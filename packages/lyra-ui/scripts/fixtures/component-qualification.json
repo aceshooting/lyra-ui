@@ -6741,7 +6741,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 1079,
+              "line": 1084,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -21683,7 +21683,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 1608,
+              "line": 1682,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -25794,7 +25794,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 639,
+              "line": 728,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

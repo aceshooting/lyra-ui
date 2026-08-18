@@ -681,7 +681,8 @@ and behavior there. **See `llms/components/lr-chart.md` for the details, code ex
 of every entry in these lists.**
 
 **Properties:** `description`, `grid`, `indexAxis` (`index-axis`), `label`, `hiddenDatasets`, `legendPosition`
-(`legend-position`), `max`, `min`, `plugins`, `stacked`, `withoutAnimation` (`without-animation`),
+(`legend-position`), `max`, `min`, `plugins`, `scaleType` (`scale-type`), `annotations`,
+`stacked`, `withoutAnimation` (`without-animation`),
 `withoutLegend` (`without-legend`), `withoutTooltip` (`without-tooltip`), `xLabel` (`x-label`),
 `yLabel` (`y-label`), plus additive `labels`, `datasets`, `valueFormatter`, `formatter`, `area`, `zoom`,
 `height`, `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`), `dataLabels`
@@ -754,6 +755,8 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
 - `seriesLabel: string = ''` (attribute `series-label`) — dataset label used for the
   legend/tooltip/table; empty falls back to localized "Frequency". Inherited `label` keeps its
   chart-wide accessible-name meaning.
+- inherits `lr-chart`'s full surface, including `scaleType` (`scale-type`) and `annotations` —
+  a logarithmic frequency axis and threshold/band markers both apply to a histogram
 - `labels`/`datasets`/`type` are **derived, read-only** (installed as getter/setter pairs on the
   prototype; direct writes are silently ignored) — `labels`/`datasets` are computed from
   `values`/`bins` (memoized per instance, keyed by reference equality on `values` plus the
@@ -999,6 +1002,7 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-charts-chart-chart-core-loader-contracts`** — Supporting data types and helpers for this component family.
   `ChartJsModule {
+    LogarithmicScale: unknown;
     Chart: unknown;
     defaults: unknown;
     plugins: unknown;
@@ -1033,6 +1037,9 @@ These named interfaces and helper signatures are available to typed integrations
   `ChartPluginCapability {
     id: unknown;
   }`
+  `loadAnnotationPlugin(/* public names: importAnnotation */): unknown`
+  `loadChartAndAnnotation(/* public names: loadChart, importAnnotation */): unknown`
+  `loadChartJsWithAnnotationResult(/* public names: importAnnotation */): unknown`
 
 - **`components-charts-chart-chart-legend-visibility-contracts`** — Supporting data types and helpers for this component family.
   `LyraChartLegendVisibilityChangeDetail {
@@ -1067,6 +1074,14 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-charts-chart-chart-contracts`** — Supporting data types and helpers for this component family.
   `lockChartType(/* public names: ctor, value */): unknown`
+  `LyraChartAnnotation {
+    axis: unknown;
+    value: unknown;
+    from: unknown;
+    to: unknown;
+    label: unknown;
+    tone: unknown;
+  }`
   `LyraChartArea {
     top: unknown;
     left: unknown;

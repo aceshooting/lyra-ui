@@ -539,6 +539,8 @@ export type {
   LyraChartGrid,
   LyraChartIndexAxis,
   LyraChartScaleType,
+  LyraChartAnnotation,
+  LyraChartAnnotationTone,
   LyraChartLayoutPosition,
   LyraChartLegendPosition,
   LyraChartExportFormat,
@@ -580,6 +582,7 @@ export type { LyraNodeTypeStyle } from './internal/node-type-style.js';
 export { LyraMap } from './components/media/map/map.class.js';
 export type {
   LyraMapLegendEntry,
+  LyraMapLegendGradientStop,
   LyraMapLegendPattern,
   LyraMapLegendProjection,
   LyraMapChoroplethLayer,

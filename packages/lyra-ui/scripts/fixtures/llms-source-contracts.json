@@ -2879,7 +2879,7 @@
       "module": "src/components/charts/chart/chart-core-loader.ts",
       "exportName": "ChartJsModule",
       "kind": "interface",
-      "fingerprint": "02d0301821ddd2f41ad8",
+      "fingerprint": "0776d18ee3aa28f8b4a1",
       "routes": [
         "src/components/charts/chart/chart-core-loader.ts"
       ],
@@ -2895,7 +2895,7 @@
       "module": "src/components/charts/chart/chart-core-loader.ts",
       "exportName": "loadAndRegisterChartModule",
       "kind": "function",
-      "fingerprint": "e19696fd3105af31d8eb",
+      "fingerprint": "ecab126986eda8924e3c",
       "routes": [
         "src/components/charts/chart/chart-core-loader.ts"
       ],
@@ -2911,7 +2911,7 @@
       "module": "src/components/charts/chart/chart-core-loader.ts",
       "exportName": "loadChartJs",
       "kind": "function",
-      "fingerprint": "09bb058e40af9ba72a8b",
+      "fingerprint": "c3fe036c5236da6d4bac",
       "routes": [
         "src/components/charts/chart/chart-core-loader.ts"
       ],
@@ -2927,7 +2927,7 @@
       "module": "src/components/charts/chart/chart-core-loader.ts",
       "exportName": "loadChartModule",
       "kind": "function",
-      "fingerprint": "30b137d10cdf0d8293c7",
+      "fingerprint": "d492dc03d009eeb4e775",
       "routes": [
         "src/components/charts/chart/chart-core-loader.ts"
       ],
@@ -2956,33 +2956,74 @@
       }
     },
     {
-      "module": "src/components/charts/chart/chart-legend-visibility.ts",
-      "exportName": "LyraChartLegendVisibilityChangeDetail",
-      "kind": "interface",
-      "fingerprint": "dfe7a881bb8ae69ef47d",
+      "module": "src/components/charts/chart/chart-feature-loader.ts",
+      "exportName": "loadAnnotationPlugin",
+      "kind": "function",
+      "fingerprint": "bfd94c48e2320f5ac3ae",
       "routes": [
-        "src/all.ts",
-        "src/components/charts/chart/chart.class.ts",
-        "src/components/charts/chart/chart.ts",
-        "src/components/charts/index.ts",
-        "src/components/lr-chart.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
+        "src/components/charts/chart/chart-feature-loader.ts"
       ],
       "document": "llms/charts.md",
       "family": "charts",
       "locator": {
         "kind": "utility",
-        "name": "components-charts-chart-chart-legend-visibility-contracts",
-        "declaration": "LyraChartLegendVisibilityChangeDetail"
+        "name": "components-charts-chart-chart-feature-loader-contracts",
+        "declaration": "loadAnnotationPlugin"
+      }
+    },
+    {
+      "module": "src/components/charts/chart/chart-feature-loader.ts",
+      "exportName": "loadChartAndAnnotation",
+      "kind": "function",
+      "fingerprint": "c466141d2f4e3291b5c9",
+      "routes": [
+        "src/components/charts/chart/chart-feature-loader.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "utility",
+        "name": "components-charts-chart-chart-feature-loader-contracts",
+        "declaration": "loadChartAndAnnotation"
+      }
+    },
+    {
+      "module": "src/components/charts/chart/chart-feature-loader.ts",
+      "exportName": "loadChartAndDataLabels",
+      "kind": "function",
+      "fingerprint": "bf8a7f53b987bc0380ec",
+      "routes": [
+        "src/components/charts/chart/chart-feature-loader.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "utility",
+        "name": "components-charts-chart-chart-loader-contracts",
+        "declaration": "loadChartAndDataLabels"
+      }
+    },
+    {
+      "module": "src/components/charts/chart/chart-feature-loader.ts",
+      "exportName": "loadChartAndRegisterZoom",
+      "kind": "function",
+      "fingerprint": "21e8ba42a181939cee1c",
+      "routes": [
+        "src/components/charts/chart/chart-feature-loader.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "utility",
+        "name": "components-charts-chart-chart-loader-contracts",
+        "declaration": "loadChartAndRegisterZoom"
       }
     },
     {
       "module": "src/components/charts/chart/chart-feature-loader.ts",
       "exportName": "loadChartAndZoom",
       "kind": "function",
-      "fingerprint": "b732bd412ca6c891b499",
+      "fingerprint": "cae3936fa26e30c9cebf",
       "routes": [
         "src/components/charts/chart/chart-feature-loader.ts"
       ],
@@ -2996,9 +3037,25 @@
     },
     {
       "module": "src/components/charts/chart/chart-feature-loader.ts",
+      "exportName": "loadChartJsWithAnnotationResult",
+      "kind": "function",
+      "fingerprint": "4f7a87ced41eee3bd58c",
+      "routes": [
+        "src/components/charts/chart/chart-feature-loader.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "utility",
+        "name": "components-charts-chart-chart-feature-loader-contracts",
+        "declaration": "loadChartJsWithAnnotationResult"
+      }
+    },
+    {
+      "module": "src/components/charts/chart/chart-feature-loader.ts",
       "exportName": "loadChartJsWithDataLabels",
       "kind": "function",
-      "fingerprint": "ad19ab35e89524eedec5",
+      "fingerprint": "e5812ef06756d87c6aa5",
       "routes": [
         "src/components/charts/chart/chart-feature-loader.ts"
       ],
@@ -3014,7 +3071,7 @@
       "module": "src/components/charts/chart/chart-feature-loader.ts",
       "exportName": "loadChartJsWithDataLabelsResult",
       "kind": "function",
-      "fingerprint": "493c8dc6a13262ded473",
+      "fingerprint": "461651e8534ea8012957",
       "routes": [
         "src/components/charts/chart/chart-feature-loader.ts"
       ],
@@ -3030,7 +3087,7 @@
       "module": "src/components/charts/chart/chart-feature-loader.ts",
       "exportName": "loadChartJsWithZoom",
       "kind": "function",
-      "fingerprint": "7e7fbecc2644f91d6c41",
+      "fingerprint": "3ee7022d54a48be3170c",
       "routes": [
         "src/components/charts/chart/chart-feature-loader.ts"
       ],
@@ -3046,7 +3103,7 @@
       "module": "src/components/charts/chart/chart-feature-loader.ts",
       "exportName": "loadChartJsWithZoomResult",
       "kind": "function",
-      "fingerprint": "fb4e32039ea8aee290fa",
+      "fingerprint": "8af4553b46e45b7bff21",
       "routes": [
         "src/components/charts/chart/chart-feature-loader.ts"
       ],
@@ -3072,6 +3129,29 @@
         "kind": "utility",
         "name": "components-charts-chart-chart-loader-contracts",
         "declaration": "loadDataLabelsPlugin"
+      }
+    },
+    {
+      "module": "src/components/charts/chart/chart-legend-visibility.ts",
+      "exportName": "LyraChartLegendVisibilityChangeDetail",
+      "kind": "interface",
+      "fingerprint": "dfe7a881bb8ae69ef47d",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart/chart.class.ts",
+        "src/components/charts/chart/chart.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-chart.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "utility",
+        "name": "components-charts-chart-chart-legend-visibility-contracts",
+        "declaration": "LyraChartLegendVisibilityChangeDetail"
       }
     },
     {
@@ -3132,6 +3212,29 @@
         "kind": "utility",
         "name": "components-charts-chart-chart-preload-contracts",
         "declaration": "preloadCharts"
+      }
+    },
+    {
+      "module": "src/components/charts/chart/chart.class.ts",
+      "exportName": "LyraChartAnnotation",
+      "kind": "interface",
+      "fingerprint": "f69a723b51fbb0054ef2",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart/chart.class.ts",
+        "src/components/charts/chart/chart.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-chart.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "utility",
+        "name": "components-charts-chart-chart-contracts",
+        "declaration": "LyraChartAnnotation"
       }
     },
     {
@@ -3669,6 +3772,44 @@
       }
     },
     {
+      "module": "src/components/conversation/markdown/katex-loader.ts",
+      "exportName": "KatexApi",
+      "kind": "interface",
+      "fingerprint": "a4d0af5538e1f550c52c",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "utility",
+        "name": "components-conversation-markdown-katex-loader-contracts",
+        "declaration": "KatexApi"
+      }
+    },
+    {
+      "module": "src/components/conversation/markdown/markdown-base.class.ts",
+      "exportName": "MarkdownVariantContext",
+      "kind": "interface",
+      "fingerprint": "a420ecd3ca8fe7623977",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "utility",
+        "name": "components-conversation-markdown-markdown-base-contracts",
+        "declaration": "MarkdownVariantContext"
+      }
+    },
+    {
       "module": "src/components/conversation/markdown/markdown-loader.ts",
       "exportName": "getMarkdownDepsIfLoaded",
       "kind": "function",
@@ -3739,82 +3880,6 @@
         "kind": "utility",
         "name": "components-conversation-markdown-markdown-loader-contracts",
         "declaration": "LyraMarkedParser"
-      }
-    },
-    {
-      "module": "src/components/conversation/markdown/katex-loader.ts",
-      "exportName": "KatexApi",
-      "kind": "interface",
-      "fingerprint": "a4d0af5538e1f550c52c",
-      "routes": [
-        "src/all.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/conversation.md",
-      "family": "conversation",
-      "locator": {
-        "kind": "utility",
-        "name": "components-conversation-markdown-katex-loader-contracts",
-        "declaration": "KatexApi"
-      }
-    },
-    {
-      "module": "src/components/conversation/markdown/markdown-base.class.ts",
-      "exportName": "MarkdownVariantContext",
-      "kind": "interface",
-      "fingerprint": "a420ecd3ca8fe7623977",
-      "routes": [
-        "src/all.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/conversation.md",
-      "family": "conversation",
-      "locator": {
-        "kind": "utility",
-        "name": "components-conversation-markdown-markdown-base-contracts",
-        "declaration": "MarkdownVariantContext"
-      }
-    },
-    {
-      "module": "src/components/conversation/markdown/markdown-shared.ts",
-      "exportName": "MarkdownKatexState",
-      "kind": "interface",
-      "fingerprint": "768365d46b2888648807",
-      "routes": [
-        "src/all.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/conversation.md",
-      "family": "conversation",
-      "locator": {
-        "kind": "utility",
-        "name": "components-conversation-markdown-markdown-shared-contracts",
-        "declaration": "MarkdownKatexState"
-      }
-    },
-    {
-      "module": "src/components/conversation/markdown/markdown-shared.ts",
-      "exportName": "PendingHighlight",
-      "kind": "interface",
-      "fingerprint": "0bcadcd760b2f2af20a0",
-      "routes": [
-        "src/all.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/conversation.md",
-      "family": "conversation",
-      "locator": {
-        "kind": "utility",
-        "name": "components-conversation-markdown-markdown-shared-contracts",
-        "declaration": "PendingHighlight"
       }
     },
     {
@@ -3931,6 +3996,44 @@
         "kind": "utility",
         "name": "components-conversation-markdown-markdown-loader-contracts",
         "declaration": "preloadMarkdown"
+      }
+    },
+    {
+      "module": "src/components/conversation/markdown/markdown-shared.ts",
+      "exportName": "MarkdownKatexState",
+      "kind": "interface",
+      "fingerprint": "768365d46b2888648807",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "utility",
+        "name": "components-conversation-markdown-markdown-shared-contracts",
+        "declaration": "MarkdownKatexState"
+      }
+    },
+    {
+      "module": "src/components/conversation/markdown/markdown-shared.ts",
+      "exportName": "PendingHighlight",
+      "kind": "interface",
+      "fingerprint": "0bcadcd760b2f2af20a0",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "utility",
+        "name": "components-conversation-markdown-markdown-shared-contracts",
+        "declaration": "PendingHighlight"
       }
     },
     {
@@ -7051,6 +7154,29 @@
     },
     {
       "module": "src/components/layout/app-rail/app-rail.class.ts",
+      "exportName": "computeAppRailMode",
+      "kind": "function",
+      "fingerprint": "57e50e39d8a48d67cd67",
+      "routes": [
+        "src/all.ts",
+        "src/components/layout/app-rail/app-rail.class.ts",
+        "src/components/layout/app-rail/app-rail.ts",
+        "src/components/layout/index.ts",
+        "src/components/lr-app-rail.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/layout.md",
+      "family": "layout",
+      "locator": {
+        "kind": "utility",
+        "name": "components-layout-app-rail-app-rail-contracts",
+        "declaration": "computeAppRailMode"
+      }
+    },
+    {
+      "module": "src/components/layout/app-rail/app-rail.class.ts",
       "exportName": "LyraAppRailModeChangeDetail",
       "kind": "interface",
       "fingerprint": "5119c398c09e8341c2f3",
@@ -7116,29 +7242,6 @@
         "kind": "utility",
         "name": "components-layout-app-rail-app-rail-contracts",
         "declaration": "LyraAppRailToggleDetail"
-      }
-    },
-    {
-      "module": "src/components/layout/app-rail/app-rail.class.ts",
-      "exportName": "computeAppRailMode",
-      "kind": "function",
-      "fingerprint": "57e50e39d8a48d67cd67",
-      "routes": [
-        "src/all.ts",
-        "src/components/layout/app-rail/app-rail.class.ts",
-        "src/components/layout/app-rail/app-rail.ts",
-        "src/components/layout/index.ts",
-        "src/components/lr-app-rail.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/layout.md",
-      "family": "layout",
-      "locator": {
-        "kind": "utility",
-        "name": "components-layout-app-rail-app-rail-contracts",
-        "declaration": "computeAppRailMode"
       }
     },
     {
@@ -8267,9 +8370,9 @@
     },
     {
       "module": "src/components/layout/split-panel/split-panel.class.ts",
-      "exportName": "SNAP_NONE",
-      "kind": "function",
-      "fingerprint": "92123c7fffa387840d33",
+      "exportName": "LyraSplitPanelRepositionDetail",
+      "kind": "interface",
+      "fingerprint": "3baff2cfa0fb26264447",
       "routes": [
         "src/all.ts",
         "src/components/layout/index.ts",
@@ -8285,7 +8388,7 @@
       "locator": {
         "kind": "utility",
         "name": "components-layout-split-panel-split-panel-contracts",
-        "declaration": "SNAP_NONE"
+        "declaration": "LyraSplitPanelRepositionDetail"
       }
     },
     {
@@ -8313,9 +8416,9 @@
     },
     {
       "module": "src/components/layout/split-panel/split-panel.class.ts",
-      "exportName": "LyraSplitPanelRepositionDetail",
-      "kind": "interface",
-      "fingerprint": "3baff2cfa0fb26264447",
+      "exportName": "SNAP_NONE",
+      "kind": "function",
+      "fingerprint": "92123c7fffa387840d33",
       "routes": [
         "src/all.ts",
         "src/components/layout/index.ts",
@@ -8331,7 +8434,7 @@
       "locator": {
         "kind": "utility",
         "name": "components-layout-split-panel-split-panel-contracts",
-        "declaration": "LyraSplitPanelRepositionDetail"
+        "declaration": "SNAP_NONE"
       }
     },
     {
@@ -9029,6 +9132,22 @@
         "kind": "utility",
         "name": "components-media-flag-flag-contracts",
         "declaration": "setFlagUrlResolver"
+      }
+    },
+    {
+      "module": "src/components/media/flag/language-map.ts",
+      "exportName": "alpha3ToAlpha2",
+      "kind": "function",
+      "fingerprint": "2c9a882bac93c15029d2",
+      "routes": [
+        "src/components/media/flag/language-map.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-flag-language-map-contracts",
+        "declaration": "alpha3ToAlpha2"
       }
     },
     {
@@ -11844,6 +11963,28 @@
       }
     },
     {
+      "module": "src/components/viewers/document-viewer/anchors.ts",
+      "exportName": "TextSelectRect",
+      "kind": "interface",
+      "fingerprint": "2a0d3105dacf2f2a20a1",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-document-viewer.ts",
+        "src/components/viewers/document-viewer/document-viewer.ts",
+        "src/components/viewers/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-document-viewer-anchors-contracts",
+        "declaration": "TextSelectRect"
+      }
+    },
+    {
       "module": "src/components/viewers/document-viewer/registry.ts",
       "exportName": "adaptDocumentRenderer",
       "kind": "function",
@@ -12654,6 +12795,29 @@
     },
     {
       "module": "src/components/viewers/email-viewer/email-viewer.class.ts",
+      "exportName": "LyraEmailAttachmentOpenDetail",
+      "kind": "interface",
+      "fingerprint": "eded3fac09020233706a",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-email-viewer.ts",
+        "src/components/viewers/email-viewer/email-viewer.class.ts",
+        "src/components/viewers/email-viewer/email-viewer.ts",
+        "src/components/viewers/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-email-viewer-email-viewer-contracts",
+        "declaration": "LyraEmailAttachmentOpenDetail"
+      }
+    },
+    {
+      "module": "src/components/viewers/email-viewer/email-viewer.class.ts",
       "exportName": "ParsedEmailAttachment",
       "kind": "interface",
       "fingerprint": "79643f12123b8b2488a9",
@@ -13025,7 +13189,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "18310b5a1ce1c1d03353",
+      "fingerprint": "1d58a9981f13264c2575",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -14610,7 +14774,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "e3a2de5d20eb1e217b86",
+      "fingerprint": "24d17dfa6a927790c7ad",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15045,7 +15209,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "6ddfd50628451ac9ecdc",
+      "fingerprint": "cb24fb34c737efd2371f",
       "routes": [
         "src/vue.ts"
       ],
@@ -15055,83 +15219,6 @@
         "kind": "utility",
         "name": "vue-contracts",
         "declaration": "LyraVueGlobalComponents"
-      }
-    },
-    {
-      "module": "src/components/charts/chart/chart-feature-loader.ts",
-      "exportName": "loadChartAndDataLabels",
-      "kind": "function",
-      "fingerprint": "edadc142584359b8adf9",
-      "routes": [
-        "src/components/charts/chart/chart-feature-loader.ts"
-      ],
-      "document": "llms/charts.md",
-      "family": "charts",
-      "locator": {
-        "kind": "utility",
-        "name": "components-charts-chart-chart-loader-contracts",
-        "declaration": "loadChartAndDataLabels"
-      }
-    },
-    {
-      "module": "src/components/charts/chart/chart-feature-loader.ts",
-      "exportName": "loadChartAndRegisterZoom",
-      "kind": "function",
-      "fingerprint": "e13c7ffdd34ab1da9a5c",
-      "routes": [
-        "src/components/charts/chart/chart-feature-loader.ts"
-      ],
-      "document": "llms/charts.md",
-      "family": "charts",
-      "locator": {
-        "kind": "utility",
-        "name": "components-charts-chart-chart-loader-contracts",
-        "declaration": "loadChartAndRegisterZoom"
-      }
-    },
-    {
-      "module": "src/components/viewers/document-viewer/anchors.ts",
-      "exportName": "TextSelectRect",
-      "kind": "interface",
-      "fingerprint": "2a0d3105dacf2f2a20a1",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-document-viewer.ts",
-        "src/components/viewers/document-viewer/document-viewer.ts",
-        "src/components/viewers/index.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-document-viewer-anchors-contracts",
-        "declaration": "TextSelectRect"
-      }
-    },
-    {
-      "module": "src/components/viewers/email-viewer/email-viewer.class.ts",
-      "exportName": "LyraEmailAttachmentOpenDetail",
-      "kind": "interface",
-      "fingerprint": "eded3fac09020233706a",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-email-viewer.ts",
-        "src/components/viewers/email-viewer/email-viewer.class.ts",
-        "src/components/viewers/email-viewer/email-viewer.ts",
-        "src/components/viewers/index.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-email-viewer-email-viewer-contracts",
-        "declaration": "LyraEmailAttachmentOpenDetail"
       }
     }
   ],

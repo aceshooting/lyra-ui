@@ -25,7 +25,8 @@ and behavior there. **See `llms/components/lr-chart.md` for the details, code ex
 of every entry in these lists.**
 
 **Properties:** `description`, `grid`, `indexAxis` (`index-axis`), `label`, `hiddenDatasets`, `legendPosition`
-(`legend-position`), `max`, `min`, `plugins`, `stacked`, `withoutAnimation` (`without-animation`),
+(`legend-position`), `max`, `min`, `plugins`, `scaleType` (`scale-type`), `annotations`,
+`stacked`, `withoutAnimation` (`without-animation`),
 `withoutLegend` (`without-legend`), `withoutTooltip` (`without-tooltip`), `xLabel` (`x-label`),
 `yLabel` (`y-label`), plus additive `labels`, `datasets`, `valueFormatter`, `formatter`, `area`, `zoom`,
 `height`, `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`), `dataLabels`

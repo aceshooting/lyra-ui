@@ -2508,6 +2508,7 @@ These named interfaces and helper signatures are available to typed integrations
   `setFlagUrlResolver(/* public names: value */): unknown`
 
 - **`components-media-flag-language-map-contracts`** — Supporting data types and helpers for this component family.
+  `alpha3ToAlpha2(/* public names: code */): unknown`
   `languageToCountry(/* public names: language */): unknown`
   `localeNativeName(/* public names: tag */): unknown`
 

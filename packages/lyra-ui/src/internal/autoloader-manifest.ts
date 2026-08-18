@@ -98,7 +98,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/overlays/badge/badge.class.js').then((module) => module.LyraBadge),
   },
   'lr-bar-chart': {
-    optionalPeers: ['chart.js', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
+    optionalPeers: ['chart.js', 'chartjs-plugin-annotation', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
     load: () => import('../components/charts/chart/bar-chart.class.js').then((module) => module.LyraBarChart),
   },
   'lr-box-plot': {
@@ -122,7 +122,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/agent-tools/browser-frame/browser-frame.class.js').then((module) => module.LyraBrowserFrame),
   },
   'lr-bubble-chart': {
-    optionalPeers: ['chart.js', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
+    optionalPeers: ['chart.js', 'chartjs-plugin-annotation', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
     load: () => import('../components/charts/chart/bubble-chart.class.js').then((module) => module.LyraBubbleChart),
   },
   'lr-button': {
@@ -158,7 +158,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/layout/carousel/carousel-item.class.js').then((module) => module.LyraCarouselItem),
   },
   'lr-chart': {
-    optionalPeers: ['chart.js', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
+    optionalPeers: ['chart.js', 'chartjs-plugin-annotation', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
     load: () => import('../components/charts/chart/chart.class.js').then((module) => module.LyraChart),
   },
   'lr-chat-composer': {
@@ -338,7 +338,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/viewers/docx-viewer/docx-viewer.class.js').then((module) => module.LyraDocxViewer),
   },
   'lr-doughnut-chart': {
-    optionalPeers: ['chart.js', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
+    optionalPeers: ['chart.js', 'chartjs-plugin-annotation', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
     load: () => import('../components/charts/chart/doughnut-chart.class.js').then((module) => module.LyraDoughnutChart),
   },
   'lr-drawer': {
@@ -506,7 +506,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/viewers/highlight-layer/highlight-layer.class.js').then((module) => module.LyraHighlightLayer),
   },
   'lr-histogram': {
-    optionalPeers: ['chart.js', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
+    optionalPeers: ['chart.js', 'chartjs-plugin-annotation', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
     load: () => import('../components/charts/chart/histogram.class.js').then((module) => module.LyraHistogram),
   },
   'lr-html-viewer': {
@@ -578,7 +578,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/media/lightbox/lightbox.class.js').then((module) => module.LyraLightbox),
   },
   'lr-line-chart': {
-    optionalPeers: ['chart.js', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
+    optionalPeers: ['chart.js', 'chartjs-plugin-annotation', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
     load: () => import('../components/charts/chart/line-chart.class.js').then((module) => module.LyraLineChart),
   },
   'lr-lite-chart': {
@@ -722,11 +722,11 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/forms/phone-input/phone-input.class.js').then((module) => module.LyraPhoneInput),
   },
   'lr-pie-chart': {
-    optionalPeers: ['chart.js', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
+    optionalPeers: ['chart.js', 'chartjs-plugin-annotation', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
     load: () => import('../components/charts/chart/pie-chart.class.js').then((module) => module.LyraPieChart),
   },
   'lr-polar-area-chart': {
-    optionalPeers: ['chart.js', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
+    optionalPeers: ['chart.js', 'chartjs-plugin-annotation', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
     load: () => import('../components/charts/chart/polar-area-chart.class.js').then((module) => module.LyraPolarAreaChart),
   },
   'lr-policy-summary': {
@@ -782,7 +782,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/media/qr-code/qr-code.class.js').then((module) => module.LyraQrCode),
   },
   'lr-radar-chart': {
-    optionalPeers: ['chart.js', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
+    optionalPeers: ['chart.js', 'chartjs-plugin-annotation', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
     load: () => import('../components/charts/chart/radar-chart.class.js').then((module) => module.LyraRadarChart),
   },
   'lr-radio': {
@@ -866,7 +866,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/forms/rubric-form/rubric-form.class.js').then((module) => module.LyraRubricForm),
   },
   'lr-scatter-chart': {
-    optionalPeers: ['chart.js', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
+    optionalPeers: ['chart.js', 'chartjs-plugin-annotation', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
     load: () => import('../components/charts/chart/scatter-chart.class.js').then((module) => module.LyraScatterChart),
   },
   'lr-scroller': {

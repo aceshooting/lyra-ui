@@ -1561,7 +1561,7 @@ test('chart optional-peer attribution follows only reachable loader capabilities
   );
   assert.deepEqual(
     peersFor('src/components/charts/chart/chart.ts'),
-    ['chart.js', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
+    ['chart.js', 'chartjs-plugin-annotation', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
     'the configurable Chart.js wrapper retains its reachable feature peers'
   );
 });

@@ -1118,7 +1118,6 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   // warning/reset-control change instead.
   private zoomFeatureState: ChartFeatureState = 'idle';
   private dataLabelsFeatureState: ChartFeatureState = 'idle';
-  private annotationFeatureState: ChartFeatureState = 'idle';
   // The resolved `chartjs-plugin-datalabels` plugin object, registered
   // PER-INSTANCE via this chart's own `config.plugins` (not globally — a global
   // registration would draw labels on, and break, every other chart on the
@@ -1446,15 +1445,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private requestAnnotationFeature(): void {
     const generation = ++this.annotationLoadGeneration;
     if (!this.needsAnnotations) {
-      this.annotationFeatureState = 'idle';
       return;
     }
-    this.annotationFeatureState = 'loading';
     void this.loadAnnotationFeature().then((result) => {
       if (generation !== this.annotationLoadGeneration || !this.isConnected || !this.needsAnnotations) {
         return;
       }
-      this.annotationFeatureState = result.kind === 'available' ? 'available' : 'unavailable';
       if (result.kind !== 'core-unavailable' && !this.loading && !this.chartJsModule) {
         this.chartJsModule = result.mod;
       }

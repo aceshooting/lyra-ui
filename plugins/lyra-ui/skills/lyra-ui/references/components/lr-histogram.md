@@ -25,6 +25,8 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
 - `seriesLabel: string = ''` (attribute `series-label`) — dataset label used for the
   legend/tooltip/table; empty falls back to localized "Frequency". Inherited `label` keeps its
   chart-wide accessible-name meaning.
+- inherits `lr-chart`'s full surface, including `scaleType` (`scale-type`) and `annotations` —
+  a logarithmic frequency axis and threshold/band markers both apply to a histogram
 - `labels`/`datasets`/`type` are **derived, read-only** (installed as getter/setter pairs on the
   prototype; direct writes are silently ignored) — `labels`/`datasets` are computed from
   `values`/`bins` (memoized per instance, keyed by reference equality on `values` plus the

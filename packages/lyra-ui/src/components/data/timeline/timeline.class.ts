@@ -185,6 +185,9 @@ export class LyraTimeline extends LyraElement {
     if (changed.has('orientation') && this.getAttribute('orientation') !== this.orientation) {
       this.setAttribute('orientation', this.orientation);
     }
+    if (changed.has('scale') || changed.has('rangeStart') || changed.has('rangeEnd')) {
+      this.applyTimeScale();
+    }
   }
 
   private countTimelineItems(slot: HTMLSlotElement): number {
@@ -200,12 +203,6 @@ export class LyraTimeline extends LyraElement {
     this.applyTimeScale();
   }
 
-  override updated(changed: PropertyValues): void {
-    super.updated(changed);
-    if (changed.has('scale') || changed.has('rangeStart') || changed.has('rangeEnd')) {
-      this.applyTimeScale();
-    }
-  }
 
   /** Read-only, live-updated count of the currently-slotted `<lr-timeline-item>` children — handy
    *  for building a `"{count} events"` header without hand-counting DOM children. */

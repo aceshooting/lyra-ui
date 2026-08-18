@@ -703,6 +703,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * signed data. A midpoint outside the resolved domain degrades to plain normalization rather
    * than distorting the ramp.
    */
+  // numeric-guard-exempt: midpointRatio() (heatmap-scale.ts) validates this with Number.isFinite
+  // before any arithmetic and falls back to plain finiteRatio() normalization when it fails, so a
+  // non-finite midpoint degrades to today's behavior rather than producing NaN ramp positions.
   @property({ type: Number }) midpoint?: number;
 
   /**

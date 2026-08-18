@@ -9885,6 +9885,7 @@
       "rootExclusion": "optional-peer-family",
       "optionalPeers": [
         "chart.js",
+        "chartjs-plugin-annotation",
         "chartjs-plugin-datalabels",
         "chartjs-plugin-zoom"
       ],
@@ -9923,6 +9924,16 @@
       ],
       "surface": {
         "attributes": [
+          {
+            "name": "annotations",
+            "property": "annotations",
+            "type": "readonly LyraChartAnnotation[]",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
           {
             "name": "area",
             "property": "area",
@@ -10054,6 +10065,16 @@
             "default": "[]"
           },
           {
+            "name": "scale-type",
+            "property": "scaleType",
+            "type": "LyraChartScaleType",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "linear"
+          },
+          {
             "name": "show-data-table",
             "property": "showDataTable",
             "type": "boolean",
@@ -10165,6 +10186,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "annotations",
+            "attribute": "annotations",
+            "type": "readonly LyraChartAnnotation[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
           {
             "name": "area",
             "attribute": "area",
@@ -10322,6 +10353,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "scaleType",
+            "attribute": "scale-type",
+            "type": "LyraChartScaleType",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "linear"
           },
           {
             "name": "showDataTable",
@@ -12142,6 +12183,7 @@
       "rootExclusion": "optional-peer-family",
       "optionalPeers": [
         "chart.js",
+        "chartjs-plugin-annotation",
         "chartjs-plugin-datalabels",
         "chartjs-plugin-zoom"
       ],
@@ -12180,6 +12222,16 @@
       ],
       "surface": {
         "attributes": [
+          {
+            "name": "annotations",
+            "property": "annotations",
+            "type": "readonly LyraChartAnnotation[]",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
           {
             "name": "area",
             "property": "area",
@@ -12311,6 +12363,16 @@
             "default": "[]"
           },
           {
+            "name": "scale-type",
+            "property": "scaleType",
+            "type": "LyraChartScaleType",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "linear"
+          },
+          {
             "name": "show-data-table",
             "property": "showDataTable",
             "type": "boolean",
@@ -12422,6 +12484,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "annotations",
+            "attribute": "annotations",
+            "type": "readonly LyraChartAnnotation[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
           {
             "name": "area",
             "attribute": "area",
@@ -12579,6 +12651,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "scaleType",
+            "attribute": "scale-type",
+            "type": "LyraChartScaleType",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "linear"
           },
           {
             "name": "showDataTable",
@@ -16499,6 +16581,7 @@
       "rootExclusion": "optional-peer-family",
       "optionalPeers": [
         "chart.js",
+        "chartjs-plugin-annotation",
         "chartjs-plugin-datalabels",
         "chartjs-plugin-zoom"
       ],
@@ -16536,6 +16619,16 @@
       ],
       "surface": {
         "attributes": [
+          {
+            "name": "annotations",
+            "property": "annotations",
+            "type": "readonly LyraChartAnnotation[]",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
           {
             "name": "area",
             "property": "area",
@@ -16667,6 +16760,16 @@
             "default": "[]"
           },
           {
+            "name": "scale-type",
+            "property": "scaleType",
+            "type": "LyraChartScaleType",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "linear"
+          },
+          {
             "name": "show-data-table",
             "property": "showDataTable",
             "type": "boolean",
@@ -16778,6 +16881,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "annotations",
+            "attribute": "annotations",
+            "type": "readonly LyraChartAnnotation[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
           {
             "name": "area",
             "attribute": "area",
@@ -16972,6 +17085,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "scaleType",
+            "attribute": "scale-type",
+            "type": "LyraChartScaleType",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "linear"
           },
           {
             "name": "showDataTable",
@@ -19737,6 +19860,10 @@
           },
           {
             "name": "label",
+            "deprecated": null
+          },
+          {
+            "name": "row",
             "deprecated": null
           }
         ],
@@ -39715,6 +39842,7 @@
       "rootExclusion": "optional-peer-family",
       "optionalPeers": [
         "chart.js",
+        "chartjs-plugin-annotation",
         "chartjs-plugin-datalabels",
         "chartjs-plugin-zoom"
       ],
@@ -39753,6 +39881,16 @@
       ],
       "surface": {
         "attributes": [
+          {
+            "name": "annotations",
+            "property": "annotations",
+            "type": "readonly LyraChartAnnotation[]",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
           {
             "name": "area",
             "property": "area",
@@ -39884,6 +40022,16 @@
             "default": "[]"
           },
           {
+            "name": "scale-type",
+            "property": "scaleType",
+            "type": "LyraChartScaleType",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "linear"
+          },
+          {
             "name": "show-data-table",
             "property": "showDataTable",
             "type": "boolean",
@@ -39995,6 +40143,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "annotations",
+            "attribute": "annotations",
+            "type": "readonly LyraChartAnnotation[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
           {
             "name": "area",
             "attribute": "area",
@@ -40152,6 +40310,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "scaleType",
+            "attribute": "scale-type",
+            "type": "LyraChartScaleType",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "linear"
           },
           {
             "name": "showDataTable",
@@ -48798,6 +48966,15 @@
             "hasDefault": false
           },
           {
+            "name": "fallback",
+            "property": "fallback",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "fidelity",
             "property": "fidelity",
             "type": "LyraFlagFidelity",
@@ -48857,6 +49034,15 @@
           {
             "name": "country",
             "attribute": "country",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "fallback",
+            "attribute": "fallback",
             "type": "string | undefined",
             "readonly": false,
             "reflects": false,
@@ -48928,11 +49114,20 @@
             "hasDefault": false
           }
         ],
-        "slots": [],
+        "slots": [
+          {
+            "name": "fallback",
+            "deprecated": null
+          }
+        ],
         "events": [],
         "parts": [
           {
             "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "fallback-image",
             "deprecated": null
           },
           {
@@ -54888,6 +55083,15 @@
             "hasDefault": false
           },
           {
+            "name": "midpoint",
+            "property": "midpoint",
+            "type": "number | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "min-cell-size",
             "property": "minCellSize",
             "type": "number | undefined",
@@ -55002,6 +55206,15 @@
             "default": "DEFAULT_MATRIX_DATA"
           },
           {
+            "name": "domain",
+            "attribute": null,
+            "type": "[number, number] | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "fitToWidth",
             "attribute": "fit-to-width",
             "type": "boolean",
@@ -55033,6 +55246,15 @@
           {
             "name": "maxCellSize",
             "attribute": "max-cell-size",
+            "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "midpoint",
+            "attribute": "midpoint",
             "type": "number | undefined",
             "readonly": false,
             "reflects": false,
@@ -55570,6 +55792,7 @@
       "rootExclusion": "optional-peer-family",
       "optionalPeers": [
         "chart.js",
+        "chartjs-plugin-annotation",
         "chartjs-plugin-datalabels",
         "chartjs-plugin-zoom"
       ],
@@ -55601,6 +55824,16 @@
       "counterparts": [],
       "surface": {
         "attributes": [
+          {
+            "name": "annotations",
+            "property": "annotations",
+            "type": "readonly LyraChartAnnotation[]",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
           {
             "name": "area",
             "property": "area",
@@ -55742,6 +55975,16 @@
             "default": "[]"
           },
           {
+            "name": "scale-type",
+            "property": "scaleType",
+            "type": "LyraChartScaleType",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "linear"
+          },
+          {
             "name": "series-label",
             "property": "seriesLabel",
             "type": "string",
@@ -55863,6 +56106,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "annotations",
+            "attribute": "annotations",
+            "type": "readonly LyraChartAnnotation[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
           {
             "name": "area",
             "attribute": "area",
@@ -56030,6 +56283,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "scaleType",
+            "attribute": "scale-type",
+            "type": "LyraChartScaleType",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "linear"
           },
           {
             "name": "seriesLabel",
@@ -64513,6 +64776,7 @@
       "rootExclusion": "optional-peer-family",
       "optionalPeers": [
         "chart.js",
+        "chartjs-plugin-annotation",
         "chartjs-plugin-datalabels",
         "chartjs-plugin-zoom"
       ],
@@ -64551,6 +64815,16 @@
       ],
       "surface": {
         "attributes": [
+          {
+            "name": "annotations",
+            "property": "annotations",
+            "type": "readonly LyraChartAnnotation[]",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
           {
             "name": "area",
             "property": "area",
@@ -64682,6 +64956,16 @@
             "default": "[]"
           },
           {
+            "name": "scale-type",
+            "property": "scaleType",
+            "type": "LyraChartScaleType",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "linear"
+          },
+          {
             "name": "show-data-table",
             "property": "showDataTable",
             "type": "boolean",
@@ -64793,6 +65077,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "annotations",
+            "attribute": "annotations",
+            "type": "readonly LyraChartAnnotation[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
           {
             "name": "area",
             "attribute": "area",
@@ -64950,6 +65244,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "scaleType",
+            "attribute": "scale-type",
+            "type": "LyraChartScaleType",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "linear"
           },
           {
             "name": "showDataTable",
@@ -67146,6 +67450,26 @@
             "default": ""
           },
           {
+            "name": "legend-gradient-hi-label",
+            "property": "legendGradientHiLabel",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "legend-gradient-lo-label",
+            "property": "legendGradientLoLabel",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -67216,6 +67540,35 @@
             "hasDefault": false
           },
           {
+            "name": "legendGradient",
+            "attribute": null,
+            "type": "readonly (readonly [number, string])[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "legendGradientHiLabel",
+            "attribute": "legend-gradient-hi-label",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "legendGradientLoLabel",
+            "attribute": "legend-gradient-lo-label",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "legendProjection",
             "attribute": null,
             "type": "LyraMapLegendProjection",
@@ -67273,7 +67626,12 @@
             "default": 2
           }
         ],
-        "slots": [],
+        "slots": [
+          {
+            "name": "legend",
+            "deprecated": null
+          }
+        ],
         "events": [
           {
             "name": "lr-map-click",
@@ -67314,7 +67672,19 @@
             "deprecated": null
           },
           {
+            "name": "legend-gradient",
+            "deprecated": null
+          },
+          {
+            "name": "legend-hi",
+            "deprecated": null
+          },
+          {
             "name": "legend-limit",
+            "deprecated": null
+          },
+          {
+            "name": "legend-lo",
             "deprecated": null
           },
           {
@@ -83217,6 +83587,7 @@
       "rootExclusion": "optional-peer-family",
       "optionalPeers": [
         "chart.js",
+        "chartjs-plugin-annotation",
         "chartjs-plugin-datalabels",
         "chartjs-plugin-zoom"
       ],
@@ -83255,6 +83626,16 @@
       ],
       "surface": {
         "attributes": [
+          {
+            "name": "annotations",
+            "property": "annotations",
+            "type": "readonly LyraChartAnnotation[]",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
           {
             "name": "area",
             "property": "area",
@@ -83386,6 +83767,16 @@
             "default": "[]"
           },
           {
+            "name": "scale-type",
+            "property": "scaleType",
+            "type": "LyraChartScaleType",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "linear"
+          },
+          {
             "name": "show-data-table",
             "property": "showDataTable",
             "type": "boolean",
@@ -83497,6 +83888,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "annotations",
+            "attribute": "annotations",
+            "type": "readonly LyraChartAnnotation[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
           {
             "name": "area",
             "attribute": "area",
@@ -83654,6 +84055,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "scaleType",
+            "attribute": "scale-type",
+            "type": "LyraChartScaleType",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "linear"
           },
           {
             "name": "showDataTable",
@@ -84109,6 +84520,7 @@
       "rootExclusion": "optional-peer-family",
       "optionalPeers": [
         "chart.js",
+        "chartjs-plugin-annotation",
         "chartjs-plugin-datalabels",
         "chartjs-plugin-zoom"
       ],
@@ -84147,6 +84559,16 @@
       ],
       "surface": {
         "attributes": [
+          {
+            "name": "annotations",
+            "property": "annotations",
+            "type": "readonly LyraChartAnnotation[]",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
           {
             "name": "area",
             "property": "area",
@@ -84278,6 +84700,16 @@
             "default": "[]"
           },
           {
+            "name": "scale-type",
+            "property": "scaleType",
+            "type": "LyraChartScaleType",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "linear"
+          },
+          {
             "name": "show-data-table",
             "property": "showDataTable",
             "type": "boolean",
@@ -84389,6 +84821,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "annotations",
+            "attribute": "annotations",
+            "type": "readonly LyraChartAnnotation[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
           {
             "name": "area",
             "attribute": "area",
@@ -84546,6 +84988,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "scaleType",
+            "attribute": "scale-type",
+            "type": "LyraChartScaleType",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "linear"
           },
           {
             "name": "showDataTable",
@@ -90297,6 +90749,7 @@
       "rootExclusion": "optional-peer-family",
       "optionalPeers": [
         "chart.js",
+        "chartjs-plugin-annotation",
         "chartjs-plugin-datalabels",
         "chartjs-plugin-zoom"
       ],
@@ -90335,6 +90788,16 @@
       ],
       "surface": {
         "attributes": [
+          {
+            "name": "annotations",
+            "property": "annotations",
+            "type": "readonly LyraChartAnnotation[]",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
           {
             "name": "area",
             "property": "area",
@@ -90466,6 +90929,16 @@
             "default": "[]"
           },
           {
+            "name": "scale-type",
+            "property": "scaleType",
+            "type": "LyraChartScaleType",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "linear"
+          },
+          {
             "name": "show-data-table",
             "property": "showDataTable",
             "type": "boolean",
@@ -90577,6 +91050,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "annotations",
+            "attribute": "annotations",
+            "type": "readonly LyraChartAnnotation[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
           {
             "name": "area",
             "attribute": "area",
@@ -90734,6 +91217,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "scaleType",
+            "attribute": "scale-type",
+            "type": "LyraChartScaleType",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "linear"
           },
           {
             "name": "showDataTable",
@@ -99022,6 +99515,7 @@
       "rootExclusion": "optional-peer-family",
       "optionalPeers": [
         "chart.js",
+        "chartjs-plugin-annotation",
         "chartjs-plugin-datalabels",
         "chartjs-plugin-zoom"
       ],
@@ -99060,6 +99554,16 @@
       ],
       "surface": {
         "attributes": [
+          {
+            "name": "annotations",
+            "property": "annotations",
+            "type": "readonly LyraChartAnnotation[]",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
           {
             "name": "area",
             "property": "area",
@@ -99191,6 +99695,16 @@
             "default": "[]"
           },
           {
+            "name": "scale-type",
+            "property": "scaleType",
+            "type": "LyraChartScaleType",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "linear"
+          },
+          {
             "name": "show-data-table",
             "property": "showDataTable",
             "type": "boolean",
@@ -99302,6 +99816,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "annotations",
+            "attribute": "annotations",
+            "type": "readonly LyraChartAnnotation[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
           {
             "name": "area",
             "attribute": "area",
@@ -99459,6 +99983,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "scaleType",
+            "attribute": "scale-type",
+            "type": "LyraChartScaleType",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "linear"
           },
           {
             "name": "showDataTable",
@@ -109718,6 +110252,10 @@
             "deprecated": null
           },
           {
+            "name": "row",
+            "deprecated": null
+          },
+          {
             "name": "switch",
             "deprecated": null
           },
@@ -117873,6 +118411,15 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "scale",
+            "property": "scale",
+            "type": "LyraTimelineScale",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "properties": [
@@ -117912,6 +118459,33 @@
             "reflects": true,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "rangeEnd",
+            "attribute": null,
+            "type": "Date | string | number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "rangeStart",
+            "attribute": null,
+            "type": "Date | string | number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "scale",
+            "attribute": "scale",
+            "type": "LyraTimelineScale",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "slots": [
@@ -117939,6 +118513,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-l)"
+          },
+          {
+            "name": "--lr-timeline-time-extent",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
           }
         ],
         "cssStates": [],
@@ -185876,6 +186456,7 @@
           "registration": "granular",
           "optionalPeers": [
             "chart.js",
+            "chartjs-plugin-annotation",
             "chartjs-plugin-datalabels",
             "chartjs-plugin-zoom"
           ]
@@ -186229,6 +186810,7 @@
           "registration": "granular",
           "optionalPeers": [
             "chart.js",
+            "chartjs-plugin-annotation",
             "chartjs-plugin-datalabels",
             "chartjs-plugin-zoom"
           ]
@@ -186995,6 +187577,7 @@
           "registration": "granular",
           "optionalPeers": [
             "chart.js",
+            "chartjs-plugin-annotation",
             "chartjs-plugin-datalabels",
             "chartjs-plugin-zoom"
           ]
@@ -189111,6 +189694,7 @@
           "registration": "granular",
           "optionalPeers": [
             "chart.js",
+            "chartjs-plugin-annotation",
             "chartjs-plugin-datalabels",
             "chartjs-plugin-zoom"
           ]
@@ -190801,6 +191385,7 @@
           "registration": "granular",
           "optionalPeers": [
             "chart.js",
+            "chartjs-plugin-annotation",
             "chartjs-plugin-datalabels",
             "chartjs-plugin-zoom"
           ]
@@ -191808,6 +192393,7 @@
           "registration": "granular",
           "optionalPeers": [
             "chart.js",
+            "chartjs-plugin-annotation",
             "chartjs-plugin-datalabels",
             "chartjs-plugin-zoom"
           ]
@@ -192017,6 +192603,7 @@
           "registration": "granular",
           "optionalPeers": [
             "chart.js",
+            "chartjs-plugin-annotation",
             "chartjs-plugin-datalabels",
             "chartjs-plugin-zoom"
           ]
@@ -192826,6 +193413,7 @@
           "registration": "granular",
           "optionalPeers": [
             "chart.js",
+            "chartjs-plugin-annotation",
             "chartjs-plugin-datalabels",
             "chartjs-plugin-zoom"
           ]
@@ -193698,6 +194286,7 @@
           "registration": "granular",
           "optionalPeers": [
             "chart.js",
+            "chartjs-plugin-annotation",
             "chartjs-plugin-datalabels",
             "chartjs-plugin-zoom"
           ]
