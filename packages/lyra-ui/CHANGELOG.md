@@ -1,5 +1,251 @@
 # Changelog
 
+## 9.1.1
+
+### Patch Changes
+
+- 3de3498: Document 18 additive public surface additions from 9.0.0 that had no changelog entry:
+  
+  - `<lr-chip>`: new `end` slot (trailing content, typically an icon, after the label).
+  - `<lr-claim-evidence>`: new `compact` and `frame` properties.
+  - `<lr-code-editor>`: new `size` property.
+  - `<lr-ebook-viewer>`, `<lr-pptx-viewer>`, `<lr-spreadsheet-viewer>`: new `maxHeight` property on
+    each.
+  - `<lr-token-input>`: new `start` and `end` adornment slots.
+  - New CSS custom-property indirection (a themeable `--lr-*` hook backing a previously
+    hardcoded/token-only value) on `<lr-dock-panel>`, `<lr-retrieval-compare>`,
+    `<lr-spreadsheet-viewer>`, `<lr-stream-status>`, `<lr-code-block>`/`<lr-code-block-core>`,
+    `<lr-page-rail>`, and `<lr-pdf-viewer>`.
+  
+  All 18 are additive and backward-compatible — nothing removed or renamed, no behavior change when
+  left unset — but none were individually called out in the 9.0.0 changelog entry, unlike the many
+  other opt-in additions from the same release that are documented by exact component/property name.
+- d04b07e: Document six cancelable pre-mutation events added in 9.0.0 with no changelog entry:
+  `<lr-dock-panel>`'s `lr-collapse-request`, `<lr-widget>`'s `lr-collapse-request`,
+  `lr-fullscreen-request`, and `lr-view-request`, `<lr-page>`'s `lr-nav-toggle`, and
+  `<lr-split-panel>`'s `lr-reposition-request`.
+  
+  9.0.0 added a consistent propose-then-commit event pair to several components that previously
+  only fired a single post-commit notification: a new cancelable `*-request` event fires first with
+  the proposed next state, and a consumer's `preventDefault()` on it now vetoes the change before
+  the existing non-cancelable `*-change`/completion event fires. `<lr-dock-panel>` gained
+  `lr-collapse-request` alongside its existing `lr-collapse-change`; `<lr-widget>` gained its own,
+  independent `lr-collapse-request` (alongside `lr-collapse-change`) plus `lr-fullscreen-request`
+  and `lr-view-request` (alongside `lr-fullscreen-change`/`lr-view-change`); `<lr-page>` gained
+  `lr-nav-toggle`, its first event of any kind; `<lr-split-panel>` gained `lr-reposition-request`
+  alongside its existing `lr-reposition` post-commit event. All six are genuine new opt-in public
+  API — a consumer can now veto a collapse, fullscreen, view, nav-open, or divider-reposition
+  mutation before it commits — but none were called out in the 9.0.0 changelog entry, unlike the
+  many other opt-in additions from the same release that are individually documented by name.
+- 7bcef3e: Document further additive 9.0.0 public surface that had no changelog entry, found auditing the
+  two largest 9.0.0 remediation commits:
+  
+  - `<lr-context-inspector>`: five new events — `lr-error`, `lr-copy-error`, `lr-export-error`,
+    `lr-show`, `lr-hide` (all from its embedded copy/export controls).
+  - `<lr-graph>`: eight categorical fallback CSS custom properties, `--lr-graph-cat-1` through
+    `--lr-graph-cat-8`, backing the default node-type color palette.
+  - `<lr-tag>`: new `lr-remove` event (non-cancelable notification that the remove button was
+    activated).
+  - `<lr-rating>`: new `focus`/`blur` native-passthrough events, `focus()`/`blur()`/`click()`
+    methods, and `base`/`rating` csspart compatibility aliases (same node, two names).
+  - A long tail of new, narrowly-scoped CSS custom properties (visual tokens only, no new
+    interaction surface) on `<lr-activity-feed>`, `<lr-prompt-studio>`, `<lr-task-list>`,
+    `<lr-tool-approval-dialog>`, `<lr-tool-param-form>`, `<lr-push-to-talk>`, `<lr-flow-controls>`,
+    `<lr-menu-item>`, `<lr-chip-group>`, and further `<lr-rating>` properties; plus new slot aliases
+    on `<lr-prompt-input>` (`start`/`leading`/`end`/`trailing`) and `<lr-push-to-talk>`
+    (`microphone-icon`/`icon`), and new cssparts on `<lr-model-select>`, `<lr-push-to-talk>`, and
+    `<lr-source-picker>`.
+  
+  All additive and backward-compatible — nothing removed or renamed, no behavior change when left
+  unset.
+- d59f8c5: Fix `<lr-button>`'s start/end adornments claiming a 40%-of-row flex-basis instead of just being
+  capped at 40%.
+  
+  A 9.0.0 change gave `[part~="start"]`/`[part~="end"]` `flex: 0 1 40%`, which sets the flex
+  *basis* to 40% of the button's own internal row -- a preferred size the flex algorithm tries to
+  honor before shrinking -- not merely `max-inline-size: 40%`'s ceiling. Because the basis is
+  self-referential (relative to the button's own internal row, unrelated to its position in the
+  page), even a small icon claimed a 40% preferred share before shrinking, squeezing
+  `[part="label"]`'s `flex: 1 1 auto` below what its text needed and ellipsizing labels that had
+  room to spare, with visible unused space left in the row. Adornments now use `flex: 0 0 auto`
+  (content-sized); `max-inline-size: 40%` remains as the actual cap for a genuinely oversized
+  adornment.
+- f7de4a5: Fix the same `overflow-wrap: anywhere` mid-word-break defect already fixed across seven other
+  components (see the `overflow-wrap-anywhere-sibling-components` and `switch-label-break-word`
+  changesets) in `<lr-card>` too — a straggler that remediation pass missed. Both `[part="body"]`
+  and a slotted `[slot="header"]` collapsed their min-content contribution to near nothing while
+  sitting as a flex item next to a non-shrinking sibling, splitting an ordinary short word mid-
+  syllable instead of wrapping at the space before it. `overflow-wrap: break-word` gives the
+  identical last-resort rescue for a genuinely unbreakable long token without that regression.
+- e57c135: Fix `<lr-chat-message>`'s `[part='actions']` pinning its footer actions to the inline end
+  regardless of `message-role`, detaching an assistant/system turn's copy/regenerate controls from
+  their own start-aligned (and often transparent-background) bubble. `[part='actions']` now scopes
+  its `margin-inline-start: auto` to `message-role="user"` and adds the mirrored
+  `margin-inline-end: auto` for `assistant`/`system`, matching the role-conditional alignment
+  `[part='bubble']` already uses. `actions-position="outside"` is unaffected for every role.
+- f7de4a5: Fix `<lr-checkbox-group>` occasionally leaking a child `<lr-checkbox>`'s own raw `lr-change`
+  (`{checked, value}`-shaped detail) to an ancestor listener, ahead of the group's own translated
+  `lr-change` (`{value: string[]}`-shaped detail) — two events instead of one, the first the wrong
+  shape. `onChildEvent`'s `stopImmediatePropagation()` only protects a listener that runs *after* it;
+  the internal listener was registered on the default bubble phase in `connectedCallback()`, which
+  only outraces a consumer's *own* bubble-phase listener when that listener happens to be registered
+  later. A Lit `@lr-change=${...}` template binding — the common case — attaches its listener while
+  the element is still a disconnected fragment, before `connectedCallback` ever runs, so it saw the
+  unstopped child event first. The internal listener now runs in the capture phase instead, which
+  always completes before any bubble-phase listener on the same node fires, regardless of
+  registration order.
+- 7d2ad99: Fix `<lr-dashboard-grid>`'s auto-created default `<lr-widget>` cell tripping the dev-mode
+  unknown-attribute diagnostic. The component marked its own library-created default cell with a
+  plain `cell-id` attribute — the same name used for the public, author-facing routing attribute a
+  consumer writes on their own light-DOM children (`<div cell-id="a">`), but `cell-id` isn't (and
+  shouldn't be) a real `<lr-widget>` property, since `lr-widget` is a general-purpose component with
+  no concept of dashboard-grid cells. The auto-created default cell now carries `data-cell-id`
+  instead — internal bookkeeping through the universally dev-mode-exempt `data-*` prefix, consistent
+  with the existing `data-dashboard-grid-default-cell` marker on the same element — while
+  author-authored content continues to use the public `cell-id` attribute unchanged.
+- 7a03421: Add a dev-mode console warning when an `lr-*` element is connected with an attribute it doesn't
+  observe.
+  
+  A typo'd or renamed attribute previously failed silently: the browser stores it inertly, the
+  component keeps rendering its default, and nothing signals the mismatch, in any environment. In
+  development only -- gated on Lit's own dev-mode signal (`globalThis.litIssuedWarnings`, already
+  populated whenever a consumer's bundler resolves `lit`'s `development` build, exactly as it
+  already does for Lit's own dev-mode warnings) -- each `lr-*` component now warns once per
+  `(tag, attribute-name)` for an attribute outside its observed set, with a did-you-mean suggestion
+  when a close match exists: `` `<lr-lite-chart>: unknown attribute 'hide-axis' — did you mean
+  'without-value-axis'?` ``. Global HTML attributes (`class`, `id`, `style`, `hidden`, `slot`,
+  `part`, ...), `data-*`, and `aria-*` are always exempt. No production behavior change -- the
+  check is fully inert when Lit's own dev-mode signal isn't present.
+  
+  Scoped to attributes only; an unrecognized `.property =` write is not detected (there is no safe
+  way to intercept it generically without either enumerating instance properties -- which floods
+  false positives against this codebase's extensive use of TypeScript's `private` keyword for
+  internal state -- or wrapping every instance in a Proxy, which cannot intercept parser-driven
+  custom-element upgrades).
+- e57c135: Fix `<lr-heatmap>` silently substituting the built-in fallback ramp color whenever
+  `--lr-heatmap-scale-lo`/`-hi` (or a `colorSteps` entry) was set to a modern CSS color function --
+  `color-mix()`, `oklch()`, `lab()`, `color(display-p3 ...)`, etc. -- with no warning. `resolveRgb()`
+  previously re-parsed the canvas's `ctx.fillStyle` read-back as a string (hex or `rgb()`/`rgba()`
+  only), which neither recognizes the `color(srgb r g b [/ a])` form Chromium normalizes
+  `color-mix()` to, nor the literal `oklch()`/`lab()`/`color(display-p3 ...)` syntax canvas
+  round-trips as-is for those functions. It now falls back to reading the actual rendered pixel back
+  via `getImageData(0, 0, 1, 1)` -- the same idiom already used in `theme.ts`/`shiki-dark-theme.ts`/
+  `color-core.ts` -- resolving any CSS color syntax the canvas accepts instead of only the forms a
+  hand-written parser recognizes. A genuinely invalid color string is unaffected: it still triggers
+  `warnInvalidColor()` and falls back.
+- 3a9ae9d: Fix `<lr-knowledge-graph-explorer>`'s composed legend starving the graph pane when `nodeTypes` is long.
+  
+  The explorer's flex column gives `[part='graph']` `flex: 1 1 auto; min-block-size: 0` so it's the
+  one part designed to shrink, but `[part='legend']` had no size cap — browser-default flex-item
+  sizing floors it at its full content height, so a `nodeTypes` list long enough to exceed the
+  host's allocated height pushed 100% of the shrinkage onto the graph pane instead, silently
+  ignoring the documented `height` property. `[part='legend']` now caps at `var(--lr-size-12rem)`
+  and scrolls internally past that, matching the existing `[part='search-results']` pattern in the
+  same stylesheet.
+- fa7b8a1: Fix `<lr-lightbox>`'s caption starving the stage when it's unusually long.
+  
+  `[part='stage']` is `flex: 1 1 auto; min-block-size: 0` — the one part designed to shrink — but
+  `[part='caption']` had no size cap, so an unusually long caller-supplied caption could floor at
+  its full multi-line content height and squeeze the stage's allocation. `[part='caption']` now
+  caps at `var(--lr-size-8rem)` and scrolls internally past that. Same mechanism, same fix shape, as
+  `<lr-knowledge-graph-explorer>`'s composed-legend fix in this same release.
+- 53ad948: Raise the optional `marked` peer dependency's lower bound to `^18.0.10` (was `^18.0.9`), picking
+  up an upstream patch release. Affects every Markdown-rendering component that declares `marked` as
+  an optional peer: `lr-agent-workspace`, `lr-dashboard-grid`, `lr-eval-run`, `lr-markdown`,
+  `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`,
+  `lr-streaming-text`, and `lr-widget-renderer`.
+- f7de4a5: Fix `<lr-multi-split>`'s `'floating'` collapse state requiring `!important` to override its
+  drawer's `position`/`inset-block`/`inset-inline-start`/`inset-inline-end`. All four were applied
+  as owned *inline* styles — always higher cascade priority than any external stylesheet rule,
+  regardless of specificity — even though their floating-state value is always the same fixed
+  literal (`absolute`, `0`), never per-render computed data. They're ordinary (overridable)
+  stylesheet rules now, keyed off the already-reflected `collapse` host attribute and the panel's
+  existing `data-collapse-state="floating"` marker, so a consumer's own CSS wins at normal
+  specificity. `flex`/`order`/`inline-size` are unaffected and stay inline: `inline-size` in
+  particular is intentionally live, mirroring the panel's own draggable `sizes` percentage so there's
+  no visual jump un-floating — a consumer wanting a different floating *width* should set `.sizes`
+  rather than override the stylesheet rule.
+- 961987b: Document `<lr-multi-split>`'s 9.0.0 behavior change: leaving a non-floating collapse state now
+  actually clears `open`, a change that shipped without a changelog entry.
+  
+  Before 8.2.3, the component reference already promised: "Leaving 'floating' while `open` is still
+  `true` also closes it, the same way `<lr-app-rail>` closes its mobile overlay when leaving
+  'mobile' while open." 8.2.3's compiled class never implemented it — there was no assignment
+  clearing `open` anywhere in the collapse path; `this.open = false` appeared only as the property
+  initializer.
+  
+  9.0.0 implemented it, in `applyEffectiveCollapseTransition`: for any transition to a state other
+  than `'floating'`, `open` is now cleared. The direction of the fix was correct — the code now
+  matches what was always documented — but it shipped silently, and the reference read identically
+  in both versions since it described the intended behavior all along, giving no changelog signal
+  to grep for.
+  
+  The ordering matters to any `lr-multi-split-collapse-change` handler that reads `open`: the clear
+  happens **after** the event fires, not before, so a listener reading `this.open` synchronously
+  inside its own handler still sees the pre-clear value.
+  
+  This is the same omission class already retro-documented twice in 9.1.0 (the heatmap
+  flat-property-to-`data` collapse, and the tab group's removed `slot`/`label` child model).
+- 22056b1: Fix the same `overflow-wrap: anywhere` mid-word-break defect just fixed in `<lr-switch>` (see the
+  sibling `switch-label-break-word` changeset) in six more components, found by auditing the rest of
+  the library for the same `overflow-wrap: anywhere` + `min-inline-size: 0` fingerprint on
+  natural-language text: `<lr-agent-eval-dashboard>` (heading and run-label text),
+  `<lr-realtime-session>` (status text), `<lr-spinner>` (the after-placement label),
+  `<lr-schema-viewer>` (name/description/issue text), `<lr-subagent-panel>` (label/task/model text),
+  and `<lr-callout>` (content/message text). Same root cause and fix in every case:
+  `overflow-wrap: break-word` gives the identical last-resort rescue for a genuinely unbreakable
+  long token without collapsing normal min-content sizing, so ordinary text now only wraps when it
+  truly cannot fit, and wraps at a word boundary when it does.
+- efb4b9b: Fix `<lr-popover>` and `<lr-tooltip>` getting stuck visible and interactive after closing.
+  
+  Both components drove their popup's `data-hidden` attribute through a Lit declarative template
+  binding *and* an imperative direct DOM write to the same attribute, keyed off a plain
+  non-reactive private field (`anchorPositioned`). The imperative write silently desynced Lit's own
+  dirty-check cache for that attribute part; because neither component's `updated()` lifecycle hook
+  repositions on close (only while `open`), a later close transition could evaluate the same
+  boolean expression to a value matching Lit's stale cache and skip the DOM write entirely — leaving
+  the popup visually and interactively present (`pointer-events: auto`) after every dismissal route
+  (trigger click, outside click, Escape, `.hide()`) once it had opened once. `anchorPositioned` is
+  now a real reactive `@state()` property in both classes, and the redundant imperative writes are
+  removed, making Lit's own render cycle the single source of truth for the attribute.
+- 34c12fa: Harden `<lr-popup>` against the same imperative/declarative attribute-write desync just fixed in
+  `<lr-popover>`/`<lr-tooltip>`.
+  
+  `<lr-popup>` shared the identical pattern (`anchorPositioned` as a plain non-reactive field, an
+  imperative `toggleAttribute` write alongside a declarative template binding for the same
+  `data-active`/`data-awaits-position` attributes) but never exhibited the observable bug, because
+  its `updated()` lifecycle hook unconditionally repositions on every update cycle regardless of
+  which property changed -- masking any stale-cache skip with a redundant imperative correction on
+  the same cycle. `anchorPositioned` is now a real reactive `@state()` property here too, removing
+  the fragile reliance on that masking behavior.
+- 03fd04f: Fix `<lr-switch>`'s label/hint/error text breaking mid-syllable, and possibly wrapping, well
+  before it runs out of room.
+  
+  The shared `[part="form-control"], [part="label"], [part~="hint"], [part="error"]` rule used
+  `overflow-wrap: anywhere`, which -- unlike `overflow-wrap: break-word` -- also collapses the
+  element's min-content contribution to essentially a single character. Combined with the same
+  rule's `min-inline-size: 0`, an ordinary short label could be squeezed far below its longest
+  word's width and forced to split it mid-syllable, even when there was ample room to sit on one
+  line or wrap cleanly at a space.
+  
+  Switching to `overflow-wrap: break-word` alone regressed the pre-existing 320px unbreakable-token
+  test: without a width propagated down to it, `.switch-layout` (an `inline-flex` box with no
+  explicit size) falls back to shrink-to-fit sizing, which can never size narrower than its own
+  min-content -- and `break-word` (correctly) keeps that min-content at the token's full width, so
+  the layout overflowed its ancestor instead of shrinking into it. Adding `max-inline-size: 100%` to
+  both `:host` and `.switch-layout` propagates an ancestor's real constraint all the way down to the
+  flex layout, fixing the overflow. `min-inline-size: 0` was deliberately *not* added to either of
+  those two rules: leaving their automatic minimum size content-based means an outer flex/grid
+  ancestor (e.g. a settings-panel row with another sibling control) won't disproportionately squeeze
+  the switch below its longest word's width the way `overflow-wrap: anywhere`'s near-zero min-content
+  let it -- at the cost of the row overflowing slightly rather than breaking a word, which is the
+  tradeoff `break-word` intends.
+- f7de4a5: Fix `<lr-thread-list>`'s exported `row-start`/`row-actions` parts sitting on the row's inline text
+  baseline (adding descender strut height above and below) instead of vertically centering their
+  `renderStart`/`renderActions` adornment content. Both parts are plain `<span>`s and default to
+  `display: inline`; they are now `display: inline-flex; align-items: center`, matching every other
+  adornment slot in the library. `row-content`/`row-meta`, which hold real text, are unaffected.
+
 ## 9.1.0
 
 ### Minor Changes
