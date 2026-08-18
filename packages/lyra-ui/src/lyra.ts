@@ -1097,7 +1097,6 @@ export { LyraSwatchPicker } from './components/forms/swatch-picker/swatch-picker
 export type {
   LyraSwatchPickerMode,
   SwatchPickerItem,
-  SwatchOption,
 } from './components/forms/swatch-picker/swatch-picker.class.js';
 export {
   DEFAULT_GEMSTONE,

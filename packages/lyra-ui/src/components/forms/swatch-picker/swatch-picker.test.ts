@@ -34,7 +34,7 @@ describe("lr-swatch-picker", () => {
     `)) as LyraSwatchPicker;
     expect(el.items).to.deep.equal(palette);
     expect(el.items === palette).to.be.false;
-    expect(el.options).to.equal(el.items);
+    expect(el.items).to.equal(el.items);
     expect(Object.isFrozen(el.items)).to.be.true;
     palette[0]!.label = "Forged";
     palette.push({ value: "purple", color: "#8250df", label: "Purple" });
@@ -51,7 +51,7 @@ describe("lr-swatch-picker", () => {
     ).to.equal("Accent");
 
     const replacement = palette.slice().reverse();
-    el.options = replacement;
+    el.items = replacement;
     await el.updateComplete;
     expect(el.items).to.deep.equal(replacement);
     expect(swatches(el).map((swatch) => swatch.dataset["value"])).to.deep.equal(
@@ -63,7 +63,7 @@ describe("lr-swatch-picker", () => {
       html`<lr-swatch-picker></lr-swatch-picker>`
     );
     el.mode = "gemstone";
-    el.options = [
+    el.items = [
       {
         value: "unsafe",
         label: "Unsafe",
@@ -78,7 +78,7 @@ describe("lr-swatch-picker", () => {
       "currentColor"
     );
 
-    el.options = [
+    el.items = [
       {
         value: "safe",
         label: "Safe",
@@ -98,7 +98,7 @@ describe("lr-swatch-picker", () => {
   it("renders role=radiogroup with one role=radio per option, aria-checked on the selected one", async () => {
     const el = (await fixture(
       html`<lr-swatch-picker
-        .options=${options()}
+        .items=${options()}
         value="green"
       ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
@@ -119,7 +119,7 @@ describe("lr-swatch-picker", () => {
   it("names each swatch and applies the option color as its fill", async () => {
     const el = (await fixture(
       html`<lr-swatch-picker
-        .options=${options()}
+        .items=${options()}
         value="blue"
       ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
@@ -134,7 +134,7 @@ describe("lr-swatch-picker", () => {
   it("uses roving tabindex -- only the selected swatch is tabbable", async () => {
     const el = (await fixture(
       html`<lr-swatch-picker
-        .options=${options()}
+        .items=${options()}
         value="green"
       ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
@@ -147,7 +147,7 @@ describe("lr-swatch-picker", () => {
 
   it("makes the first swatch tabbable when nothing is selected, so the radiogroup stays keyboard-reachable", async () => {
     const el = (await fixture(
-      html`<lr-swatch-picker .options=${options()}></lr-swatch-picker>`
+      html`<lr-swatch-picker .items=${options()}></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     expect(el.value).to.equal(null);
     expect(swatches(el).map((b) => b.getAttribute("tabindex"))).to.deep.equal([
@@ -161,7 +161,7 @@ describe("lr-swatch-picker", () => {
     const palette = options();
     const el = (await fixture(
       html`<lr-swatch-picker
-        .options=${palette}
+        .items=${palette}
         value="red"
       ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
@@ -169,7 +169,7 @@ describe("lr-swatch-picker", () => {
     el.addEventListener("lr-change", () => (changes += 1));
     swatches(el)[2]!.focus();
 
-    el.options = palette.slice(0, 2);
+    el.items = palette.slice(0, 2);
     await el.updateComplete;
 
     expect(el.shadowRoot!.activeElement?.getAttribute("data-value")).to.equal(
@@ -186,13 +186,13 @@ describe("lr-swatch-picker", () => {
     const palette = options();
     const el = (await fixture(
       html`<lr-swatch-picker
-        .options=${palette}
+        .items=${palette}
         value="green"
       ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     swatches(el)[1]!.focus();
 
-    el.options = [palette[1]!, palette[2]!, palette[0]!];
+    el.items = [palette[1]!, palette[2]!, palette[0]!];
     await el.updateComplete;
 
     expect(el.shadowRoot!.activeElement?.getAttribute("data-value")).to.equal(
@@ -207,7 +207,7 @@ describe("lr-swatch-picker", () => {
   it("selects on click and emits lr-change with the option value", async () => {
     const el = (await fixture(
       html`<lr-swatch-picker
-        .options=${options()}
+        .items=${options()}
         value="blue"
       ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
@@ -223,7 +223,7 @@ describe("lr-swatch-picker", () => {
   it("forwards host focus()/blur() to the tabbable swatch", async () => {
     const el = (await fixture(
       html`<lr-swatch-picker
-        .options=${options()}
+        .items=${options()}
         value="green"
       ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
@@ -236,7 +236,7 @@ describe("lr-swatch-picker", () => {
 
   it("forwards host click() to the tabbable swatch, selecting its option", async () => {
     const el = (await fixture(
-      html`<lr-swatch-picker .options=${options()}></lr-swatch-picker>`
+      html`<lr-swatch-picker .items=${options()}></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     expect(el.value).to.equal(null);
     const event = oneEvent(el, "lr-change");
@@ -249,7 +249,7 @@ describe("lr-swatch-picker", () => {
   it("does not emit lr-change when re-selecting the already-selected swatch", async () => {
     const el = (await fixture(
       html`<lr-swatch-picker
-        .options=${options()}
+        .items=${options()}
         value="green"
       ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
@@ -268,7 +268,7 @@ describe("lr-swatch-picker", () => {
       { value: "other", color: "#cf222e", label: "Other" },
     ];
     const el = (await fixture(
-      html`<lr-swatch-picker .options=${duplicateOptions}></lr-swatch-picker>`
+      html`<lr-swatch-picker .items=${duplicateOptions}></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     const buttons = swatches(el);
     buttons[1]!.click();
@@ -298,7 +298,7 @@ describe("lr-swatch-picker", () => {
       { value: "other", color: "#cf222e", label: "Other" },
     ];
     const el = (await fixture(
-      html`<lr-swatch-picker .options=${duplicateOptions}></lr-swatch-picker>`
+      html`<lr-swatch-picker .items=${duplicateOptions}></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     const second = swatches(el)[1]!;
     second.focus();
@@ -318,7 +318,7 @@ describe("lr-swatch-picker", () => {
   it("uses the focused swatch rather than a newer controlled value as the arrow origin", async () => {
     const el = (await fixture(
       html`<lr-swatch-picker
-        .options=${options()}
+        .items=${options()}
         value="blue"
       ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
@@ -344,7 +344,7 @@ describe("lr-swatch-picker", () => {
     const el = (await fixture(
       html`<lr-swatch-picker
         dir="rtl"
-        .options=${options()}
+        .items=${options()}
         value="blue"
       ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
@@ -369,7 +369,7 @@ describe("lr-swatch-picker", () => {
   it("selects on ArrowRight (automatic activation) and wraps cyclically at the end", async () => {
     const el = (await fixture(
       html`<lr-swatch-picker
-        .options=${options()}
+        .items=${options()}
         value="red"
       ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
@@ -389,7 +389,7 @@ describe("lr-swatch-picker", () => {
   it("moves selection backward with ArrowLeft and to the ends with Home/End", async () => {
     const el = (await fixture(
       html`<lr-swatch-picker
-        .options=${options()}
+        .items=${options()}
         value="green"
       ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
@@ -427,7 +427,7 @@ describe("lr-swatch-picker", () => {
     const el = (await fixture(
       html`<lr-swatch-picker
         dir="rtl"
-        .options=${options()}
+        .items=${options()}
         value="blue"
       ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
@@ -446,8 +446,8 @@ describe("lr-swatch-picker", () => {
   it("lets a forwarded host aria-label win on the radiogroup while retaining the label prop fallback", async () => {
     const labeled = (await fixture(
       html`<lr-swatch-picker
-        label="Accent"
-        .options=${options()}
+        aria-label="Accent"
+        .items=${options()}
       ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     expect(
@@ -459,7 +459,7 @@ describe("lr-swatch-picker", () => {
     const forwarded = (await fixture(
       html`<lr-swatch-picker
         aria-label="Forwarded"
-        .options=${options()}
+        .items=${options()}
       ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     expect(
@@ -468,11 +468,12 @@ describe("lr-swatch-picker", () => {
       ).getAttribute("aria-label")
     ).to.equal("Forwarded");
 
+    // The host attribute IS the accessible name now that the separate `label` property it used to
+    // override was removed in 10.0.0.
     const hostOverride = (await fixture(
       html`<lr-swatch-picker
-        label="Accent"
         aria-label="Author label"
-        .options=${options()}
+        .items=${options()}
       ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     expect(
@@ -482,13 +483,11 @@ describe("lr-swatch-picker", () => {
     ).to.equal("Author label");
   });
 
-  it("honors an explicit empty host aria-label instead of falling back to the label prop", async () => {
+  it("honors an explicit empty host aria-label rather than dropping the attribute", async () => {
+    // The `label` property this once guarded against was removed in 10.0.0; what still matters is
+    // that an author who deliberately empties aria-label gets an empty accessible name.
     const el = (await fixture(
-      html`<lr-swatch-picker
-        label="Accent"
-        aria-label=""
-        .options=${options()}
-      ></lr-swatch-picker>`
+      html`<lr-swatch-picker aria-label="" .items=${options()}></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     expect(
       (
@@ -509,7 +508,7 @@ describe("lr-swatch-picker", () => {
     ];
     const el = (await fixture(
       html`<lr-swatch-picker
-        .options=${withIcon}
+        .items=${withIcon}
         value="blue"
       ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
@@ -533,7 +532,7 @@ describe("lr-swatch-picker", () => {
     const el = await fixture<LyraSwatchPicker>(
       html`<lr-swatch-picker></lr-swatch-picker>`
     );
-    el.options = [
+    el.items = [
       {
         value: "hostile",
         color: "#0969da",
@@ -564,7 +563,7 @@ describe("lr-swatch-picker", () => {
     const el = (await fixture(html`
       <lr-swatch-picker
         mode="gemstone"
-        .options=${[
+        .items=${[
           {
             value: "ruby",
             color: "#e63950",
@@ -599,7 +598,7 @@ describe("lr-swatch-picker", () => {
     const el = (await fixture(html`
       <lr-swatch-picker
         mode="gemstone"
-        .options=${[
+        .items=${[
           {
             value: "ruby",
             color: "#e63950",
@@ -622,7 +621,7 @@ describe("lr-swatch-picker", () => {
   it("resolves the option color through currentColor for a rendered custom glyph", async () => {
     const el = (await fixture(html`
       <lr-swatch-picker
-        .options=${[
+        .items=${[
           {
             value: "blue",
             color: "#0969da",
@@ -646,7 +645,7 @@ describe("lr-swatch-picker", () => {
   it("actually paints the rendered fill circle background-color from the option color (not just declared in the stylesheet source)", async () => {
     const el = (await fixture(
       html`<lr-swatch-picker
-        .options=${options()}
+        .items=${options()}
         value="blue"
       ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
@@ -660,7 +659,7 @@ describe("lr-swatch-picker", () => {
   it("gives the swatch hit target the shared minimum touch-target size without inflating the visible fill", async () => {
     const el = (await fixture(
       html`<lr-swatch-picker
-        .options=${options()}
+        .items=${options()}
         value="blue"
       ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
@@ -679,7 +678,7 @@ describe("lr-swatch-picker", () => {
       <div style="--lr-theme-swatch-picker-fill-size: 19px">
         <lr-swatch-picker
           size="xs"
-          .options=${options()}
+          .items=${options()}
           value="blue"
         ></lr-swatch-picker>
       </div>
@@ -698,7 +697,7 @@ describe("lr-swatch-picker", () => {
         <lr-swatch-picker
           size="xs"
           style="--lr-swatch-picker-fill-size: 13px"
-          .options=${options()}
+          .items=${options()}
           value="blue"
         ></lr-swatch-picker>
       </div>
@@ -725,7 +724,7 @@ describe("lr-swatch-picker", () => {
     const wrapper = await fixture<HTMLElement>(html`
       <div style="--lr-swatch-picker-selected-color: rgb(10, 20, 30)">
         <lr-swatch-picker
-          .options=${options()}
+          .items=${options()}
           value="green"
         ></lr-swatch-picker>
       </div>
@@ -777,7 +776,7 @@ describe("lr-swatch-picker", () => {
   it("actually applies the lr-swatch-picker-shine animation to the checked swatch's rendered fill", async () => {
     const el = (await fixture(html`
       <lr-swatch-picker
-        .options=${options()}
+        .items=${options()}
         value="green"
         style="--lr-swatch-picker-shine-duration: 1.6s;"
       ></lr-swatch-picker>
@@ -799,7 +798,7 @@ describe("lr-swatch-picker", () => {
   it("applies the lr-swatch-picker-shine-icon animation to a checked custom icon", async () => {
     const el = (await fixture(html`
       <lr-swatch-picker
-        .options=${[
+        .items=${[
           {
             value: "blue",
             color: "#0969da",
@@ -838,7 +837,7 @@ describe("lr-swatch-picker", () => {
     // icon swatch -- which is every swatch in mode="gemstone", where the shine is on by default.
     const el = (await fixture(html`
       <lr-swatch-picker
-        .options=${[
+        .items=${[
           {
             value: "blue",
             color: "#0969da",
@@ -875,8 +874,8 @@ describe("lr-swatch-picker", () => {
   it("is accessible", async () => {
     const el = (await fixture(
       html`<lr-swatch-picker
-        label="Accent"
-        .options=${options()}
+        aria-label="Accent"
+        .items=${options()}
         value="blue"
       ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
@@ -886,8 +885,8 @@ describe("lr-swatch-picker", () => {
   it("is accessible when nothing is selected", async () => {
     const el = (await fixture(
       html`<lr-swatch-picker
-        label="Accent"
-        .options=${options()}
+        aria-label="Accent"
+        .items=${options()}
       ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     await expect(el).to.be.accessible();
@@ -901,7 +900,7 @@ describe("lr-swatch-picker", () => {
     ];
     const el = (await fixture(
       html`<lr-swatch-picker
-        .options=${withQuote}
+        .items=${withQuote}
         value="a"
       ></lr-swatch-picker>`
     )) as LyraSwatchPicker;
@@ -944,7 +943,7 @@ describe("lr-swatch-picker", () => {
       const el = await fixture(
         html`<lr-swatch-picker
           size=${size}
-          .options=${options()}
+          .items=${options()}
         ></lr-swatch-picker>`
       );
       const swatch = el.shadowRoot!.querySelector(
@@ -977,13 +976,13 @@ describe("lr-swatch-picker", () => {
       const aliasEl = await fixture(
         html`<lr-swatch-picker
           size=${alias}
-          .options=${options()}
+          .items=${options()}
         ></lr-swatch-picker>`
       );
       const stepEl = await fixture(
         html`<lr-swatch-picker
           size=${step}
-          .options=${options()}
+          .items=${options()}
         ></lr-swatch-picker>`
       );
       expect(
@@ -999,11 +998,11 @@ describe("lr-swatch-picker", () => {
 
   it('defaults to size "m" and reflects a size attribute', async () => {
     const defaultEl = (await fixture(
-      html`<lr-swatch-picker .options=${options()}></lr-swatch-picker>`
+      html`<lr-swatch-picker .items=${options()}></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     expect(defaultEl.size).to.equal("m");
     const el = (await fixture(
-      html`<lr-swatch-picker size="s" .options=${options()}></lr-swatch-picker>`
+      html`<lr-swatch-picker size="s" .items=${options()}></lr-swatch-picker>`
     )) as LyraSwatchPicker;
     expect(el.getAttribute("size")).to.equal("s");
     expect(el.size).to.equal("s");
@@ -1015,7 +1014,7 @@ describe("lr-swatch-picker", () => {
         html`<lr-swatch-picker
           disabled
           value="blue"
-          .options=${options()}
+          .items=${options()}
         ></lr-swatch-picker>`
       )) as LyraSwatchPicker;
       await el.updateComplete;
@@ -1024,7 +1023,7 @@ describe("lr-swatch-picker", () => {
 
     it("defaults to enabled and reflects the attribute both ways", async () => {
       const el = (await fixture(
-        html`<lr-swatch-picker .options=${options()}></lr-swatch-picker>`
+        html`<lr-swatch-picker .items=${options()}></lr-swatch-picker>`
       )) as LyraSwatchPicker;
       expect(el.disabled).to.equal(false);
       expect(swatches(el).every((button) => !button.disabled)).to.equal(true);
@@ -1083,7 +1082,7 @@ describe("lr-swatch-picker", () => {
       const enabled = (await fixture(
         html`<lr-swatch-picker
           value="blue"
-          .options=${options()}
+          .items=${options()}
         ></lr-swatch-picker>`
       )) as LyraSwatchPicker;
       await enabled.updateComplete;
@@ -1131,7 +1130,7 @@ describe("lr-swatch-picker", () => {
       const el = (await fixture(
         html`<lr-swatch-picker
           value="blue"
-          .options=${options()}
+          .items=${options()}
         ></lr-swatch-picker>`
       )) as LyraSwatchPicker;
       await el.updateComplete;

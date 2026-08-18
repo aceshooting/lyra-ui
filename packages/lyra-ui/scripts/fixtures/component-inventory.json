@@ -109441,35 +109441,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-swatch-picker",
-            "kind": "property",
-            "name": "label",
-            "attribute": "label",
-            "since": "8.2.3",
-            "replacement": {
-              "kind": "property",
-              "name": "accessibleLabel",
-              "usage": "aria-label=\"…\""
-            },
-            "removalNotBefore": "10.0.0",
-            "rationale": "accessibleLabel names the accessibility-only value explicitly while label remains a compatibility alias."
-          },
-          {
-            "tag": "lr-swatch-picker",
-            "kind": "property",
-            "name": "options",
-            "since": "8.2.3",
-            "replacement": {
-              "kind": "property",
-              "name": "items",
-              "usage": ".items = […]"
-            },
-            "removalNotBefore": "10.0.0",
-            "rationale": "items follows the shared collection vocabulary while options remains a compatibility alias over the same immutable snapshot."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -109506,29 +109478,6 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
-          },
-          {
-            "name": "label",
-            "property": "label",
-            "type": "string",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": {
-              "tag": "lr-swatch-picker",
-              "kind": "property",
-              "name": "label",
-              "attribute": "label",
-              "since": "8.2.3",
-              "replacement": {
-                "kind": "property",
-                "name": "accessibleLabel",
-                "usage": "aria-label=\"…\""
-              },
-              "removalNotBefore": "10.0.0",
-              "rationale": "accessibleLabel names the accessibility-only value explicitly while label remains a compatibility alias."
-            },
-            "hasDefault": true,
-            "default": ""
           },
           {
             "name": "locale",
@@ -109601,29 +109550,6 @@
             "hasDefault": false
           },
           {
-            "name": "label",
-            "attribute": "label",
-            "type": "string",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": {
-              "tag": "lr-swatch-picker",
-              "kind": "property",
-              "name": "label",
-              "attribute": "label",
-              "since": "8.2.3",
-              "replacement": {
-                "kind": "property",
-                "name": "accessibleLabel",
-                "usage": "aria-label=\"…\""
-              },
-              "removalNotBefore": "10.0.0",
-              "rationale": "accessibleLabel names the accessibility-only value explicitly while label remains a compatibility alias."
-            },
-            "hasDefault": true,
-            "default": ""
-          },
-          {
             "name": "locale",
             "attribute": "locale",
             "type": "string",
@@ -109640,27 +109566,6 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "options",
-            "attribute": null,
-            "type": "readonly SwatchPickerItem[]",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": {
-              "tag": "lr-swatch-picker",
-              "kind": "property",
-              "name": "options",
-              "since": "8.2.3",
-              "replacement": {
-                "kind": "property",
-                "name": "items",
-                "usage": ".items = […]"
-              },
-              "removalNotBefore": "10.0.0",
-              "rationale": "items follows the shared collection vocabulary while options remains a compatibility alias over the same immutable snapshot."
-            },
             "hasDefault": false
           },
           {

@@ -68,7 +68,8 @@ test('checked-in metadata covers the current manifest and inventory', () => {
   );
   assert.equal(state.metadata.assignments['compatibility-stable'].length, 1);
   assert.equal(state.metadata.assignments['introduced-stable'].length, 19);
-  assert.equal(state.metadata.deprecations.length, 10);
+  // 8 since 10.0.0 removed lr-swatch-picker's `label` and `options` properties.
+  assert.equal(state.metadata.deprecations.length, 8);
 });
 
 test('new mirrors of experimental upstream media surfaces remain experimental everywhere authored', () => {

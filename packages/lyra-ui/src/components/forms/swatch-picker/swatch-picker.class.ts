@@ -28,9 +28,6 @@ export interface SwatchPickerItem {
   readonly gemstone?: GemstoneKey;
 }
 
-/** @deprecated Use {@link SwatchPickerItem}. */
-export type SwatchOption = SwatchPickerItem;
-
 export type LyraSwatchPickerMode = 'swatch' | 'gemstone';
 
 const SWATCH_PICKER_MODE = literalSetConverter<LyraSwatchPickerMode>(
@@ -103,7 +100,6 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   static override styles = [LyraElement.styles, styles];
   static override properties = {
     items: { attribute: false, noAccessor: true },
-    options: { attribute: false, noAccessor: true },
   };
 
   private _items: readonly SwatchPickerItem[] = Object.freeze([]);
@@ -151,14 +147,6 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     this._items = Object.freeze(snapshots);
     this.requestUpdate('items', old);
   }
-  /** @deprecated Compatibility alias for `items`. */
-  get options(): readonly SwatchPickerItem[] {
-    return this.items;
-  }
-  set options(next: readonly SwatchPickerItem[]) {
-    this.items = next;
-  }
-
   /** The currently selected option's `value`, or `null` when nothing is selected. */
   @property() value: string | null = null;
 
@@ -192,9 +180,6 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
    *  visible label context exists around it (e.g. no wrapping `<label>` or adjacent heading).
    *  The resolved name is set on the `role="radiogroup"` element. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
-
-  /** @deprecated Use `accessibleLabel` or the host `aria-label` attribute. */
-  @property() label = '';
 
   /** Locks the whole picker: every rendered swatch becomes a genuinely `disabled` `<button>` (so
    *  it leaves the tab sequence and stops emitting activation), arrow/Home/End navigation and
@@ -401,7 +386,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     const ariaLabel =
       hostLabel !== null
         ? hostLabel
-        : this.accessibleLabel || this.label || nothing;
+        : this.accessibleLabel || nothing;
     // WAI-ARIA APG radiogroup: exactly one radio is ever tabbable. That's normally the checked
     // swatch, but a fresh/cleared picker (value === null) has no checked swatch -- fall back to
     // the most recently preserved live-palette position, initially the first swatch, so the

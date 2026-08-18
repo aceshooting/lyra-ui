@@ -444,33 +444,6 @@
       "rationale": "The sparkline part names the rendered SVG wrapper unambiguously; base remains on that same node during the compatibility window."
     },
     {
-      "tag": "lr-swatch-picker",
-      "kind": "property",
-      "name": "label",
-      "attribute": "label",
-      "since": "8.2.3",
-      "replacement": {
-        "kind": "property",
-        "name": "accessibleLabel",
-        "usage": "aria-label=\"…\""
-      },
-      "removalNotBefore": "10.0.0",
-      "rationale": "accessibleLabel names the accessibility-only value explicitly while label remains a compatibility alias."
-    },
-    {
-      "tag": "lr-swatch-picker",
-      "kind": "property",
-      "name": "options",
-      "since": "8.2.3",
-      "replacement": {
-        "kind": "property",
-        "name": "items",
-        "usage": ".items = […]"
-      },
-      "removalNotBefore": "10.0.0",
-      "rationale": "items follows the shared collection vocabulary while options remains a compatibility alias over the same immutable snapshot."
-    },
-    {
       "tag": "lr-video-playlist",
       "kind": "part",
       "name": "base",
@@ -11376,7 +11349,7 @@
     "current": {
       "version": "9.1.1",
       "sourceCommit": null,
-      "manifestSha256": "f7f5dfb6f426902129c6fd484adda6cac699437a060c611719f9bde684c38123",
+      "manifestSha256": "812470139d777e34ee98635893a960e4e1205911120a9bb0861fdec583967df4",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",

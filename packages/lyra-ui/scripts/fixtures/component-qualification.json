@@ -42034,21 +42034,21 @@
           "evidence": [
             {
               "file": "src/components/forms/swatch-picker/swatch-picker.test.ts",
-              "line": 532,
+              "line": 531,
               "test": "keeps arbitrary interactive option icons visible but inert beneath the radio owner",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/swatch-picker/swatch-picker.test.ts",
-              "line": 875,
+              "line": 874,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/swatch-picker/swatch-picker.test.ts",
-              "line": 886,
+              "line": 885,
               "test": "is accessible when nothing is selected",
               "target": "el",
               "state": "populated"

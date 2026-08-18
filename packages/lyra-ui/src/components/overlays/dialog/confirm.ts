@@ -19,9 +19,6 @@ export interface ConfirmOptions {
   cancelLabel?: string;
   /** `'danger'` fills the confirm button with `--lr-color-danger` instead of `--lr-color-brand` -- for destructive actions. */
   variant?: 'neutral' | 'danger';
-  /** @deprecated Use `variant` instead. Kept as a one-major back-compat alias; `variant` wins when
-   *  both are set. */
-  tone?: 'neutral' | 'danger';
 }
 
 // Native buttons keep this focused helper leaf independent of the broader button registration.
@@ -109,11 +106,8 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
   // The root re-exports this helper, so registration belongs to invocation rather than module
   // evaluation. This keeps a bare root import pure without making the synchronous API async.
   defineElement('dialog', LyraDialog);
-  // `tone` was this option's name before it was renamed to match the library's shared `variant`
-  // vocabulary; it stays accepted for one major as a deprecated alias, with `variant` winning
-  // when both are somehow set.
-  const { title, description, confirmLabel, cancelLabel, variant, tone } = options;
-  const resolvedVariant = variant ?? tone ?? 'neutral';
+  const { title, description, confirmLabel, cancelLabel, variant } = options;
+  const resolvedVariant = variant ?? 'neutral';
 
   return new Promise<boolean>((resolve) => {
     const dialog = document.createElement(tag('dialog')) as LyraDialog;

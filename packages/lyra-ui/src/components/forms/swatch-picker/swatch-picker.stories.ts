@@ -112,7 +112,7 @@ export const Sizes: Story = {
     const sizes: LyraSizeStep[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
     return html`
       <div style="display: flex; flex-direction: column; gap: 1rem">
-        ${sizes.map((size) => html`<lr-swatch-picker size=${size} label=${`Size "${size}"`} .options=${accents()} value="purple"></lr-swatch-picker>`)}
+        ${sizes.map((size) => html`<lr-swatch-picker size=${size} aria-label=${`Size "${size}"`} .items=${accents()} value="purple"></lr-swatch-picker>`)}
       </div>
     `;
   },
@@ -130,8 +130,8 @@ export const CustomIcon: Story = {
   },
   render: () => html`
     <lr-swatch-picker
-      label="Accent color"
-      .options=${accents().map((option, i) => ({ ...option, icon: gemIcons[i % gemIcons.length]!() }))}
+      aria-label="Accent color"
+      .items=${accents().map((option, i) => ({ ...option, icon: gemIcons[i % gemIcons.length]!() }))}
       value="purple"
     ></lr-swatch-picker>
   `,
@@ -149,9 +149,9 @@ export const ShiningSelection: Story = {
   },
   render: () => html`
     <lr-swatch-picker
-      label="Accent color"
+      aria-label="Accent color"
       style="--lr-swatch-picker-selected-blur: 0.35rem; --lr-swatch-picker-shine-duration: 1.6s;"
-      .options=${accents().map((option, i) => ({ ...option, icon: gemIcons[i % gemIcons.length]!() }))}
+      .items=${accents().map((option, i) => ({ ...option, icon: gemIcons[i % gemIcons.length]!() }))}
       value="purple"
     ></lr-swatch-picker>
   `,
@@ -170,8 +170,8 @@ export const GemstoneMode: Story = {
   render: () => html`
     <lr-swatch-picker
       mode="gemstone"
-      label="Gemstone accent"
-      .options=${gemstoneAccents(['emerald', 'ruby', 'amethyst', 'sapphire', 'hematite'])}
+      aria-label="Gemstone accent"
+      .items=${gemstoneAccents(['emerald', 'ruby', 'amethyst', 'sapphire', 'hematite'])}
       value="amethyst"
     ></lr-swatch-picker>
   `,
@@ -188,7 +188,7 @@ export const NoSelection: Story = {
     },
   },
   render: () => html`
-    <lr-swatch-picker label="Accent color" .options=${accents()}></lr-swatch-picker>
+    <lr-swatch-picker aria-label="Accent color" .items=${accents()}></lr-swatch-picker>
   `,
 };
 
@@ -212,8 +212,8 @@ export const LivePaletteChanges: Story = {
     return html`
       <div data-live-palette style="display: grid; gap: var(--lr-space-s); justify-items: start;">
         <lr-swatch-picker
-          label="Dynamic accent color"
-          .options=${palette}
+          aria-label="Dynamic accent color"
+          .items=${palette}
           value="purple"
         ></lr-swatch-picker>
         <div style="display: flex; flex-wrap: wrap; gap: var(--lr-space-xs);">
@@ -222,20 +222,20 @@ export const LivePaletteChanges: Story = {
             @click=${(event: Event) => {
               const picker = pickerFor(event);
               const focusedValue = picker.shadowRoot?.activeElement?.getAttribute('data-value');
-              picker.options = picker.options.filter((option) => option.value !== focusedValue);
+              picker.items = picker.items.filter((option) => option.value !== focusedValue);
             }}
           >Remove focused swatch</button>
           <button
             @pointerdown=${keepSwatchFocused}
             @click=${(event: Event) => {
               const picker = pickerFor(event);
-              picker.options = [...picker.options].reverse();
+              picker.items = [...picker.items].reverse();
             }}
           >Reverse palette</button>
           <button
             @pointerdown=${keepSwatchFocused}
             @click=${(event: Event) => {
-              pickerFor(event).options = palette;
+              pickerFor(event).items = palette;
             }}
           >Restore palette</button>
         </div>
@@ -256,9 +256,9 @@ export const Rethemed: Story = {
   },
   render: () => html`
     <lr-swatch-picker
-      label="Accent color"
+      aria-label="Accent color"
       style="--lr-swatch-picker-selected-color: var(--lr-color-success);"
-      .options=${accents()}
+      .items=${accents()}
       value="red"
     ></lr-swatch-picker>
   `,
@@ -271,8 +271,8 @@ export const Narrow: Story = {
   render: () => html`
     <div style="inline-size: 320px; max-inline-size: 100%;">
       <lr-swatch-picker
-        label="Accent color"
-        .options=${[
+        aria-label="Accent color"
+        .items=${[
           ...accents(),
           { value: 'teal', color: 'var(--lr-color-chart-3)', label: 'Teal' },
           { value: 'pink', color: 'var(--lr-color-chart-6)', label: 'Pink' },
@@ -289,8 +289,8 @@ export const RightToLeft: Story = {
   render: () => html`
     <lr-swatch-picker
       dir="rtl"
-      label="لون التمييز"
-      .options=${[
+      aria-label="لون التمييز"
+      .items=${[
         { value: 'blue', color: 'var(--lr-color-brand)', label: 'أزرق' },
         { value: 'green', color: 'var(--lr-color-success)', label: 'أخضر' },
         { value: 'red', color: 'var(--lr-color-danger)', label: 'أحمر' },
@@ -304,8 +304,8 @@ export const Events: Story = {
   render: () => html`
     <div>
       <lr-swatch-picker
-        label="Accent color"
-        .options=${accents()}
+        aria-label="Accent color"
+        .items=${accents()}
         value="blue"
         @lr-change=${(e: CustomEvent<{ value: string }>) => {
           const out = document.getElementById('swatch-picker-log');
@@ -320,11 +320,11 @@ export const Events: Story = {
 export const Disabled: Story = {
   render: () => html`
     <div style="display: grid; gap: 1rem;">
-      <lr-swatch-picker label="Accent color" .options=${accents()} value="blue"></lr-swatch-picker>
+      <lr-swatch-picker aria-label="Accent color" .items=${accents()} value="blue"></lr-swatch-picker>
       <lr-swatch-picker
         disabled
-        label="Accent color (locked while saving)"
-        .options=${accents()}
+        aria-label="Accent color (locked while saving)"
+        .items=${accents()}
         value="blue"
       ></lr-swatch-picker>
     </div>

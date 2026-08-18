@@ -9069,10 +9069,8 @@ export type LyraSwatchPickerVueProps = LyraVueCustomElement<
   | 'accessibleLabel'
   | 'disabled'
   | 'items'
-  | 'label'
   | 'locale'
   | 'mode'
-  | 'options'
   | 'size'
   | 'strings'
   | 'value',

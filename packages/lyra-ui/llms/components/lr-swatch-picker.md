@@ -6,8 +6,7 @@
 - **Class** `LyraSwatchPicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/swatch-picker/swatch-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecated property** `label` / `label` since `8.2.3`; use property `aria-label="…"`; removal not before `10.0.0` — accessibleLabel names the accessibility-only value explicitly while label remains a compatibility alias.
-- **Deprecated property** `options` since `8.2.3`; use property `.items = […]`; removal not before `10.0.0` — items follows the shared collection vocabulary while options remains a compatibility alias over the same immutable snapshot.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 4 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

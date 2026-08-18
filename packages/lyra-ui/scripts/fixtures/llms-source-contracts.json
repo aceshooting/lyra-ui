@@ -9796,7 +9796,7 @@
       "module": "src/components/overlays/dialog/confirm.ts",
       "exportName": "confirm",
       "kind": "function",
-      "fingerprint": "6ee34388dc99e16f80f5",
+      "fingerprint": "1949576c25e7ecb13c4a",
       "routes": [
         "src/all.ts",
         "src/components/overlays/dialog/confirm.ts",
@@ -9816,7 +9816,7 @@
       "module": "src/components/overlays/dialog/confirm.ts",
       "exportName": "ConfirmOptions",
       "kind": "interface",
-      "fingerprint": "f84b2080460d1f71bbfa",
+      "fingerprint": "a184e8cb9107f27f8cea",
       "routes": [
         "src/all.ts",
         "src/components/overlays/dialog/confirm.ts",
@@ -13212,7 +13212,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "39bbb81de659353b22e0",
+      "fingerprint": "959bad23c9824ef2b288",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -14797,7 +14797,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "95616c4740493917703a",
+      "fingerprint": "971a25ae6bd6b9622532",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15232,7 +15232,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "4896eb32e614662a7f52",
+      "fingerprint": "adb3916cd00342b96201",
       "routes": [
         "src/vue.ts"
       ],

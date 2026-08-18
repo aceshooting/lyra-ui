@@ -9076,10 +9076,8 @@ export type LyraSwatchPickerSvelteProps = LyraSvelteElementProps<
   | 'accessibleLabel'
   | 'disabled'
   | 'items'
-  | 'label'
   | 'locale'
   | 'mode'
-  | 'options'
   | 'size'
   | 'strings'
   | 'value',
