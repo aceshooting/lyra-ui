@@ -1,4 +1,4 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './dropdown.js';
 import '../../layout/menu/dropdown-item.js';
 import '../../layout/menu/menu.js';
@@ -665,4 +665,20 @@ it('is accessible populated and open with mapped items', async () => {
   // overlay.test.ts already uses for this same kind of reveal animation.
   el.shadowRoot!.querySelector('[part~="popup"]')?.getAnimations().forEach((animation) => animation.finish());
   await expect(el).to.be.accessible();
+});
+
+// Lit resolves `updateComplete` to `false` when a render scheduled another render. Closing an
+// overlay used to do exactly that: the paint-gating `anchorPositioned` state was cleared from
+// `updated()`, after the update had completed, costing an extra render that changed nothing
+// visible and emitting Lit's change-in-update warning to every consumer on a dev build.
+// Asserting the boolean measures the wasted render directly, rather than a console message Lit
+// only ever emits once per tag per page.
+it('settles closing in a single render, scheduling no follow-up update', async () => {
+  const el = await basic();
+  el.open = true;
+  await el.updateComplete;
+  await aTimeout(120);
+
+  el.open = false;
+  expect(await el.updateComplete, 'closing scheduled a second render').to.be.true;
 });

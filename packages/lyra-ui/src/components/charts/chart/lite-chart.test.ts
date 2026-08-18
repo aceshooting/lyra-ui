@@ -3440,7 +3440,19 @@ describe('scale="logarithmic"', () => {
       .datasets=${[{ label: 'series', data }]}
     ></lr-lite-chart>`)) as LyraLiteChart;
     await el.updateComplete;
-    await aTimeout(0);
+    // Geometry here is measured, not assumed: marks only get real coordinates once the
+    // ResizeObserver callback has reported a non-zero plot box. Two ticks of `aTimeout(0)` happened
+    // to be enough on an idle machine and were not on a loaded CI runner, where this rendered zero
+    // bars and the decade assertions read an empty array. Wait for the same measurement signal the
+    // rest of this file's fixtures use.
+    await waitUntil(() => {
+      const chart = el as unknown as { plotWidth: number; plotHeight: number };
+      return (
+        !el.ownerDocument.defaultView?.ResizeObserver ||
+        (chart.plotWidth > 0 && chart.plotHeight > 0)
+      );
+    }, 'lite-chart plot box measured');
+    await el.updateComplete;
     return el;
   };
 

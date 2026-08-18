@@ -826,3 +826,22 @@ it('leaves a focus-opened tooltip alone when its anchor moves, since no pointer 
   await new Promise((resolve) => setTimeout(resolve, 200));
   expect(tooltip.open, 'focus still holds it open after the anchor moved').to.be.true;
 });
+
+// Lit resolves `updateComplete` to `false` when a render scheduled another render. Closing an
+// overlay used to do exactly that: the paint-gating `anchorPositioned` state was cleared from
+// `updated()`, after the update had completed, costing an extra render that changed nothing
+// visible and emitting Lit's change-in-update warning to every consumer on a dev build.
+// Asserting the boolean measures the wasted render directly, rather than a console message Lit
+// only ever emits once per tag per page.
+it('settles closing in a single render, scheduling no follow-up update', async () => {
+  const el = await fixture<LyraTooltip>(html`
+    <lr-tooltip manual open><button type="button" slot="trigger">Help</button>Tip</lr-tooltip>
+  `);
+  await waitUntil(() => el.open);
+
+  el.open = false;
+  expect(await el.updateComplete, 'closing scheduled a second render').to.be.true;
+
+  el.open = true;
+  expect(await el.updateComplete, 'reopening scheduled a second render').to.be.true;
+});

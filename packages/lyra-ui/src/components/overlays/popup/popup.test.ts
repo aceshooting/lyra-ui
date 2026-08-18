@@ -1095,3 +1095,23 @@ it('does not publish an in-flight placement after disconnection', async () => {
   expect(popupOf(el).style.left).to.equal('');
   expect(popupOf(el).style.top).to.equal('');
 });
+
+// Lit resolves `updateComplete` to `false` when a render scheduled another render. Closing an
+// overlay used to do exactly that: the paint-gating `anchorPositioned` state was cleared from
+// `updated()`, after the update had completed, costing an extra render that changed nothing
+// visible and emitting Lit's change-in-update warning to every consumer on a dev build.
+// Asserting the boolean measures the wasted render directly, rather than a console message Lit
+// only ever emits once per tag per page.
+it('settles deactivating in a single render, scheduling no follow-up update', async () => {
+  const el = await fixture<LyraPopup>(html`
+    <lr-popup active><button slot="anchor">Anchor</button><div>Content</div></lr-popup>
+  `);
+  await waitUntil(() => el.popup.hasAttribute('data-active'));
+  await settle(el);
+
+  el.active = false;
+  expect(await el.updateComplete, 'deactivating scheduled a second render').to.be.true;
+
+  el.active = true;
+  expect(await el.updateComplete, 'reactivating scheduled a second render').to.be.true;
+});

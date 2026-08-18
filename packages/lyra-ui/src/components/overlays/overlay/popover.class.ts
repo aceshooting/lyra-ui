@@ -339,6 +339,12 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     if (lostDirectAnchorProperty && this.open && !this.resolveAnchor()) {
       void this.forceClose({ focusTrigger: false });
     }
+    // `anchorPositioned` gates `?data-hidden`, keeping the popup invisible until Floating UI has
+    // placed it. Clearing it from `updated()` flipped a `@state` true -> false after the update
+    // had completed, which schedules a whole second render for no visible gain and trips Lit's
+    // change-in-update warning. On close it is a pure derivation of `open`, so it belongs here,
+    // before render: the same render already hides the popup via `!this.open`.
+    if (changed.has('open') && !this.open) this.anchorPositioned = false;
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -374,8 +380,8 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
             this.activatePopoverOverlay();
           }
         } else {
+          // `anchorPositioned` is cleared in willUpdate(); `positionedAnchor` is not reactive.
           this.positionedAnchor = undefined;
-          this.anchorPositioned = false;
           this.stopLightDismiss();
           this.overlayHandle?.deactivate();
           this.overlayHandle = undefined;

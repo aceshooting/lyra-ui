@@ -268,6 +268,17 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
     super.disconnectedCallback();
   }
 
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    // `reposition()` runs from `updated()` and clears `anchorPositioned` on its way out once the
+    // popup is no longer active. Doing that after the update completed schedules a second render
+    // that changes nothing -- the same render already hides the popup via `!this.active` -- and
+    // trips Lit's change-in-update warning. Deactivating is a pure derivation of `active`, so do
+    // it here, before render; `reposition()` then finds the value already settled and schedules
+    // nothing. `reposition()` is public, so its imperative path is untouched.
+    if (changed.has('active') && !this.active) this.setPositioned(false);
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     // Any of these changes the anchor, the geometry or whether there is anything to position.
