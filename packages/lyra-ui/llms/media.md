@@ -13,7 +13,16 @@ Country/language flag image. Flag artwork ships in a **separate, optional peer p
 
 **Properties:**
 
-- `country?: string` (ISO 3166-1 alpha-2, e.g. `"fr"` — takes precedence over `language`)
+- `country?: string` (ISO 3166-1 **alpha-2 or alpha-3**, e.g. `"fr"` or `"FRA"` — takes
+  precedence over `language`). Length alone disambiguates the two code spaces, so no format hint
+  is needed: a 2-letter value is alpha-2, a 3-letter value is alpha-3. Alpha-3 support exists
+  because public statistical sources (World Bank, UN, IMF, most open-data portals) key country
+  records on alpha-3; the 249 officially-assigned mappings are packed as a ~1.2 KB fixed-width
+  string and expanded lazily on the first alpha-3 lookup, so an alpha-2-only app never pays for
+  them. Withdrawn and user-assigned codes deliberately do not map to a successor state — they
+  take the unresolved path below
+- `fallback?: string` — placeholder image URL rendered when the code cannot resolve to a current
+  flag. The `fallback` slot wins over it
 - `language?: string` (BCP-47-ish tag, e.g. `"en"`/`"en-US"`, resolved to a representative country
   via `languageToCountry()`)
 - `src?: string` (a pre-resolved flag image URL — takes precedence over `country`/`language` and
@@ -38,11 +47,17 @@ authoring types are `LyraFlagShape`, `LyraFlagFidelity`, and `LyraFlagUrlResolve
 
 **Events:** none.
 
-**Slots:** none.
+**Slots:** `fallback` — rendered in place of the flag when `country`/`language` cannot resolve to a
+current flag (an unassigned, historical, or malformed code). Wins over the `fallback` property.
 
-**CSS parts:** `image` (the underlying `<img>`, exposed once native loading succeeds), `error`
+**CSS parts:** `image` (the underlying `<img>`, exposed once native loading succeeds),
+`fallback-image` (the `fallback` property's placeholder, when no slot content is supplied), `error`
 (contained localized visible text rendered when URL validation, peer resolution, or native image
-loading fails). The host reflects the terminal error state with `data-error`.
+loading fails). The host reflects the terminal error state with `data-error`, and an unresolvable
+code with `data-unresolved`. **The two are deliberately distinct:** a dissolved federation or
+unrecognized territory in a longitudinal dataset is *data*, not a defect, so it renders the neutral
+fallback (occupying its normal footprint in a table or card grid) rather than localized error
+wording that reads to a user as a bug. Style the two states apart with those attributes.
 
 **Themeable custom properties:** `--lr-flag-radius` (default `calc(var(--lr-radius) * 0.33)` —
 rectangular corner radius), `--lr-flag-aspect-ratio` (default `4 / 3`), and

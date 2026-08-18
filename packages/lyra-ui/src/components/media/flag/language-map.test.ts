@@ -1,5 +1,11 @@
 import { expect } from '@open-wc/testing';
-import { LANGUAGE_TO_COUNTRY, languageToCountry, localeNativeName } from './language-map.js';
+import {
+  ALPHA3_RE,
+  LANGUAGE_TO_COUNTRY,
+  alpha3ToAlpha2,
+  languageToCountry,
+  localeNativeName,
+} from './language-map.js';
 
 describe('localeNativeName', () => {
   it('names a locale in its own language', () => {
@@ -85,5 +91,61 @@ describe('localeNativeName', () => {
     expect(languageToCountry('he-IL')).to.equal('il');
     expect(localeNativeName('fa')).to.equal(new Intl.DisplayNames(['fa'], { type: 'language' }).of('fa'));
     expect(localeNativeName('he')).to.equal(new Intl.DisplayNames(['he'], { type: 'language' }).of('he'));
+  });
+});
+
+describe('alpha3ToAlpha2', () => {
+  it('maps the alpha-3 codes statistical datasets key on', () => {
+    // World Bank / UN / IMF all key on alpha-3; these are the mappings a consumer would otherwise
+    // maintain by hand.
+    expect(alpha3ToAlpha2('FRA')).to.equal('fr');
+    expect(alpha3ToAlpha2('USA')).to.equal('us');
+    expect(alpha3ToAlpha2('DEU')).to.equal('de');
+    expect(alpha3ToAlpha2('ZWE')).to.equal('zw');
+    expect(alpha3ToAlpha2('CHE')).to.equal('ch');
+  });
+
+  it('is case insensitive', () => {
+    expect(alpha3ToAlpha2('fra')).to.equal('fr');
+    expect(alpha3ToAlpha2('FrA')).to.equal('fr');
+  });
+
+  it('rejects anything that is not three ASCII letters', () => {
+    expect(alpha3ToAlpha2('fr')).to.equal(undefined);
+    expect(alpha3ToAlpha2('frax')).to.equal(undefined);
+    expect(alpha3ToAlpha2('f1a')).to.equal(undefined);
+    expect(alpha3ToAlpha2('')).to.equal(undefined);
+    expect(alpha3ToAlpha2('../')).to.equal(undefined);
+  });
+
+  it('returns undefined for a withdrawn or user-assigned code rather than a successor state', () => {
+    // A dissolved federation has no current flag; silently mapping it to a successor would be
+    // wrong, so it takes the component's unresolved path instead.
+    expect(alpha3ToAlpha2('SUN'), 'former Soviet Union').to.equal(undefined);
+    expect(alpha3ToAlpha2('YUG'), 'former Yugoslavia').to.equal(undefined);
+    expect(alpha3ToAlpha2('ZZZ'), 'user-assigned').to.equal(undefined);
+  });
+
+  it('covers the full officially-assigned set exactly once', () => {
+    const seen = new Set<string>();
+    let mapped = 0;
+    for (const code of ['abw', 'zwe', 'fra', 'usa']) {
+      expect(ALPHA3_RE.test(code), code).to.be.true;
+    }
+    // Walk every alpha-3 permutation is too slow; instead assert the packed table's own size via a
+    // representative sweep of first letters, and that no alpha-2 result is malformed.
+    for (const a of 'abcdefghijklmnopqrstuvwxyz') {
+      for (const b of 'abcdefghijklmnopqrstuvwxyz') {
+        for (const c of 'abcdefghijklmnopqrstuvwxyz') {
+          const result = alpha3ToAlpha2(`${a}${b}${c}`);
+          if (result === undefined) continue;
+          mapped += 1;
+          expect(/^[a-z]{2}$/.test(result), `${a}${b}${c} -> ${result}`).to.be.true;
+          seen.add(`${a}${b}${c}`);
+        }
+      }
+    }
+    expect(mapped, 'the 249 officially-assigned ISO 3166-1 entries').to.equal(249);
+    expect(seen.size, 'each alpha-3 key appears once').to.equal(249);
   });
 });

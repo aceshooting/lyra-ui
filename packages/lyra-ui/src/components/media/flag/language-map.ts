@@ -12,6 +12,58 @@ import { getDisplayNames } from '../../../internal/intl-cache.js';
  */
 export const ALPHA2_RE = /^[a-z]{2}$/i;
 
+/** ISO 3166-1 alpha-3 shape: exactly three ASCII letters, case-insensitive. Length alone
+ *  disambiguates the two code spaces, so no explicit format hint is needed. */
+export const ALPHA3_RE = /^[a-z]{3}$/i;
+
+/**
+ * The 249 officially-assigned ISO 3166-1 alpha-3 -> alpha-2 mappings, packed as fixed-width
+ * 5-character records (3 for alpha-3, 2 for alpha-2) rather than an object literal.
+ *
+ * Public statistical sources (World Bank, UN, IMF, most open-data portals) key country records on
+ * alpha-3, so without this every consumer plotting country data ships its own copy of this same
+ * table. A `Record<string, string>` of 249 entries costs several KB of parsed object literal in a
+ * component whose entire point is to stay small; this string is ~1.2 KB and is expanded into a Map
+ * lazily, on the first alpha-3 lookup, so an app that only ever passes alpha-2 never pays for it.
+ */
+const ALPHA3_TO_ALPHA2_PACKED =
+  'abwawafgafagoaoaiaaialaaxalbalandadareaeargararmamasmasataaqatftfatgagausauautatazeazbdibi' +
+  'belbebenbjbesbqbfabfbgdbdbgrbgbhrbhbhsbsbihbablmblblrbyblzbzbmubmbolbobrabrbrbbbbrnbnbtnbt' +
+  'bvtbvbwabwcafcfcancacckccchechchlclchncncivcicmrcmcodcdcogcgcokckcolcocomkmcpvcvcricrcubcu' +
+  'cuwcwcxrcxcymkycypcyczeczdeudedjidjdmadmdnkdkdomdodzadzecuecegyegeriereshehespesesteeethet' +
+  'finfifjifjflkfkfrafrfrofofsmfmgabgagbrgbgeogeggyggghaghgibgigingnglpgpgmbgmgnbgwgnqgqgrcgr' +
+  'grdgdgrlglgtmgtgufgfgumguguygyhkghkhmdhmhndhnhrvhrhtihthunhuidnidimnimindiniotioirlieirnir' +
+  'irqiqislisisrilitaitjamjmjeyjejorjojpnjpkazkzkenkekgzkgkhmkhkirkiknaknkorkrkwtkwlaolalbnlb' +
+  'lbrlrlbylylcalclielilkalklsolsltultluxlulvalvmacmomafmfmarmamcomcmdamdmdgmgmdvmvmexmxmhlmh' +
+  'mkdmkmlimlmltmtmmrmmmnememngmnmnpmpmozmzmrtmrmsrmsmtqmqmusmumwimwmysmymytytnamnanclncnerne' +
+  'nfknfngangnicniniununldnlnornonplnpnrunrnzlnzomnompakpkpanpapcnpnperpephlphplwpwpngpgpolpl' +
+  'priprprkkpprtptprypypsepspyfpfqatqareurerourorusrurwarwsausasdnsdsensnsgpsgsgsgsshnshsjmsj' +
+  'slbsbsleslslvsvsmrsmsomsospmpmsrbrsssdssstpstsursrsvksksvnsisweseswzszsxmsxsycscsyrsytcatc' +
+  'tcdtdtgotgthathtjktjtkltktkmtmtlstltontottotttuntnturtrtuvtvtwntwtzatzugaugukruaumiumuryuy' +
+  'usausuzbuzvatvavctvcvenvevgbvgvirvivnmvnvutvuwlfwfwsmwsyemyezafzazmbzmzwezw';
+
+let alpha3Lookup: Map<string, string> | undefined;
+
+/**
+ * The alpha-2 code for an ISO 3166-1 alpha-3 code, or `undefined` when it isn't one. Case
+ * insensitive. Deliberately excludes user-assigned and withdrawn codes: a historical or defunct
+ * state has no current flag to resolve, so it takes the component's unresolved path rather than
+ * silently mapping to a successor state's flag.
+ */
+export function alpha3ToAlpha2(code: string): string | undefined {
+  if (!ALPHA3_RE.test(code)) return undefined;
+  if (!alpha3Lookup) {
+    alpha3Lookup = new Map();
+    for (let index = 0; index < ALPHA3_TO_ALPHA2_PACKED.length; index += 5) {
+      alpha3Lookup.set(
+        ALPHA3_TO_ALPHA2_PACKED.slice(index, index + 3),
+        ALPHA3_TO_ALPHA2_PACKED.slice(index + 3, index + 5),
+      );
+    }
+  }
+  return alpha3Lookup.get(code.toLowerCase());
+}
+
 /**
  * Default mapping from a language subtag to a representative country flag
  * (ISO 3166-1 alpha-2). Languages don't map 1:1 to countries; these are the

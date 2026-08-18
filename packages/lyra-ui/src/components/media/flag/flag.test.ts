@@ -870,3 +870,70 @@ it('calls super.adoptedCallback so owner-realm locale and direction caches are i
     proto.adoptedCallback = original;
   }
 });
+
+describe('alpha-3 country codes and the unresolved fallback', () => {
+  it('resolves an alpha-3 country to the same flag as its alpha-2', async () => {
+    // Length alone disambiguates the two ISO 3166-1 code spaces, so no format hint is needed.
+    registerLyraFlagPeer({ flagUrl: (code: string) => `/flags/${code}.svg` });
+    const alpha3 = (await fixture(html`<lr-flag country="FRA"></lr-flag>`)) as LyraFlag;
+    const alpha2 = (await fixture(html`<lr-flag country="fr"></lr-flag>`)) as LyraFlag;
+    await waitUntil(() => alpha3.shadowRoot!.querySelector('img') !== null);
+    await waitUntil(() => alpha2.shadowRoot!.querySelector('img') !== null);
+    expect(
+      alpha3.shadowRoot!.querySelector('img')!.getAttribute('src'),
+      'alpha-3 reaches the same asset as alpha-2'
+    ).to.equal(alpha2.shadowRoot!.querySelector('img')!.getAttribute('src'));
+  });
+
+  it('marks a code that cannot resolve as unresolved rather than an error', async () => {
+    registerLyraFlagPeer({ flagUrl: (code: string) => `/flags/${code}.svg` });
+    // SUN is the withdrawn code for the former Soviet Union: real data in a longitudinal dataset,
+    // not a mistake, so it must not render error wording.
+    const el = (await fixture(html`<lr-flag country="SUN"></lr-flag>`)) as LyraFlag;
+    await el.updateComplete;
+    expect(el.hasAttribute('data-unresolved'), 'reflects the unresolved state').to.be.true;
+    expect(el.hasAttribute('data-error'), 'and is not an error').to.be.false;
+    expect(
+      el.shadowRoot!.querySelector('[part="error"]') === null,
+      'no localized error wording is rendered'
+    ).to.be.true;
+  });
+
+  it('renders slotted fallback content in place of the flag', async () => {
+    registerLyraFlagPeer({ flagUrl: (code: string) => `/flags/${code}.svg` });
+    const el = (await fixture(html`
+      <lr-flag country="SUN"><span slot="fallback" id="ph">—</span></lr-flag>
+    `)) as LyraFlag;
+    await el.updateComplete;
+    const slot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="fallback"]');
+    expect(slot, 'the fallback slot renders').to.exist;
+    expect(
+      slot!.assignedElements({ flatten: true }).map((node) => node.id),
+      'the placeholder is assigned'
+    ).to.deep.equal(['ph']);
+  });
+
+  it('renders the fallback property as a placeholder image when no slot content is given', async () => {
+    registerLyraFlagPeer({ flagUrl: (code: string) => `/flags/${code}.svg` });
+    const el = (await fixture(
+      html`<lr-flag country="SUN" fallback="/placeholder.svg"></lr-flag>`
+    )) as LyraFlag;
+    await el.updateComplete;
+    const image = el.shadowRoot!.querySelector<HTMLImageElement>('[part="fallback-image"]');
+    expect(image, 'placeholder image renders').to.exist;
+    expect(image!.getAttribute('src')).to.equal('/placeholder.svg');
+  });
+
+  it('leaves a resolvable code untouched, so the fallback is inert by default', async () => {
+    registerLyraFlagPeer({ flagUrl: (code: string) => `/flags/${code}.svg` });
+    const el = (await fixture(
+      html`<lr-flag country="fr" fallback="/placeholder.svg"></lr-flag>`
+    )) as LyraFlag;
+    await waitUntil(() => el.shadowRoot!.querySelector('img[part="image"]') !== null);
+    expect(el.hasAttribute('data-unresolved'), 'a real code is never unresolved').to.be.false;
+    expect(
+      el.shadowRoot!.querySelector('[part="fallback-image"]') === null,
+      'the placeholder stays out of the DOM'
+    ).to.be.true;
+  });
+});

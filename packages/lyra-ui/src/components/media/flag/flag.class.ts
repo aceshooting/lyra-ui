@@ -1,4 +1,4 @@
-import { html, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -7,7 +7,7 @@ import type { LyraMessageKey } from '../../../internal/localization.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './flag.styles.js';
-import { ALPHA2_RE, languageToCountry } from './language-map.js';
+import { ALPHA2_RE, alpha3ToAlpha2, languageToCountry } from './language-map.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -169,6 +169,12 @@ function loadFlagUrlResolver(): Promise<LyraFlagUrlResolver | null> {
  * @example <lr-flag country="es" fidelity="compact"></lr-flag>
  * @example <lr-flag country="es" fidelity="detailed" shape="circle"></lr-flag>
  * @csspart image - The underlying <img>.
+ * @slot fallback - Rendered in place of the flag when `country`/`language` cannot resolve to a
+ *   current flag (an unassigned, historical, or malformed code). Wins over the `fallback` property.
+ *   Distinct from the peer-resolver failure that produces `[part="error"]`: an unresolvable code is
+ *   data, not a defect.
+ * @csspart fallback-image - The `fallback` property's placeholder image, when no `fallback` slot
+ *   content is supplied.
  * @csspart error - Ordinary localized visible error rendered when the optional peer resolver is
  *   unavailable or fails; each fresh resolution failure appends the same localized message to the
  *   shared light-DOM assertive announcement sink.
@@ -201,6 +207,14 @@ export class LyraFlag extends LyraElement {
 
   /** ISO 3166-1 alpha-2 country code (e.g. `fr`, `us`). Takes precedence over `language`. */
   @property() country?: string;
+
+  /**
+   * Placeholder image URL rendered in place of a flag when the code cannot resolve — a historical
+   * or defunct state in a longitudinal dataset, say. Unset renders the `fallback` slot's content
+   * instead, or nothing at all, so the element still occupies its normal footprint in a table or
+   * card grid rather than showing error wording.
+   */
+  @property() fallback?: string;
 
   /** BCP-47-ish language tag (e.g. `en`, `en-US`) resolved to a country flag. */
   @property() language?: string;
@@ -297,10 +311,27 @@ export class LyraFlag extends LyraElement {
 
   private get code(): string | undefined {
     if (this.country) {
-      return ALPHA2_RE.test(this.country) ? this.country.toLowerCase() : undefined;
+      // Length alone disambiguates the two ISO 3166-1 code spaces, so accepting alpha-3 needs no
+      // new API and cannot be ambiguous: a 2-letter value is alpha-2, a 3-letter value is alpha-3.
+      // Statistical sources (World Bank, UN, IMF) key on alpha-3, so this removes the ~249-row
+      // conversion table every such consumer otherwise maintains.
+      if (ALPHA2_RE.test(this.country)) return this.country.toLowerCase();
+      return alpha3ToAlpha2(this.country);
     }
     if (this.language) return languageToCountry(this.language);
     return undefined;
+  }
+
+  /**
+   * True when the component has a `country`/`language` to resolve but no flag can be produced for
+   * it — an unassigned, historical, or malformed code. Distinct from the peer-resolver failure that
+   * drives `data-error`: a dissolved federation in a longitudinal dataset is *data*, not a bug, and
+   * a consumer needs to style the two apart.
+   */
+  private get unresolved(): boolean {
+    if (this.src) return false;
+    if (!this.country && !this.language) return false;
+    return this.code === undefined;
   }
 
   override connectedCallback(): void {
@@ -353,6 +384,9 @@ export class LyraFlag extends LyraElement {
   private setSourceState(state: LyraFlagSourceState, announceError = false): void {
     this.sourceState = Object.freeze(state);
     this.toggleAttribute('data-error', state.status === 'error');
+    // Reflected separately from data-error so a consumer can style "no flag exists for this code"
+    // (a historical state in a dataset) differently from "the resolver failed" (a real fault).
+    this.toggleAttribute('data-unresolved', this.unresolved);
     this.setAttribute('aria-busy', String(state.status === 'loading'));
     if (announceError && this.isConnected) this.announceLoadError();
   }
@@ -471,11 +505,23 @@ export class LyraFlag extends LyraElement {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.setAttribute('aria-busy', String(this.sourceState.status === 'loading'));
+    // Also toggled here, not only in setSourceState(): an unresolvable code never starts a
+    // resolution, so setSourceState() may never run for exactly the case this reflects.
+    this.toggleAttribute('data-unresolved', this.unresolved);
   }
 
   override render(): TemplateResult {
     const state = this.sourceState;
     const request = this.activeSourceRequest;
+    // Checked before the error branch: an unresolvable code is data, not a failure, so it must not
+    // fall through to localized error wording that reads to a user as a bug.
+    if (this.unresolved) {
+      return html`<slot name="fallback"
+        >${this.fallback
+          ? html`<img part="fallback-image" src=${this.fallback} alt=${this.label ?? ''} />`
+          : nothing}</slot
+      >`;
+    }
     if (state.status === 'error') {
       return html`<span part="error">${this.localize(FLAG_LOAD_ERROR_KEY)}</span>`;
     }
