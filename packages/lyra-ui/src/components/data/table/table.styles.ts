@@ -14,12 +14,24 @@ export const styles = css`
   [part='base'] {
     overflow: auto;
     max-block-size: var(--lr-table-max-height, none);
+    /* scroll-mode="page" below drops both, handing scrolling back to the document. */
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     /* Makes [part='base'] a query container so the @container rules below can
        react to the table's own available width instead of the viewport's. */
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
+  }
+
+  /* A scroll container clips both axes, so 'overflow: auto' makes [part='base'] the sticky
+     containing block for the header whether or not anything can actually scroll in it. With no
+     '--lr-table-max-height' that container never scrolls, so the header scrolls away with the page
+     -- the two things a consumer most wants together (an uncapped, page-scrolling table AND a
+     pinned header) were mutually exclusive. Opting into page scrolling makes the page the header's
+     nearest scrollport, so it pins there. */
+  :host([scroll-mode='page']) [part='base'] {
+    overflow: visible;
+    max-block-size: none;
   }
   [part='filter-label'] {
     display: flex;
@@ -293,6 +305,25 @@ export const styles = css`
   [part='cell'] {
     padding: var(--lr-space-s);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    color: var(--lr-table-cell-color, inherit);
+  }
+  /* A column's 'cell(row)' may return any TemplateResult, and it renders inside this shadow root --
+     so an anchor it returns is unreachable from the page's own stylesheet, and '::part()' cannot
+     select past the first compound selector to reach it either. Left alone it computes to the UA
+     default link blue, the one colour on the page that belongs to no design system. Give it the
+     brand colour by default plus a hook. ':where()' keeps specificity at zero so an inline 'style'
+     on the returned anchor still wins, and '--lr-table-cell-link-color: revert' hands the UA
+     default back to anyone who wants it. */
+  [part='cell'] a:where(:any-link) {
+    color: var(--lr-table-cell-link-color, var(--lr-color-brand));
+  }
+  [part='cell'] a:where(:any-link):hover,
+  [part='cell'] a:where(:any-link):focus-visible {
+    color: var(
+      --lr-table-cell-link-hover-color,
+      var(--lr-table-cell-link-color, var(--lr-color-brand))
+    );
+    text-decoration-thickness: var(--lr-border-width-medium);
   }
   [part='cell-editor'] {
     box-sizing: border-box;

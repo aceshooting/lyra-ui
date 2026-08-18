@@ -197,6 +197,19 @@ export type TableSelectionMode = 'none' | 'single' | 'multiple';
  *  `paginationMode` split of the same two names. */
 export type TableSortMode = 'client' | 'server';
 
+/** `<lr-table>`'s `scrollMode`: which element scrolls when the table overflows.
+ *
+ * `'self'` (default) makes `[part="base"]` the scroll container, which is what pairs with
+ * `--lr-table-max-height` and what makes the sticky header pin inside the table's own viewport.
+ *
+ * `'page'` hands scrolling back to the page. Necessary because a scroll container clips *both*
+ * axes -- CSS gives no way to scroll one axis and not the other -- so an uncapped table that is
+ * still `overflow: auto` creates a sticky containing block that never scrolls, and its header
+ * scrolls off with the document instead of pinning. With `'page'` the header's nearest scrollport
+ * is the page, so it pins there; the cost is that a table wider than its host overflows the page
+ * rather than scrolling inside itself. */
+export type TableScrollMode = 'self' | 'page';
+
 const TABLE_LAYOUT = literalSetConverter<'auto' | 'fixed'>(['auto', 'fixed'], 'auto');
 
 /** Canonical table sort direction. */
@@ -603,8 +616,10 @@ export interface LyraTableEventMap<T = unknown> {
  *   Frozen readonly `detail: { row, rowKey }`. Fired only when `expandedContent` is set and
  *   the row passes `canExpand`; does not itself mutate `expandedRowKeys` — the
  *   consumer updates it and passes the new value back in.
- * @event lr-selection-change - Opt-in row selection changed. Frozen readonly
- *   `detail: { rowKeys: readonly (string | number)[] }`.
+ * @event lr-selection-change - Opt-in row selection changed, from a row activation or from a
+ *   `selectionMode` flip to `'single'` coercing an existing multi-row selection down to one key.
+ *   Frozen readonly `detail: { rowKeys: readonly (string | number)[] }`. Not cancelable in either
+ *   case: it announces a selection that has already changed rather than proposing one.
  * @event lr-filter-change - The filter field changed. Frozen readonly `detail: { text }`.
  * @event lr-page-change - A pagination control requested a page. Frozen readonly `detail: { page }`.
  * @event lr-cell-edit - An inline editor committed a value. `detail: { row, columnKey, value }`.
@@ -684,6 +699,15 @@ export interface LyraTableEventMap<T = unknown> {
  * @cssprop [--lr-table-resize-handle-hover-opacity=var(--lr-table-resize-handle-opacity,0.12)] - Resize-handle hover/focus opacity.
  * @cssprop [--lr-table-resize-handle-active-bg=var(--lr-table-resize-handle-hover-bg,var(--lr-color-brand))] - Resize-handle pressed background.
  * @cssprop [--lr-table-resize-handle-active-opacity=calc(var(--lr-table-resize-handle-hover-opacity,var(--lr-table-resize-handle-opacity,0.12))*2)] - Resize-handle pressed opacity.
+ * @cssprop [--lr-table-cell-color=inherit] - Text colour of body cells; inherits the host's own
+ *   colour by default.
+ * @cssprop [--lr-table-cell-link-color=var(--lr-color-brand)] - Colour of an anchor returned from a
+ *   column's `cell(row)`. Such an anchor renders inside this component's shadow root, so page CSS
+ *   cannot reach it and `::part()` cannot select past the first compound selector to reach it
+ *   either; without this hook it computes to the UA default link blue. Set `revert` for the UA
+ *   default.
+ * @cssprop [--lr-table-cell-link-hover-color=var(--lr-table-cell-link-color,var(--lr-color-brand))] -
+ *   Colour of that anchor on hover and `:focus-visible`, which also thicken its underline.
  * @cssprop [--lr-table-max-height=none] - Cap on the scroll container's block size, past which the
  *   table body scrolls.
  * @cssprop [--lr-table-heat-tint-lo=var(--lr-color-brand-quiet)] - Low endpoint of the heat-tint
@@ -874,6 +898,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  wins. */
   @property({ attribute: false }) rowKey?: (row: T) => string | number;
   @property({ reflect: true, attribute: 'selection-mode' }) selectionMode: TableSelectionMode = 'none';
+  /** Which element scrolls when the table overflows; see `TableScrollMode`. Defaults to `'self'`,
+   *  which is the pre-10.0 behaviour. */
+  @property({ reflect: true, attribute: 'scroll-mode' }) scrollMode: TableScrollMode = 'self';
   private _selectedKeys = new Set<string | number>();
   /** Selected raw row keys in every selection mode, bounded to 10,000 keys. Single mode replaces
    * this set with exactly one key per row activation; multiple mode toggles membership. Reads
@@ -1917,6 +1944,16 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     ) {
       const first = this._selectedKeys.values().next().value as string | number | undefined;
       this.selectedRowKeys = first === undefined ? new Set() : new Set([first]);
+      // A host mirroring "selected rows" purely from lr-selection-change must hear about this
+      // coercion too -- it is the only other place selectedRowKeys mutates, alongside the
+      // click/keyboard handler's two emit sites below. Non-cancelable: this is a consistency
+      // fix-up, not a user action to veto. Skipped on the very first update -- an already
+      // over-large selectedRowKeys combined with selectionMode="single" at mount is the starting
+      // state, not a live transition, and `changed` lists every property on that first pass.
+      if (this.hasUpdated) {
+        const rowKeys = Object.freeze(first === undefined ? [] : [first]) as readonly (string | number)[];
+        this.emit('lr-selection-change', Object.freeze({ rowKeys }));
+      }
     }
     // Restore a persisted `priorityColumnsVisible` preference once, before the first render, so the restored
     // value folds into the first paint with no follow-up update -- doing this in firstUpdated()

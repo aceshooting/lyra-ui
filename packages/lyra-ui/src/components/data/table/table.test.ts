@@ -1753,6 +1753,79 @@ it('enforces single cardinality when a populated multiple selection switches mod
   expect(el.shadowRoot!.querySelectorAll('[part="row"][aria-selected="true"]').length).to.equal(1);
 });
 
+it('emits lr-selection-change when a selectionMode flip silently coerces an over-large selection', async () => {
+  // The interactive click/keyboard selection paths already emit lr-selection-change; this is the
+  // *other* mutation site, the willUpdate() coercion that clamps a multi-row selection down to one
+  // key when selectionMode flips to 'single'. A host mirroring "selected rows" purely from the
+  // event must hear about this mutation too, not just re-read the property after the fact.
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.rowKey = (row) => row.id;
+  el.selectionMode = 'multiple';
+  el.selectedRowKeys = new Set(['a', 'b']);
+  await el.updateComplete;
+
+  const eventPromise = oneEvent(el, 'lr-selection-change');
+  el.selectionMode = 'single';
+  const event = await eventPromise;
+  expect(event.detail.rowKeys).to.deep.equal(['a']);
+  expect(event.cancelable, 'a consistency fix-up is not a veto point').to.equal(false);
+  expect([...el.selectedRowKeys]).to.deep.equal(['a']);
+});
+
+it('does not emit lr-selection-change when the initial mount already combines selectionMode="single" with an over-large selectedRowKeys', async () => {
+  // Lit's first `changed` map lists every set property, so a consumer mounting with an
+  // already-inconsistent selectionMode/selectedRowKeys combination must not be treated as a live
+  // transition -- the initial coerced state is the starting point, not a change from anything.
+  const el = document.createElement('lr-table') as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.rowKey = (row) => row.id;
+  el.selectionMode = 'single';
+  el.selectedRowKeys = new Set(['a', 'b']);
+  let emitted = 0;
+  el.addEventListener('lr-selection-change', () => {
+    emitted += 1;
+  });
+  document.body.append(el);
+  await el.updateComplete;
+  expect([...el.selectedRowKeys]).to.deep.equal(['a']);
+  expect(emitted, 'the initial mount is not a transition').to.equal(0);
+  el.remove();
+});
+
+it('does not trigger a Lit "scheduled an update after an update completed" dev warning when a selectionMode flip coerces the selection', async () => {
+  // Reset Lit's own dedupe set first so this doesn't silently pass just because an earlier test in
+  // this file (or another file in the same browser session) already tripped -- and thus
+  // suppressed -- the exact same warning string. Same guard as the priority-column-hiding warning
+  // test above.
+  const globalWarnings = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
+  if (globalWarnings) {
+    [...globalWarnings].filter((w) => w.includes('scheduled an update')).forEach((w) => globalWarnings.delete(w));
+  }
+
+  const originalWarn = console.warn;
+  const calls: unknown[][] = [];
+  console.warn = (...args: unknown[]) => calls.push(args);
+  try {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (row) => row.id;
+    el.selectionMode = 'multiple';
+    el.selectedRowKeys = new Set(['a', 'b']);
+    await el.updateComplete;
+    el.selectionMode = 'single';
+    await el.updateComplete;
+  } finally {
+    console.warn = originalWarn;
+  }
+
+  const messages = calls.flat().map(String);
+  expect(messages.some((m) => m.includes('scheduled an update'))).to.be.false;
+});
+
 it('emits lr-sort when a sortable header is clicked', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
@@ -6812,5 +6885,88 @@ describe('coverage: hostile-input collection normalization', () => {
     expect(rowsAfter[0]!.dataset['rowKey']).to.equal('string:b');
     const focusedNow = rowsAfter.find((tr) => tr.getAttribute('tabindex') === '0')!;
     expect(focusedNow.dataset['rowKey']).to.equal('string:b');
+  });
+});
+
+// A column's cell(row) renders its TemplateResult inside this shadow root, so an anchor it returns
+// is unreachable from page CSS, and ::part() cannot select past the first compound selector to
+// reach it either. Left alone it computes to the UA default link blue.
+describe('cell link colour', () => {
+  const linked = () =>
+    fixture(html`<lr-table></lr-table>`) as Promise<LyraTable<Row>>;
+
+  async function withLinkCell(style = ''): Promise<HTMLAnchorElement> {
+    const el = await linked();
+    if (style) el.setAttribute('style', style);
+    el.columns = [
+      { key: 'name', header: 'Name', cell: (row: Row) => html`<a href="#x">${row.name}</a>` },
+    ] as unknown as TableColumn<Row>[];
+    el.rows = rows;
+    await el.updateComplete;
+    return el.shadowRoot!.querySelector('[part~="cell"] a') as HTMLAnchorElement;
+  }
+
+  it('gives a cell anchor the brand colour rather than the UA default blue', async () => {
+    const anchor = await withLinkCell();
+    const brand = getComputedStyle(anchor).color;
+    expect(brand, 'must not be the UA default link blue').to.not.equal('rgb(0, 0, 238)');
+  });
+
+  it('honours --lr-table-cell-link-color', async () => {
+    const anchor = await withLinkCell('--lr-table-cell-link-color: rgb(1, 2, 3)');
+    expect(getComputedStyle(anchor).color).to.equal('rgb(1, 2, 3)');
+  });
+
+  it('lets an inline style on the returned anchor still win', async () => {
+    const el = await linked();
+    el.columns = [
+      {
+        key: 'name',
+        header: 'Name',
+        cell: (row: Row) => html`<a href="#x" style="color: rgb(9, 9, 9)">${row.name}</a>`,
+      },
+    ] as unknown as TableColumn<Row>[];
+    el.rows = rows;
+    await el.updateComplete;
+    const anchor = el.shadowRoot!.querySelector('[part~="cell"] a') as HTMLAnchorElement;
+    expect(getComputedStyle(anchor).color).to.equal('rgb(9, 9, 9)');
+  });
+});
+
+// A scroll container clips both axes, so an uncapped `overflow: auto` base is a sticky containing
+// block that never scrolls -- the header then scrolls away with the page.
+describe('scrollMode', () => {
+  async function tableWith(mode?: string): Promise<LyraTable<Row>> {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    if (mode) el.setAttribute('scroll-mode', mode);
+    el.columns = columns;
+    el.rows = rows;
+    await el.updateComplete;
+    return el;
+  }
+  const base = (el: LyraTable<Row>) =>
+    el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+
+  it("defaults to 'self', keeping the base a scroll container", async () => {
+    const el = await tableWith();
+    expect(el.scrollMode).to.equal('self');
+    expect(getComputedStyle(base(el)).overflowY).to.equal('auto');
+  });
+
+  it("scroll-mode='page' stops the base being a scroll container", async () => {
+    const el = await tableWith('page');
+    expect(el.scrollMode).to.equal('page');
+    const style = getComputedStyle(base(el));
+    expect(style.overflowY, 'a visible overflow leaves the page as the scrollport').to.equal(
+      'visible'
+    );
+    expect(style.maxBlockSize).to.equal('none');
+  });
+
+  it("scroll-mode='page' ignores a height cap rather than half-applying it", async () => {
+    const el = await tableWith('page');
+    el.style.setProperty('--lr-table-max-height', '120px');
+    await el.updateComplete;
+    expect(getComputedStyle(base(el)).maxBlockSize).to.equal('none');
   });
 });
