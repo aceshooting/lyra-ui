@@ -26,6 +26,7 @@
 #   ./scripts/test.sh --serial       # run lanes one at a time (lower-core machines)
 #   TEST_SH_SKIP_INSTALL=1 ./scripts/test.sh   # skip install + browser download
 #   TEST_SH_ENGINE_SHARDS=4 ./scripts/test.sh  # split each engine lane into 4 parallel shards
+#                                              # (clamped to what the host's CPU count supports)
 #
 # Sharding (TEST_SH_ENGINE_SHARDS, default 1 = unchanged behavior) is the ONLY safe way to spend
 # spare cores here. Raising a lane's own WTR_CONCURRENCY instead was measured to break
@@ -157,6 +158,26 @@ ENGINE_SHARDS="${TEST_SH_ENGINE_SHARDS:-1}"
 if [[ ! "$ENGINE_SHARDS" =~ ^[1-9][0-9]*$ ]]; then
   echo "TEST_SH_ENGINE_SHARDS must be a positive integer; received: $ENGINE_SHARDS" >&2
   exit 2
+fi
+
+# Shards MULTIPLY, they do not divide. In CI each shard owns its own runner, so its
+# WTR_CONCURRENCY is all that machine runs; here every shard is another process on the SAME host,
+# so the page count is shards x 2 engines x per-lane concurrency. Ignoring that is how a 60-core
+# box ended up at load 71 with 64 browser pages -- the precise overcommit that makes
+# lr-span-waterfall's and lr-test-results' hover assertions fail spuriously.
+#
+# Budget roughly half the host's CPUs as concurrent browser pages, leaving the rest for each
+# browser's own threads plus the chromium/visual/workspace lanes. Clamp rather than fail: an
+# explicit request still runs, just at a size the machine can actually honor.
+if [[ "$ENGINE_SHARDS" != "1" ]]; then
+  host_cpus="$( { nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4; } )"
+  per_shard_pages="${WTR_LANE_CONCURRENCY[firefox]}"
+  max_shards="$(( host_cpus / (2 * 2 * per_shard_pages) ))"
+  (( max_shards < 1 )) && max_shards=1
+  if (( ENGINE_SHARDS > max_shards )); then
+    echo "TEST_SH_ENGINE_SHARDS=$ENGINE_SHARDS would run $((ENGINE_SHARDS * 2 * per_shard_pages)) concurrent browser pages on ${host_cpus} CPUs; clamping to $max_shards to avoid timing-sensitive failures." >&2
+    ENGINE_SHARDS="$max_shards"
+  fi
 fi
 
 # One wtr process per engine shard. Ports stay deterministic and distinct for the same

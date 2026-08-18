@@ -289,11 +289,20 @@ The `firefox`/`webkit` lanes run `test:full-engine-shard` with `WTR_SHARD_INDEX=
 -- the shard math in `scripts/full-engine-shard.mjs` assigns every discovered file to shard 1 of 1,
 so this is the complete suite in one process, not an actual shard. Set
 `TEST_SH_ENGINE_SHARDS=<n>` to split each engine lane into `n` parallel shard lanes instead,
-mirroring `full-engine.yml`'s own matrix (use `8` to match it exactly, so a failing CI shard
-reproduces locally as the identically-numbered one). Each shard lane keeps the tuned per-lane
-concurrency and gets its own deterministic port; the default of `1` leaves behavior unchanged.
-On a many-core host this is the lever to reach for -- raising `WTR_LANE_CONCURRENCY` instead
-reintroduces the hover/paint flakiness described above. `test:platform`'s 26-file subset
+mirroring `full-engine.yml`'s own matrix. Each shard lane keeps the tuned per-lane concurrency and
+gets its own deterministic port; the default of `1` leaves behavior unchanged. On a many-core host
+this is the lever to reach for -- raising `WTR_LANE_CONCURRENCY` instead reintroduces the
+hover/paint flakiness described above.
+
+**Shards multiply here; they divide in CI.** Each CI shard owns its own runner, so its
+`WTR_CONCURRENCY` is everything that machine runs -- which is why 8 shards per browser is fine
+there. Locally every shard is another process on the SAME host, so the concurrent page count is
+`shards x 2 engines x per-lane concurrency`. Setting `TEST_SH_ENGINE_SHARDS=8` on a 60-core box
+therefore asks for 64 pages and was measured at load 71, i.e. exactly the overcommit that makes
+those hover assertions fail spuriously. The script now derives a ceiling from the host CPU count
+(budgeting about half the CPUs as browser pages) and clamps an over-large request with a warning
+rather than failing, so matching CI's shard *numbering* never costs you a machine-sized
+mistake -- on a 60-core host that ceiling is 3. `test:platform`'s 26-file subset
 is a strict subset of this run, so it is not run separately here.
 
 Because it's heavy (three full browser-engine sweeps), it is meant to run before publishing a
