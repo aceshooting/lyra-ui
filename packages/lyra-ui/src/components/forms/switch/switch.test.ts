@@ -1956,3 +1956,44 @@ it("bars constraint validation while disabled, like a native disabled required c
     "the violation returns once it is enforceable again"
   ).to.be.true;
 });
+
+it('exposes the row wrapper that holds the switch owner and label as a part, so a column of switches can be aligned', async () => {
+  const el = (await fixture(
+    html`<lr-switch>Enable notifications</lr-switch>`
+  )) as LyraSwitch;
+  await el.updateComplete;
+
+  const row = el.shadowRoot!.querySelector<HTMLElement>('[part~="row"]');
+  expect(row, 'the row wrapper carries a part of its own').to.exist;
+
+  // The reported defect was not "no part anywhere" but "the part named `base` is the track box,
+  // a SIBLING of the label, so nothing selects the node that actually wraps the row". Assert the
+  // structural relationship rather than just the attribute, or a part added to the wrong node
+  // would still pass.
+  const owner = el.shadowRoot!.querySelector<HTMLElement>('[part~="switch"]')!;
+  const label = el.shadowRoot!.querySelector<HTMLElement>('[part~="label"]')!;
+  // Compared as booleans, never as nodes: a failing chai assertion carrying a DOM node as
+  // actual/expected hangs the whole file until the per-file watchdog.
+  expect(owner.parentElement === row, 'the switch owner is a child of the row').to.be.true;
+  expect(label.parentElement === row, 'the label is a child of the same row').to.be.true;
+});
+
+it('lets ::part(row) stretch the switch across its container, which a shrink-to-fit wrapper made impossible', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div style="inline-size: 300px">
+      <style>
+        lr-switch::part(row) {
+          display: flex;
+          inline-size: 100%;
+          justify-content: space-between;
+        }
+      </style>
+      <lr-switch style="display: block">Enable notifications</lr-switch>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraSwitch>('lr-switch')!;
+  await el.updateComplete;
+
+  const row = el.shadowRoot!.querySelector<HTMLElement>('[part~="row"]')!;
+  expect(row.getBoundingClientRect().width, 'the row fills the 300px container').to.be.closeTo(300, 1);
+});

@@ -1970,3 +1970,42 @@ it("wraps an unbroken public label inside a 320px LTR or RTL allocation", async 
     );
   }
 });
+
+it('exposes the row wrapper that holds the checkbox owner and label as a part, matching lr-switch', async () => {
+  const el = (await fixture(
+    html`<lr-checkbox>Accept the terms</lr-checkbox>`
+  )) as LyraCheckbox;
+  await el.updateComplete;
+
+  const row = el.shadowRoot!.querySelector<HTMLElement>('[part~="row"]');
+  expect(row, 'the row wrapper carries a part of its own').to.exist;
+
+  // Same defect shape as lr-switch: `base` names the control box, which is a SIBLING of the
+  // label, so it never named the node wrapping the row.
+  const owner = el.shadowRoot!.querySelector<HTMLElement>('[part~="checkbox"]')!;
+  const label = el.shadowRoot!.querySelector<HTMLElement>('[part~="label"]')!;
+  // Compared as booleans, never as nodes: a failing chai assertion carrying a DOM node as
+  // actual/expected hangs the whole file until the per-file watchdog.
+  expect(owner.parentElement === row, 'the checkbox owner is a child of the row').to.be.true;
+  expect(label.parentElement === row, 'the label is a child of the same row').to.be.true;
+});
+
+it('lets ::part(row) stretch the checkbox across its container', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div style="inline-size: 300px">
+      <style>
+        lr-checkbox::part(row) {
+          display: flex;
+          inline-size: 100%;
+          justify-content: space-between;
+        }
+      </style>
+      <lr-checkbox style="display: block">Accept the terms</lr-checkbox>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraCheckbox>('lr-checkbox')!;
+  await el.updateComplete;
+
+  const row = el.shadowRoot!.querySelector<HTMLElement>('[part~="row"]')!;
+  expect(row.getBoundingClientRect().width, 'the row fills the 300px container').to.be.closeTo(300, 1);
+});

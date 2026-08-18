@@ -145,6 +145,9 @@ export interface LyraCheckboxEventMap {
  * @cssstate disabled - Matches while disabled directly or by an ancestor fieldset.
  * @cssstate indeterminate - Matches while the visual mixed state is true.
  * @csspart form-control - The outer wrapper around the checkbox, error, and hint.
+ * @csspart row - The row wrapping the checkbox owner and the label as siblings. This is the node
+ *  to size or align when laying out a column of checkboxes; `base`/`checkbox` is only the control
+ *  box inside it, so its inline size tracks the box, not the row.
  * @csspart base - Compatibility name for the interactive control; use `checkbox`.
  * @csspart checkbox - The interactive `role="checkbox"` owner around the box. It is the same node
  *   as `base`, retains the shared `--lr-icon-button-size` minimum target at every size tier, and
@@ -833,7 +836,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     const invalid = hasError || (this.touched && !this.internals.validity.valid);
     return html`
       <div part="form-control">
-        <span class="checkbox-layout" @click=${this.onClick}>
+        <span class="checkbox-layout" part="row" @click=${this.onClick}>
           <span
             class="checkbox-owner"
             part="base checkbox"

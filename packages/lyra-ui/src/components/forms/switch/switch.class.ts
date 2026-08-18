@@ -98,6 +98,9 @@ export interface LyraSwitchEventMap {
  * @cssstate checked - Matches while the live switch state is on.
  * @cssstate disabled - Matches while disabled directly or by an ancestor fieldset.
  * @csspart form-control - The outer wrapper around the switch, error and hint.
+ * @csspart row - The row wrapping the switch owner and the label as siblings. This is the node
+ *  to size or align when laying out a column of switches; `base`/`switch` is only the track box
+ *  inside it, so its inline size tracks the track, not the row.
  * @csspart wrapper - Compatibility name on the semantic switch owner.
  * @csspart base - Compatibility name for the semantic switch owner; use `switch`.
  * @csspart switch - The interactive `role="switch"` owner around the track, with the rich default
@@ -698,7 +701,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
       .join(' ');
     return html`
       <div part="form-control">
-        <span class="switch-layout" @click=${this.onClick}>
+        <span class="switch-layout" part="row" @click=${this.onClick}>
           <span
             class="switch-owner"
             part="base switch wrapper"

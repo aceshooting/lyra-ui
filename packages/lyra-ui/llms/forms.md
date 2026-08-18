@@ -3203,7 +3203,10 @@ leaves the internal role's serialized attribute empty; browsers without the refl
 API keep the string fallback. The relationship tracks host attribute changes and clears when
 unset.
 
-**CSS parts:** `form-control` (outer checkbox/error/hint frame), `base` (compatibility name for the
+**CSS parts:** `form-control` (outer checkbox/error/hint frame), `row` (the row wrapping the
+checkbox owner and the label as siblings — the node to size or align when laying out a column of
+checkboxes, since `base`/`checkbox` below is only the control box and its inline size tracks the box
+rather than the row), `base` (compatibility name for the
 semantic owner; use `checkbox`), `checkbox` (the interactive `role="checkbox"` owner; it is the
 same node as `base`, while the rich default label is its sibling),
 `box` / `control` (the small square showing the checkmark/indeterminate dash; while active it also
@@ -3368,7 +3371,10 @@ restores the current default before making the control pristine again.
 - `help-text` — Shoelace alias for the same hint surface.
 - `error` — custom error content.
 
-**CSS parts:** `form-control` (the outer wrapper around the switch, error and hint), `base` /
+**CSS parts:** `form-control` (the outer wrapper around the switch, error and hint), `row` (the row
+wrapping the switch owner and the label as siblings — the node to size or align when laying out a
+column of switches, since `base`/`switch` below is only the track box and its inline size tracks the
+track rather than the row), `base` /
 `switch` / `wrapper` (the semantic interactive `role="switch"` owner; the rich label is its
 sibling), `track` / `control` (the
 pill-shaped background), `thumb` (the circular knob), `label` (wrapper around the default slot),
