@@ -32,14 +32,22 @@
       "event": "workflow_dispatch",
       "headBranch": "main",
       "requiredJobs": [
-        "firefox / shard 1/4",
-        "firefox / shard 2/4",
-        "firefox / shard 3/4",
-        "firefox / shard 4/4",
-        "webkit / shard 1/4",
-        "webkit / shard 2/4",
-        "webkit / shard 3/4",
-        "webkit / shard 4/4"
+        "firefox / shard 1/8",
+        "firefox / shard 2/8",
+        "firefox / shard 3/8",
+        "firefox / shard 4/8",
+        "firefox / shard 5/8",
+        "firefox / shard 6/8",
+        "firefox / shard 7/8",
+        "firefox / shard 8/8",
+        "webkit / shard 1/8",
+        "webkit / shard 2/8",
+        "webkit / shard 3/8",
+        "webkit / shard 4/8",
+        "webkit / shard 5/8",
+        "webkit / shard 6/8",
+        "webkit / shard 7/8",
+        "webkit / shard 8/8"
       ]
     }
   }
