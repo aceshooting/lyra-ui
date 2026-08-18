@@ -205,7 +205,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
    *  state through `openSubmenu()`/`closeSubmenu()`, so this is output rather than input and is
    *  not observed. `<lr-dropdown-item>` inherits this and adds the `submenuopen` spelling to its
    *  own `observedAttributes`, where it genuinely is settable. */
-  static override knownUnobservedAttributes: readonly string[] = ['submenu-open'];
+  protected static readonly knownUnobservedAttributes: readonly string[] = ['submenu-open'];
 
   // The shared ladder sits before this component's own sheet so the per-tier `--lr-form-control-*`
   // knobs are already declared by the time `[part='base']` reads them.

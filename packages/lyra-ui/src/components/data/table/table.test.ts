@@ -6221,7 +6221,7 @@ it('rejects a column width that would inject extra declarations into the col ele
 });
 
 it('moves the roving tabindex between body rows and back up into the header', async () => {
-  const el = (await fixture(html`<lr-table row-key="id"></lr-table>`)) as LyraTable<Row>;
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
   el.rows = rows;
   await el.updateComplete;

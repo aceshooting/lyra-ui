@@ -5,9 +5,9 @@
 Two dev-mode defects that shipped in 9.x, plus the per-point chart color cost behind them.
 
 **The unknown-attribute diagnostic no longer reports a component's own API as a mistake.**
-`LyraElement` gains a `knownUnobservedAttributes` static for attributes an element owns without
-observing, and four components declare theirs. Without it the diagnostic fired on correct markup
-and on state components set on themselves:
+Components can now declare a `knownUnobservedAttributes` static for attributes they own without
+observing, and four do. Without it the diagnostic fired on correct markup and on state components
+set on themselves:
 
 - `<lr-page disable-sticky="header">` is documented public API read only by
   `:host([disable-sticky~="..."])` rules, so it has no reactive property — authoring it correctly

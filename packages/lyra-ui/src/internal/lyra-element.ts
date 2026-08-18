@@ -13,7 +13,21 @@ import { tokens } from './tokens.styles.js';
 import { palette } from './tokens/palette.styles.js';
 import { resolveIntlLocale } from './intl-cache.js';
 import { warnUnknownAttributes } from './dev-mode-attribute-warning.js';
-import {
+
+
+/**
+ * Structural view of the `protected static knownUnobservedAttributes` a component may declare for
+ * attributes it owns without observing -- host state it reflects onto itself as output
+ * (`<lr-animated-image playing>`), and documented public attributes consumed only by
+ * `:host([attr])` selectors (`<lr-page disable-sticky="header">`).
+ *
+ * Declaring it keeps the dev-mode unknown-attribute diagnostic from reporting a component's own
+ * API as a mistake, while leaving it armed for everything else -- do not use it to silence a
+ * warning about an attribute a consumer really did get wrong, which is the diagnostic's whole job.
+ */
+export interface KnownUnobservedAttributeHost {
+  knownUnobservedAttributes: readonly string[];
+}import {
   observeInheritedContext,
   beginInheritedContextUpdate,
   finishInheritedContextUpdate,
@@ -1064,23 +1078,6 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     return internals;
   }
 
-  /**
-   * Attributes this element owns without observing -- declared so the dev-mode unknown-attribute
-   * diagnostic does not report a component's own API as a mistake.
-   *
-   * Two kinds belong here, and nothing else:
-   *
-   * 1. Host state the component reflects onto itself as *output*, where authoring it in markup is
-   *    meaningless (`<lr-animated-image playing>`, `<lr-menu-item submenu-open>`).
-   * 2. Documented public attributes consumed only by `:host([attr])` selectors, which therefore
-   *    need no reactive property (`<lr-page disable-sticky="header">`).
-   *
-   * Do not use it to silence a warning about an attribute a consumer really did get wrong -- that
-   * warning is the feature. Subclasses concatenate rather than replace, so an inherited
-   * declaration is never dropped.
-   */
-  static knownUnobservedAttributes: readonly string[] = [];
-
   override connectedCallback(): void {
     // Read before `super`, which creates the render root: on the very first connect a shadow root
     // can only already exist because the parser built it from server-rendered declarative markup,
@@ -1094,7 +1091,12 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     warnUnknownAttributes(
       this,
       (this.constructor as typeof LyraElement).observedAttributes,
-      (this.constructor as typeof LyraElement).knownUnobservedAttributes
+      // Read structurally rather than from a declared base-class static: `cem` flattens an
+      // inherited static onto every subclass's manifest entry, which would publish this internal
+      // hook as public API on all 39 components and read as upstream-parity surface drift.
+      // Components declare it `protected static`; see KnownUnobservedAttributeHost.
+      (this.constructor as Partial<KnownUnobservedAttributeHost>)
+        .knownUnobservedAttributes ?? []
     );
     recordLyraOwnerDocumentConnection(this);
     // A reconnected element may sit under a different `lang`/`dir` ancestor,
