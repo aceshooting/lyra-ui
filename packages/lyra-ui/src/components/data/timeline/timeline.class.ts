@@ -257,7 +257,6 @@ export class LyraTimeline extends LyraElement {
     this.applyTimeScale();
   }
 
-
   /** Read-only, live-updated count of the currently-slotted `<lr-timeline-item>` children — handy
    *  for building a `"{count} events"` header without hand-counting DOM children. */
   get itemCount(): number {
