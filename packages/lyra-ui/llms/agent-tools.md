@@ -1571,7 +1571,9 @@ default the component creates a plain-text `Blob`/object URL and activates a syn
 `<a download>`; `preventDefault()` suppresses that built-in download so the host can substitute
 server-side or other handling),
 `lr-follow-change` (`detail: { following }`), `lr-search-change` (`detail: { query, matchCount,
-activeIndex }`), `lr-highlight-activate` (`detail: { highlightId }`), and `lr-text-select` (`detail: {
+matchCountExact, activeIndex }`; `matchCountExact` is `false` once a search hits the 10,000-match
+ceiling, marking `matchCount` as a lower bound rather than an exact total),
+`lr-highlight-activate` (`detail: { highlightId }`), and `lr-text-select` (`detail: {
 text, anchor, rects }`).
 
 **CSS parts:** `base`, `toolbar` (only rendered when copy/download are enabled), `copy-button`,

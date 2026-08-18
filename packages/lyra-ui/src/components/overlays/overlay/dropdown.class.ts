@@ -14,6 +14,8 @@ import {
 } from './popover.class.js';
 import { styles } from './dropdown.styles.js';
 
+export type { PlaceSync };
+
 const menuTag = unsafeStatic(tag('menu'));
 
 export interface LyraDropdownEventMap extends LyraPopoverEventMap {
@@ -87,25 +89,6 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
   /** Density propagated to directly owned mapped items. */
   @property({ reflect: true }) size: LyraSize = 'm';
 
-  /** Prevents the dropdown from opening. Becoming disabled also dismisses an open dropdown;
-   * initial `disabled` plus `open` markup/property state normalizes closed in either order. */
-  private _disabled = false;
-  @property({ type: Boolean, reflect: true })
-  get disabled(): boolean {
-    return this._disabled;
-  }
-  set disabled(next: boolean) {
-    const normalized = Boolean(next);
-    if (normalized === this._disabled) return;
-    const old = this._disabled;
-    this._disabled = normalized;
-    this.requestUpdate('disabled', old);
-    if (normalized && this.open) {
-      if (this.hasUpdated) void this.hide();
-      else this.open = false;
-    }
-  }
-
   /** Keeps the menu open after a selection unless the selected branch closes independently. */
   @property({ type: Boolean, attribute: 'stay-open-on-select', reflect: true })
   stayOpenOnSelect = false;
@@ -170,10 +153,6 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
   /** The positioned wrapper is presentation-only; the contained menu owns role and name. */
   protected override get popupSurfaceRole(): undefined {
     return undefined;
-  }
-
-  protected override get canOpen(): boolean {
-    return !this.disabled;
   }
 
   protected override animationDurationProperties(showing: boolean): readonly string[] {

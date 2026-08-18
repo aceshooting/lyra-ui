@@ -22,7 +22,7 @@ to populate it: set `file` to a real `File` (fresh from a picker/drop), from whi
 `mime-type`/`thumbnail-src` props instead, for reconstructing a chip from server-persisted
 attachment metadata after a page reload, when no real `File` object exists any more. `file` always
 wins when both are present. When a real `File` or `preview-src` is available, the chip offers a
-localized action that emits a cancelable `lr-preview-request`; it never registers or owns a viewer
+localized action that emits a plain, non-cancelable `lr-preview-request`; it never registers or owns a viewer
 or overlay, so the host composes the desired preview surface.
 
 **Properties:**
@@ -81,9 +81,12 @@ derived from `` `${file.name}:${file.size}:${file.lastModified}` ``; when neithe
 generated internal id is used as a last resort.
 
 **Events:** `lr-remove` (`detail: { attachmentId }`, only rendered while `removable`), `lr-retry`
-(`detail: { attachmentId }`, only rendered while `status="error"`), and cancelable
-`lr-preview-request` (`detail: { attachmentId, name, mimeType, src }`). Preventing the preview
-request is a host veto point; the chip itself has no preview default action.
+(`detail: { attachmentId }`, only rendered while `status="error"`), and
+`lr-preview-request` (`detail: { attachmentId, name, mimeType, src }`) — a plain, non-cancelable
+notification that the preview action was activated. **Breaking in 10.0.0:** this event was
+advertised as cancelable, but the chip never read `defaultPrevented` and owns no preview default
+action to veto (it never registers or owns a viewer/overlay), so `preventDefault()` was a no-op.
+The flag is gone rather than left as a promise the component cannot keep.
 
 **Slots:** none.
 

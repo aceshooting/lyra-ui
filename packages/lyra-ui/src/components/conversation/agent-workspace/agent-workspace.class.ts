@@ -6,7 +6,9 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import type { ChatComposerStatus } from '../chat-composer/chat-composer.class.js';
 import type { AgentRunMetric } from '../../agent-tools/agent-run/agent-run.class.js';
+export type { AgentRunMetric } from '../../agent-tools/agent-run/agent-run.class.js';
 import type { ContextInspectorSegment } from '../../agent-tools/context-inspector/context-inspector.class.js';
+export type { ContextInspectorSegment } from '../../agent-tools/context-inspector/context-inspector.class.js';
 import type {
   AgentRun,
   CancelEventDetail,
@@ -19,6 +21,7 @@ import type {
 } from '../../../ai/types.js';
 import type { RetrievalResultsSelectDetail } from '../../retrieval/retrieval-results/retrieval-results.class.js';
 import type { ToolTimelineEntry, ToolTimelineApprovalDetail } from '../../agent-tools/tool-timeline/tool-timeline.class.js';
+export type { ToolTimelineEntry } from '../../agent-tools/tool-timeline/tool-timeline.class.js';
 import { styles } from './agent-workspace.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START

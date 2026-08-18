@@ -130,13 +130,20 @@ const stringArrayConverter = {
  * @event lr-change - Lyra commit alias; detail is `{ value }` with the current token list.
  * @event focus - Native `FocusEvent` relayed from the draft input or inline token editor.
  * @event blur - Native `FocusEvent` relayed from the draft input or inline token editor.
- * @event lr-add - One or more tokens were added in a single commit. Detail is
+ * @event lr-add - One or more tokens are about to be added in a single commit. Detail is
  *   `{ value, values }`, where `value` is the final added token for compatibility and `values` is
- *   the complete ordered batch.
+ *   the complete ordered batch. Cancelable -- call `preventDefault()` to veto the add (e.g. a
+ *   server-side validation check) and the tokens stay out of `value`; the typed draft text is left
+ *   in the input unchanged so the user can correct it, rather than being silently cleared.
  * @event lr-remove - A token is about to be removed; detail is `{ value, index }`. Cancelable --
  *   call `preventDefault()` to veto the removal (e.g. pending an async confirmation or a
  *   protected-token check) and the token stays in `value` unchanged.
- * @event lr-token-edit - An existing token was edited in place and committed; detail is `{ value, previousValue, index }`. Not emitted for a reverted, unchanged, emptied, or duplicate-colliding edit.
+ * @event lr-token-edit - An existing token is about to be edited in place; detail is
+ *   `{ value, previousValue, index }`. Not emitted for a reverted, unchanged, emptied, or
+ *   duplicate-colliding edit -- those close the editor with no event. Cancelable -- call
+ *   `preventDefault()` to veto the edit and the token stays in `value` unchanged; the inline
+ *   editor stays open with the user's edited text intact so they can correct it, rather than
+ *   closing and discarding it.
  * @event lr-invalid - The token list failed a validity check. Cancelable: calling
  * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
  * browser's own validation bubble so an app can present the failure its own way.
@@ -698,16 +705,24 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
       next.push(token);
       added.push(token);
     }
-    if (added.length > 0) {
-      this.updateValue(next);
-      this.emit(
-        'lr-add',
-        Object.freeze({
-          value: added[added.length - 1]!,
-          values: Object.freeze([...added]),
-        })
-      );
+    if (added.length === 0) {
+      this.draft = '';
+      return;
     }
+    // Emit-then-check-then-mutate, matching `removeToken()`'s veto shape: a host that can already
+    // veto a removal has no equivalent way to veto an add otherwise. A vetoed add leaves the draft
+    // text in place rather than clearing it -- the user typed something real and gets to correct
+    // it, the same way a rejected form submission doesn't blank the field.
+    const event = this.emit(
+      'lr-add',
+      Object.freeze({
+        value: added[added.length - 1]!,
+        values: Object.freeze([...added]),
+      }),
+      { cancelable: true }
+    );
+    if (event.defaultPrevented) return;
+    this.updateValue(next);
     this.draft = '';
   }
 
@@ -810,12 +825,19 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   }
 
   /**
-   * Close the editor, applying its contents when they are a usable change. The editor is closed
-   * first so the teardown blur it triggers re-enters this method as a no-op rather than committing
-   * (and emitting `change`) a second time. An emptied editor cancels rather than removing the
-   * token -- removal stays the explicit job of the remove button -- and an edit colliding with an
-   * existing token under `allowDuplicates = false` is discarded, mirroring how `addDraft()` skips a
-   * duplicate candidate instead of rejecting the whole entry.
+   * Close the editor, applying its contents when they are a usable change. An emptied editor
+   * cancels rather than removing the token -- removal stays the explicit job of the remove button
+   * -- and an edit colliding with an existing token under `allowDuplicates = false` is discarded,
+   * mirroring how `addDraft()` skips a duplicate candidate instead of rejecting the whole entry.
+   * None of those "no usable change" cases fire `lr-token-edit`, so the editor closes for them
+   * unconditionally.
+   *
+   * A genuine change emits `lr-token-edit` as cancelable and checks `defaultPrevented` *before*
+   * closing the editor or mutating `value` -- the same emit-then-check-then-mutate shape
+   * `removeToken()` uses for `lr-remove`. A vetoed edit leaves the editor open with the user's
+   * edited (uncommitted) text intact, so they can correct it, rather than closing and discarding
+   * it. Only past that veto check does the editor close first, so the teardown blur it triggers
+   * re-enters this method as a no-op rather than committing (and emitting `change`) a second time.
    */
   private commitEdit(restoreFocus: boolean): void {
     if (this.liveDisabled) {
@@ -826,25 +848,35 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     if (index < 0) return;
     const previousValue = this.value[index];
     const next = this.editDraft.trim();
-    // Only a keyboard commit pulls focus back to the token: a blur commit means the user already
-    // aimed focus somewhere else (the text input, the next token, another control entirely), and
-    // stealing it back would fight them.
+    const noUsableChange =
+      // Editor state is cleared below even for a stale index; there is simply no previous token to
+      // report, and `lr-token-edit` promises a `string` `previousValue`.
+      previousValue === undefined ||
+      !next ||
+      next === previousValue ||
+      (!this.allowDuplicates &&
+        this.value.some((token, i) => i !== index && token === next));
+    if (noUsableChange) {
+      // Only a keyboard commit pulls focus back to the token: a blur commit means the user already
+      // aimed focus somewhere else (the text input, the next token, another control entirely), and
+      // stealing it back would fight them.
+      if (restoreFocus) this.focusTokenPending = index;
+      this.editingIndex = -1;
+      this.editDraft = '';
+      return;
+    }
+    const event = this.emit(
+      'lr-token-edit',
+      { value: next, previousValue, index },
+      { cancelable: true }
+    );
+    if (event.defaultPrevented) return;
     if (restoreFocus) this.focusTokenPending = index;
     this.editingIndex = -1;
     this.editDraft = '';
-    // Editor state is cleared above even for a stale index; there is simply no previous token to
-    // report, and `lr-token-edit` promises a `string` `previousValue`.
-    if (previousValue === undefined) return;
-    if (!next || next === previousValue) return;
-    if (
-      !this.allowDuplicates &&
-      this.value.some((token, i) => i !== index && token === next)
-    )
-      return;
     this.updateValue(
       this.value.map((token, i) => (i === index ? next : token))
     );
-    this.emit('lr-token-edit', { value: next, previousValue, index });
   }
 
   private moveRovingFocus(index: number): void {

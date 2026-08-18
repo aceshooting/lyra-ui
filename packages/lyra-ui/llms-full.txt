@@ -8174,11 +8174,16 @@ each list mutation; native events have no detail and both aliases carry a frozen
 Native `FocusEvent` `focus`/`blur` are relayed once from the draft and inline editor, preserving
 `relatedTarget`. `lr-add`
 (`detail: { value, values }`, where `value` is the final added token and `values` is the frozen,
-readonly, complete ordered and deduplicated set of tokens added by that commit),
+readonly, complete ordered and deduplicated set of tokens added by that commit — cancelable as of
+10.0.0; `preventDefault()` keeps the tokens out of `value` and leaves the typed draft text in the
+input unchanged so the user can correct it, rather than clearing it),
 `lr-remove`
 (`detail: { value, index }` — cancelable; `preventDefault()` keeps the token in `value`
 unchanged), and `lr-token-edit`
-(`detail: { value, previousValue, index }` — an existing token was edited in place and committed).
+(`detail: { value, previousValue, index }` — an existing token is about to be edited in place —
+cancelable as of 10.0.0; `preventDefault()` keeps the token in `value` unchanged and leaves the
+inline editor open with the user's edited text intact, rather than closing and discarding it).
+All three mutators now share one veto contract; previously only `lr-remove` could be vetoed.
 `lr-invalid` (no detail) is emitted once as a bubbling/composed alias when native validity fails.
 **CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `token`, `token-label` (the
 token's text, doubling as the roving-focus edit trigger — rendered only while `editable`),
@@ -9956,7 +9961,11 @@ sort properties; server mode leaves them controlled. Other events are `lr-row-cl
 (`detail: { row }`), `lr-load-more` (fired on the "load more" button),
 `lr-priority-columns-visibility-change` (frozen readonly `detail: { visible }`), and `lr-row-expand-toggle`
 (`detail: { row, rowKey }`; the table does not mutate `expandedRowKeys`), and
-`lr-selection-change` (frozen readonly `detail: { rowKeys }`) when selection is enabled, `lr-filter-change`
+`lr-selection-change` (frozen readonly `detail: { rowKeys }`, not cancelable) when selection is
+enabled — fired both from a row activation and from a `selectionMode` flip to `'single'` that coerces
+an existing multi-row selection down to one key (skipped on the very first render, since an
+already-inconsistent initial `selectionMode`/`selectedRowKeys` pairing is a starting state, not a
+live transition), `lr-filter-change`
 (frozen readonly `detail: { text }`), and `lr-page-change` (frozen readonly `detail: { page }`) from the
 filter/pagination surfaces, and `lr-cell-edit` (`detail: { row, columnKey, value }`) for editable
 columns, and `lr-column-resize` (`detail: { columnKey, width }`, `width` in CSS pixels) on every pointer or
@@ -12060,8 +12069,16 @@ title, readonly color?, readonly data? }`; `date` is an ISO `YYYY-MM-DD` string 
 - `view: CalendarView = 'month'`, where `CalendarView = 'month' | 'agenda'` (reflected) — agenda
   lists the effective visible month's events, date-sorted. Foreign tokens normalize and reflect to
   `month`
-- `firstDayOfWeek: number = 1` (attribute `first-day-of-week`) — sanitized to a finite integer
-  (fallback `1`) and wrapped into `0`–`6`, so a malformed value can't drop days
+- `firstDayOfWeek: LyraCalendarFirstDayOfWeek = 'auto'` (attribute `first-day-of-week`) — which
+  weekday the grid starts on. **Breaking in 10.0.0:** the default was a hardcoded `1` (Monday)
+  regardless of locale; it now derives from the effective locale through the same
+  `resolveFirstDayOfWeek()` contract `<lr-date-picker>`/`<lr-date-input>` already use, so an unset
+  `<lr-calendar>` renders Sunday-first under `en-US` and Monday-first under `fr-FR` instead of
+  disagreeing with a date picker on the same page. Still accepts a bare `0`–`6` integer
+  (`0`=Sunday … `6`=Saturday) — sanitized to a finite integer and wrapped into `0`–`6`, so a
+  malformed value can't drop days — or one of the shared weekday-name tokens (`'auto'`, then
+  `'sun'` through `'sat'`) to pin the week start independent of locale. Pass `1` explicitly to keep
+  the pre-10.0.0 rendering.
 - `accessibleLabel: string = ''` (attribute `aria-label`) — names the host. The nested calendar
   section retains the localized purpose name rather than duplicating an authored host name; when
   set programmatically without a host attribute, this value names the section
@@ -14692,12 +14709,15 @@ math, and any row element can be recycled or removed on the next update.
 **Events:** `lr-load-more` (no detail — fired once per approach to the bottom of the list while
 `has-more` is true and `loading` is false; does not refire on every scroll tick while still near the
 bottom — scrolling back away from the bottom and returning, or `items` growing enough to move the
-window away from the end, re-arms it), `lr-visible-range-changed` (`detail: VirtualListRange`, the
-current visible, non-overscanned item index range — fired only when it actually changes),
+window away from the end, re-arms it), `lr-visible-range-change` (`detail: VirtualListRange`, the
+current visible, non-overscanned item index range — fired only when it actually changes;
+`lr-visible-range-changed` is a deprecated alias fired alongside it with the identical detail object,
+removal not before 11.0.0 — it was the only past-tense `-changed` spelling among 58 `-change`-family
+events, so a convention-driven `lr-${x}-change` listener silently missed it),
 `lr-virtual-scroll`
 (`detail: VirtualListScroll` — the scroll container moved; emitted from the same animation frame that
 already coalesces native `scroll` events, so a fling produces at most one per frame and none at all
-when the position did not change. Unlike `lr-visible-range-changed`, which only fires on index-range
+when the position did not change. Unlike `lr-visible-range-change`, which only fires on index-range
 changes, this reports _sub-row_ movement, which is what scroll-linked layout needs)
 
 **Slots:** none — all content comes from `renderItem`.
@@ -15780,7 +15800,10 @@ row also makes it active.
 **Events:** `lr-open`, `lr-close` (both `detail: undefined`, cancelable — fired before the
 mutation, `preventDefault()` keeps the palette in its current open state), `lr-select`
 (`detail: { command }`, fired before the command's own `onSelect` runs and before the palette
-closes).
+closes), and no-detail `focus`/`blur` events re-dispatched from the host whenever the search input
+gains or loses focus. The `focus`/`blur` bridge is new in 10.0.0: native `focus`/`blur` neither
+bubble nor cross the shadow boundary, so a host-level `el.addEventListener('focus', …)` previously
+never fired at all.
 
 **Slots:** none.
 
@@ -15891,11 +15914,20 @@ the ladder doesn't cover is a two-line override rather than a fork.
 
 **Events:**
 
-- `lr-expand`, `lr-collapse`, `lr-after-expand`, `lr-after-collapse` — accordion group lifecycle.
+- `lr-expand`, `lr-collapse`, `lr-toggle-request`, `lr-after-expand`, `lr-after-collapse` —
+  accordion group lifecycle.
 - `lr-show`, `lr-hide`, `lr-toggle`, `lr-after-show`, `lr-after-hide` — Details lifecycle only.
 
 On the accordion, `lr-expand` and `lr-collapse` fire before a direct item changes, are cancelable,
-and carry `detail: { item }`. **Changed in 9.0.0:** `item` is now always a `LyraAccordionItem` —
+and carry `detail: { item }`. **New in 10.0.0:** a cancelable `lr-toggle-request`
+(`detail: { collapsed, item }`) fires alongside the matching directional event for every transition,
+including sibling auto-collapses in `single`/`single-collapsible` mode and `collapseAll()`. It carries
+the direction in the detail rather than the event name, matching `<lr-code-block>`/`<lr-chat-message>`'s
+`lr-toggle-request` convention, plus an `item` reference the single-panel siblings do not need (an
+accordion's toggling entity is one of several children, so the event target alone cannot identify it).
+`preventDefault()` on **either** event vetoes the transition — the two are a symmetric veto pair, not
+a primary and a notification. Note `<lr-thinking-panel>`'s own `lr-toggle-request` spells its detail
+`{ expanded }` rather than `{ collapsed }`; the two conventions are not fully unified. **Changed in 9.0.0:** `item` is now always a `LyraAccordionItem` —
 it could previously also be a `LyraDetails`. The exported `LyraAccordionPanel` union that spelled
 that has been removed; use `LyraAccordionItem`. An accepted transition finishes with the
 non-cancelable
@@ -16972,7 +17004,12 @@ relying on the opposite polarity and has to be re-read.
 `lr-dialog` and `lr-drawer` also expose cancelable `lr-initial-focus` and `lr-request-close` veto
 points, documented in their sections. Their cancelable `lr-dialog-close` fires **after** `lr-hide`
 and before `lr-after-hide`; it carries the close reason. Vetoing `lr-hide` stops it from firing at
-all.
+all. **New in 10.0.0:** a cancelable `lr-close` with the identical `DialogCloseReason` detail fires
+alongside `lr-dialog-close` on every dismissal path, so one listener covers `lr-dialog`/`lr-drawer`
+and the `lr-tool-select-dialog`/`lr-tool-result-dialog`/`lr-tool-approval-dialog` trio, which already
+spelled it `lr-close` while explicitly mirroring this detail shape. `preventDefault()` on **either**
+name vetoes the close. Both are retained; `lr-dialog-close` is not deprecated. `lr-drawer` inherits
+`lr-close` unchanged.
 
 **The top layer.** An open `lr-dialog` or modal `lr-drawer` is promoted into the browser **top layer**
 (through `popover="manual"`) rather than stacked with `z-index`. It therefore escapes every ancestor
@@ -17419,8 +17456,10 @@ the slide animation are its own.
 promise settles after the matching `lr-after-*` event.
 
 **Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide`, and
-`lr-initial-focus` (cancelable), `lr-request-close` (cancelable, detail source), and
-`lr-dialog-close` (`detail: DialogCloseReason`, cancelable) — all inherited unchanged from
+`lr-initial-focus` (cancelable), `lr-request-close` (cancelable, detail source),
+`lr-dialog-close` (`detail: DialogCloseReason`, cancelable), and `lr-close` (`detail:
+DialogCloseReason`, cancelable — the plain spelling fired alongside `lr-dialog-close` on every
+dismissal path, with identical detail and veto semantics) — all inherited unchanged from
 `lr-dialog`; see that section for details and veto rules. `lr-after-show` /
 `lr-after-hide` fire once the slide animation has finished, so they are deferred by roughly one
 animation compared with the state flip.
@@ -17548,12 +17587,19 @@ chrome remains visible. The fallback order appears below.
   `'close-button' | 'keyboard' | 'overlay'`. Veto stops the close lifecycle. Direct `close()` and
   `hide()` calls do not emit this request event.
 - `lr-dialog-close` — cancelable, with `detail: DialogCloseReason`; emitted after `lr-hide`
+- `lr-close` — cancelable, with `detail: DialogCloseReason`; identical detail and veto semantics to
+  `lr-dialog-close`, fired alongside it on every dismissal path — the plain spelling already used by
+  `<lr-tool-select-dialog>`, `<lr-tool-result-dialog>`, and `<lr-tool-approval-dialog>`. A listener
+  calling `preventDefault()` on either event vetoes the close; both always fire, so a listener on
+  one name never misses a transition the other name already vetoed. Also fired (with reason
+  `'unmount'`, non-cancelable there like `lr-dialog-close`) when the dialog is removed from the DOM
+  while still open.
 
 The two `lr-after-*` events are never cancelable.
 
 The open sequence is `lr-show` → `lr-initial-focus` (when focus would move) → `lr-after-show`; the
-direct close sequence is `lr-hide` → `lr-dialog-close` → `lr-after-hide`. A built-in dismissal
-prepends `lr-request-close`. **Both state pre-events fire _before_ the state changes**, so reading
+direct close sequence is `lr-hide` → `lr-dialog-close` and `lr-close` (together) → `lr-after-hide`.
+A built-in dismissal prepends `lr-request-close`. **Both state pre-events fire _before_ the state changes**, so reading
 `el.open` inside an `lr-show`/`lr-hide` handler returns the _old_ value — this is the polarity
 `wa-show`/`wa-hide` already had, and the opposite of what Lyra 7.x's own `lr-show`/`lr-hide` did on
 `lr-popover`/`lr-dropdown`. The `wa-*` → `lr-*` migration table treats the rename as mechanical, and
@@ -17569,8 +17615,8 @@ and easing. Under `prefers-reduced-motion: reduce`, registry timing flattens to 
 frame and lifecycle remain intact. Passing `null` skips native interpolation but still emits the
 matching after-event before the method promise resolves. Because dialogs now animate on close too,
 `lr-after-hide` is normally deferred by roughly one animation. A removal while open emits
-`lr-hide`, `lr-dialog-close` (reason `'unmount'`) and `lr-after-hide` in that order, none of them
-cancelable, since the element is already gone.
+`lr-hide`, `lr-dialog-close` and `lr-close` (both reason `'unmount'`) and `lr-after-hide` in that
+order, none of them cancelable, since the element is already gone.
 
 **Stacking and the top layer:** an open dialog is promoted into the browser **top layer** (via
 `popover="manual"`), new in 8.0.0. That means it escapes every ancestor stacking context and every
@@ -18255,6 +18301,11 @@ A click-triggered, light-dismiss floating surface positioned with the shared Flo
   attribute wins by presence, including `aria-label=""`; only when it is absent does the property
   or localized "Popover" ("Menu" when `popupRole` is `menu`) fallback apply
 - `popupRole: 'dialog'|'menu' = 'dialog'` (attribute `popup-role`)
+- `disabled: boolean = false` (reflected, new in 10.0.0) — prevents opening the popover; pointer,
+  keyboard, and programmatic `show()`/`open = true` are all refused while set. Becoming disabled also
+  closes an already-open popover, and initial `disabled` plus `open` normalizes closed in either
+  attribute order. `lr-dropdown` now inherits this from `lr-popover` rather than declaring its own;
+  its consumer-facing behavior is unchanged
 
 To preserve the previous Lyra-shaped defaults explicitly, use
 `placement="bottom-start" distance="4" without-arrow`; origin-aware migration emits those tokens.
@@ -18725,6 +18776,7 @@ A circular progress indicator with the same value contract as `lr-progress-bar`.
 **Properties:** `value: number = 0` (reflected), `max: number = 100`, `indeterminate: boolean = false`
 (reflected), `variant: LyraProgressVariant = 'brand'` (reflected, added in 9.0.0 — matches sibling
 `lr-progress-bar`'s semantic-palette vocabulary: `neutral`/`brand`/`success`/`warning`/`danger`),
+`showValue: boolean = false` (attribute `show-value`),
 `label: string = ''` (the mapped accessible-name property), and
 `accessibleLabel: string = ''` (attribute `accessible-label`; a Lyra compatibility
 accessible-name spelling retained by this progress component, while several sibling components use
@@ -18734,7 +18786,13 @@ visible default-slot text when supplied, then the localized "Progress". Non-fini
 `value`/`max` are normalized (`max <= 0` falls
 back to `100`, `value` clamps to `[0, max]`) rather than producing NaN geometry.
 **Slots:** default — replaces the built-in center label, which otherwise renders the rounded
-percentage (and nothing at all while `indeterminate`).
+percentage **only when `show-value` is set** (and nothing at all while `indeterminate`).
+**Breaking in 10.0.0:** a determinate ring used to render its percentage unconditionally, with no way
+to suppress it short of slotting replacement content. It now gains `showValue`/`show-value` defaulting
+to `false`, exactly matching `lr-progress-bar` — which is what "the same value contract as
+`lr-progress-bar`" above has always claimed but did not deliver. Add `show-value` to keep the
+percentage. `aria-valuetext` still carries it regardless, mirroring `lr-progress-bar`'s own
+independence there, so the accessible value is unaffected.
 Its accessible text uses the same visibility filtering, forwarding-slot mutation/reassignment
 tracking, and explicit-empty host-label precedence as `lr-progress-bar`.
 **Live members:** `indicator: SVGCircleElement | null` returns the rendered indicator circle (or
@@ -22313,7 +22371,7 @@ to populate it: set `file` to a real `File` (fresh from a picker/drop), from whi
 `mime-type`/`thumbnail-src` props instead, for reconstructing a chip from server-persisted
 attachment metadata after a page reload, when no real `File` object exists any more. `file` always
 wins when both are present. When a real `File` or `preview-src` is available, the chip offers a
-localized action that emits a cancelable `lr-preview-request`; it never registers or owns a viewer
+localized action that emits a plain, non-cancelable `lr-preview-request`; it never registers or owns a viewer
 or overlay, so the host composes the desired preview surface.
 
 **Properties:**
@@ -22372,9 +22430,12 @@ derived from `` `${file.name}:${file.size}:${file.lastModified}` ``; when neithe
 generated internal id is used as a last resort.
 
 **Events:** `lr-remove` (`detail: { attachmentId }`, only rendered while `removable`), `lr-retry`
-(`detail: { attachmentId }`, only rendered while `status="error"`), and cancelable
-`lr-preview-request` (`detail: { attachmentId, name, mimeType, src }`). Preventing the preview
-request is a host veto point; the chip itself has no preview default action.
+(`detail: { attachmentId }`, only rendered while `status="error"`), and
+`lr-preview-request` (`detail: { attachmentId, name, mimeType, src }`) — a plain, non-cancelable
+notification that the preview action was activated. **Breaking in 10.0.0:** this event was
+advertised as cancelable, but the chip never read `defaultPrevented` and owns no preview default
+action to veto (it never registers or owns a viewer/overlay), so `preventDefault()` was a no-op.
+The flag is gone rather than left as a promise the component cannot keep.
 
 **Slots:** none.
 
@@ -23410,7 +23471,9 @@ unsupported or unresolved targets report `false` through the return value and `l
 `lr-rate-change` (`detail: { rate }`), `lr-cue-change`
 (`detail: { readonly cueId, readonly index }`; `cueId` is `null` and `index` is `-1` when no cue is active),
 `lr-highlight-activate` (`detail: { highlightId }`), `lr-anchor-result` (`detail: {
-found }`), `lr-search-change` (`detail: { query, matchCount, activeIndex }`), and
+found }`), `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`;
+`matchCountExact` is always `true` — `search()` matches over the already-loaded `cues` array with no
+additional ceiling), and
 `lr-render-error` (`detail: { error }`). The native `ended`, `error`, `loadedmetadata`, `pause`,
 `play`, `timeupdate`, and `volumechange`
 events are also relayed exactly once from the host as native `Event` instances. Like the original
@@ -23839,9 +23902,19 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-media-map-map-loader-contracts`** — Supporting data types and helpers for this component family.
   `loadMaplibre(): unknown`
+  `MapLibreGeoJsonDiff {
+  update: unknown;
+  id: unknown;
+  addOrUpdateProperties: unknown;
+  key: unknown;
+  value: unknown;
+  removeProperties: unknown;
+}`
   `MapLibreGeoJsonSource {
   setData: unknown;
   data: unknown;
+  updateData: unknown;
+  diff: unknown;
 }`
   `MapLibreMapCapability {
   getCanvas: unknown;
@@ -23854,6 +23927,8 @@ These named interfaces and helper signatures are available to typed integrations
   setZoom: unknown;
   zoom: unknown;
   resize: unknown;
+  setMaxBounds: unknown;
+  bounds: unknown;
   remove: unknown;
   on: unknown;
   type: unknown;
@@ -23913,6 +23988,7 @@ These named interfaces and helper signatures are available to typed integrations
 }`
 
 - **`components-media-map-map-contracts`** — Supporting data types and helpers for this component family.
+  `buildGeoJsonPropertyDiff(/* public names: previous, next */): unknown`
   `LyraMapChoroplethLayer {
   sourceId: unknown;
   geojson: unknown;
@@ -23936,6 +24012,8 @@ These named interfaces and helper signatures are available to typed integrations
   setZoom: unknown;
   zoom: unknown;
   resize: unknown;
+  setMaxBounds: unknown;
+  bounds: unknown;
 }`
   `LyraMapLegendEntry {
   color: unknown;
@@ -27466,6 +27544,79 @@ These named interfaces and helper signatures are available to typed integrations
   title: unknown;
   page: unknown;
   children: unknown;
+}`
+
+- **`components-viewers-pptx-viewer-pptx-loader-contracts`** — Supporting data types and helpers for this component family.
+  `adaptPptxViewer(/* public names: value */): unknown`
+  `getPptxRenderer(): unknown`
+  `loadPptxRenderer(/* public names: importer */): unknown`
+  `PptxRendererModule {
+  PptxViewer: unknown;
+  open: unknown;
+  input: unknown;
+  container: unknown;
+  options: unknown;
+  RECOMMENDED_ZIP_LIMITS: unknown;
+}`
+  `PptxSearchHighlightHandle {
+  dispose: unknown;
+}`
+  `PptxTextSearchResult {
+  slideIndex: unknown;
+  nodeId: unknown;
+  matchStart: unknown;
+  matchEnd: unknown;
+  text: unknown;
+}`
+  `PptxThumbnailHandle {
+  ready: unknown;
+  dispose: unknown;
+}`
+  `PptxViewerAdapter {
+  slideCount: unknown;
+  currentSlideIndex: unknown;
+  goToSlide: unknown;
+  index: unknown;
+  searchText: unknown;
+  query: unknown;
+  options: unknown;
+  matchCase: unknown;
+  highlightSearchResult: unknown;
+  result: unknown;
+  scrollIntoView: unknown;
+  renderThumbnailToContainer: unknown;
+  container: unknown;
+  width: unknown;
+  clearSearchHighlights: unknown;
+  subscribe: unknown;
+  listener: unknown;
+  event: unknown;
+  destroy: unknown;
+}`
+  `PptxViewerApi {
+  slideCount: unknown;
+  currentSlideIndex: unknown;
+  goToSlide: unknown;
+  index: unknown;
+  searchText: unknown;
+  query: unknown;
+  options: unknown;
+  matchCase: unknown;
+  highlightSearchResult: unknown;
+  result: unknown;
+  scrollIntoView: unknown;
+  renderThumbnailToContainer: unknown;
+  container: unknown;
+  width: unknown;
+  clearSearchHighlights: unknown;
+  destroy: unknown;
+}`
+  `PptxZipLimits {
+  maxEntries: unknown;
+  maxEntryUncompressedBytes: unknown;
+  maxTotalUncompressedBytes: unknown;
+  maxMediaBytes: unknown;
+  maxConcurrency: unknown;
 }`
 
 - **`components-viewers-spreadsheet-viewer-spreadsheet-loader-contracts`** — Supporting data types and helpers for this component family.
@@ -32722,7 +32873,9 @@ default the component creates a plain-text `Blob`/object URL and activates a syn
 `<a download>`; `preventDefault()` suppresses that built-in download so the host can substitute
 server-side or other handling),
 `lr-follow-change` (`detail: { following }`), `lr-search-change` (`detail: { query, matchCount,
-activeIndex }`), `lr-highlight-activate` (`detail: { highlightId }`), and `lr-text-select` (`detail: {
+matchCountExact, activeIndex }`; `matchCountExact` is `false` once a search hits the 10,000-match
+ceiling, marking `matchCount` as a lower bound rather than an exact total),
+`lr-highlight-activate` (`detail: { highlightId }`), and `lr-text-select` (`detail: {
 text, anchor, rects }`).
 
 **CSS parts:** `base`, `toolbar` (only rendered when copy/download are enabled), `copy-button`,
@@ -35000,7 +35153,9 @@ number; communityId?: string }`; field names deliberately mirror `lr-graph`'s `L
   set — there is nothing left to tighten. The exported alias `EntityCardAppearance` is retained as a
   name for the same union.
 
-**Events:** `lr-entity-activate` (`detail: { entityId }`, the built-in focus button was activated).
+**Events:** `lr-entity-select` (`detail: { entityId }`, the built-in focus button was activated).
+`lr-entity-activate` is a deprecated alias fired alongside it from the same gesture with the same
+detail object; removal not before 11.0.0 — prefer `lr-entity-select`.
 
 **Slots:** default (extra body content below the property rows, e.g. a `lr-neighbor-list`),
 `actions` (extra header actions alongside the built-in focus button).
@@ -35070,8 +35225,10 @@ before the type template is composed, so it never produces a leading punctuation
 `, person`. An authored host `aria-label` intentionally names only the custom-element boundary;
 it is not copied onto the shadow button because host naming does not cross that boundary.
 
-**Events:** `lr-entity-activate` (`detail: { entityId }`, click, or Enter while focused),
+**Events:** `lr-entity-select` (`detail: { entityId }`, click, or Enter while focused),
 `lr-entity-open` (`detail: { entityId }`, dblclick, or Space while focused).
+`lr-entity-activate` is a deprecated alias of `lr-entity-select`, fired alongside it from the same
+gesture with the same detail object; removal not before 11.0.0. `lr-entity-open` is unaffected.
 
 **Slots:** default — rich preview content (typically a compact `lr-entity-card`), shown in a
 floating popover on hover/focus. No content means no popover and no hover affordance at all.
@@ -35118,7 +35275,9 @@ graph data) and never mutates a graph.
 - `label: string = ''` — fallback name for the stable group. A non-empty host `aria-label` makes
   the host the sole overall owner; an explicitly empty host label stays empty on the group
 
-**Events:** `lr-entity-activate` (`detail: { entityId }`, a row's node button was activated),
+**Events:** `lr-entity-select` (`detail: { entityId }`, a row's node button was activated;
+`lr-entity-activate` is a deprecated alias fired alongside it with the same detail object, removal
+not before 11.0.0),
 `lr-node-expand` (`detail: { nodeId }`, a row's expand button was activated — deliberately the same
 name and detail shape as `lr-graph`'s own event, so one host handler serves both).
 
@@ -36180,9 +36339,15 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
 - `lr-hidden-types-change` (`detail: { hiddenTypes: string[] }`) — a node type's visibility changed
   via the composed legend. Follows the same self-toggle-then-emit contract as `lr-pin-change`/
   `lr-search-change`, so reassigning back is optional.
-- `lr-search-change` (`detail: { searchQuery: string }`) — the user typed in the toolbar's search
-  box. Already self-applied before emitting, so reassigning back is optional; a direct host
-  assignment to `searchQuery` stays silent.
+- `lr-search-change` (`detail: { searchQuery: string; query: string; matchCount: number;
+  matchCountExact: boolean }`) — the user typed in the toolbar's search box. `searchQuery`/`query`
+  carry the identical value; `query` is the canonical `LyraSearchChangeDetail` field name, added
+  alongside the original `searchQuery` rather than replacing it. `matchCount` is the same live
+  node-filter total the result list and its live-region announcement already compute (`0` while the
+  query is empty). `matchCountExact` is always `true` — this component's node filter has no
+  truncating ceiling, unlike a paginated text-search viewer. There is no `activeIndex`: this is a
+  live node filter, not a cursor-based search. Already self-applied before emitting, so reassigning
+  back is optional; a direct host assignment to `searchQuery` stays silent.
 - Bubbling straight through from composed children, unmodified: `lr-node-click`
   (`detail: { nodeId, x, y }`), `lr-link-click` (`detail: { sourceNodeId, targetNodeId, linkId? }`), `lr-community-click`
   (`detail: { communityId }`), `lr-node-expand` (`detail: { nodeId }`, from `lr-graph` and/or `lr-neighbor-list`),
@@ -36786,8 +36951,10 @@ duplicates are omitted first-wins before metric fallback, slice derivation/filte
 history, counts, rendering, or actions.
 
 **Events:** `lr-metric-change` (`{ metricId }`), `lr-slice-change` (`{ slice }`), and
-`lr-run-select` (`{ run }`). All are controlled intents; the component does not mutate the
-corresponding selection properties.
+`lr-run-change` (`{ run }`). All are controlled intents; the component does not mutate the
+corresponding selection properties. `lr-run-select` is a deprecated alias for `lr-run-change`, fired
+alongside it with an identical detail from the same gesture; it was the lone `-select` spelling among
+three identically-shaped filter clicks. Removal not before 11.0.0 — prefer `lr-run-change`.
 
 **CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
 `metric-selected`, `chart`, `runs`, `runs-heading`, `run`, `empty`.

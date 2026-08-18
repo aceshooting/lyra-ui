@@ -376,7 +376,8 @@ export type LyraAccordionSvelteProps = LyraSvelteElementProps<
   | 'lr-after-collapse'
   | 'lr-after-expand'
   | 'lr-collapse'
-  | 'lr-expand',
+  | 'lr-expand'
+  | 'lr-toggle-request',
   | '--lr-accordion-filled-bg'
   | '--lr-accordion-filled-border-color'
   | '--lr-accordion-filled-outlined-bg'
@@ -2439,6 +2440,8 @@ export type LyraCommandPaletteSvelteProps = LyraSvelteElementProps<
   | 'strings',
   {},
   LyraCommandPaletteEventMap,
+  | 'blur'
+  | 'focus'
   | 'lr-close'
   | 'lr-open'
   | 'lr-select',
@@ -3169,6 +3172,7 @@ export type LyraDialogSvelteProps = LyraSvelteElementProps<
   LyraDialogEventMap,
   | 'lr-after-hide'
   | 'lr-after-show'
+  | 'lr-close'
   | 'lr-dialog-close'
   | 'lr-hide'
   | 'lr-initial-focus'
@@ -3543,6 +3547,7 @@ export type LyraDrawerSvelteProps = LyraSvelteElementProps<
   LyraDialogEventMap,
   | 'lr-after-hide'
   | 'lr-after-show'
+  | 'lr-close'
   | 'lr-dialog-close'
   | 'lr-hide'
   | 'lr-initial-focus'
@@ -3852,7 +3857,8 @@ export type LyraEntityCardSvelteProps = LyraSvelteElementProps<
   | 'types',
   {},
   LyraEntityCardEventMap,
-  | 'lr-entity-activate',
+  | 'lr-entity-activate'
+  | 'lr-entity-select',
   | '--lr-entity-card-compact-gap'
   | '--lr-entity-card-compact-padding',
   {
@@ -3872,7 +3878,8 @@ export type LyraEntityChipSvelteProps = LyraSvelteElementProps<
   {},
   LyraEntityChipEventMap,
   | 'lr-entity-activate'
-  | 'lr-entity-open',
+  | 'lr-entity-open'
+  | 'lr-entity-select',
   | '--lr-entity-chip-bg'
   | '--lr-entity-chip-border'
   | '--lr-entity-chip-color',
@@ -6335,6 +6342,7 @@ export type LyraNativeTimeInputSvelteProps = LyraSvelteElementProps<
   | 'withLabel'
   | 'withoutSpinButtons',
   {
+    autocorrect: boolean | 'off' | 'on';
     form: HTMLFormElement | string | null;
   },
   LyraInputEventMap,
@@ -6398,6 +6406,7 @@ export type LyraNeighborListSvelteProps = LyraSvelteElementProps<
   {},
   LyraNeighborListEventMap,
   | 'lr-entity-activate'
+  | 'lr-entity-select'
   | 'lr-node-expand',
 never,
   {
@@ -6514,6 +6523,7 @@ export type LyraNumberInputSvelteProps = LyraSvelteElementProps<
   | 'withoutSpinButtons'
   | 'withoutSteppers',
   {
+    autocorrect: boolean | 'off' | 'on';
     form: HTMLFormElement | string | null;
   },
   LyraNumberInputEventMap,
@@ -7182,6 +7192,7 @@ export type LyraPopoverSvelteProps = LyraSvelteElementProps<
   | 'arrow'
   | 'arrowPadding'
   | 'arrowPlacement'
+  | 'disabled'
   | 'distance'
   | 'for'
   | 'locale'
@@ -7334,6 +7345,7 @@ export type LyraProgressRingSvelteProps = LyraSvelteElementProps<
   | 'label'
   | 'locale'
   | 'max'
+  | 'showValue'
   | 'strings'
   | 'value'
   | 'variant',
@@ -7356,6 +7368,7 @@ never,
   | '--track-width',
   {
     'accessible-label'?: LyraProgressRing['accessibleLabel'];
+    'show-value'?: LyraProgressRing['showValue'];
   }
 >;
 
@@ -7850,6 +7863,7 @@ export type LyraRagEvalDashboardSvelteProps = LyraSvelteElementProps<
   {},
   LyraRagEvalDashboardEventMap,
   | 'lr-metric-change'
+  | 'lr-run-change'
   | 'lr-run-select'
   | 'lr-slice-change',
 never,
@@ -10501,6 +10515,7 @@ export type LyraVirtualListSvelteProps = LyraSvelteElementProps<
   LyraVirtualListEventMap,
   | 'lr-load-more'
   | 'lr-virtual-scroll'
+  | 'lr-visible-range-change'
   | 'lr-visible-range-changed',
   | '--lr-virtual-list-height'
   | '--lr-virtual-list-hover-outline-color'

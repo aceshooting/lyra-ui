@@ -6,6 +6,7 @@ import type { LyraFrame } from '../../../internal/variants.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
+export type { LyraEntity } from '../entity-card/entity-card.class.js';
 import '../../overlays/chip/chip.class.js';
 import '../../forms/button/button.class.js';
 import '../../overlays/empty/empty.class.js';

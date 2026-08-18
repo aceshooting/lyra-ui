@@ -954,8 +954,14 @@ describe('transcript virtualization', () => {
 describe('search', () => {
   it('search() matches cue text/speaker case-insensitively and returns the match count', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .cues=${CUES}></lr-av-player>`)) as LyraAvPlayer;
+    const listener = oneEvent(el, 'lr-search-change');
     const count = await el.search('HOST');
     expect(count).to.equal(2);
+    // search() reduces over the already-loaded cues array with no ceiling -- the count is always
+    // exact.
+    const event = (await listener) as CustomEvent<{ matchCount: number; matchCountExact: boolean }>;
+    expect(event.detail.matchCount).to.equal(2);
+    expect(event.detail.matchCountExact).to.equal(true);
   });
 
   it('reveals each active search result in the transcript without seeking playback', async () => {
@@ -1030,7 +1036,12 @@ describe('search', () => {
     await el.search('host');
     const eventPromise = oneEvent(el, 'lr-search-change');
     el.searchNext();
-    expect((await eventPromise).detail).to.deep.equal({ query: 'host', matchCount: 2, activeIndex: 1 });
+    expect((await eventPromise).detail).to.deep.equal({
+      query: 'host',
+      matchCount: 2,
+      matchCountExact: true,
+      activeIndex: 1,
+    });
     const wrapPromise = oneEvent(el, 'lr-search-change');
     el.searchNext();
     expect((await wrapPromise).detail.activeIndex).to.equal(0);
@@ -1041,7 +1052,12 @@ describe('search', () => {
     await el.search('host'); // 2 matches, activeIndex starts at 0
     const eventPromise = oneEvent(el, 'lr-search-change');
     el.searchPrevious();
-    expect((await eventPromise).detail).to.deep.equal({ query: 'host', matchCount: 2, activeIndex: 1 });
+    expect((await eventPromise).detail).to.deep.equal({
+      query: 'host',
+      matchCount: 2,
+      matchCountExact: true,
+      activeIndex: 1,
+    });
     const wrapPromise = oneEvent(el, 'lr-search-change');
     el.searchPrevious();
     expect((await wrapPromise).detail.activeIndex).to.equal(0);
@@ -1052,7 +1068,12 @@ describe('search', () => {
     await el.search('host');
     const eventPromise = oneEvent(el, 'lr-search-change');
     el.clearSearch();
-    expect((await eventPromise).detail).to.deep.equal({ query: '', matchCount: 0, activeIndex: -1 });
+    expect((await eventPromise).detail).to.deep.equal({
+      query: '',
+      matchCount: 0,
+      matchCountExact: true,
+      activeIndex: -1,
+    });
   });
 });
 

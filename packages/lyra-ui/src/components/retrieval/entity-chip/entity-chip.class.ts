@@ -11,6 +11,10 @@ import { LYRA_DEFAULT_entityChipWithType, LYRA_DEFAULT_untitledEntity } from '..
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraEntityChipEventMap {
+  /** Canonical name for the "user picked this entity" gesture. */
+  'lr-entity-select': CustomEvent<{ entityId: string }>;
+  /** Deprecated alias of `lr-entity-select`, kept firing unchanged for back-compat; slated for
+   *  removal in v11. */
   'lr-entity-activate': CustomEvent<{ entityId: string }>;
   'lr-entity-open': CustomEvent<{ entityId: string }>;
 }
@@ -38,7 +42,10 @@ function isRealPreviewNode(n: Node): boolean {
  * @customElement lr-entity-chip
  * @slot - Rich preview content (typically a compact `lr-entity-card`), shown in a floating
  * popover on hover/focus. No content -> no popover and no hover affordance at all.
- * @event lr-entity-activate - Click, or Enter while focused. `detail: { entityId }`.
+ * @event lr-entity-select - Click, or Enter while focused. `detail: { entityId }`. Fires before
+ *   `lr-entity-activate`, from the same gesture.
+ * @event lr-entity-activate - Deprecated alias of `lr-entity-select`, kept firing unchanged for
+ *   back-compat; slated for removal in v11. Same `detail: { entityId }`.
  * @event lr-entity-open - Dblclick, or Space while focused. `detail: { entityId }`.
  * @csspart base - The clickable chip (`<button>`).
  * @csspart label - The chip's visible `text`.
@@ -195,7 +202,11 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
 
   private onClick = (): void => {
     if (!isNonBlankIdentity(this.entityId)) return;
-    this.emit('lr-entity-activate', { entityId: this.entityId });
+    // Canonical name first, then the deprecated alias -- same detail object for both, so the two
+    // events can never drift from each other.
+    const detail = { entityId: this.entityId };
+    this.emit('lr-entity-select', detail);
+    this.emit('lr-entity-activate', detail);
   };
 
   private onDblClick = (): void => {

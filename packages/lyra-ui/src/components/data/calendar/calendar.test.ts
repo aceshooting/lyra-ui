@@ -510,6 +510,55 @@ it('wraps a negative firstDayOfWeek property (not just an out-of-range attribute
   expect(days.every((day) => /^\d{4}-\d{2}-\d{2}$/.test(day.dataset.date || ''))).to.be.true;
 });
 
+// Jan 1 2023 is a Sunday and Jan 2 2023 is a Monday -- fixed, well-known anchor dates used to
+// name-check the localized weekday header independent of calendar-core's own internals.
+const weekdayName = (locale: string, day: 'sun' | 'mon'): string =>
+  new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(
+    day === 'sun' ? new Date(2023, 0, 1) : new Date(2023, 0, 2),
+  );
+const firstWeekdayHeader = (el: LyraCalendar): string | null =>
+  el.shadowRoot!.querySelector('[part="weekday"]')!.textContent;
+
+it('defaults firstDayOfWeek to "auto" when unset (regression: previously hardcoded to a fixed Monday start)', async () => {
+  const el = (await fixture(html`<lr-calendar></lr-calendar>`)) as LyraCalendar;
+  expect(el.firstDayOfWeek).to.equal('auto');
+});
+
+it('derives Sunday-first week alignment from a Sunday-first locale when first-day-of-week is unset', async () => {
+  const el = (await fixture(
+    html`<lr-calendar view-date="2026-07-01" locale="en-US"></lr-calendar>`,
+  )) as LyraCalendar;
+  expect(firstWeekdayHeader(el)).to.equal(weekdayName('en-US', 'sun'));
+});
+
+it('derives Monday-first week alignment from a Monday-first locale when first-day-of-week is unset', async () => {
+  const el = (await fixture(
+    html`<lr-calendar view-date="2026-07-01" locale="en-GB"></lr-calendar>`,
+  )) as LyraCalendar;
+  expect(firstWeekdayHeader(el)).to.equal(weekdayName('en-GB', 'mon'));
+});
+
+it('keeps first-day-of-week="1" rendering Monday-first under a locale that would otherwise default to Sunday (back-compat)', async () => {
+  const el = (await fixture(
+    html`<lr-calendar view-date="2026-07-01" first-day-of-week="1" locale="en-US"></lr-calendar>`,
+  )) as LyraCalendar;
+  expect(firstWeekdayHeader(el)).to.equal(weekdayName('en-US', 'mon'));
+});
+
+it('keeps first-day-of-week="0" rendering Sunday-first under a locale that would otherwise default to Monday (back-compat)', async () => {
+  const el = (await fixture(
+    html`<lr-calendar view-date="2026-07-01" first-day-of-week="0" locale="en-GB"></lr-calendar>`,
+  )) as LyraCalendar;
+  expect(firstWeekdayHeader(el)).to.equal(weekdayName('en-GB', 'sun'));
+});
+
+it('accepts a string weekday name ("sun") for first-day-of-week, overriding an otherwise Monday-first locale', async () => {
+  const el = (await fixture(
+    html`<lr-calendar view-date="2026-07-01" first-day-of-week="sun" locale="en-GB"></lr-calendar>`,
+  )) as LyraCalendar;
+  expect(firstWeekdayHeader(el)).to.equal(weekdayName('en-GB', 'sun'));
+});
+
 it('narrows the day-cell floor inside a narrow container, resolving it through the shared 4rem size token', async () => {
   const wrapper = (await fixture(html`
     <div style="container-type: inline-size; inline-size: 300px; --lr-theme-size-4rem: 5rem">

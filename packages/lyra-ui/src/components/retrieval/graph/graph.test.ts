@@ -5713,6 +5713,34 @@ describe('coverage: private-helper direct branches', () => {
     expect(fontPx()).to.equal(10);
   });
 
+  it('falls back to a 16px assumed own font-size for an em-unit token when the own font-size cannot be parsed, even against a non-default root font-size', async () => {
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+    const fontPx = (
+      el as unknown as { edgeLabelFontPx: () => number }
+    ).edgeLabelFontPx.bind(el);
+    const originalGetComputedStyle = window.getComputedStyle;
+    const previousRootFontSize = document.documentElement.style.fontSize;
+    document.documentElement.style.fontSize = '32px';
+    window.getComputedStyle = ((element: Element) => {
+      if (element === el) {
+        return {
+          fontSize: '',
+          getPropertyValue: (name: string) =>
+            name === '--lr-font-size-2xs' ? '2em' : '',
+        } as CSSStyleDeclaration;
+      }
+      return originalGetComputedStyle(element);
+    }) as typeof window.getComputedStyle;
+    try {
+      // Own font-size unusable -> the function's own `?? 16` multiplier applies regardless of the
+      // (non-default, 32px) root font-size -- this must not silently become root-relative.
+      expect(fontPx()).to.equal(32);
+    } finally {
+      window.getComputedStyle = originalGetComputedStyle;
+      document.documentElement.style.fontSize = previousRootFontSize;
+    }
+  });
+
   it('graphItemText returns an empty string for an out-of-range index (past every node/link/hull)', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     el.nodes = nodes;

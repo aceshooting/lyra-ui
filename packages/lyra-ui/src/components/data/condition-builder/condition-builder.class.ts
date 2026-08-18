@@ -265,12 +265,16 @@ function normalizeConditionBuilderValue(value: unknown, fields: readonly Conditi
  * relationship/path queries over a knowledge graph, a genuinely different data model from this
  * one's flat tabular field/operator/value conditions — they never share a file or a value type.
  *
- * Fully controlled: a host supplies `fields` (the available columns, each with a
- * `ConditionBuilderFieldType` that determines its offered operators and value control) and `value`
- * (a plain, serializable `{ combinator, conditions }` object — safe to persist or send to a
- * backend as-is, the same shape convention as this package's `<lr-rubric-form>`/`<lr-filter-bar>`).
- * This component never mutates `fields`/`value` in place or calls out to storage/network itself;
- * every change is surfaced through `value`/`lr-input` for the host to own. A non-finite value on a
+ * A host supplies `fields` (the available columns, each with a `ConditionBuilderFieldType` that
+ * determines its offered operators and value control) and `value` (a plain, serializable
+ * `{ combinator, conditions }` object — safe to persist or send to a backend as-is, the same shape
+ * convention as this package's `<lr-rubric-form>`/`<lr-filter-bar>`).
+ * This component never mutates `fields`/`value` in place — inputs are clone-owned — and never calls
+ * out to storage/network itself. It does advance its own copy of `value` on each edit and *then*
+ * emits `lr-input` with the complete next state: the same "update, then emit; reassign to control"
+ * round-trip `<lr-source-picker>`'s `selectedSourceIds` and `<lr-retrieval-search>`'s `filters`
+ * establish. `lr-input` is not cancelable, so a host validating an edit reassigns `value` in its
+ * handler rather than vetoing the change before it renders. A non-finite value on a
  * field declared as `number` normalizes to `undefined`, whether it arrives through the controlled
  * model, later field metadata, or an overflowing user-input string, so JSON never turns it into
  * an unrelated `null` condition.

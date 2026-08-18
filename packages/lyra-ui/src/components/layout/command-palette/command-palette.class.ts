@@ -83,6 +83,8 @@ export interface LyraCommandPaletteEventMap {
   'lr-select': CustomEvent<Readonly<{ command: LyraCommand }>>;
   'lr-open': CustomEvent<null>;
   'lr-close': CustomEvent<null>;
+  focus: CustomEvent<null>;
+  blur: CustomEvent<null>;
 }
 
 /** `<lr-command-palette>` — searchable application command menu with keyboard navigation.
@@ -98,6 +100,10 @@ export interface LyraCommandPaletteEventMap {
  * closed.
  * @event lr-close - Emitted before the palette closes. Cancelable: `preventDefault()` keeps it
  * open.
+ * @event focus - Re-dispatched when the search input receives focus. Native `focus` neither
+ * bubbles nor crosses the shadow boundary, so a host listener on `<lr-command-palette>` itself
+ * never sees it otherwise.
+ * @event blur - Re-dispatched when the search input loses focus.
  * @csspart backdrop - Modal backdrop.
  * @csspart dialog - Palette dialog.
  * @csspart search - The search row wrapping the leading icon and the `input`.
@@ -654,6 +660,16 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     this.setActiveIndex(rows, this.seekEnabled(rows, 0, 1));
   };
 
+  // Native focus/blur neither bubble nor cross the shadow boundary, so a host listener on
+  // <lr-command-palette> itself never hears them without this -- mirrors
+  // <lr-tool-param-form>'s identical native-input focus/blur bridge.
+  private onSearchFocus = (): void => {
+    this.emit('focus');
+  };
+  private onSearchBlur = (): void => {
+    this.emit('blur');
+  };
+
   private get resultModel(): CommandResultModel {
     const rows = this.filtered;
     if (
@@ -823,6 +839,8 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
             aria-controls=${this.listId}
             aria-activedescendant=${activeId}
             @input=${this.onInput}
+            @focus=${this.onSearchFocus}
+            @blur=${this.onSearchBlur}
           />
         </div>
         <div

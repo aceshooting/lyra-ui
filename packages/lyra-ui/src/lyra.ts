@@ -340,6 +340,7 @@ export type {
   TableColumnEditTrigger,
   TableEdgeAlign,
   TableLoadingAppearance,
+  TableScrollMode,
   TableSelectionMode,
   TableSortCommitDetail,
   TableSortDetail,
@@ -585,6 +586,7 @@ export type {
 export type { LyraNodeTypeStyle } from './internal/node-type-style.js';
 export { LyraMap } from './components/media/map/map.class.js';
 export type {
+  LyraMapBounds,
   LyraMapLegendEntry,
   LyraMapChoroplethInterpolation,
   LyraMapLegendGradientStop,
@@ -1277,6 +1279,7 @@ export type {
   CalendarEvent,
   CalendarView,
   LyraCalendarEventMap,
+  LyraCalendarFirstDayOfWeek,
 } from './components/data/calendar/calendar.class.js';
 
 export type { LyraAppRailEventMap } from './components/layout/app-rail/app-rail.class.js';

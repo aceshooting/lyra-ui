@@ -166,6 +166,48 @@ it('emits lr-entity-activate with the node id when a row is activated', async ()
   expect(event.detail).to.deep.equal({ entityId: 'org1' });
 });
 
+it('also emits the canonical lr-entity-select when a row is activated, with an identical detail', async () => {
+  const el = (await fixture(
+    html`<lr-neighbor-list></lr-neighbor-list>`
+  )) as LyraNeighborList;
+  el.rows = rows;
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector(
+    '[part="node-label"]'
+  ) as HTMLButtonElement;
+  const listener = oneEvent(el, 'lr-entity-select');
+  button.click();
+  const event = await listener;
+  expect(event.detail).to.deep.equal({ entityId: 'org1' });
+});
+
+it('fires lr-entity-select and lr-entity-activate exactly once each, canonical first, from one row activation', async () => {
+  const el = (await fixture(
+    html`<lr-neighbor-list></lr-neighbor-list>`
+  )) as LyraNeighborList;
+  el.rows = rows;
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector(
+    '[part="node-label"]'
+  ) as HTMLButtonElement;
+  const order: string[] = [];
+  let selectCount = 0;
+  let activateCount = 0;
+  el.addEventListener('lr-entity-select', () => {
+    selectCount++;
+    order.push('lr-entity-select');
+  });
+  el.addEventListener('lr-entity-activate', () => {
+    activateCount++;
+    order.push('lr-entity-activate');
+  });
+  button.click();
+  await el.updateComplete;
+  expect(selectCount).to.equal(1);
+  expect(activateCount).to.equal(1);
+  expect(order).to.deep.equal(['lr-entity-select', 'lr-entity-activate']);
+});
+
 it('shows a per-row expand button emitting lr-node-expand only when expandable', async () => {
   const el = (await fixture(
     html`<lr-neighbor-list></lr-neighbor-list>`

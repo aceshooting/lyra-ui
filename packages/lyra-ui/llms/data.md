@@ -718,7 +718,11 @@ sort properties; server mode leaves them controlled. Other events are `lr-row-cl
 (`detail: { row }`), `lr-load-more` (fired on the "load more" button),
 `lr-priority-columns-visibility-change` (frozen readonly `detail: { visible }`), and `lr-row-expand-toggle`
 (`detail: { row, rowKey }`; the table does not mutate `expandedRowKeys`), and
-`lr-selection-change` (frozen readonly `detail: { rowKeys }`) when selection is enabled, `lr-filter-change`
+`lr-selection-change` (frozen readonly `detail: { rowKeys }`, not cancelable) when selection is
+enabled — fired both from a row activation and from a `selectionMode` flip to `'single'` that coerces
+an existing multi-row selection down to one key (skipped on the very first render, since an
+already-inconsistent initial `selectionMode`/`selectedRowKeys` pairing is a starting state, not a
+live transition), `lr-filter-change`
 (frozen readonly `detail: { text }`), and `lr-page-change` (frozen readonly `detail: { page }`) from the
 filter/pagination surfaces, and `lr-cell-edit` (`detail: { row, columnKey, value }`) for editable
 columns, and `lr-column-resize` (`detail: { columnKey, width }`, `width` in CSS pixels) on every pointer or
@@ -2822,8 +2826,16 @@ title, readonly color?, readonly data? }`; `date` is an ISO `YYYY-MM-DD` string 
 - `view: CalendarView = 'month'`, where `CalendarView = 'month' | 'agenda'` (reflected) — agenda
   lists the effective visible month's events, date-sorted. Foreign tokens normalize and reflect to
   `month`
-- `firstDayOfWeek: number = 1` (attribute `first-day-of-week`) — sanitized to a finite integer
-  (fallback `1`) and wrapped into `0`–`6`, so a malformed value can't drop days
+- `firstDayOfWeek: LyraCalendarFirstDayOfWeek = 'auto'` (attribute `first-day-of-week`) — which
+  weekday the grid starts on. **Breaking in 10.0.0:** the default was a hardcoded `1` (Monday)
+  regardless of locale; it now derives from the effective locale through the same
+  `resolveFirstDayOfWeek()` contract `<lr-date-picker>`/`<lr-date-input>` already use, so an unset
+  `<lr-calendar>` renders Sunday-first under `en-US` and Monday-first under `fr-FR` instead of
+  disagreeing with a date picker on the same page. Still accepts a bare `0`–`6` integer
+  (`0`=Sunday … `6`=Saturday) — sanitized to a finite integer and wrapped into `0`–`6`, so a
+  malformed value can't drop days — or one of the shared weekday-name tokens (`'auto'`, then
+  `'sun'` through `'sat'`) to pin the week start independent of locale. Pass `1` explicitly to keep
+  the pre-10.0.0 rendering.
 - `accessibleLabel: string = ''` (attribute `aria-label`) — names the host. The nested calendar
   section retains the localized purpose name rather than duplicating an authored host name; when
   set programmatically without a host attribute, this value names the section

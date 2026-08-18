@@ -69,6 +69,7 @@ export interface LyraDialogEventMap {
   'lr-initial-focus': CustomEvent<null>;
   'lr-request-close': CustomEvent<LyraDialogRequestCloseDetail>;
   'lr-dialog-close': CustomEvent<DialogCloseReason>;
+  'lr-close': CustomEvent<DialogCloseReason>;
 }
 /**
  * `<lr-dialog>` — a general-purpose modal/overlay. `role="dialog"`,
@@ -150,6 +151,14 @@ export interface LyraDialogEventMap {
  *   Fires after `lr-hide` and carries the one thing `lr-hide` does not: which affordance asked
  *   for the close. Also fired (with reason `'unmount'`, non-cancelable there since the element is
  *   already being removed) when the dialog is removed from the DOM while still open.
+ * @event lr-close - `detail: DialogCloseReason`. Cancelable — identical detail and veto semantics
+ *   to `lr-dialog-close`, fired alongside it on every dismissal path: the plain `lr-close`
+ *   spelling used by `<lr-tool-select-dialog>`, `<lr-tool-result-dialog>`, and
+ *   `<lr-tool-approval-dialog>`, whose own docs already describe their close-reason detail as
+ *   mirroring this shape. A listener calling `preventDefault()` on either event vetoes the close;
+ *   both always fire, so a listener on one name never misses a transition the other name already
+ *   vetoed. Also fired (with reason `'unmount'`, non-cancelable there like `lr-dialog-close`) when
+ *   the dialog is removed from the DOM while still open.
  * @csspart base - Shoelace wrapper alias.
  * @csspart backdrop - The full-viewport scrim behind the panel; also carries `overlay`.
  * @csspart overlay - Shoelace alias on the backdrop.
@@ -430,6 +439,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
           }
           this.applyOpenState(false);
           this.emit('lr-dialog-close', 'unmount');
+          this.emit('lr-close', 'unmount');
           this.emit('lr-after-hide');
         }
       });
@@ -560,8 +570,15 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
       this.syncOpenAttribute();
       return Promise.resolve();
     }
+    // `lr-dialog-close` is the original veto point; `lr-close` is the additive, identically-shaped
+    // alias every sibling dialog already uses. Both always fire -- a listener on either name can
+    // veto, and neither name's listeners may miss a transition just because the other name already
+    // vetoed it.
+    const dialogClose = this.emit('lr-dialog-close', reason, { cancelable: true });
+    const close = this.emit('lr-close', reason, { cancelable: true });
     if (
-      this.emit('lr-dialog-close', reason, { cancelable: true }).defaultPrevented ||
+      dialogClose.defaultPrevented ||
+      close.defaultPrevented ||
       this.openRequestWasSuperseded(false)
     ) {
       this.finishOpenRequest();

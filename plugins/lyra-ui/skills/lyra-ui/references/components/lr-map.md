@@ -106,6 +106,26 @@ GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
   persists across a `dataLayers` reassignment gets its GeoJSON updated in place (`setData()`), one
   that's dropped has its private source/layers removed, and a genuinely new `sourceId` gets new
   resources — nothing leaks on removal, style change, or disconnect.
+- `maxBounds: LyraMapBounds | null = null` (attribute: false) — box the map may not pan outside,
+  `[[west, south], [east, north]]`. Prefer it over calling `map.setMaxBounds()` through the `.map`
+  escape hatch: constraining the camera can wedge maplibre-gl at a sub-1 fractional zoom in a wide
+  container, leaving `getZoom()` returning `null` permanently, every frame throwing from inside the
+  peer's own matrix math, and the canvas never painting again — a blank map, with nothing thrown at
+  the call site to attribute it to. This property applies the same call, then reads the camera back
+  and reverts (restoring zoom and centre) if it did not survive, so the worst case is an
+  unconstrained map plus a dev-mode warning. A malformed box is rejected rather than clamped
+
+**Choropleth and `dataLayers` updates are diffed before they reach the peer.** `setData()`
+unconditionally re-tiles and repaints an entire source, which is invisible on a static map and
+expensive on an animated one. When an update changes only feature *properties* — the values driving
+the colour ramp — the component emits maplibre-gl's incremental `updateData()` instead. The fast
+path is deliberately strict, and needs all of: the same feature count, a `string`/`number` `id` on
+every feature in the same order, and geometry that is the **same object** as last time (not merely
+deep-equal). Structurally comparing polygon rings would cost about what the re-tile costs, and a
+false positive would paint stale geometry. Reuse your geometry objects across frames — the
+efficient way to build an animation anyway — and the fast path applies; otherwise it falls back to
+`setData()` with no change in behaviour. Peers predating `updateData()` always take the old path.
+
 **Feature properties are tiled, and therefore bounded in numeric magnitude.** MapLibre GL tiles
 every GeoJSON source through a worker into a protobuf vector tile, so a property carrying a huge
 integer throws *inside that worker* — "Given varint doesn't fit into 10 bytes". That throw is not

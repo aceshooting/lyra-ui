@@ -328,6 +328,114 @@ describe('<lr-accordion>', () => {
     expect(afterCount).to.equal(0);
   });
 
+  describe('lr-toggle-request (unified veto event, additive alongside lr-expand/lr-collapse)', () => {
+    it('fires lr-toggle-request(collapsed: false) alongside lr-expand on expand, each exactly once', async () => {
+      const { accordion, items } = await renderAccordion();
+      let expandCount = 0;
+      let toggleCount = 0;
+      let toggleDetail: { collapsed: boolean; item: LyraAccordionItem } | undefined;
+      accordion.addEventListener('lr-expand', () => expandCount++);
+      accordion.addEventListener('lr-toggle-request', (event) => {
+        toggleCount++;
+        toggleDetail = (event as CustomEvent<{ collapsed: boolean; item: LyraAccordionItem }>).detail;
+      });
+
+      const after = oneEvent(accordion, 'lr-after-expand');
+      buttonFor(items[0]!).click();
+      await after;
+
+      expect(expandCount).to.equal(1);
+      expect(toggleCount).to.equal(1);
+      expect(toggleDetail?.collapsed).to.equal(false);
+      expect(toggleDetail?.item.id).to.equal('one');
+    });
+
+    it('fires lr-toggle-request(collapsed: true) alongside lr-collapse on collapse, each exactly once', async () => {
+      const collapsible = (await fixture(html`<lr-accordion mode="single-collapsible">
+        <lr-accordion-item label="One" expanded style=${quickMotion}>One</lr-accordion-item>
+      </lr-accordion>`)) as LyraAccordion;
+      const item = collapsible.querySelector('lr-accordion-item') as LyraAccordionItem;
+      let collapseCount = 0;
+      let toggleCount = 0;
+      let toggleDetail: { collapsed: boolean; item: LyraAccordionItem } | undefined;
+      collapsible.addEventListener('lr-collapse', () => collapseCount++);
+      collapsible.addEventListener('lr-toggle-request', (event) => {
+        toggleCount++;
+        toggleDetail = (event as CustomEvent<{ collapsed: boolean; item: LyraAccordionItem }>).detail;
+      });
+
+      const after = oneEvent(collapsible, 'lr-after-collapse');
+      buttonFor(item).click();
+      await after;
+
+      expect(collapseCount).to.equal(1);
+      expect(toggleCount).to.equal(1);
+      expect(toggleDetail?.collapsed).to.equal(true);
+      // Compared as a boolean identity projection, never as the node itself: a chai failure that
+      // carries a live DOM node as `actual`/`expected` hangs the whole file on structuredClone.
+      expect(toggleDetail?.item === item).to.equal(true);
+    });
+
+    it('vetoes the toggle when only lr-toggle-request calls preventDefault (lr-expand does not)', async () => {
+      const { accordion, items } = await renderAccordion();
+      let expandCount = 0;
+      accordion.addEventListener('lr-expand', () => expandCount++);
+      accordion.addEventListener('lr-toggle-request', (event) => event.preventDefault());
+
+      buttonFor(items[0]!).click();
+      await items[0]!.updateComplete;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+      expect(items[0]!.expanded, 'a veto via lr-toggle-request alone must still stop the expand').to.be.false;
+      expect(expandCount, 'lr-expand still fires even though it did not itself veto').to.equal(1);
+    });
+
+    it('vetoes the toggle when only lr-expand calls preventDefault (lr-toggle-request does not)', async () => {
+      const { accordion, items } = await renderAccordion();
+      let toggleCount = 0;
+      accordion.addEventListener('lr-expand', (event) => event.preventDefault());
+      accordion.addEventListener('lr-toggle-request', () => toggleCount++);
+
+      buttonFor(items[0]!).click();
+      await items[0]!.updateComplete;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+      expect(items[0]!.expanded, 'a veto via lr-expand alone must still stop the expand').to.be.false;
+      expect(toggleCount, 'lr-toggle-request still fires even though it did not itself veto').to.equal(1);
+    });
+
+    it('expands normally when neither lr-expand nor lr-toggle-request is defaulted (regression)', async () => {
+      const { accordion, items } = await renderAccordion();
+      accordion.addEventListener('lr-expand', () => {});
+      accordion.addEventListener('lr-toggle-request', () => {});
+
+      const after = oneEvent(accordion, 'lr-after-expand');
+      buttonFor(items[0]!).click();
+      await after;
+
+      expect(items[0]!.expanded).to.be.true;
+    });
+
+    it('also fires for a sibling auto-collapsed by single-mode policy', async () => {
+      const accordion = (await fixture(html`<lr-accordion mode="single">
+        <lr-accordion-item id="locked" label="Locked" expanded style=${quickMotion}>Locked</lr-accordion-item>
+        <lr-accordion-item id="next" label="Next" style=${quickMotion}>Next</lr-accordion-item>
+      </lr-accordion>`)) as LyraAccordion;
+      const items = [...accordion.querySelectorAll('lr-accordion-item')] as LyraAccordionItem[];
+      const toggleIds: string[] = [];
+      accordion.addEventListener('lr-toggle-request', (event) => {
+        const detail = (event as CustomEvent<{ collapsed: boolean; item: LyraAccordionItem }>).detail;
+        toggleIds.push(`${detail.item.id}:${detail.collapsed}`);
+      });
+
+      const after = oneEvent(accordion, 'lr-after-collapse');
+      buttonFor(items[1]!).click();
+      await after;
+
+      expect(toggleIds).to.deep.equal(['next:false', 'locked:true']);
+    });
+  });
+
   it('expands and collapses direct enabled children through group methods', async () => {
     const { accordion, items } = await renderAccordion();
     items[1]!.disabled = true;

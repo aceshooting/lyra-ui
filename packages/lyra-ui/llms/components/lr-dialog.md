@@ -94,12 +94,19 @@ chrome remains visible. The fallback order appears below.
   `'close-button' | 'keyboard' | 'overlay'`. Veto stops the close lifecycle. Direct `close()` and
   `hide()` calls do not emit this request event.
 - `lr-dialog-close` — cancelable, with `detail: DialogCloseReason`; emitted after `lr-hide`
+- `lr-close` — cancelable, with `detail: DialogCloseReason`; identical detail and veto semantics to
+  `lr-dialog-close`, fired alongside it on every dismissal path — the plain spelling already used by
+  `<lr-tool-select-dialog>`, `<lr-tool-result-dialog>`, and `<lr-tool-approval-dialog>`. A listener
+  calling `preventDefault()` on either event vetoes the close; both always fire, so a listener on
+  one name never misses a transition the other name already vetoed. Also fired (with reason
+  `'unmount'`, non-cancelable there like `lr-dialog-close`) when the dialog is removed from the DOM
+  while still open.
 
 The two `lr-after-*` events are never cancelable.
 
 The open sequence is `lr-show` → `lr-initial-focus` (when focus would move) → `lr-after-show`; the
-direct close sequence is `lr-hide` → `lr-dialog-close` → `lr-after-hide`. A built-in dismissal
-prepends `lr-request-close`. **Both state pre-events fire _before_ the state changes**, so reading
+direct close sequence is `lr-hide` → `lr-dialog-close` and `lr-close` (together) → `lr-after-hide`.
+A built-in dismissal prepends `lr-request-close`. **Both state pre-events fire _before_ the state changes**, so reading
 `el.open` inside an `lr-show`/`lr-hide` handler returns the _old_ value — this is the polarity
 `wa-show`/`wa-hide` already had, and the opposite of what Lyra 7.x's own `lr-show`/`lr-hide` did on
 `lr-popover`/`lr-dropdown`. The `wa-*` → `lr-*` migration table treats the rename as mechanical, and
@@ -115,8 +122,8 @@ and easing. Under `prefers-reduced-motion: reduce`, registry timing flattens to 
 frame and lifecycle remain intact. Passing `null` skips native interpolation but still emits the
 matching after-event before the method promise resolves. Because dialogs now animate on close too,
 `lr-after-hide` is normally deferred by roughly one animation. A removal while open emits
-`lr-hide`, `lr-dialog-close` (reason `'unmount'`) and `lr-after-hide` in that order, none of them
-cancelable, since the element is already gone.
+`lr-hide`, `lr-dialog-close` and `lr-close` (both reason `'unmount'`) and `lr-after-hide` in that
+order, none of them cancelable, since the element is already gone.
 
 **Stacking and the top layer:** an open dialog is promoted into the browser **top layer** (via
 `popover="manual"`), new in 8.0.0. That means it escapes every ancestor stacking context and every

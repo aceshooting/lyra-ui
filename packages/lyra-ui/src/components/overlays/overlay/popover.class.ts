@@ -211,6 +211,27 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     this._popupRole = next;
     this.requestUpdate('popupRole', old);
   }
+  private _disabled = false;
+  /** Prevents opening the popover -- pointer, keyboard, and programmatic `show()`/`open = true`
+   *  are all refused while set. Becoming disabled also closes an already-open popover; initial
+   *  `disabled` plus `open` markup/property state normalizes closed in either order. Mirrors
+   *  `<lr-tooltip>`'s and `<lr-dropdown>`'s own `disabled`.
+   *  @default false */
+  @property({ type: Boolean, reflect: true })
+  get disabled(): boolean {
+    return this._disabled;
+  }
+  set disabled(next: boolean) {
+    const normalized = Boolean(next);
+    if (normalized === this._disabled) return;
+    const old = this._disabled;
+    this._disabled = normalized;
+    this.requestUpdate('disabled', old);
+    if (normalized && this.open) {
+      if (this.hasUpdated) void this.hide();
+      else this.open = false;
+    }
+  }
   private trigger?: HTMLElement;
   private slottedTrigger?: HTMLElement;
   @state() private resolvedSide: 'top' | 'bottom' | 'left' | 'right' = 'bottom';
@@ -303,9 +324,9 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   }
 
   /** Subclass opening invariant, checked for initial property/attribute replay and every later
-   * imperative `show()`. Generic popovers are always eligible to open. */
+   * imperative `show()`. A disabled popover is never eligible to open. */
   protected get canOpen(): boolean {
-    return true;
+    return !this.disabled;
   }
 
   /** Generic popovers project their default slot directly. A mapped subclass can insert an owned

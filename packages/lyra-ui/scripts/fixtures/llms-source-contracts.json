@@ -1211,7 +1211,11 @@
         "src/components/agent-tools/agent-run/agent-run.class.ts",
         "src/components/agent-tools/agent-run/agent-run.ts",
         "src/components/agent-tools/index.ts",
+        "src/components/conversation/agent-workspace/agent-workspace.class.ts",
+        "src/components/conversation/agent-workspace/agent-workspace.ts",
+        "src/components/conversation/index.ts",
         "src/components/lr-agent-run.ts",
+        "src/components/lr-agent-workspace.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
         "src/ssr/all.ts"
@@ -1520,6 +1524,10 @@
         "src/components/agent-tools/context-inspector/context-inspector.class.ts",
         "src/components/agent-tools/context-inspector/context-inspector.ts",
         "src/components/agent-tools/index.ts",
+        "src/components/conversation/agent-workspace/agent-workspace.class.ts",
+        "src/components/conversation/agent-workspace/agent-workspace.ts",
+        "src/components/conversation/index.ts",
+        "src/components/lr-agent-workspace.ts",
         "src/components/lr-context-inspector.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
@@ -2617,6 +2625,10 @@
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/tool-timeline/tool-timeline.class.ts",
         "src/components/agent-tools/tool-timeline/tool-timeline.ts",
+        "src/components/conversation/agent-workspace/agent-workspace.class.ts",
+        "src/components/conversation/agent-workspace/agent-workspace.ts",
+        "src/components/conversation/index.ts",
+        "src/components/lr-agent-workspace.ts",
         "src/components/lr-tool-timeline.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
@@ -4297,8 +4309,11 @@
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
+        "src/components/conversation/prompt-input/prompt-input.class.ts",
+        "src/components/conversation/prompt-input/prompt-input.ts",
         "src/components/conversation/prompt-queue/prompt-queue.class.ts",
         "src/components/conversation/prompt-queue/prompt-queue.ts",
+        "src/components/lr-prompt-input.ts",
         "src/components/lr-prompt-queue.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
@@ -4458,8 +4473,11 @@
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
+        "src/components/conversation/prompt-input/prompt-input.class.ts",
+        "src/components/conversation/prompt-input/prompt-input.ts",
         "src/components/conversation/voice-picker/voice-picker.class.ts",
         "src/components/conversation/voice-picker/voice-picker.ts",
+        "src/components/lr-prompt-input.ts",
         "src/components/lr-voice-picker.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
@@ -9286,7 +9304,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "loadMaplibre",
       "kind": "function",
-      "fingerprint": "4b65a4eab9bb7d995143",
+      "fingerprint": "bbca5b91689ae0568bb1",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9300,9 +9318,25 @@
     },
     {
       "module": "src/components/media/map/map-loader.ts",
+      "exportName": "MapLibreGeoJsonDiff",
+      "kind": "interface",
+      "fingerprint": "1a09219c9c55ee8ee786",
+      "routes": [
+        "src/components/media/map/map-loader.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-map-loader-contracts",
+        "declaration": "MapLibreGeoJsonDiff"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreGeoJsonSource",
       "kind": "interface",
-      "fingerprint": "fc45f59480dddb9cd21f",
+      "fingerprint": "ba852f53ffdf23a8473d",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9318,7 +9352,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreMapCapability",
       "kind": "interface",
-      "fingerprint": "8f27445b50499cc326a3",
+      "fingerprint": "c4c8f05ff066c669a649",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9334,7 +9368,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreMarkerCapability",
       "kind": "interface",
-      "fingerprint": "42a13fc449a007a3b233",
+      "fingerprint": "f84a78b8e41c96e5b6b8",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9350,7 +9384,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MaplibreModule",
       "kind": "interface",
-      "fingerprint": "edd0b71d6b1b9ef18c61",
+      "fingerprint": "e8823b48ac564c687e8d",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9376,6 +9410,25 @@
         "kind": "utility",
         "name": "components-media-map-map-loader-contracts",
         "declaration": "MapLibrePopupCapability"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "buildGeoJsonPropertyDiff",
+      "kind": "function",
+      "fingerprint": "b012d9629a78240243a9",
+      "routes": [
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-map-contracts",
+        "declaration": "buildGeoJsonPropertyDiff"
       }
     },
     {
@@ -9428,7 +9481,7 @@
       "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapInstance",
       "kind": "interface",
-      "fingerprint": "6851ed5c1ae126c7f945",
+      "fingerprint": "fa805174cd8fd985a6d9",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -10067,8 +10120,11 @@
       "routes": [
         "src/all.ts",
         "src/components/lr-chunk-inspector.ts",
+        "src/components/lr-entity-dossier.ts",
         "src/components/retrieval/chunk-inspector/chunk-inspector.class.ts",
         "src/components/retrieval/chunk-inspector/chunk-inspector.ts",
+        "src/components/retrieval/entity-dossier/entity-dossier.class.ts",
+        "src/components/retrieval/entity-dossier/entity-dossier.ts",
         "src/components/retrieval/index.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
@@ -10181,9 +10237,15 @@
       "fingerprint": "ec503517b8dba8f32ff9",
       "routes": [
         "src/all.ts",
+        "src/components/lr-community-card.ts",
         "src/components/lr-entity-card.ts",
+        "src/components/lr-entity-dossier.ts",
+        "src/components/retrieval/community-card/community-card.class.ts",
+        "src/components/retrieval/community-card/community-card.ts",
         "src/components/retrieval/entity-card/entity-card.class.ts",
         "src/components/retrieval/entity-card/entity-card.ts",
+        "src/components/retrieval/entity-dossier/entity-dossier.class.ts",
+        "src/components/retrieval/entity-dossier/entity-dossier.ts",
         "src/components/retrieval/index.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
@@ -10590,9 +10652,12 @@
       "routes": [
         "src/all.ts",
         "src/components/lr-ingestion-queue.ts",
+        "src/components/lr-knowledge-base-admin.ts",
         "src/components/retrieval/index.ts",
         "src/components/retrieval/ingestion-queue/ingestion-queue.class.ts",
         "src/components/retrieval/ingestion-queue/ingestion-queue.ts",
+        "src/components/retrieval/knowledge-base-admin/knowledge-base-admin.class.ts",
+        "src/components/retrieval/knowledge-base-admin/knowledge-base-admin.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
         "src/ssr/all.ts"
@@ -10635,8 +10700,11 @@
       "fingerprint": "465cfa636d4707f39291",
       "routes": [
         "src/all.ts",
+        "src/components/lr-knowledge-base-admin.ts",
         "src/components/lr-knowledge-base.ts",
         "src/components/retrieval/index.ts",
+        "src/components/retrieval/knowledge-base-admin/knowledge-base-admin.class.ts",
+        "src/components/retrieval/knowledge-base-admin/knowledge-base-admin.ts",
         "src/components/retrieval/knowledge-base/knowledge-base.class.ts",
         "src/components/retrieval/knowledge-base/knowledge-base.ts",
         "src/lyra.ts",
@@ -10773,7 +10841,10 @@
       "fingerprint": "b52db70fb91347dd1c41",
       "routes": [
         "src/all.ts",
+        "src/components/lr-entity-dossier.ts",
         "src/components/lr-neighbor-list.ts",
+        "src/components/retrieval/entity-dossier/entity-dossier.class.ts",
+        "src/components/retrieval/entity-dossier/entity-dossier.ts",
         "src/components/retrieval/index.ts",
         "src/components/retrieval/neighbor-list/neighbor-list.class.ts",
         "src/components/retrieval/neighbor-list/neighbor-list.ts",
@@ -10819,7 +10890,10 @@
       "fingerprint": "d295ed16b7bc36d2fc88",
       "routes": [
         "src/all.ts",
+        "src/components/lr-entity-dossier.ts",
         "src/components/lr-provenance-panel.ts",
+        "src/components/retrieval/entity-dossier/entity-dossier.class.ts",
+        "src/components/retrieval/entity-dossier/entity-dossier.ts",
         "src/components/retrieval/index.ts",
         "src/components/retrieval/provenance-panel/provenance-panel.class.ts",
         "src/components/retrieval/provenance-panel/provenance-panel.ts",
@@ -11095,6 +11169,10 @@
       "fingerprint": "762869c588715a52c3f2",
       "routes": [
         "src/all.ts",
+        "src/components/conversation/index.ts",
+        "src/components/conversation/prompt-input/prompt-input.class.ts",
+        "src/components/conversation/prompt-input/prompt-input.ts",
+        "src/components/lr-prompt-input.ts",
         "src/components/lr-source-picker.ts",
         "src/components/retrieval/index.ts",
         "src/components/retrieval/source-picker/source-picker.class.ts",
@@ -13047,6 +13125,166 @@
       }
     },
     {
+      "module": "src/components/viewers/pptx-viewer/pptx-loader.ts",
+      "exportName": "adaptPptxViewer",
+      "kind": "function",
+      "fingerprint": "a38b35319f6a0ac17101",
+      "routes": [
+        "src/components/viewers/pptx-viewer/pptx-loader.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-pptx-viewer-pptx-loader-contracts",
+        "declaration": "adaptPptxViewer"
+      }
+    },
+    {
+      "module": "src/components/viewers/pptx-viewer/pptx-loader.ts",
+      "exportName": "getPptxRenderer",
+      "kind": "function",
+      "fingerprint": "c0c3a4bc700b65ff9eb6",
+      "routes": [
+        "src/components/viewers/pptx-viewer/pptx-loader.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-pptx-viewer-pptx-loader-contracts",
+        "declaration": "getPptxRenderer"
+      }
+    },
+    {
+      "module": "src/components/viewers/pptx-viewer/pptx-loader.ts",
+      "exportName": "loadPptxRenderer",
+      "kind": "function",
+      "fingerprint": "d154a0f30516f233f42a",
+      "routes": [
+        "src/components/viewers/pptx-viewer/pptx-loader.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-pptx-viewer-pptx-loader-contracts",
+        "declaration": "loadPptxRenderer"
+      }
+    },
+    {
+      "module": "src/components/viewers/pptx-viewer/pptx-loader.ts",
+      "exportName": "PptxRendererModule",
+      "kind": "interface",
+      "fingerprint": "a3b83e7e9e4f31bf64fd",
+      "routes": [
+        "src/components/viewers/pptx-viewer/pptx-loader.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-pptx-viewer-pptx-loader-contracts",
+        "declaration": "PptxRendererModule"
+      }
+    },
+    {
+      "module": "src/components/viewers/pptx-viewer/pptx-loader.ts",
+      "exportName": "PptxSearchHighlightHandle",
+      "kind": "interface",
+      "fingerprint": "c0fbc4d5610464212dc9",
+      "routes": [
+        "src/components/viewers/pptx-viewer/pptx-loader.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-pptx-viewer-pptx-loader-contracts",
+        "declaration": "PptxSearchHighlightHandle"
+      }
+    },
+    {
+      "module": "src/components/viewers/pptx-viewer/pptx-loader.ts",
+      "exportName": "PptxTextSearchResult",
+      "kind": "interface",
+      "fingerprint": "a7934aa3ff2e50fc0e0c",
+      "routes": [
+        "src/components/viewers/pptx-viewer/pptx-loader.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-pptx-viewer-pptx-loader-contracts",
+        "declaration": "PptxTextSearchResult"
+      }
+    },
+    {
+      "module": "src/components/viewers/pptx-viewer/pptx-loader.ts",
+      "exportName": "PptxThumbnailHandle",
+      "kind": "interface",
+      "fingerprint": "12a1c13c9121306d4eeb",
+      "routes": [
+        "src/components/viewers/pptx-viewer/pptx-loader.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-pptx-viewer-pptx-loader-contracts",
+        "declaration": "PptxThumbnailHandle"
+      }
+    },
+    {
+      "module": "src/components/viewers/pptx-viewer/pptx-loader.ts",
+      "exportName": "PptxViewerAdapter",
+      "kind": "interface",
+      "fingerprint": "a6d246320119350cded4",
+      "routes": [
+        "src/components/viewers/pptx-viewer/pptx-loader.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-pptx-viewer-pptx-loader-contracts",
+        "declaration": "PptxViewerAdapter"
+      }
+    },
+    {
+      "module": "src/components/viewers/pptx-viewer/pptx-loader.ts",
+      "exportName": "PptxViewerApi",
+      "kind": "interface",
+      "fingerprint": "77ced34f65ce82a90e0d",
+      "routes": [
+        "src/components/viewers/pptx-viewer/pptx-loader.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-pptx-viewer-pptx-loader-contracts",
+        "declaration": "PptxViewerApi"
+      }
+    },
+    {
+      "module": "src/components/viewers/pptx-viewer/pptx-loader.ts",
+      "exportName": "PptxZipLimits",
+      "kind": "interface",
+      "fingerprint": "8b335e91fe8acd68a0f3",
+      "routes": [
+        "src/components/viewers/pptx-viewer/pptx-loader.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-pptx-viewer-pptx-loader-contracts",
+        "declaration": "PptxZipLimits"
+      }
+    },
+    {
       "module": "src/components/viewers/spreadsheet-viewer/spreadsheet-loader.ts",
       "exportName": "clearSheetJsCache",
       "kind": "function",
@@ -13212,7 +13450,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "b988c4ed7b1acc13b185",
+      "fingerprint": "a5d6f373d7698dc76178",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -14813,7 +15051,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "c182443602924fecd535",
+      "fingerprint": "35967d4918a09321f3ed",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15248,7 +15486,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "d02144b435ad2f3535ac",
+      "fingerprint": "2e19dba5d5c7608f7b84",
       "routes": [
         "src/vue.ts"
       ],

@@ -1213,3 +1213,27 @@ it("resets search state for every accepted opening entry path", async () => {
   expect((el.shadowRoot!.querySelector("input") as HTMLInputElement).value).to.equal("");
   expect(el.shadowRoot!.querySelectorAll('[part="command"]')).to.have.length(2);
 });
+
+it("bridges the search input's native focus/blur out through the shadow boundary as host focus/blur events", async () => {
+  // Native focus/blur neither bubble nor cross the shadow boundary, so a host listener on
+  // <lr-command-palette> itself never hears them without an explicit bridge -- mirrors
+  // <lr-tool-param-form>'s identical native-input focus/blur bridge.
+  const el = (await fixture(
+    html`<lr-command-palette></lr-command-palette>`
+  )) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector("input") as HTMLInputElement;
+
+  const focusPromise = oneEvent(el, "focus");
+  input.dispatchEvent(new Event("focus"));
+  const focusEvent = await focusPromise;
+  expect(focusEvent.bubbles).to.be.true;
+  expect(focusEvent.composed).to.be.true;
+
+  const blurPromise = oneEvent(el, "blur");
+  input.dispatchEvent(new Event("blur"));
+  const blurEvent = await blurPromise;
+  expect(blurEvent.bubbles).to.be.true;
+  expect(blurEvent.composed).to.be.true;
+});

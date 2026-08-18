@@ -216,7 +216,41 @@ describe('lr-knowledge-graph-explorer', () => {
     ).to.equal('curie');
   });
 
-  it('emits lr-search-change with the new query when the user types, and stays silent for a host assignment', async () => {
+  it('does not announce a preset search-query on the very first render, but still announces a later user-driven change', async () => {
+    const before = sinkTexts().length;
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        search-query="polonium"
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+
+    expect(
+      sinkTexts().length,
+      'mounting with a preset search-query must not announce -- there is no user action behind it'
+    ).to.equal(before);
+
+    const searchInput = el.shadowRoot!.querySelector(
+      '[part="search"]'
+    ) as LyraInput;
+    const native = searchInput.shadowRoot!.querySelector(
+      'input'
+    ) as HTMLInputElement;
+    native.value = 'curie';
+    native.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+
+    expect(
+      sinkTexts().length,
+      'a genuinely user-driven query change afterwards still announces'
+    ).to.equal(before + 1);
+    expect(sinkTexts().at(-1)).to.equal('2 matches');
+  });
+
+  it('emits lr-search-change with the new query, match count, and back-compat searchQuery when the user types, and stays silent for a host assignment', async () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
@@ -243,15 +277,41 @@ describe('lr-knowledge-graph-explorer', () => {
     native.dispatchEvent(new Event('input', { bubbles: true }));
     await el.updateComplete;
 
-    expect(details).to.deep.equal([{ searchQuery: 'curie' }]);
+    expect(details).to.deep.equal([
+      {
+        // `searchQuery` is the original, still-shipped member name; `query` is the canonical
+        // `LyraSearchChangeDetail` name added alongside it -- both carry the identical value.
+        searchQuery: 'curie',
+        query: 'curie',
+        // Two nodes (marie, pierre) match "curie" -- the same live filter total the search-result
+        // list and the search announcement already compute.
+        matchCount: 2,
+        // This component's matchingNodes() filters the full node set with no ceiling, so it can
+        // never truncate.
+        matchCountExact: true,
+      },
+    ]);
     expect(
       el.searchQuery,
       'the component applies the query itself before announcing it'
     ).to.equal('curie');
 
+    native.value = '';
+    native.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+    expect(
+      details.at(-1),
+      'clearing the query reports a zero match count, still exactly'
+    ).to.deep.equal({
+      searchQuery: '',
+      query: '',
+      matchCount: 0,
+      matchCountExact: true,
+    });
+
     el.searchQuery = 'polonium';
     await el.updateComplete;
-    expect(details.length, 'a direct host assignment stays silent').to.equal(1);
+    expect(details.length, 'a direct host assignment stays silent').to.equal(2);
   });
 
   it('bounds the composed graph by an explicit host height instead of its own intrinsic aspect ratio', async () => {

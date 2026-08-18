@@ -2245,6 +2245,79 @@ These named interfaces and helper signatures are available to typed integrations
   children: unknown;
 }`
 
+- **`components-viewers-pptx-viewer-pptx-loader-contracts`** — Supporting data types and helpers for this component family.
+  `adaptPptxViewer(/* public names: value */): unknown`
+  `getPptxRenderer(): unknown`
+  `loadPptxRenderer(/* public names: importer */): unknown`
+  `PptxRendererModule {
+  PptxViewer: unknown;
+  open: unknown;
+  input: unknown;
+  container: unknown;
+  options: unknown;
+  RECOMMENDED_ZIP_LIMITS: unknown;
+}`
+  `PptxSearchHighlightHandle {
+  dispose: unknown;
+}`
+  `PptxTextSearchResult {
+  slideIndex: unknown;
+  nodeId: unknown;
+  matchStart: unknown;
+  matchEnd: unknown;
+  text: unknown;
+}`
+  `PptxThumbnailHandle {
+  ready: unknown;
+  dispose: unknown;
+}`
+  `PptxViewerAdapter {
+  slideCount: unknown;
+  currentSlideIndex: unknown;
+  goToSlide: unknown;
+  index: unknown;
+  searchText: unknown;
+  query: unknown;
+  options: unknown;
+  matchCase: unknown;
+  highlightSearchResult: unknown;
+  result: unknown;
+  scrollIntoView: unknown;
+  renderThumbnailToContainer: unknown;
+  container: unknown;
+  width: unknown;
+  clearSearchHighlights: unknown;
+  subscribe: unknown;
+  listener: unknown;
+  event: unknown;
+  destroy: unknown;
+}`
+  `PptxViewerApi {
+  slideCount: unknown;
+  currentSlideIndex: unknown;
+  goToSlide: unknown;
+  index: unknown;
+  searchText: unknown;
+  query: unknown;
+  options: unknown;
+  matchCase: unknown;
+  highlightSearchResult: unknown;
+  result: unknown;
+  scrollIntoView: unknown;
+  renderThumbnailToContainer: unknown;
+  container: unknown;
+  width: unknown;
+  clearSearchHighlights: unknown;
+  destroy: unknown;
+}`
+  `PptxZipLimits {
+  maxEntries: unknown;
+  maxEntryUncompressedBytes: unknown;
+  maxTotalUncompressedBytes: unknown;
+  maxMediaBytes: unknown;
+  maxConcurrency: unknown;
+}`
+
 - **`components-viewers-spreadsheet-viewer-spreadsheet-loader-contracts`** — Supporting data types and helpers for this component family.
   `clearSheetJsCache(): unknown`
   `loadSheetJsCached(): unknown`

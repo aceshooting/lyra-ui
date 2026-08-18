@@ -1132,6 +1132,37 @@ it("emits lr-visible-range-changed once the container is measured after mount", 
   el.remove();
 });
 
+it("emits the canonical lr-visible-range-change alongside the legacy lr-visible-range-changed alias, both exactly once with identical detail", async () => {
+  const el = document.createElement("lr-virtual-list") as LyraVirtualList;
+  el.setAttribute("style", "--lr-virtual-list-height:200px");
+  el.setAttribute("row-height", "40");
+  el.items = Array.from({ length: 30 }, (_, i) => i);
+  el.renderItem = renderText;
+  el.keyFunction = numberKey;
+
+  let canonicalCount = 0;
+  let legacyCount = 0;
+  const canonicalPending = oneEvent(el, "lr-visible-range-change");
+  const legacyPending = oneEvent(el, "lr-visible-range-changed");
+  el.addEventListener("lr-visible-range-change", () => canonicalCount++);
+  el.addEventListener("lr-visible-range-changed", () => legacyCount++);
+
+  document.body.appendChild(el);
+  const [canonical, legacy] = await Promise.all([
+    canonicalPending,
+    legacyPending,
+  ]);
+  await nextFrame();
+  await el.updateComplete;
+
+  expect(canonical.detail.start).to.equal(0);
+  expect(canonical.detail.end).to.be.greaterThan(0);
+  expect(legacy.detail).to.deep.equal(canonical.detail);
+  expect(canonicalCount, "canonical name fires exactly once").to.equal(1);
+  expect(legacyCount, "legacy alias fires exactly once").to.equal(1);
+  el.remove();
+});
+
 it("re-emits a populated range after an empty transition restores the same window", async () => {
   const items = Array.from({ length: 30 }, (_, i) => i);
   const el = document.createElement("lr-virtual-list") as LyraVirtualList;

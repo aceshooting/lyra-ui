@@ -27,7 +27,9 @@ import { LYRA_DEFAULT_progress } from '../../../internal/default-strings.generat
  * @customElement lr-progress-ring
  * @slot - Optional center label whose visible accessible text names the progressbar unless an
  * explicit accessible label overrides it; live mutations stay synchronized through forwarding
- * slots.
+ * slots. When nothing is slotted, the fallback content is the formatted percentage while
+ * determinate and `show-value` is set (`''` otherwise, and always `''` while `indeterminate`) --
+ * the same value contract as `<lr-progress-bar>`'s `showValue`.
  * @csspart base - Compatibility name for the progress wrapper; use `progress-ring`.
  * @csspart progress-ring - The progress wrapper. It is the same node as `base`.
  * @csspart track - The SVG track.
@@ -72,6 +74,12 @@ export class LyraProgressRing extends LyraElement {
   /** Selects the indicator's semantic palette from the shared semantic grid, matching sibling
    *  `<lr-progress-bar>`'s `variant`. */
   @property({ reflect: true }) variant: LyraProgressVariant = 'brand';
+  /** Shows the formatted percentage as the default slot's fallback content while determinate.
+   *  `false` by default, matching sibling `<lr-progress-bar>`'s `showValue`/`show-value` exactly --
+   *  a determinate ring with no `show-value` renders no percentage text. Only the fallback is
+   *  gated: a consumer who slots their own content always sees that content instead, with or
+   *  without `show-value` (native `<slot>` projection semantics, unaffected by this property). */
+  @property({ type: Boolean, attribute: 'show-value' }) showValue = false;
   /** Mapped accessible-label property. */
   @property() label = '';
   /** Explicit accessible name, on the library-wide `accessibleLabel`/`accessible-label` convention
@@ -210,7 +218,7 @@ export class LyraProgressRing extends LyraElement {
         <circle part="indicator" cx="50" cy="50" r=${radius} stroke-width="10"
           stroke-dasharray=${circumference} stroke-dashoffset=${offset}></circle>
       </svg>
-      <span part="label"><slot @slotchange=${this.onLabelSlotChange}>${this.indeterminate ? '' : this.formattedPercent}</slot></span>
+      <span part="label"><slot @slotchange=${this.onLabelSlotChange}>${this.indeterminate || !this.showValue ? '' : this.formattedPercent}</slot></span>
     </div>`;
   }
 }

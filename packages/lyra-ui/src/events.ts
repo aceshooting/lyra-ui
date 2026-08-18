@@ -719,16 +719,17 @@ export type LyraClearEvent =
   | LyraTimeInputEventMap['lr-clear'];
 
 /**
- * `lr-close` — dispatched by 8 components: `<lr-callout>`, `<lr-command-palette>`,
- * `<lr-document-viewer>`, `<lr-responsive-panel>`, `<lr-tab>`, `<lr-tool-approval-dialog>`,
- * `<lr-tool-result-dialog>`, `<lr-tool-select-dialog>`.
+ * `lr-close` — dispatched by 10 components: `<lr-callout>`, `<lr-command-palette>`, `<lr-dialog>`,
+ * `<lr-document-viewer>`, `<lr-drawer>`, `<lr-responsive-panel>`, `<lr-tab>`,
+ * `<lr-tool-approval-dialog>`, `<lr-tool-result-dialog>`, `<lr-tool-select-dialog>`.
  *
- * A union of 8 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 9 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g. `LyraCalloutEventMap['lr-close']`.
  */
 export type LyraCloseEvent =
   | LyraCalloutEventMap['lr-close']
   | LyraCommandPaletteEventMap['lr-close']
+  | LyraDialogEventMap['lr-close']
   | LyraDocumentViewerEventMap['lr-close']
   | LyraResponsivePanelEventMap['lr-close']
   | LyraTabEventMap['lr-close']
@@ -1091,6 +1092,19 @@ export type LyraEntityActivateEvent =
  * Detail type: `LyraEntityChipEventMap['lr-entity-open']`.
  */
 export type LyraEntityOpenEvent = LyraEntityChipEventMap['lr-entity-open'];
+
+/**
+ * `lr-entity-select` — dispatched by 3 components: `<lr-entity-card>`, `<lr-entity-chip>`,
+ * `<lr-neighbor-list>`.
+ *
+ * A union of 3 component entries, so `event.detail` here exposes only what all of them share. For
+ * one component's exact detail, index its own map — e.g.
+ * `LyraEntityCardEventMap['lr-entity-select']`.
+ */
+export type LyraEntitySelectEvent =
+  | LyraEntityCardEventMap['lr-entity-select']
+  | LyraEntityChipEventMap['lr-entity-select']
+  | LyraNeighborListEventMap['lr-entity-select'];
 
 /**
  * `lr-error` — dispatched by 20 components: `<lr-animated-image>`, `<lr-artifact-panel>`,
@@ -2630,6 +2644,13 @@ export type LyraRunActivateEvent =
   | LyraSubagentPanelEventMap['lr-run-activate'];
 
 /**
+ * `lr-run-change` — dispatched by `<lr-rag-eval-dashboard>`.
+ *
+ * Detail type: `LyraRagEvalDashboardEventMap['lr-run-change']`.
+ */
+export type LyraRunChangeEvent = LyraRagEvalDashboardEventMap['lr-run-change'];
+
+/**
  * `lr-run-retry` — dispatched by 3 components: `<lr-agent-run>`, `<lr-agent-workspace>`,
  * `<lr-subagent-panel>`.
  *
@@ -3157,14 +3178,15 @@ export type LyraToggleEvent =
   | LyraThinkingPanelEventMap['lr-toggle'];
 
 /**
- * `lr-toggle-request` — dispatched by 4 components: `<lr-chat-message>`, `<lr-code-block-core>`,
- * `<lr-code-block>`, `<lr-thinking-panel>`.
+ * `lr-toggle-request` — dispatched by 5 components: `<lr-accordion>`, `<lr-chat-message>`,
+ * `<lr-code-block-core>`, `<lr-code-block>`, `<lr-thinking-panel>`.
  *
- * A union of 4 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 5 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.
- * `LyraChatMessageEventMap['lr-toggle-request']`.
+ * `LyraAccordionEventMap['lr-toggle-request']`.
  */
 export type LyraToggleRequestEvent =
+  | LyraAccordionEventMap['lr-toggle-request']
   | LyraChatMessageEventMap['lr-toggle-request']
   | LyraCodeBlockCoreEventMap['lr-toggle-request']
   | LyraCodeBlockEventMap['lr-toggle-request']
@@ -3359,6 +3381,13 @@ export type LyraVirtualScrollEvent = LyraVirtualListEventMap['lr-virtual-scroll'
 export type LyraVisibilityChangeEvent = LyraGraphLegendEventMap['lr-visibility-change'];
 
 /**
+ * `lr-visible-range-change` — dispatched by `<lr-virtual-list>`.
+ *
+ * Detail type: `LyraVirtualListEventMap['lr-visible-range-change']`.
+ */
+export type LyraVisibleRangeChangeEvent = LyraVirtualListEventMap['lr-visible-range-change'];
+
+/**
  * `lr-visible-range-changed` — dispatched by `<lr-virtual-list>`.
  *
  * Detail type: `LyraVirtualListEventMap['lr-visible-range-changed']`.
@@ -3536,6 +3565,7 @@ export interface LyraGlobalEventMap {
   'lr-edit': LyraEditEvent;
   'lr-entity-activate': LyraEntityActivateEvent;
   'lr-entity-open': LyraEntityOpenEvent;
+  'lr-entity-select': LyraEntitySelectEvent;
   'lr-error': LyraErrorEvent;
   'lr-event-select': LyraEventSelectEvent;
   'lr-example-add-request': LyraExampleAddRequestEvent;
@@ -3703,6 +3733,7 @@ export interface LyraGlobalEventMap {
   'lr-row-select': LyraRowSelectEvent;
   'lr-run': LyraRunEvent;
   'lr-run-activate': LyraRunActivateEvent;
+  'lr-run-change': LyraRunChangeEvent;
   'lr-run-retry': LyraRunRetryEvent;
   'lr-run-select': LyraRunSelectEvent;
   'lr-save': LyraSaveEvent;
@@ -3777,6 +3808,7 @@ export interface LyraGlobalEventMap {
   'lr-viewport-change': LyraViewportChangeEvent;
   'lr-virtual-scroll': LyraVirtualScrollEvent;
   'lr-visibility-change': LyraVisibilityChangeEvent;
+  'lr-visible-range-change': LyraVisibleRangeChangeEvent;
   'lr-visible-range-changed': LyraVisibleRangeChangedEvent;
   'lr-voice-change': LyraVoiceChangeEvent;
   'lr-vote': LyraVoteEvent;

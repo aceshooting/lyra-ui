@@ -33,7 +33,8 @@ const overscanConverter = {
   },
 };
 
-/** `lr-visible-range-changed` detail -- the current visible (non-overscanned) item index range. */
+/** `lr-visible-range-change` detail (also used by the deprecated `lr-visible-range-changed`
+ *  alias) -- the current visible (non-overscanned) item index range. */
 export interface LyraVirtualListRange {
   start: number;
   end: number;
@@ -115,6 +116,9 @@ export interface LyraVirtualListScroll {
 }
 
 export interface LyraVirtualListEventMap {
+  'lr-visible-range-change': CustomEvent<LyraVirtualListRange>;
+  /** @deprecated Use `lr-visible-range-change` instead; retained as an identical-detail alias
+   *  until v11. */
   'lr-visible-range-changed': CustomEvent<LyraVirtualListRange>;
   'lr-load-more': CustomEvent<null>;
   'lr-virtual-scroll': CustomEvent<LyraVirtualListScroll>;
@@ -242,15 +246,18 @@ export interface LyraVirtualListEventMap {
  *   end, re-arms it) — a consumer wanting an automatic retry after a failed
  *   fetch should surface its own retry affordance rather than relying on
  *   this firing again unprompted.
- * @event lr-visible-range-changed - `detail: { start, end }` (see
+ * @event lr-visible-range-change - `detail: { start, end }` (see
  *   `LyraVirtualListRange`) — the current visible (non-overscanned) item index
  *   range, fired only when it actually changes.
+ * @event lr-visible-range-changed - Deprecated alias for `lr-visible-range-change`, retained with
+ *   an identical `detail` and fired alongside it for backward compatibility. Prefer
+ *   `lr-visible-range-change`; this alias is slated for removal in v11.
  * @event lr-virtual-scroll - `detail: { scrollTop, viewportHeight }` (see
  *   `LyraVirtualListScroll`) — the scroll container moved. Emitted from the same
  *   `requestAnimationFrame` tick that already coalesces native `scroll`
  *   events, so a fling that fires dozens of native events produces at most one
  *   of these per frame, and none at all when the position did not actually
- *   change. Unlike `lr-visible-range-changed` this reports *sub-row*
+ *   change. Unlike `lr-visible-range-change` this reports *sub-row*
  *   movement, which is what a scroll-linked layout (a pinned header, a
  *   minimap) needs.
  *
@@ -1516,10 +1523,16 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       return;
     this.lastEmittedStart = this.visibleStart;
     this.lastEmittedEnd = this.visibleEnd;
-    this.emit('lr-visible-range-changed', {
+    // Hot path (runs on every visible-range change during scrolling): build the detail once and
+    // dispatch it under both names rather than constructing it twice. `lr-visible-range-changed`
+    // is a deprecated alias for `lr-visible-range-change`, kept emitting with identical detail
+    // until v11.
+    const detail: LyraVirtualListRange = {
       start: this.visibleStart,
       end: this.visibleEnd,
-    });
+    };
+    this.emit('lr-visible-range-change', detail);
+    this.emit('lr-visible-range-changed', detail);
   }
 
   private maybeFireLoadMore(): void {

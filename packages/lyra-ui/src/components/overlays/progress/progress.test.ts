@@ -3,6 +3,7 @@ import './progress-bar.js';
 import './progress-ring.js';
 import type { LyraProgressBar, LyraProgressVariant } from './progress-bar.js';
 import type { LyraProgressRing } from './progress-ring.js';
+import { formatProgressPercent } from './progress-shared.js';
 
 class ProgressBarLabelForwardWrapper extends HTMLElement {
   constructor() {
@@ -122,6 +123,81 @@ it('keeps a default-slot label visible and accessible independently of show-valu
   expect(slot.assignedNodes().map((node) => node.textContent).join('').trim()).to.equal('Uploading files');
   expect(getComputedStyle(label).display).to.equal('flex');
   expect(base.getAttribute('aria-label')).to.equal('Uploading files');
+});
+
+// The default slot's FALLBACK content (the literal children Lit renders inside `<slot>...
+// </slot>`) is always present as a real DOM child of the slot, whether or not it is the thing
+// actually painted -- plain `Element.textContent` reads that literal child regardless of
+// projection, so it cannot tell "fallback is showing" apart from "fallback exists but assigned
+// content is showing instead". `assignedNodes({flatten:true})` is the one API that returns the
+// real assigned nodes when present and falls back to the slot's own children only when nothing is
+// assigned (the same trick `computeVisibleLabelText()` in progress-ring.class.ts relies on), so
+// it reflects what is actually rendered in both cases.
+function ringRenderedLabelText(el: LyraProgressRing): string {
+  const slot = el.shadowRoot!.querySelector<HTMLSlotElement>('[part="label"] slot:not([name])')!;
+  return slot
+    .assignedNodes({ flatten: true })
+    .map((node) => node.textContent ?? '')
+    .join('')
+    .trim();
+}
+
+describe('lr-progress-ring show-value', () => {
+  it('defaults show-value to false, rendering no percentage text for a determinate ring with no slotted content', async () => {
+    const el = (await fixture(html`<lr-progress-ring value="40"></lr-progress-ring>`)) as LyraProgressRing;
+    expect(el.showValue).to.be.false;
+    expect(el.hasAttribute('show-value')).to.be.false;
+    expect(ringRenderedLabelText(el)).to.equal('');
+  });
+
+  it('renders the formatted percentage when show-value is set on a determinate ring', async () => {
+    const el = (await fixture(
+      html`<lr-progress-ring lang="en" value="40" show-value></lr-progress-ring>`,
+    )) as LyraProgressRing;
+    expect(el.showValue).to.be.true;
+    expect(ringRenderedLabelText(el)).to.equal(formatProgressPercent('en', 40));
+  });
+
+  it('lets slotted content win over the percentage fallback regardless of show-value', async () => {
+    const withoutShowValue = (await fixture(
+      html`<lr-progress-ring value="40">Uploading</lr-progress-ring>`,
+    )) as LyraProgressRing;
+    expect(ringRenderedLabelText(withoutShowValue)).to.equal('Uploading');
+
+    const withShowValue = (await fixture(
+      html`<lr-progress-ring value="40" show-value>Uploading</lr-progress-ring>`,
+    )) as LyraProgressRing;
+    expect(ringRenderedLabelText(withShowValue)).to.equal('Uploading');
+  });
+
+  it('leaves the indeterminate ring unaffected by show-value', async () => {
+    const withoutShowValue = (await fixture(
+      html`<lr-progress-ring indeterminate></lr-progress-ring>`,
+    )) as LyraProgressRing;
+    expect(ringRenderedLabelText(withoutShowValue)).to.equal('');
+
+    const withShowValue = (await fixture(
+      html`<lr-progress-ring indeterminate show-value></lr-progress-ring>`,
+    )) as LyraProgressRing;
+    expect(ringRenderedLabelText(withShowValue)).to.equal('');
+  });
+
+  it('defaults to show-value=false, leaving every other determinate-ring behavior unchanged', async () => {
+    const el = (await fixture(
+      html`<lr-progress-ring lang="en" value="40"></lr-progress-ring>`,
+    )) as LyraProgressRing;
+    const base = el.shadowRoot!.querySelector('[role="progressbar"]') as HTMLElement;
+    const indicator = el.shadowRoot!.querySelector('[part="indicator"]') as SVGCircleElement;
+    expect(el.showValue).to.be.false;
+    expect(base.getAttribute('aria-valuenow')).to.equal('40');
+    expect(base.getAttribute('aria-valuemin')).to.equal('0');
+    expect(base.getAttribute('aria-valuemax')).to.equal('100');
+    // aria-valuetext still carries the percentage for assistive tech, independent of show-value
+    // -- only the visible slot fallback is gated, matching `<lr-progress-bar>`'s own
+    // aria-valuetext/show-value independence.
+    expect(base.getAttribute('aria-valuetext')).to.equal(formatProgressPercent('en', 40));
+    expect(indicator.getAttribute('stroke-dashoffset')).to.equal(String(el.indicatorOffset));
+  });
 });
 
 it('supports label plus accessible-label as equivalent progress naming surfaces', async () => {
@@ -257,7 +333,7 @@ it('locale-formats visible percentage output and forwards live host naming to bo
   await bar.updateComplete;
   expect(barBase.getAttribute('aria-label')).to.equal('Download');
 
-  const ring = await fixture(html`<lr-progress-ring lang="de" value="25" max="50" aria-label="Sync"></lr-progress-ring>`);
+  const ring = await fixture(html`<lr-progress-ring lang="de" value="25" max="50" show-value aria-label="Sync"></lr-progress-ring>`);
   const ringBase = ring.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(ring.shadowRoot!.querySelector('[part="label"]')?.textContent).to.equal(
     new Intl.NumberFormat('de', { style: 'percent', maximumFractionDigits: 0 }).format(0.5),

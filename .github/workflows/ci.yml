@@ -8,9 +8,17 @@ on:
 # A new push to the same branch/PR supersedes the previous run's results entirely -- cancel it
 # instead of burning runner-minutes (and Codecov/Scorecard-style upload slots) on output nobody
 # will read. `github.ref` alone would let concurrent PRs targeting different branches collide.
+#
+# ...but NOT on `main`. Cancellation rewrites the run's top-level conclusion to `cancelled`, which
+# silently outranks a job that had ALREADY completed as `failure` before the cancel landed. A rapid
+# push sequence to `main` could therefore leave a genuinely broken commit reporting `cancelled`
+# rather than `failure`, so anyone triaging by run-level status -- the normal thing to do -- sees a
+# superseded run instead of a red gate, and the breakage survives further pushes unnoticed. Every
+# commit on `main` is a release candidate whose real pass/fail must stay attributable, so `main`
+# runs are never cancelled; branches and PRs keep the cheap behavior.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 # No job pushes, comments, or otherwise writes to the repo -- checkout and
 # artifact upload/download both work fine under read-only contents access.

@@ -945,6 +945,90 @@ describe('close() respects preventDefault()', () => {
   });
 });
 
+describe('lr-close (unified close event, additive alongside lr-dialog-close)', () => {
+  it('fires lr-close alongside lr-dialog-close with identical detail, each exactly once', async () => {
+    const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
+    let legacyCount = 0;
+    let unifiedCount = 0;
+    let legacyDetail: unknown;
+    let unifiedDetail: unknown;
+    el.addEventListener('lr-dialog-close', (e) => {
+      legacyCount++;
+      legacyDetail = (e as CustomEvent).detail;
+    });
+    el.addEventListener('lr-close', (e) => {
+      unifiedCount++;
+      unifiedDetail = (e as CustomEvent).detail;
+    });
+
+    el.close('save');
+    await el.updateComplete;
+
+    expect(legacyCount).to.equal(1);
+    expect(unifiedCount).to.equal(1);
+    expect(legacyDetail).to.equal('save');
+    expect(unifiedDetail).to.equal('save');
+    expect(el.open).to.be.false;
+  });
+
+  it('still fires the legacy lr-dialog-close unchanged when nothing listens for lr-close', async () => {
+    const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
+    let detail: unknown;
+    let count = 0;
+    el.addEventListener('lr-dialog-close', (e) => {
+      count++;
+      detail = (e as CustomEvent).detail;
+    });
+
+    el.close('api');
+    await el.updateComplete;
+
+    expect(count).to.equal(1);
+    expect(detail).to.equal('api');
+    expect(el.open).to.be.false;
+  });
+
+  it('lr-close is cancelable and, alone, vetoes the close (lr-dialog-close listener does not preventDefault)', async () => {
+    const el = (await fixture(html`<lr-dialog open>Body</lr-dialog>`)) as LyraDialog;
+    await el.updateComplete;
+    let dialogCloseCount = 0;
+    el.addEventListener('lr-dialog-close', () => dialogCloseCount++);
+    el.addEventListener('lr-close', (e) => e.preventDefault());
+
+    el.close('api');
+    await el.updateComplete;
+
+    expect(el.open, 'a veto via lr-close alone must still stop the close').to.be.true;
+    expect(dialogCloseCount, 'lr-dialog-close still fires even though it did not itself veto').to.equal(1);
+  });
+
+  it('lr-dialog-close is cancelable and, alone, vetoes the close (lr-close listener does not preventDefault)', async () => {
+    const el = (await fixture(html`<lr-dialog open>Body</lr-dialog>`)) as LyraDialog;
+    await el.updateComplete;
+    let closeCount = 0;
+    el.addEventListener('lr-dialog-close', (e) => e.preventDefault());
+    el.addEventListener('lr-close', () => closeCount++);
+
+    el.close('api');
+    await el.updateComplete;
+
+    expect(el.open, 'a veto via lr-dialog-close alone must still stop the close').to.be.true;
+    expect(closeCount, 'lr-close still fires even though it did not itself veto').to.equal(1);
+  });
+
+  it('closes normally when neither lr-close nor lr-dialog-close is defaulted (regression)', async () => {
+    const el = (await fixture(html`<lr-dialog open>Body</lr-dialog>`)) as LyraDialog;
+    await el.updateComplete;
+    el.addEventListener('lr-dialog-close', () => {});
+    el.addEventListener('lr-close', () => {});
+
+    el.close('api');
+    await el.updateComplete;
+
+    expect(el.open).to.be.false;
+  });
+});
+
 describe('external removal while open', () => {
   it('emits lr-dialog-close with reason "unmount" when removed from the DOM without calling close()', async () => {
     const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
@@ -958,6 +1042,24 @@ describe('external removal while open', () => {
     el.remove();
     // The emit is deferred a microtask so a synchronous reparent (disconnect
     // immediately followed by reconnect) isn't mistaken for a real removal.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(count).to.equal(1);
+    expect(detail).to.equal('unmount');
+    expect(el.open).to.be.false;
+  });
+
+  it('emits lr-close alongside lr-dialog-close with reason "unmount" when removed from the DOM', async () => {
+    const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
+    let detail: unknown;
+    let count = 0;
+    el.addEventListener('lr-close', (e) => {
+      count++;
+      detail = (e as CustomEvent).detail;
+    });
+
+    el.remove();
     await Promise.resolve();
     await Promise.resolve();
 

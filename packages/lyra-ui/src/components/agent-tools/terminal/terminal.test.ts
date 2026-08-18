@@ -240,21 +240,30 @@ describe('lr-terminal', () => {
     }
   });
 
-  it('search() resolves match count and lr-search-change reports query/matchCount/activeIndex', async () => {
+  it('search() resolves match count and lr-search-change reports query/matchCount/matchCountExact/activeIndex', async () => {
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
     el.write('error: bad\ninfo: ok\nerror: worse');
     await el.updateComplete;
     const listener = oneEvent(el, 'lr-search-change');
     const count = await el.search('error');
     expect(count).to.equal(2);
-    const event = (await listener) as CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
-    expect(event.detail).to.deep.equal({ query: 'error', matchCount: 2, activeIndex: 0 });
+    const event = (await listener) as CustomEvent<{
+      query: string;
+      matchCount: number;
+      matchCountExact: boolean;
+      activeIndex: number;
+    }>;
+    expect(event.detail).to.deep.equal({ query: 'error', matchCount: 2, matchCountExact: true, activeIndex: 0 });
   });
 
-  it('bounds the number of occurrence matches retained for an adversarial single line', async () => {
+  it('bounds the number of occurrence matches retained for an adversarial single line, and reports matchCountExact: false', async () => {
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
     el.write('a'.repeat(12_000));
+    const listener = oneEvent(el, 'lr-search-change');
     expect(await el.search('a')).to.equal(10_000);
+    const event = (await listener) as CustomEvent<{ matchCount: number; matchCountExact: boolean }>;
+    expect(event.detail.matchCount).to.equal(10_000);
+    expect(event.detail.matchCountExact).to.equal(false); // the 10,000-match ceiling was hit
   });
 
   it('searchNext()/searchPrevious() wrap around the match list', async () => {
@@ -280,8 +289,9 @@ describe('lr-terminal', () => {
     await el.search('error');
     const listener = oneEvent(el, 'lr-search-change');
     el.clearSearch();
-    const event = (await listener) as CustomEvent<{ matchCount: number }>;
+    const event = (await listener) as CustomEvent<{ matchCount: number; matchCountExact: boolean }>;
     expect(event.detail.matchCount).to.equal(0);
+    expect(event.detail.matchCountExact).to.equal(true);
   });
 
   it('emits exactly once for search-state changes caused by writes, trims, clears, and content replacement', async () => {
@@ -289,31 +299,39 @@ describe('lr-terminal', () => {
     el.write('error\nok');
     await el.updateComplete;
     await el.search('error');
-    const details: Array<{ query: string; matchCount: number; activeIndex: number }> = [];
+    const details: Array<{
+      query: string;
+      matchCount: number;
+      matchCountExact: boolean;
+      activeIndex: number;
+    }> = [];
     el.addEventListener('lr-search-change', (event) => {
-      details.push((event as CustomEvent<{ query: string; matchCount: number; activeIndex: number }>).detail);
+      details.push(
+        (event as CustomEvent<{ query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }>)
+          .detail,
+      );
     });
 
     el.write('\nerror');
     await el.updateComplete;
-    expect(details).to.deep.equal([{ query: 'error', matchCount: 2, activeIndex: 0 }]);
+    expect(details).to.deep.equal([{ query: 'error', matchCount: 2, matchCountExact: true, activeIndex: 0 }]);
 
     details.length = 0;
     el.maxScrollback = 2;
     await el.updateComplete;
-    expect(details).to.deep.equal([{ query: 'error', matchCount: 1, activeIndex: 0 }]);
+    expect(details).to.deep.equal([{ query: 'error', matchCount: 1, matchCountExact: true, activeIndex: 0 }]);
 
     details.length = 0;
     el.clear();
     await el.updateComplete;
-    expect(details).to.deep.equal([{ query: '', matchCount: 0, activeIndex: -1 }]);
+    expect(details).to.deep.equal([{ query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 }]);
 
     el.write('error');
     await el.search('error');
     details.length = 0;
     el.content = 'replacement';
     await el.updateComplete;
-    expect(details).to.deep.equal([{ query: '', matchCount: 0, activeIndex: -1 }]);
+    expect(details).to.deep.equal([{ query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 }]);
   });
 
   it('does not emit lr-search-change when normalization leaves public search state unchanged', async () => {

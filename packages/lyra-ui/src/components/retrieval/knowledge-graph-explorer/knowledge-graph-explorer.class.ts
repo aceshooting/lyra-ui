@@ -31,6 +31,7 @@ import {
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
 import type { LyraNeighborRow } from '../neighbor-list/neighbor-list.class.js';
 import type { LyraPathElement } from '../path-strip/path-strip.class.js';
+export type { LyraPathElement } from '../path-strip/path-strip.class.js';
 import type { LyraPopover } from '../../overlays/overlay/popover.class.js';
 import '../graph/graph.class.js';
 import '../graph-legend/graph-legend.class.js';
@@ -93,11 +94,24 @@ export interface LyraKnowledgeGraphExplorerEventMap {
    *  change` already establishes), so reassigning it back is optional -- useful only for a host
    *  that wants to persist or observe pins elsewhere. */
   'lr-pin-change': CustomEvent<LyraEventDetailSnapshot<{ pinnedNodeIds: string[] }>>;
-  /** The user typed in the toolbar's search box. `detail: { searchQuery }` -- the complete new
-   *  query. The component has already applied it to its own `searchQuery` before emitting, the same
-   *  self-toggle-then-emit contract `lr-pin-change` follows, so reassigning it back is optional and
-   *  a direct host assignment stays silent. */
-  'lr-search-change': CustomEvent<{ searchQuery: string }>;
+  /** The user typed in the toolbar's search box. `detail: { searchQuery, query, matchCount,
+   *  matchCountExact }` -- `searchQuery` is the original, still-shipped member name; `query` is the
+   *  same value under the canonical `LyraSearchChangeDetail` name
+   *  (`internal/text-viewer-target.ts`), added alongside it rather than renamed in place. `matchCount`
+   *  is the same live node-filter total the search-result list and its own live-region announcement
+   *  already compute (`0` while `query` is empty). `matchCountExact` is always `true`: unlike a
+   *  paginated text-search viewer, this component's node filter has no ceiling, so it can never
+   *  truncate. This is a live node FILTER, not a cursor-based text search -- it deliberately never
+   *  carries the canonical `activeIndex` field, since it has no `searchNext`/`searchPrevious`/
+   *  active-match cursor to report. The component has already applied the query to its own
+   *  `searchQuery` before emitting, the same self-toggle-then-emit contract `lr-pin-change` follows,
+   *  so reassigning it back is optional and a direct host assignment stays silent. */
+  'lr-search-change': CustomEvent<{
+    searchQuery: string;
+    query: string;
+    matchCount: number;
+    matchCountExact: boolean;
+  }>;
   /** A node type's visibility changed via the composed legend. `detail: { hiddenTypes }` -- the
    *  complete updated array. This component already applies it to its own `hiddenTypes` before
    *  emitting, the same self-toggle-then-emit contract `lr-pin-change`/`lr-search-change` follow,
@@ -180,7 +194,11 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * @event lr-path-request - `detail: { sourceNodeId, targetNodeId }`. See the class doc above.
  * @event lr-pin-change - `detail: { pinnedNodeIds }`. See the class doc above.
  * @event lr-search-change - The user typed in the toolbar's search box. `detail:
- *   { searchQuery: string }`. Direct host assignments do not emit.
+ *   { searchQuery, query, matchCount, matchCountExact }`. `searchQuery`/`query` carry the identical
+ *   value (`query` is the canonical `LyraSearchChangeDetail` name, added alongside the original
+ *   `searchQuery`); `matchCountExact` is always `true` since this component's node filter has no
+ *   truncating ceiling. No `activeIndex` -- this is a live node filter, not a cursor-based search.
+ *   Direct host assignments do not emit.
  * @event lr-hidden-types-change - A node type's visibility changed via the composed legend.
  *   `detail: { hiddenTypes }`. See the class doc above. Direct host assignments do not emit.
  * @event lr-node-click - Bubbles straight through from the composed `lr-graph`, unmodified.
@@ -406,7 +424,17 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
       this.setInternalSelectedNodeId(null);
       if (this.popoverEl) this.popoverEl.open = false;
     }
+    // `changed.has('searchQuery')` is already `true` on the very first `willUpdate()` whenever a
+    // preset `search-query` attribute reached the element before its first render -- there is no
+    // user action behind that transition, so it must not announce (mirrors `<lr-chat-message>`/
+    // `<lr-branch-picker>`'s identical "don't announce on mount" gate). Those two run their own
+    // announcement from `updated()`, where `this.hasUpdated` is already `true` on the very first
+    // pass, so they carry a dedicated `isMounting` field instead; this block runs from
+    // `willUpdate()`, which always executes *before* `hasUpdated` flips, so `hasUpdated` itself is
+    // already the "provably false pre-mount" comparison and needs no separate field here --
+    // `connectedCallback()`/`canActivateNode()` above already gate on it the same way.
     if (
+      this.hasUpdated &&
       this.searchQuery.trim() &&
       (changed.has('searchQuery') ||
         changed.has('nodes') ||
@@ -788,11 +816,16 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     this.searchQuery = value;
     // Same self-toggle-then-emit contract as setInternalSelectedNodeId()/togglePin(): only a
     // component-initiated change announces itself, so a host that assigns the property back in
-    // response cannot start a feedback loop.
-    this.emit('lr-search-change', { searchQuery: value });
-    // Same self-toggle-then-emit contract as setInternalSelectedNodeId()/togglePin(): only a
-    // component-initiated change announces itself, so a host that assigns the property back in
-    // response cannot start a feedback loop.
+    // response cannot start a feedback loop. `matchingNodes()` already reads `this.searchQuery`,
+    // which was just reassigned above, so it reports the count for the new query, not the old one;
+    // it returns `undefined` (not a truncated result) whenever the trimmed query is empty, hence
+    // the `?? 0` rather than a truncation-driven `matchCountExact: false`.
+    this.emit('lr-search-change', {
+      searchQuery: value,
+      query: value,
+      matchCount: this.matchingNodes()?.length ?? 0,
+      matchCountExact: true,
+    });
   };
 
   private onEntityActivate = (

@@ -326,6 +326,13 @@ Release blockers for new components, bugs in existing ones. Full rules:
   regenerated manifest agree; run `pnpm manifest`, regenerate editor data, then `./package.sh` so
   generated llms and packaged references agree too. Verify numeric/parity claims by hand; helper
   examples import granular subpaths, never the root barrel.
+- A NEW EVENT or a changed event detail needs two more generators that this list used to omit and
+  that nothing else reminds you about: `pnpm run events` (regenerates `src/events.ts`) and
+  `pnpm run framework-types` (regenerates the React/Vue/Svelte declarations). Both are blocking —
+  `check:event-types` and `check:framework-types` — so skipping them fails `pnpm lint` well after
+  the change looks finished. A new `@deprecated` member additionally needs a record in
+  `scripts/fixtures/component-metadata.json#deprecations`, whose `since` may not exceed the current
+  `package.json` version and whose `removalNotBefore` must clear one whole subsequent major.
 
 ## Testing conventions — digest
 

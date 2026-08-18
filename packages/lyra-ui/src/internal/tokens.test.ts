@@ -350,7 +350,12 @@ it('chains filled-content and border tokens through the matching lyra theme-inpu
     ['--lr-theme-color-surface-border', '--lr-color-border'],
     ['--lr-theme-color-focus', '--lr-focus-ring-color'],
     ['--lr-theme-color-on-strong-overlay', '--lr-color-on-strong-overlay'],
-    ...(['brand', 'success', 'warning', 'danger'] as const).map(
+    // `neutral` belongs here for the same reason as the other four: it declares a real
+    // `--lr-theme-color-neutral-on-loud` bridge in both palette modes, and it reaches
+    // `--lr-color-on-neutral` through the identical grid slot. Leaving it out meant the one test
+    // whose job is to catch that bridge breaking would have stayed green while tooltip, popover,
+    // lightbox and the slider's neutral track all lost their themeable foreground.
+    ...(['brand', 'success', 'warning', 'danger', 'neutral'] as const).map(
       (tone) => [`--lr-theme-color-${tone}-on-loud`, `--lr-color-on-${tone}`] as [string, string],
     ),
   ];

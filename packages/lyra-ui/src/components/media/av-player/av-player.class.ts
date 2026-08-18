@@ -27,6 +27,7 @@ import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { styles } from './av-player.styles.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { resolveBoundedCanvasAllocation } from '../../../internal/canvas.js';
+import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import {
   EMPTY_LYRA_AV_CUES,
   EMPTY_LYRA_AV_TRACKS,
@@ -195,7 +196,7 @@ export interface LyraAvPlayerEventMap {
   'lr-cue-change': CustomEvent<LyraAvCueChangeDetail>;
   'lr-highlight-activate': CustomEvent<HighlightActivateDetail>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
-  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   blur: FocusEvent;
   focus: FocusEvent;
@@ -255,7 +256,9 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  * @event lr-anchor-result - Fired after `anchor` (or a `scrollToAnchor()` call) is applied.
  *   `detail: { found }`.
  * @event lr-search-change - Fired from `search()`/`searchNext()`/`searchPrevious()`/
- *   `clearSearch()`. `detail: { query, matchCount, activeIndex }`.
+ *   `clearSearch()`. `detail: { query, matchCount, matchCountExact, activeIndex }`.
+ *   `matchCountExact` is always `true`: `search()` matches over the already-loaded `cues` array
+ *   with no additional ceiling.
  * @event lr-render-error - Native media failure, unsafe-source rejection, or an internal playback
  *   rejection. `detail: { error }`; native `MediaError` identity is preserved.
  * @event {FocusEvent} focus - Relayed once from the native media element as a bubbling, composed
@@ -1051,6 +1054,11 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this.emit('lr-search-change', {
       query: this.searchQuery,
       matchCount: this.searchMatches.length,
+      // reconcileSearchMatches() reduces over the already-loaded `cues` array with no additional
+      // ceiling (the array itself is bounded to MAX_LYRA_AV_CUES entries when it is loaded, which
+      // is a corpus-retention limit like `<lr-terminal>`'s scrollback trim, not a search-time cap),
+      // so the count is always exact.
+      matchCountExact: true,
       activeIndex: this.activeSearchIndex,
     });
   }

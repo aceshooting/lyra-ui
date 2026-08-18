@@ -33,6 +33,15 @@ export interface LyraAccordionEventMap {
   'lr-after-expand': CustomEvent<LyraEventDetailSnapshot<LyraAccordionEventDetail>>;
   'lr-collapse': CustomEvent<LyraEventDetailSnapshot<LyraAccordionEventDetail>>;
   'lr-after-collapse': CustomEvent<LyraEventDetailSnapshot<LyraAccordionEventDetail>>;
+  // `lr-expand`/`lr-collapse` put the direction in the event NAME; this shape puts it in the
+  // DETAIL instead, matching `<lr-code-block>`'s and `<lr-chat-message>`'s `lr-toggle-request`
+  // `{ collapsed }` contract (`collapsed: true` is the closing direction in both). `item` is kept
+  // alongside it because, unlike those single-panel components, an accordion's toggling entity is
+  // one of several children -- a generic listener still needs it to know which panel is proposed
+  // to change.
+  'lr-toggle-request': CustomEvent<
+    LyraEventDetailSnapshot<{ readonly collapsed: boolean; readonly item: LyraAccordionItem }>
+  >;
 }
 
 function normalizeMode(value: unknown): LyraAccordionMode {
@@ -60,6 +69,14 @@ function normalizeMode(value: unknown): LyraAccordionMode {
  * @event lr-after-expand - Emitted after a direct item finishes expanding. `detail: { item }`.
  * @event lr-collapse - Emitted before a direct item collapses. `detail: { item }`. Cancelable.
  * @event lr-after-collapse - Emitted after a direct item finishes collapsing. `detail: { item }`.
+ * @event lr-toggle-request - Emitted alongside `lr-expand`/`lr-collapse` for the same proposed
+ *   transition, with the direction in the detail instead of the event name -- the same
+ *   `{ collapsed }` shape `<lr-code-block>` and `<lr-chat-message>` use for their own
+ *   `lr-toggle-request`, plus `item` to identify which child is proposed to change.
+ *   `detail: { collapsed, item }`. Cancelable; a listener calling `preventDefault()` on either
+ *   `lr-toggle-request` or the matching `lr-expand`/`lr-collapse` vetoes the transition, and both
+ *   always fire so a listener on one name never misses a transition the other name already
+ *   vetoed.
  * @csspart base - The accordion wrapper.
  * @cssprop [--lr-accordion-outlined-bg=var(--lr-color-surface)] - Outlined group background.
  * @cssprop [--lr-accordion-outlined-border-color=var(--lr-color-border)] - Outlined border color.
@@ -78,12 +95,14 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
     'lr-after-expand': Object.freeze(['item']),
     'lr-collapse': Object.freeze(['item']),
     'lr-after-collapse': Object.freeze(['item']),
+    'lr-toggle-request': Object.freeze(['item']),
   });
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-expand',
     'lr-after-expand',
     'lr-collapse',
     'lr-after-collapse',
+    'lr-toggle-request',
   ]);
 
   static override styles = [LyraElement.styles, styles];
@@ -350,14 +369,30 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
     return panel.expanded === expanded;
   }
 
-  #requestCollapse(panel: LyraAccordionItem): boolean {
-    if (!panel.expanded) return true;
-    const before = this.emit(
-      'lr-collapse',
-      { item: panel },
+  /**
+   * Emits both the direction-named `lr-expand`/`lr-collapse` veto event and the unified
+   * `lr-toggle-request` proposal for one item's transition, and reports whether it may proceed.
+   * Both always fire regardless of the other's outcome -- a `preventDefault()` on either name
+   * vetoes the transition, so neither name's listeners can miss one just because the other name
+   * already vetoed it.
+   */
+  #emitToggleVeto(item: LyraAccordionItem, collapsed: boolean): boolean {
+    const directional = this.emit(
+      collapsed ? 'lr-collapse' : 'lr-expand',
+      { item },
       { cancelable: true }
     );
-    if (before.defaultPrevented) return false;
+    const unified = this.emit(
+      'lr-toggle-request',
+      { item, collapsed },
+      { cancelable: true }
+    );
+    return !directional.defaultPrevented && !unified.defaultPrevented;
+  }
+
+  #requestCollapse(panel: LyraAccordionItem): boolean {
+    if (!panel.expanded) return true;
+    if (!this.#emitToggleVeto(panel, true)) return false;
     return this.#performPanelState(panel, false, true);
   }
 
@@ -457,14 +492,10 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
     if (!expanded && source === 'user' && this.mode === 'single') return false;
 
     if (expanded) {
-      if (
-        this.emit('lr-expand', { item }, { cancelable: true }).defaultPrevented
-      )
-        return false;
+      if (!this.#emitToggleVeto(item, false)) return false;
       return this.mode === 'multiple' || this.#collapseSiblings(item);
     }
-    return !this.emit('lr-collapse', { item }, { cancelable: true })
-      .defaultPrevented;
+    return this.#emitToggleVeto(item, true);
   };
 
   #handleOwnedItemTransitionSettled = (

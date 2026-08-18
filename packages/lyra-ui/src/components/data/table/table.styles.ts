@@ -318,7 +318,8 @@ export const styles = css`
     color: var(--lr-table-cell-link-color, var(--lr-color-brand));
   }
   [part='cell'] a:where(:any-link):hover,
-  [part='cell'] a:where(:any-link):focus-visible {
+  [part='cell'] a:where(:any-link):focus-visible,
+  [part='cell'] a:where(:any-link):active {
     color: var(
       --lr-table-cell-link-hover-color,
       var(--lr-table-cell-link-color, var(--lr-color-brand))

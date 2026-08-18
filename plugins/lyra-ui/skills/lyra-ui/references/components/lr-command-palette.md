@@ -55,7 +55,10 @@ row also makes it active.
 **Events:** `lr-open`, `lr-close` (both `detail: undefined`, cancelable — fired before the
 mutation, `preventDefault()` keeps the palette in its current open state), `lr-select`
 (`detail: { command }`, fired before the command's own `onSelect` runs and before the palette
-closes).
+closes). **New in 10.0.0:** `focus` and `blur` (no detail) are re-dispatched from the host —
+bubbling and composed — whenever the search input gains or loses focus. They exist because native
+`focus`/`blur` neither bubble nor cross the shadow boundary, so a host-level
+`el.addEventListener('focus', …)` previously never fired at all.
 
 **Slots:** none.
 

@@ -990,6 +990,7 @@
     "./components/viewers/page-rail/page-rail.js": "./dist/components/viewers/page-rail/page-rail.js",
     "./components/viewers/pdf-viewer/pdf-viewer.class.js": "./dist/components/viewers/pdf-viewer/pdf-viewer.class.js",
     "./components/viewers/pdf-viewer/pdf-viewer.js": "./dist/components/viewers/pdf-viewer/pdf-viewer.js",
+    "./components/viewers/pptx-viewer/pptx-loader.js": "./dist/components/viewers/pptx-viewer/pptx-loader.js",
     "./components/viewers/pptx-viewer/pptx-viewer.class.js": "./dist/components/viewers/pptx-viewer/pptx-viewer.class.js",
     "./components/viewers/pptx-viewer/pptx-viewer.js": "./dist/components/viewers/pptx-viewer/pptx-viewer.js",
     "./components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.js": "./dist/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.js",

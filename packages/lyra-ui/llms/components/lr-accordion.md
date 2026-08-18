@@ -91,11 +91,20 @@ the ladder doesn't cover is a two-line override rather than a fork.
 
 **Events:**
 
-- `lr-expand`, `lr-collapse`, `lr-after-expand`, `lr-after-collapse` — accordion group lifecycle.
+- `lr-expand`, `lr-collapse`, `lr-toggle-request`, `lr-after-expand`, `lr-after-collapse` —
+  accordion group lifecycle.
 - `lr-show`, `lr-hide`, `lr-toggle`, `lr-after-show`, `lr-after-hide` — Details lifecycle only.
 
 On the accordion, `lr-expand` and `lr-collapse` fire before a direct item changes, are cancelable,
-and carry `detail: { item }`. **Changed in 9.0.0:** `item` is now always a `LyraAccordionItem` —
+and carry `detail: { item }`. **New in 10.0.0:** a cancelable `lr-toggle-request`
+(`detail: { collapsed, item }`) fires alongside the matching directional event for every transition,
+including sibling auto-collapses in `single`/`single-collapsible` mode and `collapseAll()`. It carries
+the direction in the detail rather than the event name, matching `<lr-code-block>`/`<lr-chat-message>`'s
+`lr-toggle-request` convention, plus an `item` reference the single-panel siblings do not need (an
+accordion's toggling entity is one of several children, so the event target alone cannot identify it).
+`preventDefault()` on **either** event vetoes the transition — the two are a symmetric veto pair, not
+a primary and a notification. Note `<lr-thinking-panel>`'s own `lr-toggle-request` spells its detail
+`{ expanded }` rather than `{ collapsed }`; the two conventions are not fully unified. **Changed in 9.0.0:** `item` is now always a `LyraAccordionItem` —
 it could previously also be a `LyraDetails`. The exported `LyraAccordionPanel` union that spelled
 that has been removed; use `LyraAccordionItem`. An accepted transition finishes with the
 non-cancelable

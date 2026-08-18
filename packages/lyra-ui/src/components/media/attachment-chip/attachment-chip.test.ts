@@ -67,7 +67,7 @@ it('keeps the granular chip registration free of viewer registrations', async ()
 });
 
 describe('event-owned preview requests', () => {
-  it('emits a cancelable request with the File MIME type and blob source without rendering a viewer', async () => {
+  it('emits a plain, non-cancelable notification with the File MIME type and blob source without rendering a viewer', async () => {
     const file = makeFile('notes.txt', 'text/plain', 12);
     const el = (await fixture(html`<lr-attachment-chip attachment-id="attachment-1" .file=${file}></lr-attachment-chip>`)) as LyraAttachmentChip;
     const preview = el.shadowRoot!.querySelector('[part="preview-button"]') as HTMLButtonElement;
@@ -76,7 +76,7 @@ describe('event-owned preview requests', () => {
     const eventPromise = oneEvent(el, 'lr-preview-request');
     preview.click();
     const event = await eventPromise;
-    expect(event.cancelable).to.be.true;
+    expect(event.cancelable).to.be.false;
     expect(event.detail.attachmentId).to.equal('attachment-1');
     expect(event.detail.name).to.equal('notes.txt');
     expect(event.detail.mimeType).to.equal('text/plain');
@@ -111,14 +111,20 @@ describe('event-owned preview requests', () => {
     );
   });
 
-  it('lets a consumer veto a preview request without any chip-owned side effect', async () => {
+  it('is not cancelable, so calling preventDefault() on it is byte-for-byte a no-op', async () => {
     const el = (await fixture(html`
       <lr-attachment-chip preview-src="https://example.test/report.pdf"></lr-attachment-chip>
     `)) as LyraAttachmentChip;
     el.addEventListener('lr-preview-request', (event) => event.preventDefault());
     const requested = oneEvent(el, 'lr-preview-request');
     (el.shadowRoot!.querySelector('[part="preview-button"]') as HTMLButtonElement).click();
-    expect((await requested).defaultPrevented).to.be.true;
+    const event = await requested;
+    // Per spec, `preventDefault()` on a non-cancelable event does nothing --
+    // `defaultPrevented` stays `false` even though a listener called it. This is the
+    // behavioral proof that the flag carries no meaning here: there is nothing local
+    // for the chip to gate (see the class doc), so the event is a plain notification.
+    expect(event.cancelable).to.be.false;
+    expect(event.defaultPrevented).to.be.false;
     expect(el.shadowRoot!.querySelectorAll('lr-document-viewer').length).to.equal(0);
   });
 });

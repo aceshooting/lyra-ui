@@ -127,7 +127,7 @@ export interface LyraAttachmentChipEventMap {
  * @customElement lr-attachment-chip
  * @event lr-remove - The user activated the remove (×) button. `detail: { attachmentId }`. Only rendered while `removable`.
  * @event lr-retry - The user activated the retry button. `detail: { attachmentId }`. Only rendered while `status="error"`.
- * @event lr-preview-request - Cancelable request to preview the attachment. `detail: { attachmentId, name, mimeType, src }`. The chip never registers or owns a viewer/overlay; consumers compose the desired preview surface.
+ * @event lr-preview-request - Notification that the preview action was activated. `detail: { attachmentId, name, mimeType, src }`. Not cancelable: the chip never registers or owns a viewer/overlay, so there is nothing local to gate behind `.preventDefault()`; consumers compose the desired preview surface entirely on their own.
  * @csspart base - The chip's root container.
  * @csspart thumbnail - The leading image thumbnail / generic file glyph.
  * @csspart meta - Wrapper around the filename and the formatted file size.
@@ -454,16 +454,16 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
 
   private onPreviewClick = (): void => {
     if (!this.effectivePreviewSrc) return;
-    this.emit(
-      'lr-preview-request',
-      {
-        attachmentId: this.resolvedId,
-        name: this.effectiveName,
-        mimeType: this.effectiveMimeType,
-        src: this.effectivePreviewSrc,
-      },
-      { cancelable: true }
-    );
+    // Not cancelable -- see the class doc's `lr-preview-request` entry for why this component
+    // (which, per the class doc, "never registers or owns a viewer/overlay") has no local
+    // default action of its own to gate behind `.defaultPrevented`. Same rationale as
+    // `stepper.class.ts`'s `lr-step-select` and `email-viewer.class.ts`'s `lr-attachment-open`.
+    this.emit('lr-preview-request', {
+      attachmentId: this.resolvedId,
+      name: this.effectiveName,
+      mimeType: this.effectiveMimeType,
+      src: this.effectivePreviewSrc,
+    });
   };
 
   private renderThumbnail(): TemplateResult {

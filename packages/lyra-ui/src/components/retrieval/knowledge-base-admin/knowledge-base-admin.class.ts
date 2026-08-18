@@ -3,7 +3,9 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { CancelEventDetail, RetryEventDetail } from '../../../ai/types.js';
 import type { KnowledgeSource } from '../knowledge-base/knowledge-base.class.js';
+export type { KnowledgeSource } from '../knowledge-base/knowledge-base.class.js';
 import type { IngestionQueueItem } from '../ingestion-queue/ingestion-queue.class.js';
+export type { IngestionQueueItem } from '../ingestion-queue/ingestion-queue.class.js';
 import { styles } from './knowledge-base-admin.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START

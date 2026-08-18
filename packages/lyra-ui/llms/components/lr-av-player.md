@@ -83,7 +83,9 @@ unsupported or unresolved targets report `false` through the return value and `l
 `lr-rate-change` (`detail: { rate }`), `lr-cue-change`
 (`detail: { readonly cueId, readonly index }`; `cueId` is `null` and `index` is `-1` when no cue is active),
 `lr-highlight-activate` (`detail: { highlightId }`), `lr-anchor-result` (`detail: {
-found }`), `lr-search-change` (`detail: { query, matchCount, activeIndex }`), and
+found }`), `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`;
+`matchCountExact` is always `true` — `search()` matches over the already-loaded `cues` array with no
+additional ceiling), and
 `lr-render-error` (`detail: { error }`). The native `ended`, `error`, `loadedmetadata`, `pause`,
 `play`, `timeupdate`, and `volumechange`
 events are also relayed exactly once from the host as native `Event` instances. Like the original

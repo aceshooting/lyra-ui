@@ -352,7 +352,19 @@ export interface LyraMapInstance {
   setCenter(center: [number, number]): unknown;
   setZoom(zoom: number): unknown;
   resize(): unknown;
-  setMaxBounds?(bounds: LyraMapBounds | null): unknown;
+  /**
+   * Deliberately `unknown` rather than `LyraMapBounds | null`. This interface is the peer-neutral
+   * surface the real maplibre `Map` must structurally satisfy, and maplibre spells this parameter
+   * `LngLatBoundsLike | null` — a union of a `LngLatBounds` class instance, a mutable
+   * `[LngLatLike, LngLatLike]` pair and a flat `[number, number, number, number]`. `LyraMapBounds`
+   * is a *readonly* tuple, so it is assignable to none of them, and the class instance is assignable
+   * to no tuple; with neither direction related, even method bivariance cannot bridge it and
+   * `MapLibreMap extends LyraMapInstance` silently becomes false. Restating maplibre's union here
+   * would mean importing its types into the peer-neutral layer, which is the one thing this
+   * interface exists to avoid. The component's own call site stays typed: it only ever passes
+   * `safeMaxBounds`, which is `LyraMapBounds | null`.
+   */
+  setMaxBounds?(bounds?: unknown): unknown;
 }
 
 /** A pan-constraining box, `[[west, south], [east, north]]`, in the order maplibre-gl takes. */

@@ -23,6 +23,7 @@ import type {
   LyraAttachmentFilesDetail,
 } from '../../media/attachment-trigger/attachment-trigger.class.js';
 import type { LyraSourceEntry } from '../../retrieval/source-picker/source-picker.class.js';
+export type { LyraSourceEntry } from '../../retrieval/source-picker/source-picker.class.js';
 import { firstByRetrievalIdentity as firstByPromptIdentity } from '../../retrieval/retrieval-identity.js';
 import type {
   LyraMentionItem,
@@ -40,6 +41,7 @@ import type {
   LyraModelCatalogEntry,
 } from '../model-select/model-select.class.js';
 import type { PromptQueueItem } from '../prompt-queue/prompt-queue.class.js';
+export type { PromptQueueItem } from '../prompt-queue/prompt-queue.class.js';
 import type { PromptQueueChangeDetail } from '../prompt-queue/prompt-queue.class.js';
 import type {
   LyraAttachmentIdDetail,
@@ -47,6 +49,7 @@ import type {
   LyraAttachmentUploadStatus,
 } from '../../media/attachment-chip/attachment-chip.class.js';
 import type { LyraVoiceCatalogEntry } from '../voice-picker/voice-picker.class.js';
+export type { LyraVoiceCatalogEntry } from '../voice-picker/voice-picker.class.js';
 import { styles } from './prompt-input.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';

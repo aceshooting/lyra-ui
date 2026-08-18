@@ -9,12 +9,14 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import {
+  ACKNOWLEDGED_INTERNAL_HELPER_MODULES,
   checkPackageExports,
   closeWildcardPackageExports,
   CURATED_COMPONENT_HELPER_MODULES,
   CURATED_UTILITY_MODULES,
   deriveExplicitComponentExports,
   deriveExplicitUtilityExports,
+  findUnclassifiedHelperModules,
   generatePackageExports,
 } from './generate-package-exports.mjs';
 
@@ -70,6 +72,93 @@ assert(
   CURATED_UTILITY_MODULES.includes('src/utilities/css-length.ts'),
   'the documented public css-length helper must retain its granular package route'
 );
+
+// Defect 1: llms/viewers.md:823 documents PptxViewerAdapter et al. as exported from the granular
+// PPTX loader module -- the route must exist, or the documented import does not resolve.
+assert(
+  CURATED_COMPONENT_HELPER_MODULES.includes(
+    'src/components/viewers/pptx-viewer/pptx-loader.ts'
+  ),
+  'the documented granular PPTX loader route must exist (llms/viewers.md:823)'
+);
+
+// Defect 2: every module matching the public-helper naming convention must be classified as
+// either curated public or acknowledged internal, never left unclassified.
+assert.equal(
+  new Set([...CURATED_COMPONENT_HELPER_MODULES].filter((module) =>
+    ACKNOWLEDGED_INTERNAL_HELPER_MODULES.includes(module)
+  )).size,
+  0,
+  'no module may be both curated public and acknowledged internal'
+);
+assert.deepEqual(
+  findUnclassifiedHelperModules(),
+  [],
+  'every real *-loader.ts / *-peer.ts / *-register.ts / registry.ts module must already be classified'
+);
+
+// findUnclassifiedHelperModules: positive and negative cases against an isolated fixture tree, so
+// the derivation itself (not just the current production classification) is under test.
+{
+  const helperFixtureRoot = mkdtempSync(join(tmpdir(), 'lyra-helper-modules-'));
+  const writeHelperFixture = (relativePath, contents = 'export {};\n') => {
+    const target = join(helperFixtureRoot, relativePath);
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, contents);
+  };
+  try {
+    // Negative: a classified public loader and a classified internal loader are both recognized
+    // and excluded, regardless of which list holds them.
+    writeHelperFixture('src/components/forms/alpha/alpha-loader.ts');
+    writeHelperFixture('src/components/forms/alpha/alpha-peer.ts');
+    // Positive: a new file matching the convention, in neither list, is reported.
+    writeHelperFixture('src/components/forms/beta/beta-register.ts');
+    writeHelperFixture('src/components/forms/beta/registry.ts');
+    // Non-matching neighbors (no "-loader"/"-peer"/"-register" suffix, not named "registry.ts")
+    // must never be reported -- the convention is deliberately narrow.
+    writeHelperFixture('src/components/forms/alpha/alpha-preload.ts');
+    writeHelperFixture('src/components/forms/alpha/alpha.class.ts');
+    // Test/declaration files matching the stem must be ignored even though they end in `.ts`.
+    writeHelperFixture('src/components/forms/alpha/alpha-loader.test.ts');
+
+    assert.deepEqual(
+      findUnclassifiedHelperModules(helperFixtureRoot, {
+        curatedModules: ['src/components/forms/alpha/alpha-loader.ts'],
+        internalModules: ['src/components/forms/alpha/alpha-peer.ts'],
+        skipExistenceCheck: true,
+      }),
+      [
+        'src/components/forms/beta/beta-register.ts',
+        'src/components/forms/beta/registry.ts',
+      ]
+    );
+
+    // A module claimed by both lists is a contradiction, not a silent pass.
+    assert.throws(
+      () =>
+        findUnclassifiedHelperModules(helperFixtureRoot, {
+          curatedModules: ['src/components/forms/alpha/alpha-loader.ts'],
+          internalModules: ['src/components/forms/alpha/alpha-loader.ts'],
+          skipExistenceCheck: true,
+        }),
+      /is listed as both a curated public helper and acknowledged internal/
+    );
+
+    // A stale acknowledged-internal entry (renamed/removed file) fails just as loudly as a new
+    // unclassified file would, instead of silently no-op'ing forever.
+    assert.throws(
+      () =>
+        findUnclassifiedHelperModules(helperFixtureRoot, {
+          curatedModules: [],
+          internalModules: ['src/components/forms/alpha/does-not-exist-loader.ts'],
+        }),
+      /acknowledged-internal helper module is missing/
+    );
+  } finally {
+    rmSync(helperFixtureRoot, { recursive: true, force: true });
+  }
+}
+
 const derived = deriveExplicitComponentExports(inventory, { helperModules });
 assert.deepEqual(Object.keys(derived), [...Object.keys(derived)].sort());
 assert.equal(
@@ -181,6 +270,12 @@ try {
   // a fixture copy of the production list's paths.
   const productionModule = await import('./generate-package-exports.mjs');
   for (const helper of productionModule.CURATED_COMPONENT_HELPER_MODULES)
+    write(helper);
+  // findUnclassifiedHelperModules (invoked by checkPackageExports) walks src/components looking
+  // for the naming convention regardless of which list a module belongs to, so the acknowledged
+  // internal ones need matching fixture files too, or the walk (and its existence check) sees a
+  // components/ tree that only partially mirrors the two production lists.
+  for (const helper of productionModule.ACKNOWLEDGED_INTERNAL_HELPER_MODULES)
     write(helper);
   for (const utility of CURATED_UTILITY_MODULES) write(utility);
 

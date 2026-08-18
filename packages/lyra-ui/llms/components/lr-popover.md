@@ -52,6 +52,11 @@ A click-triggered, light-dismiss floating surface positioned with the shared Flo
   attribute wins by presence, including `aria-label=""`; only when it is absent does the property
   or localized "Popover" ("Menu" when `popupRole` is `menu`) fallback apply
 - `popupRole: 'dialog'|'menu' = 'dialog'` (attribute `popup-role`)
+- `disabled: boolean = false` (reflected, new in 10.0.0) — prevents opening the popover; pointer,
+  keyboard, and programmatic `show()`/`open = true` are all refused while set. Becoming disabled also
+  closes an already-open popover, and initial `disabled` plus `open` normalizes closed in either
+  attribute order. `lr-dropdown` now inherits this from `lr-popover` rather than declaring its own;
+  its consumer-facing behavior is unchanged
 
 To preserve the previous Lyra-shaped defaults explicitly, use
 `placement="bottom-start" distance="4" without-arrow`; origin-aware migration emits those tokens.

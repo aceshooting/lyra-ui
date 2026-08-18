@@ -46,6 +46,33 @@ export const NarrowAllocation: Story = {
   `,
 };
 
+/** `firstDayOfWeek` defaults to `'auto'`, deriving the week start from the effective locale (a
+ * French locale is Monday-first) -- and still accepts an explicit override, either a bare `0`-`6`
+ * index or one of the shared weekday-name tokens (`'auto'`, then `'sun'` through `'sat'`) that
+ * `lr-date-picker`/`lr-date-input` already accept, to pin the week start independent of locale. */
+export const LocalizedWeekStart: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`firstDayOfWeek` defaults to `\'auto\'` and derives the week start from `locale` (French is Monday-first); an explicit `first-day-of-week="sun"` overrides that regardless of locale.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+      <div>
+        <p>Auto (locale-derived, French = Monday-first)</p>
+        <lr-calendar locale="fr-FR" view-date="2026-07-01"></lr-calendar>
+      </div>
+      <div>
+        <p>Explicit override: Sunday-first regardless of locale</p>
+        <lr-calendar locale="fr-FR" first-day-of-week="sun" view-date="2026-07-01"></lr-calendar>
+      </div>
+    </div>
+  `,
+};
+
 /** State paint hooks inherit from an application theme ancestor and remain independently adjustable. */
 export const StateThemeHooks: Story = {
   render: () => html`

@@ -54,7 +54,12 @@ relying on the opposite polarity and has to be re-read.
 `lr-dialog` and `lr-drawer` also expose cancelable `lr-initial-focus` and `lr-request-close` veto
 points, documented in their sections. Their cancelable `lr-dialog-close` fires **after** `lr-hide`
 and before `lr-after-hide`; it carries the close reason. Vetoing `lr-hide` stops it from firing at
-all.
+all. **New in 10.0.0:** a cancelable `lr-close` with the identical `DialogCloseReason` detail fires
+alongside `lr-dialog-close` on every dismissal path, so one listener covers `lr-dialog`/`lr-drawer`
+and the `lr-tool-select-dialog`/`lr-tool-result-dialog`/`lr-tool-approval-dialog` trio, which already
+spelled it `lr-close` while explicitly mirroring this detail shape. `preventDefault()` on **either**
+name vetoes the close. Both are retained; `lr-dialog-close` is not deprecated. `lr-drawer` inherits
+`lr-close` unchanged.
 
 **The top layer.** An open `lr-dialog` or modal `lr-drawer` is promoted into the browser **top layer**
 (through `popover="manual"`) rather than stacked with `z-index`. It therefore escapes every ancestor
@@ -501,8 +506,10 @@ the slide animation are its own.
 promise settles after the matching `lr-after-*` event.
 
 **Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide`, and
-`lr-initial-focus` (cancelable), `lr-request-close` (cancelable, detail source), and
-`lr-dialog-close` (`detail: DialogCloseReason`, cancelable) — all inherited unchanged from
+`lr-initial-focus` (cancelable), `lr-request-close` (cancelable, detail source),
+`lr-dialog-close` (`detail: DialogCloseReason`, cancelable), and `lr-close` (`detail:
+DialogCloseReason`, cancelable — the plain spelling fired alongside `lr-dialog-close` on every
+dismissal path, with identical detail and veto semantics) — all inherited unchanged from
 `lr-dialog`; see that section for details and veto rules. `lr-after-show` /
 `lr-after-hide` fire once the slide animation has finished, so they are deferred by roughly one
 animation compared with the state flip.
@@ -630,12 +637,19 @@ chrome remains visible. The fallback order appears below.
   `'close-button' | 'keyboard' | 'overlay'`. Veto stops the close lifecycle. Direct `close()` and
   `hide()` calls do not emit this request event.
 - `lr-dialog-close` — cancelable, with `detail: DialogCloseReason`; emitted after `lr-hide`
+- `lr-close` — cancelable, with `detail: DialogCloseReason`; identical detail and veto semantics to
+  `lr-dialog-close`, fired alongside it on every dismissal path — the plain spelling already used by
+  `<lr-tool-select-dialog>`, `<lr-tool-result-dialog>`, and `<lr-tool-approval-dialog>`. A listener
+  calling `preventDefault()` on either event vetoes the close; both always fire, so a listener on
+  one name never misses a transition the other name already vetoed. Also fired (with reason
+  `'unmount'`, non-cancelable there like `lr-dialog-close`) when the dialog is removed from the DOM
+  while still open.
 
 The two `lr-after-*` events are never cancelable.
 
 The open sequence is `lr-show` → `lr-initial-focus` (when focus would move) → `lr-after-show`; the
-direct close sequence is `lr-hide` → `lr-dialog-close` → `lr-after-hide`. A built-in dismissal
-prepends `lr-request-close`. **Both state pre-events fire _before_ the state changes**, so reading
+direct close sequence is `lr-hide` → `lr-dialog-close` and `lr-close` (together) → `lr-after-hide`.
+A built-in dismissal prepends `lr-request-close`. **Both state pre-events fire _before_ the state changes**, so reading
 `el.open` inside an `lr-show`/`lr-hide` handler returns the _old_ value — this is the polarity
 `wa-show`/`wa-hide` already had, and the opposite of what Lyra 7.x's own `lr-show`/`lr-hide` did on
 `lr-popover`/`lr-dropdown`. The `wa-*` → `lr-*` migration table treats the rename as mechanical, and
@@ -651,8 +665,8 @@ and easing. Under `prefers-reduced-motion: reduce`, registry timing flattens to 
 frame and lifecycle remain intact. Passing `null` skips native interpolation but still emits the
 matching after-event before the method promise resolves. Because dialogs now animate on close too,
 `lr-after-hide` is normally deferred by roughly one animation. A removal while open emits
-`lr-hide`, `lr-dialog-close` (reason `'unmount'`) and `lr-after-hide` in that order, none of them
-cancelable, since the element is already gone.
+`lr-hide`, `lr-dialog-close` and `lr-close` (both reason `'unmount'`) and `lr-after-hide` in that
+order, none of them cancelable, since the element is already gone.
 
 **Stacking and the top layer:** an open dialog is promoted into the browser **top layer** (via
 `popover="manual"`), new in 8.0.0. That means it escapes every ancestor stacking context and every
@@ -1337,6 +1351,11 @@ A click-triggered, light-dismiss floating surface positioned with the shared Flo
   attribute wins by presence, including `aria-label=""`; only when it is absent does the property
   or localized "Popover" ("Menu" when `popupRole` is `menu`) fallback apply
 - `popupRole: 'dialog'|'menu' = 'dialog'` (attribute `popup-role`)
+- `disabled: boolean = false` (reflected, new in 10.0.0) — prevents opening the popover; pointer,
+  keyboard, and programmatic `show()`/`open = true` are all refused while set. Becoming disabled also
+  closes an already-open popover, and initial `disabled` plus `open` normalizes closed in either
+  attribute order. `lr-dropdown` now inherits this from `lr-popover` rather than declaring its own;
+  its consumer-facing behavior is unchanged
 
 To preserve the previous Lyra-shaped defaults explicitly, use
 `placement="bottom-start" distance="4" without-arrow`; origin-aware migration emits those tokens.
@@ -1807,6 +1826,7 @@ A circular progress indicator with the same value contract as `lr-progress-bar`.
 **Properties:** `value: number = 0` (reflected), `max: number = 100`, `indeterminate: boolean = false`
 (reflected), `variant: LyraProgressVariant = 'brand'` (reflected, added in 9.0.0 — matches sibling
 `lr-progress-bar`'s semantic-palette vocabulary: `neutral`/`brand`/`success`/`warning`/`danger`),
+`showValue: boolean = false` (attribute `show-value`),
 `label: string = ''` (the mapped accessible-name property), and
 `accessibleLabel: string = ''` (attribute `accessible-label`; a Lyra compatibility
 accessible-name spelling retained by this progress component, while several sibling components use
@@ -1816,7 +1836,13 @@ visible default-slot text when supplied, then the localized "Progress". Non-fini
 `value`/`max` are normalized (`max <= 0` falls
 back to `100`, `value` clamps to `[0, max]`) rather than producing NaN geometry.
 **Slots:** default — replaces the built-in center label, which otherwise renders the rounded
-percentage (and nothing at all while `indeterminate`).
+percentage **only when `show-value` is set** (and nothing at all while `indeterminate`).
+**Breaking in 10.0.0:** a determinate ring used to render its percentage unconditionally, with no way
+to suppress it short of slotting replacement content. It now gains `showValue`/`show-value` defaulting
+to `false`, exactly matching `lr-progress-bar` — which is what "the same value contract as
+`lr-progress-bar`" above has always claimed but did not deliver. Add `show-value` to keep the
+percentage. `aria-valuetext` still carries it regardless, mirroring `lr-progress-bar`'s own
+independence there, so the accessible value is unaffected.
 Its accessible text uses the same visibility filtering, forwarding-slot mutation/reassignment
 tracking, and explicit-empty host-label precedence as `lr-progress-bar`.
 **Live members:** `indicator: SVGCircleElement | null` returns the rendered indicator circle (or

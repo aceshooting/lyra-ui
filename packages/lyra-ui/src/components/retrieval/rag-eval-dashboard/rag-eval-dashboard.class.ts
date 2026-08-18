@@ -41,6 +41,8 @@ export interface LyraRagEvaluationRun {
 export interface LyraRagEvalDashboardEventMap {
   'lr-metric-change': CustomEvent<{ metricId: string }>;
   'lr-slice-change': CustomEvent<{ slice: string }>;
+  'lr-run-change': CustomEvent<{ run: LyraRagEvaluationRun }>;
+  /** @deprecated Use `lr-run-change` instead; retained as an identical-detail alias until v11. */
   'lr-run-select': CustomEvent<{ run: LyraRagEvaluationRun }>;
 }
 
@@ -59,7 +61,10 @@ export interface LyraRagEvalDashboardEventMap {
  * @customElement lr-rag-eval-dashboard
  * @event lr-metric-change - A metric was activated. `detail: { metricId }`.
  * @event lr-slice-change - An evaluation slice was activated. `detail: { slice }`.
- * @event lr-run-select - An evaluation run was activated. `detail: { run }`.
+ * @event lr-run-change - An evaluation run was activated. `detail: { run }`.
+ * @event lr-run-select - Deprecated alias for `lr-run-change`, retained with an identical
+ *   `detail` and fired alongside it for backward compatibility. Prefer `lr-run-change`; this
+ *   alias is slated for removal in v11.
  * @csspart base - The named dashboard region.
  * @csspart heading - The visible dashboard heading.
  * @csspart slices - Slice filter controls.
@@ -183,6 +188,14 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
       .find((run) => Number.isFinite(run.metrics[metric.id]))?.metrics[
       metric.id
     ];
+  }
+
+  /** Dispatches the canonical `lr-run-change` and, for backward compatibility, the deprecated
+   *  `lr-run-select` alias -- both with the same detail object. */
+  private emitRunChange(run: LyraRagEvaluationRun): void {
+    const detail = { run };
+    this.emit('lr-run-change', detail);
+    this.emit('lr-run-select', detail);
   }
 
   private renderSlices(slices: readonly string[]): TemplateResult | typeof nothing {
@@ -322,7 +335,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
               <button
                 part="run"
                 type="button"
-                @click=${() => this.emit('lr-run-select', { run })}
+                @click=${() => this.emitRunChange(run)}
               >
                 <span>${run.label}</span>
                 ${active && Number.isFinite(run.metrics[active.id])

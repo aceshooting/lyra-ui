@@ -909,6 +909,32 @@ it("resolves an em-unit themed minimum width against the table's own font size",
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 4, clientX: -10000 }));
 });
 
+it('falls back to the default minimum width when an em-unit host font-size cannot be parsed', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+  const originalGetComputedStyle = window.getComputedStyle;
+  window.getComputedStyle = ((element: Element) => {
+    if (element === el) {
+      return {
+        fontSize: '',
+        getPropertyValue: (name: string) =>
+          name === '--lr-table-resize-min-width' ? '2em' : '',
+      } as CSSStyleDeclaration;
+    }
+    return originalGetComputedStyle(element);
+  }) as typeof window.getComputedStyle;
+  try {
+    const internals = el as unknown as {
+      minimumResizeWidth(column: TableColumn<Row>): number;
+    };
+    expect(internals.minimumResizeWidth(columns[0]!)).to.equal(48); // '' -> NaN host font-size -> fallback
+  } finally {
+    window.getComputedStyle = originalGetComputedStyle;
+  }
+});
+
 it('exposes focusable separator state and resizes by keyboard without sorting the header', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = [

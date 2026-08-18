@@ -6,7 +6,7 @@
 - **Class** `LyraEntityChip`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/entity-chip/entity-chip.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecations** none
+- **Deprecated event** `lr-entity-activate` since `9.1.1`; use event `addEventListener('lr-entity-select', ...)`; removal not before `11.0.0` — Renamed for cross-family event-vocabulary consistency; both names fire from the same gesture with an identical detail during the compatibility window.
 - **Optional peers** none
 - **Themeable via** 3 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -33,8 +33,10 @@ before the type template is composed, so it never produces a leading punctuation
 `, person`. An authored host `aria-label` intentionally names only the custom-element boundary;
 it is not copied onto the shadow button because host naming does not cross that boundary.
 
-**Events:** `lr-entity-activate` (`detail: { entityId }`, click, or Enter while focused),
+**Events:** `lr-entity-select` (`detail: { entityId }`, click, or Enter while focused),
 `lr-entity-open` (`detail: { entityId }`, dblclick, or Space while focused).
+`lr-entity-activate` is a deprecated alias of `lr-entity-select`, fired alongside it from the same
+gesture with the same detail object; removal not before 11.0.0. `lr-entity-open` is unaffected.
 
 **Slots:** default — rich preview content (typically a compact `lr-entity-card`), shown in a
 floating popover on hover/focus. No content means no popover and no hover affordance at all.

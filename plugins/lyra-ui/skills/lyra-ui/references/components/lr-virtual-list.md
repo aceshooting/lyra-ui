@@ -6,7 +6,7 @@
 - **Class** `LyraVirtualList`, also available unregistered from `@aceshooting/lyra-ui/components/layout/virtual-list/virtual-list.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecations** none
+- **Deprecated event** `lr-visible-range-changed` since `9.1.1`; use event `addEventListener('lr-visible-range-change', ...)`; removal not before `11.0.0` — Renamed for cross-family event-vocabulary consistency; both names fire from the same gesture with an identical detail during the compatibility window.
 - **Optional peers** none
 - **Themeable via** 5 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -168,12 +168,15 @@ math, and any row element can be recycled or removed on the next update.
 **Events:** `lr-load-more` (no detail — fired once per approach to the bottom of the list while
 `has-more` is true and `loading` is false; does not refire on every scroll tick while still near the
 bottom — scrolling back away from the bottom and returning, or `items` growing enough to move the
-window away from the end, re-arms it), `lr-visible-range-changed` (`detail: VirtualListRange`, the
-current visible, non-overscanned item index range — fired only when it actually changes),
+window away from the end, re-arms it), `lr-visible-range-change` (`detail: VirtualListRange`, the
+current visible, non-overscanned item index range — fired only when it actually changes;
+`lr-visible-range-changed` is a deprecated alias fired alongside it with the identical detail object,
+removal not before 11.0.0 — it was the only past-tense `-changed` spelling among 58 `-change`-family
+events, so a convention-driven `lr-${x}-change` listener silently missed it),
 `lr-virtual-scroll`
 (`detail: VirtualListScroll` — the scroll container moved; emitted from the same animation frame that
 already coalesces native `scroll` events, so a fling produces at most one per frame and none at all
-when the position did not change. Unlike `lr-visible-range-changed`, which only fires on index-range
+when the position did not change. Unlike `lr-visible-range-change`, which only fires on index-range
 changes, this reports _sub-row_ movement, which is what scroll-linked layout needs)
 
 **Slots:** none — all content comes from `renderItem`.

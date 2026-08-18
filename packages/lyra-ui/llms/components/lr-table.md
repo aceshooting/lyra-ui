@@ -272,7 +272,11 @@ sort properties; server mode leaves them controlled. Other events are `lr-row-cl
 (`detail: { row }`), `lr-load-more` (fired on the "load more" button),
 `lr-priority-columns-visibility-change` (frozen readonly `detail: { visible }`), and `lr-row-expand-toggle`
 (`detail: { row, rowKey }`; the table does not mutate `expandedRowKeys`), and
-`lr-selection-change` (frozen readonly `detail: { rowKeys }`) when selection is enabled, `lr-filter-change`
+`lr-selection-change` (frozen readonly `detail: { rowKeys }`, not cancelable) when selection is
+enabled — fired both from a row activation and from a `selectionMode` flip to `'single'` that coerces
+an existing multi-row selection down to one key (skipped on the very first render, since an
+already-inconsistent initial `selectionMode`/`selectedRowKeys` pairing is a starting state, not a
+live transition), `lr-filter-change`
 (frozen readonly `detail: { text }`), and `lr-page-change` (frozen readonly `detail: { page }`) from the
 filter/pagination surfaces, and `lr-cell-edit` (`detail: { row, columnKey, value }`) for editable
 columns, and `lr-column-resize` (`detail: { columnKey, width }`, `width` in CSS pixels) on every pointer or

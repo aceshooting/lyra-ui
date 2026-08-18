@@ -31,6 +31,10 @@ export interface LyraNeighborRow {
 }
 
 export interface LyraNeighborListEventMap {
+  /** Canonical name for the "user picked this entity" gesture. */
+  'lr-entity-select': CustomEvent<{ entityId: string }>;
+  /** Deprecated alias of `lr-entity-select`, kept firing unchanged for back-compat; slated for
+   *  removal in v11. */
   'lr-entity-activate': CustomEvent<{ entityId: string }>;
   /** Deliberately the *same name and detail* as the `lr-graph` event, so one host handler
    *  serves both ("expand this node's neighborhood"). */
@@ -46,7 +50,10 @@ export interface LyraNeighborListEventMap {
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-neighbor-list
- * @event lr-entity-activate - A row's node button was activated. `detail: { entityId }`.
+ * @event lr-entity-select - A row's node button was activated. `detail: { entityId }`. Fires
+ *   before `lr-entity-activate`, from the same click.
+ * @event lr-entity-activate - Deprecated alias of `lr-entity-select`, kept firing unchanged for
+ *   back-compat; slated for removal in v11. Same `detail: { entityId }`.
  * @event lr-node-expand - A row's expand button was activated (only rendered when `expandable`).
  * `detail: { nodeId }`.
  * @csspart base - The stable root wrapper across empty, populated and virtualized states. It owns
@@ -200,8 +207,13 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
         type="button"
         aria-label=${accessibleName}
         aria-description=${metaText || nothing}
-        @click=${() =>
-          this.emit('lr-entity-activate', { entityId: row.node.id })}
+        @click=${() => {
+          // Canonical name first, then the deprecated alias -- same detail object for both, so
+          // the two events can never drift from each other.
+          const detail = { entityId: row.node.id };
+          this.emit('lr-entity-select', detail);
+          this.emit('lr-entity-activate', detail);
+        }}
       >
         <span part="direction" aria-hidden="true"
           >${this.directionGlyph(row.direction)}</span

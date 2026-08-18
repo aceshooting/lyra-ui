@@ -6,7 +6,7 @@
 - **Class** `LyraEntityCard`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/entity-card/entity-card.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecations** none
+- **Deprecated event** `lr-entity-activate` since `9.1.1`; use event `addEventListener('lr-entity-select', ...)`; removal not before `11.0.0` — Renamed for cross-family event-vocabulary consistency; both names fire from the same gesture with an identical detail during the compatibility window.
 - **Optional peers** none
 - **Themeable via** 12 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -42,7 +42,9 @@ number; communityId?: string }`; field names deliberately mirror `lr-graph`'s `L
   set — there is nothing left to tighten. The exported alias `EntityCardAppearance` is retained as a
   name for the same union.
 
-**Events:** `lr-entity-activate` (`detail: { entityId }`, the built-in focus button was activated).
+**Events:** `lr-entity-select` (`detail: { entityId }`, the built-in focus button was activated).
+`lr-entity-activate` is a deprecated alias fired alongside it from the same gesture with the same
+detail object; removal not before 11.0.0 — prefer `lr-entity-select`.
 
 **Slots:** default (extra body content below the property rows, e.g. a `lr-neighbor-list`),
 `actions` (extra header actions alongside the built-in focus button).

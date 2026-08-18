@@ -28,6 +28,7 @@ import type {
 import { styles } from './terminal.styles.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import type { LyraVirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
+import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import {
   writeClipboardText,
@@ -132,6 +133,7 @@ interface SearchMatch {
 interface SearchState {
   query: string;
   matchCount: number;
+  matchCountExact: boolean;
   activeIndex: number;
 }
 
@@ -141,7 +143,7 @@ export interface LyraTerminalEventMap {
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
   'lr-download': CustomEvent<{ filename: string }>;
   'lr-follow-change': CustomEvent<{ following: boolean }>;
-  'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+  'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   'lr-highlight-activate': CustomEvent<HighlightActivateDetail>;
   'lr-text-select': CustomEvent<TextSelectDetail>;
 }
@@ -168,7 +170,9 @@ export interface LyraTerminalEventMap {
  *   `<lr-media-card>`'s `lr-open` convention.
  * @event lr-follow-change - `detail: { following }` — a user viewport/jump action changed
  *   stick-to-bottom. Direct `follow` assignments and imperative navigation do not echo an event.
- * @event lr-search-change - `detail: { query, matchCount, activeIndex }`.
+ * @event lr-search-change - `detail: { query, matchCount, matchCountExact, activeIndex }`.
+ *   `matchCountExact` is `false` once a search hits the 10,000-match retention ceiling, marking
+ *   `matchCount` as a lower bound rather than an exact total.
  * @event lr-highlight-activate - `detail: { highlightId }` — a highlighted line was
  *   clicked/activated.
  * @event lr-text-select - `detail: { text, anchor, rects }` — fires on pointerup after a text
@@ -321,6 +325,9 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   private searchQuery = '';
   private searchMatches: SearchMatch[] = [];
+  /** `false` once `recomputeSearchMatches()` hits `MAX_SEARCH_MATCHES` -- marks `searchMatches`
+   *  as a truthful lower bound rather than the true total. */
+  private searchMatchCountExact = true;
   private searchActiveIndex = -1;
 
   override connectedCallback(): void {
@@ -377,6 +384,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     this.scrollTargetLineNumber = null;
     this.searchQuery = '';
     this.searchMatches = [];
+    this.searchMatchCountExact = true;
     this.searchActiveIndex = -1;
   }
 
@@ -531,6 +539,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   private recomputeSearchMatches(): void {
     this.searchMatches = [];
+    this.searchMatchCountExact = true;
     if (!this.searchQuery) return;
     const needle = this.searchQuery.toLocaleLowerCase(this.effectiveLocale);
     for (const line of this.buffer) {
@@ -540,7 +549,10 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
         const idx = haystack.indexOf(needle, from);
         if (idx < 0) break;
         this.searchMatches.push({ lineNumber: line.number });
-        if (this.searchMatches.length >= MAX_SEARCH_MATCHES) break;
+        if (this.searchMatches.length >= MAX_SEARCH_MATCHES) {
+          this.searchMatchCountExact = false;
+          break;
+        }
         from = idx + needle.length;
       }
       if (this.searchMatches.length >= MAX_SEARCH_MATCHES) break;
@@ -554,6 +566,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     this.emit('lr-search-change', {
       query: this.searchQuery,
       matchCount: this.searchMatches.length,
+      matchCountExact: this.searchMatchCountExact,
       activeIndex: this.searchActiveIndex,
     });
   }
@@ -562,6 +575,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     return {
       query: this.searchQuery,
       matchCount: this.searchMatches.length,
+      matchCountExact: this.searchMatchCountExact,
       activeIndex: this.searchActiveIndex,
     };
   }
@@ -570,6 +584,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     if (
       previous.query !== this.searchQuery ||
       previous.matchCount !== this.searchMatches.length ||
+      previous.matchCountExact !== this.searchMatchCountExact ||
       previous.activeIndex !== this.searchActiveIndex
     ) {
       this.emitSearchChange();
@@ -585,6 +600,9 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     this.scrollTargetLineNumber = match.lineNumber;
   }
 
+  /** Resolves the retained match count. The emitted `lr-search-change.matchCountExact` is `false`
+   *  when that return value is only a lower bound because the 10,000-match retention ceiling was
+   *  reached. */
   async search(query: string): Promise<number> {
     const previousSearch = this.searchState();
     this.searchQuery = query;
@@ -624,6 +642,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     const previousSearch = this.searchState();
     this.searchQuery = '';
     this.searchMatches = [];
+    this.searchMatchCountExact = true;
     this.searchActiveIndex = -1;
     this.emitSearchChangeIfChanged(previousSearch);
     this.requestUpdate();

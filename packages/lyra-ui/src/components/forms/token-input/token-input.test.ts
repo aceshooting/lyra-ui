@@ -660,6 +660,36 @@ it("fires lr-remove as cancelable and removes the token when not prevented", asy
   expect(el.value).to.deep.equal(["beta"]);
 });
 
+it("fires lr-add as cancelable and adds the token when not prevented", async () => {
+  const el = (await fixture(
+    html`<lr-token-input></lr-token-input>`
+  )) as LyraTokenInput;
+  const input = el.shadowRoot!.querySelector("#input") as HTMLInputElement;
+  const listener = oneEvent(el, "lr-add");
+  typeInto(input, "alpha");
+  press(input, "Enter");
+  const event = await listener;
+  expect(event.cancelable).to.be.true;
+  expect(event.detail).to.deep.equal({ value: "alpha", values: ["alpha"] });
+  expect(el.value).to.deep.equal(["alpha"]);
+});
+
+it("keeps the typed draft and does not add the token when a host calls preventDefault() on lr-add", async () => {
+  const el = (await fixture(
+    html`<lr-token-input></lr-token-input>`
+  )) as LyraTokenInput;
+  const input = el.shadowRoot!.querySelector("#input") as HTMLInputElement;
+  el.addEventListener("lr-add", (e) => e.preventDefault());
+  typeInto(input, "alpha");
+  press(input, "Enter");
+  await el.updateComplete;
+  expect(el.value, "a vetoed add must not reach value").to.deep.equal([]);
+  expect(
+    input.value,
+    "the typed draft stays in the input so the user can correct it, rather than being silently cleared"
+  ).to.equal("alpha");
+});
+
 it('ignores a stale remove-button click whose bound index no longer exists after a synchronous removal', async () => {
   const el = (await fixture(
     html`<lr-token-input .value=${['alpha']}></lr-token-input>`
@@ -1630,6 +1660,7 @@ describe("editable tokens", () => {
     const edited = oneEvent(el, "lr-token-edit");
     press(field, "Enter");
     const event = await edited;
+    expect(event.cancelable).to.be.true;
     expect(event.detail).to.deep.equal({
       value: "Bash(git diff:*)",
       previousValue: RULE,
@@ -1642,6 +1673,31 @@ describe("editable tokens", () => {
       el.shadowRoot!.activeElement!.getAttribute("part"),
       "focus returns to the token"
     ).to.equal("token-label");
+  });
+
+  it("keeps the editor open with the edited text intact when a host calls preventDefault() on lr-token-edit", async () => {
+    const el = (await fixture(
+      html`<lr-token-input editable .value=${[RULE, "other"]}></lr-token-input>`
+    )) as LyraTokenInput;
+    tokenLabels(el)[0].click();
+    await el.updateComplete;
+    const field = editor(el)!;
+    typeInto(field, "Bash(git diff:*)");
+    el.addEventListener("lr-token-edit", (e) => e.preventDefault());
+    press(field, "Enter");
+    await el.updateComplete;
+    expect(el.value, "a vetoed edit must not reach value").to.deep.equal([
+      RULE,
+      "other",
+    ]);
+    expect(
+      editor(el) !== null,
+      "the editor stays open so the user can correct it, rather than closing and discarding it"
+    ).to.equal(true);
+    expect(
+      editor(el)!.value,
+      "the edited (uncommitted) text is retained"
+    ).to.equal("Bash(git diff:*)");
   });
 
   it("emits exactly one change for a committed edit, even though the editor blurs in the same tick", async () => {

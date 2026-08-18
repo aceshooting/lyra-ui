@@ -374,7 +374,8 @@ export type LyraAccordionReactProps = LyraReactElementProps<
   | 'lr-after-collapse'
   | 'lr-after-expand'
   | 'lr-collapse'
-  | 'lr-expand',
+  | 'lr-expand'
+  | 'lr-toggle-request',
   | '--lr-accordion-filled-bg'
   | '--lr-accordion-filled-border-color'
   | '--lr-accordion-filled-outlined-bg'
@@ -2437,6 +2438,8 @@ export type LyraCommandPaletteReactProps = LyraReactElementProps<
   | 'strings',
   {},
   LyraCommandPaletteEventMap,
+  | 'blur'
+  | 'focus'
   | 'lr-close'
   | 'lr-open'
   | 'lr-select',
@@ -3167,6 +3170,7 @@ export type LyraDialogReactProps = LyraReactElementProps<
   LyraDialogEventMap,
   | 'lr-after-hide'
   | 'lr-after-show'
+  | 'lr-close'
   | 'lr-dialog-close'
   | 'lr-hide'
   | 'lr-initial-focus'
@@ -3541,6 +3545,7 @@ export type LyraDrawerReactProps = LyraReactElementProps<
   LyraDialogEventMap,
   | 'lr-after-hide'
   | 'lr-after-show'
+  | 'lr-close'
   | 'lr-dialog-close'
   | 'lr-hide'
   | 'lr-initial-focus'
@@ -3850,7 +3855,8 @@ export type LyraEntityCardReactProps = LyraReactElementProps<
   | 'types',
   {},
   LyraEntityCardEventMap,
-  | 'lr-entity-activate',
+  | 'lr-entity-activate'
+  | 'lr-entity-select',
   | '--lr-entity-card-compact-gap'
   | '--lr-entity-card-compact-padding',
   {
@@ -3870,7 +3876,8 @@ export type LyraEntityChipReactProps = LyraReactElementProps<
   {},
   LyraEntityChipEventMap,
   | 'lr-entity-activate'
-  | 'lr-entity-open',
+  | 'lr-entity-open'
+  | 'lr-entity-select',
   | '--lr-entity-chip-bg'
   | '--lr-entity-chip-border'
   | '--lr-entity-chip-color',
@@ -6333,6 +6340,7 @@ export type LyraNativeTimeInputReactProps = LyraReactElementProps<
   | 'withLabel'
   | 'withoutSpinButtons',
   {
+    autocorrect: boolean | 'off' | 'on';
     form: HTMLFormElement | string | null;
   },
   LyraInputEventMap,
@@ -6396,6 +6404,7 @@ export type LyraNeighborListReactProps = LyraReactElementProps<
   {},
   LyraNeighborListEventMap,
   | 'lr-entity-activate'
+  | 'lr-entity-select'
   | 'lr-node-expand',
 never,
   {
@@ -6512,6 +6521,7 @@ export type LyraNumberInputReactProps = LyraReactElementProps<
   | 'withoutSpinButtons'
   | 'withoutSteppers',
   {
+    autocorrect: boolean | 'off' | 'on';
     form: HTMLFormElement | string | null;
   },
   LyraNumberInputEventMap,
@@ -7180,6 +7190,7 @@ export type LyraPopoverReactProps = LyraReactElementProps<
   | 'arrow'
   | 'arrowPadding'
   | 'arrowPlacement'
+  | 'disabled'
   | 'distance'
   | 'for'
   | 'locale'
@@ -7332,6 +7343,7 @@ export type LyraProgressRingReactProps = LyraReactElementProps<
   | 'label'
   | 'locale'
   | 'max'
+  | 'showValue'
   | 'strings'
   | 'value'
   | 'variant',
@@ -7354,6 +7366,7 @@ never,
   | '--track-width',
   {
     'accessible-label'?: LyraProgressRing['accessibleLabel'];
+    'show-value'?: LyraProgressRing['showValue'];
   }
 >;
 
@@ -7848,6 +7861,7 @@ export type LyraRagEvalDashboardReactProps = LyraReactElementProps<
   {},
   LyraRagEvalDashboardEventMap,
   | 'lr-metric-change'
+  | 'lr-run-change'
   | 'lr-run-select'
   | 'lr-slice-change',
 never,
@@ -10499,6 +10513,7 @@ export type LyraVirtualListReactProps = LyraReactElementProps<
   LyraVirtualListEventMap,
   | 'lr-load-more'
   | 'lr-virtual-scroll'
+  | 'lr-visible-range-change'
   | 'lr-visible-range-changed',
   | '--lr-virtual-list-height'
   | '--lr-virtual-list-hover-outline-color'

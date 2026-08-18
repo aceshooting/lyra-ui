@@ -6,7 +6,7 @@
 - **Class** `LyraNeighborList`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/neighbor-list/neighbor-list.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecations** none
+- **Deprecated event** `lr-entity-activate` since `9.1.1`; use event `addEventListener('lr-entity-select', ...)`; removal not before `11.0.0` — Renamed for cross-family event-vocabulary consistency; both names fire from the same gesture with an identical detail during the compatibility window.
 - **Optional peers** none
 - **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -30,7 +30,9 @@ graph data) and never mutates a graph.
 - `label: string = ''` — fallback name for the stable group. A non-empty host `aria-label` makes
   the host the sole overall owner; an explicitly empty host label stays empty on the group
 
-**Events:** `lr-entity-activate` (`detail: { entityId }`, a row's node button was activated),
+**Events:** `lr-entity-select` (`detail: { entityId }`, a row's node button was activated;
+`lr-entity-activate` is a deprecated alias fired alongside it with the same detail object, removal
+not before 11.0.0),
 `lr-node-expand` (`detail: { nodeId }`, a row's expand button was activated — deliberately the same
 name and detail shape as `lr-graph`'s own event, so one host handler serves both).
 

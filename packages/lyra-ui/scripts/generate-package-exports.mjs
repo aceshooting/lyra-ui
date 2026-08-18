@@ -1,8 +1,8 @@
 // Replaces the broad component/AI wildcard package exports with the exact supported public
 // routes. Component registration/class entries and stable lr-* aliases come from the authoritative
 // component inventory; the small helper list contains only deliberately documented public modules.
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const defaultPackageDir = fileURLToPath(new URL('..', import.meta.url));
@@ -30,6 +30,52 @@ export const CURATED_COMPONENT_HELPER_MODULES = Object.freeze([
   'src/components/viewers/archive-viewer/archive-viewer-register.ts',
   'src/components/viewers/document-viewer/registry.ts',
   'src/components/viewers/ebook-viewer/ebook-viewer-register.ts',
+  // `PptxViewerAdapter`/`PptxViewerAdapterEvent`/`PptxTextSearchResult`/`PptxSearchHighlightHandle`/
+  // `PptxThumbnailHandle` are imported (type-only) by pptx-viewer.class.ts but never re-exported --
+  // neither by pptx-viewer.ts's registration barrel nor by the `./components/viewers` family
+  // barrel -- so, exactly like the other granular loaders above, this is the only route that
+  // reaches them. llms/viewers.md:823 documents this module as their public source.
+  'src/components/viewers/pptx-viewer/pptx-loader.ts',
+]);
+
+// Deliberately internal despite matching the naming convention `findUnclassifiedHelperModules`
+// derives from the file tree (see below). Each group states why it stays out of the curated list
+// above instead of silently vanishing from consideration.
+export const ACKNOWLEDGED_INTERNAL_HELPER_MODULES = Object.freeze([
+  // Already reachable without a dedicated route: each viewer's registration module (which already
+  // has its own package export via the component inventory, and is re-exported again by the
+  // `./components/viewers` family barrel) does `export * from './<name>-loader.js'` wholesale, so
+  // a second granular route here would just be a redundant alias for an already-public surface.
+  'src/components/viewers/calendar-viewer/calendar-loader.ts',
+  'src/components/viewers/docx-viewer/docx-loader.ts',
+  'src/components/viewers/email-viewer/email-loader.ts',
+  'src/components/viewers/spreadsheet-viewer/spreadsheet-loader.ts',
+
+  // Simple internal optional-peer loaders: a load()/get()/clear-cache() trio plus at most one
+  // structural "Api" type, consumed only inside their own component file. Nothing re-exports them,
+  // no llms/ text promises a granular import path for them, and `check-packed-consumer.mjs` does
+  // not smoke-test them -- unlike the curated loaders above (chart-core/-feature, code, markdown,
+  // map, graph, pptx), which the docs and that smoke test both name explicitly. There is no public
+  // contract here today.
+  'src/components/conversation/markdown/katex-loader.ts',
+  'src/components/forms/emoji-picker/emoji-data-loader.ts',
+  'src/components/media/qr-code/qr-code-loader.ts',
+  'src/components/utility/icon/dompurify-loader.ts',
+  'src/components/viewers/html-viewer/dompurify-loader.ts',
+  'src/components/viewers/notebook-viewer/dompurify-loader.ts',
+  'src/components/viewers/svg-viewer/dompurify-loader.ts',
+
+  // Structurally these two look like the pptx-loader.ts case above: a real adapter-shaped "Api"
+  // type surface (PdfJsApi/PdfDocumentApi/PdfPageApi/... and EpubBook/EpubRendition/...) imported
+  // type-only by their viewer class and never re-exported by anything that already has a package
+  // route, so the types are equally unreachable. Left internal here on purpose rather than fixed:
+  // unlike pptx-loader.ts, no llms/ text promises either of these is "exported from the granular
+  // loader module", so curating one now would be undocumented new public API -- adding a route
+  // with no JSDoc/test/story/llms entry to back it, which is exactly the over-widening this
+  // mechanism exists to prevent. A human should decide deliberately, together with the doc change
+  // that would justify it.
+  'src/components/viewers/pdf-viewer/pdf-loader.ts',
+  'src/components/viewers/ebook-viewer/ebook-loader.ts',
 ]);
 
 export const CURATED_UTILITY_MODULES = Object.freeze([
@@ -76,6 +122,76 @@ function addRoute(routes, exportPath, target, owner) {
   const previous = routes.get(exportPath);
   invariant(!previous || previous.target === target, `${exportPath} is claimed by both ${previous?.owner} and ${owner}`);
   routes.set(exportPath, { target, owner });
+}
+
+// The naming convention shared by every helper module classified above, public or acknowledged
+// internal: a `*-loader.ts` (an optional-peer/heavy-dependency loader), `*-peer.ts` (an
+// optional-peer installer), `*-register.ts` (a side-effect-only renderer registration), or a
+// module literally named `registry.ts`. This mirrors `generate-side-effects.mjs`'s
+// `deriveSideEffects()`, which walks the same file tree for its own `-register`/`-peer` suffixes
+// instead of hand-copying names forward from a previous artifact.
+function matchesPublicHelperNamingConvention(basename) {
+  return basename === 'registry.ts' || /-(?:loader|peer|register)\.ts$/.test(basename);
+}
+
+function walkFiles(directory) {
+  const files = [];
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const entryPath = join(directory, entry.name);
+    if (entry.isDirectory()) files.push(...walkFiles(entryPath));
+    else files.push(entryPath);
+  }
+  return files;
+}
+
+/**
+ * Derives every helper-module *candidate* from the file tree (not from either hand-maintained
+ * list), so a newly added file matching the naming convention cannot silently avoid
+ * classification -- the failure mode that stranded `pptx-loader.ts` outside
+ * `CURATED_COMPONENT_HELPER_MODULES` with no route and no warning. This function does NOT decide
+ * public vs. internal: no automatic rule reliably distinguishes a module whose real API is
+ * reachable only through it (curated) from one that is a private implementation detail or already
+ * reachable transitively through an already-exported sibling (acknowledged internal) -- see the
+ * comments on both lists above for the evidence behind each entry. Instead this closes the gap the
+ * achievable way: every candidate MUST appear in exactly one of the two lists, or this returns it
+ * as unclassified so `checkPackageExports` fails loudly and a human classifies it deliberately.
+ */
+export function findUnclassifiedHelperModules(
+  packageDir = defaultPackageDir,
+  {
+    curatedModules = CURATED_COMPONENT_HELPER_MODULES,
+    internalModules = ACKNOWLEDGED_INTERNAL_HELPER_MODULES,
+    skipExistenceCheck = false,
+  } = {},
+) {
+  const componentsRoot = join(packageDir, 'src', 'components');
+  const curated = new Set(curatedModules);
+  const acknowledgedInternal = new Set(internalModules);
+  for (const module of acknowledgedInternal) {
+    invariant(!curated.has(module), `${module} is listed as both a curated public helper and acknowledged internal`);
+  }
+
+  const unclassified = [];
+  for (const file of walkFiles(componentsRoot)) {
+    if (!file.endsWith('.ts') || file.endsWith('.test.ts') || file.endsWith('.d.ts')) continue;
+    const relPath = relative(packageDir, file).replaceAll('\\', '/');
+    const basename = relPath.slice(relPath.lastIndexOf('/') + 1);
+    if (!matchesPublicHelperNamingConvention(basename)) continue;
+    if (curated.has(relPath) || acknowledgedInternal.has(relPath)) continue;
+    unclassified.push(relPath);
+  }
+
+  // Stale entries in the acknowledged-internal list (renamed/removed files) are just as much a
+  // silent gap as an unclassified new file: the classification they recorded no longer applies to
+  // anything, and a real replacement file could pass the check unnoticed if it were left believing
+  // its neighbor was already accounted for. Fail the same way a missing curated source module does.
+  if (!skipExistenceCheck) {
+    for (const module of acknowledgedInternal) {
+      invariant(existsSync(join(packageDir, module)), `acknowledged-internal helper module is missing: ${module}`);
+    }
+  }
+
+  return unclassified.sort();
 }
 
 export function deriveExplicitComponentExports(
@@ -242,6 +358,15 @@ export function checkPackageExports(packageDir = defaultPackageDir) {
   }
   if (JSON.stringify(current) !== JSON.stringify(expected.exports)) {
     findings.push('package.json#exports is stale');
+  }
+  for (const module of findUnclassifiedHelperModules(packageDir)) {
+    findings.push(
+      `${module} matches the public-helper naming convention (*-loader.ts / *-peer.ts / *-register.ts / ` +
+        'registry.ts) but is classified in neither CURATED_COMPONENT_HELPER_MODULES nor ' +
+        'ACKNOWLEDGED_INTERNAL_HELPER_MODULES in scripts/generate-package-exports.mjs. Add it to the former ' +
+        'if its API is public and not otherwise reachable, or the latter (with a reason) if it is ' +
+        'deliberately internal.',
+    );
   }
   return { findings, ...expected };
 }

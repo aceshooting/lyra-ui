@@ -1737,12 +1737,15 @@ math, and any row element can be recycled or removed on the next update.
 **Events:** `lr-load-more` (no detail — fired once per approach to the bottom of the list while
 `has-more` is true and `loading` is false; does not refire on every scroll tick while still near the
 bottom — scrolling back away from the bottom and returning, or `items` growing enough to move the
-window away from the end, re-arms it), `lr-visible-range-changed` (`detail: VirtualListRange`, the
-current visible, non-overscanned item index range — fired only when it actually changes),
+window away from the end, re-arms it), `lr-visible-range-change` (`detail: VirtualListRange`, the
+current visible, non-overscanned item index range — fired only when it actually changes;
+`lr-visible-range-changed` is a deprecated alias fired alongside it with the identical detail object,
+removal not before 11.0.0 — it was the only past-tense `-changed` spelling among 58 `-change`-family
+events, so a convention-driven `lr-${x}-change` listener silently missed it),
 `lr-virtual-scroll`
 (`detail: VirtualListScroll` — the scroll container moved; emitted from the same animation frame that
 already coalesces native `scroll` events, so a fling produces at most one per frame and none at all
-when the position did not change. Unlike `lr-visible-range-changed`, which only fires on index-range
+when the position did not change. Unlike `lr-visible-range-change`, which only fires on index-range
 changes, this reports _sub-row_ movement, which is what scroll-linked layout needs)
 
 **Slots:** none — all content comes from `renderItem`.
@@ -2825,7 +2828,10 @@ row also makes it active.
 **Events:** `lr-open`, `lr-close` (both `detail: undefined`, cancelable — fired before the
 mutation, `preventDefault()` keeps the palette in its current open state), `lr-select`
 (`detail: { command }`, fired before the command's own `onSelect` runs and before the palette
-closes).
+closes), and no-detail `focus`/`blur` events re-dispatched from the host whenever the search input
+gains or loses focus. The `focus`/`blur` bridge is new in 10.0.0: native `focus`/`blur` neither
+bubble nor cross the shadow boundary, so a host-level `el.addEventListener('focus', …)` previously
+never fired at all.
 
 **Slots:** none.
 
@@ -2936,11 +2942,20 @@ the ladder doesn't cover is a two-line override rather than a fork.
 
 **Events:**
 
-- `lr-expand`, `lr-collapse`, `lr-after-expand`, `lr-after-collapse` — accordion group lifecycle.
+- `lr-expand`, `lr-collapse`, `lr-toggle-request`, `lr-after-expand`, `lr-after-collapse` —
+  accordion group lifecycle.
 - `lr-show`, `lr-hide`, `lr-toggle`, `lr-after-show`, `lr-after-hide` — Details lifecycle only.
 
 On the accordion, `lr-expand` and `lr-collapse` fire before a direct item changes, are cancelable,
-and carry `detail: { item }`. **Changed in 9.0.0:** `item` is now always a `LyraAccordionItem` —
+and carry `detail: { item }`. **New in 10.0.0:** a cancelable `lr-toggle-request`
+(`detail: { collapsed, item }`) fires alongside the matching directional event for every transition,
+including sibling auto-collapses in `single`/`single-collapsible` mode and `collapseAll()`. It carries
+the direction in the detail rather than the event name, matching `<lr-code-block>`/`<lr-chat-message>`'s
+`lr-toggle-request` convention, plus an `item` reference the single-panel siblings do not need (an
+accordion's toggling entity is one of several children, so the event target alone cannot identify it).
+`preventDefault()` on **either** event vetoes the transition — the two are a symmetric veto pair, not
+a primary and a notification. Note `<lr-thinking-panel>`'s own `lr-toggle-request` spells its detail
+`{ expanded }` rather than `{ collapsed }`; the two conventions are not fully unified. **Changed in 9.0.0:** `item` is now always a `LyraAccordionItem` —
 it could previously also be a `LyraDetails`. The exported `LyraAccordionPanel` union that spelled
 that has been removed; use `LyraAccordionItem`. An accepted transition finishes with the
 non-cancelable

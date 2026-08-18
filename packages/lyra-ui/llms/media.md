@@ -1051,7 +1051,7 @@ to populate it: set `file` to a real `File` (fresh from a picker/drop), from whi
 `mime-type`/`thumbnail-src` props instead, for reconstructing a chip from server-persisted
 attachment metadata after a page reload, when no real `File` object exists any more. `file` always
 wins when both are present. When a real `File` or `preview-src` is available, the chip offers a
-localized action that emits a cancelable `lr-preview-request`; it never registers or owns a viewer
+localized action that emits a plain, non-cancelable `lr-preview-request`; it never registers or owns a viewer
 or overlay, so the host composes the desired preview surface.
 
 **Properties:**
@@ -1110,9 +1110,12 @@ derived from `` `${file.name}:${file.size}:${file.lastModified}` ``; when neithe
 generated internal id is used as a last resort.
 
 **Events:** `lr-remove` (`detail: { attachmentId }`, only rendered while `removable`), `lr-retry`
-(`detail: { attachmentId }`, only rendered while `status="error"`), and cancelable
-`lr-preview-request` (`detail: { attachmentId, name, mimeType, src }`). Preventing the preview
-request is a host veto point; the chip itself has no preview default action.
+(`detail: { attachmentId }`, only rendered while `status="error"`), and
+`lr-preview-request` (`detail: { attachmentId, name, mimeType, src }`) — a plain, non-cancelable
+notification that the preview action was activated. **Breaking in 10.0.0:** this event was
+advertised as cancelable, but the chip never read `defaultPrevented` and owns no preview default
+action to veto (it never registers or owns a viewer/overlay), so `preventDefault()` was a no-op.
+The flag is gone rather than left as a promise the component cannot keep.
 
 **Slots:** none.
 
@@ -2148,7 +2151,9 @@ unsupported or unresolved targets report `false` through the return value and `l
 `lr-rate-change` (`detail: { rate }`), `lr-cue-change`
 (`detail: { readonly cueId, readonly index }`; `cueId` is `null` and `index` is `-1` when no cue is active),
 `lr-highlight-activate` (`detail: { highlightId }`), `lr-anchor-result` (`detail: {
-found }`), `lr-search-change` (`detail: { query, matchCount, activeIndex }`), and
+found }`), `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`;
+`matchCountExact` is always `true` — `search()` matches over the already-loaded `cues` array with no
+additional ceiling), and
 `lr-render-error` (`detail: { error }`). The native `ended`, `error`, `loadedmetadata`, `pause`,
 `play`, `timeupdate`, and `volumechange`
 events are also relayed exactly once from the host as native `Event` instances. Like the original
@@ -2577,9 +2582,19 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-media-map-map-loader-contracts`** — Supporting data types and helpers for this component family.
   `loadMaplibre(): unknown`
+  `MapLibreGeoJsonDiff {
+  update: unknown;
+  id: unknown;
+  addOrUpdateProperties: unknown;
+  key: unknown;
+  value: unknown;
+  removeProperties: unknown;
+}`
   `MapLibreGeoJsonSource {
   setData: unknown;
   data: unknown;
+  updateData: unknown;
+  diff: unknown;
 }`
   `MapLibreMapCapability {
   getCanvas: unknown;
@@ -2592,6 +2607,8 @@ These named interfaces and helper signatures are available to typed integrations
   setZoom: unknown;
   zoom: unknown;
   resize: unknown;
+  setMaxBounds: unknown;
+  bounds: unknown;
   remove: unknown;
   on: unknown;
   type: unknown;
@@ -2651,6 +2668,7 @@ These named interfaces and helper signatures are available to typed integrations
 }`
 
 - **`components-media-map-map-contracts`** — Supporting data types and helpers for this component family.
+  `buildGeoJsonPropertyDiff(/* public names: previous, next */): unknown`
   `LyraMapChoroplethLayer {
   sourceId: unknown;
   geojson: unknown;
@@ -2674,6 +2692,8 @@ These named interfaces and helper signatures are available to typed integrations
   setZoom: unknown;
   zoom: unknown;
   resize: unknown;
+  setMaxBounds: unknown;
+  bounds: unknown;
 }`
   `LyraMapLegendEntry {
   color: unknown;

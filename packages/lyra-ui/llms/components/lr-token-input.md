@@ -46,11 +46,16 @@ each list mutation; native events have no detail and both aliases carry a frozen
 Native `FocusEvent` `focus`/`blur` are relayed once from the draft and inline editor, preserving
 `relatedTarget`. `lr-add`
 (`detail: { value, values }`, where `value` is the final added token and `values` is the frozen,
-readonly, complete ordered and deduplicated set of tokens added by that commit),
+readonly, complete ordered and deduplicated set of tokens added by that commit — cancelable as of
+10.0.0; `preventDefault()` keeps the tokens out of `value` and leaves the typed draft text in the
+input unchanged so the user can correct it, rather than clearing it),
 `lr-remove`
 (`detail: { value, index }` — cancelable; `preventDefault()` keeps the token in `value`
 unchanged), and `lr-token-edit`
-(`detail: { value, previousValue, index }` — an existing token was edited in place and committed).
+(`detail: { value, previousValue, index }` — an existing token is about to be edited in place —
+cancelable as of 10.0.0; `preventDefault()` keeps the token in `value` unchanged and leaves the
+inline editor open with the user's edited text intact, rather than closing and discarding it).
+All three mutators now share one veto contract; previously only `lr-remove` could be vetoed.
 `lr-invalid` (no detail) is emitted once as a bubbling/composed alias when native validity fails.
 **CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `token`, `token-label` (the
 token's text, doubling as the roving-focus edit trigger — rendered only while `editable`),

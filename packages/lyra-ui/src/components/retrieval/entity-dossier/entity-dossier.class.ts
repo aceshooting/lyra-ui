@@ -3,18 +3,22 @@ import { property, state } from 'lit/decorators.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
+export type { LyraEntity } from '../entity-card/entity-card.class.js';
 import type {
   LyraNeighborListEventMap,
   LyraNeighborRow,
 } from '../neighbor-list/neighbor-list.class.js';
+export type { LyraNeighborRow } from '../neighbor-list/neighbor-list.class.js';
 import type {
   LyraChunk,
   LyraChunkInspectorEventMap,
 } from '../chunk-inspector/chunk-inspector.class.js';
+export type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';
 import type {
   LyraProvenance,
   LyraProvenancePanelEventMap,
 } from '../provenance-panel/provenance-panel.class.js';
+export type { LyraProvenance } from '../provenance-panel/provenance-panel.class.js';
 import type { StatRow } from '../../data/stat/stat.class.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';

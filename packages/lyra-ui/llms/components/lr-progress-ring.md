@@ -20,6 +20,7 @@ A circular progress indicator with the same value contract as `lr-progress-bar`.
 **Properties:** `value: number = 0` (reflected), `max: number = 100`, `indeterminate: boolean = false`
 (reflected), `variant: LyraProgressVariant = 'brand'` (reflected, added in 9.0.0 — matches sibling
 `lr-progress-bar`'s semantic-palette vocabulary: `neutral`/`brand`/`success`/`warning`/`danger`),
+`showValue: boolean = false` (attribute `show-value`),
 `label: string = ''` (the mapped accessible-name property), and
 `accessibleLabel: string = ''` (attribute `accessible-label`; a Lyra compatibility
 accessible-name spelling retained by this progress component, while several sibling components use
@@ -29,7 +30,13 @@ visible default-slot text when supplied, then the localized "Progress". Non-fini
 `value`/`max` are normalized (`max <= 0` falls
 back to `100`, `value` clamps to `[0, max]`) rather than producing NaN geometry.
 **Slots:** default — replaces the built-in center label, which otherwise renders the rounded
-percentage (and nothing at all while `indeterminate`).
+percentage **only when `show-value` is set** (and nothing at all while `indeterminate`).
+**Breaking in 10.0.0:** a determinate ring used to render its percentage unconditionally, with no way
+to suppress it short of slotting replacement content. It now gains `showValue`/`show-value` defaulting
+to `false`, exactly matching `lr-progress-bar` — which is what "the same value contract as
+`lr-progress-bar`" above has always claimed but did not deliver. Add `show-value` to keep the
+percentage. `aria-valuetext` still carries it regardless, mirroring `lr-progress-bar`'s own
+independence there, so the accessible value is unaffected.
 Its accessible text uses the same visibility filtering, forwarding-slot mutation/reassignment
 tracking, and explicit-empty host-label precedence as `lr-progress-bar`.
 **Live members:** `indicator: SVGCircleElement | null` returns the rendered indicator circle (or

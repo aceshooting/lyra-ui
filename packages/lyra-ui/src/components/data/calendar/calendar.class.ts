@@ -1,8 +1,15 @@
-import { html, type TemplateResult } from 'lit';
+import { html, type ComplexAttributeConverter, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { formatISO, monthMatrix, parseISO, weekdayLabels } from '../../forms/date-picker/calendar-core.js';
+import {
+  formatISO,
+  monthMatrix,
+  parseISO,
+  resolveFirstDayOfWeek,
+  weekdayLabels,
+} from '../../forms/date-picker/calendar-core.js';
+import type { LyraDatePickerFirstDayOfWeek } from '../../forms/date-picker/date-picker.class.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './calendar.styles.js';
@@ -26,6 +33,27 @@ const monthStart = (date: Date): Date => new Date(date.getFullYear(), date.getMo
 /** The two display modes `view` accepts. */
 export type CalendarView = 'month' | 'agenda';
 
+/** `firstDayOfWeek` accepts either the pre-existing 0–6 numeric contract (0=Sunday … 6=Saturday,
+ *  the convention `monthMatrix`/`weekdayLabels` already use) or the shared closed weekday
+ *  vocabulary `lr-date-picker`/`lr-date-input` already accept (`'auto'`, then `'sun'` through
+ *  `'sat'`) -- reusing {@link LyraDatePickerFirstDayOfWeek} instead of a parallel string union. */
+export type LyraCalendarFirstDayOfWeek = number | LyraDatePickerFirstDayOfWeek;
+
+/** Parses the `first-day-of-week` attribute as either a bare integer (back-compat with the
+ *  pre-locale-aware numeric contract) or one of the shared weekday-name tokens; an attribute that
+ *  parses as neither a finite number nor a recognized token still reaches
+ *  {@link resolveFirstDayOfWeek} as an opaque string, which itself falls back sanely. */
+const firstDayOfWeekConverter: ComplexAttributeConverter<LyraCalendarFirstDayOfWeek> = {
+  fromAttribute(value): LyraCalendarFirstDayOfWeek {
+    if (value == null || value.trim() === '') return 'auto';
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : (value.trim().toLowerCase() as LyraDatePickerFirstDayOfWeek);
+  },
+  toAttribute(value): string {
+    return typeof value === 'number' ? String(value) : value;
+  },
+};
+
 /** `<lr-calendar>` — responsive month calendar with event markers and agenda mode.
  *
  * Month-view event markers are real buttons inside each focusable gridcell, so
@@ -34,6 +62,11 @@ export type CalendarView = 'month' | 'agenda';
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
+ *
+ * `firstDayOfWeek` defaults to `'auto'`, deriving the week start from `effectiveLocale` (via the
+ * shared `resolveFirstDayOfWeek()` contract also used by `lr-date-picker`/`lr-date-input`), and
+ * also still accepts a bare `0`–`6` integer (`0`=Sunday … `6`=Saturday) or one of the shared
+ * weekday-name tokens (`'sun'` through `'sat'`) for an explicit, locale-independent week start.
  *
  * @customElement lr-calendar
  * @event lr-date-select - A calendar date was selected.
@@ -100,12 +133,26 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
     this._view = normalized;
     this.requestUpdate('view', previous);
   }
-  @property({ type: Number, attribute: 'first-day-of-week' }) firstDayOfWeek = 1;
+  @property({ attribute: 'first-day-of-week', converter: firstDayOfWeekConverter })
+  firstDayOfWeek: LyraCalendarFirstDayOfWeek = 'auto';
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @state() private focusedDate = '';
   private get viewStart(): Date { const parsed = new Date(`${this.viewDate}T00:00:00`); return Number.isNaN(parsed.valueOf()) ? monthStart(new Date()) : monthStart(parsed); }
-  /** `firstDayOfWeek` clamped into the 0–6 range `monthMatrix`/`weekdayLabels` expect, tolerating a malformed or out-of-range attribute value instead of letting it silently drop leading days of the month or produce `Invalid Date`. `finiteInteger` sanitizes a NaN/non-finite/fractional raw value to a safe integer (falling back to `1` to match this property's own default) before the modulo wraps any still-out-of-range integer (including negatives) into `[0, 6]`. */
-  private get normalizedFirstDayOfWeek(): number { const sanitized = finiteInteger(this.firstDayOfWeek, 1); return ((sanitized % 7) + 7) % 7; }
+  /** `firstDayOfWeek` resolved into the 0–6 range `monthMatrix`/`weekdayLabels` expect. A numeric
+   *  value (attribute or direct JS property write) keeps the pre-existing contract: `finiteInteger`
+   *  sanitizes a NaN/non-finite/fractional raw value to a safe integer (falling back to `1`, this
+   *  property's pre-locale-aware default) before the modulo wraps any still-out-of-range integer
+   *  (including negatives) into `[0, 6]`. A string value -- `'auto'`, a weekday-name token, or any
+   *  other malformed token -- goes through the shared `resolveFirstDayOfWeek()` contract, which
+   *  derives `'auto'` from `effectiveLocale` and falls back to Sunday (0) for anything else. */
+  private get normalizedFirstDayOfWeek(): number {
+    const raw = this.firstDayOfWeek;
+    if (typeof raw === 'number') {
+      const sanitized = finiteInteger(raw, 1);
+      return ((sanitized % 7) + 7) % 7;
+    }
+    return resolveFirstDayOfWeek(raw, this.effectiveLocale);
+  }
   private changeMonth(delta: number): void { const next = new Date(this.viewStart.getFullYear(), this.viewStart.getMonth() + delta, 1); this.viewDate = formatISO(next); this.emit('lr-view-change', { viewDate: this.viewDate }); }
   private selectDate(date: string): void { this.value = date; this.focusedDate = date; this.emit('lr-date-select', { date }); }
   /** `events` bucketed by ISO date, built once per render — the month grid reads events for each of its 42 day cells and re-renders on every roving-focus arrow-key move, so a per-cell linear scan of `events` would cost O(cells × events) per keystroke. */
