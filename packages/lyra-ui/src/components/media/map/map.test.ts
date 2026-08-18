@@ -2873,3 +2873,106 @@ function choropleth(sourceId: string, stops: [number, string][]) {
     },
   } as unknown as import('./map.js').LyraMapChoroplethLayer;
 }
+
+describe('continuous choropleth legend', () => {
+  const STOPS = [
+    [0, '#f7fbff'],
+    [50, '#6baed6'],
+    [100, '#08306b'],
+  ] as const;
+
+  it('renders no legend panel at all when nothing asks for one', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    await el.updateComplete;
+    expect(
+      el.shadowRoot!.querySelector('[part="legend"]'),
+      'unset default is unchanged'
+    ).to.equal(null);
+  });
+
+  it('renders a gradient bar with endpoint captions from the choropleth stops', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    el.legendGradient = STOPS;
+    await el.updateComplete;
+
+    const bar = el.shadowRoot!.querySelector<HTMLElement>('[part="legend-gradient"]');
+    expect(bar, 'the ramp bar renders').to.exist;
+    const image = bar!.style.backgroundImage;
+    expect(image, 'every stop reaches the gradient').to.contain('linear-gradient');
+    expect(image).to.contain('0%');
+    expect(image).to.contain('100%');
+    // 50 of a 0..100 span sits at its true proportion, not at an evenly-spaced third.
+    expect(image, 'intermediate stops sit at their value proportion').to.contain('50%');
+
+    expect(
+      el.shadowRoot!.querySelector('[part="legend-lo"]')!.textContent!.trim(),
+      'low caption defaults to the lowest stop value'
+    ).to.equal('0');
+    expect(
+      el.shadowRoot!.querySelector('[part="legend-hi"]')!.textContent!.trim(),
+      'high caption defaults to the highest stop value'
+    ).to.equal('100');
+  });
+
+  it('lets the endpoint captions be overridden', async () => {
+    const el = (await fixture(
+      html`<lr-map
+        legend-gradient-lo-label="none"
+        legend-gradient-hi-label="≥ 100"
+      ></lr-map>`
+    )) as LyraMap;
+    el.legendGradient = STOPS;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="legend-lo"]')!.textContent!.trim()).to.equal('none');
+    expect(el.shadowRoot!.querySelector('[part="legend-hi"]')!.textContent!.trim()).to.equal('≥ 100');
+  });
+
+  it('sorts stops ascending and drops unusable ones', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    el.legendGradient = [
+      [100, '#08306b'],
+      [Number.NaN, '#ff0000'],
+      [0, '#f7fbff'],
+      [25, 'not-a-color'],
+    ] as unknown as readonly (readonly [number, string])[];
+    await el.updateComplete;
+    expect(
+      el.legendGradient.map(([value]) => value),
+      'sorted ascending, non-finite and unparsable-colour stops removed'
+    ).to.deep.equal([0, 100]);
+  });
+
+  it('renders no bar for fewer than two usable stops, since a flat block describes nothing', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    el.legendGradient = [[5, '#08306b']] as unknown as readonly (readonly [number, string])[];
+    await el.updateComplete;
+    expect(el.legendGradient.length).to.equal(0);
+    expect(el.shadowRoot!.querySelector('[part="legend-gradient"]')).to.equal(null);
+  });
+
+  it('hides the ramp bar from assistive tech, leaving the captions to carry the meaning', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    el.legendGradient = STOPS;
+    await el.updateComplete;
+    const bar = el.shadowRoot!.querySelector<HTMLElement>('[part="legend-gradient"]')!;
+    expect(bar.getAttribute('aria-hidden')).to.equal('true');
+    expect(bar.hasAttribute('inert'), 'not a tab stop either').to.be.true;
+  });
+
+  it('opens the legend panel for slotted legend content alone', async () => {
+    const el = (await fixture(
+      html`<lr-map><div slot="legend" id="custom">Custom key</div></lr-map>`
+    )) as LyraMap;
+    await el.updateComplete;
+    await aTimeout(0);
+    expect(
+      el.shadowRoot!.querySelector('[part="legend"]'),
+      'the panel renders so slotted content sits inside the map layout'
+    ).to.exist;
+    const slot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="legend"]')!;
+    expect(
+      slot.assignedElements({ flatten: true }).map((node) => node.id),
+      'the custom legend is assigned'
+    ).to.deep.equal(['custom']);
+  });
+});

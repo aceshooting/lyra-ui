@@ -293,6 +293,22 @@ operations. Its runtime value is the underlying MapLibre map.
   style-required failure and makes no tile/style request. Assign a hosted vector/raster style from
   a provider whose terms fit your application, or an explicitly network-silent style for local
   geometry.
+- `legendGradient: readonly (readonly [number, string])[] = []` (attribute: false, type
+  `LyraMapLegendGradientStop[]`) — renders the legend as a **continuous** gradient bar with endpoint
+  captions instead of (or alongside) the discrete `legend` swatches, which is the standard key for a
+  choropleth whose `interpolate` fill is itself a continuous ramp. Takes the same `[value, color]`
+  stop shape as `choropleth.stops`, so the usual assignment is `map.legendGradient =
+  myChoropleth.stops` and the key cannot drift from the layer it describes. Stops are sorted
+  ascending, bounded to 64, and filtered to finite values carrying a CSS-parsable color; fewer than
+  two usable stops render no bar at all, since a one-stop "gradient" is a flat block that describes
+  nothing. Each stop sits at its true proportion of the value range, so the bar shows the ramp the
+  expression actually produces rather than evenly spacing unevenly-spaced values. Part names
+  (`legend-gradient`, `legend-lo`, `legend-hi`) mirror `lr-heatmap`'s gradient legend, and the bar
+  is `aria-hidden`/`inert` with the captions carrying the meaning. Mirrors under RTL
+- `legendGradientLoLabel: string | null = null` (attribute `legend-gradient-lo-label`),
+  `legendGradientHiLabel: string | null = null` (attribute `legend-gradient-hi-label`) — override
+  the endpoint captions, which otherwise default to the lowest/highest stop value in the component's
+  own locale-aware numeric formatting
 - `legend: readonly LyraMapLegendEntry[] = []` (attribute: false) — immutable defensive snapshots
   of `LyraMapLegendEntry { readonly color: string; readonly label: string; readonly pattern:
 LyraMapLegendPattern }`, where `LyraMapLegendPattern` is `'solid' | 'diagonal' | 'dots' |
@@ -368,9 +384,12 @@ an element.
 hit GeoJSON feature are detached and recursively frozen — feature is only populated if a
 choropleth fill layer exists and was hit)
 
-**Slots:** none.
+**Slots:** `legend` — custom legend content, rendered inside the legend panel's own layout so it
+stays positioned with the map instead of floating beside it. Supplying it opens the panel even
+when `legend` and `legendGradient` are both empty.
 
-**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `legend-limit`, `marker`, `popup`,
+**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `legend-gradient`, `legend-lo`,
+`legend-hi`, `legend-limit`, `marker`, `popup`,
 `popup-content`, `popup-close-button`, `attribution`, `attribution-toggle`, `error`.
 `legend` is a localized `role="group"` containing a real list associated to the map canvas with
 `aria-describedby`; each entry is a `listitem`, decorative swatches are inert/accessibility-hidden,

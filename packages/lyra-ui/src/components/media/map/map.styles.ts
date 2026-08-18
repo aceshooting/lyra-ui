@@ -228,6 +228,31 @@ export const styles = css`
     gap: var(--lr-space-xs);
     min-inline-size: 0;
   }
+  /* Continuous choropleth key: low caption, ramp bar, high caption on one row -- the same shape
+     lr-heatmap's gradient legend uses, so the two components read alike. */
+  .legend-gradient {
+    display: flex;
+    align-items: center;
+    gap: var(--lr-space-xs);
+    min-inline-size: 0;
+  }
+  .legend-gradient .gradient-bar {
+    flex: 1 1 var(--lr-size-6rem);
+    min-inline-size: 0;
+    block-size: var(--lr-size-0-5rem);
+    border-radius: var(--lr-size-2px);
+  }
+  [part='legend-lo'],
+  [part='legend-hi'] {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  /* Flex row order already follows inherited direction, putting the low caption at inline-start.
+     Mirror the physical gradient so its colors stay aligned with those captions -- same fix, and
+     same reasoning, as lr-heatmap's own RTL rule. */
+  :host(:dir(rtl)) .legend-gradient .gradient-bar {
+    transform: scaleX(-1);
+  }
   .legend-row {
     display: flex;
     align-items: center;

@@ -56,6 +56,46 @@ export interface LyraMapLegendEntry {
   readonly pattern: LyraMapLegendPattern;
 }
 
+/**
+ * One `[value, color]` stop of a continuous legend ramp — deliberately the same shape as
+ * `LyraMapChoroplethLayer['stops']`, so a consumer passes the choropleth's own stops straight
+ * through instead of maintaining a second copy that drifts from the layer it describes.
+ */
+export type LyraMapLegendGradientStop = readonly [number, string];
+
+/** Upper bound on rendered gradient stops, matching the deterministic-truncation pattern
+ *  `MAX_MAP_MARKERS`/`MAX_MAP_DATA_LAYERS` use below. A ramp needs a handful of stops; anything
+ *  past this is a data bug, and an unbounded loop here would build a pathological gradient. */
+const MAX_MAP_LEGEND_GRADIENT_STOPS = 64;
+
+/**
+ * Keeps only finite-value stops carrying a color CSS actually accepts, sorted ascending by value
+ * and bounded. Returns an empty array when fewer than two usable stops survive: a one-stop
+ * "gradient" is a flat block that describes nothing, so it falls back to rendering no bar at all
+ * rather than a misleading solid one.
+ */
+function normalizeMapLegendGradient(
+  value: unknown,
+): readonly (readonly [number, string])[] {
+  if (!Array.isArray(value)) return [];
+  const usable: (readonly [number, string])[] = [];
+  const scanCount = Math.min(value.length, MAX_MAP_LEGEND_GRADIENT_STOPS);
+  for (let index = 0; index < scanCount; index += 1) {
+    const stop: unknown = value[index];
+    if (!Array.isArray(stop) || stop.length < 2) continue;
+    const [rawValue, rawColor] = stop as [unknown, unknown];
+    if (typeof rawValue !== 'number' || !Number.isFinite(rawValue)) continue;
+    if (typeof rawColor !== 'string') continue;
+    const color = sanitizeCssColor(rawColor);
+    if (!color) continue;
+    usable.push([rawValue, color] as const);
+  }
+  if (usable.length < 2) return [];
+  return Object.freeze(
+    [...usable].sort((a, b) => a[0] - b[0]),
+  ) as readonly (readonly [number, string])[];
+}
+
 /** Observable result of normalizing the latest `legend` assignment. */
 export interface LyraMapLegendProjection {
   readonly inputCount: number;
@@ -374,8 +414,13 @@ export interface LyraMapEventMap {
  *   map library loads and contains ordinary, non-live localized loading text.
  * @csspart container - The MapLibre container. Its generated canvas is the actual focusable map
  *   region and receives the host-first accessible name and effective locale.
+ * @slot legend - Custom legend content, rendered inside the legend panel's own layout so it stays
+ *  positioned with the map instead of floating beside it.
  * @csspart legend - The map legend.
  * @csspart legend-swatch - A legend color swatch.
+ * @csspart legend-gradient - The continuous ramp bar rendered from `legendGradient`.
+ * @csspart legend-lo - The low endpoint caption of the `legendGradient` bar (mirrors `lr-heatmap`).
+ * @csspart legend-hi - The high endpoint caption of the `legendGradient` bar (mirrors `lr-heatmap`).
  * @csspart legend-limit - Visible localized summary when legend input is bounded or shortened.
  * @csspart marker - A MapLibre-generated marker, with a 24px minimum target in both axes even
  *   when a peer/custom marker has no intrinsic content size.
@@ -476,6 +521,50 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this._legendProjection = normalized.projection;
     this.requestUpdate('legend', previous);
   }
+
+  /**
+   * Whether a consumer supplied `slot="legend"` content, so the panel renders for it alone.
+   *
+   * Seeded from the light DOM rather than from the slot's own `slotchange`: the slot lives INSIDE
+   * the legend panel, so a panel gated on slotchange could never render the slot that would fire
+   * it. `slotchange` still runs afterwards to track content added or removed later.
+   */
+  @state() private hasLegendSlot = false;
+
+  /** Light-DOM probe for slotted legend content, valid before the slot itself has ever rendered. */
+  private probeLegendSlot(): boolean {
+    for (const child of Array.from(this.children)) {
+      if (child.getAttribute('slot') === 'legend') return true;
+    }
+    return false;
+  }
+  private _legendGradient: readonly (readonly [number, string])[] = Object.freeze([]);
+  /**
+   * Renders the legend as a **continuous** gradient bar with endpoint labels instead of (or
+   * alongside) the discrete `legend` swatches — the standard key for a choropleth, whose
+   * `interpolate` fill is itself a continuous ramp that discrete rows cannot honestly describe.
+   *
+   * Takes the same `[value, color]` stop shape as `choropleth.stops`, so the usual assignment is
+   * `legendGradient = myChoropleth.stops` and the key cannot drift from the layer it describes.
+   * Stops are sorted ascending, bounded, and filtered to finite values carrying a CSS-parsable
+   * color; fewer than two usable stops render no bar at all, since a one-stop "gradient" is a flat
+   * block that describes nothing. Unset (the default) renders exactly today's markup.
+   *
+   * Endpoint labels default to this component's locale-aware formatting of the lowest and highest
+   * stop values; `legendGradientLoLabel`/`legendGradientHiLabel` override them.
+   */
+  get legendGradient(): readonly (readonly [number, string])[] {
+    return this._legendGradient;
+  }
+  set legendGradient(value: readonly (readonly [number, string])[]) {
+    const previous = this._legendGradient;
+    this._legendGradient = normalizeMapLegendGradient(value);
+    this.requestUpdate('legendGradient', previous);
+  }
+  /** Overrides the low endpoint's caption; defaults to the lowest stop value, locale-formatted. */
+  @property({ attribute: 'legend-gradient-lo-label' }) legendGradientLoLabel: string | null = null;
+  /** Overrides the high endpoint's caption; defaults to the highest stop value, locale-formatted. */
+  @property({ attribute: 'legend-gradient-hi-label' }) legendGradientHiLabel: string | null = null;
 
   /** Counts from the latest bounded legend normalization. `truncated` covers omitted rows or
    * shortened labels; the returned record is frozen and never aliases caller input. */
@@ -1408,6 +1497,50 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     });
   }
 
+  private onLegendSlotChange = (event: Event): void => {
+    const slot = event.target as HTMLSlotElement;
+    this.hasLegendSlot = slot.assignedNodes({ flatten: true }).some(
+      (node) =>
+        node.nodeType === Node.ELEMENT_NODE ||
+        (node.textContent ?? '').trim().length > 0,
+    );
+  };
+
+  /**
+   * The continuous gradient bar plus its two endpoint captions, or nothing when `legendGradient`
+   * holds fewer than two usable stops. Part names mirror `lr-heatmap`'s
+   * `legend-lo`/`legend-hi` so a consumer styling both components learns one vocabulary.
+   */
+  private renderLegendGradient(): TemplateResult | typeof nothing {
+    const stops = this.legendGradient;
+    if (stops.length < 2) return nothing;
+    const lo = stops[0]!;
+    const hi = stops[stops.length - 1]!;
+    const span = hi[0] - lo[0];
+    // Position every intermediate stop at its true proportion of the value range, so the bar shows
+    // the ramp the `interpolate` expression actually produces rather than evenly spacing colors
+    // that are not evenly spaced in value. A zero span (every stop on the same value) can't be
+    // divided, so those fall back to even spacing.
+    const image = stops
+      .map(([value, color], index) => {
+        const percent =
+          span > 0 ? ((value - lo[0]) / span) * 100 : (index / (stops.length - 1)) * 100;
+        return `${color} ${percent}%`;
+      })
+      .join(', ');
+    return html`<div class="legend-gradient">
+      <span part="legend-lo">${this.legendGradientLoLabel ?? this.formatCount(lo[0])}</span>
+      <span
+        part="legend-gradient"
+        class="gradient-bar"
+        aria-hidden="true"
+        inert
+        style=${styleMap({ backgroundImage: `linear-gradient(to right, ${image})` })}
+      ></span>
+      <span part="legend-hi">${this.legendGradientHiLabel ?? this.formatCount(hi[0])}</span>
+    </div>`;
+  }
+
   override render(): TemplateResult {
     // Lit's own whitespace/comment marker nodes around the `${...}` binding mean
     // `[part="legend"]` is never truly `:empty` in CSS even with zero entries, so
@@ -1426,7 +1559,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           <lr-skeleton shape="rect" .announce=${false}></lr-skeleton>
               `
             : html`<div part="container" id="map-container" lang=${this.effectiveLocale}></div>`}
-        ${this.legend.length || this.legendProjection.truncated
+        ${this.legend.length ||
+        this.legendProjection.truncated ||
+        this.legendGradient.length ||
+        this.hasLegendSlot ||
+        this.probeLegendSlot()
           ? html`<div
               part="legend"
               id="map-legend"
@@ -1435,6 +1572,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
               aria-controls="map-container"
               data-truncated=${String(this.legendProjection.truncated)}
             >
+              ${this.renderLegendGradient()}
               <div class="legend-list" role="list">
                 ${this.legend.map((entry, index) => {
                   const bg = sanitizeCssColor(entry.color);
@@ -1460,6 +1598,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
                     ${this.legendLimitText()}
                   </div>`
                 : nothing}
+              <slot name="legend" @slotchange=${this.onLegendSlotChange}></slot>
             </div>`
           : nothing}
       </div>
