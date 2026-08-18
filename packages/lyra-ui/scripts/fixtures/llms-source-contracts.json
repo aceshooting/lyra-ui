@@ -13424,6 +13424,22 @@
       }
     },
     {
+      "module": "src/internal/canvas-color.ts",
+      "exportName": "resolveCanvasColors",
+      "kind": "function",
+      "fingerprint": "33b8d78869618b3a687c",
+      "routes": [
+        "src/components/charts/chart/chart-colors.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "internal-canvas-color-contracts",
+        "declaration": "resolveCanvasColors"
+      }
+    },
+    {
       "module": "src/internal/catalog-picker.ts",
       "exportName": "LyraCatalogEntry",
       "kind": "interface",

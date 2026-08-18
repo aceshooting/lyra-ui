@@ -8,13 +8,17 @@ and no existing property, event, slot, part or CSS custom property was renamed o
 
 Removed, each with a like-for-like replacement that has shipped since 9.x:
 
-- `<lr-icon>`: `autoWidth` / `auto-width` → `canvas="auto"`.
 - `<lr-confirm>`: `tone` → `variant`. It was documented as a one-major back-compat alias, and
   `variant` already won when both were set.
 - `<lr-swatch-picker>`: `options` → `items`, `label` → `accessibleLabel` (or the host `aria-label`),
   and the `SwatchOption` type → `SwatchPickerItem`.
 
 Deliberately **kept**, so migrating consumers are not caught out:
+
+- `<lr-icon>`'s `autoWidth` / `auto-width` stays, deprecation notice and all. Web Awesome's own
+  pinned manifest still publishes `auto-width` on `wa-icon`, and a mirrored tag owes its whole
+  upstream surface — dropping it classifies `wa-icon` as an `unsupported` mapping, which is a
+  release blocker. Prefer `canvas="auto"`; the alias goes when upstream's does.
 
 - `lr-geojson-view` stays. It is a permanent compatibility class for the pre-v9 tag, not a
   deprecation.

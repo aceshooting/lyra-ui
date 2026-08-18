@@ -2921,6 +2921,7 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`internal-canvas-color-contracts`** — Shared utility contracts.
   `resolveCanvasColor(/* public names: scope, color, fallback */): unknown`
+  `resolveCanvasColors(/* public names: scope, colors, fallback */): unknown`
 
 - **`internal-localization-runtime-contracts`** — Shared utility contracts.
   `getLyraLocaleDirection(/* public names: locale */): unknown`

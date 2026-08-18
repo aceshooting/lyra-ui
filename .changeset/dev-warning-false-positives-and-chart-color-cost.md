@@ -1,5 +1,5 @@
 ---
-"@aceshooting/lyra-ui": patch
+"@aceshooting/lyra-ui": minor
 ---
 
 Two dev-mode defects that shipped in 9.x, plus the per-point chart color cost behind them.

@@ -204,12 +204,6 @@ export interface LyraAppRailEventMap {
  * @since 4.0.0
  */
 export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
-  /** Both are host state this component writes itself -- `mode` is the derived effective mode
-   *  (authors set `preferred-mode`), `dragging` tracks a live resize gesture. Neither is settable
-   *  from markup, so neither is observed; declaring them keeps the rail from reporting its own
-   *  output as an unknown attribute. */
-  protected static readonly knownUnobservedAttributes: readonly string[] = ['mode', 'dragging'];
-
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -220,6 +214,12 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     resizeNavigation: LYRA_DEFAULT_resizeNavigation,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  /** Both are host state this component writes itself -- `mode` is the derived effective mode
+   *  (authors set `preferred-mode`), `dragging` tracks a live resize gesture. Neither is settable
+   *  from markup, so neither is observed; declaring them keeps the rail from reporting its own
+   *  output as an unknown attribute. */
+  protected static readonly knownUnobservedAttributes: readonly string[] = ['mode', 'dragging'];
 
   static override styles = [LyraElement.styles, styles];
 
