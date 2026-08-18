@@ -270,6 +270,10 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   /** Focus restoration after Escape is synchronous. Suppress only that focus event so returning
    * to the trigger does not immediately reopen the tooltip; a later genuine focus still opens. */
   private suppressTriggerFocusOpen = false;
+  /** True while the current open state was driven by the pointer (a `mouseenter` on the trigger)
+   *  rather than by focus, click, or `manual`. Only a pointer-held tooltip has to be re-derived
+   *  when the trigger element is swapped out from under it -- see `adoptTrigger`. */
+  private openedByPointer = false;
   /** Registered with the shared overlay manager while a virtual-anchor or actionable tooltip is
    *  open, so Escape ownership and focus return remain topmost-stack-aware. */
   private overlayHandle?: OverlayHandle;
@@ -662,6 +666,10 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     const old = this._open;
     this._open = next;
     if (!next) this.cancelShadowContentScan();
+    // Reset here rather than in onLeave: every close path (hide(), Escape, forceClose(), a
+    // vetoed reopen) funnels through this one assignment, so the flag can never outlive the
+    // pointer interaction that set it.
+    if (!next) this.openedByPointer = false;
     this.requestUpdate('open', old);
   }
 
@@ -850,6 +858,21 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     trigger.removeEventListener('click', this.onTriggerClick);
     trigger.removeEventListener('keydown', this.onTriggerKeyDown);
   }
+  /** Whether `trigger` is currently held open by a real user interaction -- the pointer resting
+   *  over it, or focus sitting inside it. `:hover` is the browser's own post-layout hover state,
+   *  which is exactly the question being asked ("is the pointer over THIS node") and needs no
+   *  pointer-coordinate bookkeeping of our own. Both are wrapped because a detached or
+   *  not-yet-laid-out node can throw on `matches()` in some engines. */
+  private isTriggerHeld(trigger: HTMLElement): boolean {
+    try {
+      if (trigger.matches(':hover')) return true;
+    } catch {
+      /* fall through to the focus check */
+    }
+    const active = trigger.ownerDocument.activeElement;
+    return active !== null && composedContains(trigger, active);
+  }
+
   private adoptTrigger(next: HTMLElement | undefined): void {
     if (next === this.triggerElement) {
       this.syncTriggerA11y();
@@ -872,6 +895,17 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     }
     this.bindTrigger(this.triggerElement);
     this.syncTriggerA11y();
+    // A list that re-renders (a chat transcript, a log view, anything virtualized) replaces the
+    // `for` target with a FRESH node rather than moving the old one. The outgoing element is
+    // detached before it can fire the `mouseleave` that normally closes a resting tooltip, and the
+    // incoming element is not necessarily under the pointer -- so a pointer-held tooltip used to
+    // survive the swap and hang over a trigger nobody was pointing at. Reported live as several
+    // resting tooltips visible simultaneously with the pointer over none of them. Re-derive the
+    // open state from the NEW element instead of inheriting the outgoing one's: keep it open only
+    // while the incoming trigger is genuinely hovered or focused.
+    if (hadTrigger && this._open && this.openedByPointer && !this.isTriggerHeld(this.triggerElement)) {
+      void this.forceClose();
+    }
     // An initially-open tooltip reaches its first updated() before slotchange has supplied the
     // trigger, so that update has no anchor to position against. Re-run positioning once the
     // trigger exists, matching the initially-open popover path.
@@ -890,6 +924,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     if (event.type === 'focusin') {
       if (this.suppressTriggerFocusOpen || !this.opensOn('focus')) return;
     } else if (!this.opensOn('hover')) return;
+    if (event.type !== 'focusin') this.openedByPointer = true;
     this.requestTransition(true);
   };
   private onLeave = (event: Event): void => {

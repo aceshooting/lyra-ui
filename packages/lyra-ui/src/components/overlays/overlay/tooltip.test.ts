@@ -1,4 +1,5 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraTooltip } from './tooltip.class.js';
 import './tooltip.js';
 
@@ -733,4 +734,95 @@ it('degrades open-content scheduling and observation gracefully after adoption i
   expect(el.open).to.be.true;
 
   el.remove();
+});
+
+it('closes a hover-opened tooltip when a re-render replaces its trigger with a fresh node', async () => {
+  // Regression test for the reported defect. In a transcript/log view that re-renders, a row is
+  // replaced rather than moved: the hovered trigger is detached (so it never fires the mouseleave
+  // that would close the tooltip) and a fresh node takes its place under the same id. The tooltip
+  // adopted the new node but kept inheriting the outgoing one's open state, so it hung open over a
+  // trigger nobody was pointing at -- several at once, per the report.
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <button id="recycled">Copy</button>
+      <lr-tooltip for="recycled" content="Copy to clipboard" show-delay="0" hide-delay="0"></lr-tooltip>
+    </div>
+  `);
+  const tooltip = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+  const trigger = wrapper.querySelector<HTMLButtonElement>('#recycled')!;
+  await tooltip.updateComplete;
+
+  const box = trigger.getBoundingClientRect();
+  await sendMouse({
+    type: 'move',
+    position: [Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2)],
+  });
+  await waitUntil(() => tooltip.open, 'the tooltip opens on hover');
+
+  // Recycle the row: same id, new node, positioned away from the pointer.
+  const fresh = document.createElement('button');
+  fresh.id = 'recycled';
+  fresh.textContent = 'Copy';
+  fresh.style.marginBlockStart = '300px';
+  trigger.replaceWith(fresh);
+
+  await waitUntil(() => !tooltip.open, 'the tooltip closes when its trigger is swapped away', {
+    timeout: 2000,
+  });
+
+  await resetMouse();
+});
+
+it('keeps the tooltip open when the replacement trigger is itself under the pointer', async () => {
+  // The close above must key on "is the incoming trigger actually held", not merely "a swap
+  // happened" -- re-rendering a row the pointer still rests on has to leave the tooltip alone.
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <button id="held" style="inline-size: 200px; block-size: 60px">Copy</button>
+      <lr-tooltip for="held" content="Copy to clipboard" show-delay="0" hide-delay="0"></lr-tooltip>
+    </div>
+  `);
+  const tooltip = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+  const trigger = wrapper.querySelector<HTMLButtonElement>('#held')!;
+  await tooltip.updateComplete;
+
+  const box = trigger.getBoundingClientRect();
+  await sendMouse({
+    type: 'move',
+    position: [Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2)],
+  });
+  await waitUntil(() => tooltip.open, 'the tooltip opens on hover');
+
+  // Replace it in place, occupying the same box, so the pointer still rests over the new node.
+  const fresh = document.createElement('button');
+  fresh.id = 'held';
+  fresh.textContent = 'Copy';
+  fresh.style.inlineSize = '200px';
+  fresh.style.blockSize = '60px';
+  trigger.replaceWith(fresh);
+
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  expect(tooltip.open, 'the pointer still rests on the replacement, so it stays open').to.be.true;
+
+  await resetMouse();
+});
+
+it('leaves a focus-opened tooltip alone when its anchor moves, since no pointer holds it', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div style="block-size: 120px; overflow: auto">
+      <button id="focus-trigger">Copy</button>
+      <lr-tooltip for="focus-trigger" content="Copy" show-delay="0" hide-delay="0"></lr-tooltip>
+      <div style="block-size: 600px"></div>
+    </div>
+  `);
+  const tooltip = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+  const trigger = wrapper.querySelector<HTMLButtonElement>('#focus-trigger')!;
+  await tooltip.updateComplete;
+
+  trigger.focus();
+  await waitUntil(() => tooltip.open, 'the tooltip opens on focus');
+
+  wrapper.scrollTop = 400;
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  expect(tooltip.open, 'focus still holds it open after the anchor moved').to.be.true;
 });

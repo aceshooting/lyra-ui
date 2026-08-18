@@ -3930,3 +3930,40 @@ it("fills a host stretched to a definite block size by an absolutely positioned 
     1
   );
 });
+
+it("keeps a labelled dropzone inside a definite-height host instead of overflowing it", async () => {
+  // The fill chain runs block-size: 100% through [part="form-control"], which also holds the
+  // label and hint. If the dropzone took 100% of that box, label + hint + dropzone would sum to
+  // more than the host and spill out the bottom of a full-area overlay.
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div style="position: relative; inline-size: 400px; block-size: 500px">
+      <lr-file-input
+        label="Attach evidence"
+        hint="PDF or PNG"
+        style="position: absolute; inset: 0"
+      ></lr-file-input>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraFileInput>("lr-file-input")!;
+  await el.updateComplete;
+
+  const formControl = el.shadowRoot!.querySelector<HTMLElement>('[part="form-control"]')!;
+  expect(
+    formControl.getBoundingClientRect().height,
+    "label + hint + dropzone stay within the host"
+  ).to.be.at.most(el.getBoundingClientRect().height + 1);
+});
+
+it("leaves an ordinary auto-height host content-sized, so the fill chain is a no-op by default", async () => {
+  // Explicit no-regression guard for the unconditional block-size: 100% chain: a percentage
+  // block size against an auto-height ancestor must resolve to auto, leaving the default
+  // content-sized band exactly as it was.
+  const el = await fixture<LyraFileInput>(html`<lr-file-input></lr-file-input>`);
+  await el.updateComplete;
+
+  const dropzone = el.shadowRoot!.querySelector<HTMLElement>('[part="dropzone"]')!;
+  expect(
+    dropzone.getBoundingClientRect().height,
+    "still the intrinsic band, not stretched to the viewport"
+  ).to.be.lessThan(300);
+});
