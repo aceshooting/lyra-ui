@@ -50,6 +50,16 @@ property).
 - `max: number | null = null`, `min: number | null = null` — finite value-axis bounds. They apply to
   the cartesian value axis selected by `indexAxis`, or the radial `r` scale; non-finite writes are
   omitted before Chart.js sees them
+- `scaleType: 'linear' | 'logarithmic' = 'linear'` (attribute `scale-type`, type
+  `LyraChartScaleType`) — scale type for the **value** axis; the categorical axis is never
+  affected. `'logarithmic'` plots data spanning several orders of magnitude (prices, latency
+  percentiles, file sizes) honestly, where a linear axis collapses everything below the maximum
+  into the baseline. Inherited by `lr-line-chart`, `lr-scatter-chart` and `lr-bar-chart`, and
+  applied to the secondary `y2` axis too when one is present. A logarithmic axis cannot represent
+  zero (`log(0)` is `-Infinity`), so `beginAtZero` is not forwarded in that mode and non-positive
+  points are dropped by Chart.js's own log scale. Chart.js rejects an unregistered scale type at
+  construction, so `LogarithmicScale` is registered with the core — it ships inside the `chart.js`
+  module already loaded, adding no download weight
 - `plugins: LyraChartPlugin[] = []` — peer-neutral per-instance Chart.js plugin structures,
   combined without duplicates with Lyra's
   on-demand data-label plugin and any `config.plugins` entries

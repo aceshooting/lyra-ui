@@ -100,6 +100,8 @@ export type LyraChartType =
 
 export type LyraChartGrid = 'x' | 'y' | 'both' | 'none';
 export type LyraChartIndexAxis = 'x' | 'y';
+/** Scale type for a chart's value axis. The categorical axis is never affected. */
+export type LyraChartScaleType = 'linear' | 'logarithmic';
 export type LyraChartLayoutPosition =
   | 'left'
   | 'top'
@@ -685,6 +687,17 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     converter: { fromAttribute: (value) => normalizeLegendPosition(value) },
   })
   legendPosition: LyraChartLegendPosition = 'top';
+  /**
+   * Scale type for the **value** axis (the categorical axis is unaffected). `'logarithmic'` plots
+   * a dataset spanning several orders of magnitude honestly, where a linear axis collapses
+   * everything below the maximum into the baseline. Inherited by `lr-line-chart`,
+   * `lr-scatter-chart` and `lr-bar-chart`.
+   *
+   * A logarithmic axis cannot represent zero or negative values (`log(0)` is `-Infinity`), so
+   * `beginAtZero` is not forwarded in that mode -- Chart.js would otherwise be handed a bound it
+   * cannot place. Non-positive data points are dropped by Chart.js's own log scale.
+   */
+  @property({ attribute: 'scale-type' }) scaleType: LyraChartScaleType = 'linear';
   /** Maximum value-axis bound. Non-finite values are ignored. */
   @property({ type: Number }) max: number | null = null;
   /** Minimum value-axis bound. Non-finite values are ignored. */
@@ -1971,6 +1984,16 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     return this.indexAxis === 'y' ? 'y' : 'x';
   }
 
+  /** The resolved Chart.js scale type for a value axis, honoring `scaleType`. */
+  private valueScaleType(): 'linear' | 'logarithmic' {
+    return this.scaleType === 'logarithmic' ? 'logarithmic' : 'linear';
+  }
+
+  /** `beginAtZero` for a value axis, suppressed on a logarithmic scale which cannot place zero. */
+  private valueBeginAtZero(): boolean | undefined {
+    return this.valueScaleType() === 'logarithmic' ? undefined : this.beginAtZero;
+  }
+
   private scaleBounds(): { min?: number; max?: number } {
     const min = this.min !== null && Number.isFinite(this.min) ? finiteNumber(this.min, 0) : undefined;
     const max = this.max !== null && Number.isFinite(this.max) ? finiteNumber(this.max, 0) : undefined;
@@ -2050,8 +2073,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const bounds = this.scaleBounds();
     return {
       x: {
-        type: xKind === 'value' ? 'linear' : 'category',
-        beginAtZero: xKind === 'value' ? this.beginAtZero : undefined,
+        type: xKind === 'value' ? this.valueScaleType() : 'category',
+        beginAtZero: xKind === 'value' ? this.valueBeginAtZero() : undefined,
         ...(valueAxis === 'x' ? bounds : {}),
         title: { display: !!this.xLabel, text: this.xLabel, color: theme.tick },
         ticks: this.tickOptions(theme, xKind),
@@ -2064,9 +2087,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         stacked,
       },
       y: {
-        type: yKind === 'value' ? 'linear' : 'category',
+        type: yKind === 'value' ? this.valueScaleType() : 'category',
         position: rtl ? 'right' : 'left',
-        beginAtZero: yKind === 'value' ? this.beginAtZero : undefined,
+        beginAtZero: yKind === 'value' ? this.valueBeginAtZero() : undefined,
         ...(valueAxis === 'y' ? bounds : {}),
         title: { display: !!this.yLabel, text: this.yLabel, color: theme.tick },
         ticks: this.tickOptions(theme, yKind),
@@ -2081,6 +2104,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       ...(hasY2
         ? {
             y2: {
+              type: this.valueScaleType(),
               position: rtl ? 'left' : 'right',
               ...(valueAxis === 'y' ? bounds : {}),
               grid: {

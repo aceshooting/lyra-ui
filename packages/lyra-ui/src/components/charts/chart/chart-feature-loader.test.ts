@@ -27,6 +27,7 @@ const CHART_REGISTERABLE_KEYS = [
   'LinearScale',
   'CategoryScale',
   'RadialLinearScale',
+  'LogarithmicScale',
   'Filler',
   'Tooltip',
   'Legend',

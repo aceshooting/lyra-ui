@@ -35,6 +35,7 @@ export interface ChartJsModule {
   LinearScale: unknown;
   CategoryScale: unknown;
   RadialLinearScale: unknown;
+  LogarithmicScale: unknown;
   Filler: unknown;
   Tooltip: unknown;
   Legend: unknown;
@@ -56,6 +57,12 @@ const CHART_REGISTERABLE_KEYS = [
   'LinearScale',
   'CategoryScale',
   'RadialLinearScale',
+  // Registered alongside the other scales rather than behind the feature loader: unlike the zoom
+  // and datalabels plugins, LogarithmicScale is not a separate package -- it already ships inside
+  // the `chart.js` module namespace this loader imports, so registering it adds no download
+  // weight. Chart.js rejects an unregistered scale type at construction, so without this a
+  // logarithmic axis is unreachable even through the raw `config` passthrough.
+  'LogarithmicScale',
   'Filler',
   'Tooltip',
   'Legend',
@@ -141,6 +148,7 @@ function registerCore(mod: ChartJsModule): void {
     mod.LinearScale,
     mod.CategoryScale,
     mod.RadialLinearScale,
+    mod.LogarithmicScale,
     mod.Filler,
     mod.Tooltip,
     mod.Legend,

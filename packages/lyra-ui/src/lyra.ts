@@ -537,6 +537,7 @@ export type {
   LyraChartType,
   LyraChartGrid,
   LyraChartIndexAxis,
+  LyraChartScaleType,
   LyraChartLayoutPosition,
   LyraChartLegendPosition,
   LyraChartExportFormat,

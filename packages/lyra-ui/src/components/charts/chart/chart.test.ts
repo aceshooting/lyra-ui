@@ -4774,3 +4774,69 @@ describe('coverage: legend/tooltip/table label fallbacks and misc guards', () =>
     expect((el.shadowRoot!.querySelector('[part="legend"]')) == null).to.be.true;
   });
 });
+
+describe("scaleType: logarithmic value axis", () => {
+  const scalesOf = (el: LyraChart) =>
+    (el as unknown as {
+      buildScales: (
+        type: string,
+        theme: unknown,
+        style: unknown
+      ) => Record<string, { type?: string; beginAtZero?: boolean }>;
+    }).buildScales(
+      "line",
+      { tick: "#000", grid: "#eee" },
+      { gridBorderWidth: 1 }
+    );
+
+  it("defaults the value axis to linear, leaving the categorical axis alone", async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    await el.updateComplete;
+    const scales = scalesOf(el);
+    expect(el.scaleType, "unset default").to.equal("linear");
+    expect(scales["y"]?.type, "value axis").to.equal("linear");
+    expect(scales["x"]?.type, "categorical axis is untouched").to.equal("category");
+  });
+
+  it("switches the value axis to a logarithmic scale", async () => {
+    // Without LogarithmicScale registered, Chart.js rejects the type at construction, so this was
+    // unreachable even through the raw `config` passthrough.
+    const el = (await fixture(
+      html`<lr-chart scale-type="logarithmic"></lr-chart>`
+    )) as LyraChart;
+    await el.updateComplete;
+    const scales = scalesOf(el);
+    expect(el.scaleType).to.equal("logarithmic");
+    expect(scales["y"]?.type, "value axis goes log").to.equal("logarithmic");
+    expect(scales["x"]?.type, "the categorical axis stays categorical").to.equal("category");
+  });
+
+  it("suppresses beginAtZero on a logarithmic axis, which cannot place zero", async () => {
+    const linear = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    await linear.updateComplete;
+    expect(scalesOf(linear)["y"]?.beginAtZero, "linear forwards it").to.equal(true);
+
+    const log = (await fixture(
+      html`<lr-chart scale-type="logarithmic"></lr-chart>`
+    )) as LyraChart;
+    await log.updateComplete;
+    expect(
+      scalesOf(log)["y"]?.beginAtZero,
+      "log(0) is -Infinity, so the bound is not forwarded"
+    ).to.equal(undefined);
+  });
+
+  it("renders a dataset spanning several orders of magnitude on a log axis", async () => {
+    const el = (await fixture(
+      html`<lr-chart scale-type="logarithmic"></lr-chart>`
+    )) as LyraChart;
+    el.labels = ["a", "b", "c", "d"];
+    el.series = [{ label: "latency", data: [1, 100, 10_000, 1_000_000] }];
+    await el.updateComplete;
+    await aTimeout(0);
+    expect(
+      el.shadowRoot!.querySelector("canvas"),
+      "the chart constructs rather than throwing on an unregistered scale type"
+    ).to.exist;
+  });
+});
