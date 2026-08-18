@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -91,7 +91,10 @@ leaves the internal role's serialized attribute empty; browsers without the refl
 API keep the string fallback. The relationship tracks host attribute changes and clears when
 unset.
 
-**CSS parts:** `form-control` (outer checkbox/error/hint frame), `base` (compatibility name for the
+**CSS parts:** `form-control` (outer checkbox/error/hint frame), `row` (the row wrapping the
+checkbox owner and the label as siblings — the node to size or align when laying out a column of
+checkboxes, since `base`/`checkbox` below is only the control box and its inline size tracks the box
+rather than the row), `base` (compatibility name for the
 semantic owner; use `checkbox`), `checkbox` (the interactive `role="checkbox"` owner; it is the
 same node as `base`, while the rich default label is its sibling),
 `box` / `control` (the small square showing the checkmark/indeterminate dash; while active it also

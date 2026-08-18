@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -86,7 +86,10 @@ restores the current default before making the control pristine again.
 - `help-text` — Shoelace alias for the same hint surface.
 - `error` — custom error content.
 
-**CSS parts:** `form-control` (the outer wrapper around the switch, error and hint), `base` /
+**CSS parts:** `form-control` (the outer wrapper around the switch, error and hint), `row` (the row
+wrapping the switch owner and the label as siblings — the node to size or align when laying out a
+column of switches, since `base`/`switch` below is only the track box and its inline size tracks the
+track rather than the row), `base` /
 `switch` / `wrapper` (the semantic interactive `role="switch"` owner; the rich label is its
 sibling), `track` / `control` (the
 pill-shaped background), `thumb` (the circular knob), `label` (wrapper around the default slot),

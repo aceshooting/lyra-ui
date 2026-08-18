@@ -1060,6 +1060,7 @@ never,
 
 export type LyraBarChartVueProps = LyraVueCustomElement<
   LyraBarChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -1268,6 +1269,7 @@ export type LyraBrowserFrameVueProps = LyraVueCustomElement<
 
 export type LyraBubbleChartVueProps = LyraVueCustomElement<
   LyraBubbleChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -1635,6 +1637,7 @@ never,
 
 export type LyraChartVueProps = LyraVueCustomElement<
   LyraChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -3420,6 +3423,7 @@ export type LyraDocxViewerVueProps = LyraVueCustomElement<
 
 export type LyraDoughnutChartVueProps = LyraVueCustomElement<
   LyraDoughnutChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -4749,6 +4753,7 @@ export type LyraHighlightLayerVueProps = LyraVueCustomElement<
 
 export type LyraHistogramVueProps = LyraVueCustomElement<
   LyraHistogram,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'bins'
@@ -5491,6 +5496,7 @@ export type LyraLightboxVueProps = LyraVueCustomElement<
 
 export type LyraLineChartVueProps = LyraVueCustomElement<
   LyraLineChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -6943,6 +6949,7 @@ export type LyraPhoneInputVueProps = LyraVueCustomElement<
 
 export type LyraPieChartVueProps = LyraVueCustomElement<
   LyraPieChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -7035,6 +7042,7 @@ export type LyraPieChartVueProps = LyraVueCustomElement<
 
 export type LyraPolarAreaChartVueProps = LyraVueCustomElement<
   LyraPolarAreaChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -7554,6 +7562,7 @@ never,
 
 export type LyraRadarChartVueProps = LyraVueCustomElement<
   LyraRadarChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -8217,6 +8226,7 @@ export type LyraRubricFormVueProps = LyraVueCustomElement<
 
 export type LyraScatterChartVueProps = LyraVueCustomElement<
   LyraScatterChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'

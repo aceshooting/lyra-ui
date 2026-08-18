@@ -7,7 +7,7 @@
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
+- **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
 - **Themeable via** 15 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -36,6 +36,31 @@ property).
 - `max: number | null = null`, `min: number | null = null` — finite value-axis bounds. They apply to
   the cartesian value axis selected by `indexAxis`, or the radial `r` scale; non-finite writes are
   omitted before Chart.js sees them
+- `annotations: readonly LyraChartAnnotation[] = []` (attribute: false) — declarative reference
+  lines and shaded bands: a threshold, an event year, a regime change, a highlighted period.
+  `LyraChartAnnotation { axis?: 'x' | 'y'; value?: number; from?: number; to?: number; label?:
+  string; tone?: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' }`. A finite `value` renders
+  a reference line on that axis; a finite `from`/`to` pair renders a band bounded on that axis and
+  spanning the other. `axis` defaults to `'y'`. An entry with neither (or non-finite numbers) is
+  dropped rather than handed to Chart.js; a reversed range is normalized. Labelled entries are
+  included in the generated accessible description, mirroring `lr-heatmap` — the label is
+  consumer-supplied text and so is not localized, and an unlabelled line has no nameable meaning to
+  announce. Needs the optional `chartjs-plugin-annotation` peer, loaded on first actual demand, so a
+  page with no annotated charts never downloads it; without it the chart still renders and a single
+  console warning explains the no-op. The plugin is registered globally, like `chartjs-plugin-zoom`
+  and unlike `chartjs-plugin-datalabels`: it draws nothing unless a chart supplies annotation
+  options, so the registration is unobservable to charts that set none, and registration is also
+  what installs the plugin's own element defaults
+- `scaleType: 'linear' | 'logarithmic' = 'linear'` (attribute `scale-type`, type
+  `LyraChartScaleType`) — scale type for the **value** axis; the categorical axis is never
+  affected. `'logarithmic'` plots data spanning several orders of magnitude (prices, latency
+  percentiles, file sizes) honestly, where a linear axis collapses everything below the maximum
+  into the baseline. Inherited by `lr-line-chart`, `lr-scatter-chart` and `lr-bar-chart`, and
+  applied to the secondary `y2` axis too when one is present. A logarithmic axis cannot represent
+  zero (`log(0)` is `-Infinity`), so `beginAtZero` is not forwarded in that mode and non-positive
+  points are dropped by Chart.js's own log scale. Chart.js rejects an unregistered scale type at
+  construction, so `LogarithmicScale` is registered with the core — it ships inside the `chart.js`
+  module already loaded, adding no download weight
 - `plugins: LyraChartPlugin[] = []` — peer-neutral per-instance Chart.js plugin structures,
   combined without duplicates with Lyra's
   on-demand data-label plugin and any `config.plugins` entries

@@ -2,14 +2,14 @@
 
 # Optional peer dependencies
 
-All 28 peers are **optional**: nothing here is needed to install or use the library,
+All 29 peers are **optional**: nothing here is needed to install or use the library,
 but they have two deliberately different roles.
 
 **Framework declaration peers (3).** React, Svelte, and Vue are compile-time peers
 only when a project imports their matching opt-in declaration entry. Those entry points emit empty
 JavaScript, no component imports these frameworks, and Lyra ships no runtime wrapper.
 
-**Component-loaded peers (25).** No component imports one eagerly. Install a
+**Component-loaded peers (26).** No component imports one eagerly. Install a
 peer only when you use a component that needs it.
 
 **How they load.** A component that needs a peer resolves it through a dynamic `import()` on first
@@ -32,6 +32,7 @@ changes the component library version without installing a supported SheetJS rel
 | `@aiden0z/pptx-renderer` | `^1.2.4` | `lr-pptx-viewer` |
 | `@sgratzl/chartjs-chart-boxplot` | `^4.4.5` | `lr-box-plot` |
 | `chart.js` | `^4.5.1` | `lr-agent-eval-dashboard`, `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-lite-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-rag-eval-dashboard`, `lr-scatter-chart` |
+| `chartjs-plugin-annotation` | `^3.1.0` | `lr-agent-eval-dashboard`, `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-lite-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-rag-eval-dashboard`, `lr-scatter-chart` |
 | `chartjs-plugin-datalabels` | `^2.2.0` | `lr-agent-eval-dashboard`, `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-lite-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-rag-eval-dashboard`, `lr-scatter-chart` |
 | `chartjs-plugin-zoom` | `^2.2.0` | `lr-agent-eval-dashboard`, `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-lite-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-rag-eval-dashboard`, `lr-scatter-chart` |
 | `d3-drag` | `^3.0.0` | `lr-agent-workspace`, `lr-chunk-inspector`, `lr-entity-dossier`, `lr-eval-run`, `lr-graph`, `lr-grounding-summary`, `lr-knowledge-graph-explorer`, `lr-memory-panel`, `lr-provenance-panel`, `lr-rag-answer`, `lr-retrieval-results`, `lr-retrieval-trace` |

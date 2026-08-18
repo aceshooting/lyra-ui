@@ -1145,6 +1145,70 @@ canvas consumer's redraw to its normal microtask/render schedule. The optional r
 browser realm; it does not limit invalidation to a subtree. The function is a no-op during server
 rendering and retains no document or stylesheet after the last canvas consumer disconnects.
 
+## Preventing layout shift from lazy-upgrading elements (CLS)
+
+An undefined custom element is an inline box with no intrinsic size, so every `lr-*` in the initial
+viewport contributes a reflow as its definition loads. Components that additionally defer on an
+optional peer (`lr-chart`, `lr-map`, `lr-flag`, `lr-flow-canvas`, `lr-knowledge-graph-explorer`)
+render a skeleton while that peer resolves, which can cost a second shift when the real content
+replaces it. Each component is individually well-behaved; the aggregate on a first paint is what
+costs a Lighthouse Cumulative Layout Shift score.
+
+Lyra ships an optional, opt-in stylesheet that reserves each component's intrinsic footprint before
+upgrade:
+
+```css
+@import "@aceshooting/lyra-ui/reservations.css";
+```
+
+It styles **only** `:not(:defined)` elements, inside an `@layer lr-reservations`, so it becomes inert
+the moment a definition upgrades and can never fight a component's own layout. It sets no colors and
+no `:root` rules.
+
+**Every reservation is expressed with the same custom property and fallback token the component's
+own stylesheet uses** — `--lr-chart-height` / `--lr-size-280px` for the chart family,
+`--lr-flag-aspect-ratio` for `lr-flag`, `--lr-form-control-height` for the field controls, and so
+on. That is the point of shipping it rather than documenting measured pixel values: a hand-written
+reservation rots silently the moment a component's default changes, whereas these track it, and
+theming a component through its documented custom property re-themes its reservation with it.
+
+Hand-rolling equivalent rules is still fine — the pattern is just:
+
+```css
+lr-chart:not(:defined) {
+  display: block;
+  min-block-size: var(--lr-chart-height, var(--lr-size-280px));
+}
+```
+
+Two things worth knowing:
+
+- A per-instance override needs the matching custom property to be set as well, not only the
+  attribute, or the pre-upgrade frame and the upgraded frame will disagree. `<lr-chart height="500px">`
+  should carry `style="--lr-chart-height: 500px"` too if it sits above the fold.
+- The reservation covers the definition-upgrade shift. A component that then swaps a skeleton for
+  peer-resolved content stays stable as long as the reserved box matches the final footprint, which
+  is why the reservations target each component's *final* default size rather than its skeleton's.
+
+## Scope: what this library does not provide
+
+Lyra is a component library, not an application framework. The following are deliberately out of
+scope, so they are worth not searching the catalog for:
+
+- **Client-side routing.** There is no router and no route-outlet component. URL ownership belongs to
+  the application (or its router of choice), because a component library that took it over would
+  conflict with every framework router a consumer might already run. The navigation components are
+  designed to be *driven* by whatever router you use rather than to own the URL themselves:
+  `lr-app-rail-item`, `lr-breadcrumb-item` and `lr-tab-group` all expose their active/selected state
+  as ordinary reflected properties, so binding is a one-way write from your route state plus a click
+  handler that calls your router. Wire it once in your shell component; there is no Lyra-specific
+  pattern to learn.
+- **Data fetching, caching, and state management.** Components take data as properties and emit
+  events; they never fetch on your behalf, except the documented viewers/`src`-taking components,
+  which are explicit about it.
+- **Form submission and validation orchestration.** Form-associated controls integrate with the
+  native `<form>`/`ElementInternals` contract; the submission lifecycle stays the application's.
+
 ## Optional native styles and CSS utilities
 
 Lyra ships two independent light-DOM stylesheets. Neither is imported by the root barrel, a family
@@ -7047,7 +7111,10 @@ leaves the internal role's serialized attribute empty; browsers without the refl
 API keep the string fallback. The relationship tracks host attribute changes and clears when
 unset.
 
-**CSS parts:** `form-control` (outer checkbox/error/hint frame), `base` (compatibility name for the
+**CSS parts:** `form-control` (outer checkbox/error/hint frame), `row` (the row wrapping the
+checkbox owner and the label as siblings — the node to size or align when laying out a column of
+checkboxes, since `base`/`checkbox` below is only the control box and its inline size tracks the box
+rather than the row), `base` (compatibility name for the
 semantic owner; use `checkbox`), `checkbox` (the interactive `role="checkbox"` owner; it is the
 same node as `base`, while the rich default label is its sibling),
 `box` / `control` (the small square showing the checkmark/indeterminate dash; while active it also
@@ -7212,7 +7279,10 @@ restores the current default before making the control pristine again.
 - `help-text` — Shoelace alias for the same hint surface.
 - `error` — custom error content.
 
-**CSS parts:** `form-control` (the outer wrapper around the switch, error and hint), `base` /
+**CSS parts:** `form-control` (the outer wrapper around the switch, error and hint), `row` (the row
+wrapping the switch owner and the label as siblings — the node to size or align when laying out a
+column of switches, since `base`/`switch` below is only the track box and its inline size tracks the
+track rather than the row), `base` /
 `switch` / `wrapper` (the semantic interactive `role="switch"` owner; the rich label is its
 sibling), `track` / `control` (the
 pill-shaped background), `thumb` (the circular knob), `label` (wrapper around the default slot),
@@ -10597,6 +10667,23 @@ weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
   color ramp via `sqrtStep()` instead of mapping linearly; in calendar mode, the default `'linear'`
   still buckets by quartile (`quartileBucket()`, unchanged), while `'sqrt'` instead compresses via the
   same `sqrtStep()` magnitude compression as matrix mode, so one heavy day doesn't wash out the rest
+- `domain?: [number, number]` (attribute: false) — pins the color ramp's input domain instead of
+  deriving it from the data's own extremes, so two heatmaps of comparable data can share a scale
+  rather than each normalizing to its own min/max. A reversed pair is normalized; a degenerate or
+  non-finite one falls back to the derived range
+- `midpoint?: number` — anchors a diverging ramp's neutral color on this value rather than at the
+  middle of the domain, scaling the two halves independently (`lo`→0, `midpoint`→0.5, `hi`→1). A
+  midpoint outside the resolved domain degrades to plain normalization rather than distorting the
+  ramp
+- **Signed data.** Setting either `domain` or `midpoint` opts the component into signed data, where
+  only a **non-finite** value is no-data. With neither set (the default), a negative value is
+  no-data — matching the long-documented `-1` sentinel, since a matrix of counts has no meaningful
+  negative. Declaring a domain or midpoint is what disambiguates "a real negative" from "the
+  sentinel", so signed datasets render their negative half instead of dropping it. In signed mode a
+  structurally absent matrix cell reads as `NaN` so it stays no-data while a real `-1` beside it
+  renders on the ramp; in default mode an absent cell still resolves to `-1`, keeping `valueAt()`
+  and the `lr-cell-click` payload unchanged. `scale="sqrt"` rejects negatives in both modes — a
+  square root of a negative has no meaning
 - `bucketCount: number = 5` (attribute `bucket-count` — calendar mode only; non-finite values fall
   back to 5, while finite values are floored and clamped to 2–256 before the color-ramp allocation)
 - `annotations: readonly HeatmapAnnotation[] = []` (attribute: false) — `HeatmapAnnotation { row?: number;
@@ -11971,6 +12058,22 @@ opposite default from `lr-stepper`; `horizontal` makes `[part='base']` a horizon
 (the `role="list"` element is in the shadow root and never inherits a host attribute). Read-only
 `itemCount: number` is the live count of direct default-slot `<lr-timeline-item>` children;
 unrelated slotted elements and text nodes are ignored.
+`scale: 'flow' | 'time' = 'flow'` (attribute `scale`, type `LyraTimelineScale`) chooses how items
+are distributed along the main axis. `'flow'` is the default even sequence, where `timestamp` is
+rendered as text but carries no positional meaning. `'time'` positions each item at its true
+proportion of the range, so a gap of weeks and a gap of decades stop looking identical. `'time'`
+needs a definite extent to distribute along — `--lr-timeline-time-extent` (default
+`var(--lr-size-20rem)`), applied as `block-size` when vertical and `inline-size` when horizontal —
+because items are absolutely positioned and a percentage against an auto-sized track resolves to
+zero. `rangeStart` / `rangeEnd` (`Date | string | number`, attribute: false) pin the axis instead of
+deriving it from the earliest/latest item; a reversed or non-finite pair falls back to the derived
+range. An item with no parseable `timestamp` (including one supplied only through the `timestamp`
+slot, which carries no machine-readable instant) keeps document order and is spread evenly, so a
+partially-timestamped list degrades rather than stacking at the origin. Items sharing an instant
+overlap rather than being fanned into lanes: lane assignment, brushing, zooming and per-event
+selection belong to a denser component than this deliberately passive one. Positions are written to
+each child as a private `--_lr-timeline-item-offset` custom property and removed again on a switch
+back to `'flow'`, so the component still never alters its children's content or structure.
 
 **`lr-timeline-item` properties:** `timestamp?: Date | string | number` (attribute: false — `Date`
 isn't attribute-serializable; invalid input normalizes to unset and renders no timestamp UI),
@@ -21104,7 +21207,16 @@ Country/language flag image. Flag artwork ships in a **separate, optional peer p
 
 **Properties:**
 
-- `country?: string` (ISO 3166-1 alpha-2, e.g. `"fr"` — takes precedence over `language`)
+- `country?: string` (ISO 3166-1 **alpha-2 or alpha-3**, e.g. `"fr"` or `"FRA"` — takes
+  precedence over `language`). Length alone disambiguates the two code spaces, so no format hint
+  is needed: a 2-letter value is alpha-2, a 3-letter value is alpha-3. Alpha-3 support exists
+  because public statistical sources (World Bank, UN, IMF, most open-data portals) key country
+  records on alpha-3; the 249 officially-assigned mappings are packed as a ~1.2 KB fixed-width
+  string and expanded lazily on the first alpha-3 lookup, so an alpha-2-only app never pays for
+  them. Withdrawn and user-assigned codes deliberately do not map to a successor state — they
+  take the unresolved path below
+- `fallback?: string` — placeholder image URL rendered when the code cannot resolve to a current
+  flag. The `fallback` slot wins over it
 - `language?: string` (BCP-47-ish tag, e.g. `"en"`/`"en-US"`, resolved to a representative country
   via `languageToCountry()`)
 - `src?: string` (a pre-resolved flag image URL — takes precedence over `country`/`language` and
@@ -21129,11 +21241,17 @@ authoring types are `LyraFlagShape`, `LyraFlagFidelity`, and `LyraFlagUrlResolve
 
 **Events:** none.
 
-**Slots:** none.
+**Slots:** `fallback` — rendered in place of the flag when `country`/`language` cannot resolve to a
+current flag (an unassigned, historical, or malformed code). Wins over the `fallback` property.
 
-**CSS parts:** `image` (the underlying `<img>`, exposed once native loading succeeds), `error`
+**CSS parts:** `image` (the underlying `<img>`, exposed once native loading succeeds),
+`fallback-image` (the `fallback` property's placeholder, when no slot content is supplied), `error`
 (contained localized visible text rendered when URL validation, peer resolution, or native image
-loading fails). The host reflects the terminal error state with `data-error`.
+loading fails). The host reflects the terminal error state with `data-error`, and an unresolvable
+code with `data-unresolved`. **The two are deliberately distinct:** a dissolved federation or
+unrecognized territory in a longitudinal dataset is *data*, not a defect, so it renders the neutral
+fallback (occupying its normal footprint in a table or card grid) rather than localized error
+wording that reads to a user as a bug. Style the two states apart with those attributes.
 
 **Themeable custom properties:** `--lr-flag-radius` (default `calc(var(--lr-radius) * 0.33)` —
 rectangular corner radius), `--lr-flag-aspect-ratio` (default `4 / 3`), and
@@ -21384,6 +21502,22 @@ operations. Its runtime value is the underlying MapLibre map.
   style-required failure and makes no tile/style request. Assign a hosted vector/raster style from
   a provider whose terms fit your application, or an explicitly network-silent style for local
   geometry.
+- `legendGradient: readonly (readonly [number, string])[] = []` (attribute: false, type
+  `LyraMapLegendGradientStop[]`) — renders the legend as a **continuous** gradient bar with endpoint
+  captions instead of (or alongside) the discrete `legend` swatches, which is the standard key for a
+  choropleth whose `interpolate` fill is itself a continuous ramp. Takes the same `[value, color]`
+  stop shape as `choropleth.stops`, so the usual assignment is `map.legendGradient =
+  myChoropleth.stops` and the key cannot drift from the layer it describes. Stops are sorted
+  ascending, bounded to 64, and filtered to finite values carrying a CSS-parsable color; fewer than
+  two usable stops render no bar at all, since a one-stop "gradient" is a flat block that describes
+  nothing. Each stop sits at its true proportion of the value range, so the bar shows the ramp the
+  expression actually produces rather than evenly spacing unevenly-spaced values. Part names
+  (`legend-gradient`, `legend-lo`, `legend-hi`) mirror `lr-heatmap`'s gradient legend, and the bar
+  is `aria-hidden`/`inert` with the captions carrying the meaning. Mirrors under RTL
+- `legendGradientLoLabel: string | null = null` (attribute `legend-gradient-lo-label`),
+  `legendGradientHiLabel: string | null = null` (attribute `legend-gradient-hi-label`) — override
+  the endpoint captions, which otherwise default to the lowest/highest stop value in the component's
+  own locale-aware numeric formatting
 - `legend: readonly LyraMapLegendEntry[] = []` (attribute: false) — immutable defensive snapshots
   of `LyraMapLegendEntry { readonly color: string; readonly label: string; readonly pattern:
 LyraMapLegendPattern }`, where `LyraMapLegendPattern` is `'solid' | 'diagonal' | 'dots' |
@@ -21459,9 +21593,12 @@ an element.
 hit GeoJSON feature are detached and recursively frozen — feature is only populated if a
 choropleth fill layer exists and was hit)
 
-**Slots:** none.
+**Slots:** `legend` — custom legend content, rendered inside the legend panel's own layout so it
+stays positioned with the map instead of floating beside it. Supplying it opens the panel even
+when `legend` and `legendGradient` are both empty.
 
-**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `legend-limit`, `marker`, `popup`,
+**CSS parts:** `base`, `container`, `legend`, `legend-swatch`, `legend-gradient`, `legend-lo`,
+`legend-hi`, `legend-limit`, `marker`, `popup`,
 `popup-content`, `popup-close-button`, `attribution`, `attribution-toggle`, `error`.
 `legend` is a localized `role="group"` containing a real list associated to the map canvas with
 `aria-describedby`; each entry is a `listitem`, decorative swatches are inert/accessibility-hidden,
@@ -23821,6 +23958,31 @@ property).
 - `max: number | null = null`, `min: number | null = null` — finite value-axis bounds. They apply to
   the cartesian value axis selected by `indexAxis`, or the radial `r` scale; non-finite writes are
   omitted before Chart.js sees them
+- `annotations: readonly LyraChartAnnotation[] = []` (attribute: false) — declarative reference
+  lines and shaded bands: a threshold, an event year, a regime change, a highlighted period.
+  `LyraChartAnnotation { axis?: 'x' | 'y'; value?: number; from?: number; to?: number; label?:
+  string; tone?: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' }`. A finite `value` renders
+  a reference line on that axis; a finite `from`/`to` pair renders a band bounded on that axis and
+  spanning the other. `axis` defaults to `'y'`. An entry with neither (or non-finite numbers) is
+  dropped rather than handed to Chart.js; a reversed range is normalized. Labelled entries are
+  included in the generated accessible description, mirroring `lr-heatmap` — the label is
+  consumer-supplied text and so is not localized, and an unlabelled line has no nameable meaning to
+  announce. Needs the optional `chartjs-plugin-annotation` peer, loaded on first actual demand, so a
+  page with no annotated charts never downloads it; without it the chart still renders and a single
+  console warning explains the no-op. The plugin is registered globally, like `chartjs-plugin-zoom`
+  and unlike `chartjs-plugin-datalabels`: it draws nothing unless a chart supplies annotation
+  options, so the registration is unobservable to charts that set none, and registration is also
+  what installs the plugin's own element defaults
+- `scaleType: 'linear' | 'logarithmic' = 'linear'` (attribute `scale-type`, type
+  `LyraChartScaleType`) — scale type for the **value** axis; the categorical axis is never
+  affected. `'logarithmic'` plots data spanning several orders of magnitude (prices, latency
+  percentiles, file sizes) honestly, where a linear axis collapses everything below the maximum
+  into the baseline. Inherited by `lr-line-chart`, `lr-scatter-chart` and `lr-bar-chart`, and
+  applied to the secondary `y2` axis too when one is present. A logarithmic axis cannot represent
+  zero (`log(0)` is `-Infinity`), so `beginAtZero` is not forwarded in that mode and non-positive
+  points are dropped by Chart.js's own log scale. Chart.js rejects an unregistered scale type at
+  construction, so `LogarithmicScale` is registered with the core — it ships inside the `chart.js`
+  module already loaded, adding no download weight
 - `plugins: LyraChartPlugin[] = []` — peer-neutral per-instance Chart.js plugin structures,
   combined without duplicates with Lyra's
   on-demand data-label plugin and any `config.plugins` entries

@@ -1067,6 +1067,7 @@ never,
 
 export type LyraBarChartSvelteProps = LyraSvelteElementProps<
   LyraBarChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -1275,6 +1276,7 @@ export type LyraBrowserFrameSvelteProps = LyraSvelteElementProps<
 
 export type LyraBubbleChartSvelteProps = LyraSvelteElementProps<
   LyraBubbleChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -1642,6 +1644,7 @@ never,
 
 export type LyraChartSvelteProps = LyraSvelteElementProps<
   LyraChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -3427,6 +3430,7 @@ export type LyraDocxViewerSvelteProps = LyraSvelteElementProps<
 
 export type LyraDoughnutChartSvelteProps = LyraSvelteElementProps<
   LyraDoughnutChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -4756,6 +4760,7 @@ export type LyraHighlightLayerSvelteProps = LyraSvelteElementProps<
 
 export type LyraHistogramSvelteProps = LyraSvelteElementProps<
   LyraHistogram,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'bins'
@@ -5498,6 +5503,7 @@ export type LyraLightboxSvelteProps = LyraSvelteElementProps<
 
 export type LyraLineChartSvelteProps = LyraSvelteElementProps<
   LyraLineChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -6950,6 +6956,7 @@ export type LyraPhoneInputSvelteProps = LyraSvelteElementProps<
 
 export type LyraPieChartSvelteProps = LyraSvelteElementProps<
   LyraPieChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -7042,6 +7049,7 @@ export type LyraPieChartSvelteProps = LyraSvelteElementProps<
 
 export type LyraPolarAreaChartSvelteProps = LyraSvelteElementProps<
   LyraPolarAreaChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -7561,6 +7569,7 @@ never,
 
 export type LyraRadarChartSvelteProps = LyraSvelteElementProps<
   LyraRadarChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -8224,6 +8233,7 @@ export type LyraRubricFormSvelteProps = LyraSvelteElementProps<
 
 export type LyraScatterChartSvelteProps = LyraSvelteElementProps<
   LyraScatterChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'

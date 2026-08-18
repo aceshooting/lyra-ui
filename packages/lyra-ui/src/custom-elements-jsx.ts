@@ -1065,6 +1065,7 @@ never,
 
 export type LyraBarChartReactProps = LyraReactElementProps<
   LyraBarChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -1273,6 +1274,7 @@ export type LyraBrowserFrameReactProps = LyraReactElementProps<
 
 export type LyraBubbleChartReactProps = LyraReactElementProps<
   LyraBubbleChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -1640,6 +1642,7 @@ never,
 
 export type LyraChartReactProps = LyraReactElementProps<
   LyraChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -3425,6 +3428,7 @@ export type LyraDocxViewerReactProps = LyraReactElementProps<
 
 export type LyraDoughnutChartReactProps = LyraReactElementProps<
   LyraDoughnutChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -4754,6 +4758,7 @@ export type LyraHighlightLayerReactProps = LyraReactElementProps<
 
 export type LyraHistogramReactProps = LyraReactElementProps<
   LyraHistogram,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'bins'
@@ -5496,6 +5501,7 @@ export type LyraLightboxReactProps = LyraReactElementProps<
 
 export type LyraLineChartReactProps = LyraReactElementProps<
   LyraLineChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -6948,6 +6954,7 @@ export type LyraPhoneInputReactProps = LyraReactElementProps<
 
 export type LyraPieChartReactProps = LyraReactElementProps<
   LyraPieChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -7040,6 +7047,7 @@ export type LyraPieChartReactProps = LyraReactElementProps<
 
 export type LyraPolarAreaChartReactProps = LyraReactElementProps<
   LyraPolarAreaChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -7559,6 +7567,7 @@ never,
 
 export type LyraRadarChartReactProps = LyraReactElementProps<
   LyraRadarChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
@@ -8222,6 +8231,7 @@ export type LyraRubricFormReactProps = LyraReactElementProps<
 
 export type LyraScatterChartReactProps = LyraReactElementProps<
   LyraScatterChart,
+  | 'annotations'
   | 'area'
   | 'beginAtZero'
   | 'chart'
