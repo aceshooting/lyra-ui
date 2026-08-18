@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 34 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 34 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -321,7 +321,23 @@ no-rows states return the empty element as the shadow root's own root, with no `
 wrapper around it — `::part(base)` does not apply in those two states, only in the filtered-to-zero
 one — and that `empty` disappears entirely once the `empty` slot is filled.
 
-**Themeable custom properties:** `--lr-table-max-height` (default `none`; controls the scrollable
+- `scrollMode: 'self' | 'page' = 'self'` (attribute `scroll-mode`, reflected) — which element
+  scrolls when the table overflows. `'self'` makes `[part="base"]` the scroll container, which is
+  what pairs with `--lr-table-max-height` and makes the sticky header pin inside the table's own
+  viewport. `'page'` hands scrolling back to the document. Needed because a scroll container clips
+  **both** axes — CSS offers no way to scroll one and not the other — so an *uncapped* table that is
+  still `overflow: auto` becomes a sticky containing block that never scrolls, and its header
+  scrolls away with the page. With `'page'` the header's nearest scrollport is the page, so it pins
+  there; the cost is that a table wider than its host overflows the page instead of scrolling
+  inside itself. Named `scrollMode` rather than `scroll` because a `scroll` property would shadow
+  `Element.prototype.scroll()`
+
+**Themeable custom properties:** `--lr-table-cell-color` (default `inherit`),
+`--lr-table-cell-link-color` (default `var(--lr-color-brand)`) and
+`--lr-table-cell-link-hover-color` — an anchor returned from a column's `cell(row)` renders inside
+the component's shadow root, where page CSS cannot reach it and `::part()` cannot select past the
+first compound selector to reach it either, so without these it computes to the UA default link
+blue; set `revert` for the UA default. `--lr-table-max-height` (default `none`; controls the scrollable
 body's `max-block-size`). `--lr-table-heat-tint-lo` (default `var(--lr-color-brand-quiet)`) and
 `--lr-table-heat-tint-hi` (default `var(--lr-color-brand)`) — the `color-mix()` ramp endpoints
 for heat-tint mode's per-cell background, consulted only on columns/rows that define `heatValue`;

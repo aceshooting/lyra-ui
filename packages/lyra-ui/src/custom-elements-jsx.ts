@@ -5748,6 +5748,7 @@ export type LyraMapReactProps = LyraReactElementProps<
   | 'locale'
   | 'mapStyle'
   | 'markers'
+  | 'maxBounds'
   | 'strings'
   | 'zoom',
   {},
@@ -6332,7 +6333,6 @@ export type LyraNativeTimeInputReactProps = LyraReactElementProps<
   | 'withLabel'
   | 'withoutSpinButtons',
   {
-    autocorrect: boolean | 'off' | 'on';
     form: HTMLFormElement | string | null;
   },
   LyraInputEventMap,
@@ -6512,7 +6512,6 @@ export type LyraNumberInputReactProps = LyraReactElementProps<
   | 'withoutSpinButtons'
   | 'withoutSteppers',
   {
-    autocorrect: boolean | 'off' | 'on';
     form: HTMLFormElement | string | null;
   },
   LyraNumberInputEventMap,
@@ -9256,6 +9255,7 @@ export type LyraTableReactProps = LyraReactElementProps<
   | 'rowKey'
   | 'rows'
   | 'rowTotal'
+  | 'scrollMode'
   | 'selectedRowKeys'
   | 'selectionMode'
   | 'skeletonRows'
@@ -9281,6 +9281,9 @@ export type LyraTableReactProps = LyraReactElementProps<
   | 'lr-selection-change'
   | 'lr-sort'
   | 'lr-sort-request',
+  | '--lr-table-cell-color'
+  | '--lr-table-cell-link-color'
+  | '--lr-table-cell-link-hover-color'
   | '--lr-table-header-sorted-bg'
   | '--lr-table-header-sorted-color'
   | '--lr-table-heat-t'
@@ -9318,6 +9321,7 @@ export type LyraTableReactProps = LyraReactElementProps<
     'pagination-mode'?: LyraTable['paginationMode'];
     'priority-columns-visible'?: LyraTable['priorityColumnsVisible'];
     'reveal-columns-label'?: LyraTable['revealColumnsLabel'];
+    'scroll-mode'?: LyraTable['scrollMode'];
     'selection-mode'?: LyraTable['selectionMode'];
     'skeleton-rows'?: LyraTable['skeletonRows'];
     'sort-dir'?: LyraTable['sortDir'];

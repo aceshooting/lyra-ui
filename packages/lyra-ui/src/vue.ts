@@ -5743,6 +5743,7 @@ export type LyraMapVueProps = LyraVueCustomElement<
   | 'locale'
   | 'mapStyle'
   | 'markers'
+  | 'maxBounds'
   | 'strings'
   | 'zoom',
   {},
@@ -6327,7 +6328,6 @@ export type LyraNativeTimeInputVueProps = LyraVueCustomElement<
   | 'withLabel'
   | 'withoutSpinButtons',
   {
-    autocorrect: boolean | 'off' | 'on';
     form: HTMLFormElement | string | null;
   },
   LyraInputEventMap,
@@ -6507,7 +6507,6 @@ export type LyraNumberInputVueProps = LyraVueCustomElement<
   | 'withoutSpinButtons'
   | 'withoutSteppers',
   {
-    autocorrect: boolean | 'off' | 'on';
     form: HTMLFormElement | string | null;
   },
   LyraNumberInputEventMap,
@@ -9251,6 +9250,7 @@ export type LyraTableVueProps = LyraVueCustomElement<
   | 'rowKey'
   | 'rows'
   | 'rowTotal'
+  | 'scrollMode'
   | 'selectedRowKeys'
   | 'selectionMode'
   | 'skeletonRows'
@@ -9276,6 +9276,9 @@ export type LyraTableVueProps = LyraVueCustomElement<
   | 'lr-selection-change'
   | 'lr-sort'
   | 'lr-sort-request',
+  | '--lr-table-cell-color'
+  | '--lr-table-cell-link-color'
+  | '--lr-table-cell-link-hover-color'
   | '--lr-table-header-sorted-bg'
   | '--lr-table-header-sorted-color'
   | '--lr-table-heat-t'
@@ -9313,6 +9316,7 @@ export type LyraTableVueProps = LyraVueCustomElement<
     'pagination-mode'?: LyraTable['paginationMode'];
     'priority-columns-visible'?: LyraTable['priorityColumnsVisible'];
     'reveal-columns-label'?: LyraTable['revealColumnsLabel'];
+    'scroll-mode'?: LyraTable['scrollMode'];
     'selection-mode'?: LyraTable['selectionMode'];
     'skeleton-rows'?: LyraTable['skeletonRows'];
     'sort-dir'?: LyraTable['sortDir'];

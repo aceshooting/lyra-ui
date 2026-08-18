@@ -25672,7 +25672,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 1252,
+              "line": 1253,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -25686,7 +25686,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 2479,
+              "line": 2480,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -25697,7 +25697,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 2724,
+              "line": 2725,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -25714,7 +25714,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 2718,
+              "line": 2719,
               "kind": "320px allocation test signal"
             }
           ]
@@ -25782,7 +25782,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 111,
+              "line": 112,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -25794,7 +25794,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 811,
+              "line": 968,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -43120,49 +43120,49 @@
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 1801,
+              "line": 1874,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 3351,
+              "line": 3424,
               "test": "is accessible with expandedContent and an open row",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 4336,
+              "line": 4409,
               "test": "is accessible with cell titles rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 4784,
+              "line": 4857,
               "test": "is accessible in skeleton mode",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 5233,
+              "line": 5306,
               "test": "is accessible with a column of persistent editors rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 5664,
+              "line": 5737,
               "test": "is accessible while client-sorted",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 5777,
+              "line": 5850,
               "test": "is accessible while client-sorted inside groups",
               "target": "el",
               "state": "populated"

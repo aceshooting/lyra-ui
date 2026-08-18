@@ -10425,6 +10425,27 @@
       }
     },
     {
+      "name": "--lr-table-cell-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-table>`** (default: `inherit`) — Text colour of body cells; inherits the host's own colour by default."
+      }
+    },
+    {
+      "name": "--lr-table-cell-link-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-table>`** (default: `var(--lr-color-brand)`) — Colour of an anchor returned from a column's `cell(row)`. Such an anchor renders inside this component's shadow root, so page CSS cannot reach it and `::part()` cannot select past the first compound selector to reach it either; without this hook it computes to the UA default link blue. Set `revert` for the UA default."
+      }
+    },
+    {
+      "name": "--lr-table-cell-link-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-table>`** (default: `var(--lr-table-cell-link-color,var(--lr-color-brand))`) — Colour of that anchor on hover and `:focus-visible`, which also thicken its underline."
+      }
+    },
+    {
       "name": "--lr-table-header-sorted-bg",
       "description": {
         "kind": "markdown",
