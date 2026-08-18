@@ -46,7 +46,7 @@ changes the component library version without installing a supported SheetJS rel
 | `libphonenumber-js` | `>=1.11.0 <2` | `lr-phone-input` |
 | `mammoth` | `^1.12.1` | `lr-docx-viewer` |
 | `maplibre-gl` | `>=5 <7` | `lr-geojson-view`, `lr-geojson-viewer`, `lr-map` |
-| `marked` | `^18.0.9` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-eval-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-widget-renderer` |
+| `marked` | `^18.0.10` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-eval-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-widget-renderer` |
 | `papaparse` | `^5.6.0` | `lr-csv-viewer`, `lr-dataset-viewer` |
 | `pdfjs-dist` | `^6.2.108` | `lr-pdf-viewer` |
 | `postal-mime` | `^3.0.0` | `lr-email-viewer` |
