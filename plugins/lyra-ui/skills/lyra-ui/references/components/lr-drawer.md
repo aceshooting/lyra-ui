@@ -50,8 +50,10 @@ the slide animation are its own.
 promise settles after the matching `lr-after-*` event.
 
 **Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide`, and
-`lr-initial-focus` (cancelable), `lr-request-close` (cancelable, detail source), and
-`lr-dialog-close` (`detail: DialogCloseReason`, cancelable) — all inherited unchanged from
+`lr-initial-focus` (cancelable), `lr-request-close` (cancelable, detail source),
+`lr-dialog-close` (`detail: DialogCloseReason`, cancelable), and `lr-close` (`detail:
+DialogCloseReason`, cancelable — the plain spelling fired alongside `lr-dialog-close` on every
+dismissal path, with identical detail and veto semantics) — all inherited unchanged from
 `lr-dialog`; see that section for details and veto rules. `lr-after-show` /
 `lr-after-hide` fire once the slide animation has finished, so they are deferred by roughly one
 animation compared with the state flip.

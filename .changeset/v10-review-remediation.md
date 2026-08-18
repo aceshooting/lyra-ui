@@ -2,9 +2,9 @@
 "@aceshooting/lyra-ui": major
 ---
 
-**10.0.0 review remediation.** A full-library review (nine parallel reviewers, adversarial
-verification of every candidate) found a set of public-contract defects worth the major boundary.
-Breaking items first, then the additive ones.
+**10.0.0.** A set of public-contract corrections that need a major boundary, plus a larger set of
+additive fixes. Breaking items first; each one states what to change if you relied on the old
+behavior.
 
 ### Breaking
 

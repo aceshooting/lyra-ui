@@ -101,6 +101,18 @@ const coreRawBudget = {
   // zero eager and zero bundled optional peers, and the button canary plus every granular per-entry
   // gzip budget stayed green, so this is shared implementation weight rather than a dependency leak.
   devModeDiagnosticsAllowanceBytes: 20_000,
+  // The 10.0.0 public-contract pass increased the measured bundle to 4566.0 KiB raw, about 0.6 KiB
+  // beyond the preceding 4565.4 KiB ceiling. The weight is spread thin rather than concentrated:
+  // every renamed event now emits its canonical and its deprecated spelling from one gesture
+  // (entity select/activate across three retrieval components, virtual-list's visible-range pair,
+  // rag-eval's run pair, plus `lr-close` on dialog and `lr-toggle-request` on accordion); `disabled`
+  // moved onto the shared popover base; the progress ring gained `showValue`; the calendar gained a
+  // locale-derived week-start resolution path; the shared search-change detail gained
+  // `matchCountExact`; and `lr-add`/`lr-token-edit` gained the emit-check-then-mutate veto shape
+  // `lr-remove` already had. This run's peer-exclusion checks reported no eager and no bundled
+  // optional peer, and every granular per-entry gzip budget plus the button canary stayed green, so
+  // this is Lyra implementation weight rather than a dependency leak.
+  publicContractV10AllowanceBytes: 10_000,
 };
 
 const bundleEntries = {
@@ -196,7 +208,8 @@ const bundleEntries = {
       coreRawBudget.featureCapabilityAllowanceBytes +
       coreRawBudget.overlayHydrationContractAllowanceBytes +
       coreRawBudget.crossFamilyRemediationSweepAllowanceBytes +
-      coreRawBudget.devModeDiagnosticsAllowanceBytes,
+      coreRawBudget.devModeDiagnosticsAllowanceBytes +
+      coreRawBudget.publicContractV10AllowanceBytes,
   },
   // The other half of the registration split, and the reason the `core` budget above could move to
   // `all.js` without losing coverage: a bare `import '@aceshooting/lyra-ui'` must still collapse to
