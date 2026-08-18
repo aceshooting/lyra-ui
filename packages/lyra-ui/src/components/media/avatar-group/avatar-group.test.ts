@@ -511,16 +511,9 @@ describe('design tokens reach rendered CSS', () => {
     `)) as LyraAvatarGroup;
     const neutralBadge = neutral.shadowRoot!.querySelector('[part="overflow-badge-visual"]') as HTMLElement;
     // A stale `tone="brand"` must no longer reach the badge at all -- the rename is not aliased.
-    const originalWarn = console.warn;
-    console.warn = () => {};
-    let stale: LyraAvatarGroup;
-    try {
-      stale = (await fixture(html`
-        <lr-avatar-group max="0" tone="brand"><lr-avatar initials="AB"></lr-avatar></lr-avatar-group>
-      `)) as LyraAvatarGroup;
-    } finally {
-      console.warn = originalWarn;
-    }
+    const stale = (await fixture(html`
+      <lr-avatar-group max="0" tone="brand"><lr-avatar initials="AB"></lr-avatar></lr-avatar-group>
+    `)) as LyraAvatarGroup;
     const staleBadge = stale.shadowRoot!.querySelector('[part="overflow-badge-visual"]') as HTMLElement;
 
     const badge = el.shadowRoot!.querySelector('[part="overflow-badge-visual"]') as HTMLElement;

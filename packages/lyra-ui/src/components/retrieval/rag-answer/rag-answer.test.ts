@@ -304,16 +304,9 @@ describe("lr-rag-answer", () => {
   // 9.0.0 renamed `error` -> `errorText`/`error-text`, the spelling 25 other components (including
   // this one's own sibling `<lr-retrieval-search>`) already use for exactly this member.
   it("exposes caller-supplied failure text only as errorText; the removed `error` spelling is inert", async () => {
-    const originalWarn = console.warn;
-    console.warn = () => {};
-    let el: LyraRagAnswer;
-    try {
-      el = (await fixture(
-        html`<lr-rag-answer error="Legacy failure"></lr-rag-answer>`
-      )) as LyraRagAnswer;
-    } finally {
-      console.warn = originalWarn;
-    }
+    const el = (await fixture(
+      html`<lr-rag-answer error="Legacy failure"></lr-rag-answer>`
+    )) as LyraRagAnswer;
     expect("error" in el).to.equal(false);
     expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(
       0

@@ -44,16 +44,9 @@ it('defaults to empty items/categories', async () => {
 it('exposes no `orientation` property or attribute (removed in 9.0.0)', async () => {
   // The single-member `'horizontal'` union was read by nothing -- neither the template nor the
   // stylesheet ever mentioned it -- so the reflected attribute styled nothing either.
-  const originalWarn = console.warn;
-  console.warn = () => {};
-  let el: LyraSequenceStrip;
-  try {
-    el = (await fixture(
-      html`<lr-sequence-strip orientation="vertical"></lr-sequence-strip>`,
-    )) as LyraSequenceStrip;
-  } finally {
-    console.warn = originalWarn;
-  }
+  const el = (await fixture(
+    html`<lr-sequence-strip orientation="vertical"></lr-sequence-strip>`,
+  )) as LyraSequenceStrip;
   el.items = items;
   el.categories = categories;
   await el.updateComplete;

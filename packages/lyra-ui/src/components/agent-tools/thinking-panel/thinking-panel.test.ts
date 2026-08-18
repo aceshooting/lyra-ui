@@ -312,16 +312,9 @@ describe('compact / frame escape hatches', () => {
   });
 
   it('does not treat the fill-oriented appearance attribute as a frame alias', async () => {
-    const originalWarn = console.warn;
-    console.warn = () => {};
-    let el: LyraThinkingPanel;
-    try {
-      el = (await fixture(
-        html`<lr-thinking-panel appearance="plain" expanded>Reasoning</lr-thinking-panel>`,
-      )) as LyraThinkingPanel;
-    } finally {
-      console.warn = originalWarn;
-    }
+    const el = (await fixture(
+      html`<lr-thinking-panel appearance="plain" expanded>Reasoning</lr-thinking-panel>`,
+    )) as LyraThinkingPanel;
     expect(el.frame).to.equal('card');
     expect(chrome(el).base.borderTopWidth).to.equal('1px');
   });

@@ -73,21 +73,14 @@ it("does not count invalid-only model or voice catalogs as prompt option control
 });
 
 it("is deliberately event-submitted rather than a native successful form control", async () => {
-  const originalWarn = console.warn;
-  console.warn = () => {};
-  let form: HTMLFormElement;
-  try {
-    form = (await fixture(html`
-      <form>
-        <lr-prompt-input
-          name="prompt"
-          .value=${"Summarize the report"}
-        ></lr-prompt-input>
-      </form>
-    `)) as HTMLFormElement;
-  } finally {
-    console.warn = originalWarn;
-  }
+  const form = (await fixture(html`
+    <form>
+      <lr-prompt-input
+        name="prompt"
+        .value=${"Summarize the report"}
+      ></lr-prompt-input>
+    </form>
+  `)) as HTMLFormElement;
   const element = form.querySelector("lr-prompt-input") as LyraPromptInput;
 
   expect(new FormData(form).has("prompt")).to.be.false;

@@ -863,16 +863,9 @@ describe('frame', () => {
   });
 
   it('exposes no `appearance` property, and a stale appearance="plain" keeps the card chrome', async () => {
-    const originalWarn = console.warn;
-    console.warn = () => {};
-    let el: LyraMediaCard;
-    try {
-      el = (await fixture(
-        html`<lr-media-card appearance="plain" kind="file" filename="a.txt"></lr-media-card>`,
-      )) as LyraMediaCard;
-    } finally {
-      console.warn = originalWarn;
-    }
+    const el = (await fixture(
+      html`<lr-media-card appearance="plain" kind="file" filename="a.txt"></lr-media-card>`,
+    )) as LyraMediaCard;
     expect('appearance' in el, 'appearance is gone from the instance').to.be.false;
     const chrome = baseChrome(el);
     expect(chrome.borderTopWidth, 'the card border is still drawn').to.not.equal('0px');

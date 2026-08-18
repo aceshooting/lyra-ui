@@ -171,16 +171,9 @@ describe('lr-file-icon', () => {
     // `size` named a byte count here while naming a tier on the shared size ladder everywhere else
     // in the library. The rename is not aliased, so a stale attribute must be inert rather than
     // half-working.
-    const originalWarn = console.warn;
-    console.warn = () => {};
-    let el: LyraFileIcon;
-    try {
-      el = (await fixture(
-        html`<lr-file-icon mime-type="application/pdf" mode="label" size="2415919"></lr-file-icon>`,
-      )) as LyraFileIcon;
-    } finally {
-      console.warn = originalWarn;
-    }
+    const el = (await fixture(
+      html`<lr-file-icon mime-type="application/pdf" mode="label" size="2415919"></lr-file-icon>`,
+    )) as LyraFileIcon;
     expect('size' in el, 'size is gone from the instance').to.be.false;
     expect(el.bytes).to.equal(0);
     expect((el.shadowRoot!.querySelector('[part="size"]')) == null).to.be.true;

@@ -26,14 +26,7 @@ it('publishes the documented Sparkline defaults and reflected closed sets', asyn
 });
 
 it('keeps values property-only and normalizes foreign runtime data safely', async () => {
-  const originalWarn = console.warn;
-  console.warn = () => {};
-  let el: LyraSparkline;
-  try {
-    el = (await fixture(html`<lr-sparkline values="[1,2,3]"></lr-sparkline>`)) as LyraSparkline;
-  } finally {
-    console.warn = originalWarn;
-  }
+  const el = (await fixture(html`<lr-sparkline values="[1,2,3]"></lr-sparkline>`)) as LyraSparkline;
   expect(el.values).to.deep.equal([]);
   expect(el.shadowRoot!.querySelectorAll('[part="line"]').length).to.equal(0);
 

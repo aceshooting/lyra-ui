@@ -20,16 +20,9 @@ it("defaults to no tokensIn/tokensOut/costText/latencyMs/summary, abbreviate=fal
 });
 
 it("no longer carries a compact property, and a stale compact attribute is inert", async () => {
-  const originalWarn = console.warn;
-  console.warn = () => {};
-  let el: LyraUsageBadge;
-  try {
-    el = (await fixture(
-      html`<lr-usage-badge tokens-in="12345" compact></lr-usage-badge>`
-    )) as LyraUsageBadge;
-  } finally {
-    console.warn = originalWarn;
-  }
+  const el = (await fixture(
+    html`<lr-usage-badge tokens-in="12345" compact></lr-usage-badge>`
+  )) as LyraUsageBadge;
   expect("compact" in el).to.equal(false);
   // Inert rather than actively wrong: the removed density-colliding name changes nothing.
   expect(

@@ -427,16 +427,9 @@ describe('compact / frame escape hatches', () => {
   });
 
   it('gives the superseded `appearance` attribute no effect at all -- the rename left no alias', async () => {
-    const originalWarn = console.warn;
-    console.warn = () => {};
-    let el: LyraTaskList;
-    try {
-      el = (await fixture(
-        html`<lr-task-list .items=${items} appearance="plain"></lr-task-list>`,
-      )) as LyraTaskList;
-    } finally {
-      console.warn = originalWarn;
-    }
+    const el = (await fixture(
+      html`<lr-task-list .items=${items} appearance="plain"></lr-task-list>`,
+    )) as LyraTaskList;
     expect(el.frame).to.equal('card');
     const baseEl = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(getComputedStyle(baseEl).borderTopStyle).to.equal('solid');

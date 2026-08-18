@@ -371,13 +371,7 @@ it("manages destination-realm app-rail items structurally after adoption", async
 
   try {
     frameDocument.adoptNode(rail);
-    const originalWarn = console.warn;
-    console.warn = () => {};
-    try {
-      frameDocument.body.append(rail);
-    } finally {
-      console.warn = originalWarn;
-    }
+    frameDocument.body.append(rail);
     await rail.updateComplete;
     const slot = rail.shadowRoot!.querySelector<HTMLSlotElement>(
       '[part="nav"] > slot'
@@ -545,13 +539,7 @@ it("does not arm breakpoint listeners for updates while detached and uses the la
     "a detached update must not bind ambient listeners"
   ).to.equal(2);
 
-  const originalWarn = console.warn;
-  console.warn = () => {};
-  try {
-    document.body.append(el);
-  } finally {
-    console.warn = originalWarn;
-  }
+  document.body.append(el);
   await el.updateComplete;
   expect(created.map(({ query }) => query)).to.deep.equal([
     "(max-width: 960px)",
@@ -611,13 +599,7 @@ it("ignores a queued old-owner media-query callback after adoption while current
     el = (await fixture(html`<lr-app-rail></lr-app-rail>`)) as LyraAppRail;
     const stale = [...ambient.records[0]!.listeners][0]!;
     frameDocument.adoptNode(el);
-    const originalWarn = console.warn;
-    console.warn = () => {};
-    try {
-      frameDocument.body.append(el);
-    } finally {
-      console.warn = originalWarn;
-    }
+    frameDocument.body.append(el);
     await el.updateComplete;
     expect(ambient.records[0]!.listeners.size).to.equal(0);
     expect(destination.records.length).to.equal(2);
@@ -1856,13 +1838,7 @@ describe("resizable", () => {
 
     try {
       frameDocument.adoptNode(el);
-      const originalWarn = console.warn;
-      console.warn = () => {};
-      try {
-        frameDocument.body.append(el);
-      } finally {
-        console.warn = originalWarn;
-      }
+      frameDocument.body.append(el);
       el.forceMode = 'full';
       await el.updateComplete;
       const resizer = el.shadowRoot!.querySelector(

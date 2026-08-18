@@ -13,17 +13,10 @@ it('registers only the explicit sequence-playback identity and removes the gener
   expect(customElements.get('lr-sequence-playback')).to.equal(LyraSequencePlayback);
   expect(customElements.get('lr-playback')).to.equal(undefined);
 
-  const originalWarn = console.warn;
-  console.warn = () => {};
-  let el: LyraSequencePlayback;
-  try {
-    el = await fixture<LyraSequencePlayback>(html`
-      <lr-sequence-playback length="8" index="4" item-count="3" current-index="1">
-      </lr-sequence-playback>
-    `);
-  } finally {
-    console.warn = originalWarn;
-  }
+  const el = await fixture<LyraSequencePlayback>(html`
+    <lr-sequence-playback length="8" index="4" item-count="3" current-index="1">
+    </lr-sequence-playback>
+  `);
   expect('length' in el).to.be.false;
   expect('index' in el).to.be.false;
   expect(el.itemCount).to.equal(3);

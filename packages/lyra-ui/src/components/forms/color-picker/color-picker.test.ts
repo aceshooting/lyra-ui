@@ -246,16 +246,9 @@ it("uses only the canonical value attribute as its reset default", async () => {
 });
 
 it("does not treat fictional default-value as a reset-default alias", async () => {
-  const originalWarn = console.warn;
-  console.warn = () => {};
-  let el: LyraColorPicker;
-  try {
-    el = (await fixture(
-      html`<lr-color-picker default-value="#00ff00"></lr-color-picker>`
-    )) as LyraColorPicker;
-  } finally {
-    console.warn = originalWarn;
-  }
+  const el = (await fixture(
+    html`<lr-color-picker default-value="#00ff00"></lr-color-picker>`
+  )) as LyraColorPicker;
   await el.updateComplete;
   expect(el.defaultValue).to.equal("");
   expect(el.value).to.equal("");
