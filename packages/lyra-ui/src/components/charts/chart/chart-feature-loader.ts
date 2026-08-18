@@ -13,6 +13,7 @@ export interface ChartPluginCapability {
 
 export type ZoomPlugin = ChartPluginCapability;
 export type DataLabelsPlugin = ChartPluginCapability;
+export type AnnotationPlugin = ChartPluginCapability;
 
 /**
  * The outcome of loading an opt-in Chart.js feature after attempting to load
@@ -47,6 +48,9 @@ function resolveChartPlugin(value: unknown, packageName: string): ChartPluginCap
 let zoomResultLoad: Promise<ChartFeatureLoadResult<ZoomPlugin>> | undefined;
 let dataLabelsResultLoad:
   | Promise<ChartFeatureLoadResult<DataLabelsPlugin>>
+  | undefined;
+let annotationResultLoad:
+  | Promise<ChartFeatureLoadResult<AnnotationPlugin>>
   | undefined;
 let zoomLoad: Promise<ChartJsModule | null> | undefined;
 let dataLabelsLoad:
@@ -256,4 +260,81 @@ export function loadChartJsWithDataLabels(
       plugin: result.kind === 'available' ? result.plugin : undefined,
     };
   }));
+}
+
+
+/**
+ * Loads `chartjs-plugin-annotation`, validating that the module really exposes a Chart.js plugin
+ * before it is handed to a chart — registering a wrapper namespace or a malformed object would
+ * silently no-op, which is the failure mode `resolveChartPlugin` exists to prevent. Un-memoized so
+ * both the success and the degrade-with-a-warning paths stay directly testable.
+ */
+export async function loadAnnotationPlugin(
+  importAnnotation: () => Promise<unknown> = () => import('chartjs-plugin-annotation'),
+): Promise<AnnotationPlugin | undefined> {
+  try {
+    return resolveChartPlugin(await importAnnotation(), 'chartjs-plugin-annotation');
+  } catch (err) {
+    console.warn(
+      '<lr-chart> annotations need the optional peer dependency `chartjs-plugin-annotation` — ' +
+        'charts still render without it, but the `annotations` property has no effect until it is ' +
+        'installed with `pnpm add chartjs-plugin-annotation`:',
+      err,
+    );
+    return undefined;
+  }
+}
+
+/**
+ * Loads Chart.js plus the annotation plugin and **registers it globally**, preserving a usable core
+ * when the feature peer is absent. Un-memoized twin of `loadChartJsWithAnnotationResult()`, for
+ * failure-path tests.
+ *
+ * Global registration here, per-instance for `chartjs-plugin-datalabels`, and the difference is not
+ * arbitrary. Datalabels draws on every dataset the moment it is globally registered, so registering
+ * it globally would visibly change every other chart on the page. `chartjs-plugin-annotation` is
+ * the `chartjs-plugin-zoom` shape instead: it draws nothing at all unless a chart supplies
+ * `options.plugins.annotation.annotations`, so a global registration is unobservable to a chart
+ * that sets none. It also has to be global -- registration is what installs the plugin's own
+ * element types and their defaults, and an inline `config.plugins` entry skips that, leaving the
+ * plugin to throw on missing `borderWidth`/`borderCapStyle` defaults the moment it draws.
+ */
+export async function loadChartAndAnnotation(
+  loadChart: () => Promise<ChartJsModule | null>,
+  importAnnotation: () => Promise<unknown> = () => import('chartjs-plugin-annotation'),
+): Promise<ChartFeatureLoadResult<AnnotationPlugin>> {
+  const mod = await loadChart();
+  if (!mod) return { kind: 'core-unavailable' };
+  const plugin = await loadAnnotationPlugin(importAnnotation);
+  if (!plugin) return { kind: 'feature-unavailable', mod };
+
+  try {
+    mod.Chart.register(plugin);
+  } catch (err) {
+    console.warn(
+      '<lr-chart> annotations could not be enabled — charts still render without them, but the ' +
+        '`annotations` property has no effect:',
+      err,
+    );
+    return { kind: 'feature-unavailable', mod };
+  }
+
+  return { kind: 'available', mod, plugin };
+}
+
+/**
+ * Loads `chart.js` (reusing the cached core load) plus `chartjs-plugin-annotation`, on first actual
+ * demand — most charts set no annotations.
+ *
+ * Registered globally, like `chartjs-plugin-zoom` and unlike `chartjs-plugin-datalabels` — see
+ * `loadChartAndAnnotation()` for why the two differ. The load itself still happens only on first
+ * actual demand, so a page whose charts set no annotations never downloads the peer at all.
+ *
+ * Memoized behind a single promise assigned synchronously before any `await`, closing the
+ * check-then-act race across the `await` boundary that the zoom loader's doc describes.
+ */
+export function loadChartJsWithAnnotationResult(
+  importAnnotation: () => Promise<unknown> = () => import('chartjs-plugin-annotation'),
+): Promise<ChartFeatureLoadResult<AnnotationPlugin>> {
+  return (annotationResultLoad ??= loadChartAndAnnotation(loadChartJs, importAnnotation));
 }

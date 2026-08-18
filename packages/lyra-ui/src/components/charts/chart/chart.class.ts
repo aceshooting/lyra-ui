@@ -12,8 +12,10 @@ import {
   loadChartJsWithZoom,
   loadChartJsWithZoomResult,
   loadChartJsWithDataLabelsResult,
+  loadChartJsWithAnnotationResult,
   type ChartFeatureLoadResult,
   type DataLabelsPlugin,
+  type AnnotationPlugin,
   type ZoomPlugin,
 } from './chart-feature-loader.js';
 import { styles } from './chart.styles.js';
@@ -102,6 +104,26 @@ export type LyraChartGrid = 'x' | 'y' | 'both' | 'none';
 export type LyraChartIndexAxis = 'x' | 'y';
 /** Scale type for a chart's value axis. The categorical axis is never affected. */
 export type LyraChartScaleType = 'linear' | 'logarithmic';
+
+/** Tone of a chart annotation's line/band, resolved from the library's own semantic colors. */
+export type LyraChartAnnotationTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
+
+/**
+ * One declarative chart annotation: a reference line (`value`) or a shaded band (`from`/`to`) on
+ * the named axis.
+ *
+ * `value` and `from`/`to` are mutually exclusive; an entry supplying neither, or non-finite
+ * numbers, is dropped rather than handed to Chart.js, where it would silently render nothing or
+ * throw. `axis` defaults to `'y'`, the value axis for the common threshold case.
+ */
+export interface LyraChartAnnotation {
+  readonly axis?: LyraChartIndexAxis;
+  readonly value?: number;
+  readonly from?: number;
+  readonly to?: number;
+  readonly label?: string;
+  readonly tone?: LyraChartAnnotationTone;
+}
 export type LyraChartLayoutPosition =
   | 'left'
   | 'top'
@@ -698,6 +720,22 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * cannot place. Non-positive data points are dropped by Chart.js's own log scale.
    */
   @property({ attribute: 'scale-type' }) scaleType: LyraChartScaleType = 'linear';
+  /**
+   * Declarative reference lines and shaded bands — a threshold, an event year, a regime change, a
+   * highlighted period. Each entry marks either a single `value` or a `from`/`to` range on `axis`
+   * (default `'y'`), with an optional `label` and semantic `tone`.
+   *
+   * Needs the optional `chartjs-plugin-annotation` peer, loaded on first actual demand so a page
+   * with no annotated charts never downloads it. The plugin is registered globally, like
+   * `chartjs-plugin-zoom` and unlike `chartjs-plugin-datalabels`: it draws nothing unless a chart
+   * supplies annotation options, so the registration is unobservable to charts that set none, and
+   * registration is also what installs the plugin's own element defaults. Without the peer
+   * installed the chart still renders and a single console warning explains the no-op — the same
+   * fail-closed contract `data-labels` uses.
+   *
+   * Entries are included in the generated accessible description, mirroring `lr-heatmap`.
+   */
+  @property({ type: Array }) annotations: readonly LyraChartAnnotation[] = [];
   /** Maximum value-axis bound. Non-finite values are ignored. */
   @property({ type: Number }) max: number | null = null;
   /** Minimum value-axis bound. Non-finite values are ignored. */
@@ -1064,6 +1102,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     loadChartJsWithZoomResult();
   private loadDataLabelsFeature: () => Promise<ChartFeatureLoadResult<DataLabelsPlugin>> = () =>
     loadChartJsWithDataLabelsResult();
+  private loadAnnotationFeature: () => Promise<ChartFeatureLoadResult<AnnotationPlugin>> = () =>
+    loadChartJsWithAnnotationResult();
   // Invalidates a lazy-load callback when this element disconnects/reconnects. Without a
   // generation token, two connectedCallback() calls around one in-flight import can both settle
   // against the reconnected element and construct/reconfigure the chart from stale lifecycle
@@ -1071,17 +1111,22 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private loadGeneration = 0;
   private zoomLoadGeneration = 0;
   private dataLabelsLoadGeneration = 0;
+  private annotationLoadGeneration = 0;
   // These loader states are intentionally non-reactive. A feature request may start from
   // `updated()` after a property flip; making the intermediate `loading` write reactive produces
   // Lit's update-in-update warning. Completion explicitly requests the one render needed for a
   // warning/reset-control change instead.
   private zoomFeatureState: ChartFeatureState = 'idle';
   private dataLabelsFeatureState: ChartFeatureState = 'idle';
+  private annotationFeatureState: ChartFeatureState = 'idle';
   // The resolved `chartjs-plugin-datalabels` plugin object, registered
   // PER-INSTANCE via this chart's own `config.plugins` (not globally — a global
   // registration would draw labels on, and break, every other chart on the
   // page). `undefined` until the peer loads (or if it's not installed).
   private dataLabelsPlugin?: DataLabelsPlugin;
+  // The resolved `chartjs-plugin-annotation` plugin object, attached PER-INSTANCE for the same
+  // reason as the data-labels plugin above: Chart.js's registry is a page-wide singleton.
+  private annotationPlugin?: AnnotationPlugin;
 
   @state() private zoomed = false;
 
@@ -1209,6 +1254,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // generation + `isConnected` guard against a disconnect mid-import.
     if (this.needsDataLabels) {
       this.requestDataLabelsFeature();
+    }
+    if (this.needsAnnotations) {
+      this.requestAnnotationFeature();
     }
     const IntersectionObserverCtor = ownerWindow?.IntersectionObserver;
     if (IntersectionObserverCtor) {
@@ -1395,6 +1443,47 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     });
   }
 
+  private requestAnnotationFeature(): void {
+    const generation = ++this.annotationLoadGeneration;
+    if (!this.needsAnnotations) {
+      this.annotationFeatureState = 'idle';
+      return;
+    }
+    this.annotationFeatureState = 'loading';
+    void this.loadAnnotationFeature().then((result) => {
+      if (generation !== this.annotationLoadGeneration || !this.isConnected || !this.needsAnnotations) {
+        return;
+      }
+      this.annotationFeatureState = result.kind === 'available' ? 'available' : 'unavailable';
+      if (result.kind !== 'core-unavailable' && !this.loading && !this.chartJsModule) {
+        this.chartJsModule = result.mod;
+      }
+      this.applyAnnotationPlugin(result.kind === 'available' ? result.plugin : undefined);
+      this.requestUpdate();
+    });
+  }
+
+  /**
+   * Same constraint as `applyDataLabelsPlugin()`: Chart.js reads a config's inline `plugins: [...]`
+   * array ONLY at construction, so a live chart built before the peer resolved cannot gain it
+   * through `chart.update()`. Force reconstruction so the next `draw()` takes the `new Chart()`
+   * branch that reads `config.plugins`.
+   */
+  private applyAnnotationPlugin(plugin: AnnotationPlugin | undefined): void {
+    this.annotationPlugin = plugin;
+    // A chart constructed BEFORE the global registration landed has already resolved its options
+    // without the plugin's own defaults, so `options.plugins.annotation` does not exist on it and
+    // the plugin throws writing into it on the next update. Chart.js resolves plugin defaults at
+    // construction only, so the fix is the same teardown applyDataLabelsPlugin() performs, for a
+    // different underlying reason: force the next draw() down the `new Chart()` branch.
+    if (plugin && this.needsAnnotations && this.chart) {
+      this.discardChart(true);
+      this.builtType = undefined;
+      this.builtPlugins = [];
+    }
+    this.drawIfVisible();
+  }
+
   private requestDataLabelsFeature(): void {
     const generation = ++this.dataLabelsLoadGeneration;
     if (!this.needsDataLabels) {
@@ -1525,6 +1614,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // generation + `isConnected` guard against a disconnect mid-import.
     if (changed.has('dataLabels') || changed.has('stackTotals')) {
       this.requestDataLabelsFeature();
+    }
+    if (changed.has('annotations')) {
+      this.requestAnnotationFeature();
     }
     const contentChanged = this.chartContentChanged(changed);
     // `this.locale`/`this.strings` above only catch an explicit property write on this element
@@ -1834,6 +1926,86 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    *  per-point data labels or per-stack totals. */
   private get needsDataLabels(): boolean {
     return this.dataLabels || this.stackTotals;
+  }
+
+  private get needsAnnotations(): boolean {
+    return this.normalizedAnnotations().length > 0;
+  }
+
+  /**
+   * The usable annotations: a finite single `value`, or a finite `from`/`to` pair. An entry
+   * supplying neither (or non-finite numbers) is dropped rather than handed to Chart.js, where it
+   * renders nothing at best. A reversed range is normalized rather than rejected — the author's
+   * intent is unambiguous.
+   */
+  private normalizedAnnotations(): LyraChartAnnotation[] {
+    const source = Array.isArray(this.annotations) ? this.annotations : [];
+    const usable: LyraChartAnnotation[] = [];
+    for (const entry of source) {
+      if (!entry || typeof entry !== 'object') continue;
+      const { value, from, to } = entry;
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        usable.push(entry);
+        continue;
+      }
+      if (
+        typeof from === 'number' && Number.isFinite(from) &&
+        typeof to === 'number' && Number.isFinite(to)
+      ) {
+        usable.push(from <= to ? entry : { ...entry, from: to, to: from });
+      }
+    }
+    return usable;
+  }
+
+  /** Resolves an annotation tone to a canvas-ready color, through the same
+   *  `getComputedStyle`-then-`resolveCanvasColor` path every other chart color takes — canvas
+   *  silently ignores an unparseable `strokeStyle`/`fillStyle`. */
+  private annotationColor(tone: LyraChartAnnotationTone | undefined): string {
+    const token = `--lr-color-${tone ?? 'neutral'}`;
+    const raw = this.computedStyle().getPropertyValue(token).trim();
+    return resolveCanvasColor(this, raw, FALLBACK_TICK_COLOR);
+  }
+
+  /**
+   * The `chartjs-plugin-annotation` options for this chart, keyed by a stable synthetic id.
+   * A single `value` becomes a `line` on that axis's scale; a `from`/`to` pair becomes a `box`
+   * bounded on that axis and unbounded on the other.
+   */
+  private annotationOptions(): Record<string, unknown> {
+    const entries: Record<string, unknown> = {};
+    this.normalizedAnnotations().forEach((entry, index) => {
+      const axis = entry.axis === 'x' ? 'x' : 'y';
+      const color = this.annotationColor(entry.tone);
+      const label = entry.label
+        ? { content: entry.label, display: true, color: this.themeColors().tick }
+        : undefined;
+      if (typeof entry.value === 'number') {
+        entries[`lr-annotation-${index}`] = {
+          type: 'line',
+          scaleID: axis,
+          value: entry.value,
+          borderColor: color,
+          borderWidth: 2,
+          ...(label ? { label } : {}),
+        };
+        return;
+      }
+      // A band is bounded on its own axis only, so it spans the full extent of the other one.
+      const bounds =
+        axis === 'y'
+          ? { yMin: entry.from, yMax: entry.to }
+          : { xMin: entry.from, xMax: entry.to };
+      entries[`lr-annotation-${index}`] = {
+        type: 'box',
+        ...bounds,
+        backgroundColor: translucentAreaColor(this, color),
+        borderColor: color,
+        borderWidth: 0,
+        ...(label ? { label } : {}),
+      };
+    });
+    return entries;
   }
 
   /**
@@ -2559,6 +2731,11 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         onClick: (event: unknown, _elements: unknown, chart: RuntimeChart) =>
           this.handlePointClick(event, chart),
         plugins: {
+          // Only emitted when there is something to draw AND the peer actually loaded, so a chart
+          // without annotations carries no annotation options at all.
+          ...(this.needsAnnotations && this.annotationPlugin
+            ? { annotation: { annotations: this.annotationOptions() } }
+            : {}),
           legend: {
             // A canvas legend cannot wrap one long public label; the DOM legend rendered below
             // preserves the full text, normal-flow containment, keyboard access, and toggling.
@@ -2831,7 +3008,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         ? [summary, ...pointDetails].join(this.localize('chartSummarySeparator'))
         : summary;
     });
-    return summaries.length
+    const base = summaries.length
       ? this.localize('chartSummaryWithData', undefined, {
           type: this.localizedChartType(),
           // the sentence separator is a message of its own since not every
@@ -2839,6 +3016,17 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           summaries: summaries.join(this.localize('chartSummarySeparator')),
         })
       : this.localize('chartSummaryEmpty', undefined, { type: this.localizedChartType() });
+    // Annotations carry meaning a sighted reader gets from the line or band, so they belong in the
+    // description too -- the same reasoning behind lr-heatmap's [part="legend-annotation"] entries.
+    // Only LABELLED entries are announced: the label is consumer-supplied text (deliberately not
+    // routed through localize(), like every other caller-supplied string), while an unlabelled
+    // reference line has no nameable meaning to announce beyond a coordinate.
+    const annotationLabels = this.normalizedAnnotations()
+      .map((entry) => entry.label?.trim())
+      .filter((label): label is string => Boolean(label));
+    return annotationLabels.length
+      ? [base, ...annotationLabels].join(this.localize('chartSummarySeparator'))
+      : base;
   }
 
   private dataTableSample(effective = this.effectiveData()) {

@@ -2,7 +2,12 @@ import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '@web/test-runner-commands';
 import './chart.js';
 import './doughnut-chart.js';
-import { seriesPalette, LyraChart, type LyraChartSeries } from './chart.js';
+import {
+  seriesPalette,
+  LyraChart,
+  type LyraChartAnnotation,
+  type LyraChartSeries,
+} from './chart.js';
 import { styles } from './chart.styles.js';
 import { loadChartAndZoom } from './chart-feature-loader.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
@@ -4837,6 +4842,127 @@ describe("scaleType: logarithmic value axis", () => {
     expect(
       el.shadowRoot!.querySelector("canvas"),
       "the chart constructs rather than throwing on an unregistered scale type"
+    ).to.exist;
+  });
+});
+
+describe("declarative annotations", () => {
+  const configOf = (el: LyraChart) =>
+    (el as unknown as { buildConfig: () => Record<string, unknown> }).buildConfig();
+
+  const annotationsOf = (el: LyraChart) => {
+    const options = configOf(el)["options"] as
+      | { plugins?: { annotation?: { annotations?: Record<string, Record<string, unknown>> } } }
+      | undefined;
+    return options?.plugins?.annotation?.annotations;
+  };
+
+  it("emits no annotation options at all when none are set", async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    await el.updateComplete;
+    expect(el.annotations, "unset default").to.deep.equal([]);
+    expect(annotationsOf(el), "a chart without annotations carries no annotation config").to.equal(
+      undefined
+    );
+  });
+
+  it("maps a single value to a reference line on its axis", async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.annotations = [{ axis: "y", value: 80, label: "SLO", tone: "warning" }];
+    await el.updateComplete;
+    await waitUntil(() => annotationsOf(el) !== undefined, "annotation peer loads", {
+      timeout: 4000,
+    });
+    const entries = Object.values(annotationsOf(el)!);
+    expect(entries).to.have.length(1);
+    expect(entries[0]!["type"]).to.equal("line");
+    expect(entries[0]!["scaleID"]).to.equal("y");
+    expect(entries[0]!["value"]).to.equal(80);
+    expect(entries[0]!["borderColor"], "tone resolves to a canvas-ready colour").to.be.a("string");
+  });
+
+  it("maps a from/to pair to a shaded band bounded on its own axis only", async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.annotations = [{ axis: "x", from: 2, to: 5, label: "Recession" }];
+    await el.updateComplete;
+    await waitUntil(() => annotationsOf(el) !== undefined, "annotation peer loads", {
+      timeout: 4000,
+    });
+    const entry = Object.values(annotationsOf(el)!)[0]!;
+    expect(entry["type"]).to.equal("box");
+    expect(entry["xMin"]).to.equal(2);
+    expect(entry["xMax"]).to.equal(5);
+    expect(entry["yMin"], "unbounded on the other axis, so it spans the plot").to.equal(undefined);
+  });
+
+  it("normalizes a reversed range instead of dropping it", async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.annotations = [{ axis: "y", from: 9, to: 3 }];
+    await el.updateComplete;
+    await waitUntil(() => annotationsOf(el) !== undefined, "annotation peer loads", {
+      timeout: 4000,
+    });
+    const entry = Object.values(annotationsOf(el)!)[0]!;
+    expect(entry["yMin"]).to.equal(3);
+    expect(entry["yMax"]).to.equal(9);
+  });
+
+  it("drops entries that specify neither a finite value nor a finite range", async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.annotations = [
+      { axis: "y", label: "no coordinates" },
+      { axis: "y", value: Number.NaN },
+      { axis: "y", from: 1 },
+      { axis: "y", value: 5 },
+    ] as unknown as readonly LyraChartAnnotation[];
+    await el.updateComplete;
+    await waitUntil(() => annotationsOf(el) !== undefined, "annotation peer loads", {
+      timeout: 4000,
+    });
+    expect(
+      Object.values(annotationsOf(el)!),
+      "only the one usable entry survives"
+    ).to.have.length(1);
+  });
+
+  it("includes labelled annotations in the accessible description", async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.labels = ["a", "b"];
+    el.series = [{ label: "s", data: [1, 2] }];
+    el.annotations = [{ axis: "y", value: 80, label: "SLO threshold" }];
+    await el.updateComplete;
+    await aTimeout(0);
+    const description = el.shadowRoot!.querySelector('[part="description"]')!.textContent ?? "";
+    expect(
+      description,
+      "the annotation's meaning reaches assistive tech, not just the canvas"
+    ).to.contain("SLO threshold");
+  });
+
+  it("leaves a chart that sets no annotations completely unaffected", async () => {
+    // The reported concern was Chart.js's page-wide singleton registry. This plugin is registered
+    // globally (it has to be -- registration installs its element defaults), but unlike
+    // chartjs-plugin-datalabels it draws nothing without annotation options, so a neighbouring
+    // chart must be observably untouched.
+    const annotated = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    annotated.annotations = [{ axis: "y", value: 10 }];
+    await annotated.updateComplete;
+    await waitUntil(() => annotationsOf(annotated) !== undefined, "peer loads", { timeout: 4000 });
+
+    const plain = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    plain.labels = ["a", "b"];
+    plain.series = [{ label: "s", data: [1, 2] }];
+    await plain.updateComplete;
+    await aTimeout(0);
+    expect(
+      annotationsOf(plain),
+      "a chart setting no annotations carries no annotation options"
+    ).to.equal(undefined);
+    const plainPlugins = configOf(plain)["plugins"] as unknown[] | undefined;
+    expect(plainPlugins ?? [], "and gains no inline plugin entry").to.have.length(0);
+    expect(
+      plain.shadowRoot!.querySelector("canvas"),
+      "and still renders normally"
     ).to.exist;
   });
 });

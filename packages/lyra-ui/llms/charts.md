@@ -50,6 +50,21 @@ property).
 - `max: number | null = null`, `min: number | null = null` — finite value-axis bounds. They apply to
   the cartesian value axis selected by `indexAxis`, or the radial `r` scale; non-finite writes are
   omitted before Chart.js sees them
+- `annotations: readonly LyraChartAnnotation[] = []` (attribute: false) — declarative reference
+  lines and shaded bands: a threshold, an event year, a regime change, a highlighted period.
+  `LyraChartAnnotation { axis?: 'x' | 'y'; value?: number; from?: number; to?: number; label?:
+  string; tone?: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' }`. A finite `value` renders
+  a reference line on that axis; a finite `from`/`to` pair renders a band bounded on that axis and
+  spanning the other. `axis` defaults to `'y'`. An entry with neither (or non-finite numbers) is
+  dropped rather than handed to Chart.js; a reversed range is normalized. Labelled entries are
+  included in the generated accessible description, mirroring `lr-heatmap` — the label is
+  consumer-supplied text and so is not localized, and an unlabelled line has no nameable meaning to
+  announce. Needs the optional `chartjs-plugin-annotation` peer, loaded on first actual demand, so a
+  page with no annotated charts never downloads it; without it the chart still renders and a single
+  console warning explains the no-op. The plugin is registered globally, like `chartjs-plugin-zoom`
+  and unlike `chartjs-plugin-datalabels`: it draws nothing unless a chart supplies annotation
+  options, so the registration is unobservable to charts that set none, and registration is also
+  what installs the plugin's own element defaults
 - `scaleType: 'linear' | 'logarithmic' = 'linear'` (attribute `scale-type`, type
   `LyraChartScaleType`) — scale type for the **value** axis; the categorical axis is never
   affected. `'logarithmic'` plots data spanning several orders of magnitude (prices, latency
