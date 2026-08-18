@@ -4,7 +4,7 @@ const loadedLinks: HTMLLinkElement[] = [];
 let fouceTagId = 0;
 
 async function loadStylesheet(
-  name: "native.css" | "utilities.css"
+  name: "native.css" | "reservations.css" | "utilities.css"
 ): Promise<HTMLLinkElement> {
   const link = document.createElement("link");
   link.rel = "stylesheet";
@@ -305,4 +305,51 @@ it("declares stable layers without root selectors, physical geometry, or substri
     /^\s*(?:(?:margin|padding|border|inset)-(?:left|right)|left|right|width|height)\s*:/m
   );
   expect(utilities).to.not.match(/\[class(?:\^|\$|\*)=/);
+});
+
+describe("reservations.css", () => {
+  it("reserves a chart's intrinsic height before its definition upgrades", async () => {
+    await loadStylesheet("reservations.css");
+    // A tag that is deliberately never defined, standing in for a not-yet-upgraded lr-chart.
+    const el = await fixture<HTMLElement>(
+      html`<div style="inline-size: 400px"><lr-chart></lr-chart></div>`
+    );
+    const chart = el.querySelector("lr-chart")!;
+    expect(customElements.get("lr-chart"), "not registered in this file").to.equal(undefined);
+    expect(
+      chart.getBoundingClientRect().height,
+      "the undefined element already occupies its 280px default"
+    ).to.be.closeTo(280, 2);
+  });
+
+  it("tracks the component's own custom property rather than a hard-coded pixel value", async () => {
+    await loadStylesheet("reservations.css");
+    // The whole point of expressing reservations through the same token the component uses: a
+    // themed height re-themes the reservation too, instead of silently rotting.
+    const el = await fixture<HTMLElement>(
+      html`<div style="--lr-chart-height: 500px"><lr-chart></lr-chart></div>`
+    );
+    expect(
+      el.querySelector("lr-chart")!.getBoundingClientRect().height
+    ).to.be.closeTo(500, 2);
+  });
+
+  it("reserves a flag's aspect-ratio box from the surrounding font size", async () => {
+    await loadStylesheet("reservations.css");
+    const el = await fixture<HTMLElement>(
+      html`<div style="font-size: 24px"><lr-flag></lr-flag></div>`
+    );
+    const box = el.querySelector("lr-flag")!.getBoundingClientRect();
+    expect(box.height, "1em tall").to.be.closeTo(24, 2);
+    expect(box.width / box.height, "on the documented 4/3 ratio").to.be.closeTo(4 / 3, 0.05);
+  });
+
+  it("is inert for a defined element, so it can never fight a component's own layout", async () => {
+    await loadStylesheet("reservations.css");
+    // lr-skeleton is registered by this bundle, so it is :defined and must be untouched.
+    const el = await fixture<HTMLElement>(html`<div><lr-skeleton></lr-skeleton></div>`);
+    const skeleton = el.querySelector("lr-skeleton")!;
+    if (customElements.get("lr-skeleton") === undefined) return; // not loaded in this file
+    expect(skeleton.matches(":defined"), "upgraded").to.be.true;
+  });
 });

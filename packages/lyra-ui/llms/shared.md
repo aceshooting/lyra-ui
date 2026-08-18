@@ -1093,6 +1093,70 @@ canvas consumer's redraw to its normal microtask/render schedule. The optional r
 browser realm; it does not limit invalidation to a subtree. The function is a no-op during server
 rendering and retains no document or stylesheet after the last canvas consumer disconnects.
 
+## Preventing layout shift from lazy-upgrading elements (CLS)
+
+An undefined custom element is an inline box with no intrinsic size, so every `lr-*` in the initial
+viewport contributes a reflow as its definition loads. Components that additionally defer on an
+optional peer (`lr-chart`, `lr-map`, `lr-flag`, `lr-flow-canvas`, `lr-knowledge-graph-explorer`)
+render a skeleton while that peer resolves, which can cost a second shift when the real content
+replaces it. Each component is individually well-behaved; the aggregate on a first paint is what
+costs a Lighthouse Cumulative Layout Shift score.
+
+Lyra ships an optional, opt-in stylesheet that reserves each component's intrinsic footprint before
+upgrade:
+
+```css
+@import "@aceshooting/lyra-ui/reservations.css";
+```
+
+It styles **only** `:not(:defined)` elements, inside an `@layer lr-reservations`, so it becomes inert
+the moment a definition upgrades and can never fight a component's own layout. It sets no colors and
+no `:root` rules.
+
+**Every reservation is expressed with the same custom property and fallback token the component's
+own stylesheet uses** — `--lr-chart-height` / `--lr-size-280px` for the chart family,
+`--lr-flag-aspect-ratio` for `lr-flag`, `--lr-form-control-height` for the field controls, and so
+on. That is the point of shipping it rather than documenting measured pixel values: a hand-written
+reservation rots silently the moment a component's default changes, whereas these track it, and
+theming a component through its documented custom property re-themes its reservation with it.
+
+Hand-rolling equivalent rules is still fine — the pattern is just:
+
+```css
+lr-chart:not(:defined) {
+  display: block;
+  min-block-size: var(--lr-chart-height, var(--lr-size-280px));
+}
+```
+
+Two things worth knowing:
+
+- A per-instance override needs the matching custom property to be set as well, not only the
+  attribute, or the pre-upgrade frame and the upgraded frame will disagree. `<lr-chart height="500px">`
+  should carry `style="--lr-chart-height: 500px"` too if it sits above the fold.
+- The reservation covers the definition-upgrade shift. A component that then swaps a skeleton for
+  peer-resolved content stays stable as long as the reserved box matches the final footprint, which
+  is why the reservations target each component's *final* default size rather than its skeleton's.
+
+## Scope: what this library does not provide
+
+Lyra is a component library, not an application framework. The following are deliberately out of
+scope, so they are worth not searching the catalog for:
+
+- **Client-side routing.** There is no router and no route-outlet component. URL ownership belongs to
+  the application (or its router of choice), because a component library that took it over would
+  conflict with every framework router a consumer might already run. The navigation components are
+  designed to be *driven* by whatever router you use rather than to own the URL themselves:
+  `lr-app-rail-item`, `lr-breadcrumb-item` and `lr-tab-group` all expose their active/selected state
+  as ordinary reflected properties, so binding is a one-way write from your route state plus a click
+  handler that calls your router. Wire it once in your shell component; there is no Lyra-specific
+  pattern to learn.
+- **Data fetching, caching, and state management.** Components take data as properties and emit
+  events; they never fetch on your behalf, except the documented viewers/`src`-taking components,
+  which are explicit about it.
+- **Form submission and validation orchestration.** Form-associated controls integrate with the
+  native `<form>`/`ElementInternals` contract; the submission lifecycle stays the application's.
+
 ## Optional native styles and CSS utilities
 
 Lyra ships two independent light-DOM stylesheets. Neither is imported by the root barrel, a family

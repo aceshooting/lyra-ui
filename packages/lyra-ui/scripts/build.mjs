@@ -43,7 +43,7 @@ await cp(join(packageDir, 'src', 'theme.css'), join(packageDir, 'dist', 'theme.c
 const stylesDir = join(packageDir, 'dist', 'styles');
 await mkdir(stylesDir, { recursive: true });
 await Promise.all(
-  ['design-tokens.css', 'native.css', 'utilities.css'].map((name) =>
+  ['design-tokens.css', 'native.css', 'reservations.css', 'utilities.css'].map((name) =>
     cp(join(packageDir, 'src', 'styles', name), join(stylesDir, name)),
   ),
 );

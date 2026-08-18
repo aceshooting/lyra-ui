@@ -1,0 +1,82 @@
+/*
+ * @aceshooting/lyra-ui — layout-shift reservations
+ *
+ * Optional, opt-in light-DOM stylesheet. Reserves each component's intrinsic footprint BEFORE its
+ * definition upgrades, so a custom element in the initial viewport does not contribute a reflow to
+ * Cumulative Layout Shift as its definition loads.
+ *
+ * The problem this solves: an undefined custom element is an inline box with no intrinsic size, so
+ * every `lr-*` above the fold shifts the page when it upgrades. Components that additionally defer
+ * on an optional peer (`lr-chart`, `lr-map`, `lr-flag`, the graph/explorer family) show a skeleton
+ * while that peer resolves, which can cost a second shift when the real content replaces it.
+ *
+ * Every reservation below is expressed with the SAME custom property and fallback token the
+ * component's own stylesheet uses. That is the point: a reservation hard-coding a measured pixel
+ * value silently rots the moment a component's default changes, whereas these track it. Theming a
+ * component through its documented custom property automatically re-themes its reservation too.
+ *
+ * Import it alongside the token sheet, before first paint:
+ *
+ *     @import "@aceshooting/lyra-ui/reservations.css";
+ *
+ * Scope: it styles ONLY `:not(:defined)` elements, so it is inert the moment a definition upgrades
+ * and can never fight a component's own layout. It sets no colors and no `:root` rules.
+ */
+
+@layer lr-reservations {
+  /* Baseline: an undefined custom element is inline with no box. Every Lyra component that is
+     block-level once defined needs to be block-level before it, or its reservation cannot apply.
+     Deliberately scoped to `lr-` and to `:not(:defined)` only. */
+  [class*='lr-']:not(:defined),
+  :is(
+      lr-chart, lr-line-chart, lr-bar-chart, lr-scatter-chart, lr-pie-chart, lr-doughnut-chart,
+      lr-radar-chart, lr-polar-area-chart, lr-bubble-chart, lr-histogram, lr-box-plot,
+      lr-lite-chart, lr-map, lr-heatmap, lr-flow-canvas, lr-knowledge-graph-explorer,
+      lr-qr-code, lr-skeleton, lr-card, lr-page, lr-widget, lr-table, lr-data-grid
+    ):not(:defined) {
+    display: block;
+  }
+
+  /* Charts. Matches chart.styles.ts's own
+     `min-block-size: var(--lr-chart-height, var(--lr-size-280px))`. The `height` attribute is the
+     documented per-instance override, so a consumer setting it should also set the matching
+     custom property for the pre-upgrade frame to agree. */
+  :is(
+      lr-chart, lr-line-chart, lr-bar-chart, lr-scatter-chart, lr-pie-chart, lr-doughnut-chart,
+      lr-radar-chart, lr-polar-area-chart, lr-bubble-chart, lr-histogram, lr-box-plot
+    ):not(:defined) {
+    min-block-size: var(--lr-chart-height, var(--lr-size-280px, 280px));
+  }
+
+  /* Map. Matches map.styles.ts's `block-size: var(--lr-size-24rem)`. */
+  lr-map:not(:defined) {
+    inline-size: 100%;
+    block-size: var(--lr-map-height, var(--lr-size-24rem, 24rem));
+  }
+
+  /* Flag. Matches flag.styles.ts: a 1em-tall box on a 4/3 ratio, so it reserves its inline size
+     from the surrounding font size exactly as the defined element does. */
+  lr-flag:not(:defined) {
+    display: inline-block;
+    block-size: var(--lr-size-1em, 1em);
+    aspect-ratio: var(--lr-flag-aspect-ratio, 4 / 3);
+  }
+
+  /* Canvas-backed surfaces that fill their allocation once defined. Without a reservation these
+     collapse to zero before upgrade and expand to their container afterwards -- the largest single
+     shift of the set. */
+  :is(lr-flow-canvas, lr-knowledge-graph-explorer):not(:defined) {
+    inline-size: 100%;
+    min-block-size: var(--lr-canvas-reserved-height, var(--lr-size-24rem, 24rem));
+  }
+
+  /* Inline controls whose height is the shared form-control ladder. Reserving the row height stops
+     a form of stacked fields from reflowing field by field as each definition arrives. */
+  :is(
+      lr-input, lr-number-input, lr-select, lr-combobox, lr-date-input, lr-phone-input,
+      lr-color-picker, lr-button, lr-icon-button
+    ):not(:defined) {
+    display: inline-block;
+    min-block-size: var(--lr-form-control-height, 2.375rem);
+  }
+}

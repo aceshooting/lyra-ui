@@ -1029,6 +1029,7 @@
     "./theme.css": "./dist/theme.css",
     "./design-tokens.css": "./dist/styles/design-tokens.css",
     "./native.css": "./dist/styles/native.css",
+    "./reservations.css": "./dist/styles/reservations.css",
     "./utilities.css": "./dist/styles/utilities.css",
     "./testing": "./dist/testing/happy-dom-shims.js",
     "./package.json": "./package.json"
@@ -1623,6 +1624,7 @@
     "./dist/ssr/all.js",
     "./dist/styles/design-tokens.css",
     "./dist/styles/native.css",
+    "./dist/styles/reservations.css",
     "./dist/styles/utilities.css",
     "./dist/theme.css",
     "./dist/translations/ar.js",
@@ -2226,6 +2228,7 @@
     "./src/ssr/all.ts",
     "./src/styles/design-tokens.css",
     "./src/styles/native.css",
+    "./src/styles/reservations.css",
     "./src/styles/utilities.css",
     "./src/theme.css",
     "./src/translations/ar.ts",
