@@ -11011,8 +11011,12 @@
               }
             },
             {
+              "name": "col-label-height",
+              "description": "Height, in CSS px, of the matrix column-label band. Unset keeps the built-in 20px.\n\nType: `number | undefined`"
+            },
+            {
               "name": "fit-to-width",
-              "description": "When set, `cellSize` is derived from the host's measured `clientWidth`\non every draw (including ResizeObserver-triggered redraws) instead of\nthe fixed `cell-size` attribute, so the grid actually fills the\navailable width. Without this, canvas dimensions are computed purely\nfrom `PAD_LEFT + cols * cellSize` (matrix mode) or\n`CAL_PAD_LEFT + weekCount * cellSize` (calendar mode), so a\nresize-triggered redraw is a geometric no-op. Originally matrix-mode\nonly; now applies to calendar mode too.\n\nType: `boolean`  \nDefault: `false`",
+              "description": "When set, `cellSize` is derived from the host's measured `clientWidth`\non every draw (including ResizeObserver-triggered redraws) instead of\nthe fixed `cell-size` attribute, so the grid actually fills the\navailable width. Without this, canvas dimensions are computed purely\nfrom `matrixPadLeft + cols * cellSize` (matrix mode) or\n`CAL_PAD_LEFT + weekCount * cellSize` (calendar mode), so a\nresize-triggered redraw is a geometric no-op. Originally matrix-mode\nonly; now applies to calendar mode too.\n\nType: `boolean`  \nDefault: `false`",
               "value": {
                 "type": [
                   "boolean"
@@ -11039,6 +11043,10 @@
             {
               "name": "min-cell-size",
               "description": "Floor (CSS px) under the cell size `fitToWidth` derives from the host width, in **both** modes\n— the mirror of `maxCellSize`, and likewise ignored while `fitToWidth` is unset. Raises the\nbuilt-in `FIT_MIN_CELL` (4px) floor so a year-long calendar in a narrow pane keeps legible,\nhit-testable cells and overflows its host instead of collapsing to hairlines.\n\nCan only raise that floor, never lower it: a value below `4` normalizes to `4`. Unset (the\ndefault) reproduces today's exact fit-to-width behavior, and a non-finite value (or an empty\nattribute) means unset.\n\nType: `number | undefined`"
+            },
+            {
+              "name": "row-label-width",
+              "description": "Width, in CSS px, of the matrix row-label gutter, or `'auto'` to measure the widest label and\nsize the gutter to fit (never below the built-in 60px, never above 40% of the host's width, so\none long label cannot squeeze out the cells it exists to describe).\n\nUnset keeps the built-in 60px. That default is deliberate: auto-sizing every existing heatmap\nwould silently reflow charts whose labels already fit, which is a bigger change than the\nclipping it fixes. Opt in per chart, or pin an exact figure.\n\nIndependently of this, a row label too wide for the resolved gutter is now truncated with an\nellipsis instead of being clipped mid-glyph by whatever is painted beside it -- clipping read\nas a rendering fault, truncation reads as \"there is more here\". `cellText` still carries the\nfull label to the tooltip and the keyboard announcement either way.\n\nCalendar mode is unaffected; it has its own fixed weekday gutter.\n\nType: `number | 'auto' | undefined`"
             },
             {
               "name": "scale",

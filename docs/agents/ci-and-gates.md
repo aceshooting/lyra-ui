@@ -422,6 +422,20 @@ fixed at the source:
   change look artifact-neutral — a clean manifest is not evidence that component-quality is clean.
   Rule of thumb: touched anything under `src/`? rebuild, then rerun
   `generate-component-quality.mjs --write --measure-gzip` before committing.
+- **The measured gzip bytes are Node-patch-sensitive, so regenerate them on the Node version CI
+  uses.** The measurement is esbuild-bundle-then-gzip, and the gzip half runs through Node's bundled
+  zlib — which is not byte-identical across Node patch releases. On 2026-08-18 the artifacts were
+  regenerated on Node 22.22.1 and CI (`setup-node` with `node-version: 22`, resolving to 22.23.2)
+  rejected them as stale twice in a row, with `--check --measure-gzip` passing locally each time.
+  esbuild was identical and pinned; only zlib differed. Read the version out of the failing job's
+  log (`Found in cache @ /opt/hostedtoolcache/node/<version>`) and regenerate under exactly that.
+  A remote build box is the usual place this bites, since its Node rarely matches the runner's.
+- **Regenerate component-quality LAST, after every other generator.** Several generators write into
+  `src/` — `generate-default-string-slices.mjs --write` rewrites the per-component slice block in
+  each class file, and moves it to the top of the class if something was inserted above it. Running
+  it after the gzip measurement silently invalidates that measurement, which is how the same CI job
+  failed a third time on 2026-08-18. Order: manifest, framework-types, default-string-slices,
+  component-inventory, component-metadata, `./package.sh`, build, *then* component-quality.
 - **`./scripts/ci.sh` is Chromium-only, so it cannot see a contract that is entirely absent on
   another engine.** On 2026-08-12 `lr-zoomable-frame`'s host `focus`/`blur` forwarding re-dispatched
   nothing at all on Firefox — that engine dispatches neither `focus` nor `focusin` on an `<iframe>`
