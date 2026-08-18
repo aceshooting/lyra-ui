@@ -30,6 +30,3 @@ missing cell, and silent (32.7% of cells in the reporter's dataset).
   its value instead of "no data".
 - `scale="sqrt"` continues to reject negatives — a square root of a negative has no meaning — now
   explicitly rather than as a side effect of the shared guard.
-
-Reported as lyra-admin requests `fr_Gr36iF5hz-1PPwGecRlq2g` (negative values) and
-`fr_srwB8_slHoEwqYAWq9nFsg` (domain/midpoint).

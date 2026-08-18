@@ -15,6 +15,3 @@ visibly ragged.
 and `base`/`checkbox` keep their existing nodes and meaning — they are documented Web Awesome /
 Shoelace compatibility names, so repointing them would have broken shipped consumers. This is
 purely additive; an unstyled control renders identically.
-
-Reported as lyra-admin request `fr_v-ajb4KeGda0E_hXIob54g` (the `lr-checkbox` half was found by
-sweeping the library for the same shape).

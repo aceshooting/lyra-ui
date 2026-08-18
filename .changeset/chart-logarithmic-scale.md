@@ -22,5 +22,3 @@ axis collapses everything below the maximum into the baseline.
   `chart.js` module namespace the loader imports and costs no extra download weight.
 
 Default is unchanged and covered by an explicit unset test.
-
-Reported as lyra-admin request `fr_BsWWl0OWXi288ZIi1goa_w`.

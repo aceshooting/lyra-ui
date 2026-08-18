@@ -20,5 +20,3 @@ row the pointer still rests on leaves its tooltip alone. Verified on Chromium, F
 The same report's secondary note about a tooltip being clipped inside a scroll container is existing
 behavior with existing API: pass `hoist` (`<lr-copy-button>` already forwards it to its tooltip) to
 render the popup in the top layer and escape the clipping ancestor.
-
-Reported as lyra-admin request `fr_ZmtgQvx9zLCji_-SpXAd5w`.

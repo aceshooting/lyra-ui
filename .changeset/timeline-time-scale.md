@@ -28,5 +28,3 @@ Scope note: this covers the request's preferred option. Items sharing an instant
 being fanned into lanes — the denser case (parallel lanes by category, a brushable/zoomable range,
 per-event click events, collision handling) would change this component's deliberately passive,
 zero-event contract, so it belongs in a sibling component with its own design, not here.
-
-Reported as lyra-admin request `fr_g8HzriFThmgrv_UbLoY_9A`.

@@ -2884,10 +2884,12 @@ describe('continuous choropleth legend', () => {
   it('renders no legend panel at all when nothing asks for one', async () => {
     const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
     await el.updateComplete;
+    // Compared as a boolean, never as a node: a failing chai assertion carrying a DOM node as
+    // actual/expected hangs the whole file until the per-file watchdog.
     expect(
-      el.shadowRoot!.querySelector('[part="legend"]'),
+      el.shadowRoot!.querySelector('[part="legend"]') === null,
       'unset default is unchanged'
-    ).to.equal(null);
+    ).to.be.true;
   });
 
   it('renders a gradient bar with endpoint captions from the choropleth stops', async () => {
@@ -2947,7 +2949,10 @@ describe('continuous choropleth legend', () => {
     el.legendGradient = [[5, '#08306b']] as unknown as readonly (readonly [number, string])[];
     await el.updateComplete;
     expect(el.legendGradient.length).to.equal(0);
-    expect(el.shadowRoot!.querySelector('[part="legend-gradient"]')).to.equal(null);
+    expect(
+      el.shadowRoot!.querySelector('[part="legend-gradient"]') === null,
+      'no bar rendered'
+    ).to.be.true;
   });
 
   it('hides the ramp bar from assistive tech, leaving the captions to carry the meaning', async () => {

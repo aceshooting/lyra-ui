@@ -27,5 +27,3 @@ unaligned legend outside the map and keep its stops manually in sync with the la
 
 All additive: with none of them set the component renders exactly as before, covered by an explicit
 unset test.
-
-Reported as lyra-admin request `fr_jy2WDfe5H-B_coXwT5YmQw`.

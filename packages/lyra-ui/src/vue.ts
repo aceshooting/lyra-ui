@@ -1079,6 +1079,7 @@ export type LyraBarChartVueProps = LyraVueCustomElement<
   | 'max'
   | 'min'
   | 'plugins'
+  | 'scaleType'
   | 'showDataTable'
   | 'stacked'
   | 'stackTotals'
@@ -1137,6 +1138,7 @@ export type LyraBarChartVueProps = LyraVueCustomElement<
     'data-labels'?: LyraBarChart['dataLabels'];
     'index-axis'?: LyraBarChart['indexAxis'];
     'legend-position'?: LyraBarChart['legendPosition'];
+    'scale-type'?: LyraBarChart['scaleType'];
     'show-data-table'?: LyraBarChart['showDataTable'];
     'stack-totals'?: LyraBarChart['stackTotals'];
     'without-animation'?: LyraBarChart['withoutAnimation'];
@@ -1285,6 +1287,7 @@ export type LyraBubbleChartVueProps = LyraVueCustomElement<
   | 'max'
   | 'min'
   | 'plugins'
+  | 'scaleType'
   | 'showDataTable'
   | 'stacked'
   | 'stackTotals'
@@ -1343,6 +1346,7 @@ export type LyraBubbleChartVueProps = LyraVueCustomElement<
     'data-labels'?: LyraBubbleChart['dataLabels'];
     'index-axis'?: LyraBubbleChart['indexAxis'];
     'legend-position'?: LyraBubbleChart['legendPosition'];
+    'scale-type'?: LyraBubbleChart['scaleType'];
     'show-data-table'?: LyraBubbleChart['showDataTable'];
     'stack-totals'?: LyraBubbleChart['stackTotals'];
     'without-animation'?: LyraBubbleChart['withoutAnimation'];
@@ -1650,6 +1654,7 @@ export type LyraChartVueProps = LyraVueCustomElement<
   | 'max'
   | 'min'
   | 'plugins'
+  | 'scaleType'
   | 'showDataTable'
   | 'stacked'
   | 'stackTotals'
@@ -1708,6 +1713,7 @@ export type LyraChartVueProps = LyraVueCustomElement<
     'data-labels'?: LyraChart['dataLabels'];
     'index-axis'?: LyraChart['indexAxis'];
     'legend-position'?: LyraChart['legendPosition'];
+    'scale-type'?: LyraChart['scaleType'];
     'show-data-table'?: LyraChart['showDataTable'];
     'stack-totals'?: LyraChart['stackTotals'];
     'without-animation'?: LyraChart['withoutAnimation'];
@@ -3433,6 +3439,7 @@ export type LyraDoughnutChartVueProps = LyraVueCustomElement<
   | 'max'
   | 'min'
   | 'plugins'
+  | 'scaleType'
   | 'showDataTable'
   | 'stacked'
   | 'stackTotals'
@@ -3491,6 +3498,7 @@ export type LyraDoughnutChartVueProps = LyraVueCustomElement<
     'data-labels'?: LyraDoughnutChart['dataLabels'];
     'index-axis'?: LyraDoughnutChart['indexAxis'];
     'legend-position'?: LyraDoughnutChart['legendPosition'];
+    'scale-type'?: LyraDoughnutChart['scaleType'];
     'show-data-table'?: LyraDoughnutChart['showDataTable'];
     'stack-totals'?: LyraDoughnutChart['stackTotals'];
     'without-animation'?: LyraDoughnutChart['withoutAnimation'];
@@ -4677,10 +4685,12 @@ export type LyraHeatmapVueProps = LyraVueCustomElement<
   | 'cellText'
   | 'colorSteps'
   | 'data'
+  | 'domain'
   | 'fitToWidth'
   | 'legendStops'
   | 'locale'
   | 'maxCellSize'
+  | 'midpoint'
   | 'minCellSize'
   | 'scale'
   | 'selectedCell'
@@ -4758,6 +4768,7 @@ export type LyraHistogramVueProps = LyraVueCustomElement<
   | 'max'
   | 'min'
   | 'plugins'
+  | 'scaleType'
   | 'seriesLabel'
   | 'showDataTable'
   | 'stacked'
@@ -4818,6 +4829,7 @@ export type LyraHistogramVueProps = LyraVueCustomElement<
     'data-labels'?: LyraHistogram['dataLabels'];
     'index-axis'?: LyraHistogram['indexAxis'];
     'legend-position'?: LyraHistogram['legendPosition'];
+    'scale-type'?: LyraHistogram['scaleType'];
     'series-label'?: LyraHistogram['seriesLabel'];
     'show-data-table'?: LyraHistogram['showDataTable'];
     'stack-totals'?: LyraHistogram['stackTotals'];
@@ -5497,6 +5509,7 @@ export type LyraLineChartVueProps = LyraVueCustomElement<
   | 'max'
   | 'min'
   | 'plugins'
+  | 'scaleType'
   | 'showDataTable'
   | 'stacked'
   | 'stackTotals'
@@ -5555,6 +5568,7 @@ export type LyraLineChartVueProps = LyraVueCustomElement<
     'data-labels'?: LyraLineChart['dataLabels'];
     'index-axis'?: LyraLineChart['indexAxis'];
     'legend-position'?: LyraLineChart['legendPosition'];
+    'scale-type'?: LyraLineChart['scaleType'];
     'show-data-table'?: LyraLineChart['showDataTable'];
     'stack-totals'?: LyraLineChart['stackTotals'];
     'without-animation'?: LyraLineChart['withoutAnimation'];
@@ -5711,6 +5725,9 @@ export type LyraMapVueProps = LyraVueCustomElement<
   | 'dataLayers'
   | 'label'
   | 'legend'
+  | 'legendGradient'
+  | 'legendGradientHiLabel'
+  | 'legendGradientLoLabel'
   | 'locale'
   | 'mapStyle'
   | 'markers'
@@ -5725,7 +5742,10 @@ export type LyraMapVueProps = LyraVueCustomElement<
   | '--lr-map-popup-close-button-active-color'
   | '--lr-map-popup-close-button-hover-bg'
   | '--lr-map-popup-close-button-hover-color',
-  {}
+  {
+    'legend-gradient-hi-label'?: LyraMap['legendGradientHiLabel'];
+    'legend-gradient-lo-label'?: LyraMap['legendGradientLoLabel'];
+  }
 >;
 
 export type LyraMarkdownVueProps = LyraVueCustomElement<
@@ -6941,6 +6961,7 @@ export type LyraPieChartVueProps = LyraVueCustomElement<
   | 'max'
   | 'min'
   | 'plugins'
+  | 'scaleType'
   | 'showDataTable'
   | 'stacked'
   | 'stackTotals'
@@ -6999,6 +7020,7 @@ export type LyraPieChartVueProps = LyraVueCustomElement<
     'data-labels'?: LyraPieChart['dataLabels'];
     'index-axis'?: LyraPieChart['indexAxis'];
     'legend-position'?: LyraPieChart['legendPosition'];
+    'scale-type'?: LyraPieChart['scaleType'];
     'show-data-table'?: LyraPieChart['showDataTable'];
     'stack-totals'?: LyraPieChart['stackTotals'];
     'without-animation'?: LyraPieChart['withoutAnimation'];
@@ -7031,6 +7053,7 @@ export type LyraPolarAreaChartVueProps = LyraVueCustomElement<
   | 'max'
   | 'min'
   | 'plugins'
+  | 'scaleType'
   | 'showDataTable'
   | 'stacked'
   | 'stackTotals'
@@ -7089,6 +7112,7 @@ export type LyraPolarAreaChartVueProps = LyraVueCustomElement<
     'data-labels'?: LyraPolarAreaChart['dataLabels'];
     'index-axis'?: LyraPolarAreaChart['indexAxis'];
     'legend-position'?: LyraPolarAreaChart['legendPosition'];
+    'scale-type'?: LyraPolarAreaChart['scaleType'];
     'show-data-table'?: LyraPolarAreaChart['showDataTable'];
     'stack-totals'?: LyraPolarAreaChart['stackTotals'];
     'without-animation'?: LyraPolarAreaChart['withoutAnimation'];
@@ -7548,6 +7572,7 @@ export type LyraRadarChartVueProps = LyraVueCustomElement<
   | 'max'
   | 'min'
   | 'plugins'
+  | 'scaleType'
   | 'showDataTable'
   | 'stacked'
   | 'stackTotals'
@@ -7606,6 +7631,7 @@ export type LyraRadarChartVueProps = LyraVueCustomElement<
     'data-labels'?: LyraRadarChart['dataLabels'];
     'index-axis'?: LyraRadarChart['indexAxis'];
     'legend-position'?: LyraRadarChart['legendPosition'];
+    'scale-type'?: LyraRadarChart['scaleType'];
     'show-data-table'?: LyraRadarChart['showDataTable'];
     'stack-totals'?: LyraRadarChart['stackTotals'];
     'without-animation'?: LyraRadarChart['withoutAnimation'];
@@ -8209,6 +8235,7 @@ export type LyraScatterChartVueProps = LyraVueCustomElement<
   | 'max'
   | 'min'
   | 'plugins'
+  | 'scaleType'
   | 'showDataTable'
   | 'stacked'
   | 'stackTotals'
@@ -8267,6 +8294,7 @@ export type LyraScatterChartVueProps = LyraVueCustomElement<
     'data-labels'?: LyraScatterChart['dataLabels'];
     'index-axis'?: LyraScatterChart['indexAxis'];
     'legend-position'?: LyraScatterChart['legendPosition'];
+    'scale-type'?: LyraScatterChart['scaleType'];
     'show-data-table'?: LyraScatterChart['showDataTable'];
     'stack-totals'?: LyraScatterChart['stackTotals'];
     'without-animation'?: LyraScatterChart['withoutAnimation'];
@@ -9727,12 +9755,16 @@ export type LyraTimelineVueProps = LyraVueCustomElement<
   | 'accessibleLabel'
   | 'locale'
   | 'orientation'
+  | 'rangeEnd'
+  | 'rangeStart'
+  | 'scale'
   | 'strings',
   {},
   {},
 never,
   | '--lr-scroll-fade-size'
-  | '--lr-timeline-gap',
+  | '--lr-timeline-gap'
+  | '--lr-timeline-time-extent',
   {
     'aria-label'?: LyraTimeline['accessibleLabel'];
   }

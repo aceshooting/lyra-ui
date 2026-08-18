@@ -64,6 +64,10 @@ function itemEpochMs(element: Element): number | null {
  *   timeline's main axis; also the length each item's own rail visually bridges to reach the next
  *   item's marker. Declared here but actually consumed inside each `<lr-timeline-item>`'s own
  *   stylesheet, via ordinary CSS custom-property inheritance across the slot boundary.
+ * @cssprop [--lr-timeline-time-extent=var(--lr-size-20rem)] - Distance the `scale="time"` axis
+ *   distributes items along: `block-size` when vertical, `inline-size` when horizontal. Time-scaled
+ *   items are absolutely positioned, and a percentage offset against an auto-sized track resolves
+ *   to zero, so the axis needs a definite extent. Ignored in the default `scale="flow"`.
  * @cssprop [--lr-scroll-fade-size=2rem] - Inline size of each edge fade while a
  *   horizontal timeline overflows. Forced-colors mode disables the masks while retaining native
  *   scrolling.
