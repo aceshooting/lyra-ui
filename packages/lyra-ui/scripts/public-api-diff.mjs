@@ -181,10 +181,111 @@ function typeAtoms(typeText) {
   return new Set(splitTopLevel(normalizeType(typeText), '|').map(normalizeType));
 }
 
+/**
+ * A generic instantiation (`Name<A, B, …>`) split into its name and top-level type arguments, or
+ * `null` when `text` is not one.
+ */
+function genericTypeParts(text) {
+  const normalized = normalizeType(text);
+  const open = normalized.indexOf('<');
+  if (open === -1 || !normalized.endsWith('>')) return null;
+  const name = normalized.slice(0, open).trim();
+  if (name.length === 0) return null;
+  const args = splitTopLevel(normalized.slice(open + 1, -1), ',').map(normalizeType);
+  return { name, args };
+}
+
+/**
+ * Whether `after` only widens `before`.
+ *
+ * Two shapes count. A plain union gaining members is the original rule. The second is a generic
+ * instantiation whose NAME and arity are unchanged and whose type arguments are each either
+ * identical or themselves a widening -- which is the shape every additive component property
+ * produces in the generated framework declarations. `LyraFlagReactProps` is
+ * `LyraReactElementProps<…, '{}'|'fidelity'|'label'|…, …>`, so adding one optional property widens
+ * a union nested inside a type argument; the top-level text has no `|` at all, so the union rule
+ * alone sees a single changed atom and classifies a purely additive property as `major`. Without
+ * this, every additive property in the library would demand a major release.
+ *
+ * Caveat worth stating: this assumes the widened argument sits in a covariant position, which is
+ * true for the props-name unions this exists for but is not provable in general. It is the same
+ * assumption the plain-union rule above already makes.
+ */
+/**
+ * Members of an object-literal type (`{ 'a'?: X; b: Y }`) as a name -> member map, or `null` when
+ * `text` is not a single object literal. Keyed by property name so a member whose type changed
+ * reads as a change rather than one removal plus one addition.
+ */
+function objectTypeMembers(text) {
+  const normalized = normalizeType(text);
+  if (!normalized.startsWith('{') || !normalized.endsWith('}')) return null;
+  const body = normalized.slice(1, -1).trim();
+  if (body.length === 0) return new Map();
+  const members = new Map();
+  for (const raw of splitTopLevel(body, [';', ','])) {
+    const member = normalizeType(raw);
+    if (member.length === 0) continue;
+    const separator = member.indexOf(':');
+    if (separator === -1) return null;
+    const rawName = member.slice(0, separator).trim();
+    if (rawName.length === 0) return null;
+    members.set(rawName.replace(/\?$/, ''), {
+      optional: rawName.endsWith('?'),
+      type: normalizeType(member.slice(separator + 1)),
+    });
+  }
+  return members;
+}
+
+/**
+ * Whether an object-literal type only GAINED optional members, every pre-existing member keeping
+ * its name, optionality and type.
+ *
+ * This is the `AttributeAliases` argument of the generated framework props: adding one attribute
+ * rewrites that whole object's text. A gained REQUIRED member stays major -- that breaks anyone
+ * implementing the interface -- as does any change to an existing member.
+ */
+function isObjectTypeWidening(before, after) {
+  const oldMembers = objectTypeMembers(before);
+  const newMembers = objectTypeMembers(after);
+  if (!oldMembers || !newMembers) return false;
+  if (newMembers.size <= oldMembers.size) return false;
+  for (const [name, member] of oldMembers) {
+    const next = newMembers.get(name);
+    if (!next || next.optional !== member.optional || next.type !== member.type) return false;
+  }
+  for (const [name, member] of newMembers) {
+    if (!oldMembers.has(name) && !member.optional) return false;
+  }
+  return true;
+}
+
 function isTypeWidening(before, after) {
+  if (isObjectTypeWidening(before, after)) return true;
   const oldAtoms = typeAtoms(before);
   const newAtoms = typeAtoms(after);
-  return oldAtoms.size < newAtoms.size && [...oldAtoms].every((atom) => newAtoms.has(atom));
+  if (oldAtoms.size < newAtoms.size && [...oldAtoms].every((atom) => newAtoms.has(atom))) {
+    return true;
+  }
+
+  const beforeGeneric = genericTypeParts(before);
+  const afterGeneric = genericTypeParts(after);
+  if (
+    !beforeGeneric ||
+    !afterGeneric ||
+    beforeGeneric.name !== afterGeneric.name ||
+    beforeGeneric.args.length !== afterGeneric.args.length
+  ) {
+    return false;
+  }
+  let widened = false;
+  for (const [index, beforeArg] of beforeGeneric.args.entries()) {
+    const afterArg = afterGeneric.args[index];
+    if (beforeArg === afterArg) continue;
+    if (!isTypeWidening(beforeArg, afterArg)) return false;
+    widened = true;
+  }
+  return widened;
 }
 
 function normalizeDefault(value) {
@@ -2395,6 +2496,35 @@ function declarationContractBump(before, after) {
   return bump;
 }
 
+/**
+ * Whether a heritage clause list only SPECIALIZED a defaulted generic, e.g.
+ * `LyraElement` -> `LyraElement<LyraSequenceStripEventMap>`.
+ *
+ * `LyraElement` is declared `class LyraElement<Events = LyraEventMap>`, so naming the argument is
+ * how a component gains a typed event map -- the shape every event-emitting component in the
+ * library already has. Comparing the clause as an opaque string reports that as a base-class
+ * change, which it is not.
+ *
+ * A different base name, a different list length, or arguments CHANGING rather than being added
+ * all stay `major`: those really can break a subclass or a structural assignment.
+ */
+function isHeritageSpecialization(before, after) {
+  if (!Array.isArray(before) || !Array.isArray(after)) return false;
+  if (before.length !== after.length || before.length === 0) return false;
+  let specialized = false;
+  for (const [index, beforeClause] of before.entries()) {
+    const afterClause = after[index];
+    if (beforeClause === afterClause) continue;
+    const beforeGeneric = genericTypeParts(beforeClause);
+    const afterGeneric = genericTypeParts(afterClause);
+    // Only "no arguments" -> "arguments" counts; anything else is a real heritage change.
+    if (beforeGeneric || !afterGeneric) return false;
+    if (normalizeType(beforeClause) !== afterGeneric.name) return false;
+    specialized = true;
+  }
+  return specialized;
+}
+
 function changedBump(entry, before, after, baseline, current) {
   if (entry.semantic === 'declaration-contract-ref') {
     const beforeContract = baseline?.contracts?.[before];
@@ -2404,6 +2534,7 @@ function changedBump(entry, before, after, baseline, current) {
   }
   if (entry.semantic === 'dependency-contract-ref') return 'major';
   if (entry.semantic === 'type' && isTypeWidening(before, after)) return 'minor';
+  if (entry.semantic === 'heritage' && isHeritageSpecialization(before, after)) return 'minor';
   if (entry.semantic === 'optional' && before === false && after === true) return 'minor';
   if (entry.semantic === 'readonly' && before === true && after === false) return 'minor';
   if (entry.semantic === 'privacy' && before === 'protected' && after === 'public') return 'minor';

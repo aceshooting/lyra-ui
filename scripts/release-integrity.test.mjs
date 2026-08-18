@@ -380,13 +380,14 @@ test('requires one successful full-engine run for the exact release commit and a
     }
   );
 
-  const missingShard = successfulFullEngineJobs().filter(
-    (job) => job.name !== 'webkit / shard 4/4'
-  );
+  // Derived from the qualification manifest rather than naming a shard literally: the shard count
+  // is a matrix knob (4 -> 8 when full-engine.yml was widened), and a hardcoded 'webkit / shard 4/4'
+  // silently rots the moment it moves.
+  const droppedJob = REQUIRED_FULL_ENGINE_JOBS[REQUIRED_FULL_ENGINE_JOBS.length - 1];
+  const missingShard = successfulFullEngineJobs().filter((job) => job.name !== droppedJob);
   assert.deepEqual(evaluateFullEngineRun({ run, jobs: missingShard, sha }), {
     state: 'failed',
-    message:
-      "Full browser-engine suite run 84 is missing required job 'webkit / shard 4/4'.",
+    message: `Full browser-engine suite run 84 is missing required job '${droppedJob}'.`,
   });
   assert.equal(
     evaluateFullEngineRun({
