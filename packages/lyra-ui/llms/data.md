@@ -1426,6 +1426,17 @@ weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
   measured `clientWidth` on every draw/resize instead of the fixed `cell-size`, so the grid actually
   fills the available width; now applies to calendar mode as well as matrix mode — see gotchas for
   the default, non-`fit-to-width` behavior)
+- `rowLabelWidth?: number | 'auto'` (attribute `row-label-width`, reflected) — width, in CSS px, of
+  the **matrix** row-label gutter, or `'auto'` to measure the widest label and size the gutter to
+  fit (never below the built-in `60`, never above 40% of the host width, so one long label cannot
+  squeeze out the cells it describes). Unset keeps the built-in `60`, so no existing chart reflows.
+  Independently of this, a label too wide for the resolved gutter is truncated with an ellipsis
+  rather than clipped mid-glyph — clipping read as a rendering fault, truncation reads as "there is
+  more here". `cellText` still carries the full label to the tooltip and the keyboard announcement.
+  A malformed value is ignored rather than collapsing the gutter. Calendar mode is unaffected; it
+  has its own fixed weekday gutter
+- `colLabelHeight?: number` (attribute `col-label-height`) — height, in CSS px, of the matrix
+  column-label band. Unset keeps the built-in `20`
 - `maxCellSize?: number` (attribute `max-cell-size`) — ceiling, in CSS px, on the cell size
   `fitToWidth` derives from the host width, in **both** modes. Exists because `fitToWidth` divides
   the _whole_ host width across the grid, so a 5-week calendar or a 3-column matrix in a wide pane

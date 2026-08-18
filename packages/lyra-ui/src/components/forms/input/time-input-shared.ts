@@ -66,6 +66,28 @@ export function normalizeTimeValue(value: string | Date | null | undefined): str
   return parsed.precision === 'second' ? seconds : `${seconds}.${pad(parsed.millisecond, 3)}`;
 }
 
+/**
+ * Formats milliseconds since local midnight as the canonical wire value, the inverse of
+ * `parseTimeValue(...).milliseconds`.
+ *
+ * Arithmetic rather than a round-trip through a `Date`: building a local `Date` at midnight and
+ * adding an offset lands on the wrong clock time on the days a zone shifts, which is exactly the
+ * kind of once-a-year bug nobody reproduces. Anything outside a single day -- negative, a full day
+ * or more, or non-finite -- yields `''`, matching how a native time input rejects an out-of-range
+ * `valueAsNumber` rather than silently wrapping it into a different time.
+ */
+export function timeValueFromMilliseconds(value: number): string {
+  if (!Number.isFinite(value) || value < 0 || value >= DAY_MILLISECONDS) return '';
+  const total = Math.trunc(value);
+  const hour = Math.floor(total / 3_600_000);
+  const minute = Math.floor(total / 60_000) % 60;
+  const second = Math.floor(total / 1_000) % 60;
+  const millisecond = total % 1_000;
+  const base = `${pad(hour)}:${pad(minute)}`;
+  if (millisecond !== 0) return `${base}:${pad(second)}.${pad(millisecond, 3)}`;
+  return second === 0 ? base : `${base}:${pad(second)}`;
+}
+
 export function to24Hour(hour: number, dayPeriod: 'am' | 'pm'): number {
   const normalizedHour = hour % 12;
   return dayPeriod === 'pm' ? normalizedHour + 12 : normalizedHour;

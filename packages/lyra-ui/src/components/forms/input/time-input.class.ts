@@ -41,6 +41,7 @@ import {
   localeTimePattern,
   normalizeTimeValue,
   parseTimeValue,
+  timeValueFromMilliseconds,
   timeStepBaseMilliseconds,
   to24Hour,
   type TimeHourFormat,
@@ -460,18 +461,33 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     this.syncComponentStates();
   }
 
-  /** Milliseconds since local midnight, or `NaN` while blank/incomplete. */
+  /** Milliseconds since local midnight, or `NaN` while blank/incomplete.
+   *
+   *  Assigning sets `value` from the same scale. `NaN`, a negative number, or a full day or more
+   *  clears the field rather than wrapping, matching how a native time input treats an
+   *  out-of-range `valueAsNumber`. Assignment is silent, like the native property. */
   get valueAsNumber(): number {
     return parseTimeValue(this.value)?.milliseconds ?? Number.NaN;
   }
 
-  /** A Date carrying the selected local clock fields on today's local calendar date. */
+  set valueAsNumber(next: number) {
+    this.value = timeValueFromMilliseconds(next);
+  }
+
+  /** A Date carrying the selected local clock fields on today's local calendar date.
+   *
+   *  Assigning reads the same local clock fields back off the given Date, so it round-trips with
+   *  the getter; `null` or an invalid Date clears the field. Assignment is silent. */
   get valueAsDate(): Date | null {
     const parsed = parseTimeValue(this.value);
     if (!parsed) return null;
     const result = this.now();
     result.setHours(parsed.hour, parsed.minute, parsed.second, parsed.millisecond);
     return result;
+  }
+
+  set valueAsDate(next: Date | null) {
+    this.value = normalizeTimeValue(next);
   }
 
   private get numericStep(): number {

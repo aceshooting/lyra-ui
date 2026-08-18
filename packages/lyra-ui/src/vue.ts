@@ -1918,6 +1918,7 @@ export type LyraCheckboxGroupVueProps = LyraVueCustomElement<
   | 'required'
   | 'size'
   | 'strings'
+  | 'value'
   | 'withHint'
   | 'withLabel',
   {
@@ -4688,6 +4689,7 @@ export type LyraHeatmapVueProps = LyraVueCustomElement<
   | 'cellInteractive'
   | 'cellSize'
   | 'cellText'
+  | 'colLabelHeight'
   | 'colorSteps'
   | 'data'
   | 'domain'
@@ -4697,6 +4699,7 @@ export type LyraHeatmapVueProps = LyraVueCustomElement<
   | 'maxCellSize'
   | 'midpoint'
   | 'minCellSize'
+  | 'rowLabelWidth'
   | 'scale'
   | 'selectedCell'
   | 'strings'
@@ -4718,9 +4721,11 @@ export type LyraHeatmapVueProps = LyraVueCustomElement<
     'accessible-cells'?: LyraHeatmap['accessibleCells'];
     'bucket-count'?: LyraHeatmap['bucketCount'];
     'cell-size'?: LyraHeatmap['cellSize'];
+    'col-label-height'?: LyraHeatmap['colLabelHeight'];
     'fit-to-width'?: LyraHeatmap['fitToWidth'];
     'max-cell-size'?: LyraHeatmap['maxCellSize'];
     'min-cell-size'?: LyraHeatmap['minCellSize'];
+    'row-label-width'?: LyraHeatmap['rowLabelWidth'];
     'value-label'?: LyraHeatmap['valueLabel'];
   }
 >;
@@ -9648,6 +9653,8 @@ export type LyraTimeInputVueProps = LyraVueCustomElement<
   | 'step'
   | 'strings'
   | 'value'
+  | 'valueAsDate'
+  | 'valueAsNumber'
   | 'withClear'
   | 'withHint'
   | 'withLabel'

@@ -106,6 +106,17 @@ GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
   persists across a `dataLayers` reassignment gets its GeoJSON updated in place (`setData()`), one
   that's dropped has its private source/layers removed, and a genuinely new `sourceId` gets new
   resources — nothing leaks on removal, style change, or disconnect.
+**Feature properties are tiled, and therefore bounded in numeric magnitude.** MapLibre GL tiles
+every GeoJSON source through a worker into a protobuf vector tile, so a property carrying a huge
+integer throws *inside that worker* — "Given varint doesn't fit into 10 bytes". That throw is not
+catchable by your app and not a rejected promise; it reaches you only as an opaque message on
+`lr-map`'s own error handler, while the rest of the layer still paints, so one bad feature in a
+large collection is invisible until someone walks the data by hand. Both `choropleth.geojson` and
+`dataLayers[].geojson` are now pre-scanned (first 10,000 features) and any numeric property beyond
+`Number.MAX_SAFE_INTEGER` draws a dev-mode warning naming the feature and the property. Carry a
+reduced figure in the feature — a log, a bucket, an index — and keep the exact value in your own
+payload beside the map.
+
 - `label: string = ''` — purpose-specific accessible name for MapLibre's actual focusable canvas.
   A nonempty host `aria-label` remains on the host and is not duplicated onto the canvas; the canvas
   uses `label` or the localized map name. An explicitly empty host `aria-label` is preserved as an
@@ -128,9 +139,13 @@ shared `maplibre-gl` import without constructing a map or allocating a WebGL con
 an element.
 
 **Events:** `lr-map-load` (fired once, after the underlying map's own `'load'`), `lr-map-click`
-(frozen `detail: { readonly lngLat: readonly [lng, lat], readonly feature? }`; the tuple and any
-hit GeoJSON feature are detached and recursively frozen — feature is only populated if a
-choropleth fill layer exists and was hit)
+(frozen `detail: { readonly lngLat: readonly [lng, lat], readonly feature?, readonly origin?,
+readonly sourceId? }`; the tuple and any hit GeoJSON feature are detached and recursively frozen).
+`feature` resolves against the choropleth fill layer **and** every applied `dataLayers`
+fill/line/circle layer, topmost first — so a shape painted through `dataLayers` is identifiable
+instead of being indistinguishable from empty space. `origin` is `'choropleth'` or `'data-layer'`,
+and `sourceId` carries the authored `dataLayers[].sourceId` for a data-layer hit; both are
+`undefined` whenever `feature` is
 
 **Slots:** `legend` — custom legend content, rendered inside the legend panel's own layout so it
 stays positioned with the map instead of floating beside it. Supplying it opens the panel even

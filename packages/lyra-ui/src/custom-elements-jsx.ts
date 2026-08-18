@@ -1923,6 +1923,7 @@ export type LyraCheckboxGroupReactProps = LyraReactElementProps<
   | 'required'
   | 'size'
   | 'strings'
+  | 'value'
   | 'withHint'
   | 'withLabel',
   {
@@ -4693,6 +4694,7 @@ export type LyraHeatmapReactProps = LyraReactElementProps<
   | 'cellInteractive'
   | 'cellSize'
   | 'cellText'
+  | 'colLabelHeight'
   | 'colorSteps'
   | 'data'
   | 'domain'
@@ -4702,6 +4704,7 @@ export type LyraHeatmapReactProps = LyraReactElementProps<
   | 'maxCellSize'
   | 'midpoint'
   | 'minCellSize'
+  | 'rowLabelWidth'
   | 'scale'
   | 'selectedCell'
   | 'strings'
@@ -4723,9 +4726,11 @@ export type LyraHeatmapReactProps = LyraReactElementProps<
     'accessible-cells'?: LyraHeatmap['accessibleCells'];
     'bucket-count'?: LyraHeatmap['bucketCount'];
     'cell-size'?: LyraHeatmap['cellSize'];
+    'col-label-height'?: LyraHeatmap['colLabelHeight'];
     'fit-to-width'?: LyraHeatmap['fitToWidth'];
     'max-cell-size'?: LyraHeatmap['maxCellSize'];
     'min-cell-size'?: LyraHeatmap['minCellSize'];
+    'row-label-width'?: LyraHeatmap['rowLabelWidth'];
     'value-label'?: LyraHeatmap['valueLabel'];
   }
 >;
@@ -9653,6 +9658,8 @@ export type LyraTimeInputReactProps = LyraReactElementProps<
   | 'step'
   | 'strings'
   | 'value'
+  | 'valueAsDate'
+  | 'valueAsNumber'
   | 'withClear'
   | 'withHint'
   | 'withLabel'

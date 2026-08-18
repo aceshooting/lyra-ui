@@ -3044,3 +3044,142 @@ describe('choropleth interpolation', () => {
     expect(log.slice(3), 'identical stop values under log').to.deep.equal([0, '#eee', 100, '#036']);
   });
 });
+
+// `lr-map-click` used to query only the choropleth fill layer, so clicking a `dataLayers` polygon
+// produced `feature: undefined` -- indistinguishable from clicking empty ocean. That broke the
+// pattern the two properties invite: choropleth for features that have a value, a data layer for
+// features that exist but have none.
+describe('lr-map-click across choropleth and dataLayers', () => {
+  const ZONES = {
+    sourceId: 'zones',
+    geojson: {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          geometry: { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] },
+          properties: {},
+        },
+      ],
+    },
+  } as unknown as import('./map.js').LyraMapGeoJsonDataLayer;
+
+  async function readyMap(): Promise<LyraMap> {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    el.mapStyle = RASTER_STYLE;
+    await el.updateComplete;
+    await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+    await waitUntil(() => el.map!.isStyleLoaded(), 'style never loaded', { timeout: 2000 });
+    return el;
+  }
+
+  /** Data layers get generated internal ids (`lr-data-layer-N`), so a test must resolve the
+   *  authored `sourceId` through the component rather than assuming the public name. */
+  const resolvedSourceId = (el: LyraMap, publicSourceId: string): string =>
+    (el as unknown as { _appliedDataLayerIds: Map<string, string> })._appliedDataLayerIds.get(
+      publicSourceId
+    ) ?? '';
+
+  async function withZones(): Promise<{ el: LyraMap; zones: string }> {
+    const el = await readyMap();
+    el.dataLayers = [ZONES];
+    await el.updateComplete;
+    await waitUntil(() => resolvedSourceId(el, 'zones') !== '', 'data layer never applied', {
+      timeout: 2000,
+    });
+    const zones = resolvedSourceId(el, 'zones');
+    await waitUntil(() => el.map!.getLayer(`${zones}-fill`) != null, 'fill layer never added', {
+      timeout: 2000,
+    });
+    return { el, zones };
+  }
+
+  it('queries every applied dataLayers layer, not only the choropleth fill', async function () {
+    if (!hasWebGL2) this.skip();
+    const { el, zones } = await withZones();
+    el.choropleth = choropleth('both-choropleth', [
+      [0, '#000000'],
+      [10, '#ffffff'],
+    ]);
+    await el.updateComplete;
+    await waitUntil(() => el.map!.getLayer('both-choropleth-fill') != null, 'choropleth layer', {
+      timeout: 2000,
+    });
+
+    let queried: string[] = [];
+    el.map!.queryRenderedFeatures = ((_point: unknown, options?: { layers?: string[] }) => {
+      queried = options?.layers ?? [];
+      return [];
+    }) as typeof el.map.queryRenderedFeatures;
+    el.map!.fire('click', { lngLat: { lng: 1, lat: 2 }, point: { x: 5, y: 5 } });
+
+    expect(queried, 'choropleth fill still queried').to.include('both-choropleth-fill');
+    expect(queried, 'data layer fill queried').to.include(`${zones}-fill`);
+    expect(queried, 'data layer line queried').to.include(`${zones}-line`);
+    expect(queried, 'data layer circle queried').to.include(`${zones}-circle`);
+  });
+
+  it('attributes a data-layer hit to its authored sourceId', async function () {
+    if (!hasWebGL2) this.skip();
+    const { el, zones } = await withZones();
+    const hit = {
+      type: 'Feature',
+      properties: { name: 'no data' },
+      geometry: { type: 'Point', coordinates: [0, 0] },
+      layer: { id: `${zones}-fill` },
+    };
+    el.map!.queryRenderedFeatures = (() => [hit]) as typeof el.map.queryRenderedFeatures;
+
+    let detail: { feature?: unknown; origin?: string; sourceId?: string } | undefined;
+    el.addEventListener('lr-map-click', (e) => (detail = (e as CustomEvent).detail));
+    el.map!.fire('click', { lngLat: { lng: 0, lat: 0 }, point: { x: 5, y: 5 } });
+
+    expect(detail!.feature, 'the data-layer polygon is now identifiable').to.equal(hit);
+    expect(detail!.origin).to.equal('data-layer');
+    expect(detail!.sourceId).to.equal('zones');
+  });
+
+  it('attributes a choropleth hit to the choropleth, with no sourceId', async function () {
+    if (!hasWebGL2) this.skip();
+    const el = await readyMap();
+    el.choropleth = choropleth('attributed-choropleth', [
+      [0, '#000000'],
+      [10, '#ffffff'],
+    ]);
+    await el.updateComplete;
+    await waitUntil(
+      () => el.map!.getLayer('attributed-choropleth-fill') != null,
+      'layer never added',
+      { timeout: 2000 }
+    );
+
+    const hit = {
+      type: 'Feature',
+      properties: { value: 5 },
+      geometry: { type: 'Point', coordinates: [0, 0] },
+      layer: { id: 'attributed-choropleth-fill' },
+    };
+    el.map!.queryRenderedFeatures = (() => [hit]) as typeof el.map.queryRenderedFeatures;
+
+    let detail: { origin?: string; sourceId?: string } | undefined;
+    el.addEventListener('lr-map-click', (e) => (detail = (e as CustomEvent).detail));
+    el.map!.fire('click', { lngLat: { lng: 0, lat: 0 }, point: { x: 5, y: 5 } });
+
+    expect(detail!.origin).to.equal('choropleth');
+    expect(detail!.sourceId).to.equal(undefined);
+  });
+
+  it('leaves origin and sourceId undefined when nothing was hit', async function () {
+    if (!hasWebGL2) this.skip();
+    const { el } = await withZones();
+    el.map!.queryRenderedFeatures = (() => []) as typeof el.map.queryRenderedFeatures;
+
+    let detail: { feature?: unknown; origin?: string; sourceId?: string } | undefined;
+    el.addEventListener('lr-map-click', (e) => (detail = (e as CustomEvent).detail));
+    el.map!.fire('click', { lngLat: { lng: 0, lat: 0 }, point: { x: 5, y: 5 } });
+
+    expect(detail!.feature).to.equal(undefined);
+    expect(detail!.origin).to.equal(undefined);
+    expect(detail!.sourceId).to.equal(undefined);
+  });
+});

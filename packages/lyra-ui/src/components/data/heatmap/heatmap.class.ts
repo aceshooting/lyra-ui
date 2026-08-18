@@ -1,9 +1,9 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type ComplexAttributeConverter, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
-import { finiteInteger, finiteRange } from '../../../internal/numbers.js';
+import { finiteInteger, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { getScratchCtx } from '../../../internal/canvas.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
@@ -39,8 +39,28 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_heatmapCalendarCellLabel, LYRA_DEFAULT_heatmapCalendarLabel, LYRA_DEFAULT_heatmapDecorationLimit, LYRA_DEFAULT_heatmapDefaultColLabel, LYRA_DEFAULT_heatmapDefaultRowLabel, LYRA_DEFAULT_heatmapMatrixCellLabel, LYRA_DEFAULT_heatmapMatrixLabel, LYRA_DEFAULT_heatmapNoDataValue, LYRA_DEFAULT_heatmapProjectionLimit, LYRA_DEFAULT_heatmapSelectedCellLabel, LYRA_DEFAULT_heatmapValueLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+/** Floor for the matrix row-label gutter, and the width it had when it was a fixed constant.
+ *  Auto-sizing only ever grows past this, so a chart with short labels keeps its old layout. */
 const PAD_LEFT = 60;
 const PAD_TOP = 20;
+/** Breathing room either side of a row label inside the gutter. */
+const ROW_LABEL_INSET = 4;
+/** Ceiling on the auto-sized gutter, as a fraction of the host's own width. A single pathological
+ *  label must not be allowed to squeeze the cells it exists to describe down to nothing. */
+const MAX_ROW_LABEL_FRACTION = 0.4;
+/** `row-label-width` accepts a CSS-px number or the literal `auto`; anything else is ignored so a
+ *  typo leaves the built-in gutter rather than collapsing it to zero. */
+const rowLabelWidthConverter: ComplexAttributeConverter<number | 'auto' | undefined> = {
+  fromAttribute: (value) => {
+    if (value === null) return undefined;
+    const trimmed = value.trim();
+    if (trimmed.toLowerCase() === 'auto') return 'auto';
+    const parsed = Number.parseFloat(trimmed);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+  },
+  toAttribute: (value) => (value === undefined ? null : String(value)),
+};
+
 const FALLBACK_NO_DATA_FILL = 'rgba(128,128,128,0.25)';
 const RAMP_STEPS = 7;
 const FALLBACK_SCALE_LO = '#cde2fb';
@@ -615,6 +635,78 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     return this.data.kind;
   }
 
+  /**
+   * Width, in CSS px, of the matrix row-label gutter, or `'auto'` to measure the widest label and
+   * size the gutter to fit (never below the built-in 60px, never above 40% of the host's width, so
+   * one long label cannot squeeze out the cells it exists to describe).
+   *
+   * Unset keeps the built-in 60px. That default is deliberate: auto-sizing every existing heatmap
+   * would silently reflow charts whose labels already fit, which is a bigger change than the
+   * clipping it fixes. Opt in per chart, or pin an exact figure.
+   *
+   * Independently of this, a row label too wide for the resolved gutter is now truncated with an
+   * ellipsis instead of being clipped mid-glyph by whatever is painted beside it -- clipping read
+   * as a rendering fault, truncation reads as "there is more here". `cellText` still carries the
+   * full label to the tooltip and the keyboard announcement either way.
+   *
+   * Calendar mode is unaffected; it has its own fixed weekday gutter.
+   */
+  @property({ converter: rowLabelWidthConverter, attribute: 'row-label-width', reflect: true })
+  rowLabelWidth?: number | 'auto';
+
+  /** Height, in CSS px, of the matrix column-label band. Unset keeps the built-in 20px. */
+  @property({ type: Number, attribute: 'col-label-height' }) colLabelHeight?: number;
+
+  /** Gutter resolved during the last draw, so hit-testing between draws agrees with what was
+   *  painted. Only ever differs from the default while `rowLabelWidth="auto"`. */
+  private resolvedRowLabelWidth = PAD_LEFT;
+
+  // `finiteNumber(value, fallback)` returns 0 when *both* are non-finite, so it must be handed a
+  // finite fallback -- passing NaN as the fallback to mean "unset" collapsed the gutter to 0 and
+  // repainted every matrix flush against its own row labels.
+  private get matrixPadLeft(): number {
+    if (this.rowLabelWidth === 'auto') return this.resolvedRowLabelWidth;
+    if (typeof this.rowLabelWidth !== 'number') return PAD_LEFT;
+    const resolved = finiteNumber(this.rowLabelWidth, PAD_LEFT);
+    return resolved >= 0 ? resolved : PAD_LEFT;
+  }
+
+  private get matrixPadTop(): number {
+    if (typeof this.colLabelHeight !== 'number') return PAD_TOP;
+    const resolved = finiteNumber(this.colLabelHeight, PAD_TOP);
+    return resolved >= 0 ? resolved : PAD_TOP;
+  }
+
+  /** Widest row label plus insets, floored at the built-in gutter and capped so labels can never
+   *  crowd out the matrix itself. Measured against the same font the labels are drawn with. */
+  private measureRowLabelWidth(cs: CSSStyleDeclaration): number {
+    const labels = this.matrixRowLabels;
+    if (labels.length === 0) return PAD_LEFT;
+    const ctx = getScratchCtx(this.ownerDocument);
+    if (!ctx) return PAD_LEFT;
+    ctx.font = this.labelFont(cs);
+    let widest = 0;
+    for (const label of labels) widest = Math.max(widest, ctx.measureText(label).width);
+    const hostWidth = this.clientWidth || 0;
+    const cap = hostWidth > 0 ? hostWidth * MAX_ROW_LABEL_FRACTION : Number.POSITIVE_INFINITY;
+    return Math.min(Math.max(PAD_LEFT, Math.ceil(widest) + ROW_LABEL_INSET * 2), cap);
+  }
+
+  /** Trims `label` to fit `maxWidth`, ending in an ellipsis. Returns `''` when not even one
+   *  character plus the ellipsis fits, which is honest: a single clipped glyph reads as data. */
+  private ellipsize(ctx: CanvasRenderingContext2D, label: string, maxWidth: number): string {
+    if (maxWidth <= 0) return '';
+    if (ctx.measureText(label).width <= maxWidth) return label;
+    const characters = [...label];
+    let kept = characters.length - 1;
+    while (kept > 0) {
+      const candidate = `${characters.slice(0, kept).join('')}…`;
+      if (ctx.measureText(candidate).width <= maxWidth) return candidate;
+      kept -= 1;
+    }
+    return ctx.measureText('…').width <= maxWidth ? '…' : '';
+  }
+
   private get matrixRowLabels(): readonly string[] {
     return this.cachedMatrixData.rowLabels;
   }
@@ -751,7 +843,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * on every draw (including ResizeObserver-triggered redraws) instead of
    * the fixed `cell-size` attribute, so the grid actually fills the
    * available width. Without this, canvas dimensions are computed purely
-   * from `PAD_LEFT + cols * cellSize` (matrix mode) or
+   * from `matrixPadLeft + cols * cellSize` (matrix mode) or
    * `CAL_PAD_LEFT + weekCount * cellSize` (calendar mode), so a
    * resize-triggered redraw is a geometric no-op. Originally matrix-mode
    * only; now applies to calendar mode too.
@@ -2413,8 +2505,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   private matrixCellSize(cols: number): number {
     let size: number;
     if (this.fitToWidth && cols > 0) {
-      const hostWidth = this.clientWidth || PAD_LEFT + cols * this.cellSize;
-      size = this.clampFitCellSize((hostWidth - PAD_LEFT) / cols);
+      const padLeft = this.matrixPadLeft;
+      const hostWidth = this.clientWidth || padLeft + cols * this.cellSize;
+      size = this.clampFitCellSize((hostWidth - padLeft) / cols);
     } else {
       size = this.cellSize;
     }
@@ -2453,8 +2546,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       );
     }
     ctx.fillRect(
-      PAD_LEFT + col * cellSize,
-      PAD_TOP + row * cellSize,
+      this.matrixPadLeft + col * cellSize,
+      this.matrixPadTop + row * cellSize,
       cellSize - 1,
       cellSize - 1
     );
@@ -2467,8 +2560,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     cellSize: number,
     cs: CSSStyleDeclaration
   ): void {
-    const x = PAD_LEFT + col * cellSize;
-    const y = PAD_TOP + row * cellSize;
+    const x = this.matrixPadLeft + col * cellSize;
+    const y = this.matrixPadTop + row * cellSize;
     if (this.cachedMatrixAnnotationPositions.has(`${row}:${col}`)) {
       this.strokeCellState(
         ctx,
@@ -2513,8 +2606,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (pos.row < 0 || pos.row >= rows || pos.col < 0 || pos.col >= cols)
       return;
     const cellSize = this.matrixCellSize(cols);
-    const x = PAD_LEFT + pos.col * cellSize;
-    const y = PAD_TOP + pos.row * cellSize;
+    const x = this.matrixPadLeft + pos.col * cellSize;
+    const y = this.matrixPadTop + pos.row * cellSize;
     const ctx = this.canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(
@@ -2676,9 +2769,16 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (!this.canvas) return;
     const rows = this.matrixRowLabels.length;
     const cols = this.matrixColLabels.length;
+    // Resolve the gutter before anything reads it: cell size, canvas size, cell geometry and
+    // hit-testing all derive from it, so it has to settle first and then stay put for the frame.
+    if (this.rowLabelWidth === 'auto') {
+      this.resolvedRowLabelWidth = this.measureRowLabelWidth(getComputedStyle(this));
+    }
+    const padLeft = this.matrixPadLeft;
+    const padTop = this.matrixPadTop;
     const cellSize = this.matrixCellSize(cols);
-    const w = PAD_LEFT + cols * cellSize;
-    const h = PAD_TOP + rows * cellSize;
+    const w = padLeft + cols * cellSize;
+    const h = padTop + rows * cellSize;
     const dpr = this.ownerDocument.defaultView?.devicePixelRatio || 1;
     this.canvas.width = w * dpr;
     this.canvas.height = h * dpr;
@@ -2706,8 +2806,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const v = this.matrixValues[r]?.[c] ?? Number.NaN;
-        const x = PAD_LEFT + c * cellSize;
-        const y = PAD_TOP + r * cellSize;
+        const x = padLeft + c * cellSize;
+        const y = padTop + r * cellSize;
         const override = this.cellColor?.({ row: r, col: c }, v);
         if (override != null) {
           ctx.fillStyle = this.resolveCanvasColor(override, cs);
@@ -2748,8 +2848,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         if (ann.row == null || ann.col == null) continue;
         if (ann.row < 0 || ann.row >= rows || ann.col < 0 || ann.col >= cols)
           continue;
-        const x = PAD_LEFT + ann.col * cellSize;
-        const y = PAD_TOP + ann.row * cellSize;
+        const x = padLeft + ann.col * cellSize;
+        const y = padTop + ann.row * cellSize;
         this.strokeCellState(
           ctx,
           x,
@@ -2767,8 +2867,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (this.selectedCell?.row != null && this.selectedCell.col != null) {
       const { row, col } = this.selectedCell;
       if (row >= 0 && row < rows && col >= 0 && col < cols) {
-        const x = PAD_LEFT + col * cellSize;
-        const y = PAD_TOP + row * cellSize;
+        const x = padLeft + col * cellSize;
+        const y = padTop + row * cellSize;
         this.strokeCellState(
           ctx,
           x,
@@ -2787,8 +2887,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (this.focusedCell && 'row' in this.focusedCell) {
       const { row, col } = this.focusedCell;
       if (row < rows && col < cols) {
-        const x = PAD_LEFT + col * cellSize;
-        const y = PAD_TOP + row * cellSize;
+        const x = padLeft + col * cellSize;
+        const y = padTop + row * cellSize;
         this.strokeCellState(
           ctx,
           x,
@@ -2802,11 +2902,15 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
     ctx.fillStyle = this.labelColor(cs);
     ctx.font = this.labelFont(cs);
+    const rowLabelSpace = padLeft - ROW_LABEL_INSET * 2;
     this.matrixRowLabels.forEach((label, r) => {
-      ctx.fillText(label, 4, PAD_TOP + r * cellSize + cellSize / 2 + 3);
+      // Truncate rather than clip: a label cut mid-glyph by whatever is painted beside it looks
+      // like a rendering fault, while an ellipsis reads as "there is more here".
+      const shown = this.ellipsize(ctx, label, rowLabelSpace);
+      if (shown) ctx.fillText(shown, ROW_LABEL_INSET, padTop + r * cellSize + cellSize / 2 + 3);
     });
     this.matrixColLabels.forEach((label, c) => {
-      ctx.fillText(label, PAD_LEFT + c * cellSize + 2, PAD_TOP - 6);
+      ctx.fillText(label, padLeft + c * cellSize + 2, padTop - 6);
     });
     this.canvasHasContent = true;
   }
@@ -2828,8 +2932,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const cols = this.matrixColLabels.length;
     if (rows === 0 || cols === 0) return null;
     const cellSize = this.matrixCellSize(cols);
-    const col = Math.floor((x - PAD_LEFT) / cellSize);
-    const row = Math.floor((y - PAD_TOP) / cellSize);
+    // Same resolved gutter the frame was painted with -- a hit test against the old fixed 60
+    // would map every click to the wrong column as soon as the gutter auto-sized.
+    const col = Math.floor((x - this.matrixPadLeft) / cellSize);
+    const row = Math.floor((y - this.matrixPadTop) / cellSize);
     if (row < 0 || row >= rows || col < 0 || col >= cols) return null;
     const pos = { row, col };
     return this.isCellInteractive(pos) ? pos : null;
@@ -2980,8 +3086,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     }
     const cellSize = this.matrixCellSize(this.matrixColLabels.length);
     return {
-      x: PAD_LEFT + pos.col * cellSize,
-      y: PAD_TOP + pos.row * cellSize,
+      x: this.matrixPadLeft + pos.col * cellSize,
+      y: this.matrixPadTop + pos.row * cellSize,
       w: cellSize - 1,
       h: cellSize - 1,
     };

@@ -85,15 +85,23 @@ option layout and defaults to `--lr-checkbox-group-option-gap`.
 `--lr-checkbox-group-invalid-border` (default `var(--lr-color-danger)`) independently retints the
 invalid option-collection border without changing other danger-colored surfaces.
 
-**`value` is a readonly defensive read-out of child state, not an input.** The children are the
-single source of truth. An internal sync recomputes `value` on every child toggle, programmatic
-child `checked`/`value`/`disabled` update, `slotchange`, `name`/`required` change, blur, and
-`form.reset()`. Mutating an obtained array cannot mutate the group.
+**`value` reads as a frozen defensive snapshot of child state, and assigning it mirrors back onto
+the children.** The children remain the single source of truth. An internal sync recomputes `value`
+on every child toggle, programmatic child `checked`/`value`/`disabled` update, `slotchange`,
+`name`/`required` change, blur, and `form.reset()`. Mutating an obtained array cannot mutate the
+group — assign a new array instead.
 Only a checkbox whose nearest `lr-checkbox-group` ancestor is this group contributes; a nested
 group owns its own descendants and form entries. `connectedCallback()` runs that sync before the
 first render.
 
-- **To preselect**, set `checked` on the children: `<lr-checkbox value="a" checked>`.
+Assigning checks every child whose `value` (defaulting to `'on'`) appears in the array and unchecks
+every other one; duplicate entries check that many same-valued children, and values naming no child
+are ignored. `null`/`undefined` clear the selection. It is controlled input, so it emits no
+`lr-change` — only user interaction does. An assignment made before the children exist (the shape of
+a `.value=${...}` binding on first render) is applied once they arrive.
+
+- **To preselect**, either set `checked` on the children (`<lr-checkbox value="a" checked>`) or
+  assign the group's `value`.
 - **To read the selection**, use this property or the `lr-change` event detail.
 - **Give every child a distinct `value`.** `<lr-checkbox>`'s `value` defaults to `'on'`, so a group
   of undifferentiated children submits several identical `FormData` entries and the submitted data

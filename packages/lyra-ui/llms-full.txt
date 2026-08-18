@@ -6262,7 +6262,12 @@ than adding outer padding around the buttons.
 - `value: string` (also accepts a `Date` or `null` when assigned) — strict `HH:mm`, optional
   `:ss`/`.sss`; `Date` reads local clock fields without timezone conversion. Invalid strings and
   `null` normalize to `''`. `valueAsNumber` is milliseconds since midnight (`NaN` while blank),
-  and `valueAsDate` applies the clock fields to today's local date (`null` while blank).
+  and `valueAsDate` applies the clock fields to today's local date (`null` while blank). Both are
+  settable, like the native `<input type="time">` properties they mirror: assigning `valueAsNumber`
+  sets `value` from the same scale, and out-of-range or non-finite figures clear the field rather
+  than wrapping into a different time; assigning `valueAsDate` reads the same local clock fields
+  back off the Date, so it round-trips with the getter, and `null`/an invalid Date clears. Both
+  assignments are silent, again like the native properties.
 - `defaultValue`, `name`, `form`, `disabled`, `required`, `customError`, `getForm()`,
   `checkValidity()`, `reportValidity()`, `setCustomValidity()`, and `resetValidity()` use the shared form-control
   contract. Reset restores the current declarative `value` default; `readonly` remains focusable
@@ -8112,15 +8117,23 @@ option layout and defaults to `--lr-checkbox-group-option-gap`.
 `--lr-checkbox-group-invalid-border` (default `var(--lr-color-danger)`) independently retints the
 invalid option-collection border without changing other danger-colored surfaces.
 
-**`value` is a readonly defensive read-out of child state, not an input.** The children are the
-single source of truth. An internal sync recomputes `value` on every child toggle, programmatic
-child `checked`/`value`/`disabled` update, `slotchange`, `name`/`required` change, blur, and
-`form.reset()`. Mutating an obtained array cannot mutate the group.
+**`value` reads as a frozen defensive snapshot of child state, and assigning it mirrors back onto
+the children.** The children remain the single source of truth. An internal sync recomputes `value`
+on every child toggle, programmatic child `checked`/`value`/`disabled` update, `slotchange`,
+`name`/`required` change, blur, and `form.reset()`. Mutating an obtained array cannot mutate the
+group — assign a new array instead.
 Only a checkbox whose nearest `lr-checkbox-group` ancestor is this group contributes; a nested
 group owns its own descendants and form entries. `connectedCallback()` runs that sync before the
 first render.
 
-- **To preselect**, set `checked` on the children: `<lr-checkbox value="a" checked>`.
+Assigning checks every child whose `value` (defaulting to `'on'`) appears in the array and unchecks
+every other one; duplicate entries check that many same-valued children, and values naming no child
+are ignored. `null`/`undefined` clear the selection. It is controlled input, so it emits no
+`lr-change` — only user interaction does. An assignment made before the children exist (the shape of
+a `.value=${...}` binding on first render) is applied once they arrive.
+
+- **To preselect**, either set `checked` on the children (`<lr-checkbox value="a" checked>`) or
+  assign the group's `value`.
 - **To read the selection**, use this property or the `lr-change` event detail.
 - **Give every child a distinct `value`.** `<lr-checkbox>`'s `value` defaults to `'on'`, so a group
   of undifferentiated children submits several identical `FormData` entries and the submitted data
@@ -10651,6 +10664,17 @@ weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
   measured `clientWidth` on every draw/resize instead of the fixed `cell-size`, so the grid actually
   fills the available width; now applies to calendar mode as well as matrix mode — see gotchas for
   the default, non-`fit-to-width` behavior)
+- `rowLabelWidth?: number | 'auto'` (attribute `row-label-width`, reflected) — width, in CSS px, of
+  the **matrix** row-label gutter, or `'auto'` to measure the widest label and size the gutter to
+  fit (never below the built-in `60`, never above 40% of the host width, so one long label cannot
+  squeeze out the cells it describes). Unset keeps the built-in `60`, so no existing chart reflows.
+  Independently of this, a label too wide for the resolved gutter is truncated with an ellipsis
+  rather than clipped mid-glyph — clipping read as a rendering fault, truncation reads as "there is
+  more here". `cellText` still carries the full label to the tooltip and the keyboard announcement.
+  A malformed value is ignored rather than collapsing the gutter. Calendar mode is unaffected; it
+  has its own fixed weekday gutter
+- `colLabelHeight?: number` (attribute `col-label-height`) — height, in CSS px, of the matrix
+  column-label band. Unset keeps the built-in `20`
 - `maxCellSize?: number` (attribute `max-cell-size`) — ceiling, in CSS px, on the cell size
   `fitToWidth` derives from the host width, in **both** modes. Exists because `fitToWidth` divides
   the _whole_ host width across the grid, so a 5-week calendar or a 3-column matrix in a wide pane
@@ -21605,6 +21629,17 @@ GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
   persists across a `dataLayers` reassignment gets its GeoJSON updated in place (`setData()`), one
   that's dropped has its private source/layers removed, and a genuinely new `sourceId` gets new
   resources — nothing leaks on removal, style change, or disconnect.
+**Feature properties are tiled, and therefore bounded in numeric magnitude.** MapLibre GL tiles
+every GeoJSON source through a worker into a protobuf vector tile, so a property carrying a huge
+integer throws *inside that worker* — "Given varint doesn't fit into 10 bytes". That throw is not
+catchable by your app and not a rejected promise; it reaches you only as an opaque message on
+`lr-map`'s own error handler, while the rest of the layer still paints, so one bad feature in a
+large collection is invisible until someone walks the data by hand. Both `choropleth.geojson` and
+`dataLayers[].geojson` are now pre-scanned (first 10,000 features) and any numeric property beyond
+`Number.MAX_SAFE_INTEGER` draws a dev-mode warning naming the feature and the property. Carry a
+reduced figure in the feature — a log, a bucket, an index — and keep the exact value in your own
+payload beside the map.
+
 - `label: string = ''` — purpose-specific accessible name for MapLibre's actual focusable canvas.
   A nonempty host `aria-label` remains on the host and is not duplicated onto the canvas; the canvas
   uses `label` or the localized map name. An explicitly empty host `aria-label` is preserved as an
@@ -21627,9 +21662,13 @@ shared `maplibre-gl` import without constructing a map or allocating a WebGL con
 an element.
 
 **Events:** `lr-map-load` (fired once, after the underlying map's own `'load'`), `lr-map-click`
-(frozen `detail: { readonly lngLat: readonly [lng, lat], readonly feature? }`; the tuple and any
-hit GeoJSON feature are detached and recursively frozen — feature is only populated if a
-choropleth fill layer exists and was hit)
+(frozen `detail: { readonly lngLat: readonly [lng, lat], readonly feature?, readonly origin?,
+readonly sourceId? }`; the tuple and any hit GeoJSON feature are detached and recursively frozen).
+`feature` resolves against the choropleth fill layer **and** every applied `dataLayers`
+fill/line/circle layer, topmost first — so a shape painted through `dataLayers` is identifiable
+instead of being indistinguishable from empty space. `origin` is `'choropleth'` or `'data-layer'`,
+and `sourceId` carries the authored `dataLayers[].sourceId` for a data-layer hit; both are
+`undefined` whenever `feature` is
 
 **Slots:** `legend` — custom legend content, rendered inside the legend panel's own layout so it
 stays positioned with the map instead of floating beside it. Supplying it opens the panel even

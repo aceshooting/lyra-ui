@@ -3,6 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import type { Feature, FeatureCollection } from 'geojson';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -397,11 +398,65 @@ function dataLayerColor(host: Element, tone: LyraMapGeoJsonDataLayer['tone']): s
   return raw || '#0969da';
 }
 
+/** How many features one `warnOnUntileableProperties()` pass inspects. Every GeoJSON source is
+ *  re-scanned on each apply, so this stays bounded for the same reason the rest of this component
+ *  bounds consumer input: a diagnostic must not become the expensive part of a redraw. */
+const UNTILEABLE_SCAN_FEATURE_LIMIT = 10_000;
+
+/**
+ * Warns once per (source, property) when a feature property carries an integer too large to be
+ * tiled.
+ *
+ * maplibre-gl tiles every GeoJSON source through a worker into a protobuf vector tile, and a
+ * property whose integer magnitude overflows a varint throws *inside that worker* -- "Given varint
+ * doesn't fit into 10 bytes". That is not catchable by the consuming app and not a rejected
+ * promise; it surfaces only as an opaque message on this component's own `error` handler, while
+ * the rest of the layer still paints. A single bad feature in a large collection is therefore
+ * invisible until someone walks the data by hand.
+ *
+ * The bound is `Number.MAX_SAFE_INTEGER`, which is stricter than the varint limit on purpose:
+ * beyond it a JavaScript number has already lost integer identity, so a value that large is not
+ * round-tripping through tiling intact under any encoding. Values that big belong in the
+ * application beside the layer, not in the layer -- carry a reduced figure (a log, a bucket) in
+ * the feature and keep the exact one in your own payload.
+ */
+function warnOnUntileableProperties(geojson: unknown, sourceLabel: string): void {
+  const features = (geojson as { features?: unknown })?.features;
+  if (!Array.isArray(features)) return;
+  const limit = Math.min(features.length, UNTILEABLE_SCAN_FEATURE_LIMIT);
+  for (let index = 0; index < limit; index += 1) {
+    const feature = features[index] as
+      | { id?: unknown; properties?: Record<string, unknown> | null }
+      | undefined;
+    const properties = feature?.properties;
+    if (!properties || typeof properties !== 'object') continue;
+    for (const [key, value] of Object.entries(properties)) {
+      if (typeof value !== 'number' || !Number.isFinite(value)) continue;
+      if (Math.abs(value) <= Number.MAX_SAFE_INTEGER) continue;
+      const identity = feature?.id ?? `index ${index}`;
+      devWarnOnce(
+        `lyra-map-untileable-property:${sourceLabel}:${key}`,
+        `<lr-map>: feature ${String(identity)} in "${sourceLabel}" carries ${key}=${value}, which is `
+          + 'too large to survive maplibre-gl\'s vector-tile encoding. Tiling happens in a worker, '
+          + 'so the failure would reach you only as an opaque "Given varint doesn\'t fit into 10 '
+          + 'bytes" error while the rest of the layer still paints. Carry a reduced figure in the '
+          + 'feature and keep the exact value in your own data.'
+      );
+    }
+  }
+}
+
 export interface LyraMapEventMap {
   'lr-map-load': CustomEvent<null>;
   'lr-map-click': CustomEvent<{
     readonly lngLat: readonly [number, number];
     readonly feature: Feature | undefined;
+    /** Which layer `feature` was hit on, so a click is attributable when both a choropleth and
+     *  `dataLayers` are painted. `undefined` whenever `feature` is. */
+    readonly origin: 'choropleth' | 'data-layer' | undefined;
+    /** The authored `dataLayers[].sourceId` the hit belongs to; `undefined` for a choropleth hit
+     *  (which has only one possible source) and when nothing was hit. */
+    readonly sourceId: string | undefined;
   }>;
 }
 /**
@@ -435,7 +490,9 @@ export interface LyraMapEventMap {
  *
  * @customElement lr-map
  * @event lr-map-load - Fired once the underlying maplibregl.Map loads.
- * @event lr-map-click - `detail: { lngLat, feature? }`.
+ * @event lr-map-click - `detail: { lngLat, feature?, origin?, sourceId? }`. `feature` resolves
+ *   against the choropleth fill *and* every applied `dataLayers` fill/line/circle layer, topmost
+ *   first; `origin`/`sourceId` name where it came from.
  * @csspart base - The non-semantic map wrapper. It exposes `aria-busy="true"` while the optional
  *   map library loads and contains ordinary, non-live localized loading text.
  * @csspart container - The MapLibre container. Its generated canvas is the actual focusable map
@@ -925,14 +982,46 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       });
       candidate.on('click', (event) => {
         if (this._map !== candidate) return;
+        // Query the choropleth fill *and* every applied dataLayers layer. Querying only the
+        // choropleth made a click on a `dataLayers` polygon indistinguishable from a click on
+        // empty ocean -- `feature: undefined` either way -- which broke the very pattern the two
+        // properties invite: choropleth for features that have a value, a data layer for features
+        // that exist but have none. maplibre-gl returns hits topmost-first, and data layers are
+        // added after the choropleth, so the visually-topmost shape wins on overlap.
         const fillLayerId = this._appliedFillLayerId;
-        const features =
-          fillLayerId && candidate!.getLayer(fillLayerId)
-            ? candidate!.queryRenderedFeatures(event.point, { layers: [fillLayerId] })
-            : [];
+        const layerIds: string[] = [];
+        if (fillLayerId && candidate!.getLayer(fillLayerId)) layerIds.push(fillLayerId);
+        for (const resolvedSourceId of this._appliedDataLayerIds.values()) {
+          for (const suffix of ['-fill', '-line', '-circle']) {
+            const layerId = `${resolvedSourceId}${suffix}`;
+            if (candidate!.getLayer(layerId)) layerIds.push(layerId);
+          }
+        }
+        const features = layerIds.length
+          ? candidate!.queryRenderedFeatures(event.point, { layers: layerIds })
+          : [];
+        const hit = features[0] as (Feature & { layer?: { id?: string } }) | undefined;
+        const hitLayerId = hit?.layer?.id;
+        let origin: 'choropleth' | 'data-layer' | undefined;
+        let sourceId: string | undefined;
+        if (hitLayerId !== undefined) {
+          if (hitLayerId === fillLayerId) {
+            origin = 'choropleth';
+          } else {
+            for (const [publicSourceId, resolvedSourceId] of this._appliedDataLayerIds) {
+              // The trailing dash keeps a resolved id that merely prefixes another from matching.
+              if (!hitLayerId.startsWith(`${resolvedSourceId}-`)) continue;
+              origin = 'data-layer';
+              sourceId = publicSourceId;
+              break;
+            }
+          }
+        }
         this.emit('lr-map-click', {
           lngLat: [event.lngLat.lng, event.lngLat.lat],
-          feature: features[0] as Feature | undefined,
+          feature: hit as Feature | undefined,
+          origin,
+          sourceId,
         });
       });
       const canvas = candidate.getCanvas?.() as HTMLCanvasElement | undefined;
@@ -1069,6 +1158,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this.removeChoropleth();
     }
 
+    warnOnUntileableProperties(geojson, 'choropleth');
     const existingSource = this._map.getSource(sourceId) as MapLibreGeoJsonSource | undefined;
     if (existingSource) {
       // Re-apply the data even if the color expression below ends up skipped:
@@ -1164,6 +1254,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     for (const layer of layers) {
       const { sourceId: publicSourceId, geojson, tone } = layer;
       const sourceId = this.resolveDataLayerSourceId(publicSourceId);
+      warnOnUntileableProperties(geojson, publicSourceId);
       const existingSource = this._map.getSource(sourceId) as MapLibreGeoJsonSource | undefined;
       if (existingSource) {
         existingSource.setData(geojson);

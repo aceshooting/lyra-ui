@@ -1683,3 +1683,79 @@ describe('lr-time-input disabled segment hover/press feedback', () => {
     }
   });
 });
+
+// Every other value-bearing control here -- lr-input, lr-date-picker, lr-slider, lr-known-date --
+// ships setters alongside these getters, and the native `<input type="time">` this mirrors accepts
+// both. lr-time-input was the only one that did not, so `el.valueAsNumber = ms` threw
+// "only a getter" in strict mode and silently no-opped otherwise.
+describe('valueAsNumber / valueAsDate assignment', () => {
+  const blank = () => fixture(html`<lr-time-input></lr-time-input>`) as Promise<LyraTimeInput>;
+
+  it('sets the value from milliseconds since local midnight', async () => {
+    const el = await blank();
+    el.valueAsNumber = 13 * 3_600_000 + 45 * 60_000;
+    await el.updateComplete;
+
+    expect(el.value).to.equal('13:45');
+    expect(el.valueAsNumber).to.equal(13 * 3_600_000 + 45 * 60_000);
+  });
+
+  it('keeps seconds and milliseconds when the assigned figure carries them', async () => {
+    const el = await blank();
+    el.valueAsNumber = 60_000 + 2_000 + 345;
+    await el.updateComplete;
+
+    expect(el.value).to.equal('00:01:02.345');
+  });
+
+  it('clears rather than wrapping an out-of-range or non-finite assignment', async () => {
+    for (const invalid of [-1, 24 * 3_600_000, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const el = await blank();
+      el.valueAsNumber = 9 * 3_600_000;
+      await el.updateComplete;
+      el.valueAsNumber = invalid;
+      await el.updateComplete;
+
+      expect(el.value, `${invalid} must clear, not wrap`).to.equal('');
+    }
+  });
+
+  it('round-trips a Date through valueAsDate using local clock fields', async () => {
+    const el = await blank();
+    const source = new Date();
+    source.setHours(7, 8, 9, 0);
+    el.valueAsDate = source;
+    await el.updateComplete;
+
+    expect(el.value).to.equal('07:08:09');
+    const read = el.valueAsDate!;
+    expect([read.getHours(), read.getMinutes(), read.getSeconds()]).to.deep.equal([7, 8, 9]);
+  });
+
+  it('clears on a null or invalid Date', async () => {
+    for (const invalid of [null, new Date(Number.NaN)]) {
+      const el = await blank();
+      el.valueAsDate = new Date(2024, 0, 1, 5, 30);
+      await el.updateComplete;
+      el.valueAsDate = invalid;
+      await el.updateComplete;
+
+      expect(el.value).to.equal('');
+    }
+  });
+
+  it('assignment is silent, like the native property', async () => {
+    const el = await blank();
+    let events = 0;
+    for (const type of ['lr-change', 'lr-input', 'change', 'input']) {
+      el.addEventListener(type, () => {
+        events += 1;
+      });
+    }
+
+    el.valueAsNumber = 3_600_000;
+    await el.updateComplete;
+
+    expect(events).to.equal(0);
+  });
+});

@@ -2353,7 +2353,12 @@ than adding outer padding around the buttons.
 - `value: string` (also accepts a `Date` or `null` when assigned) — strict `HH:mm`, optional
   `:ss`/`.sss`; `Date` reads local clock fields without timezone conversion. Invalid strings and
   `null` normalize to `''`. `valueAsNumber` is milliseconds since midnight (`NaN` while blank),
-  and `valueAsDate` applies the clock fields to today's local date (`null` while blank).
+  and `valueAsDate` applies the clock fields to today's local date (`null` while blank). Both are
+  settable, like the native `<input type="time">` properties they mirror: assigning `valueAsNumber`
+  sets `value` from the same scale, and out-of-range or non-finite figures clear the field rather
+  than wrapping into a different time; assigning `valueAsDate` reads the same local clock fields
+  back off the Date, so it round-trips with the getter, and `null`/an invalid Date clears. Both
+  assignments are silent, again like the native properties.
 - `defaultValue`, `name`, `form`, `disabled`, `required`, `customError`, `getForm()`,
   `checkValidity()`, `reportValidity()`, `setCustomValidity()`, and `resetValidity()` use the shared form-control
   contract. Reset restores the current declarative `value` default; `readonly` remains focusable
@@ -4203,15 +4208,23 @@ option layout and defaults to `--lr-checkbox-group-option-gap`.
 `--lr-checkbox-group-invalid-border` (default `var(--lr-color-danger)`) independently retints the
 invalid option-collection border without changing other danger-colored surfaces.
 
-**`value` is a readonly defensive read-out of child state, not an input.** The children are the
-single source of truth. An internal sync recomputes `value` on every child toggle, programmatic
-child `checked`/`value`/`disabled` update, `slotchange`, `name`/`required` change, blur, and
-`form.reset()`. Mutating an obtained array cannot mutate the group.
+**`value` reads as a frozen defensive snapshot of child state, and assigning it mirrors back onto
+the children.** The children remain the single source of truth. An internal sync recomputes `value`
+on every child toggle, programmatic child `checked`/`value`/`disabled` update, `slotchange`,
+`name`/`required` change, blur, and `form.reset()`. Mutating an obtained array cannot mutate the
+group — assign a new array instead.
 Only a checkbox whose nearest `lr-checkbox-group` ancestor is this group contributes; a nested
 group owns its own descendants and form entries. `connectedCallback()` runs that sync before the
 first render.
 
-- **To preselect**, set `checked` on the children: `<lr-checkbox value="a" checked>`.
+Assigning checks every child whose `value` (defaulting to `'on'`) appears in the array and unchecks
+every other one; duplicate entries check that many same-valued children, and values naming no child
+are ignored. `null`/`undefined` clear the selection. It is controlled input, so it emits no
+`lr-change` — only user interaction does. An assignment made before the children exist (the shape of
+a `.value=${...}` binding on first render) is applied once they arrive.
+
+- **To preselect**, either set `checked` on the children (`<lr-checkbox value="a" checked>`) or
+  assign the group's `value`.
 - **To read the selection**, use this property or the `lr-change` event detail.
 - **Give every child a distinct `value`.** `<lr-checkbox>`'s `value` defaults to `'on'`, so a group
   of undifferentiated children submits several identical `FormData` entries and the submitted data

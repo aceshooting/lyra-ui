@@ -187,6 +187,8 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   private _value: string[] = [];
   private _warnedDuplicateValues = new Set<string>();
   private pendingRestoreValues?: string[];
+  /** A `value` assignment made before any checkbox child existed; applied on the next slotchange. */
+  private pendingValues?: string[];
   private childObserver?: MutationObserver;
   private childObserverDocument?: Document;
   private childObserverGeneration = 0;
@@ -206,9 +208,34 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.requestUpdate('name', old);
   }
 
-  /** Readonly defensive snapshot of checked child values, in DOM order. Selection is controlled
-   * through each child's `checked` state. */
+  /** Checked child values, in DOM order. Reading returns a frozen defensive snapshot, so mutating
+   *  the returned array never changes the group -- assign a new array instead.
+   *
+   *  Assigning mirrors the array onto the owned checkboxes: a child whose `value` (defaulting to
+   *  `'on'`) appears in the array becomes checked, every other child becomes unchecked, and
+   *  duplicate entries check that many same-valued children. Assignment is controlled input, so it
+   *  emits no `lr-change`; only user interaction does. Values naming no child are ignored.
+   *
+   *  This used to be a getter with no setter. Reading it was fine, but `.value=${...}` -- the
+   *  binding every other form control in this library accepts -- compiles to a plain property
+   *  assignment that `readonly` cannot catch at the binding site, so it threw
+   *  "Cannot set property value ... which has only a getter" from inside lit-html during a *later*
+   *  render, pointing at framework internals rather than the offending line. */
   get value(): readonly string[] { return Object.freeze([...this._value]); }
+
+  set value(next: readonly string[] | null | undefined) {
+    const requested = Array.isArray(next)
+      ? next.filter((entry): entry is string => typeof entry === 'string')
+      : [];
+    // Children may not have upgraded yet -- a template binding runs before slotted content is
+    // assigned. Defer exactly like a form restore does, and let the slotchange pass apply it.
+    if (this.boxes.length === 0) {
+      this.pendingValues = requested;
+      return;
+    }
+    this.pendingValues = undefined;
+    this.applyValues(requested);
+  }
 
   get required(): boolean { return this._required; }
   set required(next: boolean) {
@@ -442,25 +469,43 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.hasHintSlot = this.hasDirectSupportSlot('hint');
     this.hasErrorSlot = this.hasDirectSupportSlot('error');
     this.reconcileChildControllers();
-    if (!this.applyPendingRestore()) this.sync();
+    if (!this.applyPendingRestore() && !this.applyPendingValues()) this.sync();
     this.propagateDisabled();
     this.propagateSize();
   };
 
-  /** Applies a restore only once real option children exist; FACE callbacks may run before them. */
-  private applyPendingRestore(): boolean {
-    if (this.pendingRestoreValues === undefined || this.boxes.length === 0) return false;
-    const remaining = [...this.pendingRestoreValues];
-    this.pendingRestoreValues = undefined;
+  /** Checks exactly the children named by `values`, matching duplicates one-for-one, then re-syncs
+   *  the owned value/validity. Shared by the `value` setter and by form restore. */
+  private applyValues(values: readonly string[]): void {
+    const remaining = [...values];
     for (const box of this.boxes) {
       const value = box.value ?? 'on';
       const index = remaining.indexOf(value);
       box.checked = index >= 0;
       if (index >= 0) remaining.splice(index, 1);
     }
+    this.sync();
+  }
+
+  /** Applies a restore only once real option children exist; FACE callbacks may run before them. */
+  private applyPendingRestore(): boolean {
+    if (this.pendingRestoreValues === undefined || this.boxes.length === 0) return false;
+    const values = this.pendingRestoreValues;
+    this.pendingRestoreValues = undefined;
+    // A restore is not user interaction, so it clears the interacted flags; a plain `value`
+    // assignment deliberately does not.
     this.touched = false;
     this.hasInteracted = false;
-    this.sync();
+    this.applyValues(values);
+    return true;
+  }
+
+  /** Applies a `value` assignment that arrived before any checkbox child existed. */
+  private applyPendingValues(): boolean {
+    if (this.pendingValues === undefined || this.boxes.length === 0) return false;
+    const values = this.pendingValues;
+    this.pendingValues = undefined;
+    this.applyValues(values);
     return true;
   }
 

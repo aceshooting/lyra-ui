@@ -1504,3 +1504,106 @@ it('contains long horizontal options in an exact 320px RTL allocation', async ()
   expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
   expect(options.scrollWidth).to.be.at.most(options.clientWidth);
 });
+
+// `value` was a getter with no setter. Reading worked, but `.value=${...}` -- the binding every
+// other form control here accepts -- compiles to a plain assignment `readonly` cannot catch at the
+// binding site, so it threw from inside lit-html on a *later* render, blaming framework internals.
+describe('value assignment', () => {
+  const threeBoxes = () =>
+    fixture(html`
+      <lr-checkbox-group name="picks">
+        <lr-checkbox value="a">A</lr-checkbox>
+        <lr-checkbox value="b">B</lr-checkbox>
+        <lr-checkbox value="c">C</lr-checkbox>
+      </lr-checkbox-group>
+    `) as Promise<LyraCheckboxGroup>;
+
+  const checkedValues = (group: LyraCheckboxGroup) =>
+    [...group.querySelectorAll('lr-checkbox')]
+      .filter((box) => (box as LyraCheckbox).checked)
+      .map((box) => (box as LyraCheckbox).value);
+
+  it('mirrors an assigned array onto the owned checkboxes', async () => {
+    const group = await threeBoxes();
+    group.value = ['a', 'c'];
+    await group.updateComplete;
+
+    expect(checkedValues(group)).to.deep.equal(['a', 'c']);
+    expect([...group.value]).to.deep.equal(['a', 'c']);
+  });
+
+  it('unchecks everything an assignment omits, rather than merging', async () => {
+    const group = await threeBoxes();
+    group.value = ['a', 'b'];
+    await group.updateComplete;
+    group.value = ['c'];
+    await group.updateComplete;
+
+    expect(checkedValues(group)).to.deep.equal(['c']);
+  });
+
+  it('treats an empty array, null and undefined as clearing the selection', async () => {
+    for (const cleared of [[], null, undefined]) {
+      const group = await threeBoxes();
+      group.value = ['a', 'b'];
+      await group.updateComplete;
+      group.value = cleared as unknown as readonly string[];
+      await group.updateComplete;
+      expect(checkedValues(group), `cleared by ${JSON.stringify(cleared)}`).to.deep.equal([]);
+    }
+  });
+
+  it('ignores values naming no child', async () => {
+    const group = await threeBoxes();
+    group.value = ['a', 'nonexistent'];
+    await group.updateComplete;
+
+    expect(checkedValues(group)).to.deep.equal(['a']);
+  });
+
+  it('is controlled input: assignment reports the new value without emitting lr-change', async () => {
+    const group = await threeBoxes();
+    let changes = 0;
+    group.addEventListener('lr-change', () => {
+      changes += 1;
+    });
+
+    group.value = ['b'];
+    await group.updateComplete;
+
+    expect(changes, 'assignment must not echo a user event').to.equal(0);
+    expect([...group.value]).to.deep.equal(['b']);
+  });
+
+  it('applies an assignment made before the checkbox children exist', async () => {
+    // The exact shape of a template binding: the property lands while the group is still an empty
+    // fragment, so the deferral is what makes `.value=${...}` work at all on first render.
+    const group = document.createElement('lr-checkbox-group') as LyraCheckboxGroup;
+    group.value = ['b'];
+    for (const value of ['a', 'b', 'c']) {
+      const box = document.createElement('lr-checkbox') as LyraCheckbox;
+      box.value = value;
+      group.append(box);
+    }
+    document.body.append(group);
+    try {
+      await group.updateComplete;
+      await waitUntil(() => group.value.length > 0, 'deferred assignment applied');
+      expect(checkedValues(group)).to.deep.equal(['b']);
+    } finally {
+      group.remove();
+    }
+  });
+
+  it('keeps the read snapshot frozen and detached from the group', async () => {
+    const group = await threeBoxes();
+    group.value = ['a'];
+    await group.updateComplete;
+
+    const snapshot = group.value;
+    expect(Object.isFrozen(snapshot)).to.be.true;
+    group.value = ['c'];
+    await group.updateComplete;
+    expect([...snapshot], 'an earlier read must not track later assignments').to.deep.equal(['a']);
+  });
+});

@@ -30,7 +30,12 @@ than adding outer padding around the buttons.
 - `value: string` (also accepts a `Date` or `null` when assigned) — strict `HH:mm`, optional
   `:ss`/`.sss`; `Date` reads local clock fields without timezone conversion. Invalid strings and
   `null` normalize to `''`. `valueAsNumber` is milliseconds since midnight (`NaN` while blank),
-  and `valueAsDate` applies the clock fields to today's local date (`null` while blank).
+  and `valueAsDate` applies the clock fields to today's local date (`null` while blank). Both are
+  settable, like the native `<input type="time">` properties they mirror: assigning `valueAsNumber`
+  sets `value` from the same scale, and out-of-range or non-finite figures clear the field rather
+  than wrapping into a different time; assigning `valueAsDate` reads the same local clock fields
+  back off the Date, so it round-trips with the getter, and `null`/an invalid Date clears. Both
+  assignments are silent, again like the native properties.
 - `defaultValue`, `name`, `form`, `disabled`, `required`, `customError`, `getForm()`,
   `checkValidity()`, `reportValidity()`, `setCustomValidity()`, and `resetValidity()` use the shared form-control
   contract. Reset restores the current declarative `value` default; `readonly` remains focusable

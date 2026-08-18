@@ -7252,3 +7252,74 @@ describe("legendStops / colorSteps mismatch diagnostic", () => {
     ).to.be.false;
   });
 });
+
+// The row-label gutter was a hardcoded 60px with no measurement and no truncation, so a label
+// wider than it was clipped mid-word by whatever was painted beside it on the canvas -- which reads
+// as a rendering fault rather than as truncation. `cellText` carried the full name to the tooltip
+// and the keyboard announcement, but that is a mitigation for assistive tech, not a visual fix.
+describe("matrix row-label gutter", () => {
+  const LONG = "Bosnia and Herzegovina";
+
+  async function matrixWith(rowLabelWidth?: string): Promise<LyraHeatmap> {
+    const el = (await fixture(
+      html`<lr-heatmap cell-size="20"></lr-heatmap>`
+    )) as LyraHeatmap;
+    if (rowLabelWidth !== undefined) el.setAttribute("row-label-width", rowLabelWidth);
+    setMatrixData(el, { rowLabels: [LONG, "Chad"] });
+    setMatrixData(el, { colLabels: ["x", "y"] });
+    setMatrixData(el, { values: [[1, 2], [3, 4]] });
+    await el.updateComplete;
+    await aTimeout(0);
+    return el;
+  }
+
+  const canvasWidth = (el: LyraHeatmap): number =>
+    parseInt(
+      (el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement).style.width,
+      10
+    );
+
+  it("keeps the built-in 60px gutter by default, so no existing chart reflows", async () => {
+    const el = await matrixWith();
+    expect(el.rowLabelWidth).to.equal(undefined);
+    expect(canvasWidth(el)).to.equal(60 + 2 * 20);
+  });
+
+  it("pins the gutter to an explicit row-label-width", async () => {
+    const el = await matrixWith("140");
+    expect(el.rowLabelWidth).to.equal(140);
+    expect(canvasWidth(el)).to.equal(140 + 2 * 20);
+  });
+
+  it('grows the gutter past the default to fit the widest label under row-label-width="auto"', async () => {
+    const el = await matrixWith("auto");
+    expect(el.rowLabelWidth).to.equal("auto");
+    // Measured, so the exact figure depends on the font -- what matters is that it grew beyond the
+    // fixed 60 that was clipping this label, and that the cells moved with it.
+    expect(canvasWidth(el)).to.be.greaterThan(60 + 2 * 20);
+  });
+
+  it("ignores a malformed row-label-width instead of collapsing the gutter", async () => {
+    const el = await matrixWith("not-a-number");
+    expect(el.rowLabelWidth).to.equal(undefined);
+    expect(canvasWidth(el)).to.equal(60 + 2 * 20);
+  });
+
+  it("keeps hit-testing aligned with the widened gutter", async () => {
+    const el = await matrixWith("140");
+    const pos = (
+      el as unknown as {
+        hitTestMatrix(x: number, y: number): MatrixCellPos | null;
+      }
+    ).hitTestMatrix(140 + 10, 20 + 10);
+    expect(pos, "a click just inside the first cell must resolve to row 0, col 0").to.deep.equal({
+      row: 0,
+      col: 0,
+    });
+  });
+
+  it("still reports the full label through cellText, truncated or not", async () => {
+    const el = await matrixWith();
+    expect(el.data.kind === "matrix" && el.data.rowLabels[0]).to.equal(LONG);
+  });
+});
