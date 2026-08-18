@@ -7,6 +7,10 @@ import type {
 } from "./ingestion-queue.js";
 import type { LyraVirtualList } from "../../layout/virtual-list/virtual-list.class.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+
+// Removed-attribute regression tests below deliberately author these; see the helper.
+expectStaleAttribute('lr-ingestion-queue', 'virtualize-threshold');
 
 function sinkElement(politeness: "polite" | "assertive"): HTMLElement | null {
   return document.querySelector<HTMLElement>(

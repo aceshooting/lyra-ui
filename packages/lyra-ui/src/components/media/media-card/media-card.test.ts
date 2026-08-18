@@ -4,6 +4,10 @@ import './media-card.js';
 import '../../conversation/chat-message/chat-message.js';
 import type { LyraMediaCard } from './media-card.js';
 import * as mediaCardExports from './media-card.js';
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+
+// Removed-attribute regression tests below deliberately author these; see the helper.
+expectStaleAttribute('lr-media-card', 'appearance');
 
 const DATA_URI =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';

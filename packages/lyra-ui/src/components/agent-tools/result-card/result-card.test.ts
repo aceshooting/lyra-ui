@@ -1,6 +1,10 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './result-card.js';
 import type { LyraResultCard } from './result-card.js';
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+
+// Removed-attribute regression tests below deliberately author these; see the helper.
+expectStaleAttribute('lr-result-card', 'appearance');
 
 it('hides the header when there is no heading and no actions content', async () => {
   const el = (await fixture(html`<lr-result-card>body</lr-result-card>`)) as LyraResultCard;

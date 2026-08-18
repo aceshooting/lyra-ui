@@ -2,6 +2,10 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './source-card.js';
 import { LyraSourceCard } from './source-card.js';
 import { styles } from './source-card.styles.js';
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+
+// Removed-attribute regression tests below deliberately author these; see the helper.
+expectStaleAttribute('lr-source-card', 'appearance');
 
 it('defaults to empty source-id/title and unset page/href', async () => {
   const el = (await fixture(html`<lr-source-card></lr-source-card>`)) as LyraSourceCard;

@@ -29,7 +29,12 @@ import {
   acquireAnnouncementSink,
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
-import { resolveCanvasColor, seriesPalette, translucentAreaColor } from './chart-colors.js';
+import {
+  resolveCanvasColor,
+  resolveCanvasColors,
+  seriesPalette,
+  translucentAreaColor,
+} from './chart-colors.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import {
   createForcedColorPattern,
@@ -1708,9 +1713,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const colors = typeof authoredColors === 'string'
       ? [resolveCanvasColor(this, authoredColors, borderFallback ?? 'transparent')]
       : authoredColors
-        ? Array.from(authoredColors, (color) =>
-            resolveCanvasColor(this, color, borderFallback ?? 'transparent'),
-          )
+        ? resolveCanvasColors(this, authoredColors, borderFallback ?? 'transparent')
         : undefined;
     // Default a color-less series to the categorical palette, keyed by dataset index (matching
     // <lr-lite-chart>). pie/doughnut/polarArea carry one series whose *slices* each need a distinct
@@ -1742,9 +1745,16 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const authoredSegmentColors = s.segmentColors && rowIndexes
       ? rowIndexes.map((rowIndex) => s.segmentColors![rowIndex] ?? '')
       : s.segmentColors;
-    const segmentColors = authoredSegmentColors?.map((color) =>
-      resolveCanvasColor(this, color, colors?.[0] ?? borderFallback ?? 'transparent'),
-    );
+    const segmentColors = authoredSegmentColors
+      ? resolveCanvasColors(
+          this,
+          authoredSegmentColors,
+          colors?.[0] ?? borderFallback ?? 'transparent',
+        )
+      : undefined;
+    const authoredPointColors = s.pointColors && rowIndexes
+      ? rowIndexes.map((rowIndex) => s.pointColors![rowIndex] ?? '')
+      : s.pointColors;
     const resolvedBackgroundColor =
       datasetType === 'line' &&
       fill &&
@@ -1793,12 +1803,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       pointStyle: chartStyle.forcedColors ? encoding.pointStyle : undefined,
       backgroundColor: encodedBackgroundColor,
       borderColor: colors?.[0] ?? sliceBorderColors ?? borderFallback,
-      pointBackgroundColor: (s.pointColors && rowIndexes
-        ? rowIndexes.map((rowIndex) => s.pointColors![rowIndex] ?? '')
-        : s.pointColors
-      )?.map((color) =>
-          resolveCanvasColor(this, color, colors?.[0] ?? borderFallback ?? 'transparent'),
-        ),
+      pointBackgroundColor: authoredPointColors
+        ? resolveCanvasColors(
+            this,
+            authoredPointColors,
+            colors?.[0] ?? borderFallback ?? 'transparent',
+          )
+        : undefined,
       pointRadius: pointRadii
         ? (rowIndexes
             ? rowIndexes.map((rowIndex) => pointRadii[rowIndex])

@@ -2,6 +2,10 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './task-list.js';
 import type { LyraTaskList, TaskItem } from './task-list.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+
+// Removed-attribute regression tests below deliberately author these; see the helper.
+expectStaleAttribute('lr-task-list', 'appearance');
 
 const items: TaskItem[] = [
   { id: 'step-1', label: 'Read repository', status: 'success' },

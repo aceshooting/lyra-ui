@@ -8,6 +8,10 @@ import type {
   LyraPromptInputAttachment,
 } from "./prompt-input.class.js";
 import { styles } from "./prompt-input.styles.js";
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+
+// Removed-attribute regression tests below deliberately author these; see the helper.
+expectStaleAttribute('lr-prompt-input', 'name');
 
 interface PromptInputEditingFacade {
   readonly input: HTMLTextAreaElement | null;

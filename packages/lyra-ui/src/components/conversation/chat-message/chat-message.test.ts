@@ -738,7 +738,7 @@ it("actually wraps a footer crowded with status text, timestamp, retry button, a
     <lr-chat-message
       style="display: block; inline-size: 160px"
       status="failed"
-      timestamp="2024-01-01T12:00:00Z"
+      .timestamp=${'2024-01-01T12:00:00Z'}
     >
       Message body
       <button slot="actions">Copy</button>

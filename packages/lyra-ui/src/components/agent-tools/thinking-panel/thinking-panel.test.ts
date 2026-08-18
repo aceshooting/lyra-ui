@@ -2,6 +2,10 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './thinking-panel.js';
 import type { LyraThinkingPanel } from './thinking-panel.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+
+// Removed-attribute regression tests below deliberately author these; see the helper.
+expectStaleAttribute('lr-thinking-panel', 'appearance');
 
 // MutationObserver callbacks are microtasks and the resulting auto-scroll is
 // coalesced to a single requestAnimationFrame (see thinking-panel.ts's

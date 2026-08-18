@@ -1064,6 +1064,23 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     return internals;
   }
 
+  /**
+   * Attributes this element owns without observing -- declared so the dev-mode unknown-attribute
+   * diagnostic does not report a component's own API as a mistake.
+   *
+   * Two kinds belong here, and nothing else:
+   *
+   * 1. Host state the component reflects onto itself as *output*, where authoring it in markup is
+   *    meaningless (`<lr-animated-image playing>`, `<lr-menu-item submenu-open>`).
+   * 2. Documented public attributes consumed only by `:host([attr])` selectors, which therefore
+   *    need no reactive property (`<lr-page disable-sticky="header">`).
+   *
+   * Do not use it to silence a warning about an attribute a consumer really did get wrong -- that
+   * warning is the feature. Subclasses concatenate rather than replace, so an inherited
+   * declaration is never dropped.
+   */
+  static knownUnobservedAttributes: readonly string[] = [];
+
   override connectedCallback(): void {
     // Read before `super`, which creates the render root: on the very first connect a shadow root
     // can only already exist because the parser built it from server-rendered declarative markup,
@@ -1076,7 +1093,8 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     super.connectedCallback();
     warnUnknownAttributes(
       this,
-      (this.constructor as typeof LyraElement).observedAttributes
+      (this.constructor as typeof LyraElement).observedAttributes,
+      (this.constructor as typeof LyraElement).knownUnobservedAttributes
     );
     recordLyraOwnerDocumentConnection(this);
     // A reconnected element may sit under a different `lang`/`dir` ancestor,

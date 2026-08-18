@@ -354,6 +354,13 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     if (changed.has('showDelay') && this.pendingDirection === 'show') this.requestTransition(true);
     if (changed.has('hideDelay') && this.pendingDirection === 'hide') this.requestTransition(false);
     if (changed.has('for')) this.syncInteractionTrigger();
+    // `anchorPositioned` gates `?data-hidden`, keeping the popup invisible until Floating UI has
+    // actually placed it. Its close-path reset used to live in `updated()`, where flipping a
+    // `@state` true -> false after the update completed scheduled a second, wasted render and
+    // tripped Lit's change-in-update warning -- which `WTR_STRICT_CONSOLE=1` turns into a test
+    // failure. It is a pure derivation of `open`, so it belongs here, before render. Nothing
+    // visible changes: the same render already hides the popup via `!this.open`.
+    if (changed.has('open') && !this.open) this.anchorPositioned = false;
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -390,8 +397,8 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
           this.updateInteractiveContent();
           if (this.isConnected && this.requiresOverlayManager) this.activateTooltipOverlay();
         } else {
+          // `anchorPositioned` is reset in willUpdate(); `positionedAnchor` is not reactive.
           this.positionedAnchor = undefined;
-          this.anchorPositioned = false;
           const restoreFocus = this.restoreFocusOnClose;
           this.suppressTriggerFocusOpen = restoreFocus;
           try {

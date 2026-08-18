@@ -6,6 +6,10 @@ import {
   getFileTypeMetadata,
   type LyraFileTypeMetadataEntry,
 } from './file-type-metadata.js';
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+
+// Removed-attribute regression tests below deliberately author these; see the helper.
+expectStaleAttribute('lr-file-icon', 'size');
 
 describe('file type metadata', () => {
   it('covers every presentation category', () => {

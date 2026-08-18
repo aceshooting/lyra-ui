@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { confirm } from './confirm.js';
+import { confirm, type ConfirmOptions } from './confirm.js';
 import { registerLyraLocale, setLyraLocale } from '../../../internal/localization.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './dialog.js';
@@ -141,26 +141,39 @@ it('fills the confirm button with --lr-color-brand by default, --lr-color-danger
   expect(dangerColor).to.include('--lr-color-on-danger');
 });
 
-it('still honors the deprecated "tone" spelling identically to "variant"', async () => {
-  const danger = confirm({ title: 'Delete?', tone: 'danger' });
-  const dangerDialog = getMountedDialog();
-  const dangerConfirm = footerButtons(dangerDialog)[1];
-  const dangerBackground = dangerConfirm.style.background;
-  const dangerColor = dangerConfirm.style.color;
-  footerButtons(dangerDialog)[0].click();
-  await danger;
-  expect(dangerBackground).to.include('--lr-color-danger');
-  expect(dangerColor).to.include('--lr-color-on-danger');
+// 10.0.0 removed the `tone` alias for `variant`. It shipped as a one-major back-compat spelling
+// and `variant` already won whenever both were set, so nothing that reads `variant` changes here
+// -- but a stale `tone` left behind by a 9.x consumer must now be inert rather than quietly
+// styling the confirm button as destructive. Asserting equivalence to a no-options confirm is
+// deliberate: it survives any later retokenizing of the neutral button, which a hard-coded
+// `--lr-color-brand` string would not.
+async function confirmButtonStyle(options: ConfirmOptions): Promise<[string, string]> {
+  const promise = confirm(options);
+  const dialog = getMountedDialog();
+  const confirmButton = footerButtons(dialog)[1]!;
+  const style: [string, string] = [confirmButton.style.background, confirmButton.style.color];
+  footerButtons(dialog)[0]!.click();
+  await promise;
+  return style;
+}
+
+it('no longer honors the removed "tone" spelling, rendering the neutral variant instead', async () => {
+  const stale = { title: 'Delete?', tone: 'danger' } as unknown as ConfirmOptions;
+  const [staleBackground, staleColor] = await confirmButtonStyle(stale);
+  const [neutralBackground, neutralColor] = await confirmButtonStyle({ title: 'Delete?' });
+
+  expect(staleBackground).to.not.include('--lr-color-danger');
+  expect(staleColor).to.not.include('--lr-color-on-danger');
+  expect(staleBackground).to.equal(neutralBackground);
+  expect(staleColor).to.equal(neutralColor);
 });
 
-it('prefers "variant" over the deprecated "tone" when both are somehow set', async () => {
-  const promise = confirm({ title: 'Delete?', variant: 'danger', tone: 'neutral' });
-  const dialog = getMountedDialog();
-  const confirmButton = footerButtons(dialog)[1];
-  expect(confirmButton.style.background).to.include('--lr-color-danger');
-  expect(confirmButton.style.color).to.include('--lr-color-on-danger');
-  footerButtons(dialog)[0].click();
-  await promise;
+it('lets "variant" through untouched when a stale "tone" sits alongside it', async () => {
+  const both = { title: 'Delete?', variant: 'danger', tone: 'neutral' } as unknown as ConfirmOptions;
+  const [background, color] = await confirmButtonStyle(both);
+
+  expect(background).to.include('--lr-color-danger');
+  expect(color).to.include('--lr-color-on-danger');
 });
 
 it('uses the title as the dialog heading, which drives aria-label', async () => {

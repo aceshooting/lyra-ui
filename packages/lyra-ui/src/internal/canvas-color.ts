@@ -36,3 +36,36 @@ export function resolveCanvasColor(scope: Element, color: string, fallback: stri
     parent.remove();
   }
 }
+
+/**
+ * Array form of `resolveCanvasColor`, memoized across the batch.
+ *
+ * Each individual resolution inserts a probe element into the scope and reads
+ * `getComputedStyle`, forcing a synchronous style recalculation -- twice for a color that hits the
+ * first sentinel. That is a fine price once per chart, and a punishing one per *data point*: a
+ * series carrying a per-point `color` array paid it for every row, so a 600-point series meant 600
+ * probe insertions and at least 600 forced recalcs before a single pixel was drawn. On WebKit that
+ * alone overran the test suite's 6s per-test timeout.
+ *
+ * Authored color arrays are overwhelmingly a handful of distinct strings repeated across many
+ * points (a two-tone threshold ramp, one highlight against one base), so memoizing by string
+ * collapses the work to the number of *distinct* colors. The cache lives exactly as long as this
+ * call, so a later draw still re-reads the live theme and picks up `--lr-*` changes.
+ */
+export function resolveCanvasColors(
+  scope: Element,
+  colors: Iterable<string>,
+  fallback: string
+): string[] {
+  const memo = new Map<string, string>();
+  const resolved: string[] = [];
+  for (const color of colors) {
+    let value = memo.get(color);
+    if (value === undefined) {
+      value = resolveCanvasColor(scope, color, fallback);
+      memo.set(color, value);
+    }
+    resolved.push(value);
+  }
+  return resolved;
+}

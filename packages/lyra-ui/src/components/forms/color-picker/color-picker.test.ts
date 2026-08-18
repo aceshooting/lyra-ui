@@ -2,6 +2,10 @@ import { fixture, expect, html, oneEvent } from "@open-wc/testing";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import "./color-picker.js";
 import type { LyraColorPicker } from "./color-picker.js";
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+
+// Removed-attribute regression tests below deliberately author these; see the helper.
+expectStaleAttribute('lr-color-picker', 'default-value');
 
 const part = (el: LyraColorPicker, name: string): HTMLElement =>
   el.shadowRoot!.querySelector(`[part~="${name}"]`) as HTMLElement;

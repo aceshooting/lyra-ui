@@ -100,6 +100,10 @@ export interface LyraAnimatedImageEventMap {
  * @since 4.0.0
  */
 export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
+  /** `playing` is the read-only live playback state this component reflects itself; `play` is
+   *  the settable request. Authoring `playing` means nothing, so it is not observed. */
+  static override knownUnobservedAttributes: readonly string[] = ['playing'];
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {

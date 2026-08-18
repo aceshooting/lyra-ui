@@ -1,6 +1,10 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './skeleton.js';
 import type { LyraSkeleton, LyraSkeletonEffect } from './skeleton.js';
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+
+// Removed-attribute regression tests below deliberately author these; see the helper.
+expectStaleAttribute('lr-skeleton', 'variant');
 
 it('defaults to a decorative text shape like the mirrored upstream skeletons', async () => {
   const el = (await fixture(html`<lr-skeleton></lr-skeleton>`)) as LyraSkeleton;

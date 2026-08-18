@@ -4,6 +4,10 @@ import '../../media/flag/flag.js';
 import { styles } from './icon-button.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraIconButton } from './icon-button.js';
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+
+// Removed-attribute regression tests below deliberately author these; see the helper.
+expectStaleAttribute('lr-icon-button', 'type');
 
 it('inherits its public radius from an ancestor theme wrapper', async () => {
   const wrapper = await fixture<HTMLElement>(html`

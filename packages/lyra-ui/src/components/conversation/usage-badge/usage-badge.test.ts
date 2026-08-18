@@ -2,6 +2,10 @@ import { fixture, expect, html } from "@open-wc/testing";
 import "./usage-badge.js";
 import type { LyraUsageBadge } from "./usage-badge.js";
 import { styles } from "./usage-badge.styles.js";
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+
+// Removed-attribute regression tests below deliberately author these; see the helper.
+expectStaleAttribute('lr-usage-badge', 'compact');
 
 it("defaults to no tokensIn/tokensOut/costText/latencyMs/summary, abbreviate=false", async () => {
   const el = (await fixture(

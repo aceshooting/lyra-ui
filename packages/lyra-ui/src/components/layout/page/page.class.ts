@@ -176,6 +176,11 @@ export interface LyraPageEventMap {
  * @since 8.0.0
  */
 export class LyraPage extends LyraElement<LyraPageEventMap> {
+  /** `disable-sticky` is read only by `:host([disable-sticky~="..."])` rules in page.styles.ts,
+   *  so it is deliberately not a reactive property. Declared here so authoring the documented
+   *  attribute does not draw an "unknown attribute" dev warning. */
+  static override knownUnobservedAttributes: readonly string[] = ['disable-sticky'];
+
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {

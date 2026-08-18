@@ -2,6 +2,15 @@ import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './mention-popover.js';
 import type { LyraMentionItem, LyraMentionPopover, LyraMentionSelectDetail } from './mention-popover.js';
 import { styles } from './mention-popover.styles.js';
+import { ignoreResizeObserverLoopErrors } from '../../../../test/resize-observer-noise.js';
+
+// Several tests here mount an <iframe> (to exercise cross-document anchors) and then remove it in
+// a `finally`, tearing the frame down while Floating UI's `autoUpdate` ResizeObservers are still
+// attached to nodes inside it. That is exactly the shape that leaves observations undelivered at
+// the end of a frame. It reproduces on Chromium under load and not at all on WebKit, and the
+// assertions themselves pass -- only the uncaught page error fails the run, taking the rest of the
+// file with it.
+ignoreResizeObserverLoopErrors('iframe teardown races Floating UI autoUpdate observers');
 
 const ITEMS: LyraMentionItem[] = [
   { suggestionId: 'alice', label: 'Alice Johansson', description: 'Product design' },

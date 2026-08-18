@@ -101,17 +101,34 @@ export function devWarnOnce(key: string, message: string): void {
 
 /**
  * Dev-mode-only: warns once per (tag, attribute-name) when `host` carries an attribute that
- * isn't in `observedAttributes` and isn't in the always-exempt global/data/aria set. No-op when
- * Lit's own dev-mode signal isn't present (production, or a dev environment where Lit itself
- * isn't in dev mode).
+ * isn't in `observedAttributes`, isn't in `knownUnobservedAttributes`, and isn't in the
+ * always-exempt global/data/aria set. No-op when Lit's own dev-mode signal isn't present
+ * (production, or a dev environment where Lit itself is not in dev mode).
+ *
+ * `knownUnobservedAttributes` exists because "not observed" is not the same as "not ours". Two
+ * shapes of genuinely-owned attribute never reach `observedAttributes`:
+ *
+ * - **Self-reflected read-only state.** `<lr-animated-image>` publishes its live `playing` state
+ *   with `toggleAttribute('playing', ...)`, `<lr-menu-item>` does the same for `submenu-open`,
+ *   `<lr-app-rail>` for its derived `mode`. Nothing observes them because setting them from
+ *   markup means nothing -- they are output, not input. Left undeclared, a component reports its
+ *   *own* attribute as unknown, in every consumer app, the moment that state turns on.
+ * - **CSS-only public attributes.** `<lr-page>`'s documented `disable-sticky` is consumed purely
+ *   by `:host([disable-sticky~="header"])` selectors, so it needs no reactive property. Left
+ *   undeclared, correct authored markup draws a warning telling the author it is wrong.
+ *
+ * Both cases are false positives against real, documented API, which is corrosive in a way a
+ * missed warning is not: a diagnostic that cries wolf about a component's own output teaches
+ * consumers to tune out the ones that matter.
  */
 export function warnUnknownAttributes(
   host: Element,
-  observedAttributes: readonly string[]
+  observedAttributes: readonly string[],
+  knownUnobservedAttributes: readonly string[] = []
 ): void {
   const warnings = litDevWarnings();
   if (!warnings) return;
-  const observedSet = new Set(observedAttributes);
+  const observedSet = new Set([...observedAttributes, ...knownUnobservedAttributes]);
   for (const name of host.getAttributeNames()) {
     if (observedSet.has(name) || isExemptAttribute(name)) continue;
     const key = `lyra-unknown-attribute:${host.localName}:${name}`;

@@ -12,6 +12,10 @@ import { styles } from './chart.styles.js';
 import { loadChartAndZoom } from './chart-feature-loader.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import type { LyraSkeleton } from '../../overlays/skeleton/skeleton.class.js';
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+
+// Removed-attribute regression tests below deliberately author these; see the helper.
+expectStaleAttribute('lr-chart', 'horizontal');
 
 function announcementSink(
   doc: Document = document,
@@ -2806,6 +2810,11 @@ it("row-samples every series' own data/color/pointRadius arrays to match the sam
   // `labels` got sampled down to the 1,000-record budget while each series' own `data`/`color`/
   // `pointRadius`/`pointColors`/`segmentColors` arrays stayed at full source length, producing a
   // `config.data.labels`/`config.data.datasets[i].data` length mismatch fed straight to Chart.js.
+  // Also a standing guard on per-point color cost: series A carries a 2,000-entry `color` array,
+  // which `resolveCanvasColor` once probed the DOM for *per entry*. That made this the one chart
+  // test to overrun the 6s per-test timeout on WebKit. `resolveCanvasColors` memoizes by string,
+  // so the 2,000 identical reds now cost one probe -- and if that memo is ever lost, this test
+  // times out again rather than merely getting slower.
   const rowCount = 2000;
   const labels = Array.from({ length: rowCount }, (_, i) => String(i));
   const dataA = Array.from({ length: rowCount }, (_, i) => i);

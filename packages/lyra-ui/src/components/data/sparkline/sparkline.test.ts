@@ -1,6 +1,10 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './sparkline.js';
 import type { LyraSparkline } from './sparkline.js';
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+
+// Removed-attribute regression tests below deliberately author these; see the helper.
+expectStaleAttribute('lr-sparkline', 'values');
 
 it('publishes the documented Sparkline defaults and reflected closed sets', async () => {
   const el = (await fixture(html`<lr-sparkline></lr-sparkline>`)) as LyraSparkline;

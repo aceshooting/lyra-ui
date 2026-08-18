@@ -2,6 +2,10 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './sequence-strip.js';
 import type { LyraSequenceStrip } from './sequence-strip.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+
+// Removed-attribute regression tests below deliberately author these; see the helper.
+expectStaleAttribute('lr-sequence-strip', 'orientation');
 
 const categories = [
   { id: 'text', color: '#4f46e5', label: 'Text' },

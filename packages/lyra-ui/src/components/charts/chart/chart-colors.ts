@@ -25,7 +25,7 @@ const FALLBACK_SERIES_PALETTE = [
 /* chart fallback: end */
 
 const AREA_FILL_PERCENT = 28;
-export { resolveCanvasColor } from '../../../internal/canvas-color.js';
+export { resolveCanvasColor, resolveCanvasColors } from '../../../internal/canvas-color.js';
 
 /**
  * Resolves the categorical chart ramp to concrete canvas-safe colors. Passing `null` selects the

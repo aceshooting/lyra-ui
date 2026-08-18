@@ -53,6 +53,36 @@ describe('warnUnknownAttributes', () => {
     expect(warnStub.calls[0][0]).to.not.contain('did you mean');
   });
 
+  it('stays silent for an attribute the element owns without observing', () => {
+    withDevMode();
+    const host = document.createElement('lr-fake-tag');
+    // Self-reflected read-only state, e.g. <lr-animated-image playing>.
+    host.setAttribute('playing', '');
+    // A CSS-only public attribute, e.g. <lr-page disable-sticky="header">.
+    host.setAttribute('disable-sticky', 'header');
+    warnUnknownAttributes(host, ['play'], ['playing', 'disable-sticky']);
+    expect(warnStub.calls).to.have.length(0);
+  });
+
+  it('still warns about a genuine typo sitting alongside a declared unobserved attribute', () => {
+    withDevMode();
+    const host = document.createElement('lr-fake-tag');
+    host.setAttribute('playing', '');
+    host.setAttribute('disable-stikcy', 'header');
+    warnUnknownAttributes(host, ['play'], ['playing', 'disable-sticky']);
+    expect(warnStub.calls).to.have.length(1);
+    expect(warnStub.calls[0][0]).to.contain('disable-stikcy');
+  });
+
+  it('treats an omitted knownUnobservedAttributes list as empty', () => {
+    withDevMode();
+    const host = document.createElement('lr-fake-tag');
+    host.setAttribute('playing', '');
+    warnUnknownAttributes(host, ['play']);
+    expect(warnStub.calls).to.have.length(1);
+    expect(warnStub.calls[0][0]).to.contain('playing');
+  });
+
   it('suggests the closest observed attribute when one is close enough', () => {
     withDevMode();
     const host = document.createElement('lr-fake-tag');

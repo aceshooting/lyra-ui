@@ -13,6 +13,12 @@ import type {
   LyraDockPanelCollapseChangeDetail,
 } from "./dock-panel.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+
+// Removed-attribute regression tests below deliberately author these; see the helper.
+expectStaleAttribute('lr-dock-panel', 'size');
+expectStaleAttribute('lr-dock-panel', 'min-size');
+expectStaleAttribute('lr-dock-panel', 'max-size');
 
 async function dockedFixture(attrs = "", edge = "end"): Promise<LyraDockPanel> {
   const wrapper = (await fixture(

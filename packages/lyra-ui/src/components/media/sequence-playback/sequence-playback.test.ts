@@ -3,6 +3,11 @@ import { LitElement, type PropertyValues } from 'lit';
 import './sequence-playback.js';
 import { LyraSequencePlayback } from './sequence-playback.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+
+// Removed-attribute regression tests below deliberately author these; see the helper.
+expectStaleAttribute('lr-sequence-playback', 'index');
+expectStaleAttribute('lr-sequence-playback', 'length');
 
 it('registers only the explicit sequence-playback identity and removes the generic v8 surface', async () => {
   expect(customElements.get('lr-sequence-playback')).to.equal(LyraSequencePlayback);

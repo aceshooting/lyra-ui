@@ -2,6 +2,10 @@ import { aTimeout, fixture, expect, html, oneEvent } from "@open-wc/testing";
 import "./rag-answer.js";
 import type { LyraRagAnswer } from "./rag-answer.class.js";
 import type { LyraSourceCard } from "../source-card/source-card.class.js";
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+
+// Removed-attribute regression tests below deliberately author these; see the helper.
+expectStaleAttribute('lr-rag-answer', 'error');
 describe("lr-rag-answer", () => {
   it("renders answer evidence and sources", async () => {
     const el = (await fixture(

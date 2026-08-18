@@ -4,8 +4,16 @@ import './components/forms/swatch-picker/swatch-picker.js';
 import type { LyraColorPicker } from './components/forms/color-picker/color-picker.js';
 import type { LyraSwatchPicker } from './components/forms/swatch-picker/swatch-picker.js';
 
+// Never hand a missing part on to `getComputedStyle`: a blind cast turns "the component rendered
+// nothing" into an opaque "parameter 1 is not of type 'Element'" TypeError that names neither the
+// part nor the component. Naming both is what points at the real cause -- typically a fixture
+// still setting a property that has since been renamed away.
 function part(root: ShadowRoot, name: string): HTMLElement {
-  return root.querySelector(`[part~="${name}"]`) as HTMLElement;
+  const node = root.querySelector<HTMLElement>(`[part~="${name}"]`);
+  if (node === null) {
+    throw new Error(`<${root.host.localName}> rendered no element with part "${name}"`);
+  }
+  return node;
 }
 
 // `forced-color-adjust` is a Windows Forced Colors Mode integration point; this WebKit build
@@ -47,7 +55,7 @@ describe('intrinsic color surfaces in forced colors', () => {
     if (!supportsForcedColorAdjust) this.skip();
     const el = await fixture<LyraSwatchPicker>(html`
       <lr-swatch-picker
-        .options=${[
+        .items=${[
           { value: 'blue', color: '#0969da', label: 'Blue' },
           { value: 'green', color: '#1a7f37', label: 'Green' },
         ]}

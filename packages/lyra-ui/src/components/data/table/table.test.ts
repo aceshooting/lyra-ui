@@ -6268,7 +6268,7 @@ it('moves the roving tabindex between body rows and back up into the header', as
 });
 
 it('activates the focused row from Enter and Space', async () => {
-  const el = (await fixture(html`<lr-table row-key="id" selectable></lr-table>`)) as LyraTable<Row>;
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
   el.rows = rows;
   await el.updateComplete;

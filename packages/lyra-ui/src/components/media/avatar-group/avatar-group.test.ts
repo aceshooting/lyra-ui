@@ -3,6 +3,10 @@ import { LitElement, html as litHtml } from 'lit';
 import './avatar-group.js';
 import '../avatar/avatar.js';
 import type { LyraAvatarGroup } from './avatar-group.js';
+import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+
+// Removed-attribute regression tests below deliberately author these; see the helper.
+expectStaleAttribute('lr-avatar-group', 'tone');
 
 const isGroupHidden = (avatar: Element): boolean =>
   avatar.hasAttribute('data-lr-avatar-group-hidden');
