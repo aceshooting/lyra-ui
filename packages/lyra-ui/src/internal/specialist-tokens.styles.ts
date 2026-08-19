@@ -117,6 +117,14 @@ const darkSpecialistTokens = css`
     /* terminal ramp: end */
 `;
 
+/**
+ * Composed into selectors mirroring every dark route below, not a bare :host. A Windows High
+ * Contrast *dark* theme also reports prefers-color-scheme: dark, so the ordinary HCM case is
+ * forced colors AND dark at once; at 0-1-0 this block loses to every dark selector here and the
+ * whole system-colour ramp goes dead exactly where it is needed. Charts and graphs feel it worst:
+ * they resolve these tokens through getComputedStyle and paint into canvas/SVG, which the user
+ * agent's own forced-colour substitution never reaches.
+ */
 const forcedColorSpecialistTokens = css`
     --lr-color-chart-1: Highlight;
     --lr-color-chart-2: LinkText;
@@ -151,9 +159,18 @@ export const specialistTokens = css`
   :host(:not([data-lr-theme='light'])):host-context([data-lr-theme='dark']) {${darkSpecialistTokens}
   }
 
+  /* Last, and selector-for-selector against each dark rule above: at equal specificity the later
+     declaration wins, so system colours hold in every theme state. The :host-context() pair stays
+     a separate rule because Firefox and Safari ship no :host-context() and one unsupported
+     selector invalidates a whole list -- which would take the supported branches down with it. */
   /* @media (forced-colors: active) */
   @media (forced-colors: active) {
-    :host {${forcedColorSpecialistTokens}
+    :host,
+    :host(:not([data-lr-theme='light'])),
+    :host([data-lr-theme='dark']) {${forcedColorSpecialistTokens}
+    }
+    :host(:not([data-lr-theme='light'])):host-context(.lr-dark),
+    :host(:not([data-lr-theme='light'])):host-context([data-lr-theme='dark']) {${forcedColorSpecialistTokens}
     }
   }
 `;

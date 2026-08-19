@@ -422,12 +422,41 @@ const auxTokens = css`
     }
   }
 
-  /* System colors keep custom controls, SVG marks, and canvas-adjacent chrome
-     legible when the user agent replaces the normal palette. Component CSS
-     and drawing code consume these semantic tokens, so the same mode applies
-     to DOM and non-DOM visuals. */
-  @media (forced-colors: active) {
-    :host {
+  :host([hidden]) {
+    display: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    box-sizing: inherit;
+  }
+`;
+
+/**
+ * System colors keep custom controls, SVG marks, and canvas-adjacent chrome legible when the user
+ * agent replaces the normal palette. Component CSS and drawing code consume these semantic tokens,
+ * so the same mode applies to DOM and non-DOM visuals -- and the non-DOM half is why this cannot
+ * be left to the user agent's own forced-colour substitution: canvas and SVG painting resolve
+ * these tokens through getComputedStyle and draw exactly what they say.
+ *
+ * Declared ONCE and composed into selectors that mirror every dark route below, for the same
+ * reason darkTokens is: a Windows High Contrast *dark* theme also reports
+ * prefers-color-scheme: dark, so the ordinary HCM case is forced colors AND dark at once. Written
+ * as a bare :host (specificity 0-1-0) this block is outranked by every dark selector -- 0-2-0 for
+ * the media and attribute routes, more again for the :host-context() one -- so the whole
+ * system-colour fallback was present in the sheet and dead in the cascade wherever it mattered
+ * most. Mirroring the selectors keeps the win on source order at EQUAL specificity, per route,
+ * without lowering the dark rules' specificity (which would change what beats them everywhere
+ * else) and without !important.
+ *
+ * Placement note, mirroring the one on darkTokens: `scripts/generate-design-tokens.mjs` splits this
+ * file at `const auxTokens` and at the first `@media (forced-colors: active)` after it, reading the
+ * span between them as the reduced-motion set and everything past it as the forced-colours one. The
+ * rule that consumes this fragment is composed further down, so the marker is repeated on the line
+ * below to keep that split honest.
+ */
+/* @media (forced-colors: active) */
+const forcedColorTokens = css`
       --lr-color-surface: Canvas;
       --lr-color-surface-raised: Canvas;
       --lr-color-text: CanvasText;
@@ -449,16 +478,6 @@ const auxTokens = css`
       --lr-color-on-neutral: Canvas;
       --lr-color-on-strong-overlay: CanvasText;
       --lr-focus-ring-color: Highlight;
-    }
-  }
-  :host([hidden]) {
-    display: none !important;
-  }
-  *,
-  *::before,
-  *::after {
-    box-sizing: inherit;
-  }
 `;
 
 export const tokens = css`
@@ -475,4 +494,18 @@ export const tokens = css`
   }
 
   ${auxTokens}
+
+  /* Last, and selector-for-selector against each dark rule above: at equal specificity the later
+     declaration wins, so system colours hold in every theme state. The :host-context() pair stays
+     a separate rule because Firefox and Safari ship no :host-context() and one unsupported
+     selector invalidates a whole list -- which would take the supported branches down with it. */
+  @media (forced-colors: active) {
+    :host,
+    :host(:not([data-lr-theme='light'])),
+    :host([data-lr-theme='dark']) {${forcedColorTokens}
+    }
+    :host(:not([data-lr-theme='light'])):host-context(.lr-dark),
+    :host(:not([data-lr-theme='light'])):host-context([data-lr-theme='dark']) {${forcedColorTokens}
+    }
+  }
 `;

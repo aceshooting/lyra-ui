@@ -24,6 +24,8 @@ import {
 } from '../../../internal/icons.js';
 import {
   activateOverlay,
+  composedContains,
+  deepActiveElement,
   type OverlayHandle,
 } from '../../../internal/overlay-manager.js';
 import { setCustomState } from '../../../internal/custom-states.js';
@@ -1481,8 +1483,26 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
           });
         }
       } else if (!this.open) {
+        // `restorePopupFocusOnClose` only rises through `hide(true)` (Escape, a finalized
+        // selection). An application that closes the popup by assigning `open = false` never
+        // reaches `hide()` at all -- and the popup hides to `visibility: hidden`, which
+        // force-blurs whatever was focused inside it, stranding a keyboard user who was standing
+        // on a calendar day onto `<body>`. So the live "focus is still inside the popup" term is
+        // what keeps that path accessible; the flag alone is not sufficient. Read it here, before
+        // the deactivation, because style recalc has not run yet at this point in `updated()`.
+        // Outside-pointer dismissal (`hide(false)`) does reach this branch with focus still inside
+        // the popup -- this render lands in a microtask, ahead of the press's own focus default
+        // action -- so it hands the trigger one turn of focus. The press then immediately takes it
+        // to whatever was clicked, or unfocuses over non-focusable content, so the target the user
+        // pressed still wins; Chromium, Firefox and WebKit all agree on that ordering.
+        const popup = this.renderRoot.querySelector(
+          '[part="popup"]'
+        ) as HTMLElement | null;
+        const focusWasInsidePopup =
+          popup !== null &&
+          composedContains(popup, deepActiveElement(this.ownerDocument));
         this.overlayHandle?.deactivate({
-          restoreFocus: this.restorePopupFocusOnClose,
+          restoreFocus: this.restorePopupFocusOnClose || focusWasInsidePopup,
         });
         this.overlayHandle = undefined;
         this.restorePopupFocusOnClose = false;

@@ -138,9 +138,17 @@ export function expandManifestInheritance(manifest) {
         const merged = new Map(inherited.map((entry) => [mergeIdentity(key, entry), entry]));
         for (const entry of own) merged.set(mergeIdentity(key, entry), entry);
         if (merged.size > 0) {
-          declaration[key] = [...merged.values()].sort((a, b) =>
-            String(a.name ?? '').localeCompare(String(b.name ?? '')),
-          );
+          // Code-unit order, not localeCompare: this sort feeds the byte-compared generated
+          // artifacts (framework types, editor data, llms/components), and collation differs
+          // between ICU builds and default locales -- 80 arrays here order differently under the
+          // two (autocapitalize/autocomplete/autoCorrect). A contributor on a small-ICU Node would
+          // otherwise regenerate a different byte sequence and fail check:framework-types for no
+          // real reason. Matches compareText() in custom-elements-manifest.config.js.
+          declaration[key] = [...merged.values()].sort((a, b) => {
+            const left = String(a.name ?? '');
+            const right = String(b.name ?? '');
+            return left < right ? -1 : left > right ? 1 : 0;
+          });
         }
       }
     }

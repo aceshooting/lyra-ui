@@ -462,3 +462,22 @@ it('scales against the full pre-decimation value range, not just whatever the sa
   const y = Number(bar.getAttribute('y'));
   expect(y).to.be.closeTo(100, 1); // VIEW = 100; a 0 value against a real [0, 1000] range sits at the bottom
 });
+
+it('lets a host aria-label outrank the label property, and falls back to label when the host carries none', async () => {
+  // No test covered the conflict case before 10.0.0, so the inverted precedence passed both ways.
+  const el = (await fixture(
+    `<lr-sparkline label="Revenue" aria-label="Revenue over the last quarter"></lr-sparkline>`,
+  )) as LyraSparkline;
+  el.values = [1, 3, 2, 5];
+  await el.updateComplete;
+  const svg = el.shadowRoot!.querySelector('svg')!;
+  expect(svg.getAttribute('aria-label'), 'host aria-label wins').to.equal(
+    'Revenue over the last quarter',
+  );
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(svg.getAttribute('aria-label'), 'label names it when the host carries none').to.equal(
+    'Revenue',
+  );
+});

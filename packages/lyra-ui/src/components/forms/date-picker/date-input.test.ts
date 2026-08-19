@@ -2645,6 +2645,108 @@ it("closes an open calendar on an outside pointerdown but not one inside the hos
   expect(el.open).to.be.false;
 });
 
+it("leaves focus on the newly pressed target when an outside pointer closes the popup", async () => {
+  // The companion of the `open = false` restore below: an outside press closes through
+  // `hide(false)` and must still settle on whatever the user pressed, never on the trigger. Real
+  // mouse input, because the press's own focus default action is what settles it, and that runs
+  // after the close renders.
+  const wrapper = await fixture(html`
+    <div>
+      <lr-date-input
+        style="--show-duration: 0s; --hide-duration: 0s"
+      ></lr-date-input>
+      <button id="outside" style="margin-block-start: 30rem">Outside</button>
+    </div>
+  `);
+  const el = wrapper.querySelector("lr-date-input") as LyraDateInput;
+  const outside = wrapper.querySelector("#outside") as HTMLButtonElement;
+  const expand = el.shadowRoot!.querySelector(
+    '[part="expand-button"]'
+  ) as HTMLButtonElement;
+  expand.focus();
+  el.show();
+  await el.updateComplete;
+  const picker = el.shadowRoot!.querySelector(
+    "lr-date-picker"
+  ) as LyraDatePicker;
+  await picker.updateComplete;
+  const day = picker.shadowRoot!.querySelector(
+    '[part~="day"][tabindex="0"]'
+  ) as HTMLButtonElement;
+  day.focus();
+  expect(picker.shadowRoot!.activeElement === day).to.equal(true);
+
+  try {
+    const rect = outside.getBoundingClientRect();
+    await sendMouse({
+      type: "click",
+      position: [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ],
+    });
+    await el.updateComplete;
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+
+    expect(el.open, "the outside press closed the popup").to.equal(false);
+    expect(
+      document.activeElement?.id ?? document.activeElement?.localName ?? "none",
+      "an outside press keeps focus on its own target rather than restoring the trigger"
+    ).to.equal("outside");
+  } finally {
+    await resetMouse();
+  }
+});
+
+it("restores the opener when the popup is closed by assigning open = false", async () => {
+  // Escape and a finalized selection both close through `hide(true)`, which raises the private
+  // restore flag. An application that closes the popup by assigning the property directly never
+  // goes through `hide()` at all -- and the popup hides with `visibility: hidden`, which
+  // force-blurs whatever was focused inside it. Without a live "focus is still inside the popup"
+  // term, a keyboard user standing on a calendar day is dropped onto <body>.
+  const el = (await fixture(
+    html`<lr-date-input
+      style="--show-duration: 0s; --hide-duration: 0s"
+    ></lr-date-input>`
+  )) as LyraDateInput;
+  const expand = el.shadowRoot!.querySelector(
+    '[part="expand-button"]'
+  ) as HTMLButtonElement;
+  expand.focus();
+  el.show();
+  await el.updateComplete;
+  const picker = el.shadowRoot!.querySelector(
+    "lr-date-picker"
+  ) as LyraDatePicker;
+  await picker.updateComplete;
+  const day = picker.shadowRoot!.querySelector(
+    '[part~="day"][tabindex="0"]'
+  ) as HTMLButtonElement;
+  day.focus();
+  expect(
+    picker.shadowRoot!.activeElement === day,
+    "a calendar day must really hold focus before the popup closes"
+  ).to.equal(true);
+
+  el.open = false;
+  await el.updateComplete;
+  // The platform's force-blur for the now-hidden popup lands on a later rendering step, so give
+  // it one before reading focus -- otherwise the unfixed component looks fine for one microtask.
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+
+  // Report the stranded host's tag name rather than a bare `undefined` when this regresses.
+  const restored =
+    el.shadowRoot!.activeElement?.getAttribute("part") ??
+    document.activeElement?.localName;
+  expect(
+    restored,
+    "a direct `open = false` must hand focus back to the trigger, not strand it on <body>"
+  ).to.equal("expand-button");
+  expect(document.activeElement?.localName).to.equal("lr-date-input");
+});
+
 it("tracks slotted hint and error content through slotchange", async () => {
   const el = (await fixture(html`
     <lr-date-input>

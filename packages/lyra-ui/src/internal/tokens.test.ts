@@ -1,5 +1,6 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import { LitElement } from 'lit';
+import { setForcedColors } from '../../test/wtr-media.js';
 import { tag } from './prefix.js';
 import { specialistTokens } from './specialist-tokens.styles.js';
 import { tokens } from './tokens.styles.js';
@@ -258,14 +259,151 @@ it('defines the shared typography, chart, layer, and overlay token surface', asy
   expect(await probeVar('--lr-color-overlay-strong')).to.equal('rgb(0 0 0 / 0.92)');
 });
 
-it('provides central reduced-motion and forced-colors fallbacks', () => {
+it('provides central reduced-motion fallbacks', () => {
   const cssText = tokens.cssText;
   expect(cssText).to.match(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
   expect(cssText).to.match(/animation-duration:\s*0\.001ms/);
-  expect(cssText).to.match(/@media\s*\(forced-colors:\s*active\)/);
-  expect(cssText).to.include('--lr-color-surface: Canvas');
-  expect(cssText).to.include('--lr-color-text: CanvasText');
-  expect(cssText).to.include('--lr-focus-ring-color: Highlight');
+});
+
+// --- forced colors must outrank EVERY route into dark mode ----------------------------
+//
+// A Windows High Contrast *dark* theme also reports `prefers-color-scheme: dark`, so the ordinary
+// HCM case is forced-colors AND dark at the same time. Every dark selector this layer ships is
+// more specific than a bare `:host`, so a forced-colors block written as `:host` alone reads
+// perfectly correct in `cssText` while losing the cascade outright -- exactly what the
+// stylesheet-text assertions these tests replaced could never see. So: real
+// `(forced-colors: active)` emulation, and computed values read off a mounted host.
+//
+// It matters past CSS. The user agent substitutes its own colours for painted CSS, but canvas and
+// SVG drawing code gets no such substitution -- `graph.class.ts` resolves --lr-color-text and
+// --lr-color-surface through `getComputedStyle` and paints literally what they say, so a dead
+// forced-colors override is an unreadable chart, not a cosmetic miss.
+
+const FORCED_COLOR_TOKENS = [
+  ['--lr-color-surface', 'Canvas'],
+  ['--lr-color-surface-raised', 'Canvas'],
+  ['--lr-color-text', 'CanvasText'],
+  ['--lr-color-text-quiet', 'CanvasText'],
+  ['--lr-color-border', 'ButtonText'],
+  ['--lr-color-brand', 'LinkText'],
+  ['--lr-color-neutral', 'ButtonText'],
+  ['--lr-color-on-brand', 'Canvas'],
+  ['--lr-focus-ring-color', 'Highlight'],
+  ['--lr-color-chart-1', 'Highlight'],
+  ['--lr-graph-cat-1', 'Highlight'],
+] as const;
+
+const FORCED_COLOR_TOKEN_NAMES = FORCED_COLOR_TOKENS.map(([name]) => name);
+
+/** Every route into dark mode this token layer answers to, plus the no-signal light default. */
+type DarkRoute = 'none' | 'os-preference' | 'attribute' | 'ancestor';
+
+/** `:host-context()` ships in Chromium only, so the dark-ancestor route is unreachable elsewhere. */
+const hostContextSupported = CSS.supports('selector(:host-context(.lr-dark))');
+
+async function probeTokensUnder(names: readonly string[], route: DarkRoute): Promise<Map<string, string>> {
+  const probe =
+    route === 'attribute'
+      ? html`<lr-specialist-token-probe data-lr-theme="dark"></lr-specialist-token-probe>`
+      : html`<lr-specialist-token-probe></lr-specialist-token-probe>`;
+  const wrapper = (await fixture(
+    html`<div class=${route === 'ancestor' ? 'lr-dark' : 'lr-light'}>${probe}</div>`,
+  )) as HTMLElement;
+  const el = wrapper.querySelector(tag('specialist-token-probe')) as SpecialistTokenProbe;
+  await el.updateComplete;
+  // This runner exposes no colour-scheme emulation seam (test/wtr-media.ts reaches only
+  // Playwright's reducedMotion and forcedColors), so the OS route reuses the CSSOM rewrite the
+  // mode-switching tests at the end of this file already rely on: ONLY the
+  // (prefers-color-scheme: dark) condition is forced on. (forced-colors: active) stays a real
+  // media query answering to real emulation, and every selector, declaration and cascade position
+  // is the one that ships.
+  if (route === 'os-preference') el.shadowRoot!.adoptedStyleSheets = schemeForcedSheets(true);
+  const computed = getComputedStyle(el);
+  return new Map(names.map((name) => [name, squash(computed.getPropertyValue(name))]));
+}
+
+/**
+ * Enter real forced-colors emulation, reporting whether the engine honoured it. Playwright drives
+ * this through `page.emulateMedia({ forcedColors })`; an engine that does not implement
+ * forced-colors either rejects the command or leaves the media query unmatched, and the assertion
+ * has to skip there rather than redden for an unrelated reason.
+ */
+async function enterForcedColors(): Promise<boolean> {
+  try {
+    await setForcedColors('active');
+  } catch {
+    return false;
+  }
+  if (matchMedia('(forced-colors: active)').matches) return true;
+  await setForcedColors('none');
+  return false;
+}
+
+function expectSystemColors(values: Map<string, string>, route: DarkRoute): void {
+  const failures = FORCED_COLOR_TOKENS.flatMap(([name, expected]) =>
+    values.get(name) === expected ? [] : [`${name}: ${values.get(name)} (expected ${expected})`],
+  );
+  expect(failures.join('\n'), `tokens outranking the forced-colors override on the ${route} route`).to.equal('');
+}
+
+it('reaches its dark values through every dark route while forced colors are off', async () => {
+  // The premise every forced-colors test below rests on. Without it, "the system colour won" is
+  // indistinguishable from "this route never changed anything in the first place".
+  const names = ['--lr-color-surface', '--lr-color-chart-1'];
+  const light = await probeTokensUnder(names, 'none');
+  expect(light.get('--lr-color-surface'), 'the no-signal default must still be the light surface').to.equal('#fff');
+
+  const routes: DarkRoute[] = hostContextSupported
+    ? ['os-preference', 'attribute', 'ancestor']
+    : ['os-preference', 'attribute'];
+  const failures: string[] = [];
+  for (const route of routes) {
+    const dark = await probeTokensUnder(names, route);
+    if (dark.get('--lr-color-surface') !== '#1a1a1a') {
+      failures.push(`${route}: surface is ${dark.get('--lr-color-surface')}, expected #1a1a1a`);
+    }
+    if (dark.get('--lr-color-chart-1') === light.get('--lr-color-chart-1')) {
+      failures.push(`${route}: chart-1 never left its light value`);
+    }
+  }
+  expect(failures.join('\n'), 'dark routes that did not reach their dark values').to.equal('');
+});
+
+it('substitutes system colours in forced colors with no dark signal', async function () {
+  if (!(await enterForcedColors())) this.skip();
+  try {
+    expectSystemColors(await probeTokensUnder(FORCED_COLOR_TOKEN_NAMES, 'none'), 'none');
+  } finally {
+    await setForcedColors('none');
+  }
+});
+
+it('substitutes system colours in forced colors on an OS dark-scheme preference', async function () {
+  if (!(await enterForcedColors())) this.skip();
+  try {
+    expectSystemColors(await probeTokensUnder(FORCED_COLOR_TOKEN_NAMES, 'os-preference'), 'os-preference');
+  } finally {
+    await setForcedColors('none');
+  }
+});
+
+it('substitutes system colours in forced colors on a data-lr-theme="dark" host', async function () {
+  if (!(await enterForcedColors())) this.skip();
+  try {
+    expectSystemColors(await probeTokensUnder(FORCED_COLOR_TOKEN_NAMES, 'attribute'), 'attribute');
+  } finally {
+    await setForcedColors('none');
+  }
+});
+
+it('substitutes system colours in forced colors under a dark ancestor', async function () {
+  if (!hostContextSupported) this.skip();
+  if (!(await enterForcedColors())) this.skip();
+  try {
+    expectSystemColors(await probeTokensUnder(FORCED_COLOR_TOKEN_NAMES, 'ancestor'), 'ancestor');
+  } finally {
+    await setForcedColors('none');
+  }
 });
 
 it('darkens the border fallback to clear WCAG 1.4.11 non-text 3:1 contrast against white', async () => {
@@ -284,7 +422,7 @@ it('provides a dark-aware fallback under prefers-color-scheme: dark when no --lr
   expect(darkBlockMatch![1]).to.include('--lr-theme-color-text-normal');
 });
 
-it('provides light, dark, and forced-colors categorical chart palette values', () => {
+it('provides light and dark categorical chart palette values', () => {
   const cssText = specialistTokens.cssText;
   for (let index = 1; index <= 8; index++) {
     expect(cssText).to.include(`--lr-color-chart-${index}:`);
@@ -292,18 +430,15 @@ it('provides light, dark, and forced-colors categorical chart palette values', (
   const darkBlockMatch = /@media\s*\(prefers-color-scheme:\s*dark\)\s*{([\s\S]*?)}\s*}/.exec(cssText);
   expect(darkBlockMatch, 'expected a dark-mode block').to.not.equal(null);
   expect(darkBlockMatch![1]).to.include('--lr-color-chart-1:');
-  const forcedBlockMatch = /@media\s*\(forced-colors:\s*active\)\s*{([\s\S]*?)}\s*}/.exec(cssText);
-  expect(forcedBlockMatch, 'expected a forced-colors block').to.not.equal(null);
-  expect(forcedBlockMatch![1]).to.include('--lr-color-chart-1: Highlight');
+  // The forced-colors values are asserted as RENDERED values, not stylesheet text -- see the
+  // forced-colors block above. A present-but-outranked rule satisfies a `cssText` match forever.
 });
 
-it('provides light, dark, and forced-colors categorical graph-node-type palette values, independently themeable from --lr-color-chart-*', async () => {
+it('provides light and dark categorical graph-node-type palette values, independently themeable from --lr-color-chart-*', async () => {
   const light = await probeVar('--lr-graph-cat-1');
   expect(light).to.match(/^#[0-9a-f]{6}$/i);
   const darkBlockMatch = specialistTokens.cssText.match(/@media \(prefers-color-scheme: dark\) \{[\s\S]*?\n {2}\}/);
   expect(darkBlockMatch![0]).to.include('--lr-graph-cat-1:');
-  const forcedBlockMatch = specialistTokens.cssText.match(/@media \(forced-colors: active\) \{[\s\S]*?\n {2}\}/);
-  expect(forcedBlockMatch![0]).to.include('--lr-graph-cat-1:');
   // Independently themeable: overriding the chart bridge alone must not move the graph palette.
   expect(specialistTokens.cssText).to.include('--lr-graph-cat-1: var(--lr-theme-graph-cat-1,');
   expect(specialistTokens.cssText).not.to.include('--lr-graph-cat-1: var(--lr-theme-color-chart-1,');

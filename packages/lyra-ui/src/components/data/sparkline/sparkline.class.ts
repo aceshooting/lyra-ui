@@ -196,8 +196,12 @@ export class LyraSparkline extends LyraElement {
   }
 
   private accessibleName(values: readonly number[]): string {
-    if (this.label) return this.label;
+    // The host attribute outranks the property, per AGENTS.md ("a host aria-label wins over any
+    // computed internal accessible name") and matching lr-lite-chart, lr-tree, lr-segmented and
+    // lr-avatar-group. This order was inverted until 10.0.0: an author who set both got `label`,
+    // silently discarding the aria-label they wrote on the element itself.
     if (this.accessibleLabel) return this.accessibleLabel;
+    if (this.label) return this.label;
 
     const last = values.at(-1);
     if (last === undefined) return this.localize('noData');

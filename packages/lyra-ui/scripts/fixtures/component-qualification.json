@@ -12674,7 +12674,7 @@
           "evidence": [
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 3374,
+              "line": 3476,
               "test": "exposes validationTarget/resetValidity and is accessible while open and populated",
               "target": "el",
               "state": "open"
@@ -12737,7 +12737,7 @@
           "evidence": [
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 3988,
+              "line": 4090,
               "kind": "320px allocation test signal"
             }
           ]
@@ -12923,7 +12923,7 @@
           "evidence": [
             {
               "file": "src/components/forms/date-picker/date-input.test.ts",
-              "line": 3988,
+              "line": 4090,
               "kind": "320px allocation test signal"
             }
           ]
