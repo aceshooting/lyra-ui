@@ -696,12 +696,27 @@ jobs:
           restore-keys: playwright-${{ matrix.install_browser }}-${{ runner.os }}-
       - name: Install browser OS dependencies
         if: matrix.container == ''
+        # Belt and braces: the runner image already ships Chrome/Edge and their libraries, so this
+        # normally has nothing to do. Two things make it worth guarding anyway. `timeout` signals
+        # only its direct child, so a killed attempt leaves an orphaned apt-get holding
+        # /var/lib/apt/lists/lock -- which made every subsequent retry fail instantly with
+        # "Could not get lock", turning three attempts into one. Each attempt therefore clears
+        # that state before the next. And because a degraded mirror is infrastructure rather than
+        # a defect in this library, exhausting the attempts warns instead of failing the leg: a
+        # genuinely missing library still surfaces immediately, as an explicit browser-launch
+        # error in the test step below.
         run: |
           for i in 1 2 3; do
-            timeout 420 pnpm --filter @aceshooting/lyra-ui exec playwright install-deps ${{ matrix.install_browser }} && exit 0
-            echo "::warning::install-deps attempt $i timed out or failed; retrying"
+            if timeout -k 30 420 pnpm --filter @aceshooting/lyra-ui exec playwright install-deps ${{ matrix.install_browser }}; then
+              exit 0
+            fi
+            echo "::warning::install-deps attempt $i failed; clearing orphaned apt state"
+            sudo pkill -9 -x 'apt-get|dpkg' 2>/dev/null || true
+            sudo rm -f /var/lib/apt/lists/lock /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend \
+              /var/cache/apt/archives/lock 2>/dev/null || true
+            sudo dpkg --configure -a 2>/dev/null || true
           done
-          exit 1
+          echo "::warning::install-deps did not succeed; continuing, since the runner image already provides these libraries"
       - if: matrix.container == '' && steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm --filter @aceshooting/lyra-ui exec playwright install ${{ matrix.install_browser }}
       - name: Run platform contract suite
