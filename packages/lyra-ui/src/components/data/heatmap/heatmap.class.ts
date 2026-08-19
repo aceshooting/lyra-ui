@@ -48,9 +48,18 @@ const ROW_LABEL_INSET = 4;
 /** Ceiling on the auto-sized gutter, as a fraction of the host's own width. A single pathological
  *  label must not be allowed to squeeze the cells it exists to describe down to nothing. */
 const MAX_ROW_LABEL_FRACTION = 0.4;
-/** `row-label-width` accepts a CSS-px number or the literal `auto`; anything else is ignored so a
- *  typo leaves the built-in gutter rather than collapsing it to zero. */
-const rowLabelWidthConverter: ComplexAttributeConverter<number | 'auto' | undefined> = {
+/** Absolute ceiling, in CSS px, on the auto-sized column band. Deliberately NOT the row gutter's
+ *  fraction-of-the-host rule: the row gutter steals width from the cells, so it has to be bounded
+ *  relative to them, whereas the canvas simply grows taller to fit this band (`h = padTop + rows *
+ *  cellSize`) and the cells keep their size. A fraction of the host's height would also be circular
+ *  here, since that height is itself driven by the canvas. This is purely a sanity stop against a
+ *  pathological label. */
+const MAX_COL_LABEL_HEIGHT = 240;
+/** Breathing room between a column label and the grid it sits above. */
+const COL_LABEL_INSET = 6;
+/** `row-label-width`/`col-label-height` accept a CSS-px number or the literal `auto`; anything else
+ *  is ignored so a typo leaves the built-in gutter rather than collapsing it to zero. */
+const labelExtentConverter: ComplexAttributeConverter<number | 'auto' | undefined> = {
   fromAttribute: (value) => {
     if (value === null) return undefined;
     const trimmed = value.trim();
@@ -651,11 +660,49 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    *
    * Calendar mode is unaffected; it has its own fixed weekday gutter.
    */
-  @property({ converter: rowLabelWidthConverter, attribute: 'row-label-width', reflect: true })
+  @property({ converter: labelExtentConverter, attribute: 'row-label-width', reflect: true })
   rowLabelWidth?: number | 'auto';
 
-  /** Height, in CSS px, of the matrix column-label band. Unset keeps the built-in 20px. */
-  @property({ type: Number, attribute: 'col-label-height' }) colLabelHeight?: number;
+  /**
+   * Height, in CSS px, of the matrix column-label band, or `"auto"` to measure the labels and size
+   * the band to fit them (never below the built-in 20px, and bounded above by a sanity ceiling so a
+   * pathological label cannot produce an absurd canvas). Under a non-zero
+   * `colLabelRotation` the measurement projects each label's width through the rotation, which is
+   * what makes a rotated axis usable without hand-tuning a magic number.
+   *
+   * Unset keeps the built-in 20px, for the same reason `rowLabelWidth` does: auto-sizing every
+   * existing heatmap would silently reflow charts whose labels already fit.
+   */
+  @property({ converter: labelExtentConverter, attribute: 'col-label-height', reflect: true })
+  colLabelHeight?: number | 'auto';
+
+  /**
+   * Rotation, in degrees, applied to matrix column labels. Unset (or `0`) paints them horizontally
+   * exactly as before. In a dense matrix the per-column width is far narrower than a typical label,
+   * so horizontal labels collide with their neighbours; `45` or `90` is the standard remedy.
+   *
+   * Each label is rotated about an anchor at its own column's centre, with the label's *end* at the
+   * anchor, so it leans up and back over the columns to its left and the last column's label cannot
+   * overflow the canvas. Values outside `[0, 90]` clamp into it and non-finite values normalize to
+   * `0`; a rotation is not a coordinate a caller can usefully be surprised by.
+   *
+   * Pair with `colLabelHeight="auto"` to have the band size itself to the rotated extent.
+   *
+   * Not mirrored under `dir="rtl"`: both grid modes deliberately retain physical LTR geometry (see
+   * the class doc), and leaning one axis' labels the other way while the grid itself stays physical
+   * would be incoherent.
+   */
+  @property({ type: Number, attribute: 'col-label-rotation' }) colLabelRotation?: number;
+
+  /** Column band resolved during the last draw, mirroring `resolvedRowLabelWidth`. */
+  private resolvedColLabelHeight = PAD_TOP;
+
+  /** Normalized rotation in degrees: finite, clamped to `[0, 90]`. */
+  private get effectiveColLabelRotation(): number {
+    if (typeof this.colLabelRotation !== 'number') return 0;
+    const degrees = finiteNumber(this.colLabelRotation, 0);
+    return Math.min(90, Math.max(0, degrees));
+  }
 
   /** Gutter resolved during the last draw, so hit-testing between draws agrees with what was
    *  painted. Only ever differs from the default while `rowLabelWidth="auto"`. */
@@ -672,9 +719,32 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   private get matrixPadTop(): number {
+    if (this.colLabelHeight === 'auto') return this.resolvedColLabelHeight;
     if (typeof this.colLabelHeight !== 'number') return PAD_TOP;
     const resolved = finiteNumber(this.colLabelHeight, PAD_TOP);
     return resolved >= 0 ? resolved : PAD_TOP;
+  }
+
+  /** Tallest rotated column label plus inset, floored at the built-in band and capped so labels can
+   *  never crowd out the matrix. The column mirror of `measureRowLabelWidth()`. */
+  private measureColLabelHeight(cs: CSSStyleDeclaration): number {
+    const labels = this.matrixColLabels;
+    if (labels.length === 0) return PAD_TOP;
+    const ctx = getScratchCtx(this.ownerDocument);
+    if (!ctx) return PAD_TOP;
+    ctx.font = this.labelFont(cs);
+    let widest = 0;
+    for (const label of labels) widest = Math.max(widest, ctx.measureText(label).width);
+    // Horizontal labels need only their line box, so the built-in band already covers them; a
+    // rotated label's vertical extent is its width projected through the rotation.
+    const radians = (this.effectiveColLabelRotation * Math.PI) / 180;
+    const projected = widest * Math.sin(radians);
+    // Floor last, so the built-in band always wins over the ceiling rather than a small grid
+    // resolving to something shorter than the default.
+    return Math.max(
+      PAD_TOP,
+      Math.min(Math.ceil(projected) + COL_LABEL_INSET, MAX_COL_LABEL_HEIGHT),
+    );
   }
 
   /** Widest row label plus insets, floored at the built-in gutter and capped so labels can never
@@ -2771,8 +2841,14 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const cols = this.matrixColLabels.length;
     // Resolve the gutter before anything reads it: cell size, canvas size, cell geometry and
     // hit-testing all derive from it, so it has to settle first and then stay put for the frame.
-    if (this.rowLabelWidth === 'auto') {
-      this.resolvedRowLabelWidth = this.measureRowLabelWidth(getComputedStyle(this));
+    if (this.rowLabelWidth === 'auto' || this.colLabelHeight === 'auto') {
+      const measureStyle = getComputedStyle(this);
+      if (this.rowLabelWidth === 'auto') {
+        this.resolvedRowLabelWidth = this.measureRowLabelWidth(measureStyle);
+      }
+      if (this.colLabelHeight === 'auto') {
+        this.resolvedColLabelHeight = this.measureColLabelHeight(measureStyle);
+      }
     }
     const padLeft = this.matrixPadLeft;
     const padTop = this.matrixPadTop;
@@ -2909,9 +2985,27 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       const shown = this.ellipsize(ctx, label, rowLabelSpace);
       if (shown) ctx.fillText(shown, ROW_LABEL_INSET, padTop + r * cellSize + cellSize / 2 + 3);
     });
-    this.matrixColLabels.forEach((label, c) => {
-      ctx.fillText(label, padLeft + c * cellSize + 2, padTop - 6);
-    });
+    const colRotation = this.effectiveColLabelRotation;
+    if (colRotation === 0) {
+      this.matrixColLabels.forEach((label, c) => {
+        ctx.fillText(label, padLeft + c * cellSize + 2, padTop - COL_LABEL_INSET);
+      });
+    } else {
+      // Anchor the label's END at its own column's centre and lean it back over the columns to its
+      // left, so the rightmost label cannot run off the canvas. save()/restore() per label keeps the
+      // rotation from leaking into anything painted afterwards.
+      const radians = (colRotation * Math.PI) / 180;
+      const previousAlign = ctx.textAlign;
+      ctx.textAlign = 'right';
+      this.matrixColLabels.forEach((label, c) => {
+        ctx.save();
+        ctx.translate(padLeft + c * cellSize + cellSize / 2, padTop - COL_LABEL_INSET);
+        ctx.rotate(radians);
+        ctx.fillText(label, 0, 0);
+        ctx.restore();
+      });
+      ctx.textAlign = previousAlign;
+    }
     this.canvasHasContent = true;
   }
 

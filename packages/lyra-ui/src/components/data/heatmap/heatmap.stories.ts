@@ -418,3 +418,34 @@ export const CalendarAnnotations: Story = {
     `;
   },
 };
+
+/**
+ * Column labels are horizontal by default, which collides in a dense matrix where every column is
+ * far narrower than its label. `col-label-rotation` leans each label back over the columns to its
+ * left, anchored at its own column, and `col-label-height="auto"` sizes the band to the rotated
+ * extent so no magic number is needed.
+ */
+export const RotatedColumnLabels: Story = {
+  render: () => {
+    const colLabels = [
+      'Bosnia and Herzegovina',
+      'United Arab Emirates',
+      'Trinidad and Tobago',
+      'Papua New Guinea',
+      'Czech Republic',
+    ];
+    const rowLabels = ['Q1', 'Q2', 'Q3'];
+    const values = rowLabels.map((_row, r) =>
+      colLabels.map((_col, c) => Math.round(Math.abs(Math.sin((r + 1) * (c + 2))) * 10)),
+    );
+    return html`
+      <lr-heatmap
+        cell-size="34"
+        row-label-width="auto"
+        col-label-rotation="45"
+        col-label-height="auto"
+        .data=${{ kind: 'matrix', rowLabels, colLabels, values }}
+      ></lr-heatmap>
+    `;
+  },
+};

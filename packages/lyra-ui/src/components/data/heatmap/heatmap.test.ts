@@ -7323,3 +7323,114 @@ describe("matrix row-label gutter", () => {
     expect(el.data.kind === "matrix" && el.data.rowLabels[0]).to.equal(LONG);
   });
 });
+
+// The row gutter got `rowLabelWidth` (number | auto) in 10.0.0; the column band had no counterpart
+// at all -- horizontal-only labels in a fixed 20px band, so any label wider than a column collided
+// with its neighbour and a dense matrix's axis became unreadable.
+describe('matrix column-label band', () => {
+  const LONG = 'Bosnia and Herzegovina';
+
+  async function matrixWith(attrs: Record<string, string> = {}): Promise<LyraHeatmap> {
+    const el = (await fixture(html`<lr-heatmap cell-size="20"></lr-heatmap>`)) as LyraHeatmap;
+    for (const [name, value] of Object.entries(attrs)) el.setAttribute(name, value);
+    setMatrixData(el, { rowLabels: ['a', 'b'] });
+    setMatrixData(el, { colLabels: [LONG, 'Chad'] });
+    setMatrixData(el, { values: [[1, 2], [3, 4]] });
+    await el.updateComplete;
+    await aTimeout(0);
+    return el;
+  }
+
+  const canvasHeight = (el: LyraHeatmap): number =>
+    parseInt((el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement).style.height, 10);
+
+  /** Records the canvas rotations applied during one repaint. */
+  function recordRotations(el: LyraHeatmap): number[] {
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const angles: number[] = [];
+    const originalRotate = ctx.rotate.bind(ctx);
+    ctx.rotate = (angle: number) => {
+      angles.push(angle);
+      originalRotate(angle);
+    };
+    return angles;
+  }
+
+  it('paints column labels unrotated by default, so no existing chart changes', async () => {
+    const el = await matrixWith();
+    expect(el.colLabelRotation, 'unset').to.equal(undefined);
+    const angles = recordRotations(el);
+    (el as unknown as { draw(): void }).draw();
+
+    expect(angles, 'no rotation is issued at all').to.deep.equal([]);
+    expect(canvasHeight(el), 'the built-in 20px band is untouched').to.equal(20 + 2 * 20);
+  });
+
+  it('rotates each column label about its own column when asked', async () => {
+    const el = await matrixWith({ 'col-label-rotation': '45' });
+    expect(el.colLabelRotation).to.equal(45);
+    const angles = recordRotations(el);
+    (el as unknown as { draw(): void }).draw();
+
+    expect(angles.length, 'one rotation per column label').to.equal(2);
+    for (const angle of angles) {
+      expect(Math.abs(angle), '45 degrees in radians').to.be.closeTo(Math.PI / 4, 1e-6);
+    }
+  });
+
+  it('restores the transform after the labels, so cell painting is unaffected', async () => {
+    const el = await matrixWith({ 'col-label-rotation': '90' });
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    (el as unknown as { draw(): void }).draw();
+    const after = ctx.getTransform();
+    const dpr = window.devicePixelRatio || 1;
+
+    expect(after.b, 'no residual skew').to.be.closeTo(0, 1e-6);
+    expect(after.c, 'no residual skew').to.be.closeTo(0, 1e-6);
+    expect(after.a, 'still just the dpr scale').to.be.closeTo(dpr, 1e-6);
+  });
+
+  it('normalizes a garbage or out-of-range rotation instead of corrupting the transform', async () => {
+    for (const [raw, expected] of [
+      ['not-a-number', 0],
+      ['Infinity', 0],
+      ['-30', 0],
+      ['400', 90],
+    ] as const) {
+      const el = await matrixWith({ 'col-label-rotation': raw });
+      const angles = recordRotations(el);
+      (el as unknown as { draw(): void }).draw();
+      const applied = angles.length === 0 ? 0 : Math.abs(angles[0]!) * (180 / Math.PI);
+      expect(applied, `${raw} normalizes to ${expected}`).to.be.closeTo(expected, 1e-6);
+    }
+  });
+
+  it('grows the band to fit rotated labels under col-label-height="auto"', async () => {
+    const el = await matrixWith({ 'col-label-rotation': '45', 'col-label-height': 'auto' });
+    expect(el.colLabelHeight).to.equal('auto');
+    expect(canvasHeight(el), 'the band grew past the built-in 20px').to.be.greaterThan(20 + 2 * 20);
+  });
+
+  it('keeps the built-in band under auto when there is nothing to measure', async () => {
+    const el = (await fixture(html`<lr-heatmap cell-size="20"></lr-heatmap>`)) as LyraHeatmap;
+    el.setAttribute('col-label-height', 'auto');
+    setMatrixData(el, { rowLabels: [], colLabels: [], values: [] });
+    await el.updateComplete;
+    await aTimeout(0);
+
+    expect(el.colLabelHeight).to.equal('auto');
+    expect(canvasHeight(el)).to.equal(20);
+  });
+
+  it('still honours an explicit numeric band, and ignores a malformed one', async () => {
+    const pinned = await matrixWith({ 'col-label-height': '70' });
+    expect(pinned.colLabelHeight).to.equal(70);
+    expect(canvasHeight(pinned)).to.equal(70 + 2 * 20);
+
+    const malformed = await matrixWith({ 'col-label-height': 'not-a-number' });
+    expect(malformed.colLabelHeight).to.equal(undefined);
+    expect(canvasHeight(malformed)).to.equal(20 + 2 * 20);
+  });
+});
