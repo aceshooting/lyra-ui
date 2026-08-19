@@ -5039,3 +5039,88 @@ describe("formatter surfaces: export and spoken", () => {
     );
   });
 });
+
+describe('data-table disclosure', () => {
+  async function chartWith(markup: unknown): Promise<LyraChart> {
+    const el = (await fixture(markup as never)) as LyraChart;
+    el.labels = ['Q1', 'Q2', 'Q3'];
+    el.datasets = [{ label: 'Revenue', data: [1, 2, 3] }];
+    await el.updateComplete;
+    return el;
+  }
+
+  function toggleButton(el: LyraChart): HTMLButtonElement | null {
+    return el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="data-table-toggle"]');
+  }
+
+  function tableWrapper(el: LyraChart): HTMLElement {
+    return el.shadowRoot!.querySelector<HTMLElement>('[part~="data-table"]')!;
+  }
+
+  it('renders no toggle at all while the property is unset', async () => {
+    const collapsed = await chartWith(html`<lr-chart></lr-chart>`);
+    expect(toggleButton(collapsed), 'opt-in only').to.be.null;
+    expect(tableWrapper(collapsed).hasAttribute('data-visually-hidden')).to.be.true;
+
+    const shown = await chartWith(html`<lr-chart show-data-table></lr-chart>`);
+    expect(toggleButton(shown), 'still opt-in when the table is already visible').to.be.null;
+    expect(tableWrapper(shown).hasAttribute('data-visually-hidden')).to.be.false;
+  });
+
+  it('renders a labelled, wired disclosure button when opted in', async () => {
+    const el = await chartWith(html`<lr-chart data-table-toggle></lr-chart>`);
+    const button = toggleButton(el)!;
+
+    expect(button, 'the disclosure renders').to.exist;
+    expect(button.textContent?.trim(), 'localized, not hard-coded').to.not.equal('');
+    expect(button.getAttribute('aria-expanded')).to.equal('false');
+    expect(button.getAttribute('aria-controls')).to.equal(tableWrapper(el).id);
+    expect(tableWrapper(el).id, 'the wrapper carries a real id').to.not.equal('');
+  });
+
+  it('reveals the table on activation and keeps it in the DOM throughout', async () => {
+    const el = await chartWith(html`<lr-chart data-table-toggle></lr-chart>`);
+    const button = toggleButton(el)!;
+    expect(el.shadowRoot!.querySelector('table'), 'present while collapsed').to.exist;
+    expect(tableWrapper(el).hasAttribute('data-visually-hidden')).to.be.true;
+
+    button.click();
+    await el.updateComplete;
+
+    expect(toggleButton(el)!.getAttribute('aria-expanded')).to.equal('true');
+    expect(tableWrapper(el).hasAttribute('data-visually-hidden')).to.be.false;
+    expect(el.shadowRoot!.querySelector('table'), 'never left the DOM').to.exist;
+
+    toggleButton(el)!.click();
+    await el.updateComplete;
+    expect(toggleButton(el)!.getAttribute('aria-expanded')).to.equal('false');
+    expect(tableWrapper(el).hasAttribute('data-visually-hidden')).to.be.true;
+  });
+
+  it('starts expanded when show-data-table is set alongside the toggle', async () => {
+    const el = await chartWith(html`<lr-chart show-data-table data-table-toggle></lr-chart>`);
+
+    expect(toggleButton(el)!.getAttribute('aria-expanded')).to.equal('true');
+    expect(tableWrapper(el).hasAttribute('data-visually-hidden')).to.be.false;
+  });
+
+  it('gives the generated cell buttons a tab stop only while the table is visible', async () => {
+    const el = await chartWith(html`<lr-chart data-table-toggle></lr-chart>`);
+    const cellButton = (): HTMLButtonElement =>
+      el.shadowRoot!.querySelector<HTMLButtonElement>('table td button')!;
+    expect(cellButton().getAttribute('tabindex')).to.equal('-1');
+
+    toggleButton(el)!.click();
+    await el.updateComplete;
+    expect(cellButton().getAttribute('tabindex')).to.equal('0');
+  });
+
+  it('is accessible collapsed and expanded', async () => {
+    const el = await chartWith(html`<lr-chart data-table-toggle></lr-chart>`);
+    await expect(el).to.be.accessible();
+
+    toggleButton(el)!.click();
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});

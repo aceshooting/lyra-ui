@@ -176,6 +176,14 @@ property).
   ignored without evaluating script or exposing prototype-pollution keys to the merge.
 - `showDataTable: boolean = false` (attribute `show-data-table`) — makes the always-available
   accessible data table visible rather than screen-reader-only
+- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 10.1.0) — renders a
+  localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
+  reader can reveal the numbers on demand. `showDataTable` alone is all-or-nothing, which left
+  consumers wrapping a duplicated table in their own `<details>`. With the toggle on,
+  `showDataTable` becomes the disclosure's **initial** state rather than its whole behavior; the
+  table stays in the DOM in both states, so assistive technology never loses it, and the button
+  carries `aria-expanded` plus `aria-controls` pointing at the `data-table` wrapper. Unset, nothing
+  renders and behavior is identical to before.
 - `chartArea: LyraChartArea | undefined` (readonly) — current Chart.js chart-area geometry in
   canvas-local coordinates (`top`, `left`, `right`, `bottom`, `width`, `height`), when a chart is
   drawn
@@ -295,7 +303,7 @@ Chart.js escape hatch and is not rewritten by the simplified-surface sampler.
 wrapping DOM legend), `legend-item` (a dataset-visibility button), `legend-item-hidden` (added to
 that button while its dataset is hidden), `legend-swatch`,
 `reset-zoom-button`, `description`, `notices` (wrapper for nonfatal feature warnings and
-bounded-alternative truncation notices), `data-table`, `data-truncation` (the bounded-alternative
+bounded-alternative truncation notices), `data-table`, `data-table-toggle` (the `dataTableToggle` disclosure button), `data-truncation` (the bounded-alternative
 notice), `feature-warning` (a nonfatal missing optional-feature warning), `center` (the
 chart-area-centered wrapper for the `center` slot), `error` (neutral visible message rendered in
 place of `canvas` when the optional `chart.js` peer dependency fails to load; the failure transition
@@ -709,7 +717,7 @@ complete `hiddenDatasets` snapshot).
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
-`reset-zoom-button`, `description`, `notices`, `data-table`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
+`reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-toggle`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink — see
 `llms/components/lr-chart.md`).
@@ -791,7 +799,7 @@ maxSamples?)` appends finite raw samples and optionally retains only the newest 
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
-`reset-zoom-button`, `description`, `notices`, `data-table`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
+`reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-toggle`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink —
 inherited from `LyraChart`, unaffected by the binning logic).
@@ -871,6 +879,14 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 - `formatter?: LyraChartFormatter`, `valueFormatter?: LyraChartValueFormatter` — numeric axis,
   tooltip, table, summary, and export formatting; the context-object formatter takes precedence
 - `showDataTable: boolean = false` (attribute `show-data-table`) — reveals the accessible data table
+- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 10.1.0) — renders a
+  localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
+  reader can reveal the numbers on demand. `showDataTable` alone is all-or-nothing, which left
+  consumers wrapping a duplicated table in their own `<details>`. With the toggle on,
+  `showDataTable` becomes the disclosure's **initial** state rather than its whole behavior; the
+  table stays in the DOM in both states, so assistive technology never loses it, and the button
+  carries `aria-expanded` plus `aria-controls` pointing at the `data-table` wrapper. Unset, nothing
+  renders and behavior is identical to before.
 
 **Methods:** `exportData('csv'|'png')` returns spreadsheet-safe summary rows or the current canvas
 PNG data URL. `refreshTheme()` re-reads canvas theme custom properties after an ancestor theme
@@ -909,7 +925,7 @@ detailed sample and notice, making it the escape hatch for complete data.
 
 **CSS parts:** `base`, `plot` (the fixed-height canvas region), `canvas`, `legend`,
 `legend-item`, `legend-item-hidden` (added to a legend item while its box series is hidden),
-`legend-swatch`, `description`, `data-table`, `error` (neutral visible message shown
+`legend-swatch`, `description`, `data-table`, `data-table-toggle` (the `dataTableToggle` disclosure button), `error` (neutral visible message shown
 instead of `canvas` when the optional box-plot peer fails to load; the failure transition is
 announced through the shared document-level light-DOM assertive sink), `data-truncation` (the
 bounded-alternative sampling notice)

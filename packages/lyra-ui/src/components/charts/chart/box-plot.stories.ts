@@ -200,3 +200,31 @@ export const CustomDataTable: Story = {
     </lr-box-plot>
   `,
 };
+
+export const DataTableDisclosure: Story = {
+  name: 'Data table disclosure',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`data-table-toggle` renders a disclosure button above the accessible data table, so a sighted reader can reveal the five-number summaries without the consumer hand-rolling a `<details>` around a duplicated table. Matches `lr-chart`’s property of the same name.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-box-plot
+      data-table-toggle
+      .labels=${['K=2', 'K=3']}
+      .datasets=${[
+        {
+          label: 'Loss',
+          data: [
+            { min: 1, q1: 2, median: 3, q3: 4, max: 5 },
+            { min: 2, q1: 3, median: 4, q3: 5, max: 6 },
+          ],
+        },
+      ]}
+      style="max-inline-size: 32rem;"
+    ></lr-box-plot>
+  `,
+};

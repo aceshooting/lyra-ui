@@ -429,3 +429,24 @@ export const CustomDataTable: Story = {
     </lr-chart>
   `,
 };
+
+export const DataTableDisclosure: Story = {
+  name: 'Data table disclosure',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`show-data-table` is all-or-nothing: the accessible table is either permanently screen-reader-only or permanently visible. `data-table-toggle` adds a disclosure button so a sighted reader can pull up the numbers behind the chart on demand. The table stays in the DOM either way, so assistive technology never loses it, and `show-data-table` becomes the initial state rather than the whole behavior.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-chart
+      data-table-toggle
+      type="bar"
+      .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
+      .datasets=${[{ label: 'Revenue', data: [12, 19, 14, 22] }]}
+      style="max-inline-size: 32rem;"
+    ></lr-chart>
+  `,
+};

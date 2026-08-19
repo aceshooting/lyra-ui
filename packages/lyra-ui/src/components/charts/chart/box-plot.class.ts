@@ -247,6 +247,7 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  * @csspart legend-swatch - The resolved series-color swatch in a legend item.
  * @csspart description - The accessible box-plot summary.
  * @csspart data-table - The optional generated or slotted data table.
+ * @csspart data-table-toggle - The disclosure button rendered by `dataTableToggle`.
  * @csspart error - Static visible error shown instead of the canvas when the optional box-plot
  *   peer fails to load; its transition is announced through a shared light-DOM alert.
  * @csspart data-truncation - Explanation shown when the generated accessible alternative samples
@@ -351,6 +352,37 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   @property() description: string | null = null;
   /** Makes the generated data table visible; it remains screen-reader available when false. */
   @property({ type: Boolean, attribute: 'show-data-table' }) showDataTable = false;
+
+  /**
+   * Render a disclosure button above the accessible data table so a sighted reader can reveal the
+   * numbers behind the plot on demand. `showDataTable` alone is all-or-nothing -- the table is
+   * either permanently screen-reader-only or permanently visible -- which left a consumer wrapping
+   * a duplicated table in their own `<details>`.
+   *
+   * With this set, `showDataTable` becomes the disclosure's *initial* state rather than its whole
+   * behavior. The table stays in the DOM in both states, so assistive technology never loses it.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'data-table-toggle' }) dataTableToggle = false;
+
+  /**
+   * Live disclosure state. Null until the reader actually toggles, so an untouched control keeps
+   * following `showDataTable` (including a later change to it) instead of freezing a seeded copy.
+   */
+  @state() private dataTableExpandedOverride: boolean | null = null;
+
+  private readonly dataTableId = nextId('box-plot-data-table');
+
+  /** Whether the data table is currently visible. Identical to `showDataTable` whenever
+   *  `dataTableToggle` is off, which is what keeps the unset path byte-identical to before. */
+  private get dataTableVisible(): boolean {
+    if (!this.dataTableToggle) return this.showDataTable;
+    return this.dataTableExpandedOverride ?? this.showDataTable;
+  }
+
+  private toggleDataTable(): void {
+    this.dataTableExpandedOverride = !this.dataTableVisible;
+  }
   /** Formats numeric axes, tooltips, generated table cells, summaries, and CSV export. */
   @property({ attribute: false }) valueFormatter?: LyraChartValueFormatter;
   /** Unified context-object formatter shared with the other chart surfaces. */
@@ -1068,7 +1100,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     const numberFormat = getNumberFormat(this.effectiveLocale);
     const sample = this.dataTableSample();
     return html`
-      <table class=${this.showDataTable ? '' : 'sr-only'}>
+      <table class=${this.dataTableVisible ? '' : 'sr-only'}>
         <caption>${this.accessibleName(this.localize('boxPlotData'))}</caption>
         <thead>
           <tr>
@@ -1223,9 +1255,21 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
         ${this.dataTruncationMessage()
           ? html`<p part="data-truncation">${this.dataTruncationMessage()}</p>`
           : nothing}
+        ${this.dataTableToggle
+          ? html`<button
+              part="data-table-toggle"
+              type="button"
+              aria-expanded=${this.dataTableVisible ? 'true' : 'false'}
+              aria-controls=${this.dataTableId}
+              @click=${() => this.toggleDataTable()}
+            >
+              ${this.localize('boxPlotData')}
+            </button>`
+          : nothing}
         <div
+          id=${this.dataTableId}
           part="data-table"
-          ?data-visually-hidden=${!hasCustomDataTable && !this.showDataTable}
+          ?data-visually-hidden=${!hasCustomDataTable && !this.dataTableVisible}
         >
           <slot name="data-table" @slotchange=${() => this.requestUpdate()}></slot>
           ${hasCustomDataTable ? nothing : this.renderDataTable()}
