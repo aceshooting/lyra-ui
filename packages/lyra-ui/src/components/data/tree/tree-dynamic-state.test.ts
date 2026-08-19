@@ -58,7 +58,13 @@ it('forwards `label` to the internal role="tree" element\'s aria-label, and omit
   expect(base.getAttribute('aria-label')).to.equal('File explorer');
 });
 
-it('sets aria-label on the internal role="tree" element from the label prop, falling back to a forwarded host aria-label', async () => {
+it('names the internal role="tree" element from a forwarded host aria-label, and from the label prop when the host carries none', async () => {
+  // Precedence changed in 10.0.0: a host aria-label now wins over the `label` property, which is
+  // what AGENTS.md requires ("a host aria-label wins over any computed internal accessible name")
+  // and what segmented, avatar-group, card, file-icon, flow-controls, document-viewer,
+  // highlight-layer and geojson-view already did. lr-tree was the sole outlier, resolving `label`
+  // first, so an author who set both got the property rather than the attribute they wrote on the
+  // element itself.
   const el = (await fixture(
     html`<lr-tree aria-label="Forwarded label"></lr-tree>`,
   )) as LyraTree;
@@ -69,7 +75,15 @@ it('sets aria-label on the internal role="tree" element from the label prop, fal
 
   el.label = 'File explorer';
   await el.updateComplete;
-  expect(base.getAttribute('aria-label')).to.equal('File explorer');
+  expect(base.getAttribute('aria-label'), 'host aria-label outranks the label property').to.equal(
+    'Forwarded label',
+  );
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(base.getAttribute('aria-label'), 'label names the tree when the host carries none').to.equal(
+    'File explorer',
+  );
 });
 
 it('keeps arrow-key navigation correct after a node\'s `item` is mutated directly, with no `data` reassignment or toggle event', async () => {
