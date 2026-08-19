@@ -107,12 +107,39 @@ function displayNameFor(code: string, locale: string): string {
 let flagUrlResolver: Promise<LyraFlagUrlResolver | null> | undefined;
 let flagResolverGeneration = 0;
 const flagResolverSubscribers = new Set<(generation: number) => void>();
+/**
+ * One-shot guard for `warnMissingFlagResolver()`. A table of 200 flags shares one diagnostic
+ * rather than emitting 200 identical lines. Re-armed by `setFlagUrlResolver()`, so a later
+ * registration generation that is still resolver-less warns again.
+ */
+let warnedMissingFlagResolver = false;
+
+/**
+ * Explains the one failure this component otherwise reports only as a visible
+ * `[part="error"]`: `country`/`language` was set, but nothing ever registered a resolver, so
+ * there is no way to turn a code into a URL. The core component deliberately keeps the optional
+ * peer out of its module graph (see `loadFlagUrlResolver()`), which means this is a *setup*
+ * omission a developer can fix in one import — but only if they are told about it. Distinct from
+ * `loadFlagUrl()`'s warning, which fires when the peer entry WAS imported and the peer package
+ * itself is missing.
+ */
+function warnMissingFlagResolver(code: string): void {
+  if (warnedMissingFlagResolver) return;
+  warnedMissingFlagResolver = true;
+  console.warn(
+    `<lr-flag> could not resolve the code "${code}" because no flag resolver is registered. `
+      + `Import the optional peer entry once at startup -- import `
+      + `'@aceshooting/lyra-ui/components/media/flag/flag-peer.js' -- and install `
+      + `'@aceshooting/lyra-flags', or pass an already-resolved URL through 'src' instead.`,
+  );
+}
 
 /** Install an optional flag resolver supplied by a peer-registration entry. */
 export function setFlagUrlResolver(
   value: LyraFlagUrlResolver | Promise<LyraFlagUrlResolver | null> | null,
 ): void {
   flagUrlResolver = value === null ? Promise.resolve(null) : Promise.resolve(value);
+  warnedMissingFlagResolver = false;
   flagResolverGeneration++;
   for (const subscriber of [...flagResolverSubscribers]) subscriber(flagResolverGeneration);
 }
@@ -141,7 +168,9 @@ function loadFlagUrlResolver(): Promise<LyraFlagUrlResolver | null> {
  * a representative country). While that peer package's `flagUrl()` resolves,
  * the host carries `aria-busy="true"`; a decorative skeleton and ordinary, non-live localized
  * loading text render in its place. A missing or failed peer resolver fails closed with a localized visible error and a
- * shared light-DOM assertive announcement;
+ * shared light-DOM assertive announcement, plus a one-time `console.warn` naming the code and the
+ * `flag-peer.js` import that registers a resolver -- the visible error alone cannot tell a
+ * developer that the fix is a missing import rather than missing flag data;
  * an installed resolver returning no URL for an unknown code remains a valid
  * empty result.
  *
@@ -476,6 +505,7 @@ export class LyraFlag extends LyraElement {
       .then(async (resolve) => {
         if (token !== this.resolveToken || request !== this.activeSourceRequest || !this.isConnected) return;
         if (typeof resolve !== 'function') {
+          warnMissingFlagResolver(code);
           this.failSource(identity);
           return;
         }

@@ -1021,3 +1021,73 @@ describe('alpha-3 country codes and the unresolved fallback', () => {
     ).to.be.true;
   });
 });
+
+describe('missing-resolver diagnostic', () => {
+  let originalWarn: typeof console.warn;
+  let warnings: string[];
+
+  beforeEach(() => {
+    warnings = [];
+    originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '));
+  });
+
+  afterEach(() => {
+    console.warn = originalWarn;
+    setFlagUrlResolver(registerLyraFlagPeer());
+  });
+
+  it('warns once, naming the code and the peer entry, when no resolver is registered', async () => {
+    setFlagUrlResolver(null);
+    const el = await fixture<LyraFlag>(html`<lr-flag country="fr"></lr-flag>`);
+    await waitUntil(() => !!el.shadowRoot!.querySelector('[part="error"]'));
+
+    expect(warnings.length, 'exactly one warning').to.equal(1);
+    expect(warnings[0]).to.contain('fr');
+    expect(warnings[0]).to.contain('flag-peer');
+  });
+
+  it('warns once for a whole page of unresolvable flags, not once per element', async () => {
+    setFlagUrlResolver(null);
+    const host = await fixture<HTMLElement>(html`<div>
+      <lr-flag country="fr"></lr-flag>
+      <lr-flag country="de"></lr-flag>
+      <lr-flag country="it"></lr-flag>
+    </div>`);
+    const flags = Array.from(host.querySelectorAll<LyraFlag>('lr-flag'));
+    await Promise.all(
+      flags.map((flag) => waitUntil(() => !!flag.shadowRoot!.querySelector('[part="error"]'))),
+    );
+
+    expect(warnings.length, 'one warning for three flags').to.equal(1);
+  });
+
+  it('never warns when a working resolver is registered', async () => {
+    setFlagUrlResolver(async () => TEST_FLAG_SRC);
+    const el = await fixture<LyraFlag>(html`<lr-flag country="fr"></lr-flag>`);
+    await img(el);
+
+    expect(warnings, 'a registered resolver is not a fault').to.deep.equal([]);
+  });
+
+  it('never warns for a pre-resolved src', async () => {
+    setFlagUrlResolver(null);
+    const el = await fixture<LyraFlag>(
+      html`<lr-flag src=${TEST_FLAG_SRC} label="Test"></lr-flag>`,
+    );
+    await el.updateComplete;
+    await aTimeout(20);
+
+    expect(warnings, 'src bypasses the resolver entirely').to.deep.equal([]);
+  });
+
+  it('never warns for a well-formed but unmapped code, which is data rather than a defect', async () => {
+    setFlagUrlResolver(null);
+    const el = await fixture<LyraFlag>(html`<lr-flag country="ZZZ"></lr-flag>`);
+    await el.updateComplete;
+    await aTimeout(20);
+
+    expect(el.hasAttribute('data-unresolved'), 'still reflects the unresolved state').to.be.true;
+    expect(warnings, 'an unmapped code must stay silent').to.deep.equal([]);
+  });
+});

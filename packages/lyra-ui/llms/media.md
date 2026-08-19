@@ -98,8 +98,10 @@ rectangular corner radius), `--lr-flag-aspect-ratio` (default `4 / 3`), and
 image when `country` or `language` is used. Import
 `@aceshooting/lyra-ui/components/media/flag/flag-peer.js` once to opt into
 that resolver; a pre-resolved `src` works without the peer registration entry. If the peer is not
-installed, the component fails closed with localized visible `[part="error"]` text and a shared
-light-DOM assertive announcement (see gotchas).
+installed — or if `flag-peer.js` was simply never imported, which looks identical from the page —
+the component fails closed with localized visible `[part="error"]` text, a shared light-DOM
+assertive announcement, and a one-time `console.warn` naming the unresolved code and this import
+(see gotchas).
 
 Also exported from the package root:
 `languageToCountry(language: string): string | undefined` and the `LANGUAGE_TO_COUNTRY` lookup
@@ -185,7 +187,12 @@ import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
   `[data-lr-live-region="assertive"]` sink, so the shadow chrome itself is not live and identical
   retries remain separate additions. The failure also produces a one-time `console.warn`
   once the resolver rejects (lazy `import()`, cached module-wide so the warning fires only once per
-  page even with many `<lr-flag>` instances). An _empty_ template is a different, non-error outcome:
+  page even with many `<lr-flag>` instances). A **separate** one-time `console.warn` covers the
+  commonest setup mistake — `country`/`language` set while no resolver was ever registered, i.e.
+  `flag-peer.js` was not imported. It names the offending code and that import path, because the
+  visible `[part="error"]` state alone is indistinguishable from missing flag data. It is armed
+  once per resolver-registration generation, so a table of many flags warns once.
+  An _empty_ template is a different, non-error outcome:
   the peer resolved fine but returned no URL for that code (e.g. `country="zz"`) — no `[part="error"]`,
   no `<img>`, no warning.
 - Rendering is async even when the peer _is_ installed: `src` resolves after an `import()` +
