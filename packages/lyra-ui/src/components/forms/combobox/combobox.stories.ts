@@ -660,3 +660,23 @@ export const ManagedOverlayStack: Story = {
     </div>
   `,
 };
+
+/**
+ * `<lr-option>`'s documented `start`/`end` (and `prefix`/`suffix`) adornment slots now render inside
+ * the popup rows, so a country, currency, language or user picker can carry the small image it
+ * always wanted. The nodes are cloned into each row, inert and `aria-hidden`, so they never join the
+ * option's accessible name and the author's own markup is left untouched. `visible-options` bounds
+ * the popup's height while keeping every row reachable by scrolling.
+ */
+export const OptionAdornments: Story = {
+  render: () => html`
+    <lr-combobox label="Country" placeholder="Search countries…" visible-options="4" open>
+      <lr-option value="fr"><span slot="start">🇫🇷</span>France</lr-option>
+      <lr-option value="mt"><span slot="start">🇲🇹</span>Malta</lr-option>
+      <lr-option value="pt"><span slot="start">🇵🇹</span>Portugal</lr-option>
+      <lr-option value="es"><span slot="start">🇪🇸</span>Spain</lr-option>
+      <lr-option value="se"><span slot="start">🇸🇪</span>Sweden</lr-option>
+      <lr-option value="ch"><span slot="start">🇨🇭</span>Switzerland<span slot="end">CHF</span></lr-option>
+    </lr-combobox>
+  `,
+};

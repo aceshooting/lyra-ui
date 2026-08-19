@@ -145,6 +145,11 @@ export interface ComboboxSourceRow {
   readonly sub?: string;
   /** Optional decorative leading visual. Its rendered subtree is inert and aria-hidden. */
   readonly icon?: unknown;
+  /** Leading adornment, mirroring `<lr-option>`'s `start`/`prefix` slots. Inert and aria-hidden,
+   *  like `icon`, so it never joins the option's accessible name. */
+  readonly start?: unknown;
+  /** Trailing adornment, mirroring `<lr-option>`'s `end`/`suffix` slots. */
+  readonly end?: unknown;
   /** Optional trailing metadata badge. */
   readonly badge?: string | number;
   /** Spoken option label when the visible row needs additional context. */
@@ -259,6 +264,8 @@ function normalizeSourceResult(input: unknown): {
         label,
         ...(sub === undefined ? {} : { sub }),
         ...(source['icon'] === undefined ? {} : { icon: source['icon'] }),
+        ...(source['start'] === undefined ? {} : { start: source['start'] }),
+        ...(source['end'] === undefined ? {} : { end: source['end'] }),
         ...(badge === undefined ? {} : { badge }),
         ...(accessibleLabel === undefined ? {} : { accessibleLabel }),
         ...(source['data'] === undefined ? {} : { data: source['data'] }),
@@ -384,6 +391,10 @@ export interface LyraComboboxEventMap {
  *   `lr-select` and `lr-emoji-picker` so one rule can style every grouped list.
  * @csspart option - An option row.
  * @csspart option-dot - An option row's leading status dot (when `dot-color` is set).
+ * @csspart option-start - An option row's leading adornment, cloned from the source
+ *   `<lr-option>`'s `start`/`prefix` slot (or an async row's `start`). Inert and aria-hidden.
+ * @csspart option-end - An option row's trailing adornment, cloned from the source
+ *   `<lr-option>`'s `end`/`suffix` slot (or an async row's `end`). Inert and aria-hidden.
  * @csspart option-icon - An async option row's optional decorative leading visual. Its rendered
  *   subtree remains visible but is inert and hidden from assistive technology.
  * @csspart option-label - An option row's label/sub wrapper.
@@ -760,6 +771,24 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   // virtualization/render-limiting logic (`shownTags.slice`, `renderedRows`'s cap) directly, so a
   // NaN/negative value must never reach it -- sanitized synchronously here via `finiteCount`
   // rather than left for Lit's default async field setter to hand through unchecked.
+  /**
+   * Bounds the popup to roughly this many option rows, leaving the rest reachable by scrolling.
+   *
+   * This is the third and last of three similarly-named caps, which is exactly the confusion this
+   * property exists to end -- each does something different:
+   * - `visibleOptions` (this one) caps how many suggestion rows are **visible** at once. Purely
+   *   presentational: every row is still rendered and still reachable by scrolling.
+   * - `maxOptionsVisible` caps how many **selected tags** are shown in multi-select before the
+   *   "+N" summary. Nothing to do with the suggestion list.
+   * - `maxRender` caps how many suggestion rows are **rendered into the DOM at all**, as a
+   *   performance ceiling; rows past it do not exist and are summarized by `option-overflow`.
+   *
+   * Unset imposes no bound of its own, leaving the listbox's existing max-height behavior exactly
+   * as it was. Zero, negative, and non-finite values normalize to unset rather than collapsing the
+   * popup.
+   */
+  @property({ type: Number, attribute: 'visible-options' }) visibleOptions?: number;
+
   private _maxOptionsVisible = 3;
   private _maxRender = 200;
   private _sourceDelay = 200;
@@ -1113,8 +1142,12 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     this.requestUpdate('value', old);
   }
 
-  /** Maximum number of selected-value tags shown before the rest collapse behind a "+N" tag
+  /** Maximum number of selected-value **tags** shown before the rest collapse behind a "+N" tag
    *  (multi-select only). Sanitized to a finite, non-negative integer.
+   *
+   *  Not to be confused with the two caps on the suggestion list: `visibleOptions` bounds how many
+   *  suggestion rows are visible at once, and `maxRender` bounds how many are rendered at all.
+   *  This one only ever concerns the tags for values already chosen.
    * @default 3 */
   get maxOptionsVisible(): number {
     return this._maxOptionsVisible;
@@ -1125,8 +1158,11 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     this.requestUpdate('maxOptionsVisible', old);
   }
 
-  /** Maximum number of rows rendered before the rest collapse behind the overflow indicator
-   *  (the current selection is always kept visible regardless). Sanitized to a finite,
+  /** Maximum number of suggestion rows **rendered into the DOM at all** before the rest collapse
+   *  behind the overflow indicator (the current selection is always kept visible regardless). This
+   *  is a performance ceiling, not a visible-height affordance: rows past it do not exist and
+   *  cannot be scrolled to. Use `visibleOptions` to bound the popup's height while keeping every
+   *  row reachable, and `maxOptionsVisible` for the selected-tag cap. Sanitized to a finite,
    *  non-negative integer capped at 1,000.
    *
    *  Rows render in full rather than as a recycled scroll window, because the filter input's
@@ -1510,6 +1546,9 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     this.options = slot
       .assignedElements({ flatten: true })
       .filter(isLyraOptionElement);
+    // The option set (or an option's own adornment children) may have changed wholesale; re-clone
+    // lazily on the next render rather than serving a stale adornment.
+    this.adornmentClones = new WeakMap();
     this.normalizeActiveIndex();
     if (!this._defaultCaptured) {
       this._defaultCaptured = true;
@@ -1658,16 +1697,55 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   }
 
   /** The current row set in a source-agnostic shape, before capping. */
+  /**
+   * Cloned adornment nodes, keyed by the option they came from. Cached because `effectiveRows` runs
+   * on every render pass: handing Lit a fresh clone each time would rebuild the whole popup's
+   * adornment DOM on every keystroke. Dropped wholesale in `collectOptions()`, which is the only
+   * place the option set can change.
+   */
+  private adornmentClones = new WeakMap<LyraOption, { start?: unknown; end?: unknown }>();
+
+  /**
+   * `<lr-option>` documents `start`/`end` (plus the Shoelace `prefix`/`suffix` aliases) adornment
+   * slots, but the popup is built from row DATA rather than from the option elements, so slotted
+   * nodes have nowhere to land. Clone them into the row instead.
+   *
+   * `cloneNode(true)`, never `createElementNS`: the latter yields an inert, never-upgrading custom
+   * element (AGENTS.md), which would silently break the `<lr-flag>`/avatar case this exists for.
+   * Cloning also leaves the author's own subtree exactly where they put it -- moving the live node
+   * would empty their markup as a side effect of opening a dropdown.
+   */
+  private adornmentsFor(option: LyraOption): { start?: unknown; end?: unknown } {
+    const cached = this.adornmentClones.get(option);
+    if (cached) return cached;
+    const cloneSlot = (selector: string): unknown => {
+      const nodes = Array.from(option.querySelectorAll<HTMLElement>(selector));
+      if (nodes.length === 0) return undefined;
+      return nodes.map((node) => node.cloneNode(true));
+    };
+    const resolved = {
+      start: cloneSlot(':scope > [slot="start"], :scope > [slot="prefix"]'),
+      end: cloneSlot(':scope > [slot="end"], :scope > [slot="suffix"]'),
+    };
+    this.adornmentClones.set(option, resolved);
+    return resolved;
+  }
+
   private get effectiveRows(): ComboboxSourceRow[] {
     if (this.source) return this.asyncRows;
-    return this.filtered.map((o) => ({
-      value: o.value,
-      label: o.label,
-      sub: o.sub || undefined,
-      dotColor: o.dotColor || undefined,
-      group: o.group || undefined,
-      disabled: o.disabled,
-    }));
+    return this.filtered.map((o) => {
+      const adornments = this.adornmentsFor(o);
+      return {
+        value: o.value,
+        label: o.label,
+        sub: o.sub || undefined,
+        dotColor: o.dotColor || undefined,
+        group: o.group || undefined,
+        disabled: o.disabled,
+        ...(adornments.start === undefined ? {} : { start: adornments.start }),
+        ...(adornments.end === undefined ? {} : { end: adornments.end }),
+      };
+    });
   }
 
   /** Synthetic action shown only when the current nonempty query has no exact label/value match. */
@@ -1948,9 +2026,37 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     if (this.source && this.asyncRows.length === 0) this.runSource(this.query);
   }
 
+  /**
+   * Publishes `visibleOptions` as a length the listbox stylesheet folds into its existing
+   * `max-block-size: min(...)` chain. Measured rather than computed from a token, because a row's
+   * height varies with `sub` lines, adornments, and group labels -- an estimate would cut a row in
+   * half. Measuring where row N *starts* also naturally accounts for the listbox's own padding.
+   *
+   * Publishes nothing at all when the cap is unset, normalizes away, or is not actually exceeded,
+   * so the property's own fallback keeps today's behavior byte-identical.
+   */
+  private syncVisibleOptionsCap(): void {
+    const listbox = (this.renderRoot as ShadowRoot | undefined)?.querySelector<HTMLElement>(
+      '[part="listbox"]',
+    );
+    if (!listbox) return;
+    const clear = (): void => listbox.style.removeProperty('--lr-combobox-visible-block-size');
+    const requested =
+      typeof this.visibleOptions === 'number' ? finiteCount(this.visibleOptions, 0) : 0;
+    if (requested <= 0) return clear();
+    const rows = listbox.querySelectorAll<HTMLElement>('[part="option"]');
+    if (rows.length <= requested) return clear();
+    const boundary = rows[requested];
+    if (!boundary) return clear();
+    const cap = boundary.getBoundingClientRect().top - listbox.getBoundingClientRect().top;
+    if (!Number.isFinite(cap) || cap <= 0) return clear();
+    listbox.style.setProperty('--lr-combobox-visible-block-size', `${Math.ceil(cap)}px`);
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // updated() layered under this class must still run.
+    this.syncVisibleOptionsCap();
     // A vetoed transition already put `open` back during willUpdate(), so `changed` still names it
     // while nothing about the state actually moved: tearing down and rebuilding the popup
     // machinery here would undo the veto it was meant to honour.
@@ -2457,6 +2563,9 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
           aria-label=${o.accessibleLabel || nothing}
           ?data-active=${id === activeId}
         >
+          ${o.start
+            ? renderInertPresentation(o.start, { part: 'option-start' })
+            : ''}
           ${o.icon
             ? renderInertPresentation(o.icon, { part: 'option-icon' })
             : ''}
@@ -2474,6 +2583,9 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
           </span>
           ${o.badge != null
             ? html`<span part="option-badge">${o.badge}</span>`
+            : ''}
+          ${o.end
+            ? renderInertPresentation(o.end, { part: 'option-end' })
             : ''}
         </div>`
       );

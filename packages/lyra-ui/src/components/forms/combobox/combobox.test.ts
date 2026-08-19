@@ -6962,3 +6962,191 @@ it("truncates a selected tag's label with an ellipsis instead of wrapping it mid
     "a label that fits and one that overflows are both a single line tall"
   ).to.equal(singleLine);
 });
+
+// lr-option documents start/end (and the prefix/suffix aliases) slots AND matching CSS parts, but
+// lr-combobox builds its popup from normalized row DATA rather than the light-DOM nodes, so inside
+// the one component lr-option exists to feed, none of them rendered at all. That is a documented
+// contract the code did not have, not merely a missing feature.
+describe('option adornments in the popup', () => {
+  async function openWith(markup: unknown): Promise<LyraCombobox> {
+    const el = (await fixture(markup as never)) as LyraCombobox;
+    el.open = true;
+    await el.updateComplete;
+    await aTimeout(0);
+    return el;
+  }
+
+  const rowFor = (el: LyraCombobox, value: string): HTMLElement =>
+    el.shadowRoot!.querySelector<HTMLElement>(`[part="option"][data-value="${value}"]`)!;
+
+  it('renders a start adornment inside the popup row', async () => {
+    const el = await openWith(html`
+      <lr-combobox>
+        <lr-option value="fr"><span slot="start" id="fr-mark">FR</span>France</lr-option>
+      </lr-combobox>
+    `);
+    const adornment = rowFor(el, 'fr').querySelector('[part~="option-start"]');
+
+    expect(adornment, 'the documented start slot now renders').to.exist;
+    expect(adornment!.textContent).to.contain('FR');
+    expect(adornment!.getAttribute('aria-hidden'), 'decorative').to.equal('true');
+    expect((adornment as HTMLElement).inert, 'not reachable').to.be.true;
+  });
+
+  it('renders an end adornment inside the popup row', async () => {
+    const el = await openWith(html`
+      <lr-combobox>
+        <lr-option value="fr">France<span slot="end">€</span></lr-option>
+      </lr-combobox>
+    `);
+    const adornment = rowFor(el, 'fr').querySelector('[part~="option-end"]');
+
+    expect(adornment, 'the documented end slot now renders').to.exist;
+    expect(adornment!.textContent).to.contain('€');
+  });
+
+  it('treats the Shoelace prefix/suffix aliases identically', async () => {
+    const el = await openWith(html`
+      <lr-combobox>
+        <lr-option value="fr"><span slot="prefix">P</span>France<span slot="suffix">S</span></lr-option>
+      </lr-combobox>
+    `);
+    const row = rowFor(el, 'fr');
+
+    expect(row.querySelector('[part~="option-start"]')!.textContent).to.contain('P');
+    expect(row.querySelector('[part~="option-end"]')!.textContent).to.contain('S');
+  });
+
+  it('leaves the author light-DOM option subtree untouched', async () => {
+    const el = await openWith(html`
+      <lr-combobox>
+        <lr-option value="fr"><span slot="start" id="original">FR</span>France</lr-option>
+      </lr-combobox>
+    `);
+    const original = el.querySelector('#original');
+
+    expect(original, 'the author node is still where they put it').to.exist;
+    expect(original!.parentElement!.tagName.toLowerCase()).to.equal('lr-option');
+    expect(
+      rowFor(el, 'fr').querySelector('[part~="option-start"]')!.contains(original!),
+      'the popup renders a clone, not the original node',
+    ).to.be.false;
+  });
+
+  it('emits no adornment wrapper for a plain option', async () => {
+    const el = await openWith(html`
+      <lr-combobox><lr-option value="fr">France</lr-option></lr-combobox>
+    `);
+    const row = rowFor(el, 'fr');
+
+    expect(row.querySelector('[part~="option-start"]'), 'no empty wrapper').to.be.null;
+    expect(row.querySelector('[part~="option-end"]'), 'no empty wrapper').to.be.null;
+  });
+
+  it('keeps the adornment out of the option accessible name', async () => {
+    const el = await openWith(html`
+      <lr-combobox>
+        <lr-option value="fr"><span slot="start">FR</span>France</lr-option>
+      </lr-combobox>
+    `);
+    const row = rowFor(el, 'fr');
+
+    expect(row.querySelector('[part~="option-label"]')!.textContent!.trim()).to.equal('France');
+  });
+
+  it('upgrades a custom element used as an adornment in the clone', async () => {
+    // Lit forbids a binding in a tag name, so the tag is written literally below and only the
+    // definition is guarded.
+    if (!customElements.get('test-combobox-adornment')) {
+      customElements.define(
+        'test-combobox-adornment',
+        class extends HTMLElement {
+          connectedCallback(): void {
+            this.setAttribute('data-upgraded', 'yes');
+          }
+        },
+      );
+    }
+    const el = await openWith(html`
+      <lr-combobox>
+        <lr-option value="fr"
+          ><test-combobox-adornment slot="start"></test-combobox-adornment>France</lr-option
+        >
+      </lr-combobox>
+    `);
+    const clone = rowFor(el, 'fr').querySelector('test-combobox-adornment')!;
+
+    expect(clone, 'the custom element reached the row').to.exist;
+    expect(
+      clone.getAttribute('data-upgraded'),
+      'cloneNode keeps it upgradeable, unlike createElementNS',
+    ).to.equal('yes');
+  });
+});
+
+describe('visible-options cap', () => {
+  function manyOptions(count: number): unknown[] {
+    return Array.from(
+      { length: count },
+      (_unused, index) => html`<lr-option value=${`v${index}`}>Option ${index}</lr-option>`,
+    );
+  }
+
+  async function openWith(attrs: string, count = 30): Promise<LyraCombobox> {
+    const el = (await fixture(
+      html`<lr-combobox>${manyOptions(count)}</lr-combobox>`,
+    )) as LyraCombobox;
+    if (attrs) {
+      const [name, value] = attrs.split('=');
+      el.setAttribute(name!, value!);
+    }
+    el.open = true;
+    await el.updateComplete;
+    await aTimeout(0);
+    return el;
+  }
+
+  const listbox = (el: LyraCombobox): HTMLElement =>
+    el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+
+  it('imposes no bound of its own while unset', async () => {
+    const el = await openWith('');
+    expect(el.visibleOptions).to.equal(undefined);
+    expect(
+      listbox(el).style.getPropertyValue('--lr-combobox-visible-block-size'),
+      'nothing published, so the existing max-block-size chain is untouched',
+    ).to.equal('');
+  });
+
+  it('bounds the listbox to the requested row count and leaves the rest scrollable', async () => {
+    const el = await openWith('visible-options=3');
+    expect(el.visibleOptions).to.equal(3);
+    const box = listbox(el);
+    await waitUntil(
+      () => box.style.getPropertyValue('--lr-combobox-visible-block-size') !== '',
+      'the cap is measured and published',
+    );
+
+    expect(box.scrollHeight, 'the remainder is reachable by scrolling').to.be.greaterThan(
+      box.clientHeight,
+    );
+  });
+
+  it('imposes no bound when there are fewer options than the cap', async () => {
+    const el = await openWith('visible-options=10', 3);
+    expect(
+      listbox(el).style.getPropertyValue('--lr-combobox-visible-block-size'),
+      'nothing to cap',
+    ).to.equal('');
+  });
+
+  it('normalizes a garbage, zero, or negative cap instead of collapsing the popup', async () => {
+    for (const raw of ['not-a-number', '0', '-4']) {
+      const el = await openWith(`visible-options=${raw}`);
+      expect(
+        listbox(el).style.getPropertyValue('--lr-combobox-visible-block-size'),
+        `${raw} must not collapse the listbox`,
+      ).to.equal('');
+    }
+  });
+});

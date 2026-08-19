@@ -311,8 +311,10 @@ export const styles = css`
     position: fixed;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-dropdown));
     box-sizing: border-box;
+    /* --lr-combobox-visible-block-size is published by the visibleOptions property and falls back
+       to the original 18rem ceiling, so an unset cap resolves to exactly the previous expression. */
     max-block-size: min(
-      var(--lr-size-18rem),
+      var(--lr-combobox-visible-block-size, var(--lr-size-18rem)),
       var(--lr-positioner-available-block-size, var(--lr-size-18rem))
     );
     overflow-y: auto;
@@ -433,6 +435,17 @@ export const styles = css`
     justify-content: center;
     flex: 0 0 auto;
     color: var(--lr-color-text-quiet);
+  }
+  [part="option-start"],
+  [part="option-end"] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    /* Content-sized, never shrinking the label away, and bounded so one oversized adornment cannot
+       take the row -- the same shape lr-button's own adornments settled on. */
+    flex: 0 0 auto;
+    max-inline-size: 40%;
+    overflow: hidden;
   }
   [part="option-label"] {
     display: flex;
