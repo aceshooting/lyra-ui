@@ -1375,6 +1375,113 @@ it('updates fill opacity when existing choropleth and data layers are reused', a
   }
 });
 
+it('paints a data layer fill and stroke from separate colors when both are given', async () => {
+  // A fill and its outline want opposite things on a choropleth-plus-overlay map: the fill competes
+  // for area and must sit quiet, while the 1px outline competes with nothing and is the only thing
+  // keeping a no-data region's shape readable. Deriving one from the other measured 1.41:1 against
+  // a light basemap -- under WCAG 1.4.11's 3:1 floor for graphical objects.
+  const { wrapper, el } = await connectedMapWithoutMaplibre();
+  try {
+    const added: { id: string; paint: Record<string, unknown> }[] = [];
+    const fakeMap = {
+      getSource: (): undefined => undefined,
+      addSource(): void {},
+      getLayer: (): undefined => undefined,
+      addLayer(spec: { id: string; paint?: Record<string, unknown> }): void {
+        added.push({ id: spec.id, paint: spec.paint ?? {} });
+      },
+      setPaintProperty(): void {},
+      remove(): void {},
+    };
+    const privateMap = el as unknown as { _map?: unknown; applyDataLayers(): void };
+    privateMap._map = fakeMap;
+    el.dataLayers = [{
+      sourceId: 'zones',
+      geojson: { type: 'FeatureCollection', features: [] },
+      color: 'rgb(1, 2, 3)',
+      strokeColor: 'rgb(9, 8, 7)',
+    }] as never;
+    await el.updateComplete;
+    privateMap.applyDataLayers();
+
+    const fill = added.find((layer) => layer.id.endsWith('-fill'));
+    const line = added.find((layer) => layer.id.endsWith('-line'));
+    const circle = added.find((layer) => layer.id.endsWith('-circle'));
+    expect(fill?.paint['fill-color'], 'the fill takes color').to.equal('rgb(1, 2, 3)');
+    expect(line?.paint['line-color'], 'the outline takes strokeColor').to.equal('rgb(9, 8, 7)');
+    expect(circle?.paint['circle-color'], 'points follow the stroke too').to.equal('rgb(9, 8, 7)');
+  } finally {
+    wrapper.remove();
+  }
+});
+
+it('falls back through strokeColor to color to tone', async () => {
+  const { wrapper, el } = await connectedMapWithoutMaplibre();
+  try {
+    const added: { id: string; paint: Record<string, unknown> }[] = [];
+    const fakeMap = {
+      getSource: (): undefined => undefined,
+      addSource(): void {},
+      getLayer: (): undefined => undefined,
+      addLayer(spec: { id: string; paint?: Record<string, unknown> }): void {
+        added.push({ id: spec.id, paint: spec.paint ?? {} });
+      },
+      setPaintProperty(): void {},
+      remove(): void {},
+    };
+    const privateMap = el as unknown as { _map?: unknown; applyDataLayers(): void };
+    privateMap._map = fakeMap;
+    el.dataLayers = [{
+      sourceId: 'zones',
+      geojson: { type: 'FeatureCollection', features: [] },
+      color: 'rgb(1, 2, 3)',
+    }] as never;
+    await el.updateComplete;
+    privateMap.applyDataLayers();
+
+    const line = added.find((layer) => layer.id.endsWith('-line'));
+    expect(line?.paint['line-color'], 'an unset strokeColor follows color').to.equal('rgb(1, 2, 3)');
+  } finally {
+    wrapper.remove();
+  }
+});
+
+it('leaves a tone-only data layer painting exactly as before', async () => {
+  const { wrapper, el } = await connectedMapWithoutMaplibre();
+  try {
+    const added: { id: string; paint: Record<string, unknown> }[] = [];
+    const fakeMap = {
+      getSource: (): undefined => undefined,
+      addSource(): void {},
+      getLayer: (): undefined => undefined,
+      addLayer(spec: { id: string; paint?: Record<string, unknown> }): void {
+        added.push({ id: spec.id, paint: spec.paint ?? {} });
+      },
+      setPaintProperty(): void {},
+      remove(): void {},
+    };
+    const privateMap = el as unknown as { _map?: unknown; applyDataLayers(): void };
+    privateMap._map = fakeMap;
+    el.dataLayers = [{
+      sourceId: 'zones',
+      tone: 'success',
+      geojson: { type: 'FeatureCollection', features: [] },
+    }];
+    await el.updateComplete;
+    privateMap.applyDataLayers();
+
+    const fill = added.find((layer) => layer.id.endsWith('-fill'));
+    const line = added.find((layer) => layer.id.endsWith('-line'));
+    expect(
+      fill?.paint['fill-color'] === line?.paint['line-color'],
+      'with no explicit colors, fill and stroke still share the tone',
+    ).to.be.true;
+    expect(String(fill?.paint['fill-color'] ?? ''), 'and it is a real color').to.not.equal('');
+  } finally {
+    wrapper.remove();
+  }
+});
+
 it('repaints applied layers once after an ancestor theme mutation without touching map structure or data', async () => {
   const { wrapper, el } = await connectedMapWithoutMaplibre();
   try {
@@ -3034,6 +3141,21 @@ describe('choropleth interpolation', () => {
     expect(expr[0]).to.equal('interpolate');
     expect((expr[1] as unknown[])[0]).to.equal('exponential');
     expect((expr[1] as unknown[])[1], 'a sub-1 base').to.be.lessThan(1);
+  });
+
+  it('emits a step expression for discrete bands rather than a ramp', async () => {
+    // A continuous ramp puts colors on the map that appear nowhere in a banded legend, and renders
+    // two regions in the same advertised band as visibly different colors.
+    const expr = await paintExprFor('step' as never);
+    expect(expr[0], 'discrete bands, not a ramp').to.equal('step');
+    expect(expr[1]).to.deep.equal(['get', 'population']);
+    expect(expr[2], 'the base output defaults to the first stop color').to.equal('#eee');
+    expect(expr.slice(3), 'thresholds stay in the data own units').to.deep.equal([
+      0,
+      '#eee',
+      100,
+      '#036',
+    ]);
   });
 
   it('keeps stops in the data own units under either interpolation', async () => {

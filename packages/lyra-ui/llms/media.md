@@ -374,7 +374,7 @@ omittedCount, truncatedLabelCount, truncated }` result for the latest assignment
   the bounded rows are complete.
 - `choropleth?: LyraMapChoroplethLayer` (attribute: false) — `LyraMapChoroplethLayer { sourceId:
 string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, string][]; interpolation?:
-'linear' | 'logarithmic' }` (interpolated
+'linear' | 'logarithmic' | 'step'; stepBaseColor?: string }` (interpolated
   fill-color expression from `field`'s value against `stops`; `stops` must contain at least one
   `[value, color]` pair — an empty array is ignored, leaving whatever fill layer already exists, if
   any, untouched, rather than being applied).
@@ -386,7 +386,14 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
   rather than adding one (maplibre has no `['log']` interpolation type; a sub-1 exponential base is
   the documented way to weight a ramp toward the low end). **`stops` stay in the data's own units
   under either mode**, so the legend keeps reading in real values instead of log units — no
-  pre-transforming to log10 and hand-relabelling the legend back
+  pre-transforming to log10 and hand-relabelling the legend back.
+  `'step'` (new in 10.1.0) emits maplibre's `['step', …]` instead of `['interpolate', …]`, giving
+  **discrete bands rather than a continuous ramp**. Use it whenever the legend advertises a fixed
+  set of ranges with one swatch each: a ramp would put colours on the map that appear nowhere in the
+  legend, and would render two regions in the same advertised band as visibly different colours
+  (`legendGradient` covers the opposite case, a gradient legend). `stepBaseColor` is the colour for
+  values below the first threshold, which `['step', …]` requires; it defaults to the first stop's own
+  colour, so a legend whose first band starts at the data minimum needs no extra configuration
 - `markers: LyraMapMarker[] = []` (attribute: false) — `LyraMapMarker { id?: string; lngLat:
 [number, number]; color?: string; label?: string; unsafeHtml?: string }`; an explicit `id` is
   trimmed and must be nonempty, and the first marker for an explicit ID wins. Markers are reconciled
@@ -408,11 +415,21 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
 - `dataLayers: LyraMapGeoJsonDataLayer[] = []` (attribute: false) —
   `LyraMapGeoJsonDataLayer { sourceId: string; geojson: GeoJSON.Feature |
 GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
-'danger' | 'neutral' }`. `sourceId` is trimmed and must be nonempty; the first layer for a
+'danger' | 'neutral'; color?: string; strokeColor?: string }`. `sourceId` is trimmed and must be nonempty; the first layer for a
   `sourceId` wins and blank or later duplicate records are ignored. Each retained entry adds one
   GeoJSON source plus three geometry-filtered layers
   (fill, line, and circle, so a mixed `FeatureCollection` renders correctly), colored from the
-  matching `--lr-color-*` token (`tone` defaults to `'accent'` → `--lr-color-brand`). The component
+  matching `--lr-color-*` token (`tone` defaults to `'accent'` → `--lr-color-brand`).
+  `color` and `strokeColor` (both new in 10.1.0) override that per surface — `color` paints the
+  polygon fill, `strokeColor` the line and circle layers, falling back to `color` and then to `tone`.
+  They are separable because a fill and its outline want opposite things on a
+  choropleth-plus-overlay map, and the difference is measurable rather than aesthetic: the fill
+  competes for area with the choropleth beside it and has to sit quiet, while the 1px outline
+  competes with nothing and is the only thing keeping a no-data region's shape readable once the
+  fill is that faint. Deriving one from the other measured 1.41:1 against a light basemap — under
+  WCAG 1.4.11's 3:1 floor for graphical objects. A `var(--lr-…)` reference is resolved against the
+  host before it reaches MapLibre, which paints to a WebGL canvas and never sees the CSS cascade.
+  The component
   assigns collision-free private MapLibre ids for those resources: `sourceId` is the stable
   declarative reconciliation key, **not** an id to retrieve from `map`. This prevents a data layer
   from overwriting or removing a same-named source supplied by `mapStyle`. Independent of

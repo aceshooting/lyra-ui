@@ -235,10 +235,30 @@ export interface LyraMapChoroplethLayer {
    * reading in real values instead of log units.
    */
   readonly interpolation?: LyraMapChoroplethInterpolation;
+
+  /**
+   * Color for values BELOW the first `stops` threshold, used only when `interpolation` is
+   * `'step'` — maplibre's `['step', …]` requires that base output before its first threshold.
+   *
+   * Defaults to the first stop's own color, which makes the common case (a legend whose first band
+   * starts at the data's minimum) need no extra configuration. Set it when the map should
+   * distinguish "below the lowest advertised band" from the lowest band itself.
+   */
+  readonly stepBaseColor?: string;
 }
 
-/** How a choropleth's fill color is interpolated between its stops. */
-export type LyraMapChoroplethInterpolation = 'linear' | 'logarithmic';
+/**
+ * How a choropleth's fill color is derived from its stops.
+ *
+ * `'linear'` and `'logarithmic'` both emit a maplibre `['interpolate', …]` expression, producing a
+ * continuous ramp. `'step'` emits `['step', …]` instead, giving DISCRETE bands.
+ *
+ * A continuous ramp is wrong whenever the legend advertises a fixed set of ranges with one swatch
+ * each: it puts colors on the map that appear nowhere in the legend, and renders two regions in the
+ * same advertised band as visibly different colors. `legendGradient` covers the opposite case (a
+ * gradient legend) but could not express this one.
+ */
+export type LyraMapChoroplethInterpolation = 'linear' | 'logarithmic' | 'step';
 
 /**
  * Exponential base for `'logarithmic'` choropleth interpolation.
@@ -259,6 +279,26 @@ export interface LyraMapGeoJsonDataLayer {
   readonly sourceId: string;
   readonly geojson: Feature | FeatureCollection;
   readonly tone?: 'accent' | 'success' | 'warning' | 'danger' | 'neutral';
+
+  /**
+   * Explicit fill color, overriding `tone` for the polygon fill only. Any CSS color, including a
+   * `var(--lr-…)` reference.
+   *
+   * Exists because a fill and its outline want opposite things on a choropleth-plus-overlay map,
+   * and the difference is measurable rather than aesthetic: the fill competes for area with the
+   * choropleth beside it, so it has to sit quiet, while the 1px outline competes with nothing and
+   * is the only thing keeping a no-data region's shape readable once the fill is that faint.
+   * Deriving one from the other put a real case at 1.41:1 against a light basemap — under WCAG
+   * 1.4.11's 3:1 floor for graphical objects — leaving the region indistinguishable from bare
+   * basemap.
+   */
+  readonly color?: string;
+
+  /**
+   * Explicit line/outline color, overriding `tone` for the `-line` and `-circle` layers. Falls back
+   * to `color`, then to `tone`. See `color` for why these are separable.
+   */
+  readonly strokeColor?: string;
 }
 
 /** Each entry becomes one real, individually-focusable DOM marker element (with its own aria
@@ -416,6 +456,29 @@ function dataLayerColor(host: Element, tone: LyraMapGeoJsonDataLayer['tone']): s
   const token = TONE_TOKEN[tone ?? 'accent'];
   const raw = ownerWindow(host)?.getComputedStyle(host).getPropertyValue(token).trim() ?? '';
   return raw || '#0969da';
+}
+
+/**
+ * Resolves an author-supplied color for one data layer, falling back to the layer's `tone`.
+ *
+ * A `var(--lr-…)` reference is resolved against the host first, because maplibre paints to a WebGL
+ * canvas and never sees the CSS cascade — handing it a raw `var()` string yields no paint at all,
+ * the same class of silent failure `resolveCanvasColor()` exists for elsewhere in this library.
+ */
+function resolvedLayerColor(
+  host: Element,
+  explicit: string | undefined,
+  tone: LyraMapGeoJsonDataLayer['tone'],
+): string {
+  const candidate = typeof explicit === 'string' ? explicit.trim() : '';
+  if (!candidate) return dataLayerColor(host, tone);
+  const reference = /^var\(\s*(--[\w-]+)/.exec(candidate);
+  if (!reference) return candidate;
+  const resolved = ownerWindow(host)
+    ?.getComputedStyle(host)
+    .getPropertyValue(reference[1]!)
+    .trim();
+  return resolved || dataLayerColor(host, tone);
 }
 
 /** How many features one `warnOnUntileableProperties()` pass inspects. Every GeoJSON source is
@@ -1308,11 +1371,16 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     for (const [publicSourceId, sourceId] of this._appliedDataLayerIds) {
       const dataLayer = dataLayersBySourceId.get(publicSourceId);
       if (!dataLayer) continue;
-      const color = dataLayerColor(this, dataLayer.tone);
+      const color = resolvedLayerColor(this, dataLayer.color, dataLayer.tone);
+      const stroke = resolvedLayerColor(
+        this,
+        dataLayer.strokeColor ?? dataLayer.color,
+        dataLayer.tone,
+      );
       this._map.setPaintProperty(`${sourceId}-fill`, 'fill-color', color);
       this._map.setPaintProperty(`${sourceId}-fill`, 'fill-opacity', fillOpacity);
-      this._map.setPaintProperty(`${sourceId}-line`, 'line-color', color);
-      this._map.setPaintProperty(`${sourceId}-circle`, 'circle-color', color);
+      this._map.setPaintProperty(`${sourceId}-line`, 'line-color', stroke);
+      this._map.setPaintProperty(`${sourceId}-circle`, 'circle-color', stroke);
     }
   }
 
@@ -1362,14 +1430,27 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // exists (if any) untouched until `stops` is non-empty again.
     if (stops.length === 0) return;
 
-    // `stops` stay in the data's own units under either interpolation, so a consumer never has to
-    // pre-transform values to log10 and then hand-relabel the legend back into real units.
-    const interpolationExpr =
-      this.choropleth.interpolation === 'logarithmic'
-        ? ['exponential', CHOROPLETH_LOG_INTERPOLATION_BASE]
-        : ['linear'];
-    const colorExpr: unknown[] = ['interpolate', interpolationExpr, ['get', field]];
-    for (const [value, color] of stops) colorExpr.push(value, color);
+    // `['step', input, base, threshold, color, …]` -- discrete bands, not a ramp. The base output
+    // (values below the first threshold) defaults to the first stop's own color, so a legend whose
+    // first band starts at the data minimum needs no extra configuration.
+    let colorExpr: unknown[];
+    if (this.choropleth.interpolation === 'step') {
+      const base =
+        typeof this.choropleth.stepBaseColor === 'string' && this.choropleth.stepBaseColor.trim()
+          ? this.choropleth.stepBaseColor.trim()
+          : stops[0]![1];
+      colorExpr = ['step', ['get', field], base];
+      for (const [value, color] of stops) colorExpr.push(value, color);
+    } else {
+      // `stops` stay in the data's own units under either interpolation, so a consumer never has to
+      // pre-transform values to log10 and then hand-relabel the legend back into real units.
+      const interpolationExpr =
+        this.choropleth.interpolation === 'logarithmic'
+          ? ['exponential', CHOROPLETH_LOG_INTERPOLATION_BASE]
+          : ['linear'];
+      colorExpr = ['interpolate', interpolationExpr, ['get', field]];
+      for (const [value, color] of stops) colorExpr.push(value, color);
+    }
 
     if (this._map.getLayer(fillLayerId)) {
       this._map.setPaintProperty(fillLayerId, 'fill-color', colorExpr as never);
@@ -1438,7 +1519,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         this._map.addSource(sourceId, { type: 'geojson', data: geojson });
         this._appliedGeoJson.set(sourceId, geojson);
       }
-      const color = dataLayerColor(this, tone);
+      const color = resolvedLayerColor(this, layer.color, tone);
+      const stroke = resolvedLayerColor(this, layer.strokeColor ?? layer.color, tone);
       const fillId = `${sourceId}-fill`;
       const lineId = `${sourceId}-line`;
       const circleId = `${sourceId}-circle`;
@@ -1460,10 +1542,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           type: 'line',
           source: sourceId,
           filter: ['in', ['geometry-type'], ['literal', ['LineString', 'Polygon']]],
-          paint: { 'line-color': color, 'line-width': 2 },
+          paint: { 'line-color': stroke, 'line-width': 2 },
         });
       } else {
-        this._map.setPaintProperty(lineId, 'line-color', color);
+        this._map.setPaintProperty(lineId, 'line-color', stroke);
       }
       if (!this._map.getLayer(circleId)) {
         this._map.addLayer({
@@ -1471,10 +1553,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           type: 'circle',
           source: sourceId,
           filter: ['==', ['geometry-type'], 'Point'],
-          paint: { 'circle-color': color, 'circle-radius': 5 },
+          paint: { 'circle-color': stroke, 'circle-radius': 5 },
         });
       } else {
-        this._map.setPaintProperty(circleId, 'circle-color', color);
+        this._map.setPaintProperty(circleId, 'circle-color', stroke);
       }
       this._appliedDataLayerIds.set(publicSourceId, sourceId);
     }
