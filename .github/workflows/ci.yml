@@ -168,6 +168,13 @@ jobs:
     # socket. The tag MUST match the `playwright` devDependency; release-integrity asserts it.
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
+    env:
+      # The image runs as root but GitHub mounts HOME=/github/home, owned by the image's pwuser.
+      # Firefox refuses to launch when $HOME is not owned by the current user ("Running Nightly
+      # as root in a regular user's session is not supported"); Chromium and WebKit do not care,
+      # so this surfaces as a Firefox-only failure. /root is root-owned, and staying constant for
+      # the whole job keeps the pnpm store and setup-node cache on one path.
+      HOME: /root
     needs: build_and_coverage_build
     timeout-minutes: 15
     steps:
@@ -198,6 +205,13 @@ jobs:
     # socket. The tag MUST match the `playwright` devDependency; release-integrity asserts it.
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
+    env:
+      # The image runs as root but GitHub mounts HOME=/github/home, owned by the image's pwuser.
+      # Firefox refuses to launch when $HOME is not owned by the current user ("Running Nightly
+      # as root in a regular user's session is not supported"); Chromium and WebKit do not care,
+      # so this surfaces as a Firefox-only failure. /root is root-owned, and staying constant for
+      # the whole job keeps the pnpm store and setup-node cache on one path.
+      HOME: /root
     needs: build_and_coverage_build
     timeout-minutes: 15
     steps:
@@ -227,6 +241,13 @@ jobs:
     # socket. The tag MUST match the `playwright` devDependency; release-integrity asserts it.
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
+    env:
+      # The image runs as root but GitHub mounts HOME=/github/home, owned by the image's pwuser.
+      # Firefox refuses to launch when $HOME is not owned by the current user ("Running Nightly
+      # as root in a regular user's session is not supported"); Chromium and WebKit do not care,
+      # so this surfaces as a Firefox-only failure. /root is root-owned, and staying constant for
+      # the whole job keeps the pnpm store and setup-node cache on one path.
+      HOME: /root
     needs: build_and_coverage_build
     # This lane includes fresh-VM apt setup before the deterministic one-file-at-a-time sweep.
     # A degraded mirror made install-deps take 10.5+ minutes, then the former 20-minute ceiling
@@ -410,6 +431,13 @@ jobs:
     # socket. The tag MUST match the `playwright` devDependency; release-integrity asserts it.
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
+    env:
+      # The image runs as root but GitHub mounts HOME=/github/home, owned by the image's pwuser.
+      # Firefox refuses to launch when $HOME is not owned by the current user ("Running Nightly
+      # as root in a regular user's session is not supported"); Chromium and WebKit do not care,
+      # so this surfaces as a Firefox-only failure. /root is root-owned, and staying constant for
+      # the whole job keeps the pnpm store and setup-node cache on one path.
+      HOME: /root
     needs: docs_build
     # docs:check-show-code drives a full Playwright sweep clicking every "Show code" control
     # across the entire Storybook -- observed real-world duration varies 10.5-15+ minutes run to
@@ -460,10 +488,16 @@ jobs:
     # socket. The tag MUST match the `playwright` devDependency; release-integrity asserts it.
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
-    timeout-minutes: 15
     env:
+      # The image runs as root but GitHub mounts HOME=/github/home, owned by the image's pwuser.
+      # Firefox refuses to launch when $HOME is not owned by the current user ("Running Nightly
+      # as root in a regular user's session is not supported"); Chromium and WebKit do not care,
+      # so this surfaces as a Firefox-only failure. /root is root-owned, and staying constant for
+      # the whole job keeps the pnpm store and setup-node cache on one path.
+      HOME: /root
       VISUAL_SHARD_INDEX: ${{ matrix.shard }}
       VISUAL_SHARD_TOTAL: "3"
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
@@ -601,6 +635,9 @@ jobs:
     # ceiling is hang detection rather than the setup budget it used to be.
     timeout-minutes: 30
     env:
+      # Container legs run as root against a pwuser-owned /github/home, which Firefox refuses to
+      # launch under; the VM legs keep the runner's own home. See the note on the other jobs.
+      HOME: ${{ matrix.container != '' && '/root' || '/home/runner' }}
       # packageManager pins pnpm 11, which requires Node >=22.13 and crashes
       # (imports node:sqlite) under Node 20. The Node 20 leg below installs a
       # compatible pnpm 10 instead, but pnpm has its own Corepack-like

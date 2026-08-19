@@ -23,6 +23,13 @@ jobs:
     # The tag MUST match the `playwright` devDependency -- release-integrity asserts it.
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
+    env:
+      # The image runs as root but GitHub mounts HOME=/github/home, owned by the image's pwuser.
+      # Firefox refuses to launch when $HOME is not owned by the current user ("Running Nightly
+      # as root in a regular user's session is not supported"); Chromium and WebKit do not care,
+      # so this surfaces as a Firefox-only failure. /root is root-owned, and staying constant for
+      # the whole job keeps the pnpm store and setup-node cache on one path.
+      HOME: /root
     timeout-minutes: 90
     strategy:
       fail-fast: false
