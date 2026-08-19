@@ -1,3 +1,34 @@
+## Breaking changes in 10.0.0
+
+`<lr-media-card>`'s `alt` becomes optional (`alt?: string`, was `alt: string = ''`), so a decorative
+image is expressible at last. The image render used to fall through `alt`, then `filename`, then a
+localized generic description with `||`, which made an explicit `alt=""` indistinguishable from an
+absent one and published it as `alt="Image attachment"` — there was no way to mark the image
+decorative, which is the one thing
+`alt=""` means in HTML. It now reads `??`, matching `<lr-image-viewer>` and `<lr-document-preview>`,
+which already documented that contract. Omitting `alt` is unchanged; only the value read back from
+an unset property differs (`''` becomes `undefined`), so a consumer comparing `el.alt === ''` should
+read `el.alt ?? ''`. The nested `<video controls>` label deliberately does **not** follow: an empty
+`alt` there would leave an interactive player with no accessible name, and "decorative" is not a
+state a media control can be in, so the video path still falls through to `filename` and the generic
+description.
+
+`<lr-attachment-chip>`'s `lr-preview-request` is no longer cancelable. It was advertised as a veto
+point, but the chip never read `defaultPrevented` and owns no preview default action to cancel — it
+never registers or owns a viewer or overlay, by its own documented contract — so `preventDefault()`
+was a no-op. The flag is removed rather than left as a promise the component cannot keep: a host that
+was calling `preventDefault()` can drop the call, and one that believed the call was suppressing
+something was never being served. `<lr-voice-picker>`'s same-named event belongs to a different
+component, owns a real internal default action, and stays cancelable.
+
+Also corrected in 10.0.0 — not breaking, but visible. `<lr-flag>` no longer paints a full-size
+undecoded image beside its own skeleton while loading; `<lr-video>` no longer keeps a second,
+duplicate controls play button both painted and focusable behind a poster, and it now keeps captions
+for a `<track>` with no `kind` attribute, whose HTML missing-value default is `subtitles`; and
+`<lr-avatar>` and `<lr-image-comparer>` honor a consumer's `hidden` slotted child. In each case the
+component's own author-origin declaration was beating the UA stylesheet's `[hidden] { display: none }`
+regardless of specificity.
+
 ## Breaking changes in 9.0.0
 
 `<lr-media-card>`'s `accessibleLabel` property now defaults to `null` instead of `''`
@@ -1280,13 +1311,18 @@ final.
 - `mimeType: string = ''` (attribute `mime-type`) — drives auto-detection when `kind` is unset.
 - `filename: string = ''` — shown in the file-chip fallback, used as the download link's suggested
   filename, and folded into the accessible name.
-- `alt: string = ''` — alt text for the image case (and reused as a video label fallback). Falls
-  back to `filename`, then a generic per-kind description.
-- `accessibleLabel: string = ''` (attribute `aria-label`) — a declarative attribute names the host
-  as a whole while its nested button/link keeps a purpose-specific localized action name. A
-  property-only assignment can override the nested action when no host label is present. Image alt
-  text and the native video's own purpose label remain independent; an explicitly empty host still
-  leaves every interactive descendant named.
+- `alt?: string` — alt text for the image case (and reused as a video label fallback). Unset falls
+  back to `filename`, then a generic per-kind description. An explicit `alt=""` survives to the
+  rendered `<img alt="">`, which is the HTML idiom for a decorative image — same contract as
+  `<lr-image-viewer>` and `<lr-document-preview>`. The `<video>` case is deliberately outside that
+  carve-out: an empty `alt` there still falls through to `filename`/the generic description, because
+  an empty accessible name would leave an interactive player unnamed rather than mark it decorative.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — a declarative attribute names
+  the host as a whole while its nested button/link keeps a purpose-specific localized action name. A
+  property-only assignment can override the nested action when no host label is present. An explicit
+  empty string behaves like the unset `null` default — both fall through to the generated
+  purpose-specific name. Image alt text and the native video's own purpose label remain independent;
+  an explicitly empty host still leaves every interactive descendant named.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"16rem"`); once set,
   overrides the `--lr-media-card-max-height` custom property for this instance only (applied
   inline on `[part="base"]`, so it reliably wins over a `:host{}`-declared default from outside the

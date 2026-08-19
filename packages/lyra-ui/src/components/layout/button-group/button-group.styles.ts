@@ -3,13 +3,13 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-flex;
-    /* Makes the host a query container so the @container rule below reacts to the
-       group's own allocated width (a sidebar, a split pane, a dialog) instead of the
-       viewport's — a group can be narrow on a wide screen and vice versa. */
+    /* Query container, so the @container rule below reacts to the group's own allocated width (a
+       sidebar, a split pane, a dialog) rather than the viewport's: a group can be narrow on a wide
+       screen and vice versa. */
     container-type: inline-size;
-    /* Size containment removes content-based intrinsic sizing. This compact fallback keeps an
-       unallocated group wide enough to lay out ordinary actions and lets its narrow query wrap
-       longer sets; the hit-area minimum remains the hard lower bound under tighter allocation. */
+    /* Size containment removes content-based intrinsic sizing; this compact fallback keeps an
+       unallocated group wide enough for ordinary actions and lets its narrow query wrap longer
+       sets. The hit-area minimum stays the hard lower bound under tighter allocation. */
     contain-intrinsic-inline-size: var(--lr-size-12rem);
     min-inline-size: var(--lr-icon-button-size);
     max-inline-size: 100%;

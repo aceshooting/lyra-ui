@@ -17,10 +17,9 @@ export const styles = css`
     block-size: var(--lr-size-0-375rem);
     border-radius: var(--lr-radius-pill);
     background: var(--lr-color-brand);
-    /* Same token/rationale as lr-stream-status's and lr-typing-indicator's
-       own looping pulse: --lr-transition-ambient is the length the library
-       reserves for ambient "still alive" motion, so every looping indicator
-       shares one calm rhythm instead of hand-rolling its own duration. */
+    /* Same token and rationale as lr-stream-status's and lr-typing-indicator's own looping pulse:
+       --lr-transition-ambient is the length the library reserves for ambient "still alive" motion,
+       so every looping indicator shares one calm rhythm rather than its own duration. */
     animation: lr-poll-status-pulse var(--lr-transition-ambient) infinite;
   }
   [part='indicator'][data-due] {

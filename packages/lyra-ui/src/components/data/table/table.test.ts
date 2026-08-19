@@ -909,11 +909,59 @@ it("resolves an em-unit themed minimum width against the table's own font size",
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 4, clientX: -10000 }));
 });
 
-it('falls back to the default minimum width when an em-unit host font-size cannot be parsed', async () => {
+it('resolves a case-insensitive REM minimum width against the root font size, not as raw pixels', async () => {
+  const el = (await fixture(html`<lr-table style="--lr-table-resize-min-width:5REM"></lr-table>`)) as LyraTable<Row>;
+  el.columns = [
+    {
+      key: 'name',
+      label: 'Name',
+      width: '400px',
+      resizable: true,
+      cell: (r) => r.name,
+    },
+  ];
+  el.rows = rows;
+  await el.updateComplete;
+
+  const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+  const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+  handle.setPointerCapture = () => {};
+  handle.releasePointerCapture = () => {};
+  handle.dispatchEvent(
+    new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 5,
+      clientX: 100,
+    })
+  );
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 5, clientX: -10000 }));
+
+  // CSS units are case-insensitive: a lowercase-only unit check reads '5REM' as a bare 5px floor.
+  expect((el as unknown as { resizedColumnWidths: Map<string, number> }).resizedColumnWidths.get('name')).to.equal(
+    5 * rootFontSize
+  );
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 5, clientX: -10000 }));
+});
+
+it('falls back to the default minimum width for a unit with no resolvable pixel length, instead of reading it as pixels', async () => {
+  const el = (await fixture(html`<lr-table style="--lr-table-resize-min-width:5pt"></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+  const internals = el as unknown as {
+    minimumResizeWidth(column: TableColumn<Row>): number;
+  };
+  // A number-plus-unrecognized-unit value must not collapse to its bare number, which would let a
+  // drag shrink the column to 5px; the documented default floor applies instead.
+  expect(internals.minimumResizeWidth(columns[0]!)).to.equal(48);
+});
+
+it('resolves an em-unit minimum width against the root font size when the host has no readable font-size', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
   el.rows = rows;
   await el.updateComplete;
+  const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
   const originalGetComputedStyle = window.getComputedStyle;
   window.getComputedStyle = ((element: Element) => {
     if (element === el) {
@@ -929,7 +977,10 @@ it('falls back to the default minimum width when an em-unit host font-size canno
     const internals = el as unknown as {
       minimumResizeWidth(column: TableColumn<Row>): number;
     };
-    expect(internals.minimumResizeWidth(columns[0]!)).to.equal(48); // '' -> NaN host font-size -> fallback
+    // An element with no computed font-size of its own inherits the document root's, so an `em`
+    // floor anchors there rather than discarding the authored width -- the shared
+    // resolveCssLength() contract every unit-resolving component in the library now follows.
+    expect(internals.minimumResizeWidth(columns[0]!)).to.equal(2 * rootFontSize);
   } finally {
     window.getComputedStyle = originalGetComputedStyle;
   }
@@ -4932,13 +4983,38 @@ it("resets the native number-spinner chrome on the cell editor (editType: 'numbe
   expect(css).to.match(/\[part='cell-editor'\]\[type='number'\]::-webkit-outer-spin-button/);
 });
 
-it('wraps the sortable-header hover selector in :where() so a consumer ::part(header-cell):hover can win without !important', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(
-    /:where\(\[part='header-cell'\]\[data-sortable\]\):hover\s*\{[^}]*background:\s*var\(--lr-color-brand-quiet\)/
-  );
-  // The old over-specific, unwrapped shape must be gone, not merely joined by the new one.
-  expect(css).to.not.include("[part='header-cell'][data-sortable]:hover {");
+it("lets a consumer's own ::part(header-cell):hover override win over the internal hover arm", async () => {
+  // Asserted as rendered computed style, not as stylesheet text: the internal arm is written at
+  // full (0,3,0) specificity so it can out-rank the sticky-column rule, and a consumer override
+  // still wins regardless, because a declaration from the outer encapsulation context beats one
+  // from inside the shadow tree before specificity is ever consulted.
+  const style = document.createElement('style');
+  style.textContent = `lr-table::part(header-cell):hover { background: rgb(1, 2, 3); }`;
+  document.head.appendChild(style);
+  try {
+    const el = (await fixture(html`
+      <lr-table
+        style="--lr-transition-fast: 0s"
+        accessible-label="Scores"
+        .columns=${[{ key: 'name', label: 'Name', sortable: true, sticky: 'start', cell: (r: Row) => r.name }] as TableColumn<Row>[]}
+        .rows=${rows}
+      ></lr-table>
+    `)) as LyraTable<Row>;
+    await el.updateComplete;
+    const header = el.shadowRoot!.querySelector("[part='header-cell'][data-sortable]") as HTMLElement;
+    const rect = header.getBoundingClientRect();
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    await waitUntil(
+      () => getComputedStyle(header).backgroundColor === 'rgb(1, 2, 3)',
+      'the consumer ::part(header-cell):hover override never reached the header cell'
+    );
+  } finally {
+    await resetMouse();
+    style.remove();
+  }
 });
 
 it('gives the row-expand-toggle a :hover treatment, like its sibling icon controls (resize-handle/more-button/reveal-columns-button)', () => {
@@ -7014,5 +7090,121 @@ describe('scrollMode', () => {
     el.style.setProperty('--lr-table-max-height', '120px');
     await el.updateComplete;
     expect(getComputedStyle(base(el)).maxBlockSize).to.equal('none');
+  });
+});
+
+describe('sticky + sortable header pointer feedback', () => {
+  // columns[].sticky and columns[].sortable are both public options and compose freely, so a
+  // pinned sort column is ordinary usage, not a corner case.
+  const stickySortableColumns: TableColumn<Row>[] = [
+    { key: 'name', label: 'Name', sortable: true, sticky: 'start', cell: (r) => r.name },
+    { key: 'score', label: 'Score', sortable: true, cell: (r) => r.score },
+  ];
+
+  /** Resolves what a `declaration` computes to *inside this component's shadow root*, where the
+   *  `--lr-*` design tokens live. */
+  function resolvedInShadow(el: LyraTable<Row>, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  async function stickyTable(): Promise<LyraTable<Row>> {
+    const el = (await fixture(html`
+      <lr-table
+        style="--lr-transition-fast: 0s"
+        accessible-label="Scores"
+        .columns=${stickySortableColumns}
+        .rows=${rows}
+      ></lr-table>
+    `)) as LyraTable<Row>;
+    await el.updateComplete;
+    return el;
+  }
+
+  function stickyHeader(el: LyraTable<Row>): HTMLElement {
+    return el.shadowRoot!.querySelector(
+      "[part='header-cell'][data-sortable][data-sticky]"
+    ) as HTMLElement;
+  }
+
+  async function moveMouseTo(target: HTMLElement): Promise<void> {
+    target.scrollIntoView({ block: 'center', inline: 'center' });
+    const rect = target.getBoundingClientRect();
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+  }
+
+  it('tints a pinned sortable header while it is hovered', async function () {
+    if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
+    const el = await stickyTable();
+    const header = stickyHeader(el);
+    expect(header != null, 'expected a sticky sortable header cell').to.equal(true);
+    const hovered = resolvedInShadow(el, 'background: var(--lr-color-brand-quiet)', 'background-color');
+    expect(getComputedStyle(header).backgroundColor).to.not.equal(hovered);
+
+    try {
+      await resetMouse();
+      await moveMouseTo(header);
+      await waitUntil(
+        () => getComputedStyle(header).backgroundColor === hovered,
+        'the hovered sticky sortable header kept its opaque surface fill'
+      );
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('deepens a pinned sortable header while it is held', async function () {
+    if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
+    const el = await stickyTable();
+    const header = stickyHeader(el);
+    const held = resolvedInShadow(
+      el,
+      'background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+      'background-color'
+    );
+    expect(getComputedStyle(header).backgroundColor).to.not.equal(held);
+
+    try {
+      await resetMouse();
+      await moveMouseTo(header);
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(header).backgroundColor === held,
+        'the held sticky sortable header kept its opaque surface fill'
+      );
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  });
+
+  it('restores the opaque surface fill once the pointer leaves, so body rows cannot scroll through it', async function () {
+    if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
+    const el = await stickyTable();
+    const header = stickyHeader(el);
+    const surface = resolvedInShadow(el, 'background: var(--lr-color-surface)', 'background-color');
+    expect(getComputedStyle(header).backgroundColor).to.equal(surface);
+
+    try {
+      await resetMouse();
+      await moveMouseTo(header);
+      await waitUntil(
+        () => getComputedStyle(header).backgroundColor !== surface,
+        'the hovered sticky sortable header kept its opaque surface fill'
+      );
+    } finally {
+      await resetMouse();
+    }
+    await waitUntil(
+      () => getComputedStyle(header).backgroundColor === surface,
+      'the sticky sortable header never returned to its opaque surface fill'
+    );
   });
 });

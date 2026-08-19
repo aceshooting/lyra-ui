@@ -5,48 +5,52 @@ export const styles = css`
   :host {
     display: block;
     /* Two-value shorthand, block axis first. Only the INLINE half is this component's own per-tier
-       geometry; the BLOCK half is the shared ladder's --lr-form-control-padding-block at every tier,
-       because that axis is the one the trigger's height floor has to pay for -- see the
-       [part='combobox'] comment below. */
+       geometry; the BLOCK half is the shared ladder's --lr-form-control-padding-block at every
+       tier, since that axis pays for the trigger's height floor -- see the [part='combobox']
+       comment below. */
     --_lr-combobox-trigger-padding: var(--lr-form-control-padding-block)
       var(--lr-space-s);
-    /* Height and text size come from the ONE shared form-control ladder (internal/sizes.styles.ts)
-       rather than a sixth private copy of the same six values. The ladder matches both spellings of
-       every tier in one selector list, so size="small" and size="s" resolve identically here with
-       no per-component alias rules. */
+    /* Height and text size come from the one shared form-control ladder (internal/sizes.styles.ts)
+       rather than a sixth private copy. The ladder matches both spellings of every tier, so
+       size="small" and size="s" resolve identically with no per-component alias rules. */
     --_lr-combobox-trigger-min-height: var(--lr-form-control-height);
     --_lr-combobox-font-size: var(--lr-form-control-font-size);
     --_lr-combobox-tag-padding: var(--lr-size-0-1rem) var(--lr-size-0-4rem);
     --_lr-combobox-tag-font-size: var(--lr-font-size-sm);
     --_lr-combobox-expand-size: var(--lr-size-1-75rem);
-    /* Gap and radius don't vary by size tier (unlike the knobs above), so each is declared once
-       here rather than re-assigned per :host([size='…']) block -- mirrors lr-button's identical
-       --lr-button-gap/--lr-button-radius. */
+    /* Gap and radius do not vary by size tier, so each is declared once here rather than per
+       :host([size='...']) block -- mirrors lr-button's --lr-button-gap/--lr-button-radius. */
     --_lr-combobox-gap: var(--lr-space-xs);
     --_lr-combobox-radius: var(--lr-form-control-radius);
-    /* --lr-combobox-trigger-height is intentionally NOT declared here. It is a consumer-facing
-       escape hatch consumed only through the two var() fallbacks on [part='combobox'] below;
-       declaring any value for it (even 'auto') would make those fallback arms unreachable and
-       silently turn --lr-combobox-trigger-min-height into dead code. Left undeclared, both arms
-       stay live: the per-tier floor falls out of the fallback with no extra specificity rules, and
-       setting the property from anywhere (inline style, an ancestor, an outer-tree rule) pins an
-       exact height. */
+    /* Fill/border pair swapped per appearance below, as
+       lr-input/lr-textarea/lr-otp-input/lr-time-input do -- a property re-pointed on :host, never a
+       :host([appearance='...']) [part='combobox'] rule. That form is (0,3,0), out-ranking every
+       [part='combobox'] state rule ([part='combobox']:focus-within is (0,2,0)), so
+       appearance="filled" reinstated its transparent border over the focus rule's brand one,
+       leaving no visible focus indicator (WCAG 2.4.7; the focus rule's only outline is the
+       forced-colors 'solid transparent' hook, and [part='combobox-input'] carries outline: none).
+       Re-pointing a property cannot regress that way -- no [part] rule out-ranks another. */
+    --_lr-combobox-fill: var(--lr-color-surface);
+    --_lr-combobox-border-color: var(--lr-color-border);
+    /* --lr-combobox-trigger-height is deliberately undeclared: read only through the two var()
+       fallbacks on [part='combobox'] below, so any declared value (even 'auto') dead-arms them and
+       makes --lr-combobox-trigger-min-height dead code. The per-tier floor then falls out of the
+       fallback, and any override pins an exact height. */
   }
   :host([pill]) {
     --_lr-combobox-radius: var(--lr-radius-pill);
   }
-  :host([appearance="filled"]) [part="combobox"] {
-    background: var(--lr-color-surface-raised);
-    border-color: transparent;
+  :host([appearance="filled"]) {
+    --_lr-combobox-fill: var(--lr-color-surface-raised);
+    --_lr-combobox-border-color: transparent;
   }
-  :host([appearance="filled-outlined"]) [part="combobox"] {
-    background: var(--lr-color-surface-raised);
+  :host([appearance="filled-outlined"]) {
+    --_lr-combobox-fill: var(--lr-color-surface-raised);
   }
-  /* What remains per tier is this component's OWN geometry -- the selected-tag chip and the
-     decorative expand glyph -- which is not a form-control height/text ladder and so is not part of
-     the shared one. Each tier matches both spellings for the same reason sizes.styles.ts does: the
-     shared ladder accepts size="small", and a control whose tags silently ignored it would be worse
-     than one that never accepted it. */
+  /* What remains per tier is this component's own geometry -- the selected-tag chip and the
+     decorative expand glyph -- not a form-control height/text ladder, so not part of the shared
+     one. Each tier matches both spellings because the shared ladder accepts size="small", and tags
+     silently ignoring it would be worse than never accepting it. */
   :host([size="2xs"]) {
     --_lr-combobox-trigger-padding: var(--lr-form-control-padding-block)
       var(--lr-space-2xs);
@@ -88,25 +92,21 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
     font-weight: var(--lr-font-weight-semibold);
   }
-  /* :empty never matches here -- the part always contains a literal slot
-     child element regardless of assigned/text content -- so real emptiness
-     is tracked by SlotPresenceController and reflected via the hidden attribute
-     instead (same fix as [part='hint']/[part='error'] below). Without this,
-     the required-asterisk ::after below (which attaches to this box)
-     renders a stray ' *' with nothing before it whenever label is unset. */
+  /* :empty never matches (the part always holds a literal slot child), so emptiness is tracked by
+     SlotPresenceController and reflected with hidden -- same fix as [part='hint']/[part='error']
+     below. Without it the required-asterisk ::after renders a stray ' *' when label is unset. */
   [part="form-control-label"][hidden] {
     display: none;
   }
   ${formControlRequiredMarker}
 
-  /* min-block-size is a FLOOR on a border-box, so it only decides the rendered height while this
-     row's own content stays under it -- and that content includes the search input, whose text box
-     is line-height: normal, i.e. a metric of whatever font family the ambient stack resolves to. Two
-     machines resolve system-ui to different fonts, so any tier whose content sits at or above the
-     floor renders a different height on each of them. Keeping the block padding on the shared
-     ladder (and zeroing the input's UA block padding below) is what holds the content under the
-     floor at every tier, which is what makes this trigger line up with lr-input/lr-select/lr-button
-     in a toolbar row -- the promise sizes.styles.ts makes. */
+  /* min-block-size is a border-box floor, so it sets the height only while the row's content stays
+     under it -- and that content includes the search input, whose line-height: normal follows
+     whatever font the ambient stack resolves; system-ui differs per machine, so any tier reaching
+     the floor renders differently on each. Keeping block padding on the shared ladder and zeroing
+     the input's UA block padding below holds content under the floor at every tier, which is what
+     lines this trigger up with lr-input/lr-select/lr-button in a toolbar row -- the promise
+     sizes.styles.ts makes. */
   [part='combobox'] {
     display: flex;
     flex-wrap: wrap;
@@ -121,16 +121,16 @@ export const styles = css`
       )
     );
     box-sizing: border-box;
-    /* Pinned only when --lr-combobox-trigger-height is set; 'auto' otherwise, so the row keeps
-       growing to fit its own content (and, in multiple mode, a wrapping tag row). */
+    /* Pinned only when --lr-combobox-trigger-height is set; 'auto' otherwise, so the row grows to
+       fit its content (and a wrapping tag row in multiple mode). */
     block-size: var(--lr-combobox-trigger-height, auto);
     padding: var(
       --lr-combobox-trigger-padding,
       var(--_lr-combobox-trigger-padding)
     );
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--_lr-combobox-border-color);
     border-radius: var(--lr-combobox-radius, var(--_lr-combobox-radius));
-    background: var(--lr-color-surface);
+    background: var(--_lr-combobox-fill);
     font-size: var(--lr-combobox-font-size, var(--_lr-combobox-font-size));
     cursor: text;
   }
@@ -139,8 +139,7 @@ export const styles = css`
     outline: var(--lr-border-width-medium) solid transparent;
   }
   :host(:disabled) [part="combobox"] {
-    /* was a literal 0.5; now the shared library-wide disabled-state token
-       (still 0.5 by default fallback, so no visual change here). */
+    /* Shared library-wide disabled-state token; still 0.5 by fallback, so no visual change here. */
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
@@ -185,14 +184,12 @@ export const styles = css`
     overflow-wrap: anywhere;
     text-overflow: ellipsis;
   }
-  /* Same compact-chip-remove pattern as lr-chip's [part='remove-button']: the interactive hit
-     target meets the shared --lr-icon-button-size floor, while the visible glyph stays a
-     compact 1rem close icon (font-size: var(--lr-font-size-m), independent of the tag's own
-     --lr-combobox-tag-font-size, which shrinks well below that at size="xs"/"s") -- a selected
-     tag is a small inline pill, so growing its whole box to 40px would visually balloon the tags
-     row. The negative margin pulls the enlarged hit area back in so the *visible* tag footprint
-     is unchanged; it overlaps into the tag's own padding/background rather than expanding the
-     row's layout box. */
+  /* Same compact-chip-remove pattern as lr-chip's [part='remove-button']: the hit target meets the
+     --lr-icon-button-size floor while the visible glyph stays a compact 1rem close icon (font-size:
+     var(--lr-font-size-m), independent of --lr-combobox-tag-font-size, which shrinks below that at
+     size="xs"/"s") -- a small inline pill grown to 40px would balloon the tags row. The negative
+     margin pulls the enlarged hit area back into the tag's own padding, leaving the visible
+     footprint and the row's layout box unchanged. */
   [part="tag__remove-button"] {
     display: inline-flex;
     align-items: center;
@@ -212,10 +209,10 @@ export const styles = css`
   [part="combobox-input"] {
     flex: 1 1 var(--lr-size-6ch);
     min-inline-size: var(--lr-size-4ch);
-    /* 0, not the UA's own 1px default -- same neutralisation lr-input applies to its [part='input'].
-       The trigger row above already owns this control's block padding; leaving the UA's on as well
-       spent two more pixels of the height floor's budget at every tier, which is what used to push
-       the dense tiers over their floor and hand the rendered height to the ambient font. */
+    /* 0, not the UA's 1px default -- the same neutralisation lr-input applies to its
+       [part='input']. The trigger row already owns this control's block padding; leaving the UA's
+       on too spent two more pixels of the floor's budget at every tier, which pushed the dense
+       tiers over their floor and handed the rendered height to the ambient font. */
     padding-block: 0;
     border: none;
     outline: none;
@@ -228,6 +225,10 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
   }
 
+  /* no-hover-state: [part='expand-icon'] is a decorative aria-hidden dropdown indicator -- the
+     whole [part='combobox'] row opens the listbox, so the glyph owes no pointer feedback.
+     [part='clear-button'] shares this rule but is a real button with its own :hover further down.
+     */
   [part="clear-button"],
   [part="expand-icon"] {
     flex: 0 0 auto;
@@ -241,11 +242,9 @@ export const styles = css`
     padding: var(--lr-space-xs);
     line-height: var(--lr-line-height-none);
   }
-  /* [part='expand-icon'] is a decorative aria-hidden dropdown indicator, not an independently
-     clickable target of its own -- the whole [part='combobox'] row opens the listbox via
-     onComboMouseDown, so this keeps its existing compact box rather than the interactive floor
-     below (which would force every size variant's trigger row taller just to fit a glyph nobody
-     taps directly). */
+  /* Keeps its compact box rather than the interactive floor below: a decorative indicator nobody
+     taps directly should not push every tier's trigger row taller. The row itself opens the listbox
+     via onComboMouseDown. */
   [part="expand-icon"] {
     box-sizing: border-box;
     min-inline-size: min(
@@ -258,9 +257,9 @@ export const styles = css`
     );
     padding: 0;
   }
-  /* Unlike [part='expand-icon'], [part='clear-button'] is a real, independently-focusable
-     <button> (see combobox.class.ts's @click) -- it gets the full shared icon-button hit-area
-     floor instead of the capped box above. */
+  /* Unlike [part='expand-icon'], [part='clear-button'] is a real focusable <button>
+     (combobox.class.ts's @click), so it takes the full shared icon-button hit-area floor instead of
+     the capped box above. */
   [part="clear-button"] {
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
@@ -268,15 +267,14 @@ export const styles = css`
   [part="expand-icon"] svg {
     transform: rotate(90deg);
   }
-  /* Mirrors <lr-input>'s own [part='clear-button']:hover -- darkens the same quiet-to-full text
-     token step so mouse users get the same "this is interactive" feedback keyboard users already
-     get from the focus ring below. */
+  /* Mirrors <lr-input>'s [part='clear-button']:hover -- the same quiet-to-full text token step, so
+     mouse users get the feedback keyboard users get from the focus ring below. */
   [part="clear-button"]:hover {
     color: var(--lr-color-text);
   }
-  /* Pressed adds what hover cannot: hover has already spent the colour step (quiet -> full text),
-     so the press is a background pad mixed off the row's own surface. Stronger than hover by
-     construction -- --lr-color-mix-active is the larger of the two shared knobs. */
+  /* Pressed adds what hover cannot: hover already spent the colour step (quiet -> full text), so
+     the press is a background pad mixed off the row's own surface, stronger by construction since
+     --lr-color-mix-active is the larger of the two shared knobs. */
   [part="clear-button"]:active {
     background: color-mix(
       in oklab,
@@ -285,14 +283,14 @@ export const styles = css`
     );
     border-radius: var(--lr-radius);
   }
-  /* Mirrors <lr-chip>'s own [part='remove-button']:hover -- a currentColor-derived tint rather
-     than a fixed token, since this part's rest-state color is 'inherit' (the tag's own text
-     color), not a dedicated quiet token to darken. */
+  /* Mirrors <lr-chip>'s [part='remove-button']:hover -- a currentColor-derived tint rather than a
+     fixed token, since this part's rest color is 'inherit' (the tag's text color), not a quiet
+     token to darken. */
   [part="tag__remove-button"]:hover {
     background: color-mix(in srgb, currentColor 16%, transparent);
   }
-  /* Same currentColor idiom as the hover above (this part's rest color is the tag's inherited text
-     color, not a token), taken to the shared pressed strength -- 22% against the hover's 16%. */
+  /* Same currentColor idiom as the hover above, taken to the shared pressed strength -- 22% against
+     the hover's 16%. */
   [part="tag__remove-button"]:active {
     background: color-mix(
       in srgb,
@@ -332,9 +330,9 @@ export const styles = css`
     border-radius: var(--lr-radius);
     /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
     box-shadow: var(--lr-shadow-m);
-    /* Closed state: invisible + slightly raised. visibility (not
-       display:none) so opacity/transform can actually transition; hit-testing
-       and a11y exposure stay off since this part is already position:fixed. */
+    /* Closed state: invisible and slightly raised. visibility rather than display:none so
+       opacity/transform can transition; the part is already position:fixed, so hit-testing and a11y
+       exposure stay off. */
     visibility: hidden;
     opacity: 0;
     transform: translateY(var(--lr-size-neg-0-25rem));
@@ -376,27 +374,10 @@ export const styles = css`
     text-align: start;
     cursor: pointer;
   }
-  [part="option"]:hover,
-  [part="option"][data-active] {
-    background: var(
-      --lr-combobox-option-active-bg,
-      var(--lr-color-brand-quiet)
-    );
-  }
-  /* Mixing the hover tint itself (not the bare token) keeps a consumer who retinted
-     --lr-combobox-option-active-bg in charge of both states: the pressed row is always their
-     colour, one shared step further toward the text colour. */
-  [part="option"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-combobox-option-active-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
-  }
   [part="option"][aria-selected="true"] {
-    /* Per-component indirection (inline var() fallbacks to the shared brand tokens, so unset
-       rendering is byte-for-byte unchanged) -- so a consumer can retheme just the selected row
-       without hijacking --lr-color-brand library-wide. */
+    /* Per-component indirection (var() fallbacks to the shared brand tokens leave unset rendering
+       unchanged), so a consumer can retheme just the selected row without hijacking
+       --lr-color-brand library-wide. */
     background: var(--lr-combobox-option-selected-bg, transparent);
     border-color: var(
       --lr-combobox-option-selected-border,
@@ -408,9 +389,32 @@ export const styles = css`
       var(--lr-font-weight-semibold)
     );
   }
+  /* Must stay AFTER the [aria-selected='true'] rule above: all four are (0,2,0) on the same row, so
+     source order alone decides the background. Reversed, the selected rule's
+     --lr-combobox-option-selected-bg (transparent by default) swallowed hover, press and
+     [data-active] -- the aria-activedescendant highlight -- so an arrow-keyed selected option
+     showed nothing. The selected row keeps its affordance either way: that rule paints
+     border-color/color/font-weight. */
+  [part="option"]:hover,
+  [part="option"][data-active] {
+    background: var(
+      --lr-combobox-option-active-bg,
+      var(--lr-color-brand-quiet)
+    );
+  }
+  /* Mixing the hover tint itself, not the bare token, keeps a consumer who retinted
+     --lr-combobox-option-active-bg in charge of both states: the pressed row is always their
+     colour, one shared step further toward the text colour. */
+  [part="option"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-combobox-option-active-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
   [part="option"][aria-disabled="true"] {
-    /* was a literal 0.4; unified with the rest of the library's single
-       disabled-state opacity token (intentionally changes 0.4 -> 0.5). */
+    /* Unified with the library's single disabled-state opacity token; deliberately changes the old
+       literal 0.4 to 0.5. */
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
@@ -443,8 +447,8 @@ export const styles = css`
     border-radius: var(--lr-radius-pill);
     background: var(--lr-color-brand-quiet);
     /* Full-strength text, not the quiet tone: quiet-on-quiet measured 4.25:1, under WCAG 1.4.3's
-       4.5:1. The badge already reads as secondary from its size and its tinted pill; borrowing the
-       muted text colour on top of a tinted fill was double de-emphasis that cost legibility. */
+       4.5:1. The badge already reads as secondary from its size and tinted pill, so the muted text
+       colour on top was double de-emphasis. */
     color: var(--lr-color-text);
     font-size: var(--lr-font-size-xs);
   }
@@ -473,10 +477,8 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }
-  /* :empty never matches here -- the part always contains a literal
-     slot child element regardless of assigned/text content -- so real
-     emptiness is tracked by SlotPresenceController and reflected via
-     the hidden attribute instead (same fix as lr-stat's icon/caption). */
+  /* :empty never matches (the part always holds a literal slot child), so emptiness is tracked by
+     SlotPresenceController and reflected with hidden -- same fix as lr-stat's icon/caption. */
   [part="hint"][hidden] {
     display: none;
   }

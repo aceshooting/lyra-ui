@@ -44,9 +44,9 @@ readonly slot?: string; readonly actionId?: string; readonly payload?: unknown }
 - `LyraWidgetDocument { readonly version: '2'; readonly root: LyraWidgetNode }` — the sole versioned tree source.
 - `createWidgetDocument(root: LyraWidgetNode): LyraWidgetDocument` — creates an immediate frozen
   version-two snapshot for former unversioned tree assignments. Traversal uses the renderer's depth,
-  node, and per-node prop ceilings; malformed, cyclic, duplicate-id, or hostile structure throws
-  `TypeError`. Node records, child arrays, and prop records are copied and frozen, while opaque prop
-  values and action payloads intentionally retain caller identity.
+  node, per-node prop, and per-string length ceilings; malformed, cyclic, duplicate-id, or hostile
+  structure throws `TypeError`. Node records, child arrays, and prop records are copied and frozen,
+  while opaque prop values and action payloads intentionally retain caller identity.
 
 The package root and the normal `widget-renderer.js` registration entry expose the renderer
 `LyraWidgetRenderer`/`LyraWidgetRendererEventMap` together with the complete stable authoring

@@ -1,6 +1,7 @@
 import { html, nothing, svg, type SVGTemplateResult, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import type { FlowStructureSnapshot } from '../flow-canvas/flow-types.js';
@@ -207,7 +208,7 @@ export class LyraFlowControls extends LyraElement {
     return html`<div
       part="base"
       role="group"
-      aria-label=${this.getAttribute('aria-label') || this.localize('flowControlsLabel')}
+      aria-label=${hostAriaLabel(this) ?? this.localize('flowControlsLabel')}
     >
       <button
         part="zoom-in"

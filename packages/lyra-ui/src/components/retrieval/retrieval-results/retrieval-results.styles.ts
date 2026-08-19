@@ -9,19 +9,17 @@ export const styles = css`
     color: var(--lr-color-danger);
     font-size: var(--lr-font-size-sm);
   }
-  /* Two rendering paths, one presentation. Below \`virtualize-at\` (and only while ungrouped) rows
-     are committed into this component's own shadow root, where a plain [part~='x'] selector matches
-     them. Grouped mode always virtualizes, and so does any list past the threshold; then the
-     identical row template becomes <lr-virtual-list>'s .renderItem and Lit commits it inside *that*
-     component's shadow root -- a different tree, unreachable from a selector scoped to this one.
-     lr-virtual-list::part(x) crosses exactly that one boundary, so both selectors are needed for
-     every row-level part; the pairing follows <lr-ingestion-queue>'s own dual-path rows.
+  /* Two rendering paths, one presentation. Ungrouped and below 'virtualize-at', rows commit into
+     this component's own shadow root and a plain [part~='x'] selector matches. Grouped mode, and
+     any list past the threshold, virtualize: the same template becomes <lr-virtual-list>'s
+     .renderItem and Lit commits it in *its* shadow root, so every row-level part also needs
+     lr-virtual-list::part(x), which crosses that one boundary. Pairing follows
+     <lr-ingestion-queue>'s own dual-path rows.
 
-     [part='row'] is the one asymmetric case: in the virtualized path the row wrapper is
-     <lr-virtual-list>'s own "row" part (re-exported here under the same name), not an element this
-     component renders, so the two arms carry different declarations. The virtualized arm omits the
-     row separator: those wrappers are absolutely positioned and measured by <lr-virtual-list>
-     itself, and the nested chunk row already draws its own block-end border there. */
+     [part='row'] is asymmetric: virtualized, the wrapper is <lr-virtual-list>'s own "row" part
+     re-exported under the same name, not an element this component renders, so the arms differ.
+     The virtualized arm omits the separator -- those wrappers are absolutely positioned and
+     measured by <lr-virtual-list>, and the nested chunk row already draws its block-end border. */
   [part='row'] {
     display: flex;
     align-items: flex-start;
@@ -37,11 +35,10 @@ export const styles = css`
     padding-inline: var(--lr-space-s);
     padding-block: var(--lr-space-s);
   }
-  /* The group header comes from <lr-virtual-list>'s own "group" part (this component passes
-     .groups rather than a renderGroup callback), re-exported here as "group-header". The list's
-     own default already gives it the surface/quiet/semibold treatment; what it has no opinion on
-     is the boundary between the header and the first row beneath it, which this component draws
-     with the same separator its rows use. */
+  /* The group header is <lr-virtual-list>'s own "group" part -- this component passes .groups, not
+     a renderGroup callback -- re-exported here as "group-header". The list already gives it the
+     surface/quiet/semibold treatment but has no opinion on the boundary to the first row beneath
+     it, which this component draws with the same separator its rows use. */
   lr-virtual-list::part(group) {
     box-sizing: border-box;
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -55,17 +52,16 @@ export const styles = css`
   lr-virtual-list::part(row-body) {
     flex: 1 1 auto;
     min-inline-size: 0;
-    /* A border rather than a background-color change: this row's own text (the nested
-       lr-chunk-inspector's quiet-toned score text in particular) is sized/colored for the
-       page's default surface, and a tinted background can drop that text below the required
-       contrast ratio against it -- a border-only indicator carries no such risk. */
+    /* A border rather than a background-color change: this row's text -- the nested
+       lr-chunk-inspector's quiet-toned score in particular -- is sized and colored for the page's
+       default surface, and a tinted background can drop it below the required contrast ratio. */
     border-inline-start: var(--lr-space-2xs) solid transparent;
     padding-inline-start: var(--lr-space-xs);
   }
-  /* The selected state is a second part token rather than the row's data-selected attribute:
-     Shadow Parts forbids an attribute selector after ::part(), so ::part(row-body)[data-selected]
-     is invalid CSS and the rule would be dropped entirely while virtualized. data-selected stays
-     on the element for consumers selecting within their own tree. */
+  /* A second part token rather than the row's data-selected attribute: Shadow Parts forbids an
+     attribute selector after ::part(), so ::part(row-body)[data-selected] is invalid CSS and the
+     rule would drop entirely while virtualized. data-selected stays on the element for consumers
+     selecting within their own tree. */
   [part~='row-body-selected'],
   lr-virtual-list::part(row-body-selected) {
     border-inline-start-color: var(--lr-retrieval-results-selected-border, var(--lr-color-brand));
@@ -85,8 +81,8 @@ export const styles = css`
     display: flex;
     gap: var(--lr-space-2xs);
   }
-  /* The <dt>/<dd> carry their own part names because ::part() matches a single element and cannot
-     be followed by a descendant combinator -- ::part(metadata-entry) dt reaches nothing. */
+  /* The <dt>/<dd> carry their own part names: ::part() matches one element and takes no descendant
+     combinator -- ::part(metadata-entry) dt reaches nothing. */
   [part~='metadata-term'],
   lr-virtual-list::part(metadata-term) {
     font-weight: var(--lr-font-weight-medium);

@@ -3,10 +3,10 @@ import { formControlRequiredMarker } from '../../../internal/form-control.styles
 
 export const groupStyles = css`
   :host {
-    /* The group's own chrome rides the shared size ladder (internal/sizes.styles.ts): the row gap is
-       a fraction of the tier's control height rather than a fixed space token, so it stays in
+    /* The group's own chrome rides the shared size ladder (internal/sizes.styles.ts): the row gap
+       is a fraction of the tier's control height, not a fixed space token, so it stays in
        proportion to the options beside it. At the default "m" tier it resolves to exactly the
-       --lr-space-s the group shipped with before it had a size at all. */
+       pre-size --lr-space-s. */
     --_lr-radio-group-row-gap: calc(var(--lr-form-control-height) * 0.2);
     display: block;
   }

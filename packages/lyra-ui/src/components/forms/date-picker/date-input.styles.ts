@@ -9,31 +9,31 @@ export const styles = css`
     --_lr-date-input-font-size: inherit;
     --_lr-date-input-gap: var(--lr-space-xs);
     --_lr-date-input-radius: var(--lr-form-control-radius);
-    /* Per-tier minimum block size of the input row, reusing lr-input's own min-height scale
-       values. This does NOT make the two controls height-matched at a given size, and nothing here
-       should be read as promising that: [part='input-wrapper'] has no min-block-size of its own,
-       while [part='expand-button'] pins min-block-size: var(--lr-icon-button-size) un-gated by
-       size, so the row height is pinned transitively by the calendar toggle. At size="s" an
-       lr-input floors at 1.875rem/30px while an lr-date-input cannot go below ~40px plus padding.
-       Gating the button floor by size is NOT the fix: it would drop below the 24x24 target at
-       2xs/xs, and lr-input's own password-toggle has the identical un-gated floor. Consequence:
-       every default here sits below that transitive height, so the floor is dead until a consumer
-       raises it -- the unset render is byte-identical at every tier. lr-input/lr-select/lr-combobox
-       all already expose this knob; lr-date-input previously had none. */
-    /* The floor's six values come from the ONE shared form-control ladder
-       (internal/sizes.styles.ts) rather than a private copy, so retuning
-       --lr-theme-form-control-height-* moves this control and every sibling field together. That
-       ladder matches both spellings of every tier, which is what makes size="small" resolve here
-       without a per-component alias rule. */
+    /* Fill/border pair swapped per appearance, as in lr-input/lr-textarea/lr-otp-input/
+       lr-time-input. Re-points a :host property, not a repaint from
+       :host([appearance='…']) [part='input-wrapper']: at (0,3,0) that out-ranks the (0,2,0)
+       :focus-within rule, so appearance="filled" killed the focus indicator (WCAG 2.4.7 -- the row
+       has no outline, [part='input'] sets outline: none). No [part] rule out-ranks another. */
+    --_lr-date-input-fill: var(--lr-color-surface);
+    --_lr-date-input-border-color: var(--lr-color-border);
+    /* Per-tier row floor from lr-input's min-height scale -- not height parity:
+       [part='input-wrapper'] has no min-block-size, and [part='expand-button'] pins
+       min-block-size: var(--lr-icon-button-size) un-gated by size, so the calendar toggle pins row
+       height transitively (size="s": lr-input 1.875rem/30px, here ~40px plus padding). Gating that
+       floor by size would break 24x24 at 2xs/xs, and lr-input's password-toggle is un-gated too.
+       Every default sits below that height, so the floor is dead until a consumer raises it.
+       Matches lr-input/lr-select/lr-combobox. */
+    /* Six values from the one shared form-control ladder (internal/sizes.styles.ts), so
+       --lr-theme-form-control-height-* retunes this control and every sibling field together. The
+       ladder matches both spellings of every tier, so size="small" resolves with no per-component
+       alias rule. */
     --_lr-date-input-control-min-height: var(--lr-form-control-height);
-    /* --lr-date-input-control-height is intentionally NOT declared here. It is a consumer-facing
-       exact-height escape hatch consumed only through the var() fallbacks on [part='input-wrapper']
-       below; declaring any value for it (even 'auto') would make those fallback arms unreachable
-       and turn --lr-date-input-control-min-height into dead code (the lr-select trap). Left
-       undeclared, both arms stay live: the per-tier floor falls out of the fallback, and setting
-       the property pins an exact height. Pinning a height BELOW the calendar toggle's 24x24 target
-       is safe -- the toggle keeps its own --lr-icon-button-size floor and simply overflows a short
-       row rather than shrinking (WCAG 2.2 SC 2.5.8 preserved). */
+    /* --lr-date-input-control-height is deliberately undeclared: any value, 'auto' included,
+       deadens the var() fallback arms on [part='input-wrapper'] below and makes
+       --lr-date-input-control-min-height dead code -- the lr-select trap. Undeclared, the per-tier
+       floor falls out of the fallback and setting this consumer-facing hatch pins an exact height,
+       safely even below 24x24: the toggle keeps its --lr-icon-button-size floor and overflows a
+       short row (WCAG 2.2 SC 2.5.8). */
   }
   :host([pill]) {
     --_lr-date-input-radius: var(--lr-radius-pill);
@@ -44,22 +44,19 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
   }
-  :host([appearance="filled"]) [part="input-wrapper"] {
-    border-color: transparent;
-    background: var(--lr-color-surface-raised);
+  :host([appearance="filled"]) {
+    --_lr-date-input-border-color: transparent;
+    --_lr-date-input-fill: var(--lr-color-surface-raised);
   }
-  :host([appearance="filled-outlined"]) [part="input-wrapper"] {
-    background: var(--lr-color-surface-raised);
+  :host([appearance="filled-outlined"]) {
+    --_lr-date-input-fill: var(--lr-color-surface-raised);
   }
-  /* Each tier reuses lr-input's own 2xs-xl padding/font-size scale (input.styles.ts), so the two
-     read as equally dense at a given size -- density parity, not height parity; see the
-     min-height comment above for why a same-size pair does not end up the same height. That scale
-     is deliberately NOT the shared form-control padding ladder: it is a tier denser at every step,
-     and moving onto the shared values would change this row's rendered height at l and xl.
-     'm' is the default and stays on the :host block above instead of a same-shaped rule here,
-     so the unset-size render is untouched by this scale. Both spellings of a tier match, for the
-     same reason sizes.styles.ts emits both -- the height ladder accepts size="small", so a row
-     whose density silently ignored it would be worse than one that never accepted it. */
+  /* Each tier reuses lr-input's own 2xs-xl padding/font-size scale (input.styles.ts) -- density
+     parity, not height parity (see the min-height comment above). Not the shared form-control
+     padding ladder: lr-input's scale is a tier denser at every step, and switching would change
+     this row's height at l and xl. 'm' is the default and stays on the :host block, leaving the
+     unset-size render untouched. Both spellings match, as in sizes.styles.ts -- the height ladder
+     accepts size="small", so density must too. */
   :host([size="2xs"]) {
     --_lr-date-input-padding-block: var(--lr-size-0-0625rem);
     --_lr-date-input-padding-inline: var(--lr-space-2xs);
@@ -93,12 +90,10 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
     font-weight: var(--lr-font-weight-semibold);
   }
-  /* :empty never matches here -- the part always contains a literal slot
-     child element regardless of assigned/text content -- so real emptiness
-     is tracked in JS (hasLabelSlot) and reflected via the hidden attribute
-     instead (same fix as [part='hint']/[part='error'] below). Without this,
-     the required-asterisk ::after below (which attaches to this box)
-     renders a stray ' *' with nothing before it whenever label is unset. */
+  /* :empty never matches -- the part always contains a literal slot child -- so emptiness is
+     tracked in JS (hasLabelSlot) and reflected via hidden, as for [part='hint']/[part='error']
+     below. Otherwise the required-asterisk ::after here renders a stray ' *' when label is
+     unset. */
   [part="form-control-label"][hidden] {
     display: none;
   }
@@ -118,17 +113,18 @@ export const styles = css`
         var(--_lr-date-input-control-min-height)
       )
     );
-    /* Pinned only when --lr-date-input-control-height is set; 'auto' otherwise, so the row keeps
-       growing to fit its content and the calendar toggle's full touch target. */
+    /* Pinned only when --lr-date-input-control-height is set; otherwise 'auto', so the row grows
+       to fit its content and the calendar toggle's full touch target. */
     block-size: var(--lr-date-input-control-height, auto);
     padding: var(
         --lr-date-input-padding-block,
         var(--_lr-date-input-padding-block)
       )
       var(--lr-date-input-padding-inline, var(--_lr-date-input-padding-inline));
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid
+      var(--_lr-date-input-border-color);
     border-radius: var(--lr-date-input-radius, var(--_lr-date-input-radius));
-    background: var(--lr-color-surface);
+    background: var(--_lr-date-input-fill);
   }
   [part="input-wrapper"]:focus-within {
     border-color: var(
@@ -184,15 +180,10 @@ export const styles = css`
     cursor: pointer;
     color: var(--lr-color-text-quiet);
     padding: var(--lr-space-xs);
-    /* Real touch target in *both* dimensions (WCAG 2.2 SC 2.5.8 needs
-       24x24 CSS px, not just height — min-block-size alone left these
-       buttons 24px tall but narrower than that).
-       The row has no explicit min-block-size of its own (unlike combobox's
-       [part=combobox]), so it can grow to fit the full touch target.
-       Deliberately not gated by size (matches lr-input's own
-       password-toggle button) -- the interactive hit area stays constant
-       across every tier instead of shrinking below the accessible minimum
-       at '2xs'/'xs'. */
+    /* Touch target in both dimensions -- WCAG 2.2 SC 2.5.8 needs 24x24 CSS px, and min-block-size
+       alone left these 24px tall but narrower. The row has no min-block-size of its own (unlike
+       combobox's [part=combobox]), so it grows to fit. Un-gated by size, like lr-input's
+       password-toggle, so the hit area never drops below the minimum at '2xs'/'xs'. */
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     line-height: var(--lr-line-height-none);
@@ -207,10 +198,9 @@ export const styles = css`
       var(--lr-date-input-radius, var(--_lr-date-input-radius))
     );
   }
-  /* Hover has already spent the colour step (quiet -> full text), so the press is a background pad
-     mixed off the row's own --lr-color-surface fill: it moves toward the text colour, so it darkens
-     a light field and lightens a dark one instead of depending on which way a filter happens to
-     push. */
+  /* Hover already spent the colour step (quiet -> full text), so the press is a background pad
+     mixed off the row's --lr-color-surface toward the text colour -- darkening a light field and
+     lightening a dark one, not depending on a filter's direction. */
   [part="clear-button"]:active:not(:disabled),
   [part="expand-button"]:active:not(:disabled) {
     color: var(
@@ -264,10 +254,9 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }
-  /* :empty never matches here -- the part always contains a literal
-     slot child element regardless of assigned/text content -- so real
-     emptiness is tracked in JS (hasHintSlot/hasErrorSlot) and reflected via
-     the hidden attribute instead (same fix as lr-stat's icon/caption). */
+  /* :empty never matches -- the part always contains a literal slot child -- so emptiness is
+     tracked in JS (hasHintSlot/hasErrorSlot) and reflected via hidden; same fix as lr-stat's
+     icon/caption. */
   [part="hint"][hidden] {
     display: none;
   }

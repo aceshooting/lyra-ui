@@ -117,11 +117,10 @@ export const styles = css`
     user-select: none;
   }
   /* :host(:not(:disabled)), not [part='segment']:not(:disabled) -- a segment is
-     <span part="segment" role="spinbutton">, which can never itself match :disabled. This is a
-     form-associated custom element (static formAssociated = true), so the UA computes its
-     disabled state (and therefore :disabled/:enabled matching on the host) from its own disabled
-     content attribute *or* an ancestor <fieldset disabled>'s cascade, the same way lr-time-range's
-     [part^='handle']:hover is gated. */
+     <span part="segment" role="spinbutton">, which can never itself match :disabled. As a
+     form-associated custom element (static formAssociated = true), the host's :disabled/:enabled
+     state comes from its own disabled content attribute *or* an ancestor <fieldset disabled>'s
+     cascade -- the same gating as lr-time-range's [part^='handle']:hover. */
   :host(:not(:disabled)) [part='segment']:hover {
     background: var(--lr-time-input-segment-hover-bg, var(--lr-color-brand-quiet));
   }

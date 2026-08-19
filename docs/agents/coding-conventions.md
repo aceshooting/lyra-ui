@@ -173,6 +173,11 @@
   backtick is genuinely unavoidable, escape it with a preceding backslash. When a parse error
   appears in a `*.styles.ts`, grep the file for backticks first: a healthy one has exactly two
   hits, the opening and closing delimiter.
+- **`*/` inside comment prose closes the comment early**, reinterpreting the rest of the
+  sentence as CSS. Found while compressing style comments: `--lr-button-padding-*/--lr-button-font-size`
+  in a sentence is enough. It is quieter than the backtick and `${` traps because it does NOT
+  change the file's backtick count, so the usual "confirm 2 backticks" check passes. Only a
+  rendered result or a parsed-CSS comparison against the pre-edit file catches it.
 - **Watch for silently-inert CSS.** A declaration that never applies looks identical to one that
   works, and nothing in the toolchain flags it — not `tsc`, not the style policy, not a test that
   greps stylesheet text. Four live instances were found in one pass: `:host(:has(> lr-x))`

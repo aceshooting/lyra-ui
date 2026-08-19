@@ -11,11 +11,11 @@ export const styles = css`
     block-size: auto;
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
-    /* Same token names/fallback chain as chart.ts's --lr-chart-* — a host
-       already theming lr-chart gets lr-lite-chart themed for free, and
-       vice versa. Unlike chart.ts (canvas-rendered, can't consume var()
-       directly), this component is plain SVG/DOM, so these are read natively
-       by the CSS below — no getComputedStyle()/JS-side resolution needed. */
+    /* Same token names and fallback chain as chart.ts's --lr-chart-* set, so
+       theming either component themes the other for free. Unlike chart.ts
+       (canvas-rendered, cannot consume var() directly), this one is plain
+       SVG/DOM, so the CSS below reads them natively -- no getComputedStyle()
+       or JS-side resolution needed. */
     --_lr-chart-grid-color: var(--lr-color-border);
     --_lr-chart-tick-color: var(--lr-color-text-quiet);
     --_lr-chart-legend-color: var(--lr-color-text);
@@ -34,12 +34,12 @@ export const styles = css`
       'table';
     gap: var(--lr-space-xs);
   }
-  /* layout="scroll": the svg below gets an explicit inline-size (its
-     computed content width, set inline per-render since it depends on
-     category count/barWidth) instead of the 100% below, and can end up
-     wider than this container -- scroll to reveal the rest instead of
-     squeezing. Scoped strictly to the reflected [layout='scroll'] attribute
-     so layout="fit" (the default) never triggers this rule. */
+  /* layout="scroll": the svg below gets an explicit inline-size (its computed
+     content width, set inline per-render since it depends on category
+     count/barWidth) instead of the 100% below, and can end up wider than this
+     container -- scroll to reveal the rest instead of squeezing. Scoped
+     strictly to the reflected [layout='scroll'] attribute so layout="fit",
+     the default, never triggers it. */
   :host([layout='scroll']) [part='base'] {
     overflow-x: auto;
     overflow-y: hidden;
@@ -73,14 +73,12 @@ export const styles = css`
   [data-mark-hit-target] {
     cursor: pointer;
   }
-  /* A mark's resting colour is its own series colour, which varies per dataset and can be anything
-     a consumer passes -- including pure white or pure black. brightness() multiplies every channel,
-     so on those two it is a literal no-op, and on everything else it moves in whichever direction
-     the colour happens to sit rather than the direction the mark needs. Mixing toward
+  /* A mark's resting colour is its series colour -- anything a consumer passes, including pure
+     white or pure black. brightness() multiplies every channel, so it is a no-op on those two and
+     elsewhere moves whichever way the colour sits, not the way the mark needs; mixing toward
      --lr-color-mix-partner (which follows the text colour) always moves, and always away from the
-     plot background. The base is currentColor: each mark carries its series colour in an inline
-     'color' alongside its fill attribute precisely so this mix has something to read -- CSS cannot
-     see the value of a fill presentation attribute. */
+     plot background. The base is currentColor because each mark carries its series colour in an
+     inline 'color' beside its fill attribute -- CSS cannot read a fill presentation attribute. */
   :where([part='bar']):hover,
   :where([part='point']):hover,
   :where(.mark-hit-group):hover [part='bar'],
@@ -112,14 +110,13 @@ export const styles = css`
     fill: none;
     stroke-width: var(--lr-border-width-medium);
   }
-  /* The marks are the data key, so their own pixels survive forced colors: the colors they carry
-     there already come from the forced-colors system-color remap of the --lr-color-chart-* ramp,
-     and the per-series texture/dash layered over that is what keeps repeated system colors apart.
-     Letting the platform force fill/stroke a second time would collapse every series back onto one
-     color and erase the encoding entirely. Axes, gridlines, labels, and the legend text stay
-     system-controlled. forced-color-adjust is inherited, so it must sit on the marks and the
-     pattern tiles themselves rather than on the svg, which would opt the chrome out too -- the same
-     placement rationale as swatch-picker.styles.ts's swatch-fill. */
+  /* The marks are the data key, so their pixels survive forced colors: their colors already come
+     from the forced-colors system-color remap of the --lr-color-chart-* ramp, and the per-series
+     texture/dash over it keeps repeated system colors apart. Forcing fill/stroke again would
+     collapse every series onto one color. Axes, gridlines, labels and legend text stay
+     system-controlled. forced-color-adjust is inherited, so it sits on the marks and pattern tiles
+     rather than the svg, which would opt the chrome out too -- same placement rationale as
+     swatch-picker.styles.ts's swatch-fill. */
   [part='bar'],
   [part='line'],
   [part='point'],

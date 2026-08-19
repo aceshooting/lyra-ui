@@ -1,3 +1,32 @@
+## Breaking changes in 10.0.0
+
+**Breaking (event rename, v10):** `lr-dialog`'s close event is now spelled `lr-close`, and
+`lr-dialog-close` is removed; `lr-drawer`, which inherits the whole dialog lifecycle, loses it too.
+The detail (`DialogCloseReason`), the cancelability, and the position in the `lr-hide` → close →
+`lr-after-hide` sequence are all unchanged — only the name moved, onto the plain spelling
+`lr-tool-select-dialog` and the rest of the library already use. The old name is removed outright
+rather than dual-emitted, because the library has no released consumers and an alias is a permanent
+tax paid to protect users who do not exist. Rename the listener. **Breaking (default change, v10):**
+`lr-progress-ring` gains `showValue`/`show-value`, defaulting to `false`, so a determinate ring no
+longer renders its percentage unless asked. It used to render it unconditionally with no way to
+suppress it short of slotting replacement content, while sibling `lr-progress-bar` has had an opt-in
+`show-value` all along and this reference has always claimed the two share the same value contract;
+they now actually do. Add `show-value` to keep the percentage. The accessible value is unchanged
+either way — `aria-valuetext` still carries the locale-formatted percentage — and slotted replacement
+content still projects with or without the attribute. **Breaking (removal, v10):** `confirm()`'s
+deprecated `tone` option is removed from `ConfirmOptions`; use `variant` (same `'neutral' | 'danger'`
+values, same `'neutral'` default). It was documented as a one-major back-compat alias and `variant`
+already won whenever both were set, so only a caller passing `tone` alone is affected. **New,
+additive, non-breaking:** `lr-popover` gains `disabled` — both `lr-tooltip` and `lr-popover`'s own
+subclass `lr-dropdown` had it and the base did not; `lr-dropdown` now inherits it with byte-identical
+behavior.
+
+Also corrected in 10.0.0 — not breaking, but visible. `lr-alert` really hides a base that is queued
+behind the visible toast window (it renders that base `hidden` and `inert`; `inert` is
+platform-enforced, but `hidden` was doing nothing), and `lr-badge` and `lr-chip` honor a consumer's
+`hidden` slotted adornment. In each case the component's own author-origin `display` declaration was
+beating the UA stylesheet's `[hidden] { display: none }` regardless of specificity.
+
 ## Breaking changes in 9.0.0
 
 **Breaking (type-only, v9):** `lr-toast`'s exported `ToastPlacement`, `ToastCreateOptions`, and
@@ -832,7 +861,7 @@ if (ok) deleteConversation();
 ```
 
 `confirm(options: ConfirmOptions): Promise<boolean>` where
-`ConfirmOptions = { title: string; description?: string; confirmLabel?: string /* = 'Confirm' */; cancelLabel?: string /* = 'Cancel' */; variant?: 'neutral' | 'danger' /* = 'neutral' */; tone?: 'neutral' | 'danger' /* @deprecated, use variant */ }`.
+`ConfirmOptions = { title: string; description?: string; confirmLabel?: string /* = 'Confirm' */; cancelLabel?: string /* = 'Cancel' */; variant?: 'neutral' | 'danger' /* = 'neutral' */ }`.
 
 Resolves `true` only when the confirm button is pressed — Escape, a backdrop click, and the cancel
 button all resolve `false`. It sets `lightDismiss = true` on its transient dialog explicitly, so the
@@ -843,8 +872,8 @@ of the call and removes it once settled, rather than reusing a persistent page-l
 stack, each tied to its own returned promise. `title` becomes a direct light-DOM `<h2>`, which per `<lr-dialog>`'s
 own heading-detection also drives the dialog's accessible name; `description`, if provided, becomes
 a direct light-DOM `<p>`. `variant: 'danger'` fills the confirm button with `--lr-color-danger`
-instead of `--lr-color-brand`, for destructive actions. The deprecated `tone` option is a one-major
-back-compat alias for `variant`; `variant` wins when both are set. Confirm/cancel actions deliberately use native
+instead of `--lr-color-brand`, for destructive actions. The deprecated `tone` option that preceded
+`variant` was removed in 10.0.0. Confirm/cancel actions deliberately use native
 inline-styled `<button>` elements so this helper does not register or import the broader button
 component; every color value is still a `--lr-*` token reference, never a raw literal. They carry the same interaction
 states as every other control in the library: a hover/pressed fill mixed toward
@@ -2420,7 +2449,6 @@ These named interfaces and helper signatures are available to typed integrations
   confirmLabel: unknown;
   cancelLabel: unknown;
   variant: unknown;
-  tone: unknown;
 }`
 
 - **`components-overlays-dialog-dialog-contracts`** — Supporting data types and helpers for this component family.

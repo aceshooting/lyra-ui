@@ -13,16 +13,12 @@ export const styles = css`
   }
   [part='node'],
   [part='relation'] {
-    /* Both pill kinds share this rule, so both get the same shared minimum
-       hit-area floor -- a short label (either a terse relation like "is-a" or
-       a short node label) would otherwise stay well under the 40px floor.
-       The strip scrolls horizontally (see <lr-scroller> in the render
-       template), so the extra inline space this can add just scrolls rather
-       than forcing a wrap or squeezing a neighboring element -- the same
-       "direct floor" treatment lr-code-block's/lr-json-viewer's own
-       text-bearing [part='copy-button']/[part='toggle'] already use, not the
-       narrower split visible-label/hit-target pattern reserved for pills
-       genuinely out of horizontal room. */
+    /* Both pill kinds share this rule and so share the minimum hit-area floor -- a terse relation
+       or short node label would otherwise stay well under the 40px floor. The strip scrolls
+       horizontally (<lr-scroller> in the render template), so the extra inline space scrolls
+       rather than wrapping or squeezing a neighbour. Same direct-floor treatment as
+       lr-code-block's/lr-json-viewer's text-bearing [part='copy-button']/[part='toggle'], not the
+       split visible-label/hit-target pattern kept for pills genuinely out of horizontal room. */
     display: inline-flex;
     align-items: center;
     justify-content: center;

@@ -39,8 +39,8 @@ export const styles = css`
     max-block-size: 100%;
     border-radius: 0;
     /* Modal layer, one step below lr-dialog's --lr-shadow-xl: an edge-anchored sheet is flush with
-       three viewport edges, so only the one inward edge can cast anything. The surface itself keeps
-       the inherited --lr-color-surface-overlay. */
+       three viewport edges, so only the inward edge casts anything. The surface keeps the inherited
+       --lr-color-surface-overlay. */
     box-shadow: var(--lr-shadow-l);
   }
   :host([placement="top"]) [part~="panel"],
@@ -56,12 +56,10 @@ export const styles = css`
   :host([placement="end"]) [part~="panel"] {
     --_lr-drawer-enter-x: var(--lr-size-1rem);
   }
-  /* translateX is a physical transform -- logical properties don't cover it -- so the
-     enter-from offset is flipped explicitly under RTL, the same way app-rail's offscreen
-     panel transform is. A 'start' drawer rests at the physical right edge under RTL and
-     must enter from further right (positive X); an 'end' drawer rests at the physical left
-     edge and must enter from further left (negative X) -- the mirror image of the LTR rules
-     above. */
+  /* translateX is a physical transform with no logical equivalent, so the enter-from offset flips
+     explicitly under RTL, as app-rail's offscreen panel transform does. Under RTL a 'start' drawer
+     rests at the physical right edge and enters from further right (positive X); an 'end' drawer
+     rests at the physical left edge and enters from further left (negative X). */
   :host(:dir(rtl)) [part~="panel"] {
     --_lr-drawer-enter-x: var(--lr-size-1rem);
   }

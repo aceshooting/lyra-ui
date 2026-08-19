@@ -1307,8 +1307,8 @@ describe('lr-graph-query-builder', () => {
 describe('lifecycle: attachInternals guard', () => {
   it('degrades gracefully instead of throwing when ElementInternals is unavailable', async () => {
     const original = (globalThis as { ElementInternals?: unknown }).ElementInternals;
-    // @ts-expect-error -- deliberately simulating an environment (e.g. happy-dom) with no
-    // ElementInternals implementation at all.
+    // Deliberately simulating an environment (e.g. happy-dom) with no ElementInternals
+    // implementation at all.
     delete (globalThis as { ElementInternals?: unknown }).ElementInternals;
     try {
       expect(() => document.createElement('lr-graph-query-builder')).to.not.throw();
@@ -1340,6 +1340,52 @@ describe('lifecycle: attachInternals guard', () => {
       await el.updateComplete;
       expect(el.shadowRoot!.querySelectorAll('[part="base"]').length).to.equal(1);
       expect(() => el.checkValidity()).to.not.throw();
+    } finally {
+      HTMLElement.prototype.attachInternals = original;
+    }
+  });
+
+  it('still reports the real validity state through the fallback internals, instead of claiming valid', async () => {
+    // The whole point of the degraded path: form participation is unavailable, but validity is
+    // *computed*, not guessed. A stand-in hardcoding `checkValidity: () => true` silently tells
+    // every consumer an anchor-less query is runnable.
+    const original = HTMLElement.prototype.attachInternals;
+    HTMLElement.prototype.attachInternals = function (this: HTMLElement) {
+      if (this.tagName.toLowerCase() === 'lr-graph-query-builder') {
+        throw new DOMException('attachInternals is not supported', 'NotSupportedError');
+      }
+      return original.call(this);
+    };
+    try {
+      const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+      await el.updateComplete;
+      // Empty startId -> valueMissing, exactly as with real ElementInternals.
+      expect(el.checkValidity(), 'an anchor-less query must not report valid').to.be.false;
+      expect(el.reportValidity()).to.be.false;
+      expect(el.validity.valueMissing).to.be.true;
+      expect(el.validity.valid).to.be.false;
+      expect(el.validationMessage).to.equal('This field is required.');
+
+      // Anchored -> valid, proving the flags actually thread through rather than being stuck.
+      el.value = query({ startId: 'node-1' });
+      await el.updateComplete;
+      expect(el.checkValidity()).to.be.true;
+      expect(el.validity.valueMissing).to.be.false;
+      expect(el.validity.valid).to.be.true;
+      expect(el.validationMessage).to.equal('');
+
+      // The other constraint, and setCustomValidity(), reach the same stand-in.
+      el.setCustomValidity('Rejected by the server.');
+      expect(el.checkValidity()).to.be.false;
+      expect(el.validity.customError).to.be.true;
+      expect(el.validationMessage).to.equal('Rejected by the server.');
+      el.setCustomValidity('');
+      expect(el.checkValidity()).to.be.true;
+
+      // Inert form participation is still inert -- that half is genuinely unavailable.
+      expect(el.form === null, 'form owner stays null').to.be.true;
+      expect(el.labels.length).to.equal(0);
+      expect(el.willValidate).to.be.false;
     } finally {
       HTMLElement.prototype.attachInternals = original;
     }

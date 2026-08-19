@@ -5,11 +5,11 @@ export const styles = css`
   :host {
     display: block;
     --_lr-textarea-max-block-size: none;
-    /* Geometry from the shared form-control ladder (internal/sizes.styles.ts, pulled in ahead of
-       this sheet by textarea.class.ts), so this field's scale and lr-input's are the same scale
-       rather than two copies. The ladder's INLINE gutter is used on all four sides on purpose: its
-       block padding is 0 at the two tightest tiers because a control row's height floor supplies
-       the space there, and a textarea has no floor -- the first line would sit on the border. */
+    /* Geometry from the shared form-control ladder (internal/sizes.styles.ts, loaded ahead of this
+       sheet by textarea.class.ts), so this field and lr-input share one scale. Its INLINE gutter
+       is used on all four sides: the ladder's block padding is 0 at the two tightest tiers, where
+       a row's height floor supplies the space -- a textarea has no floor and the first line would
+       sit on the border. */
     --_lr-textarea-padding: var(--lr-form-control-padding-inline);
     --_lr-textarea-font-size: var(--lr-form-control-font-size);
     --_lr-textarea-radius: var(--lr-form-control-radius);
@@ -18,8 +18,8 @@ export const styles = css`
     --_lr-textarea-border-color: var(--lr-color-border);
   }
   /* Changes the private radius default rather than declaring border-radius on [part='textarea'],
-     so that one consumption point below stays the only place a corner radius is read -- and an
-     inherited or direct --lr-textarea-radius override remains authoritative. */
+     keeping one consumption point below and leaving a --lr-textarea-radius override
+     authoritative. */
   :host([pill]) {
     --_lr-textarea-radius: var(--lr-radius-pill);
   }
@@ -55,16 +55,14 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
     font-weight: var(--lr-font-weight-semibold);
   }
-  /* :empty never matches here -- the part always contains a literal slot child element regardless
-     of assigned/text content -- so real emptiness is tracked in JS (hasLabelSlot) and reflected
-     via the hidden attribute instead (same fix as lr-select's identical part). */
+  /* :empty never matches -- the part always holds a literal slot child -- so emptiness is tracked
+     in JS (hasLabelSlot) and reflected as the hidden attribute, as in lr-select. */
   [part="form-control-label"][hidden] {
     display: none;
   }
   ${formControlRequiredMarker}
-  /* A plain block box around the native control: the native resize grip writes its own inline
-     width/height onto the <textarea> itself, so the wrapper deliberately imposes no size of its
-     own and lets the field drive it. */
+  /* A plain block box: the native resize grip writes inline width/height onto the <textarea>
+     itself, so the wrapper imposes no size and lets the field drive it. */
   [part~='textarea-wrapper'] {
     display: block;
     min-inline-size: 0;
@@ -93,15 +91,13 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* Gives mouse users the same 'this is interactive' cue the :focus-visible ring above already
-     gives keyboard users -- mirrors lr-checkbox's/lr-radio's [part='base']:hover pattern, gated
-     via :host(:not(:disabled)) rather than a same-selector [part='textarea']:hover:not(:disabled)
-     (which would exceed a consumer's ::part(textarea):hover specificity -- see
-     lr-attachment-trigger's :where() fix for that class of bug). */
-  /* no-pressed-state: pressing inside a text surface places a caret, it does not actuate anything.
-     The mousedown that would match :active is the same gesture that focuses the field, so a pressed
-     treatment would render for one frame between the hover border and the focus ring and read as a
-     flicker; focus is this control's real "you are acting on me" state. */
+  /* The same 'this is interactive' cue the :focus-visible ring above gives keyboard users --
+     mirrors lr-checkbox's and lr-radio's [part='base']:hover, gating on the host's own :disabled
+     rather than the inner control's, so all three read the same way. */
+  /* no-pressed-state: pressing inside a text surface places a caret, it actuates nothing. The
+     mousedown matching :active is the same gesture that focuses the field, so a pressed treatment
+     would flicker for one frame between the hover border and the focus ring; focus is this
+     control's real acting-on-me state. */
   :host(:not(:disabled)) [part="textarea"]:hover {
     border-color: var(--lr-textarea-hover-border-color, var(--lr-color-brand));
   }

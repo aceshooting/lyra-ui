@@ -23,13 +23,11 @@ export const styles = css`
 
   [part='controls'] > * {
     /* The prompt-scoped width hook avoids an ancestor-wide generic control collision. Unlike
-       lr-model-select's own
-       min-inline-size, which resolves through --lr-size-12rem directly) -- an unset custom
-       property makes var() invalid at computed-value time, which invalidates this whole
-       declaration (min-inline-size falls back to its auto initial value; flex-basis, below,
-       falls back to auto too) rather than merely omitting the min/basis. --lr-size-12rem
-       mirrors the min-inline-size lr-model-select's own popover uses for the same "one control
-       row item" sizing purpose. */
+       lr-model-select's own min-inline-size, which resolves --lr-size-12rem directly, this needs
+       the explicit fallback: an unset custom property makes var() invalid at computed-value time,
+       invalidating the whole declaration -- min-inline-size and the flex-basis below would fall
+       back to auto rather than merely omit the min/basis. --lr-size-12rem mirrors the
+       min-inline-size lr-model-select's popover uses for the same one-control-row-item sizing. */
     min-inline-size: min(100%, var(--lr-prompt-input-control-width, var(--lr-size-12rem)));
     flex: 1 1 var(--lr-prompt-input-control-width, var(--lr-size-12rem));
   }
@@ -50,8 +48,8 @@ export const styles = css`
   [part='sources-summary']:hover {
     color: var(--lr-color-brand);
   }
-  /* The summary is a disclosure control, so the press gets a fill on top of the hover recolor --
-     mixed from [part='sources']'s own surface, which is what shows through the summary at rest. */
+  /* A disclosure control, so the press adds a fill on top of the hover recolor, mixed from
+     [part='sources']'s surface -- what shows through the summary at rest. */
   [part='sources-summary']:active {
     color: var(--lr-color-brand);
     background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));

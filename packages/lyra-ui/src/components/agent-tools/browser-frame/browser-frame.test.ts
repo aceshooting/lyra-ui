@@ -516,3 +516,23 @@ it('normalizes duplicate ping ids first-wins before overlay rendering', async ()
   expect(pings).to.have.length(1);
   expect(pings[0]!.dataset['kind']).to.equal('click');
 });
+
+describe('a slotted [hidden] viewport child', () => {
+  it('is removed from the rendered box, not just from the accessibility tree', async () => {
+    const el = (await fixture(html`
+      <lr-browser-frame url="https://example.test/">
+        <div id="gone" hidden>hidden surface</div>
+        <div id="shown">live surface</div>
+      </lr-browser-frame>
+    `)) as LyraBrowserFrame;
+    await el.updateComplete;
+    const gone = el.querySelector<HTMLElement>('#gone')!;
+    const shown = el.querySelector<HTMLElement>('#shown')!;
+    expect(getComputedStyle(gone).display).to.equal('none');
+    expect(gone.getClientRects().length).to.equal(0);
+    // The companion proves the ::slotted(*) rule itself is still live, so the assertion above
+    // cannot pass merely because the frame failed to style its slotted surface at all.
+    expect(getComputedStyle(shown).display).to.equal('block');
+    expect(shown.getClientRects().length).to.equal(1);
+  });
+});

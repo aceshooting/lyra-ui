@@ -2002,3 +2002,29 @@ describe('lr-otp-input validity custom states', () => {
     expect(el.matches(':state(user-invalid)'), 'the user has already typed').to.equal(true);
   });
 });
+
+describe('explicitly empty host aria-label', () => {
+  it('keeps the control explicitly unnamed instead of substituting the localized fallback', async () => {
+    const explicit = (await fixture(
+      html`<lr-otp-input length="4" aria-label=""></lr-otp-input>`,
+    )) as LyraOtpInput;
+    await explicit.updateComplete;
+    const control = controlOf(explicit);
+    expect(control.hasAttribute('aria-label')).to.equal(true);
+    expect(control.getAttribute('aria-label')).to.equal('');
+
+    const omitted = (await fixture(html`<lr-otp-input length="4"></lr-otp-input>`)) as LyraOtpInput;
+    await omitted.updateComplete;
+    expect(controlOf(omitted).getAttribute('aria-label')).to.equal('Verification code');
+  });
+
+  it('still points a visible label at the control through aria-labelledby when the host name is explicitly empty', async () => {
+    const el = (await fixture(
+      html`<lr-otp-input length="4" label="Code" aria-label=""></lr-otp-input>`,
+    )) as LyraOtpInput;
+    await el.updateComplete;
+    const control = controlOf(el);
+    expect(control.getAttribute('aria-label')).to.equal('');
+    expect(control.getAttribute('aria-labelledby')).to.equal(el.shadowRoot!.querySelector('[part~="label"]')!.id);
+  });
+});

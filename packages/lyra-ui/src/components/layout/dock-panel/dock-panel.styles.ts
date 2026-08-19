@@ -1,19 +1,17 @@
 import { css } from 'lit';
 
 export const styles = css`
-  /* No :host position/inset is imposed here -- unlike an overlay component,
-     lr-dock-panel deliberately stays layout-agnostic (see the class doc):
-     drop it as an absolutely-positioned child of a position:relative parent,
-     or as a flex item alongside your existing content, and it only manages
-     its own size along the resize axis plus filling the cross axis. */
+  /* No :host position/inset is imposed -- unlike an overlay component, lr-dock-panel deliberately
+     stays layout-agnostic (see the class doc): drop it as an absolutely-positioned child of a
+     position:relative parent or as a flex item, and it manages only its own size along the resize
+     axis plus filling the cross axis. */
   :host {
     display: block;
     box-sizing: border-box;
-    /* Themeable persistent-rail width/height while collapsed -- overridable
-       from outside since it's a plain custom property, not a JS prop (see
-       the class doc for why collapse hides content rather than zeroing the
-       box). Reuses the shared icon-button tap-target token so the collapse
-       toggle sitting on the rail stays comfortably tappable by default. */
+    /* Themeable persistent-rail width/height while collapsed -- a plain custom property, not a JS
+       prop, so it overrides from outside (the class doc says why collapse hides content rather
+       than zeroing the box). Reuses the shared icon-button tap-target token so the toggle on the
+       rail stays comfortably tappable. */
     --_lr-dock-panel-collapsed-size: var(--lr-icon-button-size);
     position: relative;
   }
@@ -25,14 +23,11 @@ export const styles = css`
   :host([edge="bottom"]) {
     inline-size: 100%;
   }
-  /* The collapsed-rail floor only applies once actually collapsed -- scoped
-     here rather than to the bare [edge] selectors above, so it can never
-     override a smaller explicit min-extent (resolved in JS by
-     resolveBoundsPx()) while expanded. An unconditional floor here would
-     silently win over a min-extent below the rail token's width, since a CSS
-     min-inline-size/min-block-size always wins over an inline size style
-     regardless of what value applySize() computed and announced via
-     aria-valuenow. */
+  /* The collapsed-rail floor applies only once collapsed -- scoped here, not on the bare [edge]
+     selectors above, so it can never override a smaller explicit min-extent (resolved in JS by
+     resolveBoundsPx()) while expanded. Unconditional it would silently win over a min-extent below
+     the rail token's width: a CSS min-inline-size/min-block-size always beats an inline size
+     style, whatever applySize() computed and announced via aria-valuenow. */
   :host([edge="start"][collapsed]),
   :host([edge="end"][collapsed]) {
     min-inline-size: var(
@@ -66,35 +61,32 @@ export const styles = css`
     display: none;
   }
 
-  /* The draggable edge -- always the panel's *inner* boundary (opposite the
-     docked/pinned edge), positioned with logical insets so it mirrors
-     automatically under RTL for the start/end edges. */
+  /* The draggable edge -- always the panel's *inner* boundary (opposite the docked/pinned edge),
+     on logical insets so the start/end edges mirror automatically under RTL. */
   [part="handle"] {
     position: absolute;
     background: var(--lr-color-border);
     touch-action: none;
   }
-  /* --lr-dock-panel-handle-hover-color/-active-color deliberately don't reuse the bare
-     --lr-color-brand token the collapse-toggle's own hover/active tokens fall back to below --
-     the handle's drag-affordance accent and the toggle's button hover/active feedback are
-     different visual purposes that happened to share a token by coincidence, not by design; each
-     now has its own scoped override while defaulting to the exact same rendered color. */
+  /* --lr-dock-panel-handle-hover-color/-active-color deliberately do not reuse the bare
+     --lr-color-brand the collapse-toggle's tokens fall back to below: a drag-affordance accent and
+     a button's hover/active feedback are different purposes that shared a token by coincidence.
+     Each has its own scoped override, defaulting to the same rendered color. */
   [part="handle"]:hover {
     background: var(--lr-dock-panel-handle-hover-color, var(--lr-color-brand));
   }
-  /* Split off from the :hover rule it used to share (rather than kept as one selector list) so the
-     pressed rule below can be that rule's exact twin: swapping :hover for :active in a list that
-     also carries :focus-visible would have repainted the focus state as pressed. */
+  /* Split out of the :hover selector list so the pressed rule below can be that rule's exact twin:
+     swapping :hover for :active in a list also carrying :focus-visible would have repainted the
+     focus state as pressed. */
   [part="handle"]:focus-visible {
     background: var(--lr-dock-panel-handle-hover-color, var(--lr-color-brand));
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
-  /* After :focus-visible, so a handle that was focused by keyboard still shows the deeper pressed
-     fill for the duration of a pointer drag (pointer capture holds :active throughout).
-     --lr-dock-panel-handle-active-color's own fallback still derives from the hover token via
-     color-mix() -- overriding just the hover token keeps retinting the pressed state too, same as
-     before this token existed, while an explicit active override can still opt out of that. */
+  /* After :focus-visible, so a keyboard-focused handle still shows the deeper pressed fill for the
+     whole pointer drag (pointer capture holds :active throughout).
+     --lr-dock-panel-handle-active-color falls back through color-mix() on the hover token, so
+     overriding hover alone retints the pressed state too; an explicit active override opts out. */
   [part="handle"]:active {
     background: var(
       --lr-dock-panel-handle-active-color,
@@ -105,9 +97,8 @@ export const styles = css`
       )
     );
   }
-  /* Transparent hit-slop, widening the draggable/tappable box along the
-     resize axis only, without changing the handle's visible 3px thickness --
-     same technique as lr-multi-split's divider. */
+  /* Transparent hit-slop widening the draggable/tappable box along the resize axis only, leaving
+     the handle's visible 3px thickness -- same technique as lr-multi-split's divider. */
   [part="handle"]::before {
     content: "";
     position: absolute;
@@ -160,10 +151,9 @@ export const styles = css`
       color var(--lr-transition-fast);
     z-index: var(--lr-layer-content);
   }
-  /* :active reuses the same two scoped tokens :hover sets (mixed for the background, verbatim
-     for the color) rather than a separate pair of active-only tokens -- mirrors this file's own
-     [part="handle"] precedent above, where :active has always derived straight from whatever
-     color :hover uses instead of carrying an independent token. */
+  /* :active reuses the two scoped tokens :hover sets -- mixed for the background, verbatim for the
+     color -- rather than an active-only pair, mirroring this file's [part="handle"] precedent
+     above, where :active derives straight from the color :hover uses. */
   [part="collapse-toggle"]:hover {
     background: var(
       --lr-dock-panel-collapse-toggle-hover-bg,
@@ -213,10 +203,10 @@ export const styles = css`
     inset-inline-start: 50%;
     transform: translateX(-50%);
   }
-  /* For the top/bottom edges the toggle centers on inset-inline-start: 50%, which anchors to
-     the physical right edge under RTL -- the fixed translateX(-50%) must flip sign there or
-     the toggle sits a full box-width off center. The start/end edges center along the block
-     axis (translateY), which no text direction affects. */
+  /* On top/bottom edges the toggle centers on inset-inline-start: 50%, which anchors to the
+     physical right edge under RTL, so translateX(-50%) must flip sign or the toggle sits a full
+     box-width off center. The start/end edges center on the block axis (translateY), which no text
+     direction affects. */
   :host(:dir(rtl)[edge="top"]) [part="collapse-toggle"],
   :host(:dir(rtl)[edge="bottom"]) [part="collapse-toggle"] {
     transform: translateX(50%);

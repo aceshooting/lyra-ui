@@ -6,15 +6,14 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     vertical-align: middle;
-    /* Keep the public hooks undeclared here: a consumer may set either one
-       on an ancestor. The private values below retain per-phase defaults when
-       the public hook is unset, following lr-timeline-item's marker pattern. */
+    /* Public hooks stay undeclared here so a consumer can set either on an ancestor; the private
+       values below hold the per-phase defaults, following lr-timeline-item's marker pattern. */
     --_lr-stream-status-dot-color-default: var(--lr-color-text-quiet);
     --_lr-stream-status-dot-opacity-default: 0.35;
   }
 
-  /* 'connecting' gets a dimmer, static brand dot -- present but deliberately
-     quieter than 'streaming' so the two are never confused at a glance. */
+  /* 'connecting' gets a dimmer, static brand dot -- deliberately quieter than 'streaming' so the
+     two are never confused at a glance. */
   :host([connection-state='connecting']) {
     --_lr-stream-status-dot-color-default: var(--lr-color-brand);
     --_lr-stream-status-dot-opacity-default: 0.6;
@@ -23,8 +22,8 @@ export const styles = css`
     --_lr-stream-status-dot-color-default: var(--lr-color-brand);
     --_lr-stream-status-dot-opacity-default: 1;
   }
-  /* Warning, not danger -- see the class doc's "Visual" section for why a
-     stall defaults to the recoverable/actionable tone. */
+  /* Warning, not danger: a stall defaults to the recoverable/actionable tone -- see the class doc's
+     "Visual" section. */
   :host([data-stalled]) {
     --_lr-stream-status-dot-color-default: var(--lr-color-warning);
     --_lr-stream-status-dot-opacity-default: 1;
@@ -43,8 +42,7 @@ export const styles = css`
       border-color var(--lr-transition-base);
   }
 
-  /* The one "unmistakable" treatment the spec calls for: a stall tints the
-     whole row, not just the dot, so the message/actions read as one alert
+  /* A stall tints the whole row, not just the dot, so the message and actions read as one alert
      unit rather than a plain dot next to unrelated-looking text. */
   :host([data-stalled]) [part='base'] {
     padding: var(--lr-space-xs) var(--lr-space-s);
@@ -77,12 +75,10 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
   }
 
-  /* Only 'streaming' pulses -- a moving dot reads as "actively receiving
-     data right now"; every other phase (including 'stalled', which wants
-     steady attention via color/tint, not extra motion) stays static. Same
-     token/rationale as lr-typing-indicator's pulse variant -- see that
-     component's styles for the full explanation of why
-     --lr-transition-ambient is the right length for an ambient loop. */
+  /* Only 'streaming' pulses -- a moving dot reads as "actively receiving data right now". Every
+     other phase stays static, 'stalled' included: it wants steady attention via color/tint, not
+     motion. Same token and rationale as lr-typing-indicator's pulse variant, whose styles explain
+     why --lr-transition-ambient suits an ambient loop. */
   :host([connection-state='streaming']:not([data-stalled])) [part='indicator'] {
     animation: lr-stream-status-pulse var(--lr-transition-ambient) infinite;
   }

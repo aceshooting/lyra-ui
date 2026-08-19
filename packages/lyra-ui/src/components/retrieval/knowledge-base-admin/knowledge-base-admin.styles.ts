@@ -43,9 +43,9 @@ export const styles = css`
     color: var(--lr-color-text);
   }
 
-  /* Pressed adds a fill the hover deliberately has none of: the tab's label is already moving to
-     --lr-color-text on hover, which is exactly what --lr-color-mix-partner tracks, so the only axis
-     left that can read as "held" is the tab's own transparent background mixed toward the partner. */
+  /* Pressed adds a fill hover has none of: hover already moves the label to --lr-color-text,
+     which is what --lr-color-mix-partner tracks, so the only axis left to read as held is the
+     tab's own transparent background mixed toward the partner. */
   [part='tab']:active {
     color: var(--lr-color-text);
     background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
@@ -56,10 +56,11 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
 
-  /* :where() zeroes the [aria-selected='true'] qualifier's specificity contribution -- otherwise
-     this (0,2,0) rule would beat a consumer's own ::part(tab) color/border override on the active
-     tab. Colors route through scoped cssprops so a consumer can retint just the selected tab
-     without hijacking the shared --lr-color-brand/--lr-color-text tokens used everywhere else. */
+  /* :where() zeroes the [aria-selected='true'] qualifier's specificity, keeping this at (0,1,0)
+     -- below the (0,2,0) :hover and :active rules above, so the selected tab still shows pointer
+     feedback. Colors route through scoped cssprops so a consumer can retint just the selected tab
+     without hijacking the shared --lr-color-brand and --lr-color-text tokens used everywhere
+     else. */
   [part='tab']:where([aria-selected='true']) {
     border-block-end-color: var(--lr-knowledge-base-admin-tab-selected-border, var(--lr-color-brand));
     color: var(--lr-knowledge-base-admin-tab-selected-color, var(--lr-color-text));

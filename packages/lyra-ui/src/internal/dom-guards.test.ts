@@ -4,7 +4,7 @@ import { imageMapImageFor, isDateObject, isHtmlElement, isSvgElement } from './d
 it('recognizes genuine HTML elements and Dates from another same-origin realm', async () => {
   const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
   const frameDocument = frame.contentDocument!;
-  const frameWindow = frame.contentWindow!;
+  const frameWindow = frame.contentWindow as Window & typeof globalThis;
   const foreignButton = frameDocument.createElement('button');
   const foreignSvgLink = frameDocument.createElementNS('http://www.w3.org/2000/svg', 'a');
   const foreignDate = new frameWindow.Date(2026, 6, 14);

@@ -1343,7 +1343,17 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   // re-runs on `slotchange`, which never fires for such a mutation, so
   // without this the rendered listbox row would go stale. Reassigning (not
   // mutating) `options` gives Lit a new array reference to diff against.
-  private onOptionChange = (): void => {
+  //
+  // The notification is sealed here rather than allowed to keep bubbling: it
+  // is a private child-to-parent refresh signal, not part of this component's
+  // event contract, and it carries the *option's* target/detail rather than
+  // the select's. Left uncontained it escapes the host and reaches consumer
+  // code as an undocumented, undiscoverable event; a consumer who needs to
+  // know the value moved already has `lr-change`/`lr-input`. A listener bound
+  // directly to the `<lr-option>` still sees it -- the option is the event
+  // target, and the target's own listeners run before this slot listener.
+  private onOptionChange = (e: Event): void => {
+    e.stopPropagation();
     const previousActive = this.activeOption;
     const previousActiveRawIndex = previousActive
       ? this.options.indexOf(previousActive)

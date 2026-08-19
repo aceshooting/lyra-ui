@@ -3,10 +3,9 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    /* Lets the host shrink below its rendered SVG's intrinsic inline size
-       inside a narrower flex/grid track (a split pane, dialog, etc.) instead
-       of forcing the track to overflow -- [part='body']'s own overflow:auto
-       then takes over scrolling within whatever allocation it actually gets. */
+    /* Lets the host shrink below the rendered SVG's intrinsic inline size in a narrower flex/grid
+       track instead of forcing that track to overflow; [part='body']'s overflow:auto then scrolls
+       within whatever allocation it gets. */
     min-inline-size: 0;
     max-inline-size: 100%;
     --_lr-svg-viewer-max-height: none;
@@ -118,9 +117,9 @@ export const styles = css`
       transparent
     );
   }
-  /* Pressed, matching <lr-document-preview>'s identical region overlay: the hovered tint pushed
-     toward the text colour, which both deepens the hue and (the partner being opaque) raises the
-     tint's alpha, so a mousedown on the transparent target button reads as firmer than hovering. */
+  /* Pressed, matching <lr-document-preview>'s region overlay: the hovered tint pushed toward the
+     text colour, deepening the hue and -- the partner being opaque -- raising the tint's alpha, so
+     a mousedown on the transparent target reads firmer than hover. */
   [part="region-highlight-target"]:active + [part="region-highlight"] {
     background: color-mix(
       in oklab,

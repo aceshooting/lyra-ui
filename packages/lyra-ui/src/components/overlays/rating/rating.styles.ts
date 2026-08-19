@@ -4,12 +4,11 @@ export const styles = css`
   :host {
     display: inline-block;
     color: var(--lr-color-warning);
-    /* The 'm' step reproduces exactly the fixed symbol size this component had before the size
-       property existed; every other step of the library's shared six-step ladder changes this
-       private default below. An unset size and size="m" therefore resolve identically, while an
-       inherited or direct public size remains authoritative. The steps are a type ramp rather than the shared
-       --lr-form-control-* ladder: a rating has no control box to fit text inside, only glyphs
-       whose size IS the control. */
+    /* The 'm' step reproduces the fixed symbol size this component had before the size property
+       existed; every other step of the shared six-step ladder changes this private default. An
+       unset size and size="m" resolve identically, while an inherited or direct public size stays
+       authoritative. A type ramp, not the shared --lr-form-control-* ladder: a rating has no
+       control box for text, only glyphs whose size IS the control. */
     --_lr-rating-size: var(--symbol-size, var(--lr-font-size-xl));
   }
   :host([data-effective-size="2xs"]) {
@@ -31,9 +30,9 @@ export const styles = css`
     --_lr-rating-size: var(--symbol-size, var(--lr-font-size-3xl));
   }
   /* justify-content pairs with the min-inline-size hit-area floor below: a low-max rating (a
-     single star, say) is narrower than that floor, and the default justify-content
-     (normal => flex-start) would push the stars against the leading edge of an otherwise
-     centred control. A no-op once the stars already fill the floor. */
+     single star, say) is narrower than that floor, and the default (normal => flex-start) would
+     push the stars against the leading edge of an otherwise centred control. A no-op once the
+     stars fill the floor. */
   [part~="base"] {
     display: inline-flex;
     justify-content: center;
@@ -43,11 +42,11 @@ export const styles = css`
     max-inline-size: 100%;
     min-block-size: var(--lr-icon-button-size);
   }
-  /* Pointer cursor only while the rating is actually settable -- a readonly or disabled rating is
-     not editable via click/drag, so an unconditional cursor: pointer here would misleadingly cue
-     an interaction that setValue() (rating.class.ts) refuses to apply. :disabled rather than
-     [disabled] because only the former also tracks an ancestor <fieldset disabled>, which
-     formDisabledCallback() honours but never writes to the host's own attribute. */
+  /* Pointer cursor only while the rating is settable: readonly or disabled it is not editable by
+     click/drag, so an unconditional cursor: pointer would cue an interaction setValue()
+     (rating.class.ts) refuses. :disabled not [disabled], because only the former tracks an
+     ancestor <fieldset disabled>, which formDisabledCallback() honours without writing the host's
+     own attribute. */
   :host(:not(:disabled):not([readonly])) [part~="base"] {
     cursor: pointer;
   }
@@ -55,20 +54,20 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* Gives mouse users the same 'this is interactive' cue the :focus-visible outline above already
-     gives keyboard users -- mirrors lr-checkbox's/lr-radio's [part~='base']:hover pattern, gated via
-     :host(:not(:disabled):not([readonly])) (matching the pointer-cursor rule above -- a readonly
-     rating is still focusable, see rating.class.ts's tabindex, but neither settable nor "hoverable"
-     as an affordance) rather than a same-selector [part='star']:hover:not(:disabled) (which would
-     exceed a consumer's ::part(star):hover specificity). */
+  /* The mouse-user counterpart of the :focus-visible outline above, mirroring lr-checkbox's and
+     lr-radio's [part~='base']:hover pattern. Gated on :host(:not(:disabled):not([readonly])) like
+     the pointer-cursor rule above: a readonly rating stays focusable (rating.class.ts's tabindex)
+     but is neither settable nor hoverable. A same-selector [part='star']:hover:not(:disabled)
+     could express neither state -- the star is a span, so :disabled never matches, and readonly
+     lives on the host. */
   :host(:not(:disabled):not([readonly])) [part~="base"]:hover [part="star"] {
     color: var(
       --lr-rating-empty-color,
       var(--symbol-color, var(--lr-color-border-strong))
     );
   }
-  /* Pressing commits a value, so the pressed cue is on the star the pointer is over rather than
-     the whole row -- the row-wide hover cue says "settable", this says "this one". */
+  /* Pressing commits a value, so the pressed cue is on the star under the pointer, not the whole
+     row -- the row-wide hover cue says settable, this one says which. */
   :host(:not(:disabled):not([readonly])) [part~="base"]:active [part="star"] {
     color: var(
       --lr-rating-active-color,
@@ -109,8 +108,9 @@ export const styles = css`
   [part="star"] [aria-hidden="true"] > * {
     max-inline-size: 100%;
   }
-  /* white-space keeps a consumer getSymbol() glyph at its natural width inside the percentage-wide
-     overlay, so overflow: hidden clips it mid-symbol (the partial fill) instead of reflowing it. */
+  /* white-space keeps a consumer getSymbol() glyph at its natural width inside the
+     percentage-wide overlay, so overflow: hidden clips it mid-symbol -- the partial fill --
+     instead of reflowing it. */
   [part="star-fill"] {
     position: absolute;
     inset-block-start: 0;

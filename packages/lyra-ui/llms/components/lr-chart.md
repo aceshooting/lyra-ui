@@ -93,9 +93,9 @@ property).
   non-integer, negative, and out-of-range indexes are discarded. The component writes the accepted
   legend-toggle snapshot back to this property so a host can persist it, and a programmatic write
   reconciles Chart.js and the DOM legend silently without emitting either legend-visibility event.
-- `withoutLegend: boolean = false` (attribute `without-legend`) — the legend shows by default;
-  set this to hide it. Renders a wrapping DOM legend (when shown) whose keyboard-operable buttons
-  toggle dataset visibility. The DOM surface preserves long public labels that a canvas legend
+- `withoutLegend: boolean = false` (attribute `without-legend`, reflected) — the legend shows by
+  default; set this to hide it. Renders a wrapping DOM legend (when shown) whose keyboard-operable
+  buttons toggle dataset visibility. The DOM surface preserves long public labels that a canvas legend
   would clip. Its pressed state follows `hiddenDatasets` whenever that controlled snapshot is
   defined, otherwise the effective dataset's declarative `hidden` value before Chart.js is ready
   and across chart type/plugin rebuilds.
@@ -130,8 +130,6 @@ property).
   by radar/polar-area are out of scope)
 - `withoutAnimation: boolean = false` (attribute `without-animation`, reflected) — disables Chart.js
   construction animation; reduced-motion preference also disables it regardless of this value
-- `withoutLegend: boolean = false` (attribute `without-legend`, reflected) — hides the legend;
-  it wins over the positive `legend` alias
 - `withoutTooltip: boolean = false` (attribute `without-tooltip`, reflected) — disables the
   Chart.js tooltip plugin for this instance
 - `dataLabels: boolean = false` (attribute `data-labels`) — draws each point's value on the chart via
@@ -365,7 +363,7 @@ requested enhancement is disabled and a localized static `feature-warning` is vi
 announced. In particular, unavailable data labels do not remove generated table totals.
 
 ```html
-<lr-chart type="line" x-label="Day" y-label="kWh" legend></lr-chart>
+<lr-chart type="line" x-label="Day" y-label="kWh"></lr-chart>
 <script>
   const c = document.querySelector('lr-chart');
   c.labels = ['Mon', 'Tue', 'Wed'];
@@ -410,7 +408,7 @@ announced. In particular, unavailable data labels do not remove generated table 
   off-screen, property changes that would otherwise trigger a Chart.js redraw are skipped (and a
   single redraw fires once it re-enters the viewport). Independently, `updated()` only reaches
   Chart.js when at least one of `type`, `labels`, `datasets`, `description`, `grid`, `indexAxis`,
-  `label`, `hiddenDatasets`, `legend`, `legendPosition`, `min`, `max`, `plugins`, the internal resolved auto legend
+  `label`, `hiddenDatasets`, `legendPosition`, `min`, `max`, `plugins`, the internal resolved auto legend
   position, `valueFormatter`, `formatter`, `area`, `height`, `xLabel`, `yLabel`, `y2Label`, `beginAtZero`,
   `stacked`, any `without*` control, `dataLabels`, `stackTotals`, `config`, the parsed
   slotted config, `zoom`, `locale`, `strings`, or the internal loading state actually changed in

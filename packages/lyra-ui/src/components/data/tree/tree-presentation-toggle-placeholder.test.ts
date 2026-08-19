@@ -1,7 +1,6 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './tree.js';
 import type { LyraTree } from './tree.js';
-import type { LyraTreeItem } from './tree-item.js';
 
 const data = [
   {

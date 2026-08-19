@@ -39,10 +39,10 @@ export const styles = css`
   }
   .card {
     flex: 1 1 auto;
-    /* The single source of the card's minimum width -- a second min-inline-size declaration later
-       in this same rule would win outright and make --lr-flow-node-min-inline-size dead, which is
-       exactly what a stray "min-inline-size: 0" here used to do. The host caps itself at
-       max-inline-size: 100%, so a narrow allocation still wraps rather than overflowing. */
+    /* The single source of the card's minimum width -- a second min-inline-size later in this rule
+       would win outright and make --lr-flow-node-min-inline-size dead, as a stray
+       "min-inline-size: 0" here once did. The host caps at max-inline-size: 100%, so a narrow
+       allocation still wraps rather than overflowing. */
     min-inline-size: var(--lr-flow-node-min-inline-size, calc(var(--lr-size-10rem) + var(--lr-size-1rem)));
     display: flex;
     flex-direction: column;
@@ -51,21 +51,19 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
-    /* Resting chrome: a node card sits on the canvas, so it takes a card step -- s rather than xs
-       because it has to separate from a patterned/gridded canvas background, not a flat panel. */
+    /* Resting chrome: the card step s rather than xs -- a node card must separate from a
+       patterned/gridded canvas background, not a flat panel. */
     box-shadow: var(--lr-shadow-s);
   }
-  /* Density escape -- same convention as lr-source-card's compact. The tuned values sit behind
-     inline var() fallbacks (rather than a :host declaration, which every instance re-declares and
-     so shadows any ancestor value) so a canvas or palette can retune every card at once from the
-     outside; the fallbacks are the pre-existing values scaled down one step, so an unset card
-     renders unchanged.
+  /* Density escape -- same convention as lr-source-card's compact. Inline var() fallbacks rather
+     than a :host declaration (which every instance re-declares, shadowing any ancestor value), so
+     a canvas or palette can retune every card from outside; the fallbacks are the pre-existing
+     values scaled down one step, leaving an unset card unchanged.
 
-     Deliberately placed BEFORE the :host([selected]) and :host([status='running']) rules below:
-     all three are :host([x]) .card, i.e. equal specificity, so source order alone decides. They
-     carry the state treatments (border-color, the run-state ring) while this one carries only
-     density (padding/gap), so nothing collides today -- keeping the state rules last means a
-     future border/shadow tweak here still can't silently win over selection or run state. */
+     BEFORE the :host([selected]) and :host([status='running']) rules below -- all three are
+     :host([x]) .card, so source order decides. Nothing collides today (they carry border-color and
+     the run-state ring, this one only padding/gap), but state last stops a future border/shadow
+     tweak here winning over selection or run state. */
   :host([compact]) .card {
     padding: var(--lr-flow-node-compact-padding, var(--lr-space-xs));
     gap: var(--lr-flow-node-compact-gap, var(--lr-space-2xs));
@@ -131,10 +129,10 @@ export const styles = css`
     justify-content: flex-end;
     opacity: 0;
   }
-  /* no-pressed-state: the toolbar is not a target -- it is the container the consumer slots the
-     node's own action buttons into, and hovering/focusing the CARD is what reveals it. Pressing it
-     means pressing one of those buttons, which carries its own pressed state; a pressed treatment
-     on the container would fire for every one of them and say nothing about which. */
+  /* no-pressed-state: the toolbar is not a target -- it is the container for the node's own
+     slotted action buttons, revealed by hovering/focusing the CARD. Pressing it means pressing one
+     of those buttons, each with its own pressed state; a treatment on the container would fire for
+     all of them and say nothing about which. */
   :host(:hover) [part='toolbar'],
   :host(:focus-within) [part='toolbar'] {
     opacity: 1;
@@ -146,8 +144,8 @@ export const styles = css`
     border-color: var(--lr-flow-node-running-border, var(--lr-color-brand));
     box-shadow: 0 0 0 var(--lr-size-2px) var(--lr-flow-node-running-glow, var(--lr-color-brand-quiet));
   }
-  /* The JS gate only evaluates the preference at render time; this CSS branch also covers a
-     preference change while an already-rendered card is still pulsing. */
+  /* The JS gate evaluates the preference only at render time; this branch also covers a change
+     while an already-rendered card is still pulsing. */
   @media (prefers-reduced-motion: reduce) {
     .card[data-pulse] {
       animation: none;

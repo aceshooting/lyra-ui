@@ -108,6 +108,64 @@ it('renders exactly one child by default and marks the rest hidden', async () =>
   }
 });
 
+it('actually stops painting the candidates it marks hidden', async () => {
+  // `hidden` alone is not enough here: the component's own `::slotted(*) { display: inline-block }`
+  // is an author-origin declaration and therefore beats the UA stylesheet's `[hidden] { display:
+  // none }`. Without an explicit slotted-hidden rule every candidate stayed on screen while
+  // carrying `hidden`/`aria-hidden="true"` -- the rotation was visible only to assistive tech.
+  // Rendered geometry, never stylesheet text.
+  const el = (await fixture(html`
+    <lr-random-content>
+      <div id="a">A</div>
+      <div id="b">B</div>
+      <div id="c">C</div>
+    </lr-random-content>
+  `)) as LyraRandomContent;
+  await el.updateComplete;
+
+  const children = [...el.children] as HTMLElement[];
+  const painted = children.filter((child) => child.getBoundingClientRect().width > 0);
+  expect(painted.length, 'exactly one candidate occupies a box').to.equal(1);
+  expect(painted[0]!.hidden).to.be.false;
+  for (const child of children.filter((candidate) => candidate.hidden)) {
+    expect(getComputedStyle(child).display).to.equal('none');
+  }
+});
+
+it('shows one candidate, not the whole pool, before a selection has been applied', async () => {
+  // The SSR/hydration flash: selection is applied in firstUpdated(), which a server renderer never
+  // runs, so a declarative-shadow-DOM page paints EVERY candidate until the client hydrates and
+  // collapses them. Nothing about that is fixable by seeding first-render state -- the selection
+  // mutates light-DOM siblings, which Lit's hydration never compares -- so the shadow stylesheet
+  // carries a pre-selection rule instead. Asserted as rendered geometry, never stylesheet text.
+  const el = (await fixture(html`<lr-random-content></lr-random-content>`)) as LyraRandomContent;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.hasAttribute('data-unselected'), 'no selection applied to an empty pool').to.be.true;
+
+  // Slot assignment is synchronous; `slotchange` (and therefore the component's own selection) is
+  // not. This gap is exactly the pre-hydration paint a server-rendered page shows.
+  const candidates = ['a', 'b', 'c'].map((id) => {
+    const child = document.createElement('div');
+    child.id = id;
+    child.textContent = id.toUpperCase();
+    return child;
+  });
+  const settled = oneEvent(el, 'lr-content-change');
+  el.append(...candidates);
+  expect(
+    candidates.map((child) => getComputedStyle(child).display),
+    'only the first candidate is painted before the component has chosen'
+  ).to.deep.equal(['inline-block', 'none', 'none']);
+
+  await settled;
+  await el.updateComplete;
+  expect(base.hasAttribute('data-unselected'), 'the rule lifts once a selection exists').to.be.false;
+  const shown = candidates.filter((child) => getComputedStyle(child).display !== 'none');
+  expect(shown.length).to.equal(1);
+  expect(shown[0]!.hidden).to.be.false;
+});
+
 it('selects direct SVG candidates, reports them as Elements, and restores authored state', async () => {
   const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
   const el = document.createElement('lr-random-content') as LyraRandomContent;

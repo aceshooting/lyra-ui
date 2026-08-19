@@ -4122,3 +4122,137 @@ describe("click-to-seek on the track", () => {
     window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
   });
 });
+
+describe("active-preset pointer feedback", () => {
+  /** Resolves what a `declaration` computes to *inside this component's shadow root*, where the
+   *  `--lr-*` design tokens live. */
+  function resolvedInShadow(
+    el: LyraTimeRange,
+    declaration: string,
+    property: string
+  ): string {
+    const probe = document.createElement("span");
+    probe.setAttribute("style", declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  async function themed(): Promise<LyraTimeRange> {
+    const wrapper = (await fixture(html`
+      <div
+        style="
+          --lr-transition-fast: 0s;
+          --lr-time-range-preset-active-bg: rgb(0, 51, 102);
+          --lr-time-range-preset-active-border-color: rgb(0, 102, 51);
+        "
+      >
+        <lr-time-range min="0" max="100" start="0" end="30"></lr-time-range>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector("lr-time-range") as LyraTimeRange;
+    el.presets = PRESETS;
+    await el.updateComplete;
+    return el;
+  }
+
+  async function moveMouseTo(target: HTMLElement): Promise<void> {
+    target.scrollIntoView({ block: "center", inline: "center" });
+    const rect = target.getBoundingClientRect();
+    await sendMouse({
+      type: "move",
+      position: [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ],
+    });
+  }
+
+  it("deepens the ACTIVE preset while it is held", async function () {
+    if (window.matchMedia("(hover: none), (pointer: coarse)").matches)
+      this.skip();
+    const el = await themed();
+    const active = el.shadowRoot!.querySelector(
+      '[part="preset-button"][data-active]'
+    ) as HTMLElement;
+    expect(active != null, "expected an active preset").to.equal(true);
+    expect(getComputedStyle(active).backgroundColor).to.equal("rgb(0, 51, 102)");
+    const held = resolvedInShadow(
+      el,
+      "background: color-mix(in oklab, rgb(0, 51, 102), var(--lr-color-mix-partner) var(--lr-color-mix-active))",
+      "background-color"
+    );
+    expect(held).to.not.equal("rgb(0, 51, 102)");
+
+    try {
+      await resetMouse();
+      await moveMouseTo(active);
+      // The active preset deliberately keeps its own fill while merely hovered -- the selected
+      // treatment is the point, and hover already reads on every other preset.
+      expect(getComputedStyle(active).backgroundColor).to.equal(
+        "rgb(0, 51, 102)"
+      );
+      await sendMouse({ type: "down" });
+      await waitUntil(
+        () => getComputedStyle(active).backgroundColor === held,
+        "the held active preset kept its resting fill"
+      );
+    } finally {
+      await sendMouse({ type: "up" });
+      await resetMouse();
+    }
+  });
+
+  it("deepens an INACTIVE preset while it is held -- the contrast case", async function () {
+    if (window.matchMedia("(hover: none), (pointer: coarse)").matches)
+      this.skip();
+    const el = await themed();
+    const inactive = el.shadowRoot!.querySelector(
+      '[part="preset-button"]:not([data-active])'
+    ) as HTMLElement;
+    const held = resolvedInShadow(
+      el,
+      "background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))",
+      "background-color"
+    );
+
+    try {
+      await resetMouse();
+      await moveMouseTo(inactive);
+      await sendMouse({ type: "down" });
+      await waitUntil(
+        () => getComputedStyle(inactive).backgroundColor === held,
+        "the held inactive preset kept its resting fill"
+      );
+    } finally {
+      await sendMouse({ type: "up" });
+      await resetMouse();
+    }
+  });
+
+  it("restores the active preset's resting fill once the pointer is released", async function () {
+    if (window.matchMedia("(hover: none), (pointer: coarse)").matches)
+      this.skip();
+    const el = await themed();
+    const active = el.shadowRoot!.querySelector(
+      '[part="preset-button"][data-active]'
+    ) as HTMLElement;
+    try {
+      await resetMouse();
+      await moveMouseTo(active);
+      await sendMouse({ type: "down" });
+      await waitUntil(
+        () => getComputedStyle(active).backgroundColor !== "rgb(0, 51, 102)",
+        "the held active preset kept its resting fill"
+      );
+    } finally {
+      await sendMouse({ type: "up" });
+      await resetMouse();
+    }
+    await waitUntil(
+      () => getComputedStyle(active).backgroundColor === "rgb(0, 51, 102)",
+      "the released active preset never returned to its selected fill"
+    );
+  });
+});

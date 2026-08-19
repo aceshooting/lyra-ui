@@ -764,18 +764,34 @@ function flattenedParentElement(element: Element): Element | null {
  * page declaring `<html lang>`; skipping the document element in step 2 is the other half of that
  * fix, since the ancestor walk passes through `<html>` on its way up and would otherwise read the
  * same attribute one step earlier.
+ *
+ * An EMPTY `lang` is a value, not an absence. HTML's language-of-a-node algorithm stops at the
+ * nearest ancestor carrying `lang` "regardless of its value", and defines `lang=""` as "the primary
+ * language is unknown" -- so it deliberately withdraws its subtree from language inheritance rather
+ * than deferring to a further ancestor. Reading it truthily inverted that: steps 1 and 2 walked
+ * straight past it and adopted the very ancestor locale the author asked not to inherit. The
+ * browser agrees and can be asked -- `:lang()` matches off the same computation, which is how
+ * localization-runtime.test.ts pins this. Steps 3 and 5 still apply: `setLyraLocale()` is an
+ * app-level setting rather than something inherited from an ancestor, and some concrete tag has to
+ * reach `Intl` either way. Step 4 does not, since `<html lang>` is exactly the ancestor
+ * inheritance being refused.
+ *
+ * `locale=""` gets no such meaning: it is this library's own attribute, HTML's empty-string
+ * semantics do not extend to it, and an empty one simply declares nothing.
  */
 function inheritedLocale(host: Element): string {
   const explicit = host.getAttribute('locale') || host.getAttribute('lang');
   if (explicit) return canonicalizeLyraLocale(explicit);
+  if (host.getAttribute('lang') === '') return activeLocale || 'en';
   const documentElement = host.ownerDocument?.documentElement;
   let parent = composedParentElement(host);
   while (parent) {
-    const locale =
-      parent === documentElement
-        ? parent.getAttribute('locale')
-        : parent.getAttribute('locale') || parent.getAttribute('lang');
+    const isDocumentElement = parent === documentElement;
+    const locale = isDocumentElement
+      ? parent.getAttribute('locale')
+      : parent.getAttribute('locale') || parent.getAttribute('lang');
     if (locale) return canonicalizeLyraLocale(locale);
+    if (!isDocumentElement && parent.getAttribute('lang') === '') return activeLocale || 'en';
     parent = composedParentElement(parent);
   }
   if (activeLocale) return activeLocale;

@@ -4,8 +4,8 @@ export const styles = css`
   :host {
     display: block;
     inline-size: 100%;
-    /* Keep public hooks undeclared on the host so values from a theme wrapper can inherit through
-       it. Private defaults are consumed only as fallbacks below (and by minimumResizeWidth()). */
+    /* Public hooks stay undeclared on the host so a theme wrapper's values inherit through. The
+       private defaults are consumed only as fallbacks below, and by minimumResizeWidth(). */
     --_lr-table-heat-tint-lo-default: var(--lr-color-brand-quiet);
     --_lr-table-heat-tint-hi-default: var(--lr-color-brand);
     --_lr-table-resize-min-width-default: var(--lr-size-3rem);
@@ -17,18 +17,16 @@ export const styles = css`
     /* scroll-mode="page" below drops both, handing scrolling back to the document. */
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    /* Makes [part='base'] a query container so the @container rules below can
-       react to the table's own available width instead of the viewport's. */
+    /* Makes [part='base'] a query container, so the @container rules below react to the table's own
+       width, not the viewport's. */
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
 
-  /* A scroll container clips both axes, so 'overflow: auto' makes [part='base'] the sticky
-     containing block for the header whether or not anything can actually scroll in it. With no
-     '--lr-table-max-height' that container never scrolls, so the header scrolls away with the page
-     -- the two things a consumer most wants together (an uncapped, page-scrolling table AND a
-     pinned header) were mutually exclusive. Opting into page scrolling makes the page the header's
-     nearest scrollport, so it pins there. */
+  /* A scroll container clips both axes, so overflow: auto makes [part='base'] the header's sticky
+     containing block even when nothing scrolls -- with no --lr-table-max-height the header then
+     scrolls away with the page. Opting into page scrolling makes the page the header's scrollport,
+     so an uncapped table can still pin its header. */
   :host([scroll-mode='page']) [part='base'] {
     overflow: visible;
     max-block-size: none;
@@ -59,9 +57,9 @@ export const styles = css`
   :where([part='filter']):hover {
     background: var(--lr-color-brand-quiet);
   }
-  /* Pressing a text field is how you focus it, so it gets the same acknowledgement every other
-     control here does -- one step further toward --lr-color-mix-partner (the text colour) than the
-     hovered fill, and back to the hovered fill the moment the button is released. */
+  /* Pressing a text field is how you focus it, so it gets the same acknowledgement as every other
+     control here: one step past the hovered fill toward --lr-color-mix-partner, and back on
+     release. */
   :where([part='filter']):active {
     background: color-mix(
       in oklab,
@@ -73,16 +71,15 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     opacity: 1;
   }
-  /* Matches lr-input's own unconditional reset (input.styles.ts) -- without it Chrome/Safari paint
-     their raw gray cancel-x glyph once the field has text, visually inconsistent with the rest of
-     this fully themed field (border, background, placeholder color). */
+  /* Matches lr-input's unconditional reset (input.styles.ts) -- without it Chrome/Safari paint
+     their raw gray cancel-x once the field has text, inconsistent with this fully themed field. */
   [part='filter'][type='search']::-webkit-search-cancel-button,
   [part='filter'][type='search']::-webkit-search-decoration {
     appearance: none;
   }
-  /* The visible spinner block. Scoped away from the skeleton-appearance status node, which reuses
-     [part='loading'] but is visually hidden (.sr-only) — the placeholder rows are its visible
-     affordance, so it must not also lay out an 8rem centered block. */
+  /* The visible spinner block, scoped away from the skeleton-appearance status node, which reuses
+     [part='loading'] but is sr-only: the placeholder rows are its affordance, so it must not also
+     lay out an 8rem centered block. */
   [part='loading']:not(.sr-only) {
     display: grid;
     place-items: center;
@@ -93,16 +90,10 @@ export const styles = css`
     display: block;
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
-  /*
-   * Column priority (columns[].priority) hides [data-priority='low']/
-   * ['medium'] header/cells as the container narrows. priorityColumnsVisible
-   * (toggled by [part='reveal-columns-button']) needs to override this, but
-   * a @container query can only condition on ancestor inline-size, not
-   * component state — so it's surfaced instead as the data-force-visible
-   * attribute on [part='base'] itself, and the hide rule's :not(...)
-   * selector excludes it. Toggling the attribute flips every hidden column
-   * back on without a second, state-aware container query.
-   */
+  /* columns[].priority hides [data-priority='low'] and ['medium'] header/cells as the container
+     narrows. priorityColumnsVisible (from [part='reveal-columns-button']) must override that, but a
+     @container query can only test ancestor inline-size, not component state -- so it surfaces as
+     data-force-visible on [part='base'], which the hide rule's :not() excludes. */
   @container (max-inline-size: 899.98px) {
     [part='base']:not([data-force-visible]) [data-priority='low'] {
       display: none;
@@ -118,9 +109,9 @@ export const styles = css`
     border-collapse: collapse;
     font-size: var(--lr-font-size-md-sm);
   }
-  /* Resolved in table.class.ts as a floor: 'fixed' whenever the layout property asks for it, or
-     any column carries a declared/resized width, or a resize gesture is in flight. Kept off
-     [data-has-column-widths], which additionally means "<colgroup> carries real widths". */
+  /* Resolved in table.class.ts as a floor: 'fixed' when the layout property asks, when a column
+     carries a declared or resized width, or during a resize gesture. Kept off
+     [data-has-column-widths], which also means the <colgroup> carries real widths. */
   [part='table'][data-layout='fixed'] {
     table-layout: fixed;
   }
@@ -156,9 +147,9 @@ export const styles = css`
       var(--lr-table-resize-handle-opacity, var(--_lr-table-resize-handle-opacity-default))
     );
   }
-  /* The handle is a drag grip, so its pressed state is also its dragging state and stays applied
-     for the whole gesture. The default doubles the hover opacity; the scoped active hook can
-     decouple it when a theme needs a different progression. */
+  /* The handle is a drag grip, so its pressed state is its dragging state and stays applied for the
+     whole gesture. The default doubles the hover opacity; the scoped active hook can decouple it.
+     */
   [part='resize-handle']:active,
   [part='resize-handle'][data-resizing] {
     background: var(
@@ -179,47 +170,43 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
-  /* :where() zeroes the attribute qualifiers' specificity so this drops to (0,1,0), matching the
-     :hover rule below -- otherwise a consumer's own ::part(header-cell) { cursor: ... } override
-     ((0,1,1)) would lose to this rule's (0,3,0) without !important, the same specificity conflict
-     handled by the :hover rule below. */
+  /* :where() zeroes the attribute qualifiers to (0,1,0), matching the :hover rule below -- at
+     (0,3,0) a consumer's own ::part(header-cell) cursor override ((0,1,1)) would lose without
+     !important. */
   :where([part='header-cell'][aria-sort]:not([aria-sort='none'])),
   :where([part='header-cell'][data-sortable]) {
     cursor: pointer;
   }
-  /* Inline var() fallbacks rather than :host declarations -- same rationale as the selected-row
-     rule below: a :host-declared custom property shadows any ancestor value, defeating the override
-     hook, and Shadow Parts forbids an attribute selector after ::part() so
-     ::part(header-cell)[aria-sort] is invalid CSS. These let a consumer recolor just the
-     currently-sorted header without hijacking a library-wide token. */
+  /* Inline var() fallbacks, not :host declarations -- as in the selected-row rule below: a :host
+     declaration shadows any ancestor value, defeating the hook, and Shadow Parts forbids an
+     attribute selector after ::part(), so ::part(header-cell)[aria-sort] is invalid CSS. Lets a
+     consumer recolor just the sorted header without hijacking a library-wide token. */
   [part='header-cell']:where([aria-sort]:not([aria-sort='none'])) {
-    /* Defaults to the surface fill rather than transparent: this cell is position: sticky, so a
-       transparent default lets body rows scroll visibly through the sorted column's header in any
-       height-capped table. The sticky-column rules below keep the surface fill for the same reason. */
+    /* Surface fill, not transparent: the cell is position: sticky, so a transparent default lets
+       body rows scroll visibly through the sorted column's header in a height-capped table. The
+       sticky-column rules below keep it for the same reason. */
     background: var(--lr-table-header-sorted-bg, var(--lr-color-surface));
     color: var(--lr-table-header-sorted-color, inherit);
   }
-  /* :where() zeroes the wrapped attribute selectors' specificity contribution, leaving only :hover
-     itself -- (0,1,0) total, functionally identical selection to
-     [part='header-cell'][data-sortable]:hover ((0,3,0)) but now losing (on the pseudo-element
-     tiebreak) to a consumer's own ::part(header-cell):hover override ((0,1,1)) without that
-     consumer needing !important. Matches attachment-trigger.styles.ts's low-specificity pattern. */
-  :where([part='header-cell'][data-sortable]):hover {
+  /* Both attribute selectors stay unwrapped at (0,3,0): they must out-rank the
+     [part='header-cell'][data-sticky] rule below ((0,2,0)), which necessarily declares an opaque
+     background: var(--lr-color-surface). columns[].sticky and columns[].sortable compose, and while
+     these arms were :where()-zeroed to (0,1,0) a column using both had no hover and no press. */
+  [part='header-cell'][data-sortable]:hover {
     background: var(--lr-color-brand-quiet);
   }
-  /* Re-sorting a large table is the slowest thing this component does, so the press has to read
-     before the rows move. Same zeroed specificity as the :hover arm above it, one step further
-     toward --lr-color-mix-partner. */
-  :where([part='header-cell'][data-sortable]):active {
+  /* Re-sorting a large table is the slowest thing this component does, so the press must read
+     before the rows move. Same specificity as the :hover arm above and written after it, one step
+     further toward --lr-color-mix-partner. */
+  [part='header-cell'][data-sortable]:active {
     background: color-mix(
       in oklab,
       var(--lr-color-brand-quiet),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  /* Not scoped to [data-sortable] — the roving-tabindex header stop (see
-     table.ts's focusedColKey()) can land on any column, sortable or not, so
-     every header cell needs its own visible focus indicator. */
+  /* Not scoped to [data-sortable]: the roving-tabindex header stop (table.ts's focusedColKey()) can
+     land on any column, so every header cell needs its own focus indicator. */
   [part='header-cell']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -236,10 +223,8 @@ export const styles = css`
   [part='sort-icon'] svg {
     display: block;
   }
-  /* Rotate the wrapping part element, not the svg — internal/icons.ts's
-     documented contract ("callers ... rotate the wrapping part element via
-     CSS transform: rotate(...), not the svg"). This previously rotated the
-     inner <svg> directly. */
+  /* Rotate the wrapping part element, not the svg -- internal/icons.ts's documented contract. This
+     previously rotated the inner <svg> directly. */
   [part='sort-icon'][data-dir='asc'] {
     transform: rotate(-90deg);
   }
@@ -254,25 +239,22 @@ export const styles = css`
   [part='row'][data-stripe] {
     background: var(--lr-table-row-stripe-bg, transparent);
   }
-  /* Inline var() fallback rather than a :host declaration -- a :host-declared custom property is
-     re-declared on every instance and shadows any ancestor value, which would defeat the whole
-     point of the override hook. Needed because Shadow Parts forbids an attribute selector after
-     ::part(), so ::part(row)[aria-selected] is invalid CSS and a consumer would otherwise have to
-     hijack the library-wide --lr-color-brand-quiet token to recolor the selected row. */
+  /* Inline var() fallback, not a :host declaration, which is re-declared per instance and shadows
+     any ancestor value. Needed because Shadow Parts forbids an attribute selector after ::part():
+     ::part(row)[aria-selected] is invalid, so recoloring the selected row would otherwise mean
+     hijacking --lr-color-brand-quiet library-wide. */
   [part='row'][aria-selected='true'] {
     background: var(--lr-table-row-selected-bg, var(--lr-color-brand-quiet));
   }
-  /* MUST stay after the selected-row rule above: both are (0,2,0), so source order alone decides,
-     and the selected row is the one a user is most likely to hover next -- put this before and the
-     single most common hover in a selectable table would be the one hover with no feedback. Also a
-     distinct color-mix step rather than the plain brand-quiet fallback used elsewhere, since the
-     selected row's own resting fill already resolves to that same token by default. */
+  /* MUST stay after the selected-row rule above -- both are (0,2,0), so source order alone decides,
+     and the selected row is the likeliest next hover. A distinct color-mix step rather than the
+     plain brand-quiet fallback used elsewhere, because the selected row's resting fill already
+     resolves to that token. */
   [part='row']:hover {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
-  /* MUST stay after the selected-row rule above: both are (0,2,0), so source order alone decides,
-     and the selected row is the one a user presses to DEselect -- put this first and the single
-     most common press in a selectable table would be the one press with no feedback. */
+  /* MUST stay after the selected-row rule above -- both are (0,2,0), so source order alone decides,
+     and the selected row is the one a user presses to DEselect. */
   [part='row']:active {
     background: color-mix(
       in oklab,
@@ -307,13 +289,10 @@ export const styles = css`
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     color: var(--lr-table-cell-color, inherit);
   }
-  /* A column's 'cell(row)' may return any TemplateResult, and it renders inside this shadow root --
-     so an anchor it returns is unreachable from the page's own stylesheet, and '::part()' cannot
-     select past the first compound selector to reach it either. Left alone it computes to the UA
-     default link blue, the one colour on the page that belongs to no design system. Give it the
-     brand colour by default plus a hook. ':where()' keeps specificity at zero so an inline 'style'
-     on the returned anchor still wins, and '--lr-table-cell-link-color: revert' hands the UA
-     default back to anyone who wants it. */
+  /* A column's cell(row) may return any TemplateResult, rendered in this shadow root -- unreachable
+     from the page's stylesheet, and ::part() cannot select past its first compound selector, so a
+     returned anchor would compute to the UA default link blue. :where() keeps specificity at zero
+     so an inline style still wins; --lr-table-cell-link-color: revert restores the UA default. */
   [part='cell'] a:where(:any-link) {
     color: var(--lr-table-cell-link-color, var(--lr-color-brand));
   }
@@ -351,10 +330,9 @@ export const styles = css`
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  /* editType: 'number' cells render a native type="number" editor; without this reset the
-     browser's default up/down spinner buttons show in raw, unstyled UA chrome inside an otherwise
-     fully re-themed field (custom border/background/focus ring) -- matches lr-input's/
-     lr-pagination's own identical reset. */
+  /* editType: 'number' renders a native type="number" editor; without this reset the browser's
+     spinner buttons show as raw UA chrome in an otherwise fully re-themed field -- the same reset
+     lr-input and lr-pagination apply. */
   [part='cell-editor'][type='number'] {
     appearance: textfield;
   }
@@ -436,19 +414,15 @@ export const styles = css`
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     background: var(--lr-color-surface);
   }
-  /* columns[].sticky pins a column's header/cells to the inline-start edge
-     while the table scrolls horizontally — mirrors [part='header-cell']'s
-     existing inset-block-start vertical-scroll sticky pattern above, just on
-     the other axis. The box-shadow is the seam that separates it from
-     content scrolled underneath it. */
+  /* columns[].sticky pins a column's header/cells to the inline-start edge during horizontal scroll
+     -- the [part='header-cell'] inset-block-start pattern above, on the other axis. The box-shadow
+     is the seam over content scrolled underneath. */
   [part='header-cell'][data-sticky],
   [part='cell'][data-sticky] {
     position: sticky;
-    /* Set per-column by table.ts's stickyOffsets()/updated(), which measures
-       each earlier sticky column's rendered width so multiple sticky columns
-       stack left-to-right instead of all pinning to the same edge and
-       overlapping. Falls back to 0 for the first sticky column (or before
-       the first measurement pass has run). */
+    /* Set per-column by table.ts's stickyOffsets()/updated(), which measures each earlier sticky
+       column's rendered width so several stack instead of all pinning to the same edge. Falls back
+       to 0 for the first sticky column, and before the first measurement pass. */
     inset-inline-start: var(--lr-table-sticky-offset, 0);
     z-index: var(--lr-layer-content);
     background: var(--lr-color-surface);
@@ -456,16 +430,15 @@ export const styles = css`
   }
   [part='header-cell'][data-sticky='end'],
   [part='cell'][data-sticky='end'] {
-    /* Mirror image of the 'start' rule above: pinned to the inline-end edge
-       instead, with the seam shadow flipped to the opposite physical side
-       since content now scrolls underneath from the other direction. */
+    /* Mirror of the 'start' rule above: pinned to the inline-end edge, seam shadow flipped to the
+       opposite physical side since content now scrolls underneath from the other direction. */
     inset-inline-start: auto;
     inset-inline-end: var(--lr-table-sticky-offset, 0);
     box-shadow: calc(-1 * var(--lr-size-1px)) 0 0 0 var(--lr-color-border);
   }
-  /* box-shadow's X offset is a physical (not logical) value, so it must flip explicitly under RTL:
-     a 'start'-pinned column sits on the *right* edge in RTL with content scrolling underneath from
-     the left, so its seam belongs on the left (negative X) -- the mirror image of each rule above. */
+  /* box-shadow's X offset is physical, not logical, so it must flip explicitly under RTL: a
+     'start'-pinned column sits on the right edge with content scrolling under from the left, so its
+     seam belongs on the left (negative X). */
   :host(:dir(rtl)) [part='header-cell'][data-sticky],
   :host(:dir(rtl)) [part='cell'][data-sticky] {
     box-shadow: calc(-1 * var(--lr-size-1px)) 0 0 0 var(--lr-color-border);

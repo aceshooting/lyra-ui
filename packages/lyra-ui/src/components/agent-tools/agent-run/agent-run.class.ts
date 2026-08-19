@@ -7,6 +7,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { durationMessageValue } from '../../../internal/duration.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { AGENT_STATUS_VARIANTS } from '../../../internal/agent-status-variants.js';
 import type { AgentRun, AgentStatusKind, AgentStep, CancelEventDetail, RetryEventDetail } from '../../../ai/types.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 import type { TaskItem, TaskStatus } from '../task-list/task-list.class.js';
@@ -47,18 +48,6 @@ const STATUS_LABEL: Record<string, { key: string }> = {
   done: { key: 'agentRunStatusDone' },
   error: { key: 'statusError' },
   cancelled: { key: 'agentRunStatusCancelled' },
-};
-
-const STATUS_VARIANT: Record<string, BadgeVariant> = {
-  idle: 'neutral',
-  running: 'brand',
-  queued: 'neutral',
-  collecting: 'brand',
-  'waiting-input': 'warning',
-  'waiting-approval': 'warning',
-  done: 'success',
-  error: 'danger',
-  cancelled: 'neutral',
 };
 
 /** Coarsens the broader `AgentStatusKind` down to `<lr-task-list>`'s own narrower `TaskStatus`
@@ -471,7 +460,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
                 <div part="status">
                   <lr-badge
                     part="status-badge"
-                    variant=${this.statusVariants[kind] ?? STATUS_VARIANT[kind] ?? 'neutral'}
+                    variant=${this.statusVariants[kind] ?? AGENT_STATUS_VARIANTS[kind] ?? 'neutral'}
                     >${this.statusLabel(kind)}</lr-badge
                   >
                   ${run.status.message ? html`<span part="status-message">${run.status.message}</span>` : nothing}

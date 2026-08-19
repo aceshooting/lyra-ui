@@ -3910,6 +3910,32 @@ These named interfaces and helper signatures are available to typed integrations
 
 # Form controls & inputs (`components/forms/`)
 
+## Breaking changes in 10.0.0
+
+`<lr-swatch-picker>` drops the three members it carried through 9.x as documented one-major
+back-compat aliases, each with a like-for-like replacement that has shipped since. The `options`
+property is now `items` — same frozen owned-snapshot contract, still `attribute: false`, so no
+markup changes. The `label` property/attribute is now `accessibleLabel` (attribute `aria-label`), or
+the host `aria-label` directly; this is the one worth grepping for, because an un-updated
+`<lr-swatch-picker label="Brand colours">` leaves the internal `role="radiogroup"` with no accessible
+name at all rather than failing loudly. And the exported `SwatchOption` type is now
+`SwatchPickerItem`. The item shape itself is unchanged, including its own per-item `label` field,
+which is a different member and stays.
+
+Also corrected in 10.0.0 — not breaking, but visible. A specificity sweep found rules that were
+meant to win yet were losing to another rule in the same shadow stylesheet, so their declarations
+never applied at all. In this family: arrow-keying onto the already-selected option in
+`<lr-select>` or `<lr-combobox>` produces a visible keyboard highlight again — `[aria-selected="true"]`
+was written after the active-descendant rule at equal specificity and swallowed it, so the highlight
+was absent exactly on the row a user is most likely to arrow onto first. `appearance="filled"` has a
+focus indicator again on `<lr-combobox>` and `<lr-date-input>`, both of which previously had none:
+the appearance rule out-ranked `:focus-within`, and the only `outline` in the focus rule was
+`solid transparent`. Both now express appearance as private custom properties, so no `[part]` rule
+can out-rank another. `<lr-option>` and `<lr-time-range>`'s active preset regain their pointer
+feedback, and `<lr-token-input>` can now veto all three of its mutations (`lr-add` and
+`lr-token-edit` became cancelable alongside `lr-remove`, which already was — additive; see that
+section).
+
 ## Setter-only `null` clearing in 8.0.0
 
 Several mapped string IDLs accept `null` on assignment without widening their read type. This is a
@@ -4328,7 +4354,10 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
 plain-text contract even when a separate WA `label` override is present.
 
 **Events:** `lr-option-change` — bubbles when the option's label or selectable data changes so
-its parent `lr-combobox` or `lr-select` can refresh its normalized option rows.
+its parent `lr-combobox` or `lr-select` can refresh its normalized option rows. It is a private
+child-to-parent refresh signal, not a picker event: the owning `lr-combobox`/`lr-select` consumes
+it and stops it, so it never reaches a listener on the picker host (whose own contract is
+`lr-change`/`lr-input`/`change`/`input`). Listen on the `<lr-option>` itself to observe it.
 
 **Slots:** default (visible label), `start`/`end` (WA adornments), and `prefix`/`suffix` (Shoelace
 aliases). `start` and `prefix` project into one leading wrapper; `end` and `suffix` project into one
@@ -6934,9 +6963,10 @@ gemstone?: GemstoneKey }`; a valid CSS `color` is used as the
   the selected glow/shine defaults.
 - `accessibleLabel: string = ''` (attribute `aria-label`) — accessible name copied to the internal
   `role="radiogroup"`; attribute presence wins, including an explicitly empty name.
-- `options` and `SwatchOption` remain compatibility aliases for `items` and `SwatchPickerItem`;
-  new code uses the canonical sibling radiogroup vocabulary. The former invisible `label` IDL also
-  remains as a compatibility fallback after `aria-label`/`accessibleLabel`.
+- The 9.x compatibility aliases were removed in 10.0.0: `options` is `items`, the exported
+  `SwatchOption` type is `SwatchPickerItem`, and the former invisible `label` IDL is
+  `accessibleLabel`/`aria-label`. The canonical sibling radiogroup vocabulary is now the only
+  spelling.
 - `disabled: boolean = false` (reflected) — locks the whole picker. Every swatch renders as a real
   `disabled` `<button>`, so it leaves the tab sequence and cannot be activated; arrow/Home/End
   navigation and host `click()` become no-ops; and the swatches dim to `--lr-opacity-disabled` with
@@ -9250,6 +9280,30 @@ These named interfaces and helper signatures are available to typed integrations
 }`
 
 # Data display, dashboards & flow canvas (`components/data/`)
+
+## Breaking changes in 10.0.0
+
+`<lr-calendar>`'s `firstDayOfWeek`/`first-day-of-week` drops the bare `0`–`6` integer form and stops
+defaulting to a hardcoded Monday. The type is now exactly `LyraCalendarFirstDayOfWeek`
+(`'auto'|'sun'|'mon'|'tue'|'wed'|'thu'|'fri'|'sat'`, default `'auto'`), so there is one way to
+express a week start instead of two that had to be sanitized and wrapped against each other, and
+`'auto'` resolves through the same `resolveFirstDayOfWeek()` contract `<lr-date-picker>`/
+`<lr-date-input>` already use. An unset `<lr-calendar>` and an unset `<lr-date-picker>` on the same
+page therefore agree at last — Sunday-first under `en-US`, Monday-first under `fr-FR` — where the
+calendar previously rendered Monday-first everywhere while already formatting its weekday *labels*
+from the locale. Replace `first-day-of-week="1"` with `first-day-of-week="mon"`: a leftover numeric
+value is not mapped or clamped, it is simply an unrecognized token and falls through to Sunday. If
+the locale-independent Monday start was deliberate, keep it by writing `"mon"` explicitly instead of
+relying on the default. There is no `wa-calendar`, so no upstream mirror is affected.
+
+Also corrected in 10.0.0 — not breaking, but visible. A specificity sweep found rules that were
+meant to win yet were losing to another rule in the same shadow stylesheet, so their declarations
+never applied at all. In this family: `<lr-calendar>`'s today cell has a focus ring again (its
+`[data-today]` outline was swallowing it, leaving today's cell pixel-identical focused and at rest)
+and its adjacent-month cells take selection and pointer feedback again; `<lr-table>`'s header cell
+that is both sticky and sortable, `<lr-pagination>`'s page input, `<lr-sequence-strip>`'s selected
+cell and `<lr-flow-canvas>`'s selected edge regain hover/press/focus feedback; and
+`<lr-flow-controls>` honors a `hidden` slotted action button instead of painting it.
 
 ## `lr-sparkline`
 
@@ -12989,6 +13043,23 @@ These named interfaces and helper signatures are available to typed integrations
 }`
 
 # Layout, navigation & structure (`components/layout/`)
+
+## Breaking changes in 10.0.0
+
+**`lr-virtual-list`:** the `lr-visible-range-changed` event is removed — listen for
+`lr-visible-range-change` instead. The detail (`LyraVirtualListRange`), the firing conditions and the
+gesture are all unchanged; only the name moved. The old spelling was the library's only past-tense
+`-changed` event among 58 members of the `-change` family, so a convention-driven `lr-${x}-change`
+listener silently missed it on a component embedded in ten viewers. It is removed outright rather
+than kept as a dual-emitting alias, because the library has no released consumers and an alias is a
+permanent tax paid to protect users who do not exist. Rename the listener; nothing else changes.
+
+Also corrected in 10.0.0 — not breaking, but visible. `<lr-dashboard-grid>`'s cell keeps a focus
+indicator while it is in a collision or drop state: the collision rule owns the outline channel by
+design, but the side effect was that the focus ring vanished entirely during exactly the drag or
+resize a keyboard user most needs it, so the ring is now re-expressed on a second channel. And
+`<lr-card>` honors a `hidden` slotted media child instead of painting it — the component's own
+`display` declaration is author-origin and was beating the UA stylesheet's `[hidden] { display: none }`.
 
 ## Breaking changes in 9.0.0
 
@@ -17003,6 +17074,35 @@ These named interfaces and helper signatures are available to typed integrations
 
 # Overlays, status & feedback (`components/overlays/`)
 
+## Breaking changes in 10.0.0
+
+**Breaking (event rename, v10):** `lr-dialog`'s close event is now spelled `lr-close`, and
+`lr-dialog-close` is removed; `lr-drawer`, which inherits the whole dialog lifecycle, loses it too.
+The detail (`DialogCloseReason`), the cancelability, and the position in the `lr-hide` → close →
+`lr-after-hide` sequence are all unchanged — only the name moved, onto the plain spelling
+`lr-tool-select-dialog` and the rest of the library already use. The old name is removed outright
+rather than dual-emitted, because the library has no released consumers and an alias is a permanent
+tax paid to protect users who do not exist. Rename the listener. **Breaking (default change, v10):**
+`lr-progress-ring` gains `showValue`/`show-value`, defaulting to `false`, so a determinate ring no
+longer renders its percentage unless asked. It used to render it unconditionally with no way to
+suppress it short of slotting replacement content, while sibling `lr-progress-bar` has had an opt-in
+`show-value` all along and this reference has always claimed the two share the same value contract;
+they now actually do. Add `show-value` to keep the percentage. The accessible value is unchanged
+either way — `aria-valuetext` still carries the locale-formatted percentage — and slotted replacement
+content still projects with or without the attribute. **Breaking (removal, v10):** `confirm()`'s
+deprecated `tone` option is removed from `ConfirmOptions`; use `variant` (same `'neutral' | 'danger'`
+values, same `'neutral'` default). It was documented as a one-major back-compat alias and `variant`
+already won whenever both were set, so only a caller passing `tone` alone is affected. **New,
+additive, non-breaking:** `lr-popover` gains `disabled` — both `lr-tooltip` and `lr-popover`'s own
+subclass `lr-dropdown` had it and the base did not; `lr-dropdown` now inherits it with byte-identical
+behavior.
+
+Also corrected in 10.0.0 — not breaking, but visible. `lr-alert` really hides a base that is queued
+behind the visible toast window (it renders that base `hidden` and `inert`; `inert` is
+platform-enforced, but `hidden` was doing nothing), and `lr-badge` and `lr-chip` honor a consumer's
+`hidden` slotted adornment. In each case the component's own author-origin `display` declaration was
+beating the UA stylesheet's `[hidden] { display: none }` regardless of specificity.
+
 ## Breaking changes in 9.0.0
 
 **Breaking (type-only, v9):** `lr-toast`'s exported `ToastPlacement`, `ToastCreateOptions`, and
@@ -17837,7 +17937,7 @@ if (ok) deleteConversation();
 ```
 
 `confirm(options: ConfirmOptions): Promise<boolean>` where
-`ConfirmOptions = { title: string; description?: string; confirmLabel?: string /* = 'Confirm' */; cancelLabel?: string /* = 'Cancel' */; variant?: 'neutral' | 'danger' /* = 'neutral' */; tone?: 'neutral' | 'danger' /* @deprecated, use variant */ }`.
+`ConfirmOptions = { title: string; description?: string; confirmLabel?: string /* = 'Confirm' */; cancelLabel?: string /* = 'Cancel' */; variant?: 'neutral' | 'danger' /* = 'neutral' */ }`.
 
 Resolves `true` only when the confirm button is pressed — Escape, a backdrop click, and the cancel
 button all resolve `false`. It sets `lightDismiss = true` on its transient dialog explicitly, so the
@@ -17848,8 +17948,8 @@ of the call and removes it once settled, rather than reusing a persistent page-l
 stack, each tied to its own returned promise. `title` becomes a direct light-DOM `<h2>`, which per `<lr-dialog>`'s
 own heading-detection also drives the dialog's accessible name; `description`, if provided, becomes
 a direct light-DOM `<p>`. `variant: 'danger'` fills the confirm button with `--lr-color-danger`
-instead of `--lr-color-brand`, for destructive actions. The deprecated `tone` option is a one-major
-back-compat alias for `variant`; `variant` wins when both are set. Confirm/cancel actions deliberately use native
+instead of `--lr-color-brand`, for destructive actions. The deprecated `tone` option that preceded
+`variant` was removed in 10.0.0. Confirm/cancel actions deliberately use native
 inline-styled `<button>` elements so this helper does not register or import the broader button
 component; every color value is still a `--lr-*` token reference, never a raw literal. They carry the same interaction
 states as every other control in the library: a hover/pressed fill mixed toward
@@ -19425,7 +19525,6 @@ These named interfaces and helper signatures are available to typed integrations
   confirmLabel: unknown;
   cancelLabel: unknown;
   variant: unknown;
-  tone: unknown;
 }`
 
 - **`components-overlays-dialog-dialog-contracts`** — Supporting data types and helpers for this component family.
@@ -20985,7 +21084,9 @@ assigned nodes update the announcement without requiring the wrapper component t
 
 The `label` part alias was deprecated in 8.0.0 in favor of the shared form vocabulary
 `form-control-label`. Both names remain on the same node during the compatibility window; use
-`::part(form-control-label)` in new CSS. The alias will not be removed before 10.0.0.
+`::part(form-control-label)` in new CSS. Removal is not scheduled: Web Awesome still publishes its
+own deprecated `label` part on `<wa-known-date>`, and a mirrored tag owes its whole upstream
+surface, so the alias goes only when upstream's does.
 
 **The required marker.** The `*` the legend grows while `required` is the library's shared
 required-field marker, and it takes the same three consumer-settable properties every other
@@ -21151,6 +21252,19 @@ behavior warning; direct SVG candidates and the documented animation vocabulary 
   used (a11y-tree inconsistencies across engines).
 - Slot/focus microtasks and autoplay never queue new selection work while detached; reconnecting
   starts again from current state rather than replaying stale work.
+- Non-selected candidates are hidden by the component's own `::slotted([hidden])` rule, not by the
+  UA's. `::slotted(*)` sets `display: inline-block` on every candidate, and an author-origin
+  declaration always beats the user-agent `[hidden] { display: none }` — so the rule that restores
+  the native meaning of `hidden` is load-bearing, and an author overriding `display` on
+  `::slotted` content from outside must keep the hidden case at `display: none`.
+  `hidden="until-found"` is exempted, exactly as the UA rule exempts it.
+- **Before script runs, the first candidate is the one that shows.** Selection happens after the
+  first client render and works by setting `hidden`/`aria-hidden` on light-DOM siblings, which Lit
+  hydration never compares, so a server renderer can never produce it. Every candidate after the
+  first is therefore hidden by CSS until a selection has been applied: a server-rendered page — or
+  one whose script never runs — paints one candidate rather than the whole pool. Randomness itself
+  cannot survive SSR (there is no shared seed), so order the pool if a specific candidate should be
+  the pre-hydration one. With `items > 1` the pre-hydration paint is still a single candidate.
 
 ## `lr-tour`
 
@@ -21366,6 +21480,37 @@ These named interfaces and helper signatures are available to typed integrations
 }`
 
 # Media, files & maps (`components/media/`)
+
+## Breaking changes in 10.0.0
+
+`<lr-media-card>`'s `alt` becomes optional (`alt?: string`, was `alt: string = ''`), so a decorative
+image is expressible at last. The image render used to fall through `alt`, then `filename`, then a
+localized generic description with `||`, which made an explicit `alt=""` indistinguishable from an
+absent one and published it as `alt="Image attachment"` — there was no way to mark the image
+decorative, which is the one thing
+`alt=""` means in HTML. It now reads `??`, matching `<lr-image-viewer>` and `<lr-document-preview>`,
+which already documented that contract. Omitting `alt` is unchanged; only the value read back from
+an unset property differs (`''` becomes `undefined`), so a consumer comparing `el.alt === ''` should
+read `el.alt ?? ''`. The nested `<video controls>` label deliberately does **not** follow: an empty
+`alt` there would leave an interactive player with no accessible name, and "decorative" is not a
+state a media control can be in, so the video path still falls through to `filename` and the generic
+description.
+
+`<lr-attachment-chip>`'s `lr-preview-request` is no longer cancelable. It was advertised as a veto
+point, but the chip never read `defaultPrevented` and owns no preview default action to cancel — it
+never registers or owns a viewer or overlay, by its own documented contract — so `preventDefault()`
+was a no-op. The flag is removed rather than left as a promise the component cannot keep: a host that
+was calling `preventDefault()` can drop the call, and one that believed the call was suppressing
+something was never being served. `<lr-voice-picker>`'s same-named event belongs to a different
+component, owns a real internal default action, and stays cancelable.
+
+Also corrected in 10.0.0 — not breaking, but visible. `<lr-flag>` no longer paints a full-size
+undecoded image beside its own skeleton while loading; `<lr-video>` no longer keeps a second,
+duplicate controls play button both painted and focusable behind a poster, and it now keeps captions
+for a `<track>` with no `kind` attribute, whose HTML missing-value default is `subtitles`; and
+`<lr-avatar>` and `<lr-image-comparer>` honor a consumer's `hidden` slotted child. In each case the
+component's own author-origin declaration was beating the UA stylesheet's `[hidden] { display: none }`
+regardless of specificity.
 
 ## Breaking changes in 9.0.0
 
@@ -22649,13 +22794,18 @@ final.
 - `mimeType: string = ''` (attribute `mime-type`) — drives auto-detection when `kind` is unset.
 - `filename: string = ''` — shown in the file-chip fallback, used as the download link's suggested
   filename, and folded into the accessible name.
-- `alt: string = ''` — alt text for the image case (and reused as a video label fallback). Falls
-  back to `filename`, then a generic per-kind description.
-- `accessibleLabel: string = ''` (attribute `aria-label`) — a declarative attribute names the host
-  as a whole while its nested button/link keeps a purpose-specific localized action name. A
-  property-only assignment can override the nested action when no host label is present. Image alt
-  text and the native video's own purpose label remain independent; an explicitly empty host still
-  leaves every interactive descendant named.
+- `alt?: string` — alt text for the image case (and reused as a video label fallback). Unset falls
+  back to `filename`, then a generic per-kind description. An explicit `alt=""` survives to the
+  rendered `<img alt="">`, which is the HTML idiom for a decorative image — same contract as
+  `<lr-image-viewer>` and `<lr-document-preview>`. The `<video>` case is deliberately outside that
+  carve-out: an empty `alt` there still falls through to `filename`/the generic description, because
+  an empty accessible name would leave an interactive player unnamed rather than mark it decorative.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — a declarative attribute names
+  the host as a whole while its nested button/link keeps a purpose-specific localized action name. A
+  property-only assignment can override the nested action when no host label is present. An explicit
+  empty string behaves like the unset `null` default — both fall through to the generated
+  purpose-specific name. Image alt text and the native video's own purpose label remain independent;
+  an explicitly empty host still leaves every interactive descendant named.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"16rem"`); once set,
   overrides the `--lr-media-card-max-height` custom property for this instance only (applied
   inline on `[part="base"]`, so it reliably wins over a `:host{}`-declared default from outside the
@@ -24271,9 +24421,9 @@ property).
   non-integer, negative, and out-of-range indexes are discarded. The component writes the accepted
   legend-toggle snapshot back to this property so a host can persist it, and a programmatic write
   reconciles Chart.js and the DOM legend silently without emitting either legend-visibility event.
-- `withoutLegend: boolean = false` (attribute `without-legend`) — the legend shows by default;
-  set this to hide it. Renders a wrapping DOM legend (when shown) whose keyboard-operable buttons
-  toggle dataset visibility. The DOM surface preserves long public labels that a canvas legend
+- `withoutLegend: boolean = false` (attribute `without-legend`, reflected) — the legend shows by
+  default; set this to hide it. Renders a wrapping DOM legend (when shown) whose keyboard-operable
+  buttons toggle dataset visibility. The DOM surface preserves long public labels that a canvas legend
   would clip. Its pressed state follows `hiddenDatasets` whenever that controlled snapshot is
   defined, otherwise the effective dataset's declarative `hidden` value before Chart.js is ready
   and across chart type/plugin rebuilds.
@@ -24308,8 +24458,6 @@ property).
   by radar/polar-area are out of scope)
 - `withoutAnimation: boolean = false` (attribute `without-animation`, reflected) — disables Chart.js
   construction animation; reduced-motion preference also disables it regardless of this value
-- `withoutLegend: boolean = false` (attribute `without-legend`, reflected) — hides the legend;
-  it wins over the positive `legend` alias
 - `withoutTooltip: boolean = false` (attribute `without-tooltip`, reflected) — disables the
   Chart.js tooltip plugin for this instance
 - `dataLabels: boolean = false` (attribute `data-labels`) — draws each point's value on the chart via
@@ -24543,7 +24691,7 @@ requested enhancement is disabled and a localized static `feature-warning` is vi
 announced. In particular, unavailable data labels do not remove generated table totals.
 
 ```html
-<lr-chart type="line" x-label="Day" y-label="kWh" legend></lr-chart>
+<lr-chart type="line" x-label="Day" y-label="kWh"></lr-chart>
 <script>
   const c = document.querySelector('lr-chart');
   c.labels = ['Mon', 'Tue', 'Wed'];
@@ -24588,7 +24736,7 @@ announced. In particular, unavailable data labels do not remove generated table 
   off-screen, property changes that would otherwise trigger a Chart.js redraw are skipped (and a
   single redraw fires once it re-enters the viewport). Independently, `updated()` only reaches
   Chart.js when at least one of `type`, `labels`, `datasets`, `description`, `grid`, `indexAxis`,
-  `label`, `hiddenDatasets`, `legend`, `legendPosition`, `min`, `max`, `plugins`, the internal resolved auto legend
+  `label`, `hiddenDatasets`, `legendPosition`, `min`, `max`, `plugins`, the internal resolved auto legend
   position, `valueFormatter`, `formatter`, `area`, `height`, `xLabel`, `yLabel`, `y2Label`, `beginAtZero`,
   `stacked`, any `without*` control, `dataLabels`, `stackTotals`, `config`, the parsed
   slotted config, `zoom`, `locale`, `strings`, or the internal loading state actually changed in
@@ -24898,7 +25046,7 @@ together. The mirrored hooks are `--border-color-1`,
 `zoom` is set, and `chartjs-plugin-datalabels` only once `data-labels`/`stack-totals` is set.
 
 ```html
-<lr-bar-chart legend></lr-bar-chart>
+<lr-bar-chart></lr-bar-chart>
 <lr-pie-chart></lr-pie-chart>
 <script>
   document.querySelector('lr-bar-chart').labels = ['A', 'B'];
@@ -25630,8 +25778,9 @@ value, without suppressing the visible `name` heading.
 
 - `lr-close` — `detail: DocumentViewerCloseReason`, the viewer shell dialog's dismissal reason.
   The event is emitted after the viewer sets `open` to `false`. A registered renderer may compose
-  its own descendant dialog; closing that inner dialog keeps its normal `lr-dialog-close` path and
-  does not close the document viewer.
+  its own descendant dialog; closing that inner dialog keeps its own `lr-close` path — the shell
+  guards on `event.target !== event.currentTarget` — and does not close the document viewer.
+  (`<lr-dialog>`'s close event was spelled `lr-dialog-close` before 10.0.0.)
 - `lr-download` — `detail: { src, filename }`, emitted when the native safe download action is
   activated. The browser download itself is handled by the link.
 - `lr-anchor-result` — `detail: { found }`. Emitted by this shell as `{ found: false }` once per
@@ -26483,7 +26632,8 @@ nonnegative dimensions.
 - `lr-load` — `detail: { pageCount }` — the document reached `ready`. `page` is reset to `1` first.
 - `lr-page-change` — `detail: { page, pageCount }` — fired for scroll-driven page crossings as well
   as `page` assignments and `nextPage()`/`previousPage()`/`goToPage()`.
-- `lr-zoom-change` — `detail: { zoom }`.
+- `lr-zoom-change` — `detail: { zoom }` — fired for `zoom` assignments as well as
+  `zoomIn()`/`zoomOut()`. Never fired for the initial `1`, only for a transition away from it.
 - `lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }` — from `search()`/`searchNext()`/
   `searchPrevious()`/`clearSearch()` and effective-locale re-evaluation. A `src` change invalidates document-relative matches and emits
   the canonical reset `{ query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 }`.
@@ -26497,6 +26647,30 @@ nonnegative dimensions.
 - `lr-page-viewer-state-change` — `detail.snapshot` is the same immutable atomic state exposed by
   `pageViewerSnapshot` (`identity`, `status`, `page`, `pageCount`). `identity` changes for every load,
   including same-count replacements.
+
+**`lr-page-change`/`lr-zoom-change` are state broadcasts, not user-intent signals.** This differs
+deliberately from the same-named `<lr-pagination>` event and from `<lr-pan-zoom>`'s `lr-zoom-change`,
+and the distinction is worth internalizing before wiring a handler. Pagination and pan-zoom are
+*controlled*: pagination never mutates its own `page`, so its event is a request the host applies,
+and pan-zoom's `zoom` is bound by a parent, so echoing a programmatic write back would feed a loop.
+This viewer instead *owns* `page` and `zoom` — scrolling the page list changes `page` with no
+consumer action at all — so there is no useful "the user did this" subset to isolate, and every
+accepted transition is announced identically: scrolling, `nextPage()`/`previousPage()`/`goToPage()`,
+`zoomIn()`/`zoomOut()`, anchor resolution, the reset to page 1 when a new `src` finishes loading,
+and a plain `viewer.page = 3` / `viewer.zoom = 2` assignment. A handler that mirrors the event back
+into the property it came from is therefore idempotent rather than looping, but it is also
+redundant — read the property, or `pageViewerSnapshot`, instead.
+
+A write that clamps or rounds back onto the value already in effect is not a transition and stays
+silent: on a 3-page document already showing page 1, `viewer.page = -7` and `viewer.page = 1.4` both
+settle on page 1 and emit nothing, and `viewer.zoom = 999` at 4× emits nothing.
+
+For page-addressed integrations prefer the atomic `pageViewerSnapshot` /
+`lr-page-viewer-state-change` channel over this pair: it carries page, count, load status and
+document `identity` together, and a late subscriber can read the current value synchronously instead
+of having missed the announcement. `<lr-page-rail>` binds that channel for any viewer exposing
+`pageViewerSnapshot` — including this one — and falls back to `lr-load`/`lr-page-change` only for
+older structural sources that do not.
 
 **Methods:** `nextPage()`, `previousPage()`, `zoomIn()`, and `zoomOut()` update the corresponding
 controlled state within its supported range. `getPageText(page)` resolves the raw reading-order text
@@ -30450,9 +30624,9 @@ readonly slot?: string; readonly actionId?: string; readonly payload?: unknown }
 - `LyraWidgetDocument { readonly version: '2'; readonly root: LyraWidgetNode }` — the sole versioned tree source.
 - `createWidgetDocument(root: LyraWidgetNode): LyraWidgetDocument` — creates an immediate frozen
   version-two snapshot for former unversioned tree assignments. Traversal uses the renderer's depth,
-  node, and per-node prop ceilings; malformed, cyclic, duplicate-id, or hostile structure throws
-  `TypeError`. Node records, child arrays, and prop records are copied and frozen, while opaque prop
-  values and action payloads intentionally retain caller identity.
+  node, per-node prop, and per-string length ceilings; malformed, cyclic, duplicate-id, or hostile
+  structure throws `TypeError`. Node records, child arrays, and prop records are copied and frozen,
+  while opaque prop values and action payloads intentionally retain caller identity.
 
 The package root and the normal `widget-renderer.js` registration entry expose the renderer
 `LyraWidgetRenderer`/`LyraWidgetRendererEventMap` together with the complete stable authoring
@@ -30957,7 +31131,8 @@ import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts
 - `lr-copy` event — Passthrough from rendered JSON content.
 - `lr-highlight-activate` event — Passthrough from rendered Markdown.
 - `lr-link-click` event — Passthrough from rendered Markdown.
-- `lr-preview-request` event — Cancelable passthrough from a rendered attachment.
+- `lr-preview-request` event — Passthrough from a rendered attachment. Not cancelable as of 10.0.0:
+  `<lr-attachment-chip>` dropped the flag, since it owns no preview default action to veto.
 - `lr-remove` event — Passthrough from a rendered attachment.
 - `lr-render-error` event — Passthrough from rendered Markdown, tool-result, or widget content.
 - `lr-retry` event — Passthrough from a rendered attachment.
@@ -33133,9 +33308,11 @@ columns. Consumes the same `LyraSpan[]` as `<lr-span-waterfall>`.
 under `lr-span-waterfall` above (exported from `trace-tree/span.ts`); hierarchy comes from
 `parentId`, and a span whose `parentId` is missing or doesn't resolve within the same array renders
 as a root rather than being dropped. `activeSpanId: string | null = null`
-(attribute `active-span-id`), `label: string = ''`, `showTokens: boolean = false` (attribute
+(attribute `active-span-id`), `label?: string`, `showTokens: boolean = false` (attribute
 `show-tokens`) — surfaces `tokensIn`/`tokensOut`, `showCost: boolean = false` (attribute
 `show-cost`) — surfaces `costText`, and `hideBars: boolean = false` (attribute `hide-bars`).
+`label` is an optional accessible-name override for the `role="tree"` element: omission localizes
+the default, and any supplied string — including `''` — is rendered verbatim.
 Token counts render only when finite and non-negative; invalid metrics are omitted rather than
 reaching `Intl.NumberFormat`. A row's accessible name includes its optional `detail` text as well
 as its name/status/metrics, and updates when the supplied span data changes. Every trace view uses
@@ -33724,7 +33901,9 @@ hierarchical trace tree from one shared `spans` array.
   (`'agent' | 'llm' | 'tool' | 'retriever' | 'embedding' | 'other'`). Empty shows every kind;
   pre-settable (e.g. to hide `retriever`/`embedding` by default) and readable back after
   `lr-span-visibility-change`
-- `label: string = ''` — forwarded to the composed `lr-trace-tree`
+- `label?: string` — forwarded to the composed `lr-trace-tree`. Omission leaves that tree's own
+  `label` unset so it localizes its own default; any supplied string (including `''`) is
+  forwarded verbatim
 - `showTokens: boolean = false` (attribute `show-tokens`), `showCost: boolean = false` (attribute
   `show-cost`), `showBars: boolean = true` (attribute `show-bars`, renamed from `hideBars` in
   9.0.0 to match the positive polarity of its two siblings above — default inverted so the
@@ -34253,7 +34432,7 @@ persistence.
 `versions: readonly PromptStudioVersion[] = []` is a property-only host-controlled input;
 empty/blank message and version ids are omitted and later duplicates use deterministic first-wins
 identity before rendering, editing, focus, selection, and events;
-`selectedVersionId: string = ''` (attribute `selected-version-id`); `label: string = ''`;
+`selectedVersionId: string | null = null` (attribute `selected-version-id`); `label: string = ''`;
 `heading: string = ''` — visible toolbar heading, falling back to the localized Prompt Studio
 label when unset;
 `running: boolean = false`, `disabled: boolean = false`, and `reorderable: boolean = false`
@@ -34320,7 +34499,8 @@ It intentionally does not fetch remote references or validate values.
 
 **Properties:** clone-owned, bounded, frozen `schema: JsonSchemaNode | null = null` and
 `issues: readonly SchemaValidationIssue[] = []` (attribute: false); reassign a new schema record or
-issue array after changes. `selectedPath: string = ''` (attribute `selected-path`);
+issue array after changes. `selectedPath: string | null = null` (attribute `selected-path`) —
+`null` means no selection, while the empty string is the valid JSON Pointer for the schema root;
 `maxDepth: number = 20` (attribute `max-depth`, clamped to 100); `label: string = ''`.
 
 **Exported types:** `JsonSchemaNode` covers `$ref`, type/title/description, properties/items,
@@ -34850,6 +35030,44 @@ These named interfaces and helper signatures are available to typed integrations
   `normalizeLyraSpanStatus(/* public names: value */): unknown`
 
 # Retrieval, knowledge graph & grounding (`components/retrieval/`)
+
+## Breaking changes in 10.0.0
+
+`lr-entity-card`, `lr-entity-chip` and `lr-neighbor-list` no longer emit `lr-entity-activate`. The
+canonical name for that gesture is `lr-entity-select` (`detail: { entityId }`), fired from the same
+gesture with the same detail — only the second spelling is gone. It is removed outright rather than
+kept as a dual-emitting alias, because the library has no released consumers and an alias is a
+permanent tax paid to protect users who do not exist. Rename the listener; nothing else changes.
+
+Two composites narrow with them. `lr-entity-dossier` surfaces its embedded entity card's and
+neighbor list's gesture as `lr-entity-select` only, and `lr-provenance-panel` does the same for its
+embedded entity chip. On both, `lr-entity-activate` now reaches a host only from the embedded
+community card or relationship path strip, which is also the only source of the richer
+`{ entityId, occurrenceIndex? }` detail — so on these two elements the names now carry different
+shapes rather than being two spellings of one event.
+
+`lr-community-card` and `lr-path-strip` keep `lr-entity-activate` unchanged. It is their only name
+and never was an alias, so do **not** rename those listeners.
+
+`lr-rag-eval-dashboard` no longer emits `lr-run-select`; listen for `lr-run-change`
+(`detail: { run }`, unchanged). Same removal, same reason.
+
+`lr-knowledge-graph-explorer`'s `lr-search-change` detail is now exactly
+`{ query, matchCount, matchCountExact }`. The old `searchQuery` member is replaced by the canonical
+`query` rather than carried beside it, so the event finally has the `LyraSearchChangeDetail` shape
+the rest of the library's search emitters use — read `e.detail.query`. The detail deliberately has no
+`activeIndex` (this is a live node filter, not a cursor-based search) and `matchCountExact` is always
+`true`, since that filter has no truncating ceiling. The `searchQuery` **property** is a different
+member and is unaffected: the component still applies the query to it before emitting, so reassigning
+it from the handler stays a no-op.
+
+Also corrected in 10.0.0 — not breaking, but visible. A chip with no `entity-id` renders its button
+disabled, and now looks it: `lr-entity-chip` used to paint that state pixel-identical to a working
+chip — full opacity, a hand cursor, complete hover and press feedback for a control that cannot emit
+anything — and now dims to `--lr-opacity-disabled` with a `not-allowed` cursor and no pointer
+response. `lr-embedding-explorer`'s selected point has a focus ring again. And
+`lr-knowledge-graph-explorer` no longer announces on mount: a preset `search-query` used to fire its
+live region before any user action.
 
 ## Breaking changes in 9.0.0
 

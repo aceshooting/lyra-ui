@@ -322,7 +322,7 @@ describe("lr-email-viewer", () => {
     const definition =
       getDefaultDocumentRendererRegistry().get("message/rfc822")!;
     const highlights: LyraHighlight[] = [
-      { id: "subject", anchor: { kind: "text-quote", exact: "Quarterly" } },
+      { id: "subject", anchor: { kind: "text-quote", quote: "Quarterly" } },
     ];
     const anchor = { kind: "fragment" as const, id: "subject" };
     const rendered = definition.render!({

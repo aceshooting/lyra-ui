@@ -71,11 +71,10 @@ export const styles = css`
   [part='heading'] { margin-block-end: var(--lr-space-xs); font-weight: var(--lr-font-weight-semibold); }
   [part='content'] { grid-column: 2; min-inline-size: 0; overflow-wrap: break-word; }
   [part='message'] { min-inline-size: 0; overflow-wrap: break-word; }
-  /* The interactive hit target meets the shared minimum tappable size (--lr-icon-button-size)
-     in both the default panel and the compact [inline] variant below -- the *visible* "×" glyph
-     is what shrinks for [inline] instead, rendered on the separate [part='close-icon'] child and
-     centered via this button's own flex layout, not by resizing the button itself. Mirrors
-     lr-swatch-picker's [part='swatch']/[part='swatch-fill'] split. */
+  /* The hit target meets --lr-icon-button-size in both the default panel and the compact [inline]
+     variant below; only the visible glyph shrinks for [inline], on the separate
+     [part='close-icon'] child, centered by this button's flex layout. Mirrors lr-swatch-picker's
+     [part='swatch'] and [part='swatch-fill'] split. */
   [part='close-button'] { display: inline-flex; grid-column: 3; align-items: center; justify-content: center; min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); border: 0; border-radius: var(--lr-radius-pill); background: transparent; color: inherit; cursor: pointer; }
   [part='close-button']:where(:hover) { background: var(--lr-callout-close-hover-bg, var(--_lr-callout-close-hover-bg)); }
   [part='close-button']:where(:active) { background: color-mix(in oklab, var(--lr-callout-close-hover-bg, var(--_lr-callout-close-hover-bg)), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }

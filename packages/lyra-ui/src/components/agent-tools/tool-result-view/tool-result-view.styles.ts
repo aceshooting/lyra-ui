@@ -7,10 +7,10 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    /* Chains through the shared monospace token (like lr-json-viewer's
-       --lr-json-viewer-font and lr-tool-approval-dialog's mono font) so a
-       consumer retheming --lr-theme-font-family-mono also repaints the plain-text
-       fallback view, instead of it being stuck on the hardcoded system stack. */
+    /* Chains through the shared monospace token, like lr-json-viewer's --lr-json-viewer-font and
+       lr-tool-approval-dialog's mono font, so a consumer retheming --lr-theme-font-family-mono
+       also repaints the plain-text fallback view instead of leaving it on the hardcoded system
+       stack. */
     --_lr-tool-result-view-font: var(--lr-font-mono);
   }
   [part="base"] {

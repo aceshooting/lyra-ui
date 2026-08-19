@@ -1,4 +1,5 @@
-import { fixture, expect, html, oneEvent } from "@open-wc/testing";
+import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
+import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import "./conversation-item.js";
 import type {
   LyraConversationItem,
@@ -1479,4 +1480,107 @@ it("click() activates the row, and targets the rename input while renaming", asy
     selected,
     "while renaming, click() must not re-select the row"
   ).to.equal(1);
+});
+
+// Regression: `:host([active]) [part='base']` and `:host(:active) [part='base']` are both (0,3,0)
+// and both declare `background`, and the [active] rule is written last on purpose (so an
+// active-and-hovered row keeps its stronger tint). That ordering silently swallowed the press as
+// well as the hover, leaving the open session the one row in the list that acknowledged nothing
+// when it was clicked. Overriding --lr-conversation-item-active-bg to a flat literal makes the
+// masking provable through getComputedStyle rather than by coincidence of two token values.
+it("darkens the ACTIVE row while it is held, instead of freezing on the active tint", async () => {
+  const wrapper = (await fixture(html`
+    <div style="--lr-conversation-item-active-bg: rgb(9, 9, 9)">
+      <lr-conversation-item active label="Open session"></lr-conversation-item>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector(
+    "lr-conversation-item"
+  ) as LyraConversationItem;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const button = el.shadowRoot!.querySelector(
+    '[part="select-button"]'
+  ) as HTMLElement;
+  expect(
+    getComputedStyle(base).backgroundColor,
+    "sanity: the active paint hook must apply while resting"
+  ).to.equal("rgb(9, 9, 9)");
+
+  el.scrollIntoView({ block: "center", inline: "center" });
+  const rect = button.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: "move",
+      position: [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ],
+    });
+    await waitUntil(
+      () => el.matches(":hover"),
+      "the active row never reported itself hovered"
+    );
+    // Hover deliberately loses to the active tint -- that is what the rule ordering is for.
+    expect(getComputedStyle(base).backgroundColor).to.equal("rgb(9, 9, 9)");
+
+    await sendMouse({ type: "down" });
+    await waitUntil(
+      () => getComputedStyle(base).backgroundColor !== "rgb(9, 9, 9)",
+      "the held active row kept its resting tint -- the press produced no feedback at all"
+    );
+  } finally {
+    await sendMouse({ type: "up" });
+    await resetMouse();
+  }
+});
+
+// The contrast case, so the fix cannot be "everything is pressed-coloured now": an inactive row's
+// press still mixes from transparent, not from the active fill.
+it("keeps an INACTIVE row's own press feedback distinct from the active row's", async () => {
+  const wrapper = (await fixture(html`
+    <div style="--lr-conversation-item-active-bg: rgb(9, 9, 9)">
+      <lr-conversation-item active label="Open"></lr-conversation-item>
+      <lr-conversation-item label="Other"></lr-conversation-item>
+    </div>
+  `)) as HTMLElement;
+  const rows = Array.from(
+    wrapper.querySelectorAll("lr-conversation-item")
+  ) as LyraConversationItem[];
+  const activeRow = rows[0]!;
+  const plainRow = rows[1]!;
+  await activeRow.updateComplete;
+  await plainRow.updateComplete;
+  const heldBackground = async (
+    row: LyraConversationItem
+  ): Promise<string> => {
+    const base = row.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const button = row.shadowRoot!.querySelector(
+      '[part="select-button"]'
+    ) as HTMLElement;
+    row.scrollIntoView({ block: "center", inline: "center" });
+    const rect = button.getBoundingClientRect();
+    const resting = getComputedStyle(base).backgroundColor;
+    try {
+      await sendMouse({
+        type: "move",
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      await sendMouse({ type: "down" });
+      await waitUntil(
+        () => getComputedStyle(base).backgroundColor !== resting,
+        "the held row never changed background"
+      );
+      return getComputedStyle(base).backgroundColor;
+    } finally {
+      await sendMouse({ type: "up" });
+      await resetMouse();
+    }
+  };
+  const heldActive = await heldBackground(activeRow);
+  const heldPlain = await heldBackground(plainRow);
+  expect(heldActive).to.not.equal(heldPlain);
 });

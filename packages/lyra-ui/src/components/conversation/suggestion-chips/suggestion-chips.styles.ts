@@ -8,9 +8,9 @@ export const styles = css`
   [part='base'] {
     max-inline-size: 100%;
   }
-  /* Line packing is consumer-tunable because it is unreachable otherwise: centering the chips under
+  /* Line packing is consumer-tunable because it is otherwise unreachable: centering the chips under
      centered empty-state text needs the wrapped final line centered too, and ::part(base) can only
-     center the row while it still fits on one line. */
+     center the row while it fits on one line. */
   .row {
     display: flex;
     justify-content: var(--lr-suggestion-chips-justify, flex-start);

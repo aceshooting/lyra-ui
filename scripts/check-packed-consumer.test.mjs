@@ -34,6 +34,7 @@ test('models the raw core ceiling as the established baseline plus capability al
     crossFamilyRemediationSweepAllowanceBytes: 610_000,
     devModeDiagnosticsAllowanceBytes: 20_000,
     publicContractV10AllowanceBytes: 10_000,
+    v10RemediationSweepAllowanceBytes: 0,
   });
   assert.equal(
       terms.establishedBaselineBytes +
@@ -46,12 +47,13 @@ test('models the raw core ceiling as the established baseline plus capability al
       terms.overlayHydrationContractAllowanceBytes +
       terms.crossFamilyRemediationSweepAllowanceBytes +
       terms.devModeDiagnosticsAllowanceBytes +
-      terms.publicContractV10AllowanceBytes,
+      terms.publicContractV10AllowanceBytes +
+      terms.v10RemediationSweepAllowanceBytes,
     4_685_000,
   );
   assert.match(
     checkerSource,
-    /maxRawBytes:\s*coreRawBudget\.establishedBaselineBytes\s*\+\s*coreRawBudget\.stableRootRegistrationAllowanceBytes\s*\+\s*coreRawBudget\.crossComponentContractAllowanceBytes\s*\+\s*coreRawBudget\.boundedDataResilienceAllowanceBytes\s*\+\s*coreRawBudget\.interactionAccessibilityAllowanceBytes\s*\+\s*coreRawBudget\.accessibilityStyleCorrectionAllowanceBytes\s*\+\s*coreRawBudget\.featureCapabilityAllowanceBytes\s*\+\s*coreRawBudget\.overlayHydrationContractAllowanceBytes\s*\+\s*coreRawBudget\.crossFamilyRemediationSweepAllowanceBytes\s*\+\s*coreRawBudget\.devModeDiagnosticsAllowanceBytes\s*\+\s*coreRawBudget\.publicContractV10AllowanceBytes\s*,/u,
+    /maxRawBytes:\s*coreRawBudget\.establishedBaselineBytes\s*\+\s*coreRawBudget\.stableRootRegistrationAllowanceBytes\s*\+\s*coreRawBudget\.crossComponentContractAllowanceBytes\s*\+\s*coreRawBudget\.boundedDataResilienceAllowanceBytes\s*\+\s*coreRawBudget\.interactionAccessibilityAllowanceBytes\s*\+\s*coreRawBudget\.accessibilityStyleCorrectionAllowanceBytes\s*\+\s*coreRawBudget\.featureCapabilityAllowanceBytes\s*\+\s*coreRawBudget\.overlayHydrationContractAllowanceBytes\s*\+\s*coreRawBudget\.crossFamilyRemediationSweepAllowanceBytes\s*\+\s*coreRawBudget\.devModeDiagnosticsAllowanceBytes\s*\+\s*coreRawBudget\.publicContractV10AllowanceBytes\s*\+\s*coreRawBudget\.v10RemediationSweepAllowanceBytes\s*,/u,
     'the core bundle entry must use every named term instead of a second unexplained ceiling',
   );
 });

@@ -62,7 +62,7 @@ export interface LyraMessagePartsEventMap
  * @event lr-highlight-activate - Passthrough from rendered Markdown.
  * @event lr-text-select - Passthrough from rendered Markdown.
  * @event lr-anchor-result - Passthrough from rendered Markdown.
- * @event lr-preview-request - Cancelable passthrough from a rendered attachment.
+ * @event lr-preview-request - Passthrough from a rendered attachment. Not cancelable since 10.0.0.
  * @event lr-retry - Passthrough from a rendered attachment.
  * @event lr-remove - Passthrough from a rendered attachment.
  * @event lr-citation-open - Passthrough from a rendered citation's full-preview action.

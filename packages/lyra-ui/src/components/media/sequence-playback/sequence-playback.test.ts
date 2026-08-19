@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import { LitElement, type PropertyValues } from 'lit';
 import './sequence-playback.js';
 import { LyraSequencePlayback } from './sequence-playback.js';
@@ -833,19 +833,48 @@ it('chains willUpdate() to super.willUpdate() so a mixin layered under LyraEleme
   }
 });
 
-describe('slider hover specificity', () => {
-  it('a ::part(slider):hover override wins without needing !important', async () => {
-    // The internal hover rule wraps its extra pseudo-classes in :where(...) so its specificity
-    // stays at (0,1,0) -- below a consumer's own ::part(slider):hover ((0,1,1)) -- rather than
-    // the (0,3,0) an unwrapped [part='slider']:hover:not(:disabled) would have, which would beat
-    // that consumer override and force !important. Same regression this library already fixed for
-    // <lr-attachment-trigger>.
-    const el = (await fixture(html`<lr-sequence-playback item-count="3"></lr-sequence-playback>`)) as LyraSequencePlayback;
-    const internalSheet = (el.shadowRoot!.adoptedStyleSheets ?? [])
-      .flatMap((sheet) => Array.from(sheet.cssRules))
-      .map((rule) => rule.cssText)
-      .find((text) => text.includes(':hover') && /\[part=['"]?slider['"]?\]/.test(text));
-    expect(internalSheet).to.contain(':where(');
+describe('slider hover override', () => {
+  it("renders a consumer's own ::part(slider):hover accent-color, with no !important", async () => {
+    // Asserts the RENDERED result, not the stylesheet text: hover the slider for real and read the
+    // computed accent-color back. The predecessor of this test only asserted that the internal
+    // hover rule's text contained ':where(', which can never fail for the reason it claimed to
+    // guard.
+    //
+    // What actually decides this is the cascade's encapsulation-context step (CSS Cascade 5),
+    // which is sorted BEFORE specificity: between two NORMAL declarations from different shadow
+    // contexts, the outer (consumer) one wins outright. Verified empirically here -- this
+    // assertion still passes with the :where() removed from sequence-playback.styles.ts, i.e. the
+    // internal rule cannot win this on specificity however specific it gets. What DOES break it is
+    // an !important inside the shadow stylesheet, because the context ordering inverts for
+    // important declarations -- and that is the regression this test discriminates against.
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <style>
+          lr-sequence-playback::part(slider):hover {
+            accent-color: rgb(1, 2, 3);
+          }
+        </style>
+        <lr-sequence-playback item-count="3"></lr-sequence-playback>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-sequence-playback') as LyraSequencePlayback;
+    const slider = el.shadowRoot!.querySelector('[part="slider"]') as HTMLInputElement;
+    expect(getComputedStyle(slider).accentColor).to.not.equal('rgb(1, 2, 3)');
+
+    try {
+      const rect = slider.getBoundingClientRect();
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      // Pointer-driven :hover settles asynchronously and at a different moment per engine.
+      await waitUntil(
+        () => getComputedStyle(slider).accentColor === 'rgb(1, 2, 3)',
+        'the consumer ::part(slider):hover accent-color never won over the internal hover rule',
+      );
+    } finally {
+      await resetMouse();
+    }
   });
 });
 

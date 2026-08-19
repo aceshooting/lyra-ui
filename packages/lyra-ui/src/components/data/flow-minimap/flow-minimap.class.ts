@@ -1,7 +1,7 @@
 import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { nextId, srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
@@ -491,7 +491,7 @@ export class LyraFlowMinimap extends LyraElement {
   }
 
   override render(): TemplateResult {
-    const label = this.getAttribute('aria-label') || this.label || this.localize('flowMinimapLabel');
+    const label = hostAriaLabel(this) ?? (this.label || this.localize('flowMinimapLabel'));
     if (!this.canvasEl || !this.snapshot) {
       return html`<div part="base" aria-hidden="true"></div>`;
     }

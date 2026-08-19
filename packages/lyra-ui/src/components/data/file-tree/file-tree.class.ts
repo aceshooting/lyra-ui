@@ -208,6 +208,18 @@ export interface LyraFileTreeEventMap {
  * `<lr-file-tree>` — a file-explorer preset over `<lr-tree>` + `<lr-file-icon>`: path-keyed
  * nodes with git-status/diff-count badges, lazy directory loading, and select/open events.
  *
+ * **The composed `<lr-tree>`'s `reorderable`/`lr-reorder` capability is deliberately not
+ * forwarded.** The tree it renders is not a model this component owns: `treeItems` is derived
+ * from `nodes` on every render and keyed by filesystem path, so sibling order is whatever the
+ * host's own listing produced (name, type, git status), not an authored sequence a user can
+ * rearrange. `<lr-tree>`'s reorder is also strictly sibling-scoped — it never crosses a subtree
+ * boundary, precisely so a reorder can never become a reparent — which is the one file operation
+ * ("move this file into that directory") that would change a path and therefore mean something
+ * here. Forwarding it would have to invent a second, path-shaped event alongside
+ * `lr-file-select`/`lr-file-open`/`lr-load-children`, permanently, for a gesture whose result the
+ * host would have to discard. A consumer that genuinely needs orderable rows composes `<lr-tree>`
+ * directly, where the capability already lives.
+ *
  * @customElement lr-file-tree
  * @event lr-file-select - `detail: { filePath, node }` — a row was activated.
  * @event lr-file-open - `detail: { filePath, node }` — Enter/click on an already-selected file row

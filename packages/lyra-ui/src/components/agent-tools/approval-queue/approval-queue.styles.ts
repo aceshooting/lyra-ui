@@ -66,14 +66,24 @@ export const styles = css`
     cursor: pointer;
   }
 
-  [part='request']:hover {
+  /* A row whose request is no longer pending renders its button disabled; without this an approved
+     or denied request stayed pixel-identical to a pending one -- full opacity, hand cursor, full
+     hover/press feedback -- and read as still actionable. :disabled rather than [disabled] because
+     only the pseudo-class also tracks a <fieldset disabled> cascade; every interactive rule below
+     excludes it likewise. Matches lr-chip and lr-button. */
+  [part='request']:disabled {
+    opacity: var(--lr-opacity-disabled);
+    cursor: not-allowed;
+  }
+
+  [part='request']:not(:disabled):hover {
     background: var(--lr-color-surface-raised);
   }
 
-  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
-     --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
-     than hover in both light and dark themes rather than repeating it. */
-  [part='request']:active {
+  /* Pressed pushes the hovered tint a further --lr-color-mix-active toward --lr-color-mix-partner
+     (which follows the text colour), so it reads as a distinctly deeper step than hover in both
+     light and dark themes. */
+  [part='request']:not(:disabled):active {
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
 

@@ -162,6 +162,15 @@ export class LyraGauge extends LyraElement {
             value: this.displayText,
           })
         : defaultName;
+    // Truthiness, not the presence test (`hostAriaLabel()`) the rest of the library uses to keep an
+    // explicit `aria-label=""` meaning "no accessible name" -- and deliberately so. Everywhere else
+    // the authored label is copied onto a node INSIDE the shadow root, so honouring an empty one
+    // still leaves the host itself as the author's own naming surface. Here the name is written back
+    // onto the host, which is the same element carrying role="meter" (or role="img" while the
+    // value trio is non-finite). Both are name-required roles, so an empty label would not suppress
+    // a redundant second name, it would publish an unnamed meter -- strictly worse for a screen
+    // reader than a generic one, and with no other element left to carry the name. Suppressing the
+    // gauge entirely is `aria-hidden="true"` on the host, which this method never touches.
     const nextAriaLabel =
       this.explicitAriaLabel ||
       (finiteTrio ? defaultName : fallbackValueLabel);

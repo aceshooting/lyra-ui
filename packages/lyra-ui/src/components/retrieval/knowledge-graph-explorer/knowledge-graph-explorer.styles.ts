@@ -4,13 +4,12 @@ export const styles = css`
   :host {
     display: block;
   }
-  /* An explicit height on the host has to actually bound the rendered explorer. Without this chain
-     the column only ever sized itself from its content -- chiefly the composed graph's own
-     intrinsic svg/canvas aspect ratio -- so a host height either left a dead gap below the graph or
-     was overflowed by it. The same block-size: 100% propagation lr-multi-split and lr-widget use.
-     min-block-size: 0 lets the graph below shrink past its intrinsic size instead of forcing the
-     column taller than its allocation; with no height on the host both percentages resolve to auto
-     and the content-sized behaviour is unchanged. */
+  /* Makes an explicit host height actually bound the explorer. Without this chain the column sized
+     itself from content alone -- chiefly the composed graph's intrinsic svg/canvas aspect ratio --
+     so a host height left a dead gap or was overflowed. Same block-size: 100% propagation
+     lr-multi-split and lr-widget use; min-block-size: 0 lets the graph shrink past its intrinsic
+     size rather than forcing the column taller than its allocation. With no host height both
+     percentages resolve to auto, unchanged. */
   [part='base'] {
     display: flex;
     flex-direction: column;
@@ -83,21 +82,19 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
   }
-  /* Type filters are a consumer-data-driven list (nodeTypes) with no library-imposed size limit --
-     without a cap it floors at its full content height (browser-default flex-item min-height:
-     auto) and starves 100% of the shrinkage onto [part='graph'] below, even though that part is
-     explicitly set up to be the one that shrinks. Same max-block-size + overflow-y pattern as
-     [part='search-results'] above. */
+  /* Type filters are a consumer-data-driven list (nodeTypes) with no library-imposed size limit;
+     uncapped it floors at full content height (browser-default flex-item min-height: auto) and
+     starves 100% of the shrinkage onto [part='graph'] below, the part set up to shrink. Same
+     max-block-size + overflow-y pattern as [part='search-results'] above. */
   [part='legend'] {
     flex: 0 1 auto;
     max-block-size: var(--lr-size-12rem);
     overflow-y: auto;
     overflow-x: clip;
   }
-  /* The one flexible row: it takes whatever the toolbar, search results, pinned row and path strip
-     leave over. flex-basis stays auto so an unsized host still gets the graph's intrinsic height,
-     while min-block-size: 0 removes the automatic content-based flex minimum that would otherwise
-     stop it shrinking into a shorter allocation. */
+  /* The one flexible row: it takes what the toolbar, search results, pinned row and path strip
+     leave. flex-basis stays auto so an unsized host still gets the graph's intrinsic height, and
+     min-block-size: 0 drops the content-based flex minimum that would stop it shrinking. */
   [part='graph'] {
     display: block;
     inline-size: 100%;

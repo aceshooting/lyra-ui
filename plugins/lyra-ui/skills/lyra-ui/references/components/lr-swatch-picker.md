@@ -48,9 +48,10 @@ gemstone?: GemstoneKey }`; a valid CSS `color` is used as the
   the selected glow/shine defaults.
 - `accessibleLabel: string = ''` (attribute `aria-label`) — accessible name copied to the internal
   `role="radiogroup"`; attribute presence wins, including an explicitly empty name.
-- `options` and `SwatchOption` remain compatibility aliases for `items` and `SwatchPickerItem`;
-  new code uses the canonical sibling radiogroup vocabulary. The former invisible `label` IDL also
-  remains as a compatibility fallback after `aria-label`/`accessibleLabel`.
+- The 9.x compatibility aliases were removed in 10.0.0: `options` is `items`, the exported
+  `SwatchOption` type is `SwatchPickerItem`, and the former invisible `label` IDL is
+  `accessibleLabel`/`aria-label`. The canonical sibling radiogroup vocabulary is now the only
+  spelling.
 - `disabled: boolean = false` (reflected) — locks the whole picker. Every swatch renders as a real
   `disabled` `<button>`, so it leaves the tab sequence and cannot be activated; arrow/Home/End
   navigation and host `click()` become no-ops; and the swatches dim to `--lr-opacity-disabled` with

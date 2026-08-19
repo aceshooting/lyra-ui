@@ -29,9 +29,8 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
-  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
-     --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
-     than hover in both light and dark themes rather than repeating it. */
+  /* The hovered tint pushed a further --lr-color-mix-active toward --lr-color-mix-partner (which
+     follows the text colour), so the press reads deeper than hover in light and dark alike. */
   [part="header"]:active {
     background: color-mix(
       in oklab,
@@ -114,13 +113,11 @@ export const styles = css`
       var(--_lr-activity-feed-max-height)
     );
   }
-  /* Every entry rule below is paired with an lr-virtual-list::part(x) twin because this component
-     renders entries through two paths. Below virtualize-at, entryTemplate()'s result is
-     committed into this component's own shadow root and the plain [part=] selector matches. At or
-     above it, the exact same template becomes <lr-virtual-list>'s .renderItem, and Lit commits it
-     wherever virtual-list's own render() is updating -- i.e. inside *its* shadow root, a different
-     shadow tree that a [part=] selector scoped to this one can never reach. ::part() crosses that
-     single boundary. Both selectors are load-bearing; dropping either silently unstyles one path. */
+  /* Every entry rule below is paired with an lr-virtual-list::part(x) twin because entries render
+     through two paths. Below virtualize-at, entryTemplate() commits into this shadow root and the
+     plain [part=] selector matches; at or above it the same template becomes <lr-virtual-list>'s
+     .renderItem and commits inside ITS shadow root, which a [part=] selector scoped here can never
+     reach -- ::part() crosses that one boundary. Dropping either selector unstyles one path. */
   [part="entry"],
   lr-virtual-list::part(entry) {
     display: flex;
@@ -143,12 +140,11 @@ export const styles = css`
     block-size: var(--lr-size-0-5rem);
     border-radius: var(--lr-radius-pill);
   }
-  /* Shadow Parts forbids an attribute selector after ::part(), so the variant cannot be matched as
-     ::part(variant-dot)[data-variant='success'] -- that selector is invalid and would drop the rule
-     entirely. Each variant carries a second name in the dot's part list instead; ::part() matches
-     with part~= semantics, so both names select the same element, and a consumer gains a
-     per-variant hook the [data-variant] form never offered. The [part~=] form is the plain-path
-     twin: [part='variant-dot-success'] would not match a multi-name part attribute. */
+  /* Shadow Parts forbids an attribute selector after ::part(), so
+     ::part(variant-dot)[data-variant='success'] is invalid and would drop the rule. Each variant
+     carries a second name in the dot's part list instead; ::part() matches with part~= semantics,
+     so both names hit the same element and a consumer gains a per-variant hook. [part~=] is the
+     plain-path twin -- [part='variant-dot-success'] would not match a multi-name part attribute. */
   [part~="variant-dot-neutral"],
   lr-virtual-list::part(variant-dot-neutral) {
     background: var(--lr-color-text-quiet);

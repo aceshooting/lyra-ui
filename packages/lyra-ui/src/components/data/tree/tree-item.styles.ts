@@ -18,10 +18,9 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
     padding: var(--lr-space-xs) var(--lr-space-s);
-    /* Depth-based indent is capped at --lr-size-8rem (8rem) so a deeply-nested
-       item can't push its content off-screen with no way back; [part=label]
-       below truncates the remaining overflow and tree.styles.ts's [part=base]
-       adds an overflow-x:auto fallback for whatever's left. */
+    /* Depth-based indent is capped at --lr-size-8rem (8rem) so a deeply-nested item can't push its
+       content off-screen with no way back; [part=label] below truncates the remaining overflow and
+       tree.styles.ts's [part=base] adds an overflow-x:auto fallback for the rest. */
     padding-inline-start: calc(
       var(--lr-space-s) + min(var(--lr-tree-depth, 0) * var(--indent-size, var(--lr-space-l)), var(--lr-size-8rem))
     );
@@ -32,22 +31,21 @@ export const styles = css`
     color: var(--lr-tree-selected-color, var(--lr-color-brand));
     background: var(--lr-tree-selected-bg, var(--lr-color-brand-quiet));
   }
-  /* MUST stay after the selected-row rule above, and the second arm exists so it can: a selected
-     row is matched at (0,3,0) there, which a bare [part='row']:hover ((0,2,0)) cannot reach, and the
-     already-selected item is exactly the row a user is most likely to hover next. Matching it
-     through :host() lands both arms at the same specificity as that rule, so source order decides --
-     and the :where() keeps the state qualifier itself out of the count. Also a distinct color-mix
-     step rather than the plain brand-quiet fallback used elsewhere, since the selected row's own
-     resting fill already resolves to that same token by default. */
+  /* MUST stay after the selected-row rule above, and the second arm exists so it can: that rule
+     matches a selected row at (0,3,0), out of reach of a bare [part='row']:hover ((0,2,0)), so the
+     selected row -- the likeliest hover target -- would never light up. Going through :host() lands
+     both arms at that rule's specificity so source order decides, with :where() keeping the state
+     qualifier out of the count. A color-mix step rather than the plain brand-quiet fallback used
+     elsewhere, since the selected row's resting fill already resolves to that token. */
   [part='row']:hover,
   :host(:where([aria-selected='true'])) [part='row']:hover {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
-  /* MUST stay after the selected-row rule above, and the second arm exists so it can: a selected
-     row is matched at (0,3,0) there, which a bare [part='row']:active ((0,2,0)) cannot reach, and
-     the already-selected item is exactly the row a user presses next. Matching it through :host()
-     lands both arms at the same specificity as that rule, so source order decides -- and the
-     :where() keeps the state qualifier itself out of the count. */
+  /* MUST stay after the selected-row rule above, and the second arm exists so it can: that rule
+     matches a selected row at (0,3,0), out of reach of a bare [part='row']:active ((0,2,0)), so the
+     selected row -- the one a user presses next -- would answer nothing. Going through :host()
+     lands both arms at that rule's specificity so source order decides, with :where() keeping the
+     state qualifier out of the count. */
   [part='row']:active,
   :host(:where([aria-selected='true'])) [part='row']:active {
     background: color-mix(
@@ -63,19 +61,17 @@ export const styles = css`
   :host([aria-disabled='true']) [part='row']:hover {
     background: transparent;
   }
-  /* A disabled item must stay inert under the pointer for the press as well as the hover -- without
-     this it would light up on mousedown and then do nothing. */
+  /* A disabled item stays inert under the pointer for the press as well as the hover -- otherwise
+     it lights up on mousedown and then does nothing. */
   :host([aria-disabled='true']) [part='row']:active {
     background: transparent;
   }
   [part='toggle'] {
-    /* Keep the chevron glyph compact (the row itself stays a --lr-size-1-75rem-ish
-       visual rhythm) while giving the interactive box the shared minimum tappable
-       size -- same "small glyph, padded hit box" pattern as lr-code-block's/
-       lr-json-viewer's/lr-trace-tree's own [part='toggle']. min-inline-size/
-       min-block-size always win over a smaller explicit size, so the *visible*
-       icon stays put via its own 1em SVG sizing while the clickable box floors
-       out at 40px. */
+    /* Compact chevron glyph (the row keeps its --lr-size-1-75rem-ish visual rhythm) with the
+       interactive box at the shared minimum tappable size -- the same "small glyph, padded hit box"
+       pattern as lr-code-block's, lr-json-viewer's and lr-trace-tree's own [part='toggle'].
+       min-inline-size and min-block-size always win over a smaller explicit size, so the *visible*
+       icon stays put via its own 1em SVG sizing while the clickable box floors out at 40px. */
     inline-size: var(--lr-size-1-75rem);
     block-size: var(--lr-size-1-75rem);
     min-inline-size: var(--lr-icon-button-size);
@@ -108,8 +104,8 @@ export const styles = css`
     cursor: default;
   }
   [part='toggle'][hidden] {
-    /* visibility (not display) so the placeholder keeps its layout box --
-       a leaf row still lines up with sibling rows that do have a chevron. */
+    /* visibility, not display, so the placeholder keeps its layout box and a leaf row still lines
+       up with sibling rows that do have a chevron. */
     visibility: hidden;
   }
   [part='spinner'] {

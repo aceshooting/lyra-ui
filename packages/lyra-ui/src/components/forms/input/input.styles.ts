@@ -5,28 +5,26 @@ export const styles = css`
   :host {
     display: block;
     /* Geometry from the shared form-control ladder (internal/sizes.styles.ts, pulled in ahead of
-       this sheet by input.class.ts): one scale for lr-button/lr-input/lr-select/lr-combobox/
-       lr-date-input instead of five hand-maintained copies that had already drifted (this
-       component's own l and xl tiers used to overshoot their declared floor by 2px and 5px, so an
-       input never actually lined up with the button beside it). The ladder matches both spellings
-       of every tier in one selector list, so size="small" is size="s" here for free. */
+       this sheet by input.class.ts): one scale across lr-button/lr-input/lr-select/lr-combobox/
+       lr-date-input, replacing five drifting copies whose l and xl tiers overshot their floor by
+       2px and 5px. The ladder matches both tier spellings in one selector list, so size="small"
+       is size="s" for free. */
     --_lr-input-padding-block-default: var(--lr-form-control-padding-block);
     --_lr-input-padding-inline-default: var(--lr-form-control-padding-inline);
     --_lr-input-font-size-default: var(--lr-form-control-font-size);
     --_lr-input-control-min-height-default: var(--lr-form-control-height);
-    /* --lr-input-control-height is intentionally NOT declared here. It is a consumer-facing escape
-       hatch consumed only through the two var() fallbacks on [part~='input-wrapper'] below;
-       declaring any value for it (even 'auto') would make those fallback arms unreachable and
-       silently turn --lr-input-control-min-height into dead code. Left undeclared, both arms stay
-       live: the per-tier floor falls out of the fallback, and setting the property from anywhere
-       (inline style, an ancestor, an outer-tree rule) pins an exact height. */
-    /* The adornment gap is deliberately NOT taken from the ladder: it does not vary by tier there
-       either, and the ladder's value is tuned for a button's icon-beside-label spacing, which is
-       tighter than a text field wants between an adornment and the caret. */
+    /* --lr-input-control-height is deliberately NOT declared: it is read only through the two var()
+       fallbacks on [part~='input-wrapper'] below, and declaring any value (even 'auto') would make
+       those arms unreachable, turning --lr-input-control-min-height into dead code. Undeclared, the
+       per-tier floor falls out of the fallback and setting it from anywhere pins an exact height.
+       */
+    /* The adornment gap is deliberately NOT from the ladder: it does not vary by tier there either,
+       and the ladder's value is tuned for a button's icon-beside-label spacing, tighter than a text
+       field wants between an adornment and the caret. */
     --_lr-input-gap-default: var(--lr-space-xs);
     --_lr-input-radius-default: var(--lr-form-control-radius);
-    /* Fill/border pair swapped per appearance below. The mapped default is outlined, so an element
-       whose appearance attribute has not reflected yet still paints the correct border-only box. */
+    /* Fill/border pair swapped per appearance below; the default is outlined, so an element whose
+       appearance attribute has not reflected yet still paints the correct border-only box. */
     --_lr-input-fill-default: transparent;
     --_lr-input-border-color-default: var(--lr-color-border);
   }
@@ -50,9 +48,9 @@ export const styles = css`
     --_lr-input-fill-default: transparent;
     --_lr-input-border-color-default: transparent;
   }
-  /* The loudest tier still has to read as an editable text surface, so it takes the *quiet* brand
-     tint as its fill and the loud brand color on the border only -- a loud fill would put user
-     text on a saturated background at an unpredictable contrast ratio. */
+  /* The loudest tier must still read as an editable text surface: *quiet* brand tint as the fill,
+     loud brand on the border only -- a loud fill puts user text on a saturated background at an
+     unpredictable contrast ratio. */
   :host([appearance='accent']) {
     --_lr-input-fill-default: var(--lr-color-brand-quiet);
     --_lr-input-border-color-default: var(--lr-color-brand);
@@ -77,8 +75,8 @@ export const styles = css`
     inline-size: 100%;
     box-sizing: border-box;
     min-block-size: var(--lr-input-control-height, var(--lr-input-control-min-height, var(--_lr-input-control-min-height-default)));
-    /* Pinned only when --lr-input-control-height is set; 'auto' otherwise, so the row keeps
-       growing to fit its own content. */
+    /* Pinned only when --lr-input-control-height is set; 'auto' otherwise, so the row keeps growing
+       to fit its own content. */
     block-size: var(--lr-input-control-height, auto);
     padding-inline: var(--lr-input-padding-inline, var(--_lr-input-padding-inline-default));
     border: var(--lr-border-width-thin) solid var(--lr-input-border-color, var(--_lr-input-border-color-default));
@@ -88,19 +86,13 @@ export const styles = css`
   [part~='input-wrapper']:focus-within {
     border-color: var(--lr-input-focus-border-color, var(--lr-color-brand));
   }
-  /* :host(:disabled), not :host([disabled]) -- lr-input is form-associated
-     (FormAssociated mixin), so the UA computes its disabled state (and
-     therefore :disabled/:enabled matching) the same way it does for a
-     native form control: from its own disabled content attribute *or* an
-     ancestor <fieldset disabled>'s cascade. The attribute selector alone
-     only ever matched the first case; disabled purely via an ancestor
-     fieldset left the whole wrapper chrome (adornments, password-toggle/
-     clear buttons, border) at full opacity with a normal cursor. Dims the
-     wrapper as one unit rather than [part='input'] alone (the previous,
-     narrower rule this replaces): a per-element opacity compounds with an
-     ancestor's, so keeping both would have doubly faded the text relative
-     to the buttons/adornments beside it. Mirrors lr-date-input's/lr-radio's
-     identical fix. */
+  /* :host(:disabled), not :host([disabled]) -- lr-input is form-associated (FormAssociated mixin),
+     so the UA matches :disabled from its own disabled attribute *or* an ancestor <fieldset
+     disabled>'s cascade; the attribute selector caught only the first, leaving a fieldset-disabled
+     field's whole wrapper chrome (adornments, password-toggle/clear buttons, border) at full
+     opacity with a normal cursor. Dims the wrapper as one unit rather than [part='input'] alone: a
+     per-element opacity compounds with an ancestor's, doubly fading the text against the buttons
+     beside it. Same fix as lr-date-input and lr-radio. */
   :host(:disabled) [part~='input-wrapper'] {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
@@ -124,10 +116,9 @@ export const styles = css`
   [part='input'][type='search']::-webkit-search-decoration {
     appearance: none;
   }
-  /* Gated on the rendered data attribute rather than :host([without-spin-buttons]) so the
-     suppression tracks the property on the very first render, independent of when Lit reflects
-     the host attribute -- and so a subclass defaulting the property the other way (see
-     <lr-number-input>) needs no converter gymnastics to keep the two in step. */
+  /* Gated on the rendered data attribute, not :host([without-spin-buttons]), so suppression tracks
+     the property from the first render regardless of when Lit reflects the host attribute, and a
+     subclass defaulting it the other way (<lr-number-input>) needs no converter gymnastics. */
   [part='input'][type='number'][data-without-spin-buttons] {
     appearance: textfield;
   }
@@ -136,9 +127,9 @@ export const styles = css`
     appearance: none;
     margin: 0;
   }
-  /* Restyled, not suppressed -- this is the only mouse/touch affordance to open the native time
-     picker, unlike the search-cancel/number-spinner glyphs above which this component/lr-pagination
-     both already provide their own alternative for. */
+  /* Restyled, not suppressed: the only mouse/touch affordance for opening the native time picker,
+     unlike the search-cancel/number-spinner glyphs above, for which this component and
+     lr-pagination already provide their own alternative. */
   [part='input'][type='time']::-webkit-calendar-picker-indicator {
     cursor: pointer;
     border-radius: var(--lr-radius-xs);
@@ -187,18 +178,17 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     border: none;
-    /* Invisible while the background is none; it exists so the pressed fill below (and the
-       focus ring, which follows the same corner) is a rounded chip rather than a hard rectangle. */
+    /* Invisible while the background is none; it makes the pressed fill below, and the focus ring
+       that follows the same corner, a rounded chip rather than a hard rectangle. */
     border-radius: var(--lr-radius);
     background: none;
     cursor: pointer;
     color: var(--lr-color-text-quiet);
     padding: var(--lr-space-xs);
-    /* This button only exists once the field has a value/is clearable-eligible, so an unscaled
-       --lr-icon-button-size floor here would grow a field shorter than 40px the moment it appears
-       -- min() caps that floor at the active tier's own --lr-form-control-height instead, so m and
-       up (already >= 40px) keep the full WCAG 2.5.8 hit-area target untouched while 2xs/xs/s never
-       get forced open past their own control height. */
+    /* This button appears only once the field has a value or is clearable-eligible, so an unscaled
+       --lr-icon-button-size floor would grow a field shorter than 40px. min() caps it at the tier's
+       own --lr-form-control-height: m and up (already >= 40px) keep the full WCAG 2.5.8 hit-area
+       target, while 2xs/xs/s are never forced past their own control height. */
     min-inline-size: min(var(--lr-icon-button-size), var(--lr-form-control-height));
     min-block-size: min(var(--lr-icon-button-size), var(--lr-form-control-height));
     line-height: var(--lr-line-height-none);
@@ -210,11 +200,9 @@ export const styles = css`
   [part='clear-button']:not(:disabled):hover {
     color: var(--lr-input-action-hover-color, var(--lr-color-text));
   }
-  /* Pressed: the hover's quiet-to-full text step PLUS a fill, mixing the page surface toward
-     --lr-color-mix-partner. Deliberately more than the hover rather than a repeat of it -- these
-     two sit inside a text field whose own hover already moves the field border, so a fill at
-     rest-or-hover would compete with it, while a fill under the thumb only while the pointer is
-     down cannot. */
+  /* Pressed adds a fill mixing the page surface toward --lr-color-mix-partner on top of the hover's
+     quiet-to-full text step: the surrounding field's own hover already moves its border, so a fill
+     at rest or hover would compete with it while a fill held only under the pointer cannot. */
   [part='password-toggle']:not(:disabled):active,
   [part='clear-button']:not(:disabled):active {
     color: var(--lr-input-action-active-color, var(--lr-input-action-hover-color, var(--lr-color-text)));

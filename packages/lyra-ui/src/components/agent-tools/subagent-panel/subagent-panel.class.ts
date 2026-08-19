@@ -9,7 +9,7 @@ import {
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
+import { AGENT_STATUS_VARIANTS } from '../../../internal/agent-status-variants.js';
 import '../../overlays/badge/badge.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './subagent-panel.styles.js';
@@ -39,11 +39,6 @@ export interface LyraSubagentPanelEventMap {
   'lr-run-retry': CustomEvent<LyraEventDetailSnapshot<{ runId: string }>>;
 }
 
-const STATUS_VARIANT: Partial<Record<AgentStatusKind, BadgeVariant>> = {
-  idle: 'neutral', queued: 'neutral', running: 'brand', collecting: 'brand',
-  'waiting-input': 'warning', 'waiting-approval': 'warning', done: 'success',
-  error: 'danger', cancelled: 'neutral',
-};
 const ACTIVE = new Set<AgentStatusKind>(['queued', 'running', 'collecting', 'waiting-input', 'waiting-approval']);
 const MAX_RENDERED_RUNS = 500;
 const MAX_VISUAL_INDENT_DEPTH = 12;
@@ -372,7 +367,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
             @click=${() => this.emit('lr-run-activate', { runId: run.id, run })}
           >
             <span part="label">${run.label}</span>
-            <lr-badge part="status" variant=${STATUS_VARIANT[run.status] ?? 'neutral'}>${this.statusLabel(run.status)}</lr-badge>
+            <lr-badge part="status" variant=${AGENT_STATUS_VARIANTS[run.status] ?? 'neutral'}>${this.statusLabel(run.status)}</lr-badge>
             ${run.task ? html`<span part="task">${run.task}</span>` : nothing}
             ${run.model ? html`<span part="model">${run.model}</span>` : nothing}
             ${progress != null

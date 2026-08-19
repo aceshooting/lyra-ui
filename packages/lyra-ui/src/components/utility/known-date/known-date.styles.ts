@@ -3,52 +3,56 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    /* Every per-tier value below comes from the library's one shared size ladder
-       (internal/sizes.styles.ts), which re-points --lr-form-control-* per :host([size='...']) and
-       matches BOTH spellings of every tier in the same selector list -- so small/medium/large work
-       here for free. This component's own --lr-known-date-field-* surface is unchanged and still
-       the documented override point; only the values behind it moved, which is what keeps a
-       birthdate field the same height as the <lr-input>/<lr-date-input> beside it in a form row at
-       every tier instead of drifting from a hand-kept copy of that scale. */
+    /* Per-tier values come from the shared size ladder (internal/sizes.styles.ts), which re-points
+       --lr-form-control-* per :host([size='...']) and matches BOTH tier spellings in one selector
+       list, so small/medium/large work for free. --lr-known-date-field-* stays the documented
+       override point; the ladder keeps this field the height of an adjacent
+       <lr-input>/<lr-date-input> at every tier, not a hand-kept copy's. */
     --_lr-known-date-field-padding-block: var(--lr-form-control-padding-block);
     --_lr-known-date-field-padding-inline: var(
       --lr-form-control-padding-inline
     );
     --_lr-known-date-field-font-size: var(--lr-form-control-font-size);
-    /* Not --lr-form-control-gap: that knob is the rhythm between one control's own inline
-       affordances, an order of magnitude tighter than the gap between three separate field
-       blocks. Constant across tiers by design. */
+    /* Not --lr-form-control-gap: that knob spaces one control's own inline affordances, an order of
+       magnitude tighter than the gap between three separate field blocks. Constant across tiers by
+       design. */
     --_lr-known-date-field-gap: var(--lr-space-s);
+    /* Fill/border pair swapped per appearance, as lr-input/lr-textarea/lr-otp-input/lr-time-input
+       do. Re-pointed on :host, not a :host([appearance='…']) [part='field-input'] rule: that form
+       is (0,3,0), out-ranks [part='field-input']:hover at (0,2,0), and appearance="filled" then
+       reinstated its transparent border over the hover brand one -- hover being border-only, filled
+       fields lost pointer feedback entirely. No [part] rule out-ranks another, so re-pointing
+       cannot; the deliberately stronger :host([data-invalid]) [part='field-input'] rule below does,
+       as intended. */
+    --_lr-known-date-field-fill: var(--lr-color-surface);
+    --_lr-known-date-field-border-color: var(--lr-color-border);
     --_lr-known-date-year-field-width: var(--lr-size-5em);
     --_lr-known-date-day-field-width: var(--lr-size-3-5em);
     --_lr-known-date-month-field-width: var(--lr-size-3-5em);
-    /* max() rather than the bare ladder height: the ladder's 2xs tier resolves to 1.25rem/20px,
-       and a field a pointer has to hit floors at WCAG 2.2 SC 2.5.8's 24px minimum. Above that the
-       floor tracks the ladder exactly. At the small tiers the floor exceeds the field's own
-       padding/font-driven content height and actively pins the rendered box; at l/xl the content
-       height stays under it, so the floor is inert there. */
+    /* max() rather than the bare ladder height: the ladder's 2xs tier resolves to 1.25rem/20px, and
+       a field a pointer has to hit floors at WCAG 2.2 SC 2.5.8's 24px minimum; above that the floor
+       tracks the ladder exactly. At the small tiers it exceeds the padding/font-driven content
+       height and pins the rendered box; at l/xl content height wins and the floor is inert. */
     --_lr-known-date-field-min-height: max(
       var(--lr-form-control-height),
       var(--lr-size-24px)
     );
-    /* --lr-known-date-field-height is intentionally NOT declared here. It is a consumer-facing
-       exact-height escape hatch consumed only through the var() fallbacks on [part='field-input']
-       below; declaring any value for it (even 'auto') would make those fallback arms unreachable
-       and turn --lr-known-date-field-min-height into dead code (the lr-select trap). Left
-       undeclared, both arms stay live: the per-tier floor falls out of the fallback, and setting
-       the property pins an exact height. */
+    /* --lr-known-date-field-height is intentionally NOT declared here: it is a consumer-facing
+       exact-height escape hatch read only through the var() fallbacks on [part='field-input']
+       below, and declaring any value (even 'auto') would deaden those arms and turn
+       --lr-known-date-field-min-height into dead code (the lr-select trap). */
   }
 
   [part~="form-control"] {
     min-inline-size: 0;
   }
 
-  :host([appearance="filled"]) [part="field-input"] {
-    border-color: transparent;
-    background: var(--lr-color-surface-raised);
+  :host([appearance="filled"]) {
+    --_lr-known-date-field-border-color: transparent;
+    --_lr-known-date-field-fill: var(--lr-color-surface-raised);
   }
-  :host([appearance="filled-outlined"]) [part="field-input"] {
-    background: var(--lr-color-surface-raised);
+  :host([appearance="filled-outlined"]) {
+    --_lr-known-date-field-fill: var(--lr-color-surface-raised);
   }
   :host([pill]) [part="field-input"] {
     border-radius: var(--lr-radius-pill);
@@ -70,22 +74,17 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
     overflow-wrap: anywhere;
   }
-  /* [part] always contains a literal <slot> child regardless of assigned
-     content, so :empty never matches -- real emptiness is tracked in JS
-     (hasLabelSlot) and reflected via [hidden] instead (same fix as every
-     other lyra form control's label/hint/error chrome). Without this the
-     required marker below (attached to this box) would render a stray glyph
-     with nothing before it whenever no label is set. */
+  /* [part] always contains a literal <slot> child, so :empty never matches -- emptiness is tracked
+     in JS (hasLabelSlot) and reflected via [hidden], as in every other lyra form control's
+     label/hint/error chrome. Otherwise the required marker below, attached to this box, renders a
+     stray glyph with nothing before it. */
   [part="legend"][hidden] {
     display: none;
   }
-  /* The one component that does NOT take its marker rule from
-     internal/form-control.styles.ts, only its custom properties. That sheet
-     attaches the marker to [part~="form-control-label"], which here is a span
-     INSIDE this legend; the marker belongs to the legend box itself, after the
-     whole label, so the selector is local while the glyph, colour and offset
-     stay the same three consumer-settable properties every other control
-     resolves. Keep these declarations identical to that sheet's. */
+  /* The one component taking only the custom properties from internal/form-control.styles.ts, not
+     its marker rule: that sheet attaches the marker to [part~="form-control-label"], a span INSIDE
+     this legend, but the marker belongs to the legend box itself, after the whole label. Same three
+     consumer-settable glyph/colour/offset properties -- keep these declarations identical. */
   :host([required]) [part="legend"]::after {
     content: var(--lr-form-control-required-content, ' *');
     color: var(--lr-form-control-required-color, var(--lr-color-danger));
@@ -119,8 +118,8 @@ export const styles = css`
         var(--_lr-known-date-field-min-height)
       )
     );
-    /* Pinned only when --lr-known-date-field-height is set; 'auto' otherwise, so the field keeps
-       growing to fit its own padding/font content. */
+    /* Pinned only when --lr-known-date-field-height is set; 'auto' otherwise, so the field grows to
+       fit its own padding/font content. */
     block-size: var(--lr-known-date-field-height, auto);
     padding-block: var(
       --lr-known-date-field-padding-block,
@@ -130,9 +129,10 @@ export const styles = css`
       --lr-known-date-field-padding-inline,
       var(--_lr-known-date-field-padding-inline)
     );
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid
+      var(--_lr-known-date-field-border-color);
     border-radius: var(--lr-form-control-radius);
-    background: var(--lr-color-surface);
+    background: var(--_lr-known-date-field-fill);
     color: var(--lr-color-text);
     font-family: inherit;
     font-size: var(
@@ -159,11 +159,10 @@ export const styles = css`
       var(--_lr-known-date-year-field-width)
     );
   }
-  /* Mouse-hover parity with the keyboard :focus-visible ring below -- same border-retint
-     treatment as lr-color-picker's own bordered [part='input']:hover.
-     no-pressed-state: a press on a number field lands the caret rather than activating a control,
-     so a pressed tint would show only for the length of the mousedown and then be replaced by the
-     :focus-visible ring below, which is the state that actually persists and communicates. */
+  /* Mouse-hover parity with the keyboard :focus-visible ring below -- same border-retint as
+     lr-color-picker's own bordered [part='input']:hover.
+     no-pressed-state: a press on a number field lands the caret, so a pressed tint would last only
+     for the mousedown before the persistent :focus-visible ring replaced it. */
   [part="field-input"]:hover {
     border-color: var(--lr-color-brand);
   }
@@ -171,9 +170,8 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* --lr-known-date-invalid-border-color indirection (rather than the bare --lr-color-danger
-     token) lets a consumer retheme just this component's invalid-field border without
-     repainting every other component in the app that reads the same shared danger token. */
+  /* --lr-known-date-invalid-border-color rethemes just this component's invalid-field border; the
+     bare --lr-color-danger token would repaint every other component reading it. */
   :host([data-invalid]) [part="field-input"] {
     border-color: var(
       --lr-known-date-invalid-border-color,

@@ -14,11 +14,9 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
-    /* The body font, not a monospace stack — unlike lr-code-block's own
-       local --lr-code-block-font token, a key cap's content is mostly
-       single characters and modifier glyphs (⌘⇧⌥), which read more legibly
-       — and have more complete glyph coverage — in the UI font than in a
-       monospace stack that may not even ship those symbols. */
+    /* The body font, not a monospace stack like lr-code-block's --lr-code-block-font: a key cap is
+       mostly single characters and modifier glyphs (⌘⇧⌥), which read more legibly, and have fuller
+       coverage, in the UI font than in a monospace stack that may not ship them. */
     font-family: var(--lr-font);
     font-size: var(--lr-font-size-sm);
     line-height: var(--lr-line-height-snug);
@@ -39,9 +37,8 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font-weight: var(--lr-font-weight-medium);
-    /* A subtle bottom-weighted inset shadow reads as a slightly-raised
-       physical key cap rather than a flat label chip, echoing the
-       lr-chip/lr-checkbox box's own bordered-box treatment. */
+    /* A bottom-weighted inset shadow reads as a slightly-raised physical key cap rather than a
+       flat label chip, echoing lr-chip/lr-checkbox's own bordered-box treatment. */
     box-shadow: inset 0 var(--lr-size-neg-1px) 0 var(--lr-color-border);
   }
 

@@ -136,6 +136,33 @@ it("keeps a live slotted label idref as the trigger and panel name while host ar
   expect(panel.hasAttribute("aria-labelledby")).to.equal(false);
 });
 
+it("treats an explicitly empty host aria-label as a suppressed name, not an absent one", async () => {
+  const el = (await fixture(
+    html`<lr-color-picker aria-label=""></lr-color-picker>`
+  )) as LyraColorPicker;
+  await el.updateComplete;
+  const trigger = part(el, "trigger");
+  const panel = part(el, "panel");
+  // `aria-label=""` is the author saying "this control has no accessible name"; the localized
+  // fallback must not quietly reinstate one, matching lr-otp-input.
+  expect(trigger.getAttribute("aria-label")).to.equal(null);
+  expect(trigger.hasAttribute("aria-labelledby")).to.equal(false);
+  expect(panel.getAttribute("aria-label")).to.equal(null);
+  expect(panel.hasAttribute("aria-labelledby")).to.equal(false);
+});
+
+it("keeps a rendered visible label naming the trigger through an empty host aria-label", async () => {
+  const el = (await fixture(
+    html`<lr-color-picker label="Accent" aria-label=""></lr-color-picker>`
+  )) as LyraColorPicker;
+  await el.updateComplete;
+  const label = part(el, "form-control-label");
+  const trigger = part(el, "trigger");
+  // Suppressing the host name must not orphan the visible label from the control it names.
+  expect(trigger.getAttribute("aria-labelledby")).to.equal(label.id);
+  expect(trigger.hasAttribute("aria-label")).to.equal(false);
+});
+
 it("shows slotted hint/label/error content on the very first render, not only after a later slotchange", async () => {
   const el = document.createElement("lr-color-picker") as LyraColorPicker;
   el.innerHTML =

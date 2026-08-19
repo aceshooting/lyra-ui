@@ -3,16 +3,15 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-flex;
-    /* Lets the host shrink below its row's max-content width when it's a flex/grid
-       item in a consumer's own narrow layout -- the default min-width:auto for flex
-       items would otherwise force the scroll container wide. */
+    /* Lets the host shrink below its row's max-content width as a flex/grid item in a narrow
+       consumer layout; flex items' default min-width:auto would otherwise force the scroll
+       container wide. */
     min-inline-size: 0;
     max-inline-size: 100%;
-    /* One ladder for the whole library (internal/sizes.styles.ts): the track floor, the segment
-       padding and the segment font size are the tier's own --lr-form-control-* values, so a toolbar
-       built with same-size controls shows this control at a matching height beside them, per the
-       class doc's own "flush beside those controls" promise. This component used to carry six
-       :host([size=...]) blocks of its own, on a scale that had drifted from that one. */
+    /* One ladder for the whole library (internal/sizes.styles.ts): track floor, segment padding
+       and segment font size are the tier's own --lr-form-control-* values, so a toolbar of
+       same-size controls shows this one flush beside them, as the class doc promises. No
+       :host([size=...]) blocks of its own; that private scale had drifted. */
     --_lr-segmented-track-min-height: var(--lr-form-control-height);
     --_lr-segmented-segment-padding: var(--lr-form-control-padding-block)
       var(--lr-form-control-padding-inline);
@@ -24,10 +23,10 @@ export const styles = css`
     overflow-x: auto;
     overflow-y: hidden;
     min-inline-size: 0;
-    /* --lr-segmented-track-height is deliberately NEVER declared anywhere: an exact-height hatch
-       only works as an undeclared sentinel, so the fallback arm below can fall through to the
-       per-size --lr-segmented-track-min-height floor. Declaring it as "auto" on :host would be a
-       valid value that always wins, silently making the per-size floor dead code. */
+    /* --lr-segmented-track-height is deliberately NEVER declared: an exact-height hatch only
+       works as an undeclared sentinel, letting the fallback arm below reach the per-size
+       --lr-segmented-track-min-height floor. Declaring it auto on :host would be a valid value
+       that always wins, making that floor dead code. */
     min-block-size: var(
       --lr-segmented-track-height,
       var(
@@ -42,20 +41,15 @@ export const styles = css`
     padding: var(--lr-segmented-track-padding, var(--lr-size-0-125rem));
     gap: var(--lr-segmented-track-gap, var(--lr-size-0-125rem));
   }
-  /* Edge fade, gated on the track actually overflowing -- ScrollOverflowController toggles
-     data-scroll-overflow from a real scrollWidth/clientWidth measurement. This used to be painted
-     unconditionally ("a low-cost affordance that needs no observers"), which is only harmless when
-     there IS overflow: at the 2rem-per-edge default a two-option row (Overall | Daily) is narrower
-     than its own two fades, so both labels rendered half-transparent and the control read as
-     disabled. One-sided and RTL-aware, matching lr-tab-group: data-scroll-start/data-scroll-end
-     (also from ScrollOverflowController, logical and live-updated on scroll) report which edge(s)
-     genuinely still have more to reach, so a track scrolled fully to one edge fades only the other
-     -- a track resting at its start no longer dims that already-fully-visible start edge.
-     data-scroll-start/data-scroll-end are wrapped in :where() below purely to keep these rules'
-     specificity pinned at the same (0,2,0) as the plain [data-scroll-overflow] selector -- so the
-     later forced-colors override (same base selector, later in the stylesheet) still wins the tie
-     by source order rather than losing to these more-specific-looking selectors, which would
-     otherwise leave the gradient mask painted even under forced-colors. */
+  /* Edge fade, gated on real overflow: ScrollOverflowController toggles data-scroll-overflow from
+     a scrollWidth/clientWidth measurement. Unconditional fades are harmless only when there IS
+     overflow -- at the 2rem-per-edge default a two-option row is narrower than its own two fades,
+     so both labels rendered half-transparent and the control read as disabled. One-sided and
+     RTL-aware, matching lr-tab-group: data-scroll-start/data-scroll-end (same controller,
+     logical, live on scroll) name the edges with more to reach, so a track resting at one edge
+     fades only the other. Both sit in :where() purely to hold these rules at (0,2,0), tying with
+     plain [data-scroll-overflow] so the later forced-colors override wins on source order rather
+     than leaving the mask painted. */
   [part="base"][data-scroll-overflow]:where([data-scroll-start][data-scroll-end]) {
     -webkit-mask-image: linear-gradient(
       to right,
@@ -168,22 +162,19 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  /* Reads its own prop, not the shared --lr-color-text token the selected state used to share:
-     recoloring the selected pill must never repaint hovered-unselected segments with it.
-     :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
-     -- (0,1,0) total, functionally identical selection to the unwrapped shape but now losing (on
-     the pseudo-element tiebreak) to a consumer's own ::part(segment):hover override ((0,1,1))
-     without that consumer needing !important -- mirrors lr-attachment-trigger's identical fix. */
+  /* Reads its own prop, not the --lr-color-text token the selected state shares, so recoloring
+     the selected pill never repaints hovered-unselected segments. :where() zeroes the wrapped
+     selectors, leaving (0,1,0) from :hover alone -- tying with the pressed rule below, which wins
+     on source order while a segment is held. */
   :where([part="segment"]):hover:where(
       :not([aria-disabled="true"]):not([aria-checked="true"])
     ) {
     color: var(--lr-segmented-hover-color, var(--lr-color-text));
   }
-  /* Hover lifts only the label colour on this control, so the pressed state has to add a surface
-     to be a visible step past it: the segment's own transparent fill mixed toward
-     --lr-color-mix-partner, which lands as the partner colour at --lr-color-mix-active alpha over
-     whatever track colour the theme is using. Same :not() guards, and the same zeroed specificity,
-     as the hover rule it twins. */
+  /* Hover lifts only the label colour here, so pressed adds a surface to be a visible step past
+     it: the segment's transparent fill mixed toward --lr-color-mix-partner at
+     --lr-color-mix-active alpha over whatever track colour the theme uses. Same :not() guards and
+     zeroed specificity as the hover rule it twins. */
   :where([part="segment"]):active:where(
       :not([aria-disabled="true"]):not([aria-checked="true"])
     ) {
@@ -204,10 +195,10 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* Every value here is an inline var() fallback rather than a :host-declared property on purpose:
-     :host is re-declared per size tier, which would shadow any value a consumer sets on an
-     ancestor -- exactly what these hooks exist to allow. Unset, each falls back to the token the
-     rule used before the hooks existed, so the rendering is unchanged. */
+  /* Inline var() fallbacks, not :host-declared properties: :host is re-declared per size tier and
+     would shadow any value a consumer sets on an ancestor, which is exactly what these hooks
+     exist to allow. Unset, each falls back to the token the rule used before the hooks existed.
+     */
   [part="segment"][aria-checked="true"] {
     background: var(--lr-segmented-selected-bg, var(--lr-color-surface));
     color: var(--lr-segmented-selected-color, var(--lr-color-text));
@@ -216,7 +207,7 @@ export const styles = css`
       var(--lr-font-weight-semibold)
     );
     /* Smallest step in the scale: the checked segment is a thumb lifted a hair off its own track,
-       the shallowest piece of resting chrome the library has. */
+       the shallowest resting chrome the library has. */
     box-shadow: var(--lr-segmented-selected-shadow, var(--lr-shadow-xs));
   }
   @media (forced-colors: active) {

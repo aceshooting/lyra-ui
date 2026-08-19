@@ -4,10 +4,9 @@ export const styles = css`
   :host {
     --_lr-lightbox-overlay-color: var(--lr-color-overlay-strong);
     /* Background for every floating/toolbar icon button (close-button, previous-button,
-       next-button). These buttons float directly over arbitrary image content, not the app's
-       normal surface, so they reuse the "solid, high-contrast neutral fill" token rather than
-       --lr-color-surface for guaranteed contrast independent of both the page theme and
-       whatever's in the photo. */
+       next-button). They float over arbitrary image content, not the app's normal surface, so they
+       take the solid high-contrast neutral fill token rather than --lr-color-surface -- contrast
+       independent of the page theme and of whatever is in the photo. */
     --_lr-lightbox-control-bg: var(--lr-color-neutral);
     --_lr-lightbox-control-color: var(--lr-color-on-neutral);
     display: none;
@@ -104,19 +103,18 @@ export const styles = css`
   [part="close-button"] {
     margin-inline-start: var(--lr-space-xs);
   }
-  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
-     -- mirrors lr-attachment-trigger's identical fix for the same [part='x']:hover:not(:disabled)
-     over-specificity shape, so a consumer's ::part(close-button):hover /
-     ::part(previous-button):hover / ::part(next-button):hover override wins without !important. */
+  /* :where() zeroes the wrapped selectors, leaving only :hover -- (0,1,0), the same weight as the
+     pressed rule below, which therefore takes the control on source order while the pointer is
+     down. */
   :where([part="close-button"]):hover,
   :where([part="previous-button"]):hover:where(:not(:disabled)),
   :where([part="next-button"]):hover:where(:not(:disabled)) {
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
-  /* Pressed carries the hover fill further toward --lr-color-mix-partner. These controls float over
-     arbitrary photography, so the press has to be legible on its own rather than relying on the
-     surrounding image to supply contrast. */
+  /* Pressed carries the hover fill further toward --lr-color-mix-partner: these controls float
+     over arbitrary photography, so the press must be legible on its own rather than relying on the
+     image for contrast. */
   :where([part="close-button"]):active,
   :where([part="previous-button"]):active:where(:not(:disabled)),
   :where([part="next-button"]):active:where(:not(:disabled)) {
@@ -175,10 +173,9 @@ export const styles = css`
   [part="next-button"] {
     inset-inline-end: var(--lr-space-s);
   }
-  /* Rotate the wrapping part element, not the icon itself -- rotate(180deg) matches
-     pagination.styles.ts's existing previous-icon/next-icon recipe for a chevronIcon()-based
-     prev/next pair (carousel's scaleX(-1) recipe is for its literal ‹/› glyphs, a different base
-     case). */
+  /* Rotate the wrapping part element, not the icon -- rotate(180deg) matches
+     pagination.styles.ts's previous-icon/next-icon recipe for a chevronIcon()-based prev/next
+     pair; carousel's scaleX(-1) recipe is for its literal ‹/› glyphs, a different base case. */
   [part="previous-glyph"] {
     transform: rotate(180deg);
   }
@@ -205,9 +202,9 @@ export const styles = css`
     text-align: center;
     overflow-wrap: anywhere;
   }
-  /* Container-query lengths cannot reference custom properties. This is the documented 320px
-     narrow-allocation baseline expressed in root-relative units so it still follows the page's
-     type scale -- mirrors pagination.styles.ts's identical container query. */
+  /* Container-query lengths cannot reference custom properties, so the documented 320px
+     narrow-allocation baseline is expressed in root-relative units and still follows the page's
+     type scale -- mirrors pagination.styles.ts's container query. */
   @container (max-inline-size: 20rem) {
     [part="counter"] {
       max-inline-size: 45%;

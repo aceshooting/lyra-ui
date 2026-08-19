@@ -3,15 +3,13 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    /* Consumer-tunable scroll cap -- 'none' means the viewer grows with its
-       content, matching every other block-level component in this library
-       until a caller opts into an internal scrollbar via the max-height
+    /* Consumer-tunable scroll cap; 'none' grows with the content like every other block-level
+       component here until a caller opts into an internal scrollbar via the max-height
        attribute. */
     --_lr-json-viewer-max-height: none;
-    /* Contained here (rather than left as a bare font-family literal) so a
-       host page can retheme it, same rationale as --lr-widget-overlay-color
-       in widget.styles.ts -- no shared --lr-* monospace token exists
-       to resolve through. */
+    /* A property rather than a bare font-family literal so a host page can retheme it -- same
+       rationale as --lr-widget-overlay-color in widget.styles.ts; no shared --lr-* monospace token
+       exists to resolve through. */
     --_lr-json-viewer-font: var(--lr-font-mono);
     --_lr-json-viewer-active-outline: var(--lr-focus-ring-color);
     --_lr-json-viewer-string-color: var(--lr-color-success);
@@ -45,13 +43,11 @@ export const styles = css`
   }
   [part="tree"] {
     padding: var(--lr-space-s);
-    /* A JSON tree's structure -- key, colon, value, brackets, indentation -- reads
-       left-to-right regardless of the surrounding document direction, exactly like
-       code and like every JSON view (devtools, VS Code). Without this, an ancestor
-       dir="rtl" reverses each row to value-colon-key order, right-aligns the tree, and
-       flips the disclosure chevrons, so the data reads backwards. A key/value that
-       itself contains RTL text still renders that run correctly via the bidi algorithm;
-       only the LTR scaffolding is pinned. Matches code-block's [part='pre'] lock. */
+    /* A JSON tree's key, colon, value, brackets and indentation read left-to-right whatever the
+       document direction, like code and every JSON view (devtools, VS Code). Without this an
+       ancestor dir="rtl" reverses each row to value-colon-key, right-aligns the tree and flips the
+       chevrons, so the data reads backwards. RTL text inside a key/value still renders via the bidi
+       algorithm; only the scaffolding is pinned. Matches code-block's [part='pre'] lock. */
     direction: ltr;
   }
   .row {
@@ -64,17 +60,17 @@ export const styles = css`
   .row:hover {
     background: var(--lr-json-viewer-row-hover-bg, var(--lr-color-brand-quiet));
   }
-  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover/
-     :focus-within themselves -- (0,1,0) total, so a consumer's own ::part(copy-button):hover
-     override ((0,1,1)) wins without needing !important -- same fix shape as
-     lr-attachment-trigger's/lr-copy-button's own :where()-wrapped hover rule. */
-  :where(.row):hover :where([part="copy-button"]),
-  :where(.row):focus-within :where([part="copy-button"]) {
+  /* Full specificity on both compounds, deliberately: this rule exists only to beat the resting
+     '.row [part=copy-button] { opacity: 0 }' further down, which is (0,2,0). A :where() around
+     either compound drops the selector to (0,1,0); the resting rule then wins from any source
+     position and the button never fades in at all, on hover or on focus. */
+  .row:hover [part="copy-button"],
+  .row:focus-within [part="copy-button"] {
     opacity: 1;
   }
   [part="toggle"] {
-    /* Keep the glyph compact while giving the interactive box the shared
-       minimum target size, even for deeply nested rows. */
+    /* Compact glyph, but the interactive box keeps the shared minimum target size even in deeply
+       nested rows. */
     inline-size: var(--lr-size-1-25rem);
     block-size: var(--lr-size-1-25rem);
     min-inline-size: var(--lr-icon-button-size);
@@ -91,12 +87,10 @@ export const styles = css`
     border-radius: var(--lr-radius);
     cursor: pointer;
   }
-  /* The UA '[hidden] { display: none }' rule is author-overridable by any
-     same-origin declaration for that element regardless of specificity --
-     author rules always win over user-agent rules unless !important is
-     involved -- so this only needs to add visibility, not re-declare
-     display. Keeping the box (rather than display:none) preserves this
-     leaf/empty row's alignment with sibling rows that do have a chevron. */
+  /* An author declaration beats the UA '[hidden] { display: none }' regardless of specificity,
+     !important aside, so this only needs to add visibility, not re-declare display. Keeping the box
+     rather than display:none preserves this leaf/empty row's alignment with sibling rows that do
+     have a chevron. */
   [part="toggle"][hidden] {
     visibility: hidden;
   }
@@ -108,13 +102,10 @@ export const styles = css`
   [part="toggle"][aria-expanded="true"] .chevron {
     transform: rotate(90deg);
   }
-  /* No RTL chevron override: [part='tree'] above is pinned direction:ltr, so a collapsed
-     row's disclosure chevron always points at the LTR-positioned children (to the right),
-     the same as it does in an LTR document. */
-  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
-     -- (0,1,0) total, so a consumer's own ::part(toggle):hover override ((0,1,1)) wins without
-     needing !important -- same fix shape as lr-attachment-trigger's/lr-copy-button's own
-     :where()-wrapped hover rule. */
+  /* No RTL chevron override: [part='tree'] above is pinned direction:ltr, so a collapsed row's
+     chevron always points at the LTR-positioned children, to the right, as in an LTR document. */
+  /* :where() zeroes the wrapped selectors' specificity, leaving :hover alone at (0,1,0) -- the same
+     weight as the :active rule below, which therefore wins on source order while held. */
   :where([part="toggle"]):hover:where(:not([hidden])) {
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
@@ -132,9 +123,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* Stands in for [part='toggle'] on the closing-bracket row, so it must match the toggle's
-     actual used inline-size -- min-inline-size wins over the toggle's own smaller inline-size,
-     so the real box is --lr-icon-button-size, not --lr-size-1-25rem. */
+  /* Stands in for [part='toggle'] on the closing-bracket row, so it matches the toggle's used
+     inline-size: min-inline-size wins over the toggle's smaller inline-size, making the real box
+     --lr-icon-button-size, not --lr-size-1-25rem. */
   .toggle-space {
     inline-size: var(--lr-icon-button-size);
     flex: 0 0 auto;
@@ -155,9 +146,9 @@ export const styles = css`
     flex: 0 0 auto;
     color: var(--lr-color-text-quiet);
   }
-  /* --lr-json-viewer-match-bg indirection (rather than the bare --lr-color-warning-quiet token)
-     lets a consumer retheme just this component's search-match highlight without repainting
-     every other warning-toned surface on the page that reads the same shared token. */
+  /* The --lr-json-viewer-match-bg indirection lets a consumer retheme this search-match highlight
+     alone, without repainting every other warning-toned surface reading the shared
+     --lr-color-warning-quiet token. */
   [part="key"][data-match],
   [part="value"][data-match] {
     background: var(--lr-json-viewer-match-bg, var(--lr-color-warning-quiet));
@@ -229,9 +220,9 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
-  /* This is also the pressed state for the row-hover reveal rule further up: that rule only fades
-     the button in when its row is hovered, it is not itself a hover treatment on the button, and the
-     button's own held state belongs here next to its hover. */
+  /* Also the pressed state for the row-hover reveal rule further up: that rule only fades the
+     button in when its row is hovered rather than styling the button's own hover, so the button's
+     held state belongs here beside its hover. */
   [part="copy-button"]:active {
     background: color-mix(
       in oklab,
@@ -240,9 +231,8 @@ export const styles = css`
     );
     color: var(--lr-color-brand);
   }
-  /* Per-node copy buttons stay out of the way until the row is actually
-     being interacted with -- the toolbar's own top-level copy button is
-     exempt (it has no ancestor .row, so this rule never matches it). */
+  /* Per-node copy buttons stay out of the way until the row is interacted with; the toolbar's own
+     top-level copy button has no ancestor .row, so this rule never matches it. */
   .row [part="copy-button"] {
     opacity: 0;
   }

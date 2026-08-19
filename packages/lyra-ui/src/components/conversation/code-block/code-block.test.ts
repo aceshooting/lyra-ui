@@ -1293,6 +1293,66 @@ describe("highlight-lines", () => {
     ).to.equal(beforeHtml);
   });
 
+  // Rendered geometry, never stylesheet text: a `.line` that stays inline paints its highlight
+  // background behind the glyphs only, so a one-character highlighted line shows an 8px swatch
+  // instead of a highlighted row.
+  const lineRows = async (
+    lineNumbers: boolean
+  ): Promise<{
+    display: string[];
+    steps: number[];
+    highlightedWidth: number;
+    preWidth: number;
+    lineHeight: number;
+  }> => {
+    const el = (await fixture(
+      html`<lr-code-block
+        code=${"a\nb\nc"}
+        ?line-numbers=${lineNumbers}
+        highlight-lines="1"
+      ></lr-code-block>`
+    )) as LyraCodeBlock;
+    await el.updateComplete;
+    const pre = el.shadowRoot!.querySelector('[part="pre"]') as HTMLElement;
+    const lines = [
+      ...el.shadowRoot!.querySelectorAll("[data-line]"),
+    ] as HTMLElement[];
+    const tops = lines.map((line) => line.getBoundingClientRect().top);
+    return {
+      display: lines.map((line) => getComputedStyle(line).display),
+      steps: tops.slice(1).map((top, index) => top - tops[index]!),
+      highlightedWidth: (
+        el.shadowRoot!.querySelector("[data-highlighted]") as HTMLElement
+      ).getBoundingClientRect().width,
+      preWidth: pre.getBoundingClientRect().width,
+      lineHeight: parseFloat(getComputedStyle(pre).lineHeight),
+    };
+  };
+
+  it("paints a highlighted line across the whole row without line-numbers, not just behind its glyphs", async () => {
+    const rows = await lineRows(false);
+    expect(rows.display).to.deep.equal(["block", "block", "block"]);
+    // A single "a" is ~8px wide; the row is the full width of the <pre>.
+    expect(rows.highlightedWidth).to.be.greaterThan(rows.preWidth * 0.9);
+  });
+
+  it("keeps one rendered row per line in both line-numbers modes", async () => {
+    // The "\n" separating each line is a real text node in both renderers. Inside a plain block
+    // container each one becomes its own anonymous block, doubling every code block's row
+    // spacing; the grid container that makes the highlight span the row drops whitespace-only
+    // runs instead of boxing them.
+    for (const lineNumbers of [false, true]) {
+      const rows = await lineRows(lineNumbers);
+      for (const step of rows.steps) {
+        expect(
+          step,
+          `line-numbers=${lineNumbers} row step should be one line-height (${rows.lineHeight}px)`
+        ).to.be.lessThan(rows.lineHeight * 1.5);
+        expect(step).to.be.greaterThan(rows.lineHeight * 0.5);
+      }
+    }
+  });
+
   it("ignores non-line-range highlight entries when merging highlight-lines", async () => {
     const el = (await fixture(
       html`<lr-code-block code=${"a\nb\nc"}></lr-code-block>`
@@ -2255,4 +2315,101 @@ it("does not write highlighted state from the default per-language load once the
     internalsOf(el).highlightedHtml,
     "must not be written on a disconnected instance"
   ).to.equal(null);
+});
+
+describe("gutter line-button pointer feedback", () => {
+  /** Resolves what a `declaration` computes to *inside this component's shadow root*, where the
+   *  `--lr-*` design tokens live. */
+  function resolvedInShadow(
+    el: LyraCodeBlock,
+    declaration: string,
+    property: string
+  ): string {
+    const probe = document.createElement("span");
+    probe.setAttribute("style", declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  async function gutterFixture(): Promise<LyraCodeBlock> {
+    const el = (await fixture(
+      html`<lr-code-block
+        style="--lr-transition-fast: 0s"
+        code=${"a\nb"}
+        line-numbers
+        activatable-lines
+      ></lr-code-block>`
+    )) as LyraCodeBlock;
+    await el.updateComplete;
+    return el;
+  }
+
+  async function moveMouseTo(target: HTMLElement): Promise<void> {
+    target.scrollIntoView({ block: "center", inline: "center" });
+    const rect = target.getBoundingClientRect();
+    await sendMouse({
+      type: "move",
+      position: [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ],
+    });
+  }
+
+  it("tints the gutter button while it is hovered", async function () {
+    if (window.matchMedia("(hover: none), (pointer: coarse)").matches)
+      this.skip();
+    const el = await gutterFixture();
+    const gutter = el.shadowRoot!.querySelector(
+      '[part~="line-button"]'
+    ) as HTMLElement;
+    expect(gutter != null, "expected a gutter line button").to.equal(true);
+    const hovered = resolvedInShadow(
+      el,
+      "background: var(--lr-color-brand-quiet)",
+      "background-color"
+    );
+    expect(getComputedStyle(gutter).backgroundColor).to.not.equal(hovered);
+
+    try {
+      await resetMouse();
+      await moveMouseTo(gutter);
+      await waitUntil(
+        () => getComputedStyle(gutter).backgroundColor === hovered,
+        "the hovered gutter button never painted the brand-quiet tint"
+      );
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it("deepens the gutter button while it is held", async function () {
+    if (window.matchMedia("(hover: none), (pointer: coarse)").matches)
+      this.skip();
+    const el = await gutterFixture();
+    const gutter = el.shadowRoot!.querySelector(
+      '[part~="line-button"]'
+    ) as HTMLElement;
+    const held = resolvedInShadow(
+      el,
+      "background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))",
+      "background-color"
+    );
+    expect(getComputedStyle(gutter).backgroundColor).to.not.equal(held);
+
+    try {
+      await resetMouse();
+      await moveMouseTo(gutter);
+      await sendMouse({ type: "down" });
+      await waitUntil(
+        () => getComputedStyle(gutter).backgroundColor === held,
+        "the held gutter button never painted the pressed tint"
+      );
+    } finally {
+      await sendMouse({ type: "up" });
+      await resetMouse();
+    }
+  });
 });

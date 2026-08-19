@@ -500,7 +500,7 @@ it('preserves an explicitly empty host aria-label on both progress roles', async
 it('constructs progress label observers in the adopted owner realm', async () => {
   const frame = document.createElement('iframe');
   document.body.append(frame);
-  const frameWindow = frame.contentWindow!;
+  const frameWindow = frame.contentWindow as Window & typeof globalThis;
   const frameDocument = frame.contentDocument!;
   const observerDescriptor = Object.getOwnPropertyDescriptor(frameWindow, 'MutationObserver');
   const NativeMutationObserver = frameWindow.MutationObserver;

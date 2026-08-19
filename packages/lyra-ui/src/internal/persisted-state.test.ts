@@ -101,7 +101,7 @@ describe('persisted-state', () => {
 
   it('does not throw when the value cannot be serialized (circular reference)', () => {
     const circular: Record<string, unknown> = {};
-    circular.self = circular;
+    circular['self'] = circular;
     expect(() => writePersistedState('lr-test:circular', circular)).to.not.throw();
     expect(localStorage.getItem('lr-test:circular')).to.equal(null);
   });

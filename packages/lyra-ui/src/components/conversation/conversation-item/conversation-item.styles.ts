@@ -7,12 +7,10 @@ export const styles = css`
     line-height: var(--lr-line-height-1-4);
   }
 
-  /* [part='base'] is a plain layout wrapper (no ARIA role of its own) --
-     the interactive/selectable region is [part='select-button'] alone, kept free
-     of focusable descendants (see the class doc's nested-interactive note).
-     The row-level hover/active background treatments still live here so
-     hovering anywhere across the row -- including over the trailing
-     rename/actions controls -- highlights the whole thing as one row. */
+  /* Plain layout wrapper, no ARIA role: [part='select-button'] alone is the interactive/selectable
+     region, kept free of focusable descendants (class doc's nested-interactive note). Row-level
+     hover/active backgrounds live here so hovering anywhere -- rename/actions controls included --
+     highlights the whole row. */
   [part='base'] {
     position: relative;
     display: flex;
@@ -33,25 +31,19 @@ export const styles = css`
     pointer-events: none;
     z-index: var(--lr-layer-content);
   }
-  /* Density escape -- same convention as lr-empty's compact. Conversation rows render in sidebar
-     lists, so the tuned values sit behind inline var() fallbacks (rather than a :host declaration,
-     which every instance re-declares and so shadows any ancestor value) letting a list retune every
-     row at once from the outside; the fallbacks are the pre-existing values scaled down one step, so
-     an unset row renders unchanged.
+  /* Density escape -- same convention as lr-empty's compact. Tuned values sit in inline var()
+     fallbacks, not a :host declaration (re-declared per instance, shadowing ancestor values), so a
+     sidebar list retunes every row from outside; each fallback is the prior value one step down, so
+     an unset row is unchanged. MUST precede the :host([active]) rules below -- equal specificity,
+     so source order alone decides any declaration they share, and active is the stronger appearance
+     statement.
 
-     MUST stay before the :host([active]) rules below: :host([compact]) [part='base'] and
-     :host([active]) [part='base'] are equal specificity, so source order alone decides which wins
-     should either ever grow a declaration the other also sets. active is the stronger statement of
-     appearance ("this is the open session"), so it goes last.
-
-     Deliberately NOT changed by compact: [part='rename-button']'s min-inline-size/min-block-size
-     (the shared --lr-icon-button-size target floor -- a density flag must never silently opt a row
-     out of it; a consumer who really wants a sub-floor row lowers that token at an ancestor),
+     compact deliberately skips [part='rename-button']'s min-inline-size/min-block-size (the shared
+     --lr-icon-button-size target floor -- lower that token at an ancestor instead),
      [part='start']'s min sizes, and the excerpt/timestamp font sizes (already the smallest steps
-     in use here; font size is retuned through the host's inherited font-size instead). The excerpt
-     also stays visible: it is already single-line ellipsised and ?hidden-bindable per row, so it
-     costs exactly one line -- hiding content is a per-row consumer decision, not a side effect of a
-     density flag. */
+     here; retune via the host's inherited font-size). The excerpt stays visible too: single-line
+     ellipsised and ?hidden-bindable per row, it costs one line, and hiding it is a consumer
+     decision. */
   :host([compact]) [part='base'] {
     padding: var(--lr-conversation-item-compact-padding, var(--lr-space-xs) var(--lr-space-s));
     gap: var(--lr-conversation-item-compact-gap, var(--lr-space-2xs));
@@ -59,28 +51,38 @@ export const styles = css`
   :host(:hover) [part='base'] {
     background: color-mix(in srgb, var(--lr-color-text) 6%, transparent);
   }
-  /* Pressed. Note the two very different selectors here: :host(:active) is the transient
-     pointer/keyboard press, :host([active]) below is "this is the open session". The press tint is
-     the hover tint escalated to --lr-color-mix-active, mixed toward --lr-color-mix-partner (which
-     tracks the text color) so it moves in the right direction on a light and a dark surface alike.
-     [part='base'] is a plain wrapper div, but :active propagates from the pressed [part='select-button']
-     inside it up through the host, so the whole row answers a press the way it answers hover. */
+  /* Pressed. :host(:active) is the transient pointer/keyboard press; :host([active]) below is 'this
+     is the open session'. The press tint is the hover tint escalated to --lr-color-mix-active
+     toward --lr-color-mix-partner (which tracks the text color), so it moves the right way on light
+     and dark surfaces alike. :active propagates up from the pressed [part='select-button'], so this
+     plain wrapper div answers a press the way it answers hover. */
   :host(:active) [part='base'] {
     background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
-  /* Placed after the :hover and :active rules (equal selector specificity) so an
-     active-and-hovered row keeps the stronger active tint instead of the
-     two backgrounds visually competing. */
+  /* Both rules above are (0,3,0), like this one, so being written last hands this rule BOTH
+     contests: an active-and-hovered row keeps the stronger active tint instead of two backgrounds
+     competing. Right for hover, wrong for press -- hence the rule below. */
   :host([active]) [part='base'] {
     background: var(--lr-conversation-item-active-bg, var(--lr-color-brand-quiet));
   }
+  /* The open session's own held state: without it the already-open row answers a click with
+     nothing, because the rule above declares the same background the generic :host(:active) rule
+     does and out-ranks it on source order. Hover is droppable once a row is visibly open; a press
+     ('your click landed') is not. (0,4,0) via the extra :active inside :host(), so it settles
+     against the [active] rule on specificity, not ordering. The mix starts from
+     --lr-conversation-item-active-bg rather than transparent, so retinting the active row deepens
+     THAT colour, not the stock one. */
+  :host([active]:active) [part='base'] {
+    background: color-mix(
+      in oklab,
+      var(--lr-conversation-item-active-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
 
-  /* text-quiet's contrast ratio against brand-quiet lands at ~4.25:1 --
-     just under the WCAG AA 4.5:1 floor for normal-size text -- even though
-     it comfortably passes against the plain (non-active) background used
-     the rest of the time. Same class of bug already hit and fixed in
-     lr-attachment-chip's [part='size'] and lr-chat-message's
-     [part='footer']; same fix, full-strength text color once active. */
+  /* text-quiet on brand-quiet is ~4.25:1, under the WCAG AA 4.5:1 floor for normal-size text,
+     though it passes against the plain non-active background. Same fix as lr-attachment-chip's
+     [part='size'] and lr-chat-message's [part='footer']: full-strength text color once active. */
   :host([active]) [part='excerpt'],
   :host([active]) [part='timestamp'] {
     color: var(--lr-conversation-item-active-color, var(--lr-color-text));
@@ -119,9 +121,8 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-size-0-125rem);
   }
-  /* The label/excerpt/meta column's own inter-row gap collapses entirely under compact -- the three
-     lines already carry their own line-height, so the extra hairline is the first thing to go. No
-     var() hatch here: this one has no smaller step left to retune to. */
+  /* The label/excerpt/meta column's inter-row gap collapses entirely: the three lines carry their
+     own line-height, so the hairline goes first. No var() hatch -- no smaller step to retune to. */
   :host([compact]) [part='content'] {
     gap: 0;
   }
@@ -160,13 +161,11 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
   }
-  /* Needed because of the unconditional display: block above -- an author-origin declaration
-     always beats the UA stylesheet's [hidden] { display: none }, regardless of specificity, so
-     without this the ?hidden binding on [part='excerpt'] would be a visual no-op. Same reasoning
-     as [part='actions'][hidden] below, and mirrors lr-timeline-item's identical
-     [part='timestamp'][hidden] / [part='description'][hidden] rules for its own slot-wins-over-
-     property parts. [part='meta'] doesn't need the same override -- it has no author display
-     declaration of its own, so the UA stylesheet's default [hidden] handling already applies. */
+  /* The author-origin display: block above beats the UA stylesheet's [hidden] { display: none }
+     regardless of specificity, so without this the ?hidden binding is a visual no-op. Same as
+     [part='actions'][hidden] below and lr-timeline-item's [part='timestamp'][hidden] and
+     [part='description'][hidden]. [part='meta'] declares no display, so UA [hidden] handling
+     applies. */
   [part='excerpt'][hidden] {
     display: none;
   }
@@ -180,9 +179,8 @@ export const styles = css`
     font-variant-numeric: tabular-nums;
   }
 
-  /* A conversation-item row has real room (unlike a compact chip pill) -- the rename button gets
-     the full shared --lr-icon-button-size floor directly, no capped/split-glyph compromise
-     needed. */
+  /* A row has real room (unlike a compact chip pill), so the rename button takes the full shared
+     --lr-icon-button-size floor directly -- no capped/split-glyph compromise. */
   [part='rename-button'] {
     flex: 0 0 auto;
     display: inline-flex;

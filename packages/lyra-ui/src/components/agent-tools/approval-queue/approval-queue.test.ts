@@ -1,4 +1,5 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './approval-queue.js';
 import type { LyraApprovalQueue, ToolApprovalRequest } from './approval-queue.class.js';
 import type { LyraToolApprovalDialog } from '../tool-approval-dialog/tool-approval-dialog.class.js';
@@ -194,6 +195,72 @@ describe('lr-approval-queue', () => {
     expect(selections).to.equal(0);
     expect(el.selectedInvocationId).to.equal(null);
     expect(el.open).to.be.false;
+  });
+
+  it('paints and de-affords a resolved row while a pending sibling keeps its hover and press feedback', async () => {
+    const mixed: ToolApprovalRequest[] = [
+      { id: 'call-1', toolName: 'pending_tool', args: {} },
+      { id: 'call-2', toolName: 'approved_tool', args: {}, status: 'approved' },
+    ];
+    const el = await fixture<LyraApprovalQueue>(html`
+      <lr-approval-queue .requests=${mixed}></lr-approval-queue>
+    `);
+    await el.updateComplete;
+    const [pending, resolved] = [
+      ...el.shadowRoot!.querySelectorAll('[part="request"]'),
+    ] as HTMLButtonElement[];
+    // The IDL flag was already true while the row looked and felt exactly like a pending one, so
+    // everything below asserts the rendered result instead.
+    expect(pending.disabled).to.be.false;
+    expect(resolved.disabled).to.be.true;
+
+    expect(getComputedStyle(pending).cursor).to.equal('pointer');
+    expect(getComputedStyle(resolved).cursor).to.equal('not-allowed');
+    expect(Number(getComputedStyle(pending).opacity)).to.equal(1);
+    expect(Number(getComputedStyle(resolved).opacity)).to.be.lessThan(1);
+
+    const pendingResting = getComputedStyle(pending).backgroundColor;
+    const resolvedResting = getComputedStyle(resolved).backgroundColor;
+    const center = (node: Element): [number, number] => {
+      const rect = node.getBoundingClientRect();
+      return [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ];
+    };
+    try {
+      await resetMouse();
+      await sendMouse({ type: 'move', position: center(pending) });
+      await waitUntil(
+        () => getComputedStyle(pending).backgroundColor !== pendingResting,
+        'a pending row must still light up under the pointer',
+      );
+      const pendingHover = getComputedStyle(pending).backgroundColor;
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(pending).backgroundColor !== pendingHover,
+        'a pending row must still darken under a press',
+      );
+      await sendMouse({ type: 'up' });
+
+      await sendMouse({ type: 'move', position: center(resolved) });
+      await waitUntil(
+        () => getComputedStyle(pending).backgroundColor === pendingResting,
+        'the pointer should have left the pending row',
+      );
+      expect(
+        getComputedStyle(resolved).backgroundColor,
+        'a resolved row must not light up under the pointer',
+      ).to.equal(resolvedResting);
+      await sendMouse({ type: 'down' });
+      expect(
+        getComputedStyle(resolved).backgroundColor,
+        'a resolved row must not react to a press either',
+      ).to.equal(resolvedResting);
+      await sendMouse({ type: 'up' });
+    } finally {
+      await resetMouse();
+    }
   });
 
   it('omits requests with empty or blank identities before counts, selection, and rendering', async () => {

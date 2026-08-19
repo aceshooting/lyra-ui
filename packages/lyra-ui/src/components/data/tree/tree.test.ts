@@ -800,3 +800,27 @@ it('collapseAll() resets a dangling/non-existent activeId to the first enabled r
   await el.updateComplete;
   expect(el.activeId).to.equal('1');
 });
+
+describe('explicitly empty host aria-label', () => {
+  it('lets the host aria-label win over the label property, including an explicitly empty one', async () => {
+    const explicit = (await fixture(
+      html`<lr-tree label="Files" aria-label="" .data=${data}></lr-tree>`,
+    )) as LyraTree;
+    await explicit.updateComplete;
+    const base = explicit.shadowRoot!.querySelector('[part~="tree"]')!;
+    expect(base.hasAttribute('aria-label')).to.equal(true);
+    expect(base.getAttribute('aria-label')).to.equal('');
+
+    const authored = (await fixture(
+      html`<lr-tree label="Files" aria-label="Project files" .data=${data}></lr-tree>`,
+    )) as LyraTree;
+    await authored.updateComplete;
+    expect(authored.shadowRoot!.querySelector('[part~="tree"]')!.getAttribute('aria-label')).to.equal(
+      'Project files',
+    );
+
+    const omitted = (await fixture(html`<lr-tree label="Files" .data=${data}></lr-tree>`)) as LyraTree;
+    await omitted.updateComplete;
+    expect(omitted.shadowRoot!.querySelector('[part~="tree"]')!.getAttribute('aria-label')).to.equal('Files');
+  });
+});

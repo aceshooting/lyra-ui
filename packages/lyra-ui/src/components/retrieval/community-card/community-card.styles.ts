@@ -14,9 +14,8 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
   }
-  /* Strips the card chrome for a community card nested inside an already-bordered/backgrounded
-     container -- same escape hatch as this component's own sibling lr-entity-card's identical
-     frame='plain' rule. */
+  /* Strips the card chrome for a card nested inside an already-bordered/backgrounded container --
+     the same escape hatch as sibling lr-entity-card's identical frame='plain' rule. */
   :host([frame='plain']) [part='base'] {
     padding: 0;
     border: 0;
@@ -52,8 +51,8 @@ export const styles = css`
   [part='title'] button:hover {
     text-decoration: underline;
   }
-  /* The label already renders in --lr-color-text, which is what --lr-color-mix-partner tracks, so
-     mixing the *text* would move nothing; the pressed signal is a wash mixed from the button's own
+  /* The label already renders in --lr-color-text, which --lr-color-mix-partner tracks, so mixing
+     the *text* would move nothing; the pressed signal is a wash mixed from the button's own
      transparent background instead. */
   [part='title'] button:active {
     text-decoration: underline;

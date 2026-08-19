@@ -541,3 +541,21 @@ it('is accessible under frame="plain"', async () => {
   await overlay.updateComplete;
   await expect(overlay).to.be.accessible();
 });
+
+describe('explicitly empty host aria-label', () => {
+  it('keeps the status group explicitly unnamed instead of falling back to the label property', async () => {
+    const explicit = (await fixture(
+      html`<lr-flow-run-status label="Progress" aria-label=""></lr-flow-run-status>`,
+    )) as LyraFlowRunStatus;
+    await explicit.updateComplete;
+    const base = explicit.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.hasAttribute('aria-label')).to.equal(true);
+    expect(base.getAttribute('aria-label')).to.equal('');
+
+    const omitted = (await fixture(
+      html`<lr-flow-run-status label="Progress"></lr-flow-run-status>`,
+    )) as LyraFlowRunStatus;
+    await omitted.updateComplete;
+    expect(omitted.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Progress');
+  });
+});

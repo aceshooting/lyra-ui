@@ -4,7 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import { nextId } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { chevronIcon, playIcon, pauseIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import {
@@ -365,10 +365,6 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
       entry.description ?? '',
     ],
     emitChange: (detail) => this.emit('lr-change', detail),
-    // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- native focus/blur (already
-    // relayed by the controller itself) are the only focus notifications this control emits now.
-    // The controller still requires this hook, so it's a no-op rather than an omitted property.
-    emitFocusAlias: () => {},
     beforeValueChange: (value) => {
       const previewTarget = this.internalPreviewTargetId;
       if (previewTarget !== null && previewTarget !== value) this.stopInternalPreview();
@@ -1105,7 +1101,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
           aria-expanded=${this.open ? 'true' : 'false'}
           aria-controls=${this.listId}
           aria-activedescendant=${activeId}
-          aria-label=${this.getAttribute('aria-label') || (hasLabel ? nothing : this.placeholder || this.localize('voice'))}
+          aria-label=${hostAriaLabel(this) ?? (hasLabel ? nothing : this.placeholder || this.localize('voice'))}
           aria-describedby=${describedBy || nothing}
           aria-required=${this.required ? 'true' : 'false'}
           aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
@@ -1146,7 +1142,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
             id=${this.controlId}
             part="combobox-input"
             role="combobox"
-            aria-label=${this.getAttribute('aria-label') || (hasLabel ? nothing : this.placeholder || this.localize('voice'))}
+            aria-label=${hostAriaLabel(this) ?? (hasLabel ? nothing : this.placeholder || this.localize('voice'))}
             aria-expanded=${this.open ? 'true' : 'false'}
             aria-controls=${this.listId}
             aria-activedescendant=${activeId}

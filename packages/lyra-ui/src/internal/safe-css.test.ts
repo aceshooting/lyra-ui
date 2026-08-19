@@ -10,7 +10,7 @@ import {
 describe('sanitizeCssColor (the swatch guard)', () => {
   it('no longer exports the historical sanitizeSwatchColor alias', async () => {
     const module = (await import('./safe-css.js')) as Record<string, unknown>;
-    expect(module.sanitizeSwatchColor).to.equal(undefined);
+    expect(module['sanitizeSwatchColor']).to.equal(undefined);
   });
 
   it('allows hex, keyword, function, and custom-property color syntax', () => {

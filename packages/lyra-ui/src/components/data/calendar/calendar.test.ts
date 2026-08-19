@@ -1,8 +1,9 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './calendar.js';
 import type { LyraCalendar } from './calendar.js';
 import { formatISO } from '../../forms/date-picker/calendar-core.js';
 import { styles } from './calendar.styles.js';
+import { sendKeys } from '@web/test-runner-commands';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 /**
@@ -598,4 +599,127 @@ it('centers the chevron glyph in each icon-only month-nav button', async () => {
     const offset = Math.abs(mark.left + mark.width / 2 - (box.left + box.width / 2));
     expect(offset, `chevron is ${offset}px off the button's centre`).to.be.at.most(0.5);
   }
+});
+
+// Regression: [part='day'][data-outside='true'] used to be declared AFTER the [part='day']:hover
+// and :active rules. All three are (0,2,0), so source order alone decided, and the static
+// adjacent-month fill won -- every leading/trailing day in the 6x7 grid (up to a dozen cells, all
+// of them clickable: the click handler calls selectDate for an outside cell exactly as it does for
+// an in-month one) answered the pointer with nothing at all. Overriding the outside paint hook to a
+// literal makes the masking provable through getComputedStyle instead of by coincidence.
+it('shows hover and pressed feedback on an adjacent-month day, not just the flat outside-month fill', async () => {
+  const wrapper = (await fixture(html`
+    <div style="--lr-calendar-day-outside-bg: rgb(9, 9, 9)">
+      <lr-calendar view-date="2026-07-01"></lr-calendar>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-calendar') as LyraCalendar;
+  await el.updateComplete;
+  const outside = el.shadowRoot!.querySelector<HTMLElement>('[part="day"][data-outside="true"]')!;
+  outside.scrollIntoView({ block: 'center', inline: 'center' });
+  const restingColor = getComputedStyle(outside).backgroundColor;
+  expect(
+    restingColor,
+    'sanity: the outside-month paint hook must actually apply while resting',
+  ).to.equal('rgb(9, 9, 9)');
+
+  const rect = outside.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    await waitUntil(
+      () => getComputedStyle(outside).backgroundColor !== restingColor,
+      'a hovered adjacent-month day showed no hover feedback at all',
+    );
+    const hoveredColor = getComputedStyle(outside).backgroundColor;
+
+    await sendMouse({ type: 'down' });
+    await waitUntil(
+      () => getComputedStyle(outside).backgroundColor !== hoveredColor,
+      'a pressed adjacent-month day showed no active feedback beyond its hover fill',
+    );
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
+});
+
+// Same ordering defect, other end of it: the outside-month rule also out-ranked
+// [part='day'][data-selected='true'], so picking an adjacent-month day (a supported interaction --
+// the cell's own click handler selects it) left nothing on screen saying which day was chosen.
+it('renders the selected fill on an adjacent-month day, not the outside-month fill', async () => {
+  const wrapper = (await fixture(html`
+    <div style="--lr-calendar-day-selected-bg: rgb(1, 2, 3); --lr-calendar-day-outside-bg: rgb(9, 9, 9)">
+      <lr-calendar view-date="2026-07-01"></lr-calendar>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-calendar') as LyraCalendar;
+  await el.updateComplete;
+  const outsideDate = el
+    .shadowRoot!.querySelector<HTMLElement>('[part="day"][data-outside="true"]')!
+    .getAttribute('data-date')!;
+  el.value = outsideDate;
+  await el.updateComplete;
+  const cell = el.shadowRoot!.querySelector<HTMLElement>(`[data-date="${outsideDate}"]`)!;
+  expect(cell.getAttribute('data-outside'), 'sanity: still an adjacent-month cell').to.equal('true');
+  expect(cell.getAttribute('data-selected'), 'sanity: and now the selected one').to.equal('true');
+  expect(
+    getComputedStyle(cell).backgroundColor,
+    'a selected adjacent-month day must paint as selected',
+  ).to.equal('rgb(1, 2, 3)');
+});
+
+// Regression: [part='day'][data-today='true'] used to be declared AFTER [part='day']:focus-visible.
+// Both are (0,2,0) and both declare `outline`/`outline-offset`, so the today decoration won and the
+// focus ring never rendered on today's cell -- focused and unfocused were the same pixels. The two
+// only differ once --lr-calendar-day-today-outline-color is moved off its --lr-color-brand default,
+// which --lr-focus-ring-color also resolves to. Focus arrives by real Tab rather than .focus():
+// Firefox declines :focus-visible for a programmatic focus with no keyboard interaction behind it,
+// so a .focus()-driven version of this test silently proves nothing there.
+it("renders the focus ring, not the today outline, on a focused today cell", async () => {
+  const wrapper = (await fixture(html`
+    <div style="--lr-calendar-day-today-outline-color: rgb(10, 11, 12)">
+      <button type="button">before</button>
+      <lr-calendar></lr-calendar>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-calendar') as LyraCalendar;
+  await el.updateComplete;
+  const today = el.shadowRoot!.querySelector<HTMLElement>('[part="day"][data-today="true"]')!;
+  expect(
+    getComputedStyle(today).outlineColor,
+    'sanity: the today paint hook must apply while unfocused',
+  ).to.equal('rgb(10, 11, 12)');
+
+  (wrapper.querySelector('button') as HTMLElement).focus();
+  // First Tab lands on the previous-month nav button, whose :focus-visible rule declares the very
+  // same `outline` shorthand the day cell's does -- so it is the reference ring, read live rather
+  // than restated as a literal.
+  await sendKeys({ press: 'Tab' });
+  const nav = el.shadowRoot!.activeElement as HTMLElement;
+  const focusRing = getComputedStyle(nav).outlineColor;
+  const focusRingWidth = getComputedStyle(nav).outlineWidth;
+  expect(
+    focusRing,
+    'sanity: the focus ring and the today outline must be different colours here',
+  ).to.not.equal('rgb(10, 11, 12)');
+
+  let guard = 0;
+  while (guard++ < 8 && el.shadowRoot!.activeElement !== today) await sendKeys({ press: 'Tab' });
+  expect(el.shadowRoot!.activeElement === today, "Tab must reach today's cell").to.equal(true);
+  expect(
+    getComputedStyle(today).outlineColor,
+    'a focused today cell must show the focus ring, not the static today outline',
+  ).to.equal(focusRing);
+  expect(getComputedStyle(today).outlineWidth).to.equal(focusRingWidth);
+
+  // ...and the today decoration comes straight back once the roving focus moves off it.
+  await sendKeys({ press: 'ArrowRight' });
+  await waitUntil(
+    () => el.shadowRoot!.activeElement !== today,
+    'ArrowRight never moved the roving focus off today',
+  );
+  expect(getComputedStyle(today).outlineColor).to.equal('rgb(10, 11, 12)');
 });

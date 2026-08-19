@@ -5,47 +5,31 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
     max-inline-size: 100%;
-    /* Sequential ramp endpoints for the data-driven cell colors (canvas can't
-       consume var() directly, so heatmap.ts resolves these via
-       getComputedStyle and interpolates between them). Component-specific
-       business color — exposed so hosts can retheme
-       the ramp without raw hex leaking into the public API. */
+    /* Sequential ramp endpoints for the data-driven cell colors. Canvas can't consume var(), so
+       heatmap.ts resolves these through getComputedStyle and interpolates between them; tokens,
+       not literals, so hosts retheme the ramp without raw hex in the public API. */
     --_lr-heatmap-scale-lo: var(--lr-color-brand-quiet);
     --_lr-heatmap-scale-hi: var(--lr-color-brand);
-    /* No-data cell fill (the -1 sentinel / NaN case) — same resolve-via-
-       getComputedStyle pattern as the ramp endpoints above, so hosts can
-       retheme it instead of it being a hardcoded literal in heatmap.ts. */
+    /* No-data cell fill (the -1 sentinel / NaN case), resolved like the ramp above -- a token so
+       hosts can retheme it rather than a literal in heatmap.ts. */
     --_lr-heatmap-no-data-fill: var(--lr-color-no-data);
-    /* Canvas-drawn axis/month/weekday label font — same resolve-via-
-       getComputedStyle pattern as the ramp endpoints above (canvas can't
-       consume var() directly). */
+    /* Canvas-drawn axis/month/weekday label font, resolved like the ramp above. */
     --_lr-heatmap-label-font: var(--lr-size-10px) var(--lr-font);
-    /* [part="tooltip"] is a real DOM element (not canvas-drawn), so unlike
-       the tokens above it consumes these var()s directly — no getComputedStyle
-       resolution needed. Own tokens (not the bare --lr-color-surface/-text)
-       so a host can retheme just the heatmap tooltip, same rationale as
-       chart.ts's --lr-chart-tooltip-bg/-text. */
+    /* [part="tooltip"] is real DOM, so it consumes these var()s directly -- no getComputedStyle.
+       Own tokens rather than bare --lr-color-surface/-text so a host can retheme just the heatmap
+       tooltip, as chart.ts does with --lr-chart-tooltip-bg/-text. */
     --_lr-heatmap-tooltip-bg: var(--lr-color-surface);
     --_lr-heatmap-tooltip-text: var(--lr-color-text);
-    /* Canvas-drawn focus-ring stroke around the keyboard-focused cell — same
-       resolve-via-getComputedStyle pattern as the ramp endpoints (canvas
-       can't consume var() directly). A dedicated token (rather than reusing
-       --lr-focus-ring-color straight from tokens.styles.ts) so a host can
-       retheme the in-canvas ring independently of every other :focus-visible
-       outline in the library, while defaulting to that same brand color —
-       also reused by the [part="canvas"]:focus-visible outline below so the
-       two stay visually in sync. */
+    /* Canvas-drawn focus ring on the keyboard-focused cell, resolved like the ramp above. Own
+       token, defaulting to --lr-focus-ring-color, so it retunes apart from every other
+       :focus-visible outline; [part="canvas"]:focus-visible below reuses it. */
     --_lr-heatmap-focus-ring-color: var(--lr-focus-ring-color);
-    /* Canvas-drawn ring around annotated cells — same resolve-via-
-       getComputedStyle pattern. Defaults to --lr-color-danger (a loud,
-       attention-grabbing color distinct from the sequential data ramp) so an
-       annotation reads clearly against any point on that ramp. */
+    /* Canvas-drawn ring around annotated cells, resolved like the ramp above. --lr-color-danger is
+       loud and distinct from the sequential data ramp, so it reads against any point on it. */
     --_lr-heatmap-annotation-color: var(--lr-color-danger);
-    /* Canvas-drawn ring around the persistently selectedCell — same
-       resolve-via-getComputedStyle pattern. A dedicated token so a host can
-       retheme it independently of the focus ring
-       (--lr-heatmap-focus-ring-color) and the annotation ring
-       (--lr-heatmap-annotation-color) it's drawn between. */
+    /* Canvas-drawn ring around the persistent selectedCell, resolved like the ramp above. Its own
+       token so it retunes apart from the focus ring (--lr-heatmap-focus-ring-color) and annotation
+       ring (--lr-heatmap-annotation-color) it is drawn between. */
     --_lr-heatmap-selected-color: var(--lr-color-success);
   }
   [part="base"] {
@@ -59,17 +43,15 @@ export const styles = css`
   canvas {
     display: block;
     inline-size: 100%;
-    /* The 2D context defaults ctx.direction to 'inherit' (the canvas element's computed
-       direction), and the axis labels are drawn with the default textAlign:'start'. Under an
-       ancestor dir="rtl" that 'start' anchors to the right, so a left-drawn row label (x=2/x=4)
-       runs off the left edge and only its trailing glyph survives ("Mon" -> "n"). The grid is
-       positioned physically regardless of direction (see the [part='cells'] direction:ltr pin
-       and the arrow-key note in heatmap.class.ts), so the canvas is pinned LTR to match. */
+    /* ctx.direction defaults to 'inherit' and labels use the default textAlign:'start', so under
+       an ancestor dir="rtl" a left-drawn row label (x=2/x=4) anchors right, runs off the left edge
+       and keeps only its trailing glyph. The grid is positioned physically either way (see the
+       [part='cells'] direction:ltr pin and heatmap.class.ts's arrow-key note), so the canvas is
+       pinned LTR too. */
     direction: ltr;
-    /* Only takes visual effect when the canvas itself is the clickable/focusable surface (the
-       default, accessible-cells unset) -- [part='canvas'][aria-hidden] below turns off
-       pointer-events entirely once the accessible-cells overlay takes over hit-testing, so this
-       never shows a pointer over a canvas the mouse can't actually interact with. */
+    /* Visible only while the canvas is the clickable surface (the default, accessible-cells
+       unset): [part='canvas'][aria-hidden] below drops pointer-events once the overlay takes over
+       hit-testing, so no pointer appears over a canvas the mouse can't use. */
     cursor: pointer;
   }
   [part="canvas"]:hover {
@@ -77,10 +59,9 @@ export const styles = css`
       var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color));
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* Neither the canvas nor a cell has a background of its own to tint -- the fill under the pointer
-     is painted into the bitmap from the consumer's data -- so the pointer feedback is carried by the
-     outline, and the pressed step is the ring thickening from a hairline to the full focus-ring
-     width. */
+  /* Neither the canvas nor a cell has a background to tint -- the fill under the pointer is
+     painted into the bitmap from consumer data -- so the outline carries the feedback, and the
+     pressed step is the ring thickening from a hairline to the full focus-ring width. */
   [part="canvas"]:active {
     outline: var(--lr-focus-ring-width) solid
       var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color));
@@ -171,9 +152,9 @@ export const styles = css`
       )
     );
   }
-  /* Flex row order already follows inherited direction, placing the low
-     endpoint at inline-start. Mirror the physical CSS gradient as well so
-     its colors stay aligned with those labels, including custom step ramps. */
+  /* Flex row order already follows inherited direction, putting the low endpoint at inline-start;
+     mirror the physical gradient too so its colors stay aligned with those labels, custom step
+     ramps included. */
   :host(:dir(rtl)) [part="legend"] .bar {
     transform: scaleX(-1);
   }

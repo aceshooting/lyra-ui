@@ -8,11 +8,10 @@ export const styles = css`
     display: contents;
   }
   [part~='popup'] {
-    /* Positioned by internal/positioner.ts, which writes physical position/left/top itself. The
-       baseline must use those same physical properties: inset-inline-start becomes right under
-       RTL and would remain active beside the JS-written left, stretching or pinning the popup.
-       The element must still be laid out (not display:none) while inactive is expressed by hiding
-       it, or the first measurement would read a zero rect. */
+    /* Positioned by internal/positioner.ts, which writes physical position/left/top itself, so the
+       baseline must use those same physical properties: inset-inline-start becomes right under RTL
+       and would stay active beside the JS-written left, stretching or pinning the popup. Inactive
+       is expressed by hiding, never display:none, or the first measurement reads a zero rect. */
     position: absolute;
     top: 0;
     /* policy-allow(physical-css): positioner.ts overwrites this exact physical property; a
@@ -34,16 +33,16 @@ export const styles = css`
     transition-duration: var(--hide-duration, var(--lr-duration-fast));
   }
   [part~='popup'][data-awaits-position] {
-    /* An active request without a live, placed anchor is not a hide transition: letting the old
-       surface fade at stale coordinates would paint unattached chrome for another frame. */
+    /* An active request without a live, placed anchor is not a hide transition -- fading the old
+       surface at stale coordinates paints unattached chrome for another frame. */
     transition: none;
   }
 
   [part~='hover-bridge'] {
-    /* A viewport-sized transparent box clipped down to the quad internal/positioner.ts writes
-       between the anchor and the popup, so a pointer crossing the distance gap never leaves
-       both at once. The coordinates are physical viewport pixels — a polygon spanning two
-       different boxes has no logical-property spelling — and land here as custom properties. */
+    /* A viewport-sized transparent box clipped to the quad internal/positioner.ts writes between
+       the anchor and the popup, so a pointer crossing the distance gap never leaves both at once.
+       The coordinates are physical viewport pixels -- a polygon spanning two different boxes has
+       no logical-property spelling -- and land here as custom properties. */
     position: fixed;
     inset: 0;
     z-index: calc(var(--lr-overlay-stack-index, var(--lr-layer-popover)) - 1);

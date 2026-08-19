@@ -488,12 +488,13 @@ describe('NativeMediaController', () => {
     }
   });
 
-  it('skips non-element nodes and tracks missing a kind attribute while cloning', () => {
+  it('skips non-element nodes and tracks carrying an unrecognized kind while cloning', () => {
     const consumer = document.createElement('div');
     const comment = document.createComment('not an element');
     const text = document.createTextNode('not an element either');
     const track = document.createElement('track');
-    track.src = 'https://example.test/no-kind.vtt';
+    track.src = 'https://example.test/unknown-kind.vtt';
+    track.setAttribute('kind', 'not-a-track-kind');
     const source = document.createElement('source');
     source.src = 'https://example.test/ok.mp4';
     consumer.append(comment, text, track, source);
@@ -502,6 +503,28 @@ describe('NativeMediaController', () => {
 
     expect(clones.length).to.equal(1);
     expect(clones[0]?.tagName).to.equal('SOURCE');
+  });
+
+  it("clones a <track> with no kind attribute as subtitles, matching HTML's missing-value default", () => {
+    const consumer = document.createElement('div');
+    consumer.innerHTML =
+      '<track src="/captions.vtt" srclang="en" label="English" default>';
+
+    const clones = cloneSafeMediaNodes(consumer.children, document);
+
+    expect(clones.length).to.equal(1);
+    expect(clones[0]?.tagName).to.equal('TRACK');
+    expect(clones[0]?.getAttribute('kind')).to.equal('subtitles');
+    expect(clones[0]?.getAttribute('srclang')).to.equal('en');
+    expect(clones[0]?.getAttribute('label')).to.equal('English');
+    expect(clones[0]?.hasAttribute('default')).to.equal(true);
+  });
+
+  it('leaves an explicitly empty kind out, since the empty string is not a valid keyword', () => {
+    const consumer = document.createElement('div');
+    consumer.innerHTML = '<track src="/captions.vtt" kind="" srclang="en" label="English">';
+
+    expect(cloneSafeMediaNodes(consumer.children, document).length).to.equal(0);
   });
 
   it('invokes an onEvent callback registered through the constructor for every observed native event', () => {

@@ -79,7 +79,7 @@ it('always renders the excerpt slot content', async () => {
     html`<lr-source-card title="a.pdf"><span slot="excerpt">Preview text</span></lr-source-card>`,
   )) as LyraSourceCard;
   const excerptSlot = el.shadowRoot!.querySelector('slot[name="excerpt"]') as HTMLSlotElement;
-  expect(excerptSlot.assignedElements()[0].textContent).to.equal('Preview text');
+  expect(excerptSlot.assignedElements()[0]!.textContent).to.equal('Preview text');
   expect((el.shadowRoot!.querySelector('[part="excerpt"]') as HTMLElement).hidden).to.be.false;
 });
 

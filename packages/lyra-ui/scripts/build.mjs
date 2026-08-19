@@ -6,6 +6,7 @@ import { compactBuildJavaScript } from './compact-build-js.mjs';
 import { checkLocalizationSlices } from './check-localization-slices.mjs';
 import { createMigrationRuntimeInventory } from './migrate-wa.mjs';
 import { normalizeMixinDeclarations } from './normalize-mixin-declarations.mjs';
+import { stripCssComments } from './strip-css-comments.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const tsc = join(
@@ -52,6 +53,15 @@ const compacted = await compactBuildJavaScript(join(packageDir, 'dist'));
 console.log(
   `Published JavaScript compacted: ${compacted.beforeBytes.toLocaleString('en')} -> ` +
     `${compacted.afterBytes.toLocaleString('en')} bytes across ${compacted.files} modules.`,
+);
+
+// esbuild's minifier treats a template literal's body as opaque -- it must, since the tag can read
+// `raw` -- so the CSS comments in every `css` tagged template survive compaction and ship. They
+// were 28% of emitted style bytes. Source keeps them; only the published copy loses them.
+const strippedCss = await stripCssComments(join(packageDir, 'dist'));
+console.log(
+  `Published CSS comments stripped: ${strippedCss.removedBytes.toLocaleString('en')} bytes from ` +
+    `${strippedCss.filesChanged} of ${strippedCss.files} modules.`,
 );
 
 // The public migration executable is deliberately assembled from only its two runtime modules

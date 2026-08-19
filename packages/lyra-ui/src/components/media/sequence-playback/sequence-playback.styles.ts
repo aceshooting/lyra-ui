@@ -5,10 +5,9 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     gap: var(--lr-space-s);
-    /* Derived from --lr-icon-button-size (0.35 * 2.5rem = 0.875rem, the
-       prior bare literal) so the rendered play/pause SVG icon (icons render
-       at width/height: 1em, so this font-size directly controls its pixel
-       size) tracks the button's own token instead of drifting from it. */
+    /* Derived from --lr-icon-button-size (0.35 * 2.5rem = 0.875rem, the prior bare literal) so the
+       play/pause SVG icon tracks the button's own token instead of drifting from it -- icons
+       render at width/height: 1em, so this font-size sets their pixel size. */
     --_lr-sequence-playback-icon-size: calc(var(--lr-icon-button-size) * 0.35);
   }
   [part="base"] {
@@ -17,11 +16,10 @@ export const styles = css`
     gap: var(--lr-space-s);
   }
   [part="play-button"] {
-    /* Already exactly the shared floor (2.5rem/40px) via inline-size/block-size for
-       this circular button's own shape -- min-inline-size/min-block-size are added
-       alongside (not swapped in) at the same value, so the floor is explicit and this
-       resolves through the shared token like every other icon-button in the library,
-       without disturbing the fixed circle. */
+    /* Already exactly the shared floor (2.5rem/40px) through inline-size/block-size for this
+       circular button's shape -- min-inline-size/min-block-size are added alongside at the same
+       value, not swapped in, so the floor is explicit and resolves through the shared token like
+       every other icon-button, without disturbing the fixed circle. */
     inline-size: var(--lr-icon-button-size);
     block-size: var(--lr-icon-button-size);
     min-inline-size: var(--lr-icon-button-size);
@@ -68,16 +66,13 @@ export const styles = css`
     accent-color: var(--lr-color-brand);
     cursor: pointer;
   }
-  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
-     -- (0,1,0) total, functionally identical selection to \`[part='slider']:hover:not(:disabled)\`
-     ((0,3,0)) but now losing (on the pseudo-element tiebreak) to a consumer's own
-     \`::part(slider):hover\` override ((0,1,1)) without that consumer needing !important. Same
-     fix as \`<lr-attachment-trigger>\`'s \`.trigger-button\` hover rule. */
-  /* The visible ink on a native range input is drawn by the UA from accent-color, not from
-     background -- so the interaction states move accent-color. (The old filter: brightness() bought
-     the same visual by multiplying every channel of the whole subtree; it did nothing to a pure
-     white or pure black accent, and it dimmed/lit the input's own focus ring along with the
-     track.) */
+  /* :where() zeroes the wrapped selectors' contribution, leaving :hover at (0,1,0) -- the same
+     weight as the :active rule below. Unwrapped this rule sits at (0,3,0) and out-ranks that
+     source-later pressed rule, so the slider would show no press. */
+  /* A native range input's visible ink is drawn by the UA from accent-color, not background, so
+     the interaction states move accent-color. filter: brightness() bought the same visual by
+     multiplying every channel of the subtree: it did nothing to a pure white or pure black accent,
+     and it dimmed/lit the input's own focus ring along with the track. */
   :where([part="slider"]):hover:where(:not(:disabled)) {
     accent-color: color-mix(
       in oklab,

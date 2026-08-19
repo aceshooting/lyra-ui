@@ -1,9 +1,9 @@
 import { css } from 'lit';
 
 export const styles = css`
-  /* The clip-rect + 1px-box technique rather than display: none or visibility: hidden, both of
-     which remove the content from the accessibility tree along with the viewport -- the whole point
-     here is that assistive technology still reaches it. */
+  /* The clip-rect + 1px-box technique, not display: none or visibility: hidden -- those drop the
+     content from the accessibility tree as well as the viewport, and the point here is that
+     assistive technology still reaches it. */
   :host {
     position: absolute !important;
     inline-size: var(--lr-size-1px) !important;

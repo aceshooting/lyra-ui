@@ -540,6 +540,40 @@ it('toast() moves the same alert into the shared Lyra toast stack and removes it
   expect(el.isConnected).to.be.false;
 });
 
+it('hides a queued toast\'s own base surface, not only the host the toast region masks', async () => {
+  const alerts: LyraAlert[] = [];
+  for (let index = 0; index < 4; index += 1) {
+    alerts.push(
+      (await fixture(html`<lr-alert style=${motionless}>Queued ${index}</lr-alert>`)) as LyraAlert,
+    );
+  }
+  const completions = alerts.map((alert) => alert.toast());
+  const queued = alerts[3]!;
+  await waitUntil(() => queued.hasAttribute('data-toast-queued'));
+  await queued.updateComplete;
+  const base = queued.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  expect(base.hidden, 'a queued alert marks its own base hidden').to.be.true;
+  expect(base.inert, 'and inert -- the platform-enforced half of the pair').to.be.true;
+
+  // <lr-toast> also hides the queued host outright, which masks whether the alert's own sheet
+  // honours that hidden attribute. Unmask the host and measure the base itself: [part='base']
+  // declares display: grid unconditionally, and an author-origin declaration outranks the UA
+  // stylesheet's [hidden] { display: none } whatever their specificities, so without a guard of
+  // its own the surface stays laid out. Defence in depth -- the region masking means no shipped
+  // consumer sees this today.
+  queued.removeAttribute('data-toast-queued');
+  // A queued alert is not open either, so :host is display: none as well -- force the host to
+  // render so the measurement below is of the base surface, nothing else.
+  queued.style.display = 'block';
+  await queued.updateComplete;
+  expect(getComputedStyle(queued).display).to.equal('block');
+  expect(getComputedStyle(base).display).to.equal('none');
+  expect(base.getClientRects().length).to.equal(0);
+
+  for (const alert of alerts) alert.remove();
+  await Promise.all(completions);
+});
+
 it('toast() can reuse the same identity after its previous dismissal', async () => {
   const el = (await fixture(html`
     <lr-alert style=${motionless}>Reusable toast</lr-alert>

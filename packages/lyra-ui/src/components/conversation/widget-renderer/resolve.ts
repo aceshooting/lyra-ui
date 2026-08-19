@@ -16,6 +16,24 @@ import {
   WIDGET_MAX_WARNINGS,
 } from '../../../internal/widget-resolver.js';
 
+/**
+ * Per-string ceiling for authored text children and admitted string prop values.
+ *
+ * The structural ceilings bound how *many* strings an agent-streamed tree can admit, never how
+ * long any one of them is, so a single enormous string value passes all of them untouched. Worse,
+ * one over-long binding target or `fallback` fans that single string out across every admitted
+ * node, turning a small payload into an unbounded resolved tree and DOM. 16,384 characters is far
+ * above any realistic label, caption, alt text, stat value or markdown block an agent emits, while
+ * bounding one string to 32 KiB of UTF-16 and the whole resolved tree to a survivable multiple of
+ * it. Over-long strings are truncated rather than rejected, matching every other ceiling here:
+ * the admitted prefix still renders, and the resolver reports the loss through its warning channel
+ * instead of failing the whole document closed.
+ *
+ * @internal Exported for the resolver's own tests only, exactly like the sibling structural
+ * ceilings; it is not re-exported by any barrel and carries no semver guarantee.
+ */
+export const WIDGET_MAX_STRING_LENGTH = 16_384;
+
 export interface LyraWidgetNode {
   readonly type: string;
   readonly id?: string;
@@ -35,6 +53,15 @@ export interface LyraWidgetBinding {
 export interface LyraWidgetDocument {
   readonly version: '2';
   readonly root: LyraWidgetNode;
+}
+
+/** Truncates one authored string to `WIDGET_MAX_STRING_LENGTH`, never mid-surrogate-pair: slicing
+ * between a high and a low surrogate would emit a lone code unit that no consumer asked for. */
+function truncateWidgetString(value: string): string {
+  if (value.length <= WIDGET_MAX_STRING_LENGTH) return value;
+  const capped = value.slice(0, WIDGET_MAX_STRING_LENGTH);
+  const last = capped.charCodeAt(capped.length - 1);
+  return last >= 0xd800 && last <= 0xdbff ? capped.slice(0, -1) : capped;
 }
 
 const DOCUMENT_INVALID = Symbol('invalid-widget-document');
@@ -70,7 +97,8 @@ function snapshotDocumentProps(
       if (admitted >= WIDGET_MAX_PROPS_PER_NODE) break;
       const value = Reflect.get(input, key);
       admitted += 1;
-      output[key] = value;
+      output[key] =
+        typeof value === 'string' ? truncateWidgetString(value) : value;
     }
   } catch {
     return DOCUMENT_INVALID;
@@ -171,7 +199,7 @@ function snapshotDocumentNode(
         }
         if (typeof child === 'string') {
           context.remaining -= 1;
-          children.push(child);
+          children.push(truncateWidgetString(child));
           continue;
         }
         const snapshot = snapshotDocumentNode(child, depth + 1, context);
@@ -201,6 +229,8 @@ function snapshotDocumentNode(
 /**
  * Creates an immediate, bounded, frozen version-two document snapshot. Widget-owned structure and
  * prop records are copied; opaque prop values and action payloads intentionally retain identity.
+ * String children and string prop values are truncated to `WIDGET_MAX_STRING_LENGTH`, the same
+ * silent admission ceiling the depth/node/prop budgets apply here.
  * Malformed, cyclic, duplicate-id, or hostile input throws `TypeError` before a document escapes.
  */
 export function createWidgetDocument(root: LyraWidgetNode): LyraWidgetDocument {
@@ -275,6 +305,25 @@ function warnOnce(ctx: ResolveContext, key: string, message: string): void {
   }
   ctx.warned.add(key);
   (ctx.warn ?? console.warn)(`[lr-widget-renderer] ${message}`);
+}
+
+/** The resolve-pipeline form of `truncateWidgetString`: same ceiling, plus the one deduplicated
+ * diagnostic every other ceiling here emits when it drops admitted input. */
+function capResolvedString(
+  value: string,
+  ctx: ResolveContext,
+  key: string,
+  subject: string
+): string {
+  const capped = truncateWidgetString(value);
+  if (capped.length !== value.length) {
+    warnOnce(
+      ctx,
+      `__string-cap__:${key}`,
+      `truncated ${subject} after the ${WIDGET_MAX_STRING_LENGTH}-character string cap was reached`
+    );
+  }
+  return capped;
 }
 
 function isBinding(value: unknown): value is LyraWidgetBinding {
@@ -496,7 +545,15 @@ function filterMappedProps(
         );
         continue;
       }
-      out[key] = value;
+      out[key] =
+        typeof value === 'string'
+          ? capResolvedString(
+              value,
+              ctx,
+              `${type}:${key}`,
+              `string prop "${key}" on type "${type}"`
+            )
+          : value;
       if (path)
         bindings.push({ prop: key, path, event: def.bindings?.[key]?.event });
     }
@@ -519,7 +576,7 @@ function resolveChild(
       nodeKey: `path:${path}`,
       nodePath: path,
       kind: 'text',
-      text: value,
+      text: capResolvedString(value, ctx, '__text__', 'a text child'),
     };
   }
   return resolveNode(value, ctx, path);
@@ -549,7 +606,14 @@ function resolveNode(
     const resolved = resolveValue(node.props?.['value'], ctx);
     props =
       typeof resolved.value === 'string' || typeof resolved.value === 'number'
-        ? { value: String(resolved.value) }
+        ? {
+            value: capResolvedString(
+              String(resolved.value),
+              ctx,
+              '__text-value__',
+              'the "value" of a built-in text node'
+            ),
+          }
         : {};
     if (resolved.path) {
       if (!authoredId) {

@@ -13,26 +13,29 @@ export const styles = css`
     min-inline-size: var(--lr-icon-button-size);
     max-inline-size: 100%;
     overflow-inline: auto;
-    /* Paired with overflow-inline above: per the CSS overflow spec, pinning one axis to a
-       non-'visible' value forces the browser to resolve the other to 'auto' too (never
-       'visible') -- left implicit, a sub-pixel content/box mismatch on the block axis can trip a
-       spurious, non-interactive vertical scrollbar even though nothing here needs one. Mirrors
-       lr-tab-group's tablist fix (overflow-x: auto; overflow-y: hidden) for the identical bug. */
+    /* Paired with overflow-inline above: the CSS overflow spec resolves the other axis to 'auto',
+       never 'visible', once one is pinned non-'visible'. Left implicit, a sub-pixel content/box
+       mismatch on the block axis trips a spurious, non-interactive vertical scrollbar. Mirrors
+       lr-tab-group's tablist fix (overflow-x: auto; overflow-y: hidden). */
     overflow-block: hidden;
     overflow-wrap: anywhere;
   }
   [part='content'][data-unsanitized] {
-    /* Explicitly unsanitized content may carry positioned descendants. Keep that trusted-content
-       escape hatch clipped to this document surface instead of covering the surrounding app. */
+    /* Unsanitized content may carry positioned descendants; clip that trusted-content escape hatch
+       to this surface rather than let it cover the surrounding app. */
     contain: paint;
   }
+  /* no-hover-state: both parts are scrollable prose surfaces, not pointer targets. The focus ring
+     tells a keyboard user which overflowing region the arrow keys will scroll; a mouse user
+     already scrolls by pointing, and tinting a block of rendered Markdown under the pointer would
+     read as a selection, not an affordance. */
   [part='content']:focus-visible,
   [part='code-block']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
-  /* Shared by both the "still loading" and "fell back after a failure"
-     states -- see the renderedHtml field doc in markdown.ts. */
+  /* Shared by the still-loading and failure-fallback states -- see the renderedHtml field doc in
+     markdown.ts. */
   [part='content'][data-fallback] {
     white-space: pre-wrap;
     font-family: inherit;
@@ -67,14 +70,12 @@ export const styles = css`
     overflow-inline: auto;
     /* See [part='content']'s identical overflow-block above -- same paired-axis rationale. */
     overflow-block: hidden;
-    /* Deliberately the *shared* --lr-code-block-* name, not a --lr-markdown- one: a consumer setting
-       one tab width expects every code surface in the library to honour it. The default lives here
-       as a var() fallback rather than a :host declaration so a page- or container-level value can
-       actually reach it; lr-code-block carries the same fallback for its own <pre>, since it is a
-       sibling custom element rather than an ancestor and no single rule covers both.
-       Same value, but not necessarily the same look: this part inherits pre-wrap from
-       [part='content'] while lr-code-block's <pre> is white-space: pre, and tab stops are measured
-       from the start of each visual line, so a wrapped markdown code line restarts them. */
+    /* Deliberately the *shared* --lr-code-block-* name, not a --lr-markdown- one: one tab width
+       should reach every code surface in the library. A var() fallback rather than a :host
+       declaration, so a page- or container-level value can reach it; lr-code-block repeats it for
+       its own <pre>, being a sibling rather than an ancestor. Same value, different look: this
+       part inherits pre-wrap from [part='content'] while that <pre> is white-space: pre, and tab
+       stops measure from each visual line's start, so a wrapped line restarts them. */
     tab-size: var(--lr-code-block-tab-size, 2);
   }
   [part='code-block'] code {
@@ -84,19 +85,17 @@ export const styles = css`
     line-height: var(--lr-line-height-normal);
   }
   /*
-   * Activates shiki's "dual themes" dark variant for highlighted fenced blocks, exactly as
-   * code-block.styles.ts does for lr-code-block's own pre. tokenizeMarkdownHighlight() renders
-   * every token with its light color as a plain inline color/background-color and its dark color
-   * stashed in the --shiki-dark/--shiki-dark-bg custom properties on the same element; shiki's own
-   * documented way to toggle them is a stylesheet rule that reassigns color/background-color from
-   * those variables. !important is required because an inline style attribute outranks an external
-   * stylesheet at any selector specificity short of it. These values come from shiki's theme data
-   * rather than this library's design tokens -- the one deliberate exception in this file.
+   * Activates shiki's dual-themes dark variant for highlighted fenced blocks, as
+   * code-block.styles.ts does for lr-code-block's pre. tokenizeMarkdownHighlight() renders each
+   * token's light color inline and stashes the dark one in --shiki-dark/--shiki-dark-bg on the
+   * same element; shiki's documented toggle reassigns color/background-color from those variables.
+   * !important is required because an inline style attribute outranks an external stylesheet at
+   * any specificity. The values are shiki theme data, not this library's design tokens -- the one
+   * deliberate exception in this file.
    *
-   * Gated on [data-dark-theme='true'] (kept live by the shared ThemeWatcher, off the component's
-   * own resolved --lr-color-text/--lr-color-surface) rather than the OS-level
-   * prefers-color-scheme media query, so a consumer who sets --lr-theme-color-* explicitly still
-   * gets the dark shiki palette.
+   * Gated on [data-dark-theme='true'], kept live by the shared ThemeWatcher off the resolved
+   * --lr-color-text/--lr-color-surface rather than the OS-level prefers-color-scheme query, so a
+   * consumer setting --lr-theme-color-* explicitly still gets the dark shiki palette.
    */
   [part='content'][data-dark-theme='true'] [part='code-block'],
   [part='content'][data-dark-theme='true'] [part='code-block'] span {
@@ -107,9 +106,8 @@ export const styles = css`
     color: var(--lr-color-brand);
     text-underline-offset: var(--lr-size-0-125rem);
   }
-  /* Keeps an oversized source image from overflowing the content wrapper --
-     matches the overflow-wrap: anywhere guard on [part='content'] above,
-     which only covers text, not replaced elements like <img>. */
+  /* Keeps an oversized source image inside the content wrapper: [part='content']'s
+     overflow-wrap: anywhere covers text only, not replaced elements like <img>. */
   [part='img'] {
     max-inline-size: 100%;
   }
@@ -147,10 +145,10 @@ export const styles = css`
   [part='math'][data-display='inline'] {
     display: inline-block;
   }
-  /* Painted text-quote highlights: the CSS Custom Highlight API path styles the browser-native
-     ::highlight() pseudo (no element exists to select, so a [part='content'] mark[...] selector
-     below never matches on that path); the <mark>-wrap fallback path styles the real elements
-     text-highlights.ts creates in this same shadow tree. Both are kept in sync by tone. */
+  /* Painted text-quote highlights. The CSS Custom Highlight API path styles the native
+     ::highlight() pseudo, where no element exists for the [part='content'] mark[...] selectors
+     below to match; the <mark>-wrap fallback styles the real elements text-highlights.ts creates
+     in this same shadow tree. Both are kept in sync by tone. */
   ::highlight(lr-highlight-accent) {
     background-color: var(--lr-markdown-highlight-accent-bg, var(--lr-color-brand-quiet));
   }

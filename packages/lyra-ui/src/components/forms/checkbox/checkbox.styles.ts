@@ -2,22 +2,19 @@ import { css } from 'lit';
 
 export const styles = css`
   :host {
-    /* The box tracks the shared size ladder (internal/sizes.styles.ts): 70% of the tier's control
-       height, so the checkbox lines up with an lr-input/lr-select/lr-button of the same size
-       instead of carrying a scale of its own. At the default "m" tier this resolves to exactly the
-       1.75rem the control shipped with before it had a size at all, and the
-       --lr-icon-button-size cap is kept so a consumer compacting that theme token still compacts
-       this control with it. */
+    /* 70% of the tier's control height on the shared size ladder (internal/sizes.styles.ts), so the
+       box lines up with a same-size lr-input/lr-select/lr-button; at "m" that is exactly the
+       1.75rem it shipped with before it had a size. The --lr-icon-button-size cap stays so
+       compacting that theme token compacts this control too. */
     --_lr-checkbox-box-size: min(
       var(--lr-icon-button-size),
       calc(var(--lr-form-control-height) * 0.7)
     );
     display: inline-block;
-    /* Private default for the public label-indent hook. It uses the same two terms as the layout
-       below: the box's floor plus the label gap. A consumer can override the public hook on an
-       ancestor or directly on the checkbox. It does not reach a sibling node in the consumer's
-       tree, because custom properties inherit down, not sideways; a sibling <p> can compute the
-       same formula from --lr-theme-icon-button-size and --lr-theme-space-s. */
+    /* Private default for the public label-indent hook: the box's floor plus the label gap, the
+       same two terms the layout below uses. Overridable on an ancestor or the checkbox itself, but
+       never on a sibling -- custom properties inherit down, not sideways, so a sibling <p> computes
+       the formula from --lr-theme-icon-button-size and --lr-theme-space-s. */
     --_lr-checkbox-label-indent: calc(
       var(--lr-checkbox-box-size, var(--_lr-checkbox-box-size)) +
         var(--lr-space-s)
@@ -26,9 +23,9 @@ export const styles = css`
   .checkbox-layout {
     display: inline-flex;
     align-items: center;
-    /* Derived from the published indent rather than repeating --lr-space-s, so the advertised
-       value and the rendered label offset cannot drift: the label always starts exactly
-       --lr-checkbox-label-indent from the base's inline start. Resolves to --lr-space-s by default. */
+    /* Derived from the published indent rather than repeating --lr-space-s, so the advertised value
+       and the rendered label offset cannot drift: the label always starts exactly
+       --lr-checkbox-label-indent from the base's inline start. Defaults to --lr-space-s. */
     gap: 0;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
@@ -55,16 +52,14 @@ export const styles = css`
     justify-content: center;
     flex: 0 0 auto;
     box-sizing: border-box;
-    /* Matches the inline icon-affordance sizing convention used by
-       lr-combobox's clear-button / lr-select's toggle
-       (--lr-icon-button-size capped at the tier's own share of the control
-       height) — a real touch target without ballooning to the full 2.5rem
-       meant for standalone icon-only buttons. */
+    /* The inline icon-affordance sizing convention of lr-combobox's clear-button and lr-select's
+       toggle: --lr-icon-button-size capped at the tier's own share of the control height -- a real
+       touch target without ballooning to the full 2.5rem meant for standalone icon-only buttons. */
     min-inline-size: var(--lr-checkbox-box-size, var(--_lr-checkbox-box-size));
     min-block-size: var(--lr-checkbox-box-size, var(--_lr-checkbox-box-size));
-    /* The glyph is drawn at 1em, so the box owns the font size that scales it. Pinning it to the
-       ladder rather than letting it inherit keeps the checkmark proportional to the box at every
-       tier; at "m" it resolves to the same 1rem the surrounding text carries by default. */
+    /* The glyph is drawn at 1em, so the box owns the font size that scales it. Pinned to the ladder
+       rather than inherited, the checkmark stays proportional to the box at every tier; at "m" it
+       resolves to the same 1rem the surrounding text carries by default. */
     font-size: var(--lr-form-control-font-size);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: calc(var(--lr-form-control-radius) * 0.6);
@@ -76,11 +71,10 @@ export const styles = css`
   :host(:not(:disabled)) .checkbox-layout:hover [part~="box"] {
     border-color: var(--lr-checkbox-hover-border, var(--lr-color-brand));
   }
-  /* Pressed. Expressed as a ring around the box rather than as a fill, because the box's own fill
-     is the state readout: it is the page surface while unchecked and the brand while checked, and
-     tinting it under the thumb would either wash out the checkmark or read as a half-toggled box.
-     A ring is unambiguous in both states, and is visibly more than the hover's border-colour step
-     -- same soft-ring pressed vocabulary <lr-slider>'s thumb uses. */
+  /* Pressed as a ring, not a fill: the box's own fill is the state readout (page surface unchecked,
+     brand checked), and tinting it under the thumb would wash out the checkmark or read as a
+     half-toggled box. A ring is unambiguous in both states and visibly more than the hover's
+     border-colour step -- the soft-ring pressed vocabulary <lr-slider>'s thumb uses. */
   :host(:not(:disabled)) .checkbox-layout:active [part~="box"] {
     border-color: var(--lr-checkbox-active-border, var(--lr-color-brand));
     box-shadow: 0 0 0 var(--lr-border-width-medium)
@@ -88,16 +82,14 @@ export const styles = css`
   }
   [part~="checked"],
   [part~="indeterminate"] {
-    /* Component-scoped indirection (mirrors lr-source-picker's identical
-       --lr-source-picker-checked-bg/-border pair) so a consumer can retint just this control's
-       checked/indeterminate fill without hijacking the shared --lr-color-brand token used across
-       the rest of the library. */
+    /* Component-scoped indirection, mirroring lr-source-picker's identical
+       --lr-source-picker-checked-bg/-border pair, so a consumer can retint just this control's
+       checked/indeterminate fill without hijacking the shared --lr-color-brand token. */
     background: var(--lr-checkbox-checked-bg, var(--lr-color-brand));
     border-color: var(--lr-checkbox-checked-border, var(--lr-color-brand));
   }
-  /* Gives a required-but-unmet checkbox a persistent visible affordance --
-     matching lr-combobox/lr-select's data-invalid styling hook --
-     beyond the transient native validation-bubble popup, which only shows
+  /* A persistent visible affordance for a required-but-unmet checkbox, matching
+     lr-combobox/lr-select's data-invalid styling hook: the native validation bubble only shows
      momentarily around reportValidity()/form submission. */
   :host([data-invalid]) [part~="box"] {
     border-color: var(--lr-checkbox-invalid-border, var(--lr-color-danger));
@@ -109,10 +101,9 @@ export const styles = css`
     transform: scale(var(--checked-icon-scale, 1));
   }
 
-  /* No explicit "display" here (unlike e.g. lr-combobox's
-     [part='form-control-label']), so the UA stylesheet's default
-     "[hidden] { display: none }" rule needs no author-side override to
-     take effect when hasLabelSlot is false. */
+  /* No explicit "display" here (unlike lr-combobox's [part='form-control-label']), so the UA
+     stylesheet's default "[hidden] { display: none }" rule needs no author-side override when
+     hasLabelSlot is false. */
   [part="label"] {
     margin-inline-start: calc(
       var(--lr-checkbox-label-indent, var(--_lr-checkbox-label-indent)) -

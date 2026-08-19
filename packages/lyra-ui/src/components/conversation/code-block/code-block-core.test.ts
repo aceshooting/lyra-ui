@@ -12,6 +12,7 @@ import type { LyraCodeBlockCore } from "./code-block-core.js";
 import {
   loadShikiHighlighterCore,
   __setShikiHighlighterCoreLoaderForTesting,
+  type ShikiLanguageInput,
 } from "./shiki-types.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 

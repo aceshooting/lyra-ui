@@ -21,23 +21,19 @@ export const styles = css`
       var(--border-color, var(--lr-color-border));
     border-radius: var(--border-radius, var(--lr-radius));
     background: var(--lr-color-surface);
-    /* Stretches to fill the host's own allocated block-size -- e.g. a CSS Grid row with the
-       default align-items: stretch -- so a shorter card's visible border/background reaches the
-       row's full height instead of shrink-wrapping to its own content (mirrors lyra-stat's/
-       word-cloud's/context-meter's identical fix; card.class.ts's own doc advertises "clickable
-       grid tiles" as an intended use case). box-sizing keeps the border inside that measured
-       height rather than growing past it. */
+    /* Fills the host's allocated block-size (a stretch-aligned grid row) so a short card's border
+       and background reach the row's full height instead of shrink-wrapping. Matches lyra-stat,
+       word-cloud and context-meter; card.class.ts advertises clickable grid tiles. box-sizing
+       keeps the border inside that height. */
     block-size: 100%;
     box-sizing: border-box;
     color: inherit;
     text-decoration: none;
-    /* Load-bearing, not incidental: it clips a full-bleed media/image child to the rounded border,
-       so removing it squares off the corners of every slotted image. The consequence, paired with
-       the stretched block-size above, is that a card in a DEFINITE allocation (a fixed grid row,
-       an explicit block-size) clips body content taller than that allocation instead of growing
-       or scrolling. Neither upstream card exposes an overflow, block-size, or scroll hook, so the
-       scroll owner stays a consumer decision made through the public body part -- see the
-       overflow note in card.class.ts's class doc. */
+    /* Load-bearing: it clips a full-bleed media child to the rounded border, so removing it
+       squares off every slotted image. With the stretched block-size above, a card in a DEFINITE
+       allocation clips body content taller than it rather than growing or scrolling. No upstream
+       card exposes an overflow, block-size or scroll hook, so the scroll owner is a consumer
+       decision via the public body part -- see card.class.ts's class doc. */
     overflow: hidden;
   }
   .linked-shell {
@@ -62,8 +58,8 @@ export const styles = css`
     box-sizing: border-box;
     color: inherit;
     text-decoration: none;
-    /* Same corner clip and same consequence as the base rule above; this is the href variant's
-       visible twin, so the two must keep identical overflow behavior. */
+    /* Same corner clip and consequence as the base rule above -- the href variant's visible twin,
+       so overflow must stay identical. */
     overflow: hidden;
     border-radius: var(--border-radius, var(--lr-radius));
     pointer-events: none;
@@ -95,11 +91,10 @@ export const styles = css`
   .linked-shell:hover > [part="base"][data-actionable="true"] {
     border-color: var(--lr-card-interactive-hover-border-color, var(--lr-color-brand));
   }
-  /* Pressed keeps the hover border and adds a tint of the whole tile, so it reads as a step past
-     hover rather than a different colour of the same step. The tint is a background-IMAGE layer,
-     not a background colour: the appearance variants own background-color (filled and
-     filled-outlined set brand-quiet), and a colour here would replace theirs instead of deepening
-     it, so a filled card would flash back to plain surface on mousedown. */
+  /* Pressed keeps the hover border and tints the whole tile, a step past hover rather than
+     another colour of the same step. A background-IMAGE layer, not a background colour: the
+     appearance variants own background-color (filled and filled-outlined set brand-quiet), so a
+     colour here would replace theirs and flash a filled card back to plain surface. */
   [part="base"][data-actionable="true"]:active,
   .linked-shell:active > [part="base"][data-actionable="true"] {
     border-color: var(--lr-card-interactive-active-border-color, var(--lr-color-brand));
@@ -150,6 +145,13 @@ export const styles = css`
   [part~="media"] ::slotted(*) {
     display: block;
     inline-size: 100%;
+  }
+  /* The display above is author-origin, outranking the UA '[hidden] { display: none }', so a
+     hidden slotted media child would still paint -- the wrapper guard above only fires when the
+     media part itself is empty. Media is exactly the collapsed markup find-in-page should reveal,
+     so keep the 'until-found' carve-out. */
+  [part~="media"] ::slotted([hidden]:not([hidden="until-found" i])) {
+    display: none;
   }
   [part="header"] {
     display: flex;

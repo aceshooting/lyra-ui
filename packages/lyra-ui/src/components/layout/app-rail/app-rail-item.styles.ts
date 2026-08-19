@@ -26,10 +26,9 @@ export const styles = css`
     background: var(--lr-app-rail-item-hover-bg, var(--lr-color-brand-quiet));
     color: var(--lr-app-rail-item-hover-color, var(--lr-color-brand));
   }
-  /* Pressed travels further along the same axis hover moved on: the identical brand-quiet fill,
-     mixed toward --lr-color-mix-partner (which follows the text colour), so it deepens on a light
-     theme and lightens on a dark one rather than depending on which way a brightness multiplier
-     happens to push this particular fill. */
+  /* Pressed travels further along hover's own axis: the same brand-quiet fill mixed toward
+     --lr-color-mix-partner, which follows the text colour, so it deepens on a light theme and
+     lightens on a dark one rather than depending on a brightness multiplier's direction. */
   [part="base"]:not([aria-disabled="true"]):active {
     background: var(
       --lr-app-rail-item-active-bg,
@@ -50,11 +49,10 @@ export const styles = css`
     cursor: not-allowed;
   }
   /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on any
-     ancestor and a :host declaration can never shadow that. ::part(base)[aria-current='page'] is
-     invalid CSS (an attribute selector cannot follow ::part), so hijacking the shared
-     --lr-color-brand-quiet/--lr-color-brand tokens used to be the only route -- which repainted every
-     other element reading those tokens. Unset, each falls back to the token the rule used before,
-     so the rendering is unchanged. */
+     ancestor and no :host declaration shadows that. ::part(base)[aria-current='page'] is invalid
+     CSS -- an attribute selector cannot follow ::part -- so hijacking the shared
+     --lr-color-brand-quiet/--lr-color-brand tokens was previously the only route, repainting every
+     other element reading them. Unset, each falls back to the token used before. */
   [part="base"][aria-current="page"] {
     background: var(--lr-app-rail-item-current-bg, var(--lr-color-brand-quiet));
     color: var(--lr-app-rail-item-current-color, var(--lr-color-brand));
@@ -65,9 +63,9 @@ export const styles = css`
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    /* Deliberately floors only the inline axis. The row's tappable height is already guaranteed by
-       [part='base']'s own min-block-size above, so flooring the icon's block axis too would add
-       nothing for target size while forcing every row to --lr-icon-button-size + 2x --lr-space-s. */
+    /* Deliberately floors only the inline axis: [part='base']'s own min-block-size above already
+       guarantees the row's tappable height, so flooring the block axis too would add nothing for
+       target size while forcing every row to --lr-icon-button-size + 2x --lr-space-s. */
     inline-size: var(--lr-icon-button-size);
     min-inline-size: var(--lr-icon-button-size);
   }

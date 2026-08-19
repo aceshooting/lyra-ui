@@ -4,9 +4,8 @@ export const styles = css`
   :host {
     display: inline-block;
     max-inline-size: 100%;
-    /* Consumer-tunable cap so one oversized image/video can't blow out a
-       chat bubble -- same naming/contract as lr-document-preview's
-       identical --lr-document-preview-max-height. Width already caps at
+    /* Consumer-tunable cap so one oversized image/video cannot blow out a chat bubble -- same naming
+       and contract as lr-document-preview's --lr-document-preview-max-height. Width already caps at
        100% of whatever the host message body allows. */
     --_lr-media-card-max-height: var(--lr-size-20rem);
   }
@@ -24,14 +23,12 @@ export const styles = css`
     color: var(--lr-color-text);
     text-decoration: none;
   }
-  /* Reset native button/anchor chrome only where "base" is actually one of
-     those (image and file-with-a-safe-link cases) -- a plain div/span never
-     had any to begin with, so this is harmless there too. These are ordinary
-     composite/native whole-card actions (an <img>, or an icon+filename chip), not a compact
-     icon-sized control, so this deliberately does not reach for the --lr-icon-button-size 40px
-     floor -- but a source image can render far smaller than that (a thumbnail, a tiny icon
-     upload), and WCAG 2.5.8 Target Size (Minimum) still applies at 24px. --lr-size-1-5rem (24px)
-     matches the floor lr-breadcrumb-item/lr-segmented/lr-map already use for the same contract. */
+  /* Resets native button/anchor chrome only where "base" is actually one of those (image and
+     file-with-a-safe-link); a plain div/span never had any. These are whole-card actions (an <img>,
+     or an icon+filename chip), not compact icon-sized controls, so they deliberately skip the
+     --lr-icon-button-size 40px floor -- but a source image can render far smaller, and WCAG 2.5.8
+     Target Size (Minimum) still applies at 24px. --lr-size-1-5rem (24px) matches the floor
+     lr-breadcrumb-item/lr-segmented/lr-map use. */
   button[part="base"],
   a[part="base"] {
     min-inline-size: var(--lr-size-1-5rem);
@@ -46,10 +43,9 @@ export const styles = css`
   a[part="base"]:hover {
     border-color: var(--lr-color-brand);
   }
-  /* Pressed deepens both the border the hover rule tints and the card's own fill, so the whole-card
-     button reads as depressed rather than merely pointed at. Under frame="plain" the later,
-     higher-specificity chrome reset still wins -- that mode is opting out of card chrome entirely,
-     pressed included. */
+  /* Pressed deepens both the border the hover rule tints and the card's own fill. Under
+     frame="plain" the later, higher-specificity chrome reset still wins -- that mode opts out of
+     card chrome, pressed included. */
   button[part="base"]:active,
   a[part="base"]:active {
     border-color: var(
@@ -74,9 +70,8 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   /* Chrome escape hatch for a dense list/feed of cards -- the library-wide
-     :host([frame='plain']) [part='base'] reset. Image/video kinds already render [part='base']
-     with zero padding (see the button[part='base'] rule above), so this only visibly changes
-     padding for the file-chip fallback's span/a[part='base']. */
+     :host([frame='plain']) [part='base'] reset. Image/video kinds already render [part='base'] with
+     zero padding, so only the file-chip fallback's span/a[part='base'] visibly changes. */
   :host([frame="plain"]) [part="base"] {
     padding: 0;
     border: 0;
@@ -103,9 +98,9 @@ export const styles = css`
     );
   }
 
-  /* -- video: base is a plain non-interactive wrapper around the video
-     plus its own separate open-button -- see the class doc for why video
-     doesn't reuse the whole-card-button pattern image/file use. */
+  /* -- video: base is a plain non-interactive wrapper around the video plus its own separate
+     open-button -- see the class doc for why video does not reuse image/file's
+     whole-card-button pattern. */
   div[part="base"] {
     position: relative;
     display: inline-block;
@@ -117,10 +112,9 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    /* Meets the shared minimum tappable size (--lr-icon-button-size) --
-       previously capped at 2rem/32px for a compact overlay look, but this
-       button floats over the video's own generous canvas (absolutely
-       positioned in a corner), which has ample room for the full floor. */
+    /* The shared minimum tappable size (--lr-icon-button-size), not the former 2rem/32px compact
+       overlay cap: this button floats in a corner of the video's own canvas, which has ample room
+       for the full floor. */
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     padding: 0;
@@ -135,8 +129,8 @@ export const styles = css`
   [part="open-button"]:hover {
     background: var(--lr-color-surface);
   }
-  /* Hover only finishes opacifying the translucent scrim, which leaves it with nowhere further to
-     go; pressed mixes that now-solid surface toward --lr-color-mix-partner instead. */
+  /* Hover only finishes opacifying the translucent scrim, leaving it nowhere further to go; pressed
+     mixes that now-solid surface toward --lr-color-mix-partner instead. */
   [part="open-button"]:active {
     background: color-mix(
       in oklab,

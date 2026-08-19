@@ -8,13 +8,12 @@ export const styles = css`
     inline-size: 100%;
     min-inline-size: 0;
     max-inline-size: var(--lr-size-24rem);
-    /* The size ladder itself lives in internal/sizes.styles.ts, which this component composes ahead
-       of this sheet. Only the indirection is here: the public --lr-model-select-* surface stays
-       exactly as documented, while its VALUES come from the one --lr-form-control-* scale every
-       other control in the library sizes against. That keeps a model select the same height as the
-       lr-select / lr-input / lr-button next to it in a toolbar row at every tier, and it means the
-       shared sheet's per-tier :host([size='...']) rules (which list both spellings of each step)
-       are the only place a tier is ever restated. */
+    /* The ladder lives in internal/sizes.styles.ts, composed ahead of this sheet; only the
+       indirection is here. The public --lr-model-select-* surface is unchanged, its values coming
+       from the one --lr-form-control-* scale every other control sizes against, so a model select
+       matches the lr-select / lr-input / lr-button beside it at every tier, and the shared sheet's
+       per-tier :host([size='...']) rules (both spellings) are the only place a tier is
+       restated. */
     --_lr-model-select-trigger-padding: var(--lr-form-control-padding-block)
       var(--lr-form-control-padding-inline);
     --_lr-model-select-trigger-min-height: var(--lr-form-control-height);
@@ -26,9 +25,9 @@ export const styles = css`
   :host(:disabled) {
     cursor: not-allowed;
   }
-  /* The decorative expand icon is the one knob the shared ladder has no equivalent for -- it is a
-     glyph box, not a control metric -- so its three sizes stay here, listed in both spellings of
-     each tier so they track the shared sheet exactly. */
+  /* The decorative expand icon is a glyph box, not a control metric, so the shared ladder has no
+     equivalent and its three sizes stay here -- both spellings of each tier, tracking the shared
+     sheet exactly. */
   :host([size="2xs"]),
   :host([size="xs"]) {
     --_lr-model-select-expand-size: var(--lr-size-1rem);
@@ -44,14 +43,14 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
     font-weight: var(--lr-font-weight-semibold);
   }
-  /* :empty never matches here because the part always contains a slot element. Visible-label
-     presence is tracked from both the property and named slot, then reflected through hidden. */
+  /* :empty never matches -- the part always contains a slot element -- so visible-label presence
+     is tracked from both the property and named slot, then reflected through hidden. */
   [part="form-control-label"][hidden] {
     display: none;
   }
-  /* This control accepts required and renders a visible label like every other field in the
-     library, so it marks it the same way -- the [hidden] rule above is what keeps the marker from
-     orphaning a stray glyph when no label is set. */
+  /* Accepts required and renders a visible label like every other field in the library, so it
+     marks it the same way -- the [hidden] rule above keeps the marker from orphaning a stray
+     glyph when no label is set. */
   ${formControlRequiredMarker}
 
   [part='trigger'],
@@ -95,9 +94,10 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* :where() zeroes the wrapped selectors' specificity contribution, keeping this at (0,1,0) --
-     matches lr-attachment-trigger's fixed convention, so a consumer's ::part(trigger):hover
-     override ((0,1,1)) still wins without needing !important. */
+  /* :where() zeroes the wrapped selectors, holding this at (0,1,0) so the pressed rule below --
+     same specificity, later in source order -- wins while the trigger is held. It buys nothing
+     against a consumer's own ::part(trigger):hover: encapsulation context sorts before
+     specificity, so an outer normal declaration wins whatever this rule weighs. */
   :where([part="trigger"]):hover:where(:not(:disabled)) {
     background: var(--lr-color-brand-quiet);
   }
@@ -204,9 +204,9 @@ export const styles = css`
     );
     /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
     box-shadow: var(--lr-shadow-m);
-    /* Closed state: invisible + slightly raised. visibility (not
-       display:none) so opacity/transform can actually transition; hit-testing
-       and a11y exposure stay off since this part is already position:fixed. */
+    /* Closed state: invisible and slightly raised. visibility, not display:none, so
+       opacity/transform can transition; hit-testing and a11y exposure stay off since this part is
+       already position:fixed. */
     visibility: hidden;
     opacity: 0;
     transform: translateY(var(--lr-size-neg-0-25rem));
@@ -242,25 +242,9 @@ export const styles = css`
     text-align: start;
     cursor: pointer;
   }
-  [part="option"]:hover,
-  [part="option"][data-active] {
-    background: var(
-      --lr-model-select-option-active-bg,
-      var(--lr-color-brand-quiet)
-    );
-  }
-  /* Mixes the SAME --lr-model-select-option-active-bg the hover/active-descendant rule above uses,
-     so a consumer retinting the highlight gets a matching pressed step for free. */
-  [part="option"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-model-select-option-active-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
-  }
   [part="option"][aria-selected="true"] {
-    /* Per-component indirection (inline var() fallbacks to the shared brand tokens, so unset
-       rendering is byte-for-byte unchanged) -- so a consumer can retheme just the selected row
+    /* Per-component indirection, falling back inline to the shared brand tokens so unset
+       rendering is byte-for-byte unchanged, letting a consumer retheme just the selected row
        without hijacking --lr-color-brand library-wide. */
     background: var(--lr-model-select-option-selected-bg, transparent);
     border-color: var(
@@ -271,6 +255,28 @@ export const styles = css`
     font-weight: var(
       --lr-model-select-option-selected-font-weight,
       var(--lr-font-weight-semibold)
+    );
+  }
+  /* Must stay AFTER the [aria-selected='true'] rule above: all four selectors are (0,2,0) on the
+     same row element, so source order alone decides the selected row's background. Reversed, that
+     rule's background (--lr-model-select-option-selected-bg, transparent by default) swallowed
+     hover, press and [data-active] -- the aria-activedescendant highlight -- so arrow-keying onto
+     the selected model showed nothing. The selected row keeps its affordance either way: it paints
+     border-color/color/font-weight, untouched here. */
+  [part="option"]:hover,
+  [part="option"][data-active] {
+    background: var(
+      --lr-model-select-option-active-bg,
+      var(--lr-color-brand-quiet)
+    );
+  }
+  /* Mixes the SAME --lr-model-select-option-active-bg the hover/active-descendant rule above
+     uses, so retinting the highlight retints the pressed step too. */
+  [part="option"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-model-select-option-active-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
   [part="option-icon"] {
@@ -284,10 +290,9 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  /* Stale-value row: a previously-saved value that no longer appears in the
-     catalog. Marked with a dashed border + italic label (instead of the
-     solid border every real row uses) so it visually reads as "remembered,
-     not offered" rather than a normal selectable catalog entry. */
+  /* Stale-value row: a previously-saved value no longer in the catalog. A dashed border and
+     italic label, against the solid border every real row uses, read as remembered rather than
+     offered. */
   [part="option"][data-synthetic] {
     border-style: var(--lr-model-select-option-synthetic-border-style, dashed);
     border-color: var(
@@ -318,10 +323,9 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }
-  /* :empty never matches here -- the part always contains a literal slot
-     child element regardless of assigned/text content -- so real emptiness
-     is tracked in JS (hasHintSlot) and reflected via the hidden attribute
-     instead (same fix as lr-select's identical part). */
+  /* :empty never matches -- the part always contains a literal slot child whatever the assigned
+     or text content -- so emptiness is tracked in JS (hasHintSlot) and reflected via hidden; same
+     fix as lr-select's identical part. */
   [part="hint"][hidden] {
     display: none;
   }

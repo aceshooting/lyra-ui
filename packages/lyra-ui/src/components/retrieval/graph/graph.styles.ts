@@ -24,16 +24,14 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* A background wash on the canvas box rather than filter: brightness(). A filter applies to the
-     element's own painted output, so it re-tinted every drawn node, link and label the renderer had
-     just computed -- and multiplied nothing at all on a pure-white or pure-black one. The canvas is
-     cleared to transparent wherever nothing is drawn, so a background tints only the empty plot
-     area and leaves the drawn scene exactly as rendered.
+  /* A background wash on the canvas box, not filter: brightness(). A filter applies to the element's
+     own painted output, so it re-tinted every drawn node, link and label, and multiplied nothing on
+     a pure-white or pure-black one. The canvas is transparent wherever nothing is drawn, so a
+     background tints only the empty plot area.
 
-     no-pressed-state: this canvas is the surface d3-zoom binds its pan/drag to, so a pressed wash
-     would sit under the whole graph for the entire duration of a pan and dim the very data the user
-     is dragging into view; a press here also lands on a painted node, which is not a DOM element and
-     cannot carry :active at all. The hover tint alone confirms the surface is live. */
+     no-pressed-state: d3-zoom binds its pan/drag to this canvas, so a pressed wash would sit under
+     the whole graph for the entire pan and dim the data being dragged into view; a press here also
+     lands on a painted node, which is not a DOM element and cannot carry :active. */
   [part="canvas"]:hover {
     background: color-mix(
       in oklab,
@@ -43,10 +41,9 @@ export const styles = css`
   }
   [part="tooltip"] {
     position: absolute;
-    /* Physical left/top on purpose: the inline position written on hover is a physical offset
-       derived from getBoundingClientRect(), and it targets these same physical properties. A
-       logical inset-inline-start would compute to right under RTL, leaving both edges pinned
-       (stretching the box) once the inline left lands on top of it. */
+    /* Physical left/top on purpose: the inline position written on hover is a physical offset from
+       getBoundingClientRect() targeting these same properties. A logical inset-inline-start would
+       compute to right under RTL, pinning both edges and stretching the box. */
     /* policy-allow(physical-css): must match the physical style.left the hover positioner writes. */
     left: 0;
     top: 0;
@@ -97,13 +94,12 @@ export const styles = css`
     stroke-linejoin: round;
     pointer-events: all;
   }
-  /* This part's own color is per-instance/data-driven (--lr-link-color, --lr-node-fill,
-     --lr-graph-hull-fill), so a single hardcoded hover color can't work across every value it might
-     take -- but neither could filter: brightness(), which multiplies every channel and so lightens a
-     dark stroke, darkens nothing at all on a pure-white or pure-black one, and (being a filter)
-     re-tinted the arrowhead marker painted from the same stroke. Mixing the very same custom
-     property toward --lr-color-mix-partner keeps the per-instance color and always moves, in the
-     direction the surface actually needs. */
+  /* This part's color is per-instance and data-driven (--lr-link-color, --lr-node-fill,
+     --lr-graph-hull-fill), so no single hardcoded hover color works -- and neither did filter:
+     brightness(), which multiplies every channel: it lightened a dark stroke, did nothing on a
+     pure-white or pure-black one, and, being a filter, re-tinted the arrowhead marker painted from
+     the same stroke. Mixing that same custom property toward --lr-color-mix-partner keeps the
+     per-instance color and always moves in the direction needed. */
   [part="link"]:hover {
     stroke: color-mix(
       in oklab,
@@ -130,11 +126,10 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
   }
   [part="node"] {
-    /* --lr-node-fill is set inline per-node (see graph.ts) from LyraGraphNode.color;
-       falls back to the brand token when a node doesn't supply one. An inline
-       style declaration always wins the cascade over this selector, so setting
-       fill directly here (rather than via the presentation attribute) is what
-       lets a per-node color actually take effect. */
+    /* --lr-node-fill is set inline per node (see graph.ts) from LyraGraphNode.color, falling back
+       to the brand token. An inline style declaration always wins the cascade over this selector,
+       so fill has to be set here, not via the presentation attribute, for a per-node color to
+       apply. */
     fill: var(--lr-node-fill, var(--lr-color-brand));
     cursor: pointer;
   }
@@ -179,8 +174,8 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-md-sm);
   }
-  /* Mirrors map.styles.ts's identical [part='error'] treatment for the same "optional
-     peer dependency missing" failure shape. */
+  /* Mirrors map.styles.ts's identical [part='error'] treatment for the same
+     missing-optional-peer-dependency failure shape. */
   [part="error"] {
     margin: 0;
     padding: var(--lr-space-l);

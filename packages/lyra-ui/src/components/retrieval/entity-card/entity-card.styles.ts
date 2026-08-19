@@ -15,19 +15,18 @@ export const styles = css`
     color: var(--lr-color-text);
     min-inline-size: 0;
   }
-  /* Density escape -- same convention as lr-empty's compact, and as this component's own sibling
-     lr-community-card. The tuned values sit behind inline var() fallbacks (rather than a :host
-     declaration, which every instance re-declares and so shadows any ancestor value) so a consumer
-     can retune them from outside; the fallbacks are the pre-existing values, so an unset card
-     renders unchanged. */
+  /* Density escape -- same convention as lr-empty's compact and the sibling lr-community-card.
+     Values sit behind inline var() fallbacks, not a :host declaration that every instance
+     re-declares and so shadows any ancestor value; the fallbacks are the pre-existing values, so an
+     unset card renders unchanged. */
   :host([compact]) [part='base'] {
     padding: var(--lr-entity-card-compact-padding, var(--lr-space-s));
     gap: var(--lr-entity-card-compact-gap, var(--lr-space-xs));
   }
-  /* MUST stay after :host([compact]): both selectors are :host([x]) [part='base'], i.e. equal
-     specificity, so source order alone decides which padding/gap wins when a card is both compact
-     and plain. plain is the stronger statement ("no chrome at all"), so it goes last. The header's
-     focus button and type badge draw their own chrome and stay visible either way. */
+  /* MUST stay after :host([compact]): both are :host([x]) [part='base'], equal specificity, so
+     source order alone decides which padding/gap wins on a card that is both. plain is the stronger
+     statement ("no chrome at all") and goes last. The header's focus button and type badge draw
+     their own chrome and stay visible either way. */
   :host([frame='plain']) [part='base'] {
     padding: 0;
     border: 0;
@@ -65,9 +64,9 @@ export const styles = css`
     gap: var(--lr-space-xs);
   }
   @media (forced-colors: active) {
-    /* Caller category colors remain an accent in ordinary themes. In forced colors the system
-       palette is the authority for every text/background/border channel, including values that
-       arrived as inline custom properties on the nested badge. */
+    /* Caller category colors stay an accent in ordinary themes; under forced colors the system
+       palette owns every text/background/border channel, including values that arrived as inline
+       custom properties on the nested badge. */
     [part='type-badge'] {
       --lr-badge-color: var(--lr-color-text) !important;
       --lr-badge-background: var(--lr-color-surface) !important;

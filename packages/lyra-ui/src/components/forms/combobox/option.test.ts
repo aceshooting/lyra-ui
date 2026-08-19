@@ -1,4 +1,5 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './option.js';
 import './combobox.js';
 import '../select/select.js';
@@ -609,6 +610,52 @@ it('reflects sub and dot-color attributes onto their properties', async () => {
   expect(el.dotColor).to.equal('green');
 });
 
+describe('pressed feedback under a real pointer press', () => {
+  const centerOf = (node: Element): [number, number] => {
+    const rect = node.getBoundingClientRect();
+    return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+  };
+
+  it('keeps the pressed background even though the press also makes the option current', async () => {
+    const el = (await fixture(html`
+      <lr-option
+        value="a"
+        tabindex="0"
+        style="
+          --lr-transition-fast: 0s;
+          --lr-option-hover-bg: rgb(4, 5, 6);
+          --lr-option-current-bg: rgb(7, 8, 9);
+          --lr-option-active-bg: rgb(1, 2, 3);
+        "
+        >Alpha</lr-option
+      >
+    `)) as LyraOption;
+    await el.updateComplete;
+    const base = part(el, 'base');
+    const resting = getComputedStyle(base).backgroundColor;
+    let becameCurrent: boolean | null = null;
+    try {
+      await sendMouse({ type: 'move', position: centerOf(base) });
+      await waitUntil(
+        () => getComputedStyle(base).backgroundColor !== resting,
+        'the option never picked up its hover tint',
+      );
+      await sendMouse({ type: 'down' });
+      // The engine-dependent half of this test: a mousedown focuses a focusable element, and the
+      // option turns `current` on focusin. Recorded rather than assumed, so a failure says which
+      // state actually won.
+      becameCurrent = supportsStateSelector ? el.matches(':state(current)') : null;
+      await waitUntil(
+        () => getComputedStyle(base).backgroundColor === 'rgb(1, 2, 3)',
+        `pressed background never reached --lr-option-active-bg (became current: ${becameCurrent})`,
+      );
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  });
+});
+
 it('is accessible', async () => {
   const listbox = await fixture<HTMLElement>(html`
     <div role="listbox" aria-label="Letters">
@@ -635,4 +682,27 @@ it('contains unbroken labels and end adornments in a 320px LTR or RTL allocation
     expect(wrapper.scrollWidth, `${direction} wrapper scroll width`).to.be.at.most(wrapper.clientWidth);
     expect(base.scrollWidth, `${direction} base scroll width`).to.be.at.most(base.clientWidth);
   }
+});
+
+it('keeps a consumer hover retint visible on the option that is also current', async function () {
+  if (!supportsCustomStates || !supportsStateSelector) this.skip();
+  // :host(:state(hover)) [part~='base'] and :host(:state(current)) [part~='base'] are both
+  // (0,3,0), and the current rule is written later, so before the current-qualified hover arm
+  // existed the current option ignored --lr-option-hover-bg entirely. In a roving-tabindex
+  // listbox the current option is exactly the one the pointer is most likely to be over, so a
+  // consumer retinting only the hover token saw no hover response on the row that matters most.
+  const el = (await fixture(html`
+    <lr-option value="a" style="--lr-option-hover-bg: rgb(1, 2, 3); --lr-option-current-bg: rgb(9, 9, 9)"
+      >Alpha</lr-option
+    >
+  `)) as LyraOption;
+  el.dispatchEvent(new FocusEvent('focusin', { bubbles: true, composed: true }));
+  expect(el.matches(':state(current)'), 'sanity: option is current').to.equal(true);
+  const base = part(el, 'base');
+  expect(getComputedStyle(base).backgroundColor, 'current, not hovered').to.equal('rgb(9, 9, 9)');
+
+  el.dispatchEvent(new PointerEvent('pointerenter', { bubbles: false }));
+  await el.updateComplete;
+  expect(el.matches(':state(hover)'), 'sanity: option is hovered').to.equal(true);
+  expect(getComputedStyle(base).backgroundColor, 'current and hovered').to.equal('rgb(1, 2, 3)');
 });

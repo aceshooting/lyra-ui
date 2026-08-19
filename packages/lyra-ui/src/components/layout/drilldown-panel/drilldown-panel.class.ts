@@ -28,7 +28,7 @@ import '../../overlays/empty/empty.class.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_drilldownDocuments, LYRA_DEFAULT_drilldownEmpty, LYRA_DEFAULT_drilldownRuns, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_items, LYRA_DEFAULT_next, LYRA_DEFAULT_noData, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_previous, LYRA_DEFAULT_provenanceEntities, LYRA_DEFAULT_sourceListDefaultLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_drilldownDocuments, LYRA_DEFAULT_drilldownEmpty, LYRA_DEFAULT_drilldownRuns, LYRA_DEFAULT_items, LYRA_DEFAULT_next, LYRA_DEFAULT_noData, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_previous, LYRA_DEFAULT_provenanceEntities, LYRA_DEFAULT_sourceListDefaultLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraDrilldownCategory =
@@ -559,7 +559,6 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     drilldownDocuments: LYRA_DEFAULT_drilldownDocuments,
     drilldownEmpty: LYRA_DEFAULT_drilldownEmpty,
     drilldownRuns: LYRA_DEFAULT_drilldownRuns,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
     items: LYRA_DEFAULT_items,
     next: LYRA_DEFAULT_next,
     noData: LYRA_DEFAULT_noData,

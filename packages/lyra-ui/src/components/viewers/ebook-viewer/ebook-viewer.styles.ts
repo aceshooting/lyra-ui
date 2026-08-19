@@ -28,10 +28,9 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    /* Meets the shared minimum tappable size (same --lr-icon-button-size
-       floor as lr-code-block's [part='toggle']) -- the toolbar has ample
-       room (flex + justify-content: space-between), so the button box
-       itself grows rather than relying on invisible hit-slop. */
+    /* The shared --lr-icon-button-size floor, as on lr-code-block's [part='toggle']. The toolbar
+       has room (flex, justify-content: space-between), so the button box itself grows rather than
+       relying on invisible hit-slop. */
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     padding: 0;

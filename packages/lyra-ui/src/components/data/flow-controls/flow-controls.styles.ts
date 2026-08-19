@@ -18,26 +18,24 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
-    /* Overlay step: this cluster's job is to float over a flow canvas as a toolbar, which is why the
-       plain escape below strips the whole surface treatment when it is embedded in real chrome. */
+    /* Overlay step: the cluster floats over a flow canvas as a toolbar, so the plain escape below
+       strips the whole surface treatment when it is embedded in real chrome. */
     box-shadow: var(--lr-shadow-m);
   }
   :host([orientation='vertical']) [part='base'] {
     flex-direction: column;
     flex-wrap: nowrap;
   }
-  /* Chrome-less escape, mirroring the shared LyraFrame vocabulary's frame="plain" (and lr-callout's [inline]): the
-     cluster is often placed directly inside a host toolbar or panel that already draws its own
-     border/background, where this floating-surface chrome doubles the frame. The box-shadow goes
-     with the rest of the box decoration, exactly as lr-flow-run-status's plain does -- a lift
-     shadow with no surface under it reads as a stray smudge. Only the decoration goes: the flex
-     layout, the gap, every button's --lr-icon-button-size hit-area floor, and their hover/focus
-     affordances all stay.
+  /* Chrome-less escape, mirroring the shared LyraFrame vocabulary's frame="plain" and lr-callout's
+     [inline]: inside a host toolbar or panel already drawing its own border/background, this
+     floating-surface chrome doubles the frame. The box-shadow goes with the rest of the box
+     decoration, as lr-flow-run-status's plain does -- a lift shadow with no surface under it is a
+     stray smudge. Only decoration goes; the flex layout, the gap, every button's
+     --lr-icon-button-size hit-area floor and their hover/focus affordances stay.
 
-     MUST stay after :host([orientation='vertical']) [part='base']: both are :host([x])
-     [part='base'], i.e. equal specificity, so source order alone decides. Only flex-direction vs.
-     box decoration is set today, so nothing collides -- keeping this last preserves plain as the
-     stronger statement ("no chrome at all") if either rule grows. */
+     MUST stay after :host([orientation='vertical']) [part='base'] -- both are :host([x])
+     [part='base'], so source order alone decides. Nothing collides today (flex-direction vs. box
+     decoration), but last keeps plain the stronger no-chrome statement if either rule grows. */
   :host([frame='plain']) [part='base'] {
     padding: 0;
     border: 0;
@@ -45,11 +43,10 @@ export const styles = css`
     background: transparent;
     box-shadow: none;
   }
-  /* Enumerated by part (rather than the previous bare "[part='base'] button"
-     tag selector) so each control resolves to the shared minimum tappable
-     size (--lr-icon-button-size) directly off its own [part='...'] --
-     the floating toolbar already has the room, this doesn't change the
-     rendered box, just how it's declared. */
+  /* Enumerated by part rather than a bare "[part='base'] button" tag
+     selector, so each control resolves the shared minimum tappable size
+     (--lr-icon-button-size) off its own [part='...']. The floating toolbar
+     already has the room; the rendered box is unchanged. */
   [part='zoom-in'],
   [part='zoom-out'],
   [part='fit'],
@@ -66,18 +63,16 @@ export const styles = css`
     color: var(--lr-color-text);
     cursor: pointer;
   }
-  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
-     -- (0,1,0) total, functionally identical selection to \`[part='base'] button:hover:not(:disabled)\`
-     ((0,3,1)) but now losing (on the pseudo-element tiebreak) to a consumer's own
-     \`::part(zoom-in):hover\` override ((0,1,1)) without that consumer needing !important. Mirrors
+  /* :where() leaves only :hover contributing -- (0,1,0), the same selection as
+     \`[part='base'] button:hover:not(:disabled)\` ((0,3,1)) but now losing the pseudo-element
+     tiebreak to a consumer's own \`::part(zoom-in):hover\` ((0,1,1)) with no !important. Mirrors
      lr-attachment-trigger's identical fix for the same over-specific shape. */
   :where([part='base'] button):hover:where(:not(:disabled)) {
     background: var(--lr-color-surface-hover, var(--lr-color-border));
   }
-  /* Same shape as the hover rule, so it inherits the same (0,1,0) specificity and a consumer's
-     ::part(zoom-in):active override still wins. The fill is the hovered one carried further toward
-     --lr-color-mix-partner (the text colour), which moves in whichever direction the surface needs
-     rather than always lightening. */
+  /* Same shape as the hover rule, so the same (0,1,0) and a consumer's ::part(zoom-in):active
+     override still wins. The hover fill carried further toward --lr-color-mix-partner (the text
+     colour), which moves whichever way the surface needs instead of always lightening. */
   :where([part='base'] button):active:where(:not(:disabled)) {
     background: color-mix(
       in oklab,
@@ -96,14 +91,13 @@ export const styles = css`
   [part='lock'][aria-pressed='true'] {
     color: var(--lr-flow-controls-lock-active-color, var(--lr-color-brand));
   }
-  /* The default slot's own contract: a consumer's button joins the cluster and is "styled by the
-     same group". None of the rules above can deliver that -- every one of them is either a
-     [part='...'] selector (a light-DOM button carries no part attribute) or a descendant selector
-     inside a shadow stylesheet, and per CSS Scoping neither form ever matches slotted content
-     wherever it visually renders. ::slotted() is the only selector that crosses that boundary, and
-     it takes a COMPOUND argument, so each state goes inside the parentheses rather than after
-     them. It matches only the slotted element itself, never its descendants, which is exactly the
-     scope wanted here: the button's box, not the consumer's own icon markup inside it. */
+  /* The default slot's contract: a consumer's button joins the cluster and is styled by the same
+     group. No rule above can do that -- each is either a [part='...'] selector (a light-DOM button
+     carries no part attribute) or a descendant selector in a shadow stylesheet, and per CSS
+     Scoping neither ever matches slotted content. ::slotted() is the only selector that crosses
+     the boundary; it takes a COMPOUND argument, so each state goes inside the parentheses, and it
+     matches the slotted element only, never its descendants -- the button's box, not the
+     consumer's icon markup. */
   ::slotted(button) {
     display: inline-flex;
     align-items: center;
@@ -120,6 +114,15 @@ export const styles = css`
     white-space: normal;
     overflow-wrap: anywhere;
     cursor: pointer;
+  }
+  /* The display above is author-origin, so it outranks the UA stylesheet's own
+     '[hidden] { display: none }' and a consumer hiding one of its own action buttons would still
+     get a painted, clickable control. Restating the UA rule keeps its find-in-page carve-out, so
+     every ::slotted([hidden]) override in the library reads identically -- a hidden button is not
+     find-in-page content, but excluding the value costs nothing and never makes this rule stricter
+     than the platform's. */
+  ::slotted([hidden]:not([hidden='until-found' i])) {
+    display: none;
   }
   ::slotted(button:hover:not(:disabled)) {
     background: var(--lr-color-surface-hover, var(--lr-color-border));

@@ -22,7 +22,7 @@ import '../../forms/button/button.class.js';
 import '../../overlays/spinner/spinner.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_filterBarActiveFilters, LYRA_DEFAULT_filterBarReset, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_filterBarActiveFilters, LYRA_DEFAULT_filterBarReset } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -547,20 +547,9 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     filterBarActiveFilters: LYRA_DEFAULT_filterBarActiveFilters,
     filterBarReset: LYRA_DEFAULT_filterBarReset,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
-    open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
-    progress: LYRA_DEFAULT_progress,
-    restore: LYRA_DEFAULT_restore,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

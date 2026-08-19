@@ -53,8 +53,9 @@ value, without suppressing the visible `name` heading.
 
 - `lr-close` — `detail: DocumentViewerCloseReason`, the viewer shell dialog's dismissal reason.
   The event is emitted after the viewer sets `open` to `false`. A registered renderer may compose
-  its own descendant dialog; closing that inner dialog keeps its normal `lr-dialog-close` path and
-  does not close the document viewer.
+  its own descendant dialog; closing that inner dialog keeps its own `lr-close` path — the shell
+  guards on `event.target !== event.currentTarget` — and does not close the document viewer.
+  (`<lr-dialog>`'s close event was spelled `lr-dialog-close` before 10.0.0.)
 - `lr-download` — `detail: { src, filename }`, emitted when the native safe download action is
   activated. The browser download itself is handled by the link.
 - `lr-anchor-result` — `detail: { found }`. Emitted by this shell as `{ found: false }` once per

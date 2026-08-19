@@ -89,10 +89,10 @@ export const styles = css`
     border-color: var(--lr-graph-query-builder-save-border-color, var(--lr-color-border));
     color: var(--lr-graph-query-builder-save-color, var(--lr-color-text));
   }
-  /* Mixing the resting fill toward --lr-color-mix-partner (which follows the text colour) rather
-     than multiplying every channel with filter: brightness(): a filter lightens a dark brand and
+  /* The resting fill mixed toward --lr-color-mix-partner (which follows the text colour) rather
+     than multiplied channel-wise by filter: brightness(): a filter lightens a dark brand and
      darkens a light one only by accident, does nothing at all to a pure white or pure black one,
-     and -- because it applies to the whole subtree -- shifted this button's label with it. */
+     and applies to the whole subtree, so it shifted this button's label too. */
   [part='run-button']:hover {
     background: var(
       --lr-graph-query-builder-run-hover-bg,
@@ -190,9 +190,9 @@ export const styles = css`
   [part='saved-load-button']:hover {
     text-decoration: underline;
   }
-  /* The row this button fills has the surface fill, so that -- not the button's own transparent
-     background -- is the base the pressed tint mixes from; an underline alone cannot get "more
-     underlined", and loading a saved query replaces the whole form, which is worth acknowledging. */
+  /* The pressed tint mixes from the row's surface fill, not the button's own transparent
+     background; an underline alone cannot get more underlined, and loading a saved query replaces
+     the whole form, which is worth acknowledging. */
   [part='saved-load-button']:active {
     background: var(
       --lr-graph-query-builder-saved-load-active-bg,
@@ -224,8 +224,8 @@ export const styles = css`
     color: var(--lr-graph-query-builder-saved-delete-hover-color, var(--lr-color-danger));
   }
   /* Pressed adds the quiet danger fill behind the already-red glyph rather than only deepening the
-     glyph itself: a colour step on an icon this small is easy to miss, and this is the destructive
-     control in the row. */
+     glyph: a colour step on an icon this small is easy to miss, and this is the row's destructive
+     control. */
   [part='saved-delete-button']:active {
     color: var(
       --lr-graph-query-builder-saved-delete-active-color,

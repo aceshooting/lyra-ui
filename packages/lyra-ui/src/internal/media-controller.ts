@@ -155,7 +155,13 @@ export function cloneSafeMediaNodes(
     }
 
     if (source.localName !== 'track') continue;
-    const kind = source.getAttribute('kind')?.toLowerCase() ?? '';
+    // HTML's missing-value default for <track kind> is the subtitles state, so an omitted kind
+    // means subtitles -- reading it as the empty string dropped the whole track and silently
+    // lost captions for the common <track src srclang label> markup. An unrecognized value stays
+    // rejected rather than following the spec's metadata invalid-value default: this cloner is an
+    // allowlist, and a metadata track is never presented to the user anyway.
+    const declaredKind = source.getAttribute('kind');
+    const kind = declaredKind === null ? 'subtitles' : declaredKind.toLowerCase();
     if (!TRACK_KINDS.has(kind)) continue;
     const clone = targetDocument.createElement('track');
     clone.setAttribute('src', url);

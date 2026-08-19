@@ -955,3 +955,30 @@ it('inherits independent appearance and interactive-state paint from an ancestor
     await resetMouse();
   }
 });
+
+describe("a slotted [hidden] media child", () => {
+  it("is removed from the rendered box, not just from the accessibility tree", async () => {
+    const el = (await fixture(html`
+      <lr-card>
+        <span id="gone" slot="media" hidden>hidden media</span>
+        body
+      </lr-card>
+    `)) as LyraCard;
+    await el.updateComplete;
+    const gone = el.querySelector<HTMLElement>("#gone")!;
+    expect(getComputedStyle(gone).display).to.equal("none");
+    expect(gone.getClientRects().length).to.equal(0);
+  });
+
+  it("still lets find-in-page reveal a hidden='until-found' media child", async () => {
+    const el = (await fixture(html`
+      <lr-card>
+        <span id="findable" slot="media" hidden="until-found">collapsed media</span>
+        body
+      </lr-card>
+    `)) as LyraCard;
+    await el.updateComplete;
+    const findable = el.querySelector<HTMLElement>("#findable")!;
+    expect(getComputedStyle(findable).display).to.equal("block");
+  });
+});

@@ -73,39 +73,49 @@ export const styles = css`
   [part='row'][data-active] {
     background: var(--lr-trace-tree-row-active-bg, var(--lr-color-brand-quiet));
   }
-  /* The row itself is the click target (it selects a span; the nested [part='toggle'] only expands
-     it), so it earns a pressed state. Mixing the hovered tint a further --lr-color-mix-active toward
-     --lr-color-mix-partner keeps it a distinctly deeper step than hover in both themes. It must stay
-     after the [data-active] rule: the two selectors are both (0,2,0), so source order alone decides
-     whether pressing the already-selected row shows any feedback at all. */
+  /* The selected row needs its own hover step: plain [part='row']:hover above is (0,2,0), exactly
+     what [part='row'][data-active] scores, and the active rule wins that tie on source order, so
+     without this the selected row goes dead under the pointer. :where() keeps the state qualifier
+     out of the specificity count, so this stays (0,2,0) and the ordering below still hands :active
+     the press. Mixed from the active fill, not the plain-row hover fill, so a retinted
+     --lr-trace-tree-row-active-bg carries into the hover step; same pattern as lr-tree-item. */
+  [part='row']:where([data-active]):hover {
+    background: color-mix(
+      in oklab,
+      var(--lr-trace-tree-row-active-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+    );
+  }
+  /* The row is the click target -- it selects a span, while the nested [part='toggle'] only expands
+     it. Mixing the hovered tint a further --lr-color-mix-active toward --lr-color-mix-partner keeps
+     it a deeper step than hover in both themes. Must stay after the [data-active] rule and its
+     hover companion: all three are (0,2,0), so source order alone decides whether pressing the
+     already-selected row shows any feedback. */
   [part='row']:active {
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
 
-  /* text-quiet's contrast ratio against brand-quiet lands at ~4.25:1 -- just under the WCAG AA
-     4.5:1 floor for normal-size text -- even though it comfortably passes against the plain
-     (non-active) row background used the rest of the time. Darkening the active tint instead would
-     make it worse, since every failing foreground here is dark text; the fix is to raise the
-     foreground to full strength once the row is active, as lr-conversation-item does for the same
-     bug. --lr-color-text flips with the color scheme, so this raises contrast in both.
-     [data-status='pending'] is included because its color *is* --lr-color-text-quiet: same failure,
-     same fix. The other statuses keep their semantic hue -- see the mix below. */
+  /* text-quiet against brand-quiet lands at ~4.25:1, just under the WCAG AA 4.5:1 floor for
+     normal-size text, though it passes against the plain non-active row background. Darkening the
+     active tint would make it worse -- every failing foreground here is dark text -- so raise the
+     foreground to full strength once the row is active, as lr-conversation-item does.
+     --lr-color-text flips with the color scheme, so contrast rises in both.
+     [data-status='pending'] is included because its color *is* --lr-color-text-quiet; the other
+     statuses keep their semantic hue -- see the mix below. */
   [part='row'][data-active]
     :is([part='detail'], [part='duration'], [part='tokens-in'], [part='tokens-out'], [part='cost']),
   [part='row'][data-active] [part='status-text'][data-status='pending'] {
     color: var(--lr-trace-tree-row-active-color, var(--lr-color-text));
   }
 
-  /* The semantic status labels keep their hue on the active row -- an error row that stops being
-     red once selected is an information-design regression, and the hue is the fastest scan signal
-     in a trace list -- but get pulled 25% toward the text color so they clear the same AA floor
-     (success 4.46 -> 6.18, denied/warning 4.28 -> 5.96 against the default tint). Applied to every
-     tone rather than only the two that fail at the shipped defaults: a per-status carve-out is
-     theme-fragile, since a consumer retheming one --lr-color-* moves that ratio and would silently
-     re-break. The mix is theme-symmetric by construction -- --lr-color-text flips with the scheme,
-     so the same declaration darkens in light mode and lightens in dark mode.
-     Scoped to [part='status-text'] rather than redefining the tokens inside the active row, which
-     would silently re-point a consumer's own token override and drag [part='bar'] along with it. */
+  /* The semantic status labels keep their hue on the active row -- hue is the fastest scan signal in
+     a trace list -- but are pulled 25% toward the text color to clear the same AA floor (success
+     4.46 -> 6.18, denied/warning 4.28 -> 5.96 against the default tint). Applied to every tone, not
+     just the two failing at the shipped defaults: retheming one --lr-color-* moves that ratio, so a
+     per-status carve-out would silently re-break. --lr-color-text flips with the scheme, so one
+     declaration darkens in light mode and lightens in dark. Scoped to [part='status-text'] rather
+     than redefining the tokens inside the active row, which would re-point a consumer's own token
+     override and drag [part='bar'] along with it. */
   [part='row'][data-active] [part='status-text'][data-status='success'] {
     color: color-mix(
       in srgb,
@@ -136,9 +146,9 @@ export const styles = css`
   }
 
   [part='toggle'] {
-    /* Keep the chevron glyph compact while giving the interactive box the shared minimum
-       tappable size -- same "small glyph, padded hit box" pattern as lr-code-block's/
-       lr-json-viewer's own [part='toggle']. */
+    /* Compact chevron glyph in an interactive box at the shared minimum tappable size -- the same
+       small-glyph, padded-hit-box pattern as lr-code-block's and lr-json-viewer's [part='toggle'].
+       */
     flex: 0 0 auto;
     inline-size: var(--lr-size-1-25rem);
     block-size: var(--lr-size-1-25rem);
@@ -256,15 +266,14 @@ export const styles = css`
     background-size: 200% 100%;
     animation: lr-trace-tree-stripe var(--lr-transition-ambient) infinite;
   }
-  /* background-position animates in physical coordinates, so the sweep needs
-     an explicit mirrored keyframe track to travel inline-start -> inline-end
-     in RTL as well. */
+  /* background-position animates in physical coordinates, so RTL needs an explicit mirrored keyframe
+     track to sweep inline-start -> inline-end too. */
   :host(:dir(rtl)) [part='bar'][data-status='running'] {
     animation-name: lr-trace-tree-stripe-rtl;
   }
   @media (prefers-reduced-motion: reduce) {
-    /* the RTL selector outranks the bare one, so it must be silenced here
-       explicitly or its animation-name would win over 'animation: none' */
+    /* The RTL selector outranks the bare one: unsilenced, its animation-name would beat
+       'animation: none'. */
     [part='bar'][data-status='running'],
     :host(:dir(rtl)) [part='bar'][data-status='running'] {
       animation: none;

@@ -2,15 +2,13 @@ import { css } from 'lit';
 
 export const styles = css`
   :host {
-    /* Backdrop scrim color -- component-specific so a host can retheme it
-       without a raw literal leaking into the public API (no shared
-       --lr-*-overlay token exists in the design system to resolve through,
-       same rationale as lr-dialog's --lr-dialog-overlay-color and
-       lr-widget's --lr-widget-overlay-color). */
+    /* Backdrop scrim color, component-specific so a host can retheme it without a raw literal
+       leaking into the public API: no shared --lr-*-overlay token exists to resolve through, same
+       rationale as lr-dialog's --lr-dialog-overlay-color and lr-widget's
+       --lr-widget-overlay-color. */
     --_lr-tool-result-dialog-overlay-color: var(--lr-color-overlay);
-    /* Inset applied to the panel while [maximized] -- overridable the same
-       way lr-widget's --lr-widget-fullscreen-inset is, e.g. to leave a
-       persistent app rail visible. */
+    /* Inset applied to the panel while [maximized] -- overridable like lr-widget's
+       --lr-widget-fullscreen-inset, e.g. to leave a persistent app rail visible. */
     --_lr-tool-result-dialog-maximized-inset: max(
         var(--lr-space-l),
         var(--lr-safe-area-top)
@@ -62,8 +60,8 @@ export const styles = css`
     min-inline-size: 0;
     max-block-size: 100%;
     box-sizing: border-box;
-    /* Modal-panel surface, not the page surface -- in dark mode the two resolve to the same
-       near-black and the dialog reads as a scrim with floating text instead of a panel. */
+    /* Modal-panel surface, not the page surface: in dark mode the two resolve to the same
+       near-black and the dialog reads as a scrim with floating text. */
     background: var(--lr-color-surface-overlay);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
@@ -144,8 +142,8 @@ export const styles = css`
     min-inline-size: 0;
     overflow-wrap: anywhere;
   }
-  /* Pending is the resting state before a tool call has done anything worth
-     calling out; its foreground and background remain independently themeable. */
+  /* Pending is the resting state before a tool call has done anything worth calling out; its
+     foreground and background stay independently themeable. */
   :host([status="running"]) [part="status"] {
     color: var(
       --lr-tool-result-dialog-running-color,
@@ -176,9 +174,8 @@ export const styles = css`
       var(--_lr-tool-result-dialog-error-bg)
     );
   }
-  /* 'denied' is a policy rejection, not a runtime failure -- the warning
-     (not danger) tinted-background reads that distinction without relying on
-     the status text alone. */
+  /* 'denied' is a policy rejection, not a runtime failure -- the warning tinted background, not
+     danger, carries that distinction without relying on the status text alone. */
   :host([status="denied"]) [part="status"] {
     color: var(
       --lr-tool-result-dialog-denied-color,
@@ -226,9 +223,8 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
-  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
-     --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
-     than hover in both light and dark themes rather than repeating it. */
+  /* Pressed is the hover tint pushed a further --lr-color-mix-active toward --lr-color-mix-partner,
+     which follows the text colour -- a distinctly deeper step in both light and dark themes. */
   [part="maximize-button"]:active,
   [part="close-button"]:active {
     background: color-mix(

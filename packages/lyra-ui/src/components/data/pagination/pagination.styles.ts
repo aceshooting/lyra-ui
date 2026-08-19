@@ -6,11 +6,10 @@ export const styles = css`
     min-inline-size: 0;
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
-    /* Both knobs read the shared control ladder, which owns every tier and matches both the s/m/l
-       and small/medium/large spellings in one selector list. Keeping the public
-       --lr-pagination-* names in front lets a consumer retune this component alone, while the
-       values still come from one place. The literal fallbacks are the ladder's own "m" tier, so
-       this sheet resolves to the resting control footprint on its own. */
+    /* Both knobs read the shared control ladder -- every tier, both the s/m/l and
+       small/medium/large spellings, one selector list. The public --lr-pagination-* names come
+       first so a consumer can retune this component alone; the fallbacks are the ladder's m tier,
+       so this sheet stands alone. */
     --_lr-pagination-control-size: var(
       --lr-form-control-height,
       var(--lr-size-2-5rem)
@@ -20,17 +19,15 @@ export const styles = css`
       var(--lr-font-size-m)
     );
     --_lr-pagination-control-radius: var(--lr-radius);
-    /* Inner padding of the nav buttons and the page input. Exposed as a single knob (previously
-       a hardcoded var(--lr-space-xs) repeated at both sites) so a consumer can adjust the icon /
-       digit inset. Kept uniform across every tier -- today's padding is identical at every tier,
-       and per-tier divergence would visibly change the current rendering, which must stay
-       byte-identical. The control's outer footprint is fixed by --lr-pagination-control-size
-       (border-box), so this only affects the inner inset, not the button size. */
+    /* One knob for the icon / digit inset of the nav buttons and the page input, replacing a
+       var(--lr-space-xs) at both sites. Uniform across tiers -- divergence would change the
+       current rendering. --lr-pagination-control-size fixes the border-box footprint, so this
+       moves the inset only, not the button size. */
     --_lr-pagination-control-padding: var(--lr-space-xs);
-    /* Resting fill and border of every control, varied by the appearance variant below. Routed through two
-       properties rather than one rule per appearance so the rule that consumes them stays at the
-       specificity of a bare [part] selector -- a consumer's ::part(page) override has to be able
-       to win, and an :host([appearance=...]) [part=...] rule would out-specify it. */
+    /* Resting fill and border of every control, per appearance. Two properties rather than one
+       rule per appearance keeps the consuming rule at a bare [part]'s weight: an
+       :host([appearance=...]) [part=...] rule would land at (0,3,0) and out-rank the page-current
+       chip and the hover/pressed rules, which sit at (0,1,0) and win on source order. */
     --_lr-pagination-control-bg-default: var(--lr-color-surface);
     --_lr-pagination-control-border-color-default: var(--lr-color-border);
   }
@@ -125,14 +122,13 @@ export const styles = css`
     text-decoration: none;
     cursor: pointer;
   }
-  /* A numbered page grows with its digits instead of clipping a four-digit page number, while the
-     icon-only controls keep their square footprint. */
+  /* A numbered page grows with its digits instead of clipping a four-digit page number; icon-only
+     controls keep their square footprint. */
   [part~="page"] {
     inline-size: auto;
   }
-  /* The applied page reads as a solid chip in every appearance -- which page you are on must not
-     depend on which look the consumer picked. Declared after the appearance-driven rule above and
-     at the same specificity, so a consumer ::part(page-current) override still wins. */
+  /* The applied page reads as a solid chip in every appearance. Declared after the control rule it
+     overrides and at the same (0,1,0), so source order alone decides. */
   [part~="page-current"] {
     border-color: var(--lr-pagination-current-border-color, transparent);
     background: var(--lr-pagination-current-bg, var(--lr-color-brand));
@@ -142,8 +138,11 @@ export const styles = css`
   [part~="ellipsis"] {
     color: var(--lr-color-text-quiet);
   }
-  /* :where() zeroes every state qualifier's specificity contribution, so a consumer's
-     ::part(previous-button):hover / ::part(next-button):hover override wins without !important. */
+  /* :where() zeroes every state qualifier, keeping this at (0,1,0) -- the weight of the :active
+     rules below and the page-current arms after them, which win on source order alone.
+     [part='page-input'] is deliberately absent: its resting rule sits further down (it needs the
+     sizing tokens declared there) and at the same (0,1,0) would take background and border-color
+     back, so its hover/press arms live beside it. */
   [part~="first-button"]:where(:hover):where(:not(:disabled)):where(
       :not([aria-disabled="true"])
     ),
@@ -161,17 +160,16 @@ export const styles = css`
     ),
   [part~="page"]:where(:hover):where(:not(:disabled)):where(
       :not([aria-disabled="true"])
-    ):where(:not([part~="page-current"])),
-  [part="page-input"]:where(:hover):where(:not(:disabled)) {
+    ):where(:not([part~="page-current"])) {
     background: var(--lr-pagination-hover-bg, var(--lr-color-brand-quiet));
     border-color: var(
       --lr-pagination-hover-border-color,
       var(--lr-color-brand)
     );
   }
-  /* Same selectors, same zeroed specificity, one step further toward --lr-color-mix-partner (which
-     follows the text colour) -- so the pressed fill is unmistakably deeper than the hovered one in
-     either theme, and a consumer's ::part(next-button):active still wins. */
+  /* Same selectors and zeroed specificity, one step further toward --lr-color-mix-partner (which
+     follows the text colour) so the press reads deeper than the hover in either theme; the
+     page-current :active arm below still wins on source order. */
   [part~="first-button"]:where(:active):where(:not(:disabled)):where(
       :not([aria-disabled="true"])
     ),
@@ -189,8 +187,7 @@ export const styles = css`
     ),
   [part~="page"]:where(:active):where(:not(:disabled)):where(
       :not([aria-disabled="true"])
-    ):where(:not([part~="page-current"])),
-  [part="page-input"]:where(:active):where(:not(:disabled)) {
+    ):where(:not([part~="page-current"])) {
     background: var(
       --lr-pagination-active-bg,
       color-mix(
@@ -204,15 +201,15 @@ export const styles = css`
       var(--lr-color-brand)
     );
   }
-  /* The current page is already a brand chip; without its own :hover arm it would fall back to the
-     rule above and visibly lighten under the pointer, reading as "not selected". */
+  /* Without its own :hover arm the current page's brand chip falls back to the rule above and
+     lightens under the pointer, reading as not selected. */
   [part~="page-current"]:where(:hover) {
     background: var(--lr-pagination-current-hover-bg, var(--lr-color-brand));
     border-color: var(--lr-pagination-current-hover-border-color, transparent);
   }
-  /* Pressing the page you are already on is a no-op, but it still has to acknowledge the click --
-     the chip deepens rather than lightening, so it never momentarily reads as deselected. MUST stay
-     after the generic :active rule above: both are (0,1,0) after :where(), so source order decides. */
+  /* Pressing the page you are on is a no-op but must still acknowledge the click: the chip deepens
+     rather than lightening, so it never reads as deselected. MUST stay after the generic :active
+     rule above -- both are (0,1,0) after :where(), so source order decides. */
   [part~="page-current"]:where(:active) {
     background: var(
       --lr-pagination-current-active-bg,
@@ -244,8 +241,8 @@ export const styles = css`
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }
-  /* Link mode has no :disabled to hang off -- the anchors carry aria-disabled and lose their href
-     instead, so the resting look has to follow that attribute. */
+  /* Link mode has no :disabled -- the anchors carry aria-disabled and lose their href instead, so
+     the resting look follows that attribute. */
   [part~="button"]:where([aria-disabled="true"]) {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
@@ -259,8 +256,8 @@ export const styles = css`
     justify-content: center;
     line-height: var(--lr-line-height-none);
   }
-  /* The two chevrons of an edge control overlap slightly so they read as one doubled glyph rather
-     than two separate arrows. */
+  /* The two chevrons of an edge control overlap slightly so they read as one doubled glyph, not
+     two arrows. */
   [part="first-icon"] slot > svg + svg,
   [part="last-icon"] slot > svg + svg {
     margin-inline-start: var(--lr-size-neg-4px);
@@ -321,11 +318,40 @@ export const styles = css`
     appearance: none;
     margin: 0;
   }
-  /* :where() zeroes the [aria-invalid='true'] qualifier's specificity contribution -- otherwise
-     this (0,2,0) rule would beat a consumer's own ::part(page-input) border-color override
-     whenever the typed page is out of range. The color routes through a scoped cssprop so a
-     consumer can retint just the invalid state without hijacking the shared --lr-color-danger
-     token used everywhere else. */
+  /* The nav buttons' shared hover/:active fills, written HERE purely for source order: every
+     [part='page-input'] rule is (0,1,0) once :where() zeroes its state qualifier, and the resting
+     block directly above declares background and (via the border shorthand) border-color, so
+     placed earlier these lost both back and the field had no hover and no press. Keep them after
+     it and before the [aria-invalid='true'] rule, which must stay last so a hovered out-of-range
+     field keeps its danger border. */
+  [part="page-input"]:where(:hover):where(:not(:disabled)) {
+    background: var(--lr-pagination-hover-bg, var(--lr-color-brand-quiet));
+    border-color: var(
+      --lr-pagination-hover-border-color,
+      var(--lr-color-brand)
+    );
+  }
+  /* One step further toward --lr-color-mix-partner (which follows the text colour) than the hover
+     arm above, matching the buttons' pressed treatment; after it, so a press reads deeper at their
+     shared specificity. */
+  [part="page-input"]:where(:active):where(:not(:disabled)) {
+    background: var(
+      --lr-pagination-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-color-brand-quiet),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
+    border-color: var(
+      --lr-pagination-active-border-color,
+      var(--lr-color-brand)
+    );
+  }
+  /* :where() zeroes the [aria-invalid='true'] qualifier, leaving this at the same (0,1,0) as every
+     other [part='page-input'] rule in this sheet; last of them, so it wins on source order. The
+     scoped cssprop lets a consumer retint just the invalid state without hijacking the shared
+     --lr-color-danger token used everywhere else. */
   [part="page-input"]:where([aria-invalid="true"]) {
     border-color: var(--lr-pagination-invalid-border, var(--lr-color-danger));
   }
@@ -340,9 +366,9 @@ export const styles = css`
     white-space: nowrap;
     border: 0;
   }
-  /* Container-query lengths cannot reference custom properties. This is the
-     documented 320px narrow-allocation baseline expressed in root-relative
-     units so it still follows the page's type scale. */
+  /* Container-query lengths cannot reference custom properties; the documented
+     320px narrow-allocation baseline is written in root-relative units so it
+     still follows the page's type scale. */
   @container (max-inline-size: 20rem) {
     [part~="base"] {
       flex-direction: column;

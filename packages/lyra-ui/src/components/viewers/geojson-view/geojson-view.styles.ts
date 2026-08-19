@@ -11,8 +11,8 @@ export const styles = css`
   }
 
   /* The danger tone every sibling document viewer gives its own failure text (lr-docx-viewer,
-     lr-email-viewer, lr-html-viewer, lr-archive-viewer). Without it this text inherits the plain
-     body colour, leaving a sighted user no signal that a parse or fetch actually failed. */
+     lr-email-viewer, lr-html-viewer, lr-archive-viewer). Without it the text inherits the plain
+     body colour, leaving a sighted user no signal that a parse or fetch failed. */
   [part='error'] {
     margin: 0;
     padding: var(--lr-space-l);

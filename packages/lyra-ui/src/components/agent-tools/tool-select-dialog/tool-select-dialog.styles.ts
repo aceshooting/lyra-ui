@@ -2,11 +2,11 @@ import { css } from 'lit';
 
 export const styles = css`
   :host {
-    /* Backdrop scrim color -- component-specific so a host can retheme it
-       without a raw literal leaking into the public API (no shared
-       --lr-*-overlay token exists in the design system to resolve through,
-       same rationale as lr-dialog's --lr-dialog-overlay-color and
-       lr-tool-result-dialog's --lr-tool-result-dialog-overlay-color). */
+    /* Backdrop scrim color, component-specific so a host can retheme it
+       without a raw literal leaking into the public API -- no shared
+       --lr-*-overlay token exists to resolve through. Same rationale as
+       lr-dialog's --lr-dialog-overlay-color and lr-tool-result-dialog's
+       --lr-tool-result-dialog-overlay-color. */
     --_lr-tool-select-dialog-overlay-color: var(--lr-color-overlay);
     display: none;
     position: fixed;
@@ -42,12 +42,12 @@ export const styles = css`
     max-inline-size: 100%;
     block-size: min(var(--lr-size-38rem), 100%);
     /* Modal-panel surface, not the page surface -- in dark mode the two resolve to the same
-       near-black and the dialog reads as a scrim with floating text instead of a panel. */
+       near-black and the dialog reads as a scrim with floating text. */
     background: var(--lr-color-surface-overlay);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    /* Modal layer, top step: a centered, scrimmed dialog floating free on all four edges --
-       the same role as lr-dialog, so the same elevation. */
+    /* Modal layer, top step: a centered, scrimmed dialog floating free on all four edges, the
+       same role as lr-dialog and so the same elevation. */
     box-shadow: var(--lr-shadow-xl);
     overflow: hidden;
   }
@@ -91,9 +91,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* no-pressed-state: a search field is a caret target, not a push target -- pointer-down places an
-     insertion point and hands the affordance to :focus-visible, so a pressed tint would flash for
-     one frame and then be contradicted by the focus ring. */
+  /* no-pressed-state: a search field is a caret target, not a push target -- pointer-down places
+     an insertion point and hands the affordance to :focus-visible, so a pressed tint would flash
+     for one frame and then be contradicted by the focus ring. */
   :where([part="search-input"]):hover {
     border-color: var(--lr-color-brand);
   }
@@ -115,12 +115,11 @@ export const styles = css`
   }
   [part="defaults-hint"] {
     margin: 0;
-    /* Lines the hint up under the switch's label text, not its track --
-       lr-switch's own [part="base"] uses a fixed 2.25rem track
-       inline-size plus a --lr-space-s gap before its label (both defined
-       in switch.styles.ts, not exposed as tokens), so this indent is
-       coupled to that fixed geometry rather than derived from an unrelated
-       component's token. */
+    /* Lines the hint up under the switch's label text, not its track:
+       lr-switch's [part="base"] uses a fixed 2.25rem track inline-size plus a
+       --lr-space-s gap before its label (both in switch.styles.ts, not
+       exposed as tokens), so this indent is coupled to that fixed geometry
+       rather than derived from another component's token. */
     padding-inline-start: calc(var(--lr-size-2-25rem) + var(--lr-space-s));
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text-quiet);
@@ -286,8 +285,8 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
   }
   [part="tool-disabled-reason"] {
-    /* Slotted into lr-checkbox's owned hint surface alongside tool-description, so the stable
-       checkbox-hint bridge describes the control without lengthening its accessible name. */
+    /* Slotted into lr-checkbox's own hint surface alongside tool-description, so the checkbox-hint
+       bridge describes the control without lengthening its accessible name. */
     display: block;
     min-inline-size: 0;
     max-inline-size: 100%;

@@ -1,5 +1,5 @@
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
-import { sendKeys, sendMouse } from '@web/test-runner-commands';
+import { resetMouse, sendKeys, sendMouse } from '@web/test-runner-commands';
 import './voice-picker.js';
 import type { LyraVoicePicker } from './voice-picker.js';
 import { styles } from './voice-picker.styles.js';
@@ -367,6 +367,101 @@ describe('open and synthetic stale-row theme cssprops', () => {
       resolvedColor(defaulted, 'var(--lr-color-border)'),
     );
     expect(getComputedStyle(defaultedLabel).fontStyle).to.equal('italic');
+  });
+});
+
+describe('row state feedback on the already-selected option', () => {
+  const THREE_VOICES = ['alloy', 'verse', 'sage'];
+  const centerOf = (node: Element): [number, number] => {
+    const rect = node.getBoundingClientRect();
+    return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+  };
+
+  /** Polls a pointer-driven condition for up to 500ms, reporting whether it ever held. Pointer
+   *  state lands a variable number of frames after the mouse command resolves, per engine. */
+  const settle = async (holds: () => boolean): Promise<boolean> => {
+    for (let attempt = 0; attempt < 25; attempt++) {
+      if (holds()) return true;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    return holds();
+  };
+
+  const openWithSelectedMiddleRow = async (): Promise<LyraVoicePicker> => {
+    const el = (await fixture(html`
+      <lr-voice-picker
+        value="verse"
+        .catalog=${THREE_VOICES}
+        style="--lr-transition-fast: 0s; --lr-voice-picker-option-active-bg: rgb(1, 2, 3);"
+      ></lr-voice-picker>
+    `)) as LyraVoicePicker;
+    el.open = true;
+    await el.updateComplete;
+    // The listbox is placed by the Floating UI positioner a tick after the open render, so a
+    // getBoundingClientRect() taken before that points the pointer at the pre-placement box.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    return el;
+  };
+
+  it('keeps the active-descendant highlight visible after arrowing onto the selected row', async () => {
+    const el = await openWithSelectedMiddleRow();
+    // Driven through the component's own ArrowDown handling rather than by hand-stamping
+    // [data-active], so this covers the rendered aria-activedescendant highlight itself.
+    let active: HTMLElement | null = null;
+    for (let step = 0; step < 5; step++) {
+      trigger(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      await el.updateComplete;
+      active = el.shadowRoot!.querySelector<HTMLElement>('[part="option"][data-active]');
+      if (active?.getAttribute('aria-selected') === 'true') break;
+    }
+    expect(active?.getAttribute('aria-selected'), 'arrowing reached the selected row').to.equal('true');
+    expect(
+      getComputedStyle(active!).backgroundColor,
+      'aria-activedescendant highlight on the selected row',
+    ).to.equal('rgb(1, 2, 3)');
+  });
+
+  /** Hovers and presses one row of a freshly opened listbox, returning both computed backgrounds
+   *  (or null when the engine never put the pointer over the row). One fixture per row on purpose:
+   *  releasing the button over an option commits that option and closes the listbox. */
+  const measureRow = async (
+    pick: (rows: HTMLElement[]) => HTMLElement,
+  ): Promise<{ hover: string; press: string } | null> => {
+    const el = await openWithSelectedMiddleRow();
+    const row = pick(Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part="option"]')));
+    const resting = getComputedStyle(row).backgroundColor;
+    try {
+      await sendMouse({ type: 'move', position: centerOf(row) });
+      // Earlier pointer tests in this file can leave Firefox with no document hover state at all
+      // until a real pointer entry; an unverified reading would report the fixed cascade as broken
+      // again, so report 'no pointer' rather than a background.
+      if (!(await settle(() => row.matches(':hover')))) return null;
+      await settle(() => getComputedStyle(row).backgroundColor !== resting);
+      const hover = getComputedStyle(row).backgroundColor;
+      await sendMouse({ type: 'down' });
+      await settle(() => getComputedStyle(row).backgroundColor !== hover);
+      return { hover, press: getComputedStyle(row).backgroundColor };
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+      el.remove();
+    }
+  };
+
+  it('hovers and presses the selected row exactly like an unselected one', async function () {
+    const control = await measureRow((rows) => rows.find((row) => row.getAttribute('aria-selected') !== 'true')!);
+    const selected = await measureRow((rows) => rows.find((row) => row.getAttribute('aria-selected') === 'true')!);
+    if (control === null || selected === null) {
+      this.skip();
+      return;
+    }
+    expect(control.hover, 'an unselected row hovers to the row tint').to.equal('rgb(1, 2, 3)');
+    expect(selected.hover, 'hovered selected row').to.equal(control.hover);
+    // Compared against the unselected row rather than asserted absolutely: an option cancels its own
+    // mousedown, and Firefox suppresses :active for a cancelled activation while Chromium keeps it.
+    // Equality is the contract either way -- the selected row must not be the only one without
+    // pressed feedback.
+    expect(selected.press, 'pressed selected row').to.equal(control.press);
   });
 });
 
@@ -2748,4 +2843,40 @@ it('still seeds slotted hint/error state synchronously on an ordinary browser-on
   // first render, exactly as before.
   expect(el.shadowRoot!.querySelector('[part="hint"]')!.hasAttribute('hidden')).to.equal(false);
   expect(el.shadowRoot!.querySelector('[part="error"]')!.hasAttribute('hidden')).to.equal(false);
+});
+
+describe('explicitly empty host aria-label', () => {
+  it('keeps the closed-mode trigger explicitly unnamed instead of substituting the generic fallback', async () => {
+    const explicit = (await fixture(
+      html`<lr-voice-picker aria-label="" .catalog=${CATALOG}></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    await explicit.updateComplete;
+    const trigger = explicit.shadowRoot!.querySelector('[part="trigger"]')!;
+    expect(trigger.hasAttribute('aria-label')).to.equal(true);
+    expect(trigger.getAttribute('aria-label')).to.equal('');
+
+    const omitted = (await fixture(
+      html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    await omitted.updateComplete;
+    expect(omitted.shadowRoot!.querySelector('[part="trigger"]')!.getAttribute('aria-label')).to.equal('Voice');
+  });
+
+  it('keeps the free-text combobox input explicitly unnamed instead of substituting the generic fallback', async () => {
+    const explicit = (await fixture(
+      html`<lr-voice-picker allow-custom aria-label="" .catalog=${CATALOG}></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    await explicit.updateComplete;
+    const input = explicit.shadowRoot!.querySelector('[part="combobox-input"]')!;
+    expect(input.hasAttribute('aria-label')).to.equal(true);
+    expect(input.getAttribute('aria-label')).to.equal('');
+
+    const omitted = (await fixture(
+      html`<lr-voice-picker allow-custom .catalog=${CATALOG}></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    await omitted.updateComplete;
+    expect(omitted.shadowRoot!.querySelector('[part="combobox-input"]')!.getAttribute('aria-label')).to.equal(
+      'Voice',
+    );
+  });
 });

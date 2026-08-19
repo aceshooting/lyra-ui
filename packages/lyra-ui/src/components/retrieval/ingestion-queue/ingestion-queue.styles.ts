@@ -21,29 +21,25 @@ export const styles = css`
     overflow-y: auto;
     overflow-x: clip;
   }
-  /* Deliberately NOT derived from --lr-ingestion-queue-max-height (whose own default is the
-     keyword 'none', valid for [part='list']'s max-block-size above but not for a length-only
-     custom property): chaining var(--lr-ingestion-queue-max-height, var(--lr-size-24rem)) here
-     would make that 'none' win unconditionally (a var() fallback only applies when the referenced
-     property is *unset*, not when it resolves to a keyword that happens to be invalid for this
-     use), leaving --lr-virtual-list-height literally 'none' -- an invalid block-size that resolves
-     to 'auto', which is the one sizing lr-virtual-list's own windowing math cannot tolerate: its
-     viewport height would then depend on its rendered rows' height while the rendered rows
-     themselves depend on the viewport height, a genuine circular layout dependency that surfaces
-     as a real "ResizeObserver loop completed with undelivered notifications" browser error, not
-     mere test flakiness. A fixed token default, independent of the non-virtualized list's own cap,
-     is the same choice <lr-dataset-viewer>'s own lr-virtual-list sizing rule makes. */
+  /* NOT derived from --lr-ingestion-queue-max-height, whose default is the keyword 'none' -- valid
+     for [part='list']'s max-block-size above, not for a length-only custom property. Chaining
+     var(--lr-ingestion-queue-max-height, var(--lr-size-24rem)) would let 'none' win
+     unconditionally: a var() fallback applies only when the property is unset, not when its value
+     is invalid here. --lr-virtual-list-height would then be literally 'none', an invalid
+     block-size resolving to 'auto' -- the one sizing lr-virtual-list's windowing math cannot
+     tolerate, since viewport height would depend on rendered row height and the rows on viewport
+     height, a circular layout dependency surfacing as a real "ResizeObserver loop completed with
+     undelivered notifications" browser error, not test flakiness. A fixed token default,
+     independent of the non-virtualized list's own cap, matches <lr-dataset-viewer>. */
   lr-virtual-list {
     display: block;
     --lr-virtual-list-height: var(--lr-size-24rem);
   }
   /* [part='item'] and its descendants below also target lr-virtual-list::part(x): above
-     virtualize-at, itemTemplate()'s return value is <lr-virtual-list>'s .renderItem, and
-     Lit commits that content wherever virtual-list's own render() is currently updating --
-     i.e. inside *its* shadow root, not this component's. A plain [part=] selector here, scoped
-     to this component's own shadow root, would never match a node living in that different
-     shadow tree; lr-virtual-list::part(x) reaches that one shadow boundary in, the same
-     technique <lr-dataset-viewer>/<lr-terminal> already use for their own virtualized rows. */
+     virtualize-at, itemTemplate() is <lr-virtual-list>'s .renderItem, so Lit commits that content
+     inside virtual-list's own shadow root, not this component's, where a plain [part=] selector
+     can never reach. lr-virtual-list::part(x) hops that one boundary, as
+     <lr-dataset-viewer>/<lr-terminal> do for their virtualized rows. */
   [part="item"],
   lr-virtual-list::part(item) {
     display: flex;
@@ -83,9 +79,9 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
   }
   /* Each meta fragment (chunk count, embedding status, attempt count) interpolates a
-     locale-formatted number into fixed surrounding words -- resolve each from its own first
-     strong character so the digits stay in reading order instead of being bidi-reordered against
-     the page's own direction, matching toast-item.styles.ts's identical [part="content"] rule. */
+     locale-formatted number into fixed words, so each resolves from its own first strong character
+     and the digits stay in reading order instead of bidi-reordering against the page's direction
+     -- matching toast-item.styles.ts's [part="content"] rule. */
   [part="item-chunk-count"],
   lr-virtual-list::part(item-chunk-count),
   [part="item-embedding-status"],

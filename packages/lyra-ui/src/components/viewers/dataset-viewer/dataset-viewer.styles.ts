@@ -49,11 +49,10 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  /* [part='data-row']/[part~='cell']/etc. below render inside <lr-virtual-list>'s own shadow
-     root (they're renderRow()'s return value, passed in as virtual-list's .renderItem) -- a plain
-     [part=] selector here, scoped to this component's own shadow root, would never match a node
-     living in a *different* shadow tree. lr-virtual-list::part(x) is what reaches one shadow
-     boundary in. */
+  /* [part='data-row']/[part~='cell']/etc. below render inside <lr-virtual-list>'s own shadow root
+     -- they are renderRow()'s return value, passed in as virtual-list's .renderItem -- so a plain
+     [part=] selector scoped to this component's shadow root would never match a node in a
+     *different* tree. lr-virtual-list::part(x) reaches that one boundary in. */
   lr-virtual-list::part(data-row) {
     display: grid;
     grid-auto-flow: column;
@@ -68,11 +67,14 @@ export const styles = css`
     white-space: nowrap;
     color: var(--lr-color-text);
   }
-  /* The cell's padding moves onto the nested action button so the button's hit area covers the
-     whole cell and the rendered text position is unchanged. The active/warning outline color
-     can't be expressed as a [data-active] attribute selector chained onto ::part() (unsupported),
-     so renderCell() sets a private active default inline. The public hook stays an inheritable
-     input and wins over that default. */
+  /* The cell's padding moves onto the nested action button so its hit area covers the whole cell
+     with the rendered text position unchanged. The active/warning outline color cannot be a
+     [data-active] attribute selector chained onto ::part(), which is unsupported, so renderCell()
+     sets a private active default inline; the public hook stays an inheritable input and wins over
+     that default. */
+  /* no-hover-state: pointer feedback belongs to the nested [part='cell-highlight-action'], sized
+     below to cover this cell edge to edge, so a pointer anywhere on the highlighted cell already
+     hovers that button; a second treatment on the structural cell would double-tint one gesture. */
   [part~='cell-highlight'],
   lr-virtual-list::part(cell-highlight) {
     outline: var(--lr-border-width-medium) solid
@@ -84,11 +86,11 @@ export const styles = css`
     cursor: pointer;
     padding: 0;
   }
-  /* A real action button (not a plain grid cell -- see [part='header-cell']/::part(cell) above),
-     so it gets the shared minimum tappable floor in the block dimension via a min-block-size on
-     top of the "all: unset" reset above; its inline size already spans the full cell
-     (inline-size: 100%) so no min-inline-size is strictly needed to reach the floor there, but it
-     is set anyway so the part is self-describing independent of its container. */
+  /* A real action button, not a plain grid cell like [part='header-cell']/::part(cell) above, so a
+     min-block-size gives it the shared minimum tappable floor on top of the all: unset reset.
+     inline-size: 100% already spans the full cell, so min-inline-size is not strictly needed to
+     reach the floor there, but it is set anyway so the part is self-describing independent of its
+     container. */
   [part='cell-highlight-action'],
   lr-virtual-list::part(cell-highlight-action) {
     all: unset;

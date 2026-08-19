@@ -4,18 +4,16 @@ export const styles = css`
   :host {
     display: block;
   }
-  /* Every row rule below is paired with an lr-virtual-list::part(x) twin because this component
-     renders rows through two paths. At or below virtualize-at, renderNeighborRow()'s result is
-     committed into this component's own shadow root and the plain [part=] selector matches. Above
-     it, the exact same content becomes <lr-virtual-list>'s .renderItem, and Lit commits it wherever
-     virtual-list's own render() is updating -- i.e. inside *its* shadow root, a different shadow
-     tree that a [part=] selector scoped to this one can never reach. ::part() crosses that single
-     boundary. Both selectors are load-bearing; dropping either silently unstyles one path.
+  /* Every row rule below has an lr-virtual-list::part(x) twin because rows render through two
+     paths: at or below virtualize-at, renderNeighborRow()'s result lands in this component's own
+     shadow root and the plain [part=] selector matches; above it, the same content becomes
+     <lr-virtual-list>'s .renderItem and lands in *its* shadow root, which only ::part() reaches.
+     Dropping either unstyles one path.
 
-     [part='row'] is the one name shared with lr-virtual-list's own per-row wrapper, which is
-     exactly why renderItem returns only the row's *content*: a nested second part="row" would be
-     matched by ::part(row) too (::part uses part~= semantics and reaches any depth of the target
-     shadow tree), doubling this rule's padding and divider border on every virtualized row. */
+     [part='row'] is the one name shared with lr-virtual-list's own per-row wrapper -- hence
+     renderItem returns only the row's *content*: a nested second part="row" would match ::part(row)
+     too (part~= semantics, any depth), doubling this rule's padding and divider border on every
+     virtualized row. */
   [part='row'],
   lr-virtual-list::part(row) {
     display: flex;
@@ -67,15 +65,12 @@ export const styles = css`
   }
   [part='node-meta'],
   lr-virtual-list::part(node-meta) {
-    /* A flex item's default min-inline-size is auto (a content-based automatic minimum). When
-       lr-neighbor-list's own host is placed where its width is resolved intrinsically (e.g. as a
-       flex/grid item itself, a common real layout for a sidebar/detail-panel row) rather than
-       against an already-definite available width, that content-based minimum -- driven by
-       node-meta's un-wrapped (white-space: nowrap) text -- propagates up through the row and
-       host, growing the whole layout past its container instead of eliding. Pinning it to 0
-       keeps node-meta (and everything containing it) out of that intrinsic-size contribution, so
-       overflow/text-overflow above can actually clip it once real (constrained) space is
-       available. */
+    /* A flex item's default min-inline-size is auto, a content-based minimum. Where the host's
+       width resolves intrinsically (as a flex/grid item -- a common sidebar/detail-panel layout)
+       rather than against a definite available width, that minimum -- node-meta's nowrap text --
+       propagates up through row and host and grows the layout past its container instead of
+       eliding. Pinning it to 0 keeps node-meta and its containers out of that contribution, so
+       overflow/text-overflow can clip. */
     min-inline-size: 0;
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-xs);
@@ -114,13 +109,11 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* Virtualized mode renders the relation headers from the groups property through
-     lr-virtual-list's own "group" part (re-exported from here as "group-header"), not through this
-     component's
-     [part='group-header'] element -- so the same presentation has to be stated for both, or the
-     headers change appearance the moment the list crosses virtualize-at. Only the typographic
-     treatment is shared: virtual-list positions and inline-pads its own group labels, which is
-     layout this rule deliberately leaves alone. */
+  /* Virtualized, the groups property's relation headers render through lr-virtual-list's own
+     "group" part (re-exported here as "group-header"), not this component's [part='group-header'],
+     so both need the same presentation or the headers change the moment the list crosses
+     virtualize-at. Only typography is shared: virtual-list positions and inline-pads its own
+     labels. */
   [part='group-header'],
   lr-virtual-list::part(group) {
     padding-block: var(--lr-space-xs);

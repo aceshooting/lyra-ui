@@ -4,30 +4,27 @@ export const styles = css`
   :host {
     display: inline-block;
     max-inline-size: 100%;
-    /* The 'm' defaults exactly reproduce the original fixed badge treatment -- mirrors
-       <lr-chip>'s identical --lr-chip-font-size/-padding-inline/-min-height trio so a consumer
-       moving between the two sibling components finds the same size vocabulary. */
+    /* The 'm' defaults reproduce the original fixed badge treatment, and mirror <lr-chip>'s
+       --lr-chip-font-size/-padding-inline/-min-height trio so both siblings share one size
+       vocabulary. */
     --_lr-badge-font-size: var(--lr-font-size-sm);
     --_lr-badge-padding-inline: var(--lr-space-s);
     --_lr-badge-min-height: var(--lr-size-1-25rem);
-    /* Space between the start slot, the label and the end slot. Collapses to nothing on its own
-       when a wrapper is empty, because the empty wrapper is display:none rather than zero-width. */
+    /* Gap between the start slot, the label and the end slot; collapses on its own because an empty
+       wrapper is display:none rather than zero-width. */
     --_lr-badge-gap: var(--lr-space-2xs);
-    /* Rounded rectangle by default; the pill treatment is opt-in through the 'pill' attribute
-       below, matching the badge/tag shape vocabulary. Doesn't vary by size tier, so it's declared
-       once here rather than re-assigned per effective-size block -- mirrors lr-button's
-       identical --lr-button-radius. */
+    /* Rounded rectangle by default; the 'pill' attribute below opts into the pill treatment,
+       matching the badge/tag shape vocabulary. Size-invariant, so declared once here rather than
+       per effective-size block -- mirrors lr-button's --lr-button-radius. */
     --_lr-badge-radius: var(--lr-radius);
 
     /* --- Palette: what the 'variant' axis chooses. -------------------------------------------
-       Five semantic slots per variant, so the 'appearance' axis below can route them onto the
-       surface without every (variant, appearance) pair needing its own rule. Neutral is the
-       default set declared here: it is the only variant whose border color and text color differ
-       (a plain bordered surface reading as "no signal"), which is why -edge and -ink are separate
-       slots rather than one loud color.
-       -solid and -on-solid read the shared variants sheet's generic slots unconditionally, because
-       neutral's own values there already ARE the grid's neutral row; only -tint, -edge and -ink
-       need the non-neutral rule below. */
+       Five slots per variant let the 'appearance' axis below route them onto the surface without a
+       rule per (variant, appearance) pair. Neutral, the default declared here, is the only variant
+       whose border and text colors differ (a bordered "no signal" surface) -- hence -edge and -ink
+       as separate slots, not one loud color. -solid and -on-solid read the shared variants sheet's
+       generic slots unconditionally, since neutral's values there already ARE the grid's neutral
+       row; only -tint, -edge and -ink need the non-neutral rule below. */
     --_lr-badge-tint: var(--lr-color-surface);
     --_lr-badge-solid: var(--lr-color-fill-loud);
     --_lr-badge-edge: var(--lr-color-border);
@@ -36,16 +33,16 @@ export const styles = css`
 
     /* --- Surface: what the 'appearance' axis chooses from that palette. ----------------------
        Kept separate from the public --lr-badge-background/-border/-color trio so those three stay
-       *undeclared* and therefore still inherit from a consumer's ancestor rule; they are consumed
-       as the first arm of the var() fallbacks on [part~='base'] below. The values here are the
-       'filled-outlined' default, restated per appearance further down. */
+       *undeclared* and still inherit from a consumer's ancestor rule; [part~='base'] below consumes
+       them as the first var() arm. These are the 'filled-outlined' default, restated per appearance
+       further down. */
     --_lr-badge-fill: var(--lr-badge-tint, var(--_lr-badge-tint));
     --_lr-badge-stroke: var(--lr-badge-edge, var(--_lr-badge-edge));
     --_lr-badge-text: var(--lr-badge-ink, var(--_lr-badge-ink));
 
     /* --- Attention: the opt-in attention-seeking animation. ----------------------------------
-       Duration and easing are separate custom properties (not one compound transition token) so
-       the 'animation' shorthand below expands to exactly one timing function. */
+       Duration and easing are separate custom properties, not one compound transition token, so the
+       'animation' shorthand below expands to exactly one timing function. */
     --_lr-badge-attention-duration: var(--lr-duration-ambient, 1.8s);
     --_lr-badge-attention-easing: var(--lr-easing-emphasized, ease-in-out);
     --_lr-badge-pulse-color: var(
@@ -86,8 +83,8 @@ export const styles = css`
     overflow: hidden;
     align-items: center;
   }
-  /* Defeats the display:inline-flex above -- the native [hidden] UA rule alone would lose to it at
-     equal specificity. Same fix <lr-chip>'s identical [part='icon'][hidden] override applies. */
+  /* Defeats the display:inline-flex above -- the UA [hidden] rule alone loses to it at equal
+     specificity. Same fix as <lr-chip>'s [part='icon'][hidden] override. */
   [part='start'][hidden],
   [part='end'][hidden] {
     display: none;
@@ -97,6 +94,13 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
     max-inline-size: 100%;
+  }
+  /* The author-origin display above outranks the UA stylesheet's '[hidden] { display: none }', so a
+     consumer's hidden slotted child would still paint and hit-test. Restated here with the UA
+     rule's find-in-page carve-out so 'hidden' keeps meaning hidden. */
+  [part='start'] ::slotted([hidden]:not([hidden='until-found' i])),
+  [part='end'] ::slotted([hidden]:not([hidden='until-found' i])) {
+    display: none;
   }
 
   /* The label truncates, not the whole surface: keeping overflow off [part~='base'] lets the
@@ -110,13 +114,12 @@ export const styles = css`
   }
 
   /* --- variant: the palette ----------------------------------------------------------------
-     One rule for all four non-neutral variants, in place of the four near-identical blocks that
-     stood here: the shared variants sheet has already re-pointed --lr-color-fill-* at the active
-     variant's row of the semantic grid, so the badge reads generic slots and never names a
-     variant. Neutral is excluded rather than mapped, because it keeps the ambient
-     surface/border/text "no signal" treatment declared on :host above instead of the grid's grey
-     neutral row. Matching [variant] as well as :not([variant='neutral']) keeps a host that has not
-     yet reflected its default attribute on the same neutral values. */
+     One rule for all four non-neutral variants: the shared variants sheet already re-points
+     --lr-color-fill-* at the active variant's row of the semantic grid, so the badge reads generic
+     slots and never names a variant. Neutral is excluded, not mapped, keeping the ambient
+     "no signal" surface/border/text on :host above instead of the grid's grey neutral row. Matching
+     [variant] as well as :not([variant='neutral']) keeps a host that has not reflected its default
+     attribute yet on those same neutral values. */
   :host([data-effective-variant]:not([data-effective-variant='neutral'])) {
     --_lr-badge-tint: var(--lr-color-fill-quiet);
     --_lr-badge-edge: var(--lr-color-fill-loud);
@@ -216,9 +219,9 @@ export const styles = css`
     }
   }
 
-  /* The attention animations are decorative and infinite, so they stop outright rather than
-     merely shortening. The shared token layer already clamps every animation's duration and
-     iteration count under this query; naming animation itself keeps the badge provably still. */
+  /* The attention animations are decorative and infinite, so they stop outright rather than merely
+     shortening. The shared token layer already clamps every animation's duration and iteration
+     count under this query; naming animation itself keeps the badge provably still. */
   @media (prefers-reduced-motion: reduce) {
     [part~='base'] {
       animation: none !important;

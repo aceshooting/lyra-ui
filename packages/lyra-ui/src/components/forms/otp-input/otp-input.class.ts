@@ -3,7 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated, isBarredFromValidation } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
-import { nextId } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
@@ -825,6 +825,12 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     const intrinsicInvalid = this.touched && !this.validity.valid;
     const ariaInvalid = hasError || intrinsicInvalid;
     const describedBy = [hasError ? this.errorId : '', hasHint ? this.hintId : ''].filter(Boolean).join(' ');
+    // The control's own name below is presence-based (`hostAriaLabel`), so `aria-label=""` stays an
+    // explicit "the host supplies no name". This companion association is deliberately
+    // truthiness-based instead: it asks whether the host already supplies a *real* name, and an
+    // empty one supplies none. Suppressing the host name must not orphan a rendered visible label
+    // from the control it names, so the labelledby association survives `aria-label=""`.
+    const labelledBy = hasLabel && !this.getAttribute('aria-label') ? this.labelId : nothing;
     let segmentIndex = -1;
 
     return html`
@@ -853,8 +859,8 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
             ?disabled=${this.effectiveDisabled}
             ?readonly=${this.readonly}
             ?required=${this.required}
-            aria-label=${this.getAttribute('aria-label') || (hasLabel ? nothing : this.localize('otpInputLabel'))}
-            aria-labelledby=${hasLabel && !this.getAttribute('aria-label') ? this.labelId : nothing}
+            aria-label=${hostAriaLabel(this) ?? (hasLabel ? nothing : this.localize('otpInputLabel'))}
+            aria-labelledby=${labelledBy}
             aria-describedby=${describedBy || nothing}
             aria-invalid=${ariaInvalid ? 'true' : 'false'}
             @input=${this.onInput}

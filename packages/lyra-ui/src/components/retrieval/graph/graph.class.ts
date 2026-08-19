@@ -14,6 +14,7 @@ import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { literalSetConverter } from '../../../internal/converters.js';
+import { resolveCssLength } from '../../../internal/css-length.js';
 import { styles } from './graph.styles.js';
 import {
   loadD3,
@@ -115,6 +116,7 @@ type GraphItemIdentity =
 
 const STUB_OFFSET_PX = 14; // matches the length of a typical broken-link stub in comparable UIs
 const EDGE_LABEL_OFFSET_PX = 4; // perpendicular offset from the segment midpoint, in world px
+const DEFAULT_EDGE_LABEL_FONT_PX = 10; // used when --lr-font-size-2xs carries no resolvable length
 const EDGE_LABEL_LENGTH_GATE_RATIO = 0.85; // label hides when its measured width exceeds this * edge length
 const EDGE_LABEL_WIDTH_CACHE_MAX = 512; // distinct measured label texts kept before the oldest entry is evicted
 const EXPAND_KEY_INTERVAL_MS = 500; // window for a double-Enter/Space to count as a double-activate
@@ -3180,24 +3182,16 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     };
   }
 
+  /** The edge-label font size in used pixels: `--lr-font-size-2xs` resolved against the live root
+   *  (rem) or own (em) font size through the shared `resolveCssLength()`, so canvas text matches
+   *  what the same token paints in CSS on a page that isn't at the default 16px root size. A token
+   *  in a unit that has no used pixel length here (`ch`, `pt`, `calc()`) falls back to
+   *  DEFAULT_EDGE_LABEL_FONT_PX rather than being measured as raw pixels. */
   private edgeLabelFontPx(): number {
     const raw = this.computedStyle()
       .getPropertyValue('--lr-font-size-2xs')
       .trim();
-    const parsed = parseFloat(raw);
-    if (!Number.isFinite(parsed)) return 10;
-    const unit = raw.toLowerCase();
-    if (unit.endsWith('rem')) {
-      const rootFontSize = parseFloat(
-        this.computedStyle(this.ownerDocument.documentElement).fontSize
-      );
-      return parsed * (Number.isFinite(rootFontSize) ? rootFontSize : 16);
-    }
-    if (unit.endsWith('em')) {
-      const ownFontSize = parseFloat(this.computedStyle().fontSize);
-      return parsed * (Number.isFinite(ownFontSize) ? ownFontSize : 16);
-    }
-    return parsed;
+    return resolveCssLength(raw, { host: this }) ?? DEFAULT_EDGE_LABEL_FONT_PX;
   }
 
   private edgeLabelContext(): CanvasRenderingContext2D | null {

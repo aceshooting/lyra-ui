@@ -24,19 +24,19 @@ export const styles = css`
     --_lr-inline-cursor-width-default: var(--lr-size-0-125rem);
     --_lr-inline-cursor-height-default: var(--lr-size-1em);
     --_lr-typing-duration-default: var(--lr-transition-ambient);
-    /* Themeable, not auto-derived from --lr-typing-duration: like the compound
-       --lr-transition-ambient it aliases (duration + timing-function, e.g. "1.8s ease-in-out")
-       baked into the animation: shorthand above, it can't be decomposed via calc() into a
-       fraction of just its duration. A consumer retiming --lr-typing-duration keeps the
-       stagger proportional by also setting these two explicitly. */
+    /* Themeable, not auto-derived from --lr-typing-duration: that token aliases the compound
+       --lr-transition-ambient (duration + timing-function, e.g. "1.8s ease-in-out") baked into the
+       animation: shorthand, so calc() cannot decompose it into a fraction of the duration alone. A
+       consumer retiming --lr-typing-duration keeps the stagger proportional by setting these two
+       explicitly. */
     --_lr-typing-dot-stagger-1-default: 600ms;
     --_lr-typing-dot-stagger-2-default: 1200ms;
   }
   /* The shared six-step size ladder renders here as three tiers: a presence cue is a few pixels of
      decoration, and six distinguishable dot diameters inside a 1em line box do not exist. Every
-     step of the ladder still matches a rule -- a value the type accepts and no selector matches
-     would quietly render at the default tier, which nothing in this repo can detect. Both
-     spellings of each tier are listed, so migrating markup never loses its sizing. */
+     step still matches a rule -- an accepted value no selector matches would quietly render at the
+     default tier, which nothing in this repo can detect. Both spellings of each tier are listed, so
+     migrating markup never loses its sizing. */
   :host([size='2xs']),
   :host([size='xs']),
   :host([size='s']),
@@ -111,11 +111,9 @@ export const styles = css`
   }
 
   /* -- cursor -------------------------------------------------------------
-     A blinking vertical bar for inline placement at the tail of streamed
-     text. The two adjacent keyframe stops (49% / 50%) hold identical values
-     either side of an instant flip, so the blink still reads as a sharp
-     on/off even though the token's ease-out timing-function is in effect
-     across the whole animation. */
+     A blinking vertical bar for inline placement at the tail of streamed text. The adjacent 49% /
+     50% stops sit either side of an instant flip, so the blink still reads as a sharp on/off even
+     though the token's ease-out timing-function is in effect across the whole animation. */
   [part='cursor'] {
     inline-size: var(--lr-inline-cursor-width, var(--_lr-inline-cursor-width-default));
     block-size: var(--lr-inline-cursor-height, var(--_lr-inline-cursor-height-default));
@@ -135,10 +133,9 @@ export const styles = css`
     }
   }
 
-  /* Every variant collapses to its plain, fully-visible resting state
-     under reduced motion -- never a static mid-animation frame (e.g. a
-     permanently-invisible cursor, had the blink's "off" half been frozen
-     instead). */
+  /* Every variant collapses to its plain, fully-visible resting state -- never a static
+     mid-animation frame, e.g. the permanently-invisible cursor that freezing the blink's "off" half
+     would leave. */
   @media (prefers-reduced-motion: reduce) {
     [part='dot'],
     [part='pulse'],

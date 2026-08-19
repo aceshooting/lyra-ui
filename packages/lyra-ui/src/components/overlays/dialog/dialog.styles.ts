@@ -2,21 +2,19 @@ import { css } from 'lit';
 
 export const styles = css`
   :host {
-    /* Backdrop scrim color -- component-specific so a host can retheme it
-       without a raw literal leaking into the public API (no shared
-       --lr-*-overlay token exists in the design system to resolve through,
-       same rationale as lr-widget's --lr-widget-overlay-color). */
+    /* Backdrop scrim color -- component-scoped: no shared --lr-*-overlay token exists to resolve
+       through, and a host still needs a retheme hook. Same as lr-widget's
+       --lr-widget-overlay-color. */
     --_lr-dialog-overlay-color: var(--lr-color-overlay);
     display: none;
     position: fixed;
     inset: 0;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-modal));
-    /* The host is promoted into the browser top layer through the popover API while it is open,
-       so no consumer stacking context can trap it. The z-index above is only the fallback for a
-       user agent without popover support. These six declarations neutralize the user-agent
-       styles that come with the popover attribute (a fit-content auto-margined box with a solid
-       border, its own padding, and an opaque Canvas background), leaving the host exactly the
-       full-viewport transparent frame it was before. */
+    /* The popover API promotes the open host into the browser top layer, so no consumer stacking
+       context can trap it; the z-index above is only the no-popover fallback. These six
+       declarations neutralize the popover attribute's user-agent styles (fit-content, auto margins,
+       solid border, padding, opaque Canvas background), restoring the host's full-viewport
+       transparent frame. */
     margin: 0;
     border: none;
     background: transparent;
@@ -36,10 +34,9 @@ export const styles = css`
   :host([open]) {
     display: flex;
   }
-  /* The exit animation needs the panel to stay rendered after open flips to false. The attribute
-     is written by the component for exactly as long as that animation runs, and is removed again
-     before lr-after-hide fires. Pointer input is dead for that window so a dismissing dialog
-     cannot swallow a click meant for the page underneath. */
+  /* Keeps the panel rendered after open flips to false, through the exit animation: the component
+     writes this attribute for exactly that long and removes it before lr-after-hide. Pointer input
+     is dead meanwhile, so a dismissing dialog cannot swallow a click meant for the page below. */
   :host([data-closing]) {
     display: flex;
     pointer-events: none;
@@ -64,13 +61,10 @@ export const styles = css`
     /* --lr-dialog-width is an assertive width (unset/auto by default -- the panel shrink-wraps to
        content, unchanged) capped by the same max-inline-size below and by the viewport. */
     inline-size: var(--width, var(--lr-dialog-width, auto));
-    /* --lr-dialog-max-width lets a consumer widen/narrow the panel per
-       instance (e.g. inline on the host) without overriding the whole rule --
-       same convention as lr-media-card's --lr-media-card-max-height. When
-       --lr-dialog-width is set but --lr-dialog-max-width is left at its
-       default, the cap falls back to the requested width itself (not the
-       32rem default) so an assertive width isn't silently clipped by the
-       old shrink-to-fit cap -- the viewport (100%) is still a hard limit. */
+    /* --lr-dialog-max-width resizes the panel per instance without overriding the rule -- same
+       convention as lr-media-card's --lr-media-card-max-height. With --lr-dialog-width set and this
+       one left at its default, the cap falls back to the requested width, not the 32rem default, so
+       an assertive width is not silently clipped; the viewport (100%) is still a hard limit. */
     max-inline-size: min(
       var(
         --lr-dialog-max-width,
@@ -79,16 +73,15 @@ export const styles = css`
       100%
     );
     max-block-size: 100%;
-    /* The modal-panel surface, NOT the page surface. In dark mode --lr-color-surface is the same
+    /* The modal-panel surface, NOT the page surface: in dark mode --lr-color-surface is the same
        near-black as the page behind the scrim, so a dialog painted with it reads as a scrim with
-       text floating on it and no panel at all. In light mode the token still resolves to the page
-       surface, so nothing changes there. */
+       floating text and no panel. In light mode it still resolves to the page surface. */
     background: var(--lr-color-surface-overlay);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    /* Modal layer, and the deepest one: a centered dialog floats free on all four edges over a
-       scrim, so it takes the top step of the elevation scale. lr-drawer, which extends this rule,
-       steps back down to --lr-shadow-l because three of its edges are flush with the viewport. */
+    /* Top step of the elevation scale: a centered dialog floats free on all four edges over a
+       scrim. lr-drawer, which extends this rule, steps back down to --lr-shadow-l because three of
+       its edges are flush with the viewport. */
     box-shadow: var(--lr-shadow-xl);
     overflow: auto;
   }
@@ -149,8 +142,8 @@ export const styles = css`
     border-radius: var(--lr-radius);
     cursor: pointer;
   }
-  /* Once a header-actions group has claimed the auto margin, the close button must not claim a
-     second one or it would be pushed away from the group it belongs beside. */
+  /* Once header-actions has claimed the auto margin, a second one on the close button would push
+     it away from the group it belongs beside. */
   [part="header-actions"] + [part~="close-button"] {
     margin-inline-start: 0;
   }
@@ -158,11 +151,10 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
   }
-  /* Pressed drives the hover's quiet brand fill further toward --lr-color-mix-partner (which
-     follows the text colour), so it darkens on a light theme and lightens on a dark one without
-     this rule knowing which is in force -- the property filter: brightness() never had. The glyph
-     colour is restated rather than left to the hover rule because keyboard activation raises
-     :active with no :hover. */
+  /* Drives the hover's quiet brand fill toward --lr-color-mix-partner, which follows the text
+     colour, so it darkens on a light theme and lightens on a dark one without knowing which is in
+     force -- the property filter: brightness() never had. The glyph colour is restated because
+     keyboard activation raises :active with no :hover. */
   [part~="close-button"]:active {
     background: color-mix(
       in oklab,
@@ -188,9 +180,9 @@ export const styles = css`
     overflow: auto;
     overflow-wrap: anywhere;
   }
-  /* The body carries tabindex="-1" so an overflowing dialog can be scrolled from the keyboard;
-     once it can hold focus it has to say so. Inset offset because the body is flush with the
-     panel edges, where an outset ring would be clipped or would overlap the header rule. */
+  /* The body carries tabindex="-1" so an overflowing dialog scrolls from the keyboard, and a box
+     that can hold focus has to say so. Inset offset because the body is flush with the panel edges,
+     where an outset ring would be clipped or would overlap the header rule. */
   [part="body"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
@@ -214,9 +206,9 @@ export const styles = css`
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
     overflow-wrap: anywhere;
   }
-  /* Footer content is consumer-owned light DOM, so the wrapper's responsive rules do not select
-     it directly. Keep each assigned action capable of shrinking to the panel and inherit the
-     same emergency-wrap policy for a localized or identifier-like label. */
+  /* Footer content is consumer-owned light DOM, which the wrapper's responsive rules do not select
+     directly. Each assigned action must still shrink to the panel and take the same emergency-wrap
+     policy for a localized or identifier-like label. */
   [part="footer"] ::slotted(*) {
     min-inline-size: 0;
     max-inline-size: 100%;

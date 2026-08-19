@@ -1044,3 +1044,33 @@ describe('viewport-rect minimum pointer target', () => {
     expect(getComputedStyle(hitRectOf(defaultFloor)).fill).to.equal('rgba(0, 0, 0, 0)');
   });
 });
+
+describe('explicitly empty host aria-label', () => {
+  it('keeps the region explicitly unnamed instead of falling back to the label property', async () => {
+    const explicitWrapper = (await fixture(html`
+      <lr-flow-canvas>
+        <lr-flow-minimap slot="bottom-end" label="Overview" aria-label=""></lr-flow-minimap>
+      </lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    explicitWrapper.nodes = nodes;
+    await explicitWrapper.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    const explicit = explicitWrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+    await explicit.updateComplete;
+    const base = explicit.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.hasAttribute('aria-label')).to.equal(true);
+    expect(base.getAttribute('aria-label')).to.equal('');
+
+    const omittedWrapper = (await fixture(html`
+      <lr-flow-canvas>
+        <lr-flow-minimap slot="bottom-end" label="Overview"></lr-flow-minimap>
+      </lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    omittedWrapper.nodes = nodes;
+    await omittedWrapper.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    const omitted = omittedWrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+    await omitted.updateComplete;
+    expect(omitted.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Overview');
+  });
+});

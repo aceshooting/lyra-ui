@@ -130,10 +130,10 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
 
-  /* Painted text-quote highlights: the CSS Custom Highlight API path styles the browser-native
-     ::highlight() pseudo (no element exists to select, so a [part='content'] mark[...] selector
-     below never matches on that path); the <mark>-wrap fallback path styles the real elements
-     text-highlights.ts creates in this same shadow tree. Both are kept in sync by tone. */
+  /* Painted text-quote highlights, two paths kept in sync by tone: the CSS Custom Highlight API
+     path styles the native ::highlight() pseudo -- no element exists, so the mark[...] selectors
+     below never match there -- while the <mark>-wrap fallback styles real elements
+     text-highlights.ts creates here. */
   ::highlight(lr-highlight-accent) {
     background-color: var(
       --lr-docx-viewer-highlight-accent-background,
@@ -158,10 +158,10 @@ export const styles = css`
       var(--lr-color-danger-quiet)
     );
   }
-  /* --lr-color-surface-raised, not --lr-color-surface: [part='content'] paints no background of
-     its own, so it shows [part='base']'s --lr-color-surface. Falling back to that same token would
-     render a neutral-tone highlight with zero contrast against the text it marks -- i.e. visibly
-     unhighlighted. Matches highlight-layer's neutral fallback. */
+  /* --lr-color-surface-raised, not --lr-color-surface: [part='content'] paints no background, so
+     it shows [part='base']'s --lr-color-surface, and falling back to that token would leave a
+     neutral highlight with zero contrast against the text it marks. Matches highlight-layer's
+     neutral fallback. */
   ::highlight(lr-highlight-neutral) {
     background-color: var(
       --lr-docx-viewer-highlight-neutral-background,
@@ -176,7 +176,7 @@ export const styles = css`
     text-decoration: underline;
   }
   /* Each tone resolves into one private carrier so the hover/active rules below have a single base
-     to mix from -- a tone-specific background declared directly is invisible to a generic
+     to mix from: a directly declared tone background is invisible to the generic
      mark[data-lr-highlight-tone]:hover rule. Same shape as lr-highlight-layer's
      --_lr-highlight-layer-background. */
   [part="content"] mark[data-lr-highlight-tone] {
@@ -189,11 +189,11 @@ export const styles = css`
     border-radius: calc(var(--lr-radius) * 0.5);
     cursor: pointer;
   }
-  /* A mark wraps document TEXT, and brightness() applies to the whole subtree -- it recoloured the
-     quoted words along with their highlight. It is also a channel multiply, so it did nothing at
-     all to a highlight themed pure white or pure black and moved every other one in whichever
-     direction its own colour happened to sit. Mixing the tone's own background toward
-     --lr-color-mix-partner (which follows the text colour) leaves the text alone and always moves. */
+  /* A mark wraps document TEXT and brightness() applies to the whole subtree, so it recoloured the
+     quoted words with their highlight; as a channel multiply it also did nothing to a pure white or
+     pure black highlight and moved every other one whichever way its colour sat. Mixing the tone's
+     background toward --lr-color-mix-partner (the text colour) leaves the text alone and always
+     moves. */
   [part="content"] mark[data-lr-highlight-tone]:hover {
     background: color-mix(
       in oklab,

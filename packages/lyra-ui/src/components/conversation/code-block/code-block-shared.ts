@@ -584,8 +584,11 @@ export interface CodeBlockPlainCodeOptions {
  * is what `highlight-lines`/`highlights`/`activatable-lines` attach to. `.split()` consumes each
  * newline character, so a literal `'\n'` text node is re-inserted between lines to keep the
  * non-line-numbered case's visual output (relying on `[part='pre']`'s `white-space: pre`) identical
- * to a single-text-node rendering -- the line-numbered case's `.line` elements are already
- * `display: block` (`code-block.styles.ts`) so that text node is inert there. The gutter is a
+ * to a single-text-node rendering. That text node is NOT inert in the line-numbered case, as this
+ * comment once claimed: inside a block container each whitespace run becomes its own anonymous
+ * block, which rendered a blank row between every line (a 3-line block laid out 5 rows). The
+ * container is `display: grid` (`code-block.styles.ts`), which drops whitespace-only runs instead
+ * of boxing them, so one row is painted per line in both modes. The gutter is a
  * separate real button, leaving source text selectable in both plain and highlighted output.
  */
 export function renderCodeBlockPlainCode(

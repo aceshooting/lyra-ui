@@ -2,6 +2,7 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import {
   getDateTimeFormat,
   getNumberFormat,
@@ -719,7 +720,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
 
   override render(): TemplateResult {
     const label =
-      this.getAttribute('aria-label')?.trim() ||
+      hostAriaLabel(this)?.trim() ??
       (this.label == null ? this.localize('documentLibraryLabel') : this.label);
     const visible = this.visibleDocuments;
     const tags = this.allTags;

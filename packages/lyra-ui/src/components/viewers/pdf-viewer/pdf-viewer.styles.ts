@@ -71,27 +71,27 @@ export const styles = css`
   lr-virtual-list::part(base) {
     overflow-x: auto;
   }
-  /* Everything below renders through <lr-virtual-list>'s renderItem, i.e. into that element's own
-     shadow root rather than this one -- a bare [part='x'] selector can never reach across that
-     boundary, so each page-level rule goes through ::part(). ::part() cannot be followed by a
-     descendant combinator either, which is why the canvas and the generated text runs carry their
-     own part names instead of being addressed as descendants of page/text-layer. */
+  /* Everything below renders through <lr-virtual-list>'s renderItem, into that element's own
+     shadow root, so a bare [part='x'] can never reach across the boundary and every page-level
+     rule goes through ::part(). ::part() also takes no descendant combinator, hence the canvas and
+     the generated text runs carrying their own part names instead of page/text-layer
+     descendants. */
   lr-virtual-list::part(page) {
     position: relative;
     display: flex;
-    /* Center a fitting page, but fall back to the logical start when it overflows so neither edge
-       becomes unreachable through the scroll container. */
+    /* Centers a fitting page but falls back to the logical start when it overflows, so neither
+       edge becomes unreachable through the scroll container. */
     justify-content: safe center;
     inline-size: max-content;
     min-inline-size: 100%;
     padding-block: var(--lr-space-m);
   }
-  /* direction:ltr so the canvas 2D context (which defaults ctx.direction to 'inherit' -> the
-     element's computed direction) lays PDF.js's explicitly-positioned glyphs out LTR. Under an
-     ancestor dir="rtl" the inherited RTL direction otherwise reorders/overlaps the painted text
-     ("Hello, world!" -> "H e lb world!"); a PDF's text position is absolute and encoded in the
-     file, never a function of the surrounding UI direction. Scoped to the canvas alone so the
-     text-layer's own RTL centering (below) is untouched. */
+  /* direction:ltr so the canvas 2D context (ctx.direction defaults to 'inherit', the element's
+     computed direction) lays PDF.js's explicitly-positioned glyphs out LTR. Under an ancestor
+     dir="rtl" the inherited RTL reorders and overlaps the painted text ("Hello, world!" ->
+     "H e lb world!"); a PDF's text position is absolute and encoded in the file, never a function
+     of the surrounding UI direction. Scoped to the canvas alone, leaving the text-layer's own RTL
+     centering (below) untouched. */
   lr-virtual-list::part(page-canvas) {
     box-shadow: 0 0 0 var(--lr-border-width-thin) var(--lr-color-border);
     direction: ltr;
@@ -125,23 +125,22 @@ export const styles = css`
        exactly equals the glyph height, so selection aligns with the canvas. */
     line-height: var(--lr-line-height-none);
     opacity: 1;
-    /* Nothing in this layer is ever meant to paint: it is an invisible, selectable overlay sitting on
-       top of glyphs the canvas underneath already painted. The per-run rule below cannot carry that
-       alone, because part='text-span' is stamped onto PDF.js's generated runs only after render()
-       resolves -- so every run is unreachable by it while the layer is being built, and permanently
-       for any run left behind by a render that aborted partway. Declaring transparency on the
-       container makes it the inherited default for whatever PDF.js creates in here, parted or not;
-       the runs and the search marks re-declare it and are unaffected. */
+    /* Nothing in this layer ever paints: it is an invisible, selectable overlay over glyphs the
+       canvas already painted. The per-run rule below cannot carry that alone -- part='text-span'
+       is stamped onto PDF.js's generated runs only after render() resolves, so runs are
+       unreachable while the layer builds, and permanently for any left by a render that aborted
+       partway. Transparency on the container becomes the inherited default for whatever PDF.js
+       creates here, parted or not; the runs and search marks re-declare it and are unaffected. */
     color: transparent;
   }
   :host(:dir(rtl)) lr-virtual-list::part(text-layer) {
     transform: translateX(50%);
   }
-  /* PDF.js's TextLayer only sets inline left/top percentages and CSS custom properties on each
-     generated span -- everything else (making the run invisible-but-selectable over the already-
-     painted canvas glyphs, and sizing/rotating/skewing each run to match the page) is expected to
-     come from the surrounding stylesheet, normally web/pdf_viewer.css's .textLayer rules. Ported
-     here since that stylesheet isn't shipped with the pdfjs-dist peer. */
+  /* PDF.js's TextLayer sets only inline left/top percentages and CSS custom properties on each
+     generated span; the rest -- invisible-but-selectable over the already-painted canvas glyphs,
+     and sizing/rotating/skewing each run to match the page -- is expected from the surrounding
+     stylesheet, normally web/pdf_viewer.css's .textLayer rules. Ported here since that stylesheet
+     isn't shipped with the pdfjs-dist peer. */
   lr-virtual-list::part(text-span) {
     position: absolute;
     color: transparent;
@@ -152,16 +151,16 @@ export const styles = css`
     font-size: calc(var(--total-scale-factor, 1) * var(--font-height));
     transform: rotate(var(--rotate, 0deg)) scaleX(var(--scale-x, 1));
   }
-  /* Attached to the text run itself rather than to its text-layer container: a highlight pseudo is
-     matched against the element the selected text actually originates in, so targeting the run needs
-     no reliance on highlight inheritance propagating down from an ancestor. */
+  /* On the text run itself, not its text-layer container: a highlight pseudo matches against the
+     element the selected text originates in, so targeting the run relies on no highlight
+     inheritance from an ancestor. */
   lr-virtual-list::part(text-span)::selection {
     background: var(--lr-color-brand-quiet);
   }
-  /* Kept text-transparent like every other text-layer run above -- only the highlighted background
-     should show, letting the canvas's own painted glyphs remain the visible text underneath.
-     ::part() already matches on part~= semantics, so the active match's two-name part list is
-     reached by naming each part separately. */
+  /* Text-transparent like every other text-layer run above, so only the highlighted background
+     shows and the canvas's own painted glyphs stay the visible text. ::part() matches with part~=
+     semantics, so the active match's two-name part list is reached by naming each part
+     separately. */
   lr-virtual-list::part(search-match) {
     background: var(
       --lr-pdf-viewer-search-match-bg,

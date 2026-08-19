@@ -450,7 +450,7 @@ describe("active filters/scope chips", () => {
 
   it("formats cyclic, deeply nested, and wide filter values within deterministic bounds", async () => {
     const cycle: Record<string, unknown> = { label: "cycle" };
-    cycle.self = cycle;
+    cycle['self'] = cycle;
     let deep: unknown = "leaf";
     for (let index = 0; index < 20; index++) deep = { child: deep };
     const wide = Array.from({ length: 80 }, (_, index) => index);

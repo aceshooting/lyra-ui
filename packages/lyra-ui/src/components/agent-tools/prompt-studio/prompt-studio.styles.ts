@@ -24,12 +24,12 @@ export const styles = css`
     padding-inline: var(--lr-space-s) var(--lr-space-l);
     cursor: pointer;
   }
-  /* The select's popup list is still painted by the browser from these options; without an
-     explicit surface/text pairing it falls back to UA colors (a white panel in dark themes). */
+  /* The browser paints the select's popup from these options; without an explicit surface/text
+     pairing it falls back to UA colors -- a white panel in dark themes. */
   [part='message-role'] option { background: var(--lr-color-surface); color: var(--lr-color-text); }
-  /* appearance: none strips the native dropdown affordance, so this chevron -- matching
-     av-player's [part='rate-select'] / image-viewer's [part='fit-control'] pattern -- replaces
-     it; without one a visible, functional <select> would read as a plain bordered box. */
+  /* appearance: none strips the native dropdown affordance, so this chevron replaces it, matching
+     av-player's [part='rate-select'] / image-viewer's [part='fit-control']; without one a visible,
+     functional <select> would read as a plain bordered box. */
   .message-role-chevron {
     position: absolute;
     inset-inline-end: var(--lr-space-xs);
@@ -39,10 +39,10 @@ export const styles = css`
     pointer-events: none;
   }
   .message-role-chevron svg { transform: rotate(90deg); }
-  /* no-pressed-state: these three are field surfaces, not push targets -- pointer-down on the
-     textarea or the text input places a caret, and pointer-down on the role select hands the whole
-     interaction to the UA's own native option list, which paints its own pressed feedback and holds
-     it for as long as the popup is open. :focus-visible carries the affordance in all three cases. */
+  /* no-pressed-state: these three are field surfaces, not push targets -- pointer-down places a
+     caret in the textarea and the text input, and hands the role select to the UA's own native
+     option list, which paints its own pressed feedback for as long as the popup is open.
+     :focus-visible carries the affordance in all three cases. */
   :where([part='message-role'], [part='message-content']):hover:where(:not(:disabled)),
   :where([part='variable']) input:hover:where(:not(:disabled)) {
     border-color: var(--lr-prompt-studio-field-hover-border, var(--lr-color-brand));
@@ -62,15 +62,14 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
   }
-  /* Keep the state pseudo-class outside :where(): it supplies the same specificity as each
-     resting [part] selector, while the toolbar descendant retains its matching type specificity. */
+  /* The state pseudo-class stays outside :where(), matching each resting [part] selector's
+     specificity, while the toolbar descendant keeps its own type specificity. */
   :where([part='toolbar']) button:hover:where(:not(:disabled)),
   :where([part='move-message-up'], [part='move-message-down'], [part='remove-message'], [part='add-message'], [part='version']):hover:where(:not(:disabled)) {
     background: var(--lr-color-surface-raised);
   }
-  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
-     --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
-     than hover in both light and dark themes rather than repeating it. */
+  /* Pressed is the hover tint pushed a further --lr-color-mix-active toward --lr-color-mix-partner,
+     which follows the text colour -- a distinctly deeper step in both light and dark themes. */
   :where([part='toolbar']) button:active:where(:not(:disabled)),
   :where([part='move-message-up'], [part='move-message-down'], [part='remove-message'], [part='add-message'], [part='version']):active:where(:not(:disabled)) {
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));

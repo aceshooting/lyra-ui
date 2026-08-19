@@ -14,10 +14,10 @@ export const styles = css`
   }
 
   /* The block size arrives as --lr-embedding-explorer-height, set on the host from the height
-     property. An SVG height presentation attribute cannot carry it -- any stylesheet declaration
-     outranks a presentation attribute -- and an inline block-size on the SVG would hide the value
-     from consumers rethemeing through the custom property. The auto fallback is the
-     aspect-ratio-preserved size derived from the viewBox. */
+     property. An SVG height presentation attribute cannot carry it (any stylesheet declaration
+     outranks a presentation attribute), and an inline block-size on the SVG would hide the value
+     from consumers rethemeing through the custom property. The auto fallback is the viewBox's
+     aspect-ratio-preserved size. */
   [part='plot'] {
     display: block;
     inline-size: 100%;
@@ -53,11 +53,12 @@ export const styles = css`
     stroke-width: var(--lr-border-width-medium);
   }
 
-  /* Pressed thickens the same ring the hover/focus rule above draws rather than retinting it: the
-     ring is already --lr-color-text, which is exactly what --lr-color-mix-partner tracks, so a mix
-     toward the partner would resolve back to the colour it started from. Width is the one axis left
-     that reads as visibly stronger. Placed after the hover rule so it wins at equal specificity
-     while the point is both hovered and held. */
+  /* Pressed thickens the ring the hover/focus rule above draws rather than retinting it: that ring
+     is already --lr-color-text, exactly what --lr-color-mix-partner tracks, so a mix toward the
+     partner resolves back to its starting colour, leaving width as the one axis that reads
+     stronger. Placed after the hover rule so it wins at equal specificity while a point is hovered
+     and held -- UNSELECTED points only; a selected one is out-ranked by the rule below and
+     escalates after it. */
   [part='point']:active .point-marker {
     stroke: var(--lr-color-text);
     stroke-width: var(--lr-border-width-thick);
@@ -66,6 +67,23 @@ export const styles = css`
   [part='point'][data-selected='true'] .point-marker {
     stroke: var(--lr-embedding-explorer-selected-stroke, var(--lr-color-brand));
     stroke-width: var(--lr-border-width-medium);
+  }
+
+  /* A selected point's own pointer/focus escalation, needed because the three rules above are all
+     (0,3,0), exactly like the selected rule, which is written last and so won both contests: a
+     selected point acknowledged neither a press nor a focus. The focus half is an accessibility
+     defect -- [part='point'] and the :hover/:focus-visible rule both declare outline: none, so this
+     marker stroke IS the whole focus indicator. The escalation stays in the WIDTH channel, leaving
+     the selected stroke colour alone so the point still reads as selected; --lr-focus-ring-color
+     would be no help, resolving by default to --lr-color-brand -- the colour the selected ring
+     already uses. The press step is one thin hair above thick because the ramp stops at thick, in
+     tokens rather than a literal so a retuned scale carries it. */
+  [part='point'][data-selected='true']:hover .point-marker,
+  [part='point'][data-selected='true']:focus-visible .point-marker {
+    stroke-width: var(--lr-border-width-thick);
+  }
+  [part='point'][data-selected='true']:active .point-marker {
+    stroke-width: calc(var(--lr-border-width-thick) + var(--lr-border-width-thin));
   }
 
   [part='legend'] {

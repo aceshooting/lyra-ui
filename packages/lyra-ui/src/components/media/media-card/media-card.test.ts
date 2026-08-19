@@ -132,7 +132,7 @@ describe('defaults', () => {
     expect(el.kind).to.be.undefined;
     expect(el.mimeType).to.equal('');
     expect(el.filename).to.equal('');
-    expect(el.alt).to.equal('');
+    expect(el.alt).to.equal(undefined);
     expect(el.accessibleLabel).to.equal(null);
   });
 
@@ -1102,5 +1102,40 @@ describe('narrow chat-message attachment compositions', () => {
       expect(getComputedStyle(openButton).minInlineSize, `${dir} video open action keeps its hit floor`).to.equal('40px');
       expect(getComputedStyle(openButton).minBlockSize, `${dir} video open action keeps its hit floor`).to.equal('40px');
     }
+  });
+});
+
+describe('an explicitly empty alt', () => {
+  it('marks the image decorative instead of substituting a generated description', async () => {
+    const el = (await fixture(
+      html`<lr-media-card src="https://example.test/divider.png" kind="image" filename="divider.png" alt=""></lr-media-card>`,
+    )) as LyraMediaCard;
+    expect(el.alt).to.equal('');
+    expect(el.shadowRoot!.querySelector('img')!.getAttribute('alt')).to.equal('');
+  });
+
+  it('still names the video control, which has no decorative state to opt into', async () => {
+    const el = (await fixture(
+      html`<lr-media-card src="https://example.test/a.mp4" kind="video" filename="clip.mp4" alt=""></lr-media-card>`,
+    )) as LyraMediaCard;
+    expect(el.shadowRoot!.querySelector('video')!.getAttribute('aria-label')).to.equal('clip.mp4');
+
+    const bare = (await fixture(
+      html`<lr-media-card src="https://example.test/a.mp4" kind="video" alt=""></lr-media-card>`,
+    )) as LyraMediaCard;
+    expect(bare.shadowRoot!.querySelector('video')!.getAttribute('aria-label')).to.equal('Video attachment');
+  });
+
+  it('leaves the omitted-alt fallback chain exactly as it was', async () => {
+    const withFilename = (await fixture(
+      html`<lr-media-card src="https://example.test/a.png" kind="image" filename="a.png"></lr-media-card>`,
+    )) as LyraMediaCard;
+    expect(withFilename.alt).to.equal(undefined);
+    expect(withFilename.shadowRoot!.querySelector('img')!.getAttribute('alt')).to.equal('a.png');
+
+    const withNeither = (await fixture(
+      html`<lr-media-card src="https://example.test/a.png" kind="image"></lr-media-card>`,
+    )) as LyraMediaCard;
+    expect(withNeither.shadowRoot!.querySelector('img')!.getAttribute('alt')).to.equal('Image attachment');
   });
 });

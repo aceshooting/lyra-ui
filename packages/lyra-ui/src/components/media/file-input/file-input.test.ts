@@ -2452,6 +2452,29 @@ it("paints the shared required marker on the label, and lets a consumer retune o
   ).to.equal("");
 });
 
+it("keeps the deprecated base and label tokens beside their canonical part names", async () => {
+  // wa-file-input still publishes both spellings -- `base` beside `file-input` and `label` beside
+  // `form-control-label` -- so a migrated `::part(base)` / `::part(label)` rule keeps matching.
+  const el = await fixture<LyraFileInput>(
+    html`<lr-file-input label="Attachments"></lr-file-input>`
+  );
+  await el.updateComplete;
+  const picker = el.shadowRoot!.querySelector(
+    '[part~="file-input"]'
+  ) as HTMLElement;
+  const label = el.shadowRoot!.querySelector(
+    '[part~="form-control-label"]'
+  ) as HTMLElement;
+  expect(picker.part.contains("base")).to.equal(true);
+  expect(label.part.contains("label")).to.equal(true);
+  // Compare identity as a boolean, never the nodes themselves: a DOM payload in chai's
+  // actual/expected hangs the whole file until the per-file watchdog.
+  expect(el.shadowRoot!.querySelector('[part~="base"]') === picker, "base resolves to the picker").to
+    .be.true;
+  expect(el.shadowRoot!.querySelector('[part~="label"]') === label, "label resolves to the form-control-label").to
+    .be.true;
+});
+
 it("leaves the required marker off an optional file input", async () => {
   const el = await fixture<LyraFileInput>(
     html`<lr-file-input label="Attachments"></lr-file-input>`

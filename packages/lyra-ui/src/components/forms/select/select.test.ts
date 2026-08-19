@@ -3443,6 +3443,178 @@ describe("selected-state theming tokens", () => {
   });
 });
 
+describe("row state feedback on the already-selected option", () => {
+  const centerOf = (node: Element): [number, number] => {
+    const rect = node.getBoundingClientRect();
+    return [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
+  };
+
+  /** Polls a pointer-driven condition for up to 500ms, reporting whether it ever held. Pointer
+   *  state lands a variable number of frames after the mouse command resolves, per engine. */
+  const settle = async (holds: () => boolean): Promise<boolean> => {
+    for (let attempt = 0; attempt < 25; attempt++) {
+      if (holds()) return true;
+      await aTimeout(20);
+    }
+    return holds();
+  };
+
+  const arrow = (el: LyraSelect, key: "ArrowDown" | "ArrowUp"): void => {
+    trigger(el).dispatchEvent(
+      new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true })
+    );
+  };
+
+  const openWithSelectedMiddleRow = async (): Promise<LyraSelect> => {
+    const el = (await fixture(html`
+      <lr-select
+        value="b"
+        style="--lr-transition-fast: 0s; --lr-select-option-active-bg: rgb(1, 2, 3);"
+      >
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+        <lr-option value="c">Cherry</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    el.open = true;
+    await el.updateComplete;
+    // The listbox is placed by the Floating UI positioner a tick after the open render, so a
+    // getBoundingClientRect() taken before that points the pointer at the pre-placement box.
+    await aTimeout(50);
+    return el;
+  };
+
+  it("keeps the active-descendant highlight visible after arrowing onto the selected row", async () => {
+    const el = await openWithSelectedMiddleRow();
+    // Driven the way a keyboard user reaches it -- ArrowUp to the first row, ArrowDown back onto
+    // the selected one -- rather than hand-stamping [data-active], so the assertion covers the
+    // component's own rendering of the active-descendant highlight.
+    arrow(el, "ArrowUp");
+    await el.updateComplete;
+    arrow(el, "ArrowDown");
+    await el.updateComplete;
+    const active = el.shadowRoot!.querySelector<HTMLElement>(
+      '[part="option"][data-active]'
+    )!;
+    expect(
+      active.getAttribute("aria-selected"),
+      "the arrowed-to row is the selected one"
+    ).to.equal("true");
+    expect(
+      getComputedStyle(active).backgroundColor,
+      "aria-activedescendant highlight on the selected row"
+    ).to.equal("rgb(1, 2, 3)");
+  });
+
+  /** Hovers and presses one row of a freshly opened listbox, returning both computed backgrounds
+   *  (or null when the engine never put the pointer over the row). One fixture per row on purpose:
+   *  releasing the button over an option commits that option and closes the listbox. */
+  const measureRow = async (
+    pick: (rows: HTMLElement[]) => HTMLElement
+  ): Promise<{ hover: string; press: string } | null> => {
+    const el = await openWithSelectedMiddleRow();
+    const row = pick(
+      Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part="option"]'))
+    );
+    const resting = getComputedStyle(row).backgroundColor;
+    try {
+      await sendMouse({ type: "move", position: centerOf(row) });
+      // Earlier pointer tests in this file can leave Firefox with no document hover state at all
+      // until a real pointer entry; an unverified reading would report the fixed cascade as
+      // broken again, so report "no pointer" rather than a background.
+      if (!(await settle(() => row.matches(":hover")))) return null;
+      await settle(() => getComputedStyle(row).backgroundColor !== resting);
+      const hover = getComputedStyle(row).backgroundColor;
+      await sendMouse({ type: "down" });
+      await settle(() => getComputedStyle(row).backgroundColor !== hover);
+      return { hover, press: getComputedStyle(row).backgroundColor };
+    } finally {
+      await sendMouse({ type: "up" });
+      await resetMouse();
+      el.remove();
+    }
+  };
+
+  it("hovers and presses the selected row exactly like an unselected one", async function () {
+    const control = await measureRow(
+      (rows) => rows.find((row) => row.getAttribute("aria-selected") !== "true")!
+    );
+    const selected = await measureRow(
+      (rows) => rows.find((row) => row.getAttribute("aria-selected") === "true")!
+    );
+    if (control === null || selected === null) {
+      this.skip();
+      return;
+    }
+    expect(control.hover, "an unselected row hovers to the row tint").to.equal(
+      "rgb(1, 2, 3)"
+    );
+    expect(selected.hover, "hovered selected row").to.equal(control.hover);
+    // Compared against the unselected row rather than asserted absolutely: an option cancels its
+    // own mousedown, and Firefox suppresses :active for a cancelled activation while Chromium
+    // keeps it. Equality is the contract either way -- the selected row must not be the only one
+    // without pressed feedback.
+    expect(selected.press, "pressed selected row").to.equal(control.press);
+  });
+});
+
+describe("lr-select filled (Shoelace compatibility alias)", () => {
+  const centerOf = (node: Element): [number, number] => {
+    const rect = node.getBoundingClientRect();
+    return [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
+  };
+
+  const settle = async (holds: () => boolean): Promise<boolean> => {
+    for (let attempt = 0; attempt < 25; attempt++) {
+      if (holds()) return true;
+      await aTimeout(20);
+    }
+    return holds();
+  };
+
+  it("keeps the trigger's hover and press feedback", async function () {
+    const el = (await fixture(html`
+      <lr-select filled style="--lr-transition-fast: 0s">
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    await el.updateComplete;
+    const button = trigger(el);
+    const resting = getComputedStyle(button).backgroundColor;
+    try {
+      await sendMouse({ type: "move", position: centerOf(button) });
+      // Prove the pointer actually reached the trigger before reading a background: an engine that
+      // silently dropped the move would otherwise report this cascade fix as broken.
+      if (!(await settle(() => button.matches(":hover")))) {
+        this.skip();
+        return;
+      }
+      await settle(
+        () => getComputedStyle(button).backgroundColor !== resting
+      );
+      const hovered = getComputedStyle(button).backgroundColor;
+      expect(hovered, "filled trigger hover vs resting").to.not.equal(resting);
+      await sendMouse({ type: "down" });
+      await settle(
+        () => getComputedStyle(button).backgroundColor !== hovered
+      );
+      expect(
+        getComputedStyle(button).backgroundColor,
+        "filled trigger press vs hover"
+      ).to.not.equal(hovered);
+    } finally {
+      await sendMouse({ type: "up" });
+      await resetMouse();
+    }
+  });
+});
+
 // -- Slotted supporting text and listbox pointer handling -------------------
 
 it("preserves rendered error behavior while shared slot presence changes", async () => {
@@ -5185,4 +5357,49 @@ it("skips inert options when moving the active descendant", async () => {
   press("Enter");
   await el.updateComplete;
   expect(el.value, "the inert option is never a navigation stop").to.equal("c");
+});
+
+it("contains the internal lr-option-change notification instead of leaking it past the host", async () => {
+  const el = (await fixture(html`
+    <lr-select><lr-option value="a">Apple</lr-option></lr-select>
+  `)) as LyraSelect;
+  await el.updateComplete;
+  const option = el.querySelector("lr-option") as LyraOption;
+
+  let atOption = 0;
+  let pastHost = 0;
+  let pastDocument = 0;
+  option.addEventListener("lr-option-change", () => atOption++);
+  el.addEventListener("lr-option-change", () => pastHost++);
+  const onDocument = (): void => {
+    pastDocument++;
+  };
+  document.addEventListener("lr-option-change", onDocument);
+
+  try {
+    // A real option-data mutation, not a synthetic dispatch: `updated()` on
+    // `<lr-option>` emits `lr-option-change` for a `group` change, so this
+    // proves the event genuinely fires before asserting where it stops.
+    option.group = "Fruit";
+    await option.updateComplete;
+    await aTimeout(0);
+    await el.updateComplete;
+  } finally {
+    document.removeEventListener("lr-option-change", onDocument);
+  }
+
+  expect(atOption, "the option still emits its own notification").to.equal(1);
+  expect(
+    pastHost,
+    "lr-option-change is <lr-select> implementation detail and must not reach a host listener"
+  ).to.equal(0);
+  expect(pastDocument, "and must not reach the document either").to.equal(0);
+  // Containment must not disable the refresh the notification exists to drive.
+  const groupLabels = Array.from(
+    el.shadowRoot!.querySelectorAll('[part="group-label"]')
+  ).map((node) => node.textContent?.trim() ?? "");
+  expect(
+    groupLabels,
+    "the contained notification still refreshes the rendered rows"
+  ).to.deep.equal(["Fruit"]);
 });

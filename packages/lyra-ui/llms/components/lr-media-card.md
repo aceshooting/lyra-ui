@@ -30,13 +30,18 @@ final.
 - `mimeType: string = ''` (attribute `mime-type`) — drives auto-detection when `kind` is unset.
 - `filename: string = ''` — shown in the file-chip fallback, used as the download link's suggested
   filename, and folded into the accessible name.
-- `alt: string = ''` — alt text for the image case (and reused as a video label fallback). Falls
-  back to `filename`, then a generic per-kind description.
-- `accessibleLabel: string = ''` (attribute `aria-label`) — a declarative attribute names the host
-  as a whole while its nested button/link keeps a purpose-specific localized action name. A
-  property-only assignment can override the nested action when no host label is present. Image alt
-  text and the native video's own purpose label remain independent; an explicitly empty host still
-  leaves every interactive descendant named.
+- `alt?: string` — alt text for the image case (and reused as a video label fallback). Unset falls
+  back to `filename`, then a generic per-kind description. An explicit `alt=""` survives to the
+  rendered `<img alt="">`, which is the HTML idiom for a decorative image — same contract as
+  `<lr-image-viewer>` and `<lr-document-preview>`. The `<video>` case is deliberately outside that
+  carve-out: an empty `alt` there still falls through to `filename`/the generic description, because
+  an empty accessible name would leave an interactive player unnamed rather than mark it decorative.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — a declarative attribute names
+  the host as a whole while its nested button/link keeps a purpose-specific localized action name. A
+  property-only assignment can override the nested action when no host label is present. An explicit
+  empty string behaves like the unset `null` default — both fall through to the generated
+  purpose-specific name. Image alt text and the native video's own purpose label remain independent;
+  an explicitly empty host still leaves every interactive descendant named.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"16rem"`); once set,
   overrides the `--lr-media-card-max-height` custom property for this instance only (applied
   inline on `[part="base"]`, so it reliably wins over a `:host{}`-declared default from outside the

@@ -39,7 +39,7 @@ describe('theme presets', () => {
 
     applyLyraThemePreset(preset);
     expect(getLyraTheme()).to.deep.equal({ mode: 'dark', accent: '#22d3ee' });
-    expect(document.documentElement.dataset.lrThemePreset).to.equal('application-ocean');
+    expect(document.documentElement.dataset['lrThemePreset']).to.equal('application-ocean');
     expect(
       document.documentElement.style.getPropertyValue('--lr-theme-color-brand-fill-loud'),
     ).to.not.equal('');

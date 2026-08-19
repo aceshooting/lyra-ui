@@ -20,15 +20,15 @@ export const styles = css`
     block-size: 100%;
     cursor: pointer;
   }
-  /* Mouse-hover cue matching the cursor: pointer affordance above -- mirrors the reveal-button/
-     copy-button/sources-summary brand-quiet hover tint used across the library for a clickable
-     surface with no dedicated icon of its own. */
+  /* Mouse-hover cue matching the cursor: pointer affordance above -- the reveal-button/copy-button/
+     sources-summary brand-quiet tint the library uses for a clickable surface with no dedicated
+     icon of its own. */
   [part='map']:hover {
     background: var(--lr-color-brand-quiet);
   }
-  /* Clicking the map recenters the canvas viewport, and that jump is the only confirmation the user
-     gets -- the pressed fill is what says the click landed on the map rather than on the viewport
-     rect drawn over it. */
+  /* Clicking the map recenters the canvas viewport, and that jump is the only confirmation -- the
+     pressed fill says the click landed on the map rather than on the viewport rect drawn over it.
+     */
   [part='map']:active {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
@@ -73,8 +73,8 @@ export const styles = css`
     fill: color-mix(in srgb, var(--lr-color-brand) 25%, transparent);
     stroke-width: 3;
   }
-  /* The rect is a grab handle, so its pressed state is also its dragging state -- it stays applied
-     for the whole gesture. Both channels step past the hovered values, and the cursor flips to
+  /* The rect is a grab handle, so its pressed state is also its dragging state and stays applied
+     for the whole gesture. Both channels step past the hover values and the cursor flips to
      grabbing, matching the [data-panning] treatment lr-flow-canvas gives its own background. */
   [data-viewport-control]:has([part='viewport-hit-area']:active) [part='viewport'] {
     fill: color-mix(in srgb, var(--lr-color-brand) 40%, transparent);

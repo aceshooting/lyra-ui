@@ -1681,9 +1681,11 @@ columns. Consumes the same `LyraSpan[]` as `<lr-span-waterfall>`.
 under `lr-span-waterfall` above (exported from `trace-tree/span.ts`); hierarchy comes from
 `parentId`, and a span whose `parentId` is missing or doesn't resolve within the same array renders
 as a root rather than being dropped. `activeSpanId: string | null = null`
-(attribute `active-span-id`), `label: string = ''`, `showTokens: boolean = false` (attribute
+(attribute `active-span-id`), `label?: string`, `showTokens: boolean = false` (attribute
 `show-tokens`) — surfaces `tokensIn`/`tokensOut`, `showCost: boolean = false` (attribute
 `show-cost`) — surfaces `costText`, and `hideBars: boolean = false` (attribute `hide-bars`).
+`label` is an optional accessible-name override for the `role="tree"` element: omission localizes
+the default, and any supplied string — including `''` — is rendered verbatim.
 Token counts render only when finite and non-negative; invalid metrics are omitted rather than
 reaching `Intl.NumberFormat`. A row's accessible name includes its optional `detail` text as well
 as its name/status/metrics, and updates when the supplied span data changes. Every trace view uses
@@ -2272,7 +2274,9 @@ hierarchical trace tree from one shared `spans` array.
   (`'agent' | 'llm' | 'tool' | 'retriever' | 'embedding' | 'other'`). Empty shows every kind;
   pre-settable (e.g. to hide `retriever`/`embedding` by default) and readable back after
   `lr-span-visibility-change`
-- `label: string = ''` — forwarded to the composed `lr-trace-tree`
+- `label?: string` — forwarded to the composed `lr-trace-tree`. Omission leaves that tree's own
+  `label` unset so it localizes its own default; any supplied string (including `''`) is
+  forwarded verbatim
 - `showTokens: boolean = false` (attribute `show-tokens`), `showCost: boolean = false` (attribute
   `show-cost`), `showBars: boolean = true` (attribute `show-bars`, renamed from `hideBars` in
   9.0.0 to match the positive polarity of its two siblings above — default inverted so the
@@ -2801,7 +2805,7 @@ persistence.
 `versions: readonly PromptStudioVersion[] = []` is a property-only host-controlled input;
 empty/blank message and version ids are omitted and later duplicates use deterministic first-wins
 identity before rendering, editing, focus, selection, and events;
-`selectedVersionId: string = ''` (attribute `selected-version-id`); `label: string = ''`;
+`selectedVersionId: string | null = null` (attribute `selected-version-id`); `label: string = ''`;
 `heading: string = ''` — visible toolbar heading, falling back to the localized Prompt Studio
 label when unset;
 `running: boolean = false`, `disabled: boolean = false`, and `reorderable: boolean = false`
@@ -2868,7 +2872,8 @@ It intentionally does not fetch remote references or validate values.
 
 **Properties:** clone-owned, bounded, frozen `schema: JsonSchemaNode | null = null` and
 `issues: readonly SchemaValidationIssue[] = []` (attribute: false); reassign a new schema record or
-issue array after changes. `selectedPath: string = ''` (attribute `selected-path`);
+issue array after changes. `selectedPath: string | null = null` (attribute `selected-path`) —
+`null` means no selection, while the empty string is the valid JSON Pointer for the schema root;
 `maxDepth: number = 20` (attribute `max-depth`, clamped to 100); `label: string = ''`.
 
 **Exported types:** `JsonSchemaNode` covers `$ref`, type/title/description, properties/items,

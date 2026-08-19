@@ -1,3 +1,41 @@
+## Breaking changes in 10.0.0
+
+`lr-entity-card`, `lr-entity-chip` and `lr-neighbor-list` no longer emit `lr-entity-activate`. The
+canonical name for that gesture is `lr-entity-select` (`detail: { entityId }`), fired from the same
+gesture with the same detail — only the second spelling is gone. It is removed outright rather than
+kept as a dual-emitting alias, because the library has no released consumers and an alias is a
+permanent tax paid to protect users who do not exist. Rename the listener; nothing else changes.
+
+Two composites narrow with them. `lr-entity-dossier` surfaces its embedded entity card's and
+neighbor list's gesture as `lr-entity-select` only, and `lr-provenance-panel` does the same for its
+embedded entity chip. On both, `lr-entity-activate` now reaches a host only from the embedded
+community card or relationship path strip, which is also the only source of the richer
+`{ entityId, occurrenceIndex? }` detail — so on these two elements the names now carry different
+shapes rather than being two spellings of one event.
+
+`lr-community-card` and `lr-path-strip` keep `lr-entity-activate` unchanged. It is their only name
+and never was an alias, so do **not** rename those listeners.
+
+`lr-rag-eval-dashboard` no longer emits `lr-run-select`; listen for `lr-run-change`
+(`detail: { run }`, unchanged). Same removal, same reason.
+
+`lr-knowledge-graph-explorer`'s `lr-search-change` detail is now exactly
+`{ query, matchCount, matchCountExact }`. The old `searchQuery` member is replaced by the canonical
+`query` rather than carried beside it, so the event finally has the `LyraSearchChangeDetail` shape
+the rest of the library's search emitters use — read `e.detail.query`. The detail deliberately has no
+`activeIndex` (this is a live node filter, not a cursor-based search) and `matchCountExact` is always
+`true`, since that filter has no truncating ceiling. The `searchQuery` **property** is a different
+member and is unaffected: the component still applies the query to it before emitting, so reassigning
+it from the handler stays a no-op.
+
+Also corrected in 10.0.0 — not breaking, but visible. A chip with no `entity-id` renders its button
+disabled, and now looks it: `lr-entity-chip` used to paint that state pixel-identical to a working
+chip — full opacity, a hand cursor, complete hover and press feedback for a control that cannot emit
+anything — and now dims to `--lr-opacity-disabled` with a `not-allowed` cursor and no pointer
+response. `lr-embedding-explorer`'s selected point has a focus ring again. And
+`lr-knowledge-graph-explorer` no longer announces on mount: a preset `search-query` used to fire its
+live region before any user action.
+
 ## Breaking changes in 9.0.0
 
 `lr-graph`'s exported types `GraphLayout`, `GraphRenderer`, `GraphSelectionMode`, `GraphPickKind`, and

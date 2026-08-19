@@ -6,7 +6,7 @@ import { tag } from '../internal/prefix.js';
 import { setLyraTheme, type LyraThemeMode } from './theme.js';
 
 class ProductionThemeProbe extends LitElement {
-  static styles = [palette, tokens];
+  static override styles = [palette, tokens];
 }
 
 const probeTag = tag('production-theme-probe');

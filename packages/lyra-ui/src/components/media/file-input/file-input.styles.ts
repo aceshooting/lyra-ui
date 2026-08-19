@@ -7,11 +7,11 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     --_lr-file-input-font-size: var(--lr-form-control-font-size);
-    /* The dropzone's own ladder. sizes.styles.ts only carries the six shared --lr-form-control-*
+    /* The dropzone's own ladder. sizes.styles.ts carries only the six shared --lr-form-control-*
        knobs, which describe a single-line row control; this is a block drop target whose
-       instructional text, glyph, padding and detail text each need their own tier or size ends up
+       instructional text, glyph, padding and detail text each need their own tier, or size ends up
        resizing the label alone. These :host values ARE the m/medium tier, so an unset or
-       default-size control renders exactly as it did before the ladder existed. */
+       default-size control renders unchanged. */
     --_lr-file-input-dropzone-font-size: var(--lr-font-size-md-sm);
     --_lr-file-input-dropzone-icon-size: var(--lr-font-size-xl);
     --_lr-file-input-dropzone-padding: var(--lr-space-l);
@@ -47,11 +47,11 @@ export const styles = css`
   [part="form-control"] {
     min-inline-size: 0;
     max-inline-size: 100%;
-    /* Percentage block-size against an auto-height ancestor resolves to auto, so this is a no-op
-       for the ordinary content-sized default -- it only takes effect when :host itself has a
-       definite block size (a consumer using this control as a full-area drop overlay, host
-       absolutely positioned with inset: 0 over a sized panel). The chain has to continue through
-       .dropzone and [part~="base"] below or the fill breaks at whichever one is missing it. */
+    /* A percentage block-size against an auto-height ancestor resolves to auto, so this is a no-op
+       for the content-sized default; it bites only when :host has a definite block size (a consumer
+       using this control as a full-area drop overlay, host absolutely positioned with inset: 0 over
+       a sized panel). The chain must continue through .dropzone and [part~="base"] below or the
+       fill breaks at whichever one is missing it. */
     block-size: 100%;
   }
   [part~="form-control-label"] {
@@ -67,9 +67,9 @@ export const styles = css`
   [part="error"][hidden] {
     display: none;
   }
-  /* This control accepts a required attribute and renders a visible label like every other field
-     in the library, so it marks it the same way -- the [hidden] rule above is what keeps the
-     marker from orphaning a stray glyph when no label is set. */
+  /* Accepts required and renders a visible label like every other field in the library, so it marks
+     it the same way; the [hidden] rule above keeps the marker from orphaning a stray glyph when no
+     label is set. */
   ${formControlRequiredMarker}
   .dropzone {
     position: relative;
@@ -144,10 +144,10 @@ export const styles = css`
     pointer-events: auto;
   }
   /* Density escape -- same convention as lr-empty's compact. A --lr-space-l dropzone is unusable in
-     a toolbar or a table cell; compact shrinks the padding, gap and label font so the zone fits a
-     tight row. The tuned values sit behind inline var() fallbacks (rather than a :host declaration,
-     which every instance re-declares and so shadows any ancestor value) so a consumer can retune
-     them from outside; the fallbacks preserve today's rendering for an unset dropzone. */
+     a toolbar or table cell, so compact shrinks the padding, gap and label font. The tuned values
+     sit in inline var() fallbacks, not a :host declaration (re-declared per instance, shadowing
+     ancestor values), so a consumer can retune from outside; the fallbacks preserve today's
+     rendering for an unset dropzone. */
   :host([compact]) [part~="base"] {
     padding: var(--lr-file-input-compact-padding, var(--lr-space-s));
     font-size: var(--lr-file-input-compact-font-size, var(--lr-font-size-sm));
@@ -160,11 +160,11 @@ export const styles = css`
     );
     font-size: var(--lr-file-input-compact-font-size, var(--lr-font-size-sm));
   }
-  /* Inline var() fallbacks (rather than :host-declared properties, which every instance would
-     re-declare and so shadow any ancestor value) so a consumer can retint just this dropzone's
-     drag accept/reject highlight without hijacking the shared --lr-color-success/--lr-color-danger
-     tokens used everywhere else in their theme. Unset, each falls back to the same value this
-     rendered before the hatch existed, so the default rendering is unchanged. */
+  /* Inline var() fallbacks rather than :host-declared properties (re-declared per instance,
+     shadowing ancestor values), so a consumer can retint just this dropzone's drag accept/reject
+     highlight without hijacking the shared --lr-color-success and --lr-color-danger tokens used
+     everywhere else in their theme. Unset, each falls back to the pre-hatch value, so default
+     rendering is unchanged. */
   [part~="base"][data-drag-state="accept"] {
     border-color: var(
       --lr-file-input-accept-border-color,
@@ -205,10 +205,10 @@ export const styles = css`
   :host(:not(:disabled)) .dropzone:hover [part~="base"] {
     border-color: var(--lr-color-brand);
   }
-  /* [part~='base'] is the button that opens the file dialog, so the press is a real activation and
-     needs its own answer -- the hover border alone repeats what hover already said. Both selector
-     shapes are mirrored because the pointer can be over the button itself or over the
-     pointer-events: none content stacked on top of it in the same grid cell. */
+  /* [part~='base'] opens the file dialog, so a press is a real activation needing its own answer --
+     the hover border alone repeats what hover already said. Both selector shapes are mirrored
+     because the pointer can be over the button itself or over the pointer-events: none content
+     stacked on top of it in the same grid cell. */
   :host(:not(:disabled)) [part~="base"]:active {
     border-color: var(--lr-color-brand);
     background: color-mix(

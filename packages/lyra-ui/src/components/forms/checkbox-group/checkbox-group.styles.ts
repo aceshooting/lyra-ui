@@ -3,10 +3,10 @@ import { formControlRequiredMarker } from '../../../internal/form-control.styles
 
 export const styles = css`
   :host {
-    /* The group's own chrome rides the shared size ladder (internal/sizes.styles.ts). Both gaps are
+    /* The group's chrome rides the shared size ladder (internal/sizes.styles.ts). Both gaps are
        fractions of the tier's control height rather than fixed space tokens, so they stay in
        proportion to the options beside them; at the default "m" tier they resolve to exactly the
-       --lr-space-xs / --lr-space-s the group shipped with before it had a size at all. */
+       --lr-space-xs and --lr-space-s the group shipped with before it had a size at all. */
     --_lr-checkbox-group-row-gap: calc(var(--lr-form-control-height) * 0.1);
     --_lr-checkbox-group-option-gap: calc(var(--lr-form-control-height) * 0.2);
     display: block;
@@ -24,8 +24,8 @@ export const styles = css`
     display: grid;
     gap: var(--lr-checkbox-group-row-gap, var(--_lr-checkbox-group-row-gap));
   }
-  /* The rendered legend's real part is "form-control-label" (see checkbox-group.class.ts's
-     render()), not "label" -- this must match it exactly or the rule is dead code. */
+  /* The rendered legend's real part is "form-control-label" (checkbox-group.class.ts's render()),
+     not "label" -- this must match it exactly or the rule is dead code. */
   [part~="form-control-label"] {
     font-weight: var(--lr-font-weight-semibold);
     color: var(--lr-color-text);
@@ -34,8 +34,8 @@ export const styles = css`
   /* The required marker comes from the one shared sheet (internal/form-control.styles.ts) like
      every other labelled control's, so its glyph, colour and spacing are consumer-settable. The
      rule below suppresses this component's older hand-rolled glyph -- a literal <span> the legend
-     template still renders -- so the two never double up; it is dead the moment that span is
-     dropped from checkbox-group.class.ts's render(). */
+     template still renders -- so the two never double up; it dies the moment that span leaves
+     checkbox-group.class.ts's render(). */
   :host([required]) [part~="form-control-label"] > span[aria-hidden="true"] {
     display: none;
   }
@@ -75,13 +75,12 @@ export const styles = css`
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
-  /* :host(:disabled), never :host([disabled]) -- this is a form-associated custom element, so the
-     UA computes the FACE :disabled state from the group's own disabled attribute OR an ancestor
-     fieldset's cascade, which is exactly what effectiveDisabled already gates the options on. The
-     attribute selector would only ever have matched the first of the two.
-     Dimming lands on the three chrome parts the GROUP renders itself, not on the host: every owned
-     <lr-checkbox> already dims itself, and a host-level opacity would multiply with that and push
-     the options to a quarter of full contrast. */
+  /* :host(:disabled), never :host([disabled]) -- on a form-associated custom element the UA
+     computes :disabled from the group's own disabled attribute OR an ancestor fieldset's cascade,
+     exactly what effectiveDisabled already gates the options on; the attribute selector matched
+     only the first. Dimming lands on the three chrome parts the GROUP renders itself, not the host:
+     every owned <lr-checkbox> already dims itself, and a host-level opacity would multiply with
+     that, pushing the options to a quarter of full contrast. */
   :host(:disabled) [part~="form-control-label"],
   :host(:disabled) [part="hint"],
   :host(:disabled) [part="error"] {

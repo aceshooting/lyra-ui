@@ -14,12 +14,11 @@ export const styles = css`
       var(--_lr-page-rail-height)
     );
   }
-  /* Page rows are produced by this component's renderItem but are committed into the embedded
-     lr-virtual-list's OWN shadow root, one boundary deeper than this stylesheet: a bare
-     [part='page'] selector can never match one, so every row-level rule reaches through
-     ::part(). ::part() cannot be followed by an attribute selector either, so the state variants
-     (current page, heat tone, overflow marker) each carry their own name in the element's part
-     list -- ::part() matches with part~= semantics, so a row is both page and page-current. */
+  /* Page rows come from this component's renderItem but commit into the embedded lr-virtual-list's
+     OWN shadow root, one boundary deeper, so a bare [part='page'] can never match and every
+     row-level rule goes through ::part(). ::part() also takes no attribute selector, so each state
+     variant (current page, heat tone, overflow marker) carries its own part name; ::part() matches
+     with part~= semantics, so a row is both page and page-current. */
   lr-virtual-list::part(page) {
     display: flex;
     flex-direction: column;
@@ -51,9 +50,9 @@ export const styles = css`
   lr-virtual-list::part(page-current) {
     background: var(--lr-page-rail-current-bg, var(--lr-color-brand-quiet));
   }
-  /* Split out from the resting rule rather than folded into its selector list: it has to match the
-     specificity of the ::part(page):hover rule above and come later, or the current page reverts to
-     the generic hover surface under the pointer and stops being identifiable. */
+  /* Split out from the resting rule: it must match the ::part(page):hover rule above in
+     specificity and come later, or the current page falls back to the generic hover surface under
+     the pointer. */
   lr-virtual-list::part(page-current):hover {
     background: var(--lr-page-rail-current-bg, var(--lr-color-brand-quiet));
   }
@@ -83,10 +82,9 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text-quiet);
   }
-  /* No inset here: the cluster is the third stacked child of the column-flex, center-aligned page
-     button and is positioned entirely by that flow. An inset on a position: static box has no
-     effect at all, so a trailing-edge offset declared here would be silently inert -- and giving
-     it effect (position: relative) would push a deliberately centered row off-centre. */
+  /* No inset: the cluster is the third stacked child of the column-flex page button and is placed
+     entirely by that flow. An inset on a position: static box is inert, and adding
+     position: relative to give it effect would push a deliberately centered row off-centre. */
   lr-virtual-list::part(heat) {
     display: flex;
     align-items: center;

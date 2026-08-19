@@ -4,16 +4,15 @@ export const styles = css`
   :host {
     display: block;
     color: var(--lr-color-brand);
-    /* Palette slot: which color the active 'variant' contributes to the indicator, read from the
-       shared semantic grid's loud fill (imported alongside this sheet as 'variants' in the class
-       file's static styles). It sits *inside* the two consumer-facing override names below in the
-       fallback chain -- an explicit --lr-progress-indicator-color or the upstream --indicator-color
-       alias still wins outright, exactly as before this token existed. The standalone default here
-       (brand) matches the value this indicator always rendered before variant support existed. */
+    /* Palette slot: the color the active 'variant' contributes to the indicator, from the shared
+       semantic grid's loud fill ('variants', imported alongside this sheet in the class file's
+       static styles). It sits *inside* the two consumer-facing override names below, so an
+       explicit --lr-progress-indicator-color or the upstream --indicator-color alias still wins
+       outright. The standalone brand default is what this indicator rendered before variants. */
     --_lr-progress-indicator-variant-color: var(--lr-color-brand);
   }
-  /* [variant] is always present -- 'variant' reflects its 'brand' property default on first
-     render -- but the bare :host default above still guards a not-yet-updated element. */
+  /* [variant] is always present ('variant' reflects its 'brand' default on first render), but the
+     bare :host default above still guards a not-yet-updated element. */
   :host([variant]) {
     --_lr-progress-indicator-variant-color: var(--lr-color-fill-loud);
   }
@@ -81,10 +80,10 @@ export const styles = css`
       transform: translateX(250%);
     }
   }
-  /* The determinate fill mirrors for free (a block box anchors to the inline-start edge, the
-     physical right under RTL), but translateX is physical, so the indeterminate sweep needs
-     mirrored keyframes to travel end-to-start under RTL: the indicator's static position is
-     right-anchored there, so just-off-screen is +100% (right) through -250% (left). */
+  /* The determinate fill mirrors for free -- a block box anchors to the inline-start edge, the
+     physical right under RTL -- but translateX is physical, so the indeterminate sweep needs
+     mirrored keyframes to travel end-to-start: right-anchored there, just-off-screen is +100%
+     (right) through -250% (left). */
   :host([indeterminate]:dir(rtl)) [part="indicator"] {
     animation-name: lr-progress-slide-rtl;
   }
@@ -108,17 +107,15 @@ export const ringStyles = css`
   :host {
     display: inline-block;
     color: var(--lr-color-brand);
-    /* Palette slot: which color the active 'variant' contributes to the indicator, read from the
-       shared semantic grid's loud fill (imported alongside this sheet as 'variants' in the class
-       file's static styles). It sits *inside* the two consumer-facing override names below in the
-       fallback chain -- an explicit --lr-progress-ring-indicator-color or the upstream
-       --indicator-color alias still wins outright, exactly as before this token existed. The
-       standalone default here (brand) matches the value this indicator always rendered before
-       variant support existed. */
+    /* Palette slot: the color the active 'variant' contributes to the indicator, from the shared
+       semantic grid's loud fill ('variants', imported alongside this sheet in the class file's
+       static styles). It sits *inside* the two consumer-facing override names below, so an
+       explicit --lr-progress-ring-indicator-color or the upstream --indicator-color alias still
+       wins outright. The standalone brand default is what this rendered before variants. */
     --_lr-progress-ring-indicator-variant-color: var(--lr-color-brand);
   }
-  /* [variant] is always present -- 'variant' reflects its 'brand' property default on first
-     render -- but the bare :host default above still guards a not-yet-updated element. */
+  /* [variant] is always present ('variant' reflects its 'brand' default on first render), but the
+     bare :host default above still guards a not-yet-updated element. */
   :host([variant]) {
     --_lr-progress-ring-indicator-variant-color: var(--lr-color-fill-loud);
   }

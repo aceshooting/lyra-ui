@@ -492,7 +492,7 @@ it('reconciles a forwarded slot with no assigned content, via firstUpdated, when
   icon.removeAttribute('hidden');
   actions.removeAttribute('hidden');
 
-  el.firstUpdated();
+  el.firstUpdated(new Map());
 
   expect(icon.hasAttribute('hidden')).to.be.true;
   expect(actions.hasAttribute('hidden')).to.be.true;
@@ -520,7 +520,7 @@ it('reconciles a forwarded slot with assigned content, via firstUpdated, when wi
   icon.setAttribute('hidden', '');
   actions.setAttribute('hidden', '');
 
-  el.firstUpdated();
+  el.firstUpdated(new Map());
 
   expect(icon.hasAttribute('hidden')).to.be.false;
   expect(actions.hasAttribute('hidden')).to.be.false;
@@ -551,7 +551,7 @@ it('reconciles a forwarded heading/description slot with no assigned content, vi
   heading.removeAttribute('hidden');
   description.removeAttribute('hidden');
 
-  el.firstUpdated();
+  el.firstUpdated(new Map());
 
   expect(heading.hasAttribute('hidden')).to.be.true;
   expect(description.hasAttribute('hidden')).to.be.true;
@@ -579,7 +579,7 @@ it('reconciles a forwarded heading/description slot with assigned content, via f
   heading.setAttribute('hidden', '');
   description.setAttribute('hidden', '');
 
-  el.firstUpdated();
+  el.firstUpdated(new Map());
 
   expect(heading.hasAttribute('hidden')).to.be.false;
   expect(description.hasAttribute('hidden')).to.be.false;
@@ -603,7 +603,7 @@ it('keeps a forwarded heading/description visible via firstUpdated when the attr
   heading.setAttribute('hidden', '');
   description.setAttribute('hidden', '');
 
-  el.firstUpdated();
+  el.firstUpdated(new Map());
 
   expect(heading.hasAttribute('hidden')).to.be.false;
   expect(description.hasAttribute('hidden')).to.be.false;

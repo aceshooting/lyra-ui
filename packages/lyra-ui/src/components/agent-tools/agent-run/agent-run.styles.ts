@@ -17,19 +17,19 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
   }
-  /* Density escape -- same convention as lr-empty's compact. The tuned values sit behind inline
-     var() fallbacks (rather than a :host declaration, which every instance would re-declare and so
-     shadow any ancestor value) so a consumer can retune them from outside without restating the
-     whole rule; the fallbacks are the pre-existing values, so an unset run renders unchanged. */
+  /* Density escape -- same convention as lr-empty's compact. Inline var() fallbacks rather than a
+     :host declaration (which every instance re-declares, shadowing any ancestor value), so a
+     consumer can retune from outside without restating the whole rule; the fallbacks are the
+     pre-existing values, leaving an unset run unchanged. */
   :host([compact]) [part="base"] {
     padding: var(--lr-agent-run-compact-padding, var(--lr-space-s));
     gap: var(--lr-agent-run-compact-gap, var(--lr-space-s));
   }
-  /* MUST stay after :host([compact]): both selectors are :host([x]) [part='base'], i.e. equal
-     specificity, so source order alone decides which padding/gap wins when a run is both compact
-     and frame="plain". plain is the stronger statement ("no chrome at all"), so it goes last. The built-in
-     Cancel/Retry buttons keep their own border/background -- that chrome is theirs, not the card's,
-     so a chrome-less run still has a visible interactive affordance. */
+  /* MUST stay after :host([compact]) -- both are :host([x]) [part='base'], equal specificity, so
+     source order alone decides the padding/gap when a run is both compact and frame="plain", and
+     plain is the stronger no-chrome statement. The built-in Cancel/Retry buttons keep their own
+     border/background -- that chrome is theirs, not the card's -- so a chrome-less run still has a
+     visible interactive affordance. */
   :host([frame="plain"]) [part="base"] {
     padding: 0;
     border: 0;
@@ -176,10 +176,10 @@ export const styles = css`
     border-color: var(--lr-color-brand);
     color: var(--lr-color-brand);
   }
-  /* Both hovers recolour the border and label only, which leaves the pressed step nothing to
-     deepen -- so pressed tints the button's own surface fill toward --lr-color-mix-partner (which
-     follows the text colour) instead. The :hover border/label colours still apply underneath while
-     the pointer is down, so Cancel stays danger-toned and Retry stays brand-toned when pressed. */
+  /* Both hovers recolour the border and label only, leaving the pressed step nothing to deepen, so
+     pressed tints the button's own surface fill toward --lr-color-mix-partner (which follows the
+     text colour). The :hover border/label colours still apply underneath while the pointer is
+     down, so Cancel stays danger-toned and Retry brand-toned when pressed. */
   [part="cancel-button"]:active,
   [part="retry-button"]:active {
     background: color-mix(

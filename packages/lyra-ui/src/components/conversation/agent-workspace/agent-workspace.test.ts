@@ -466,6 +466,55 @@ it("renders a bounded latest-message window for very large fallback transcripts"
   expect(viewport.unreadStartIndex).to.equal(495);
 });
 
+it("recomputes the unread index when the messages slot is filled or emptied after mount", async () => {
+  // `safeUnreadStartIndex` branches on `hasSlotted('messages')`: a slotted transcript owns its own
+  // indexing, so the authored index passes through untouched, while the data-driven list remaps it
+  // through the deduplicated projection. Without a `slotchange` binding on that slot the branch is
+  // only ever evaluated at mount, so slotting a transcript in (or pulling it back out) later leaves
+  // the viewport reading the wrong boundary.
+  const el = await fixture<LyraAgentWorkspace>(html`<lr-agent-workspace
+    unread-start-index="9"
+    .messages=${[
+      { id: "first", role: "assistant", text: "First" },
+      { id: "first", role: "assistant", text: "Ignored duplicate" },
+      { id: "", role: "assistant", text: "Ignored empty" },
+      { id: "second", role: "assistant", text: "Second" },
+    ]}
+  ></lr-agent-workspace>`);
+  const viewport = el.shadowRoot!.querySelector("lr-chat-viewport") as HTMLElement & {
+    unreadStartIndex: number | null;
+  };
+  const messagesSlot = el.shadowRoot!.querySelector(
+    'slot[name="messages"]'
+  ) as HTMLSlotElement;
+  // Two of the four authored messages survive deduplication, so the data-driven branch remaps 9
+  // down to 2. Both branches land past the last rendered row, which keeps the composed viewport's
+  // own unread-divider offset at null throughout -- otherwise this test would be measuring
+  // lr-chat-viewport's separate change-in-update wart rather than the slot binding.
+  expect(viewport.unreadStartIndex).to.equal(2);
+
+  const slotted = document.createElement("div");
+  slotted.slot = "messages";
+  slotted.textContent = "Virtualized transcript";
+  let changed = oneEvent(messagesSlot, "slotchange");
+  el.append(slotted);
+  await changed;
+  await el.updateComplete;
+  expect(
+    viewport.unreadStartIndex,
+    "a slotted transcript passes the authored index straight through"
+  ).to.equal(9);
+
+  changed = oneEvent(messagesSlot, "slotchange");
+  slotted.remove();
+  await changed;
+  await el.updateComplete;
+  expect(
+    viewport.unreadStartIndex,
+    "removing it returns to the projected data-driven index"
+  ).to.equal(2);
+});
+
 it("maps the authored unread index through the same normalized message projection", async () => {
   const el = await fixture<LyraAgentWorkspace>(html`<lr-agent-workspace
     unread-start-index="3"
@@ -756,5 +805,37 @@ describe("definite-allocation overflow", () => {
     expect(composer.scrollHeight > composer.clientHeight).to.be.true;
     expect(root.scrollHeight).to.equal(root.clientHeight);
     expect(body.clientHeight > 0).to.be.true;
+  });
+});
+
+describe("a slotted [hidden] message", () => {
+  it("is removed from the rendered box, not just from the accessibility tree", async () => {
+    const el = await fixture<LyraAgentWorkspace>(html`
+      <lr-agent-workspace>
+        <div id="gone" slot="messages" hidden>filtered out</div>
+        <div id="shown" slot="messages">still here</div>
+      </lr-agent-workspace>
+    `);
+    await el.updateComplete;
+    const gone = el.querySelector<HTMLElement>("#gone")!;
+    const shown = el.querySelector<HTMLElement>("#shown")!;
+    expect(getComputedStyle(gone).display).to.equal("none");
+    expect(gone.getClientRects().length).to.equal(0);
+    // The companion proves the slot[name='messages']::slotted(*) rule is still live, so the
+    // assertion above cannot pass merely because the workspace stopped styling its messages.
+    expect(getComputedStyle(shown).display).to.equal("block");
+    expect(shown.getClientRects().length).to.equal(1);
+  });
+
+  it("still lets find-in-page reveal a hidden='until-found' message", async () => {
+    const el = await fixture<LyraAgentWorkspace>(html`
+      <lr-agent-workspace>
+        <div id="findable" slot="messages" hidden="until-found">collapsed transcript</div>
+      </lr-agent-workspace>
+    `);
+    await el.updateComplete;
+    expect(
+      getComputedStyle(el.querySelector<HTMLElement>("#findable")!).display
+    ).to.equal("block");
   });
 });

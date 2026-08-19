@@ -3,7 +3,7 @@ import type { PropertyValues } from 'lit';
 import { html, nothing, type TemplateResult } from 'lit';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { nextId } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import type { LyraSelect } from '../../forms/select/select.class.js';
 import type { LyraCombobox } from '../../forms/combobox/combobox.class.js';
 import type { LyraInput } from '../../forms/input/input.class.js';
@@ -743,7 +743,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
     const hasFields = this._fields.length > 0;
     const value = this._value;
     return html`
-      <div part="base" role="group" aria-label=${this.getAttribute('aria-label') || this.localize('queryBuilderLabel')}>
+      <div part="base" role="group" aria-label=${hostAriaLabel(this) ?? this.localize('queryBuilderLabel')}>
         ${!hasFields
           ? html`<p part="empty">${this.localize('queryBuilderNoFields')}</p>`
           : html`

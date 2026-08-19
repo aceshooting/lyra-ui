@@ -6,7 +6,7 @@
 - **Class** `LyraVideoPlaylist`, also available unregistered from `@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecated part** `base` since `8.0.0`; use part `::part(video-playlist)`; removal not before `10.0.0` — The video-playlist part identifies the root component explicitly; base remains on the same root node for migration compatibility.
+- **Deprecated part** `base` since `8.0.0`; use part `::part(video-playlist)`; removal not before `10.0.0` — The video-playlist part identifies the root component explicitly; base remains on the same root node for migration compatibility. That version is a policy floor, not a plan: `wa-video-playlist` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is.
 - **Optional peers** `dompurify` — see `llms/peers.md`
 - **Themeable via** 7 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

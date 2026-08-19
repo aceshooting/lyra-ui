@@ -1,7 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { styles } from './env-list.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
@@ -208,7 +208,7 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
 
   private get accessibleLabel(): string {
     return (
-      this.getAttribute('aria-label')?.trim() ||
+      hostAriaLabel(this)?.trim() ??
       (this.label == null ? this.localize('envListLabel') : this.label)
     );
   }

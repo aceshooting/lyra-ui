@@ -70,9 +70,9 @@ export const styles = css`
   }
   [part='restore-button']:hover, [part='copy-button']:hover, [part='download-button']:hover,
   [part='view-button']:hover { background: var(--lr-color-brand-quiet); color: var(--lr-color-brand); }
-  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
-     --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
-     than hover in both light and dark themes rather than repeating it. */
+  /* Pressed pushes the hovered tint a further --lr-color-mix-active toward --lr-color-mix-partner,
+     which follows the text colour, so it reads as a distinctly deeper step than hover in both
+     themes. */
   [part='restore-button']:active, [part='copy-button']:active, [part='download-button']:active,
   [part='view-button']:active {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));

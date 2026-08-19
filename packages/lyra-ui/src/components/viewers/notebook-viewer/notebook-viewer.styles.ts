@@ -4,9 +4,9 @@ export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
-    /* Makes the host a query container so the @container rule below reacts to this viewer's own
-       allocated width (a chat transcript, a split pane, a narrow dialog) instead of the page
-       viewport's -- a reusable primitive can be squeezed into a narrow panel on a wide desktop. */
+    /* Query container, so the @container rule below reacts to this viewer's own allocated width
+       -- a chat transcript, a split pane, a narrow dialog on a wide desktop -- not the page
+       viewport's. */
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
@@ -18,15 +18,14 @@ export const styles = css`
     border-radius: var(--lr-radius);
   }
   /* Every cell part below is emitted by renderCell()/renderOutput() but committed into
-     <lr-virtual-list>'s OWN shadow root, so a bare [part='...'] selector here can never reach it --
-     it would resolve against this component's shadow tree, which holds none of those nodes. The
-     one-shadow-hop ::part() form is what actually matches, and the paired exportparts on the
-     <lr-virtual-list> element re-exposes the same names to a consumer.
+     <lr-virtual-list>'s OWN shadow root, so a bare [part='...'] selector here resolves against
+     this component's tree and never reaches it; the one-shadow-hop ::part() form does, and
+     exportparts on the <lr-virtual-list> element re-exposes the names to consumers.
 
-     State variants ride a part *list* (e.g. part="cell cell-active") rather than an attribute:
-     ::part() has part~= semantics, but Shadow Parts forbids an attribute selector after ::part(),
-     so ::part(cell)[data-active] is invalid CSS. The data-* attributes stay on the elements for
-     scripting and semantics; the extra part token is what the stylesheet keys off. */
+     State variants ride a part list (part="cell cell-active"), not an attribute: ::part() has
+     part~= semantics but Shadow Parts forbids an attribute selector after it, so
+     ::part(cell)[data-active] is invalid CSS. The data-* attributes stay for scripting and
+     semantics; the part token is what the stylesheet keys off. */
   lr-virtual-list::part(cell) {
     display: grid;
     grid-template-columns: auto 1fr;
@@ -37,11 +36,10 @@ export const styles = css`
   lr-virtual-list::part(cell-active) {
     background: var(--lr-notebook-viewer-active-bg, var(--lr-color-brand-quiet));
   }
-  /* Tone-specific rules below only override the custom property, not background directly -- the
-     base rule here both declares the accent-tone default and is the only rule that reads the
-     property into background, so whichever tone-specific rule matches alongside it (later in
-     source order, same specificity) wins the property's value. Mirrors docx-viewer.styles.ts's
-     identical --_lr-docx-viewer-highlight-background tone-override pattern. */
+  /* The tone rules below override only the custom property; this base rule declares the
+     accent-tone default and alone reads it into background, so whichever tone rule matches
+     alongside -- later, same specificity -- supplies the value. Mirrors docx-viewer.styles.ts's
+     --_lr-docx-viewer-highlight-background pattern. */
   lr-virtual-list::part(cell-highlighted) {
     --_lr-notebook-viewer-highlight-background: var(
       --lr-notebook-viewer-highlight-accent-background,
@@ -73,9 +71,9 @@ export const styles = css`
       var(--lr-color-surface-raised)
     );
   }
-  /* Applied alongside cell-highlighted/cell-highlighted-<tone> -- an inset outline (rather than
-     cell-active's plain background swap) so it stays visible layered on top of any highlight tone
-     background above instead of replacing it. */
+  /* Applied alongside cell-highlighted/cell-highlighted-<tone>: an inset outline rather than
+     cell-active's background swap, so it layers over any highlight tone above instead of
+     replacing it. */
   lr-virtual-list::part(cell-highlight-active) {
     outline: var(--lr-focus-ring-width) solid
       var(--lr-notebook-viewer-highlight-active-outline, var(--lr-focus-ring-color));
@@ -98,9 +96,9 @@ export const styles = css`
     max-inline-size: 100%;
     overflow: auto;
   }
-  /* no-pressed-state: raw-source is a <pre tabindex="0"> horizontal scroll surface, not a control --
-     the tint tells the pointer which cell it is about to scroll, and a mousedown there starts a text
-     selection rather than activating anything. */
+  /* no-pressed-state: raw-source is a <pre tabindex="0"> horizontal scroll surface, not a control
+     -- the tint tells the pointer which cell it is about to scroll, and mousedown there starts a
+     text selection rather than activating anything. */
   lr-virtual-list::part(raw-source):hover {
     background: var(--lr-color-surface-raised);
   }
@@ -118,20 +116,19 @@ export const styles = css`
     font-family: var(--lr-font-mono);
     font-size: var(--lr-font-size-sm);
     white-space: pre-wrap;
-    /* Output is raw/code-like content (stdout/stderr text, tracebacks, text/plain results), read
-       left-to-right regardless of the surrounding document direction -- same reasoning as
-       code-block.styles.ts's [part=pre] rule for the code-input block directly above it. Without
-       this, an ambient dir="rtl" bidi-reorders the text and right-aligns it (text-align: start
-       resolving to right), producing a cell whose input stays pinned left and whose output flips
-       right. isolate keeps any RTL run inside the output text from leaking out and reordering it. */
+    /* Output is raw code-like content (stdout/stderr, tracebacks, text/plain), read left-to-right
+       whatever the document direction -- same reasoning as code-block.styles.ts's [part=pre]
+       rule. Otherwise an ambient dir="rtl" bidi-reorders and right-aligns it (text-align: start
+       resolving to right), leaving input pinned left and output flipped right; isolate stops an
+       RTL run inside the output leaking out. */
     direction: ltr;
     unicode-bidi: isolate;
   }
   lr-virtual-list::part(output-error) {
     color: var(--lr-color-danger);
   }
-  /* block display gives the label its own line ahead of the traceback text
-     without baking a joiner character into the translated string */
+  /* block display gives the label its own line ahead of the traceback text without baking a
+     joiner character into the translated string. */
   lr-virtual-list::part(error-output-label) {
     display: block;
     font-weight: var(--lr-font-weight-semibold);
@@ -148,9 +145,9 @@ export const styles = css`
   lr-virtual-list::part(output-toggle):hover {
     text-decoration: underline;
   }
-  /* The toggle is a borderless text button, so there is no fill to deepen: the press keeps the
-     hover's underline and shifts the label itself toward the text colour, which is a stronger and
-     visibly different step rather than a repeat of the hover rule. */
+  /* The toggle is a borderless text button with no fill to deepen, so the press keeps the hover
+     underline and shifts the label itself toward the text colour -- a stronger, visibly different
+     step rather than a repeat of hover. */
   lr-virtual-list::part(output-toggle):active {
     text-decoration: underline;
     color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
@@ -165,8 +162,8 @@ export const styles = css`
     text-align: center;
   }
   /* Container-query evaluation walks the flat tree, so it crosses the <lr-virtual-list> shadow
-     boundary and still resolves against the :host container declared above -- the narrow-allocation
-     rules keep working on the ::part() selectors. */
+     boundary and still resolves against the :host container above -- these narrow-allocation
+     ::part() rules keep working. */
   @container (max-inline-size: 30rem) {
     lr-virtual-list::part(cell) {
       grid-template-columns: 1fr;

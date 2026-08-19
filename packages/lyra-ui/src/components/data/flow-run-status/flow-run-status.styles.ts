@@ -16,18 +16,18 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
-    /* Resting chrome, despite the element's name: this is an in-flow status strip (the host is a
-       plain display:block box with no positioning of its own, and it is usually dropped into a
-       toolbar next to the canvas), not a layer floating above the page. */
+    /* Resting chrome despite the element's name: an in-flow status strip (plain display:block
+       host, no positioning of its own, usually dropped into a toolbar beside the canvas), not a
+       layer floating above the page. */
     box-shadow: var(--lr-shadow-s);
     font-size: var(--lr-font-size-xs);
     min-inline-size: 0;
     max-inline-size: 100%;
   }
-  /* Chrome-less escape, mirroring the shared LyraFrame vocabulary's frame="plain" (and lr-callout's [inline]): the
-     summary strip is often placed directly inside a host toolbar that already draws its own
+  /* Chrome-less escape, mirroring the shared LyraFrame vocabulary's frame="plain" (and
+     lr-callout's [inline]): the strip often sits inside a host toolbar that already draws its own
      border/background, where this floating-surface chrome doubles the frame. Only the box
-     decoration goes -- the flex layout, gap and the per-status count dots stay. */
+     decoration goes -- the flex layout, gap and per-status count dots stay. */
   :host([frame='plain']) [part='base'] {
     padding: 0;
     border: 0;

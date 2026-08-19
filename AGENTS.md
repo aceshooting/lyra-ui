@@ -182,7 +182,11 @@ Full rules, incidents, and patterns:
 - Sibling `*.styles.ts` per component; `static styles = [LyraElement.styles, styles]`.
 - A backtick inside a `css`/`html` tagged template terminates the literal — including inside a
   CSS/HTML comment, which JavaScript does not treat as a comment. The parse error then points at
-  an innocent line far below. `${` in a comment is the same trap.
+  an innocent line far below. `${` in a comment is the same trap. A third, quieter one: `*/` inside
+  comment PROSE closes the comment early and reinterprets the rest of the sentence as CSS — writing
+  `--lr-button-padding-*/--lr-button-font-size` is enough to do it. Unlike the first two it leaves
+  the backtick count unchanged, so a backtick audit misses it; only a rendered or parsed CSS
+  comparison catches it.
 - **Composed-child `exportparts` is on-demand, not blanket.** `::part()` pierces exactly one shadow
   boundary, so a composed `lr-*` child's internals are unreachable unless the parent forwards them.
   Only ~34 of ~321 composed-child edges forward, and that is deliberate: forwarding invents new

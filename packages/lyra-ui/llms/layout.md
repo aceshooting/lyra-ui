@@ -1,3 +1,20 @@
+## Breaking changes in 10.0.0
+
+**`lr-virtual-list`:** the `lr-visible-range-changed` event is removed — listen for
+`lr-visible-range-change` instead. The detail (`LyraVirtualListRange`), the firing conditions and the
+gesture are all unchanged; only the name moved. The old spelling was the library's only past-tense
+`-changed` event among 58 members of the `-change` family, so a convention-driven `lr-${x}-change`
+listener silently missed it on a component embedded in ten viewers. It is removed outright rather
+than kept as a dual-emitting alias, because the library has no released consumers and an alias is a
+permanent tax paid to protect users who do not exist. Rename the listener; nothing else changes.
+
+Also corrected in 10.0.0 — not breaking, but visible. `<lr-dashboard-grid>`'s cell keeps a focus
+indicator while it is in a collision or drop state: the collision rule owns the outline channel by
+design, but the side effect was that the focus ring vanished entirely during exactly the drag or
+resize a keyboard user most needs it, so the ring is now re-expressed on a second channel. And
+`<lr-card>` honors a `hidden` slotted media child instead of painting it — the component's own
+`display` declaration is author-origin and was beating the UA stylesheet's `[hidden] { display: none }`.
+
 ## Breaking changes in 9.0.0
 
 **`lr-app-rail`:** `mode`'s write side is removed: the accessor is now strictly read-only (always resolves to

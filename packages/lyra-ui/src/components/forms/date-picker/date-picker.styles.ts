@@ -8,10 +8,9 @@ export const styles = css`
     --_lr-date-picker-header-gap: var(--lr-space-s);
     --_lr-date-picker-radius: var(--lr-radius);
   }
-  /* A calendar day cell is a square in a 7-column grid, not a form-control row, so this is the
-     component's own ladder rather than the shared --lr-form-control-height one (whose 2xs/xs steps
-     would put a tappable cell under 24px). It still matches both spellings of every tier, the same
-     way internal/sizes.styles.ts does, so size="small" is honoured here too. */
+  /* Day cells are grid squares, not form-control rows: the shared --lr-form-control-height's
+     2xs/xs steps would drop a tappable cell under 24px. Both tier spellings match, as in
+     internal/sizes.styles.ts. */
   :host([size="2xs"]) {
     --_lr-cell-size: var(--lr-size-1-5rem);
   }
@@ -35,10 +34,8 @@ export const styles = css`
   }
   [part~="base"] {
     display: flex;
-    /* months="2" renders two fixed-width month grids side by side (~520px
-       total) -- in a panel/dialog/viewport narrower than that, wrapping the
-       second month onto its own line keeps every day cell reachable instead
-       of the row overflowing its allocation. */
+    /* months="2" renders two fixed-width month grids side by side (~520px total); in anything
+       narrower, wrapping the second month onto its own line beats overflowing the allocation. */
     flex-wrap: wrap;
     gap: var(--lr-date-picker-month-gap, var(--_lr-date-picker-month-gap));
     padding: var(--lr-space-s);
@@ -50,13 +47,10 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
   }
-  /* Nested flexbox has to be told at EVERY level that it may shrink: a flex/grid item's
-     automatic minimum size only zeroes out (letting a non-visible-overflow descendant like
-     .calendar-scroll actually absorb the overflow) once every ancestor between here and that
-     descendant already has a definite width to shrink into -- an unbroken chain of explicit
-     min-inline-size: 0 down to [part="month"] below, mirroring [part~="date-picker"]'s own
-     min/max-inline-size pairing above. Leaving any single link on its content-based auto default
-     reintroduces the overflow this whole chain exists to prevent. */
+  /* Every link of the nested flex chain needs min-inline-size: 0, down to [part="month"] and
+     mirroring [part~="date-picker"] above: a flex item's automatic minimum only zeroes once every
+     ancestor has a definite width. One link on auto puts the overflow back instead of letting
+     .calendar-scroll absorb it. */
   .content {
     min-inline-size: 0;
     max-inline-size: 100%;
@@ -130,18 +124,16 @@ export const styles = css`
     padding: var(--lr-space-xs);
     border-radius: var(--lr-date-picker-radius, var(--_lr-date-picker-radius));
   }
-  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself,
-     mirroring lr-pagination's/lr-table's low-specificity rule for this exact selector shape --
-     a consumer's own ::part(previous):hover/::part(next):hover can win without !important. The
-     background routes through a scoped cssprop so a consumer can retint just this hover state
-     without hijacking the shared --lr-color-brand-quiet token used everywhere else. */
+  /* :where() ties this with the pressed rule at (0,1,0), so source order hands that one the press
+     while the arrow is held. The scoped cssprop retints this hover alone, not the shared
+     --lr-color-brand-quiet. */
   :where([part="previous"]):hover:not(:disabled),
   :where([part="next"]):hover:not(:disabled) {
     background: var(--lr-date-picker-nav-hover-bg, var(--lr-color-brand-quiet));
   }
-  /* Pressed mixes the hover tint one shared step further toward the text colour -- month paging
-     repeats, so "the click landed" has to be legible without waiting for the grid to redraw.
-     Wrapped in :where() for the same specificity reason as the hover rule above. */
+  /* Pressed mixes the hover tint one shared step toward the text colour -- month paging repeats, so
+     the click has to read as landed before the grid redraws. :where() for the specificity reason
+     above. */
   :where([part="previous"]):active:not(:disabled),
   :where([part="next"]):active:not(:disabled) {
     background: var(
@@ -158,51 +150,39 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* Rotate the wrapping part element, not the svg -- internal/icons.ts's
-     documented contract ("callers ... rotate the wrapping part element via
-     CSS transform: rotate(...), not the svg"). This previously rotated the
-     inner <svg> directly. */
+  /* Rotate the wrapping part element, not the inner <svg> -- internal/icons.ts's documented
+     contract; this once rotated the svg directly. */
   [part="previous"] {
     transform: rotate(180deg);
   }
-  /* Under RTL the header's flexbox auto-mirrors (see date-picker.class.ts's
-     ArrowLeft/ArrowRight comment), moving 'previous' to the physical right
-     side and 'next' to the physical left -- so the chevrons must swap
-     rotation in lockstep to keep pointing outward from the month title,
-     matching the unrotated 'next' chevron's LTR orientation. */
+  /* RTL auto-mirrors the header flexbox (see date-picker.class.ts's ArrowLeft/ArrowRight comment),
+     putting 'previous' physically right and 'next' left, so the chevrons swap rotation in lockstep
+     to keep pointing outward from the month title. */
   :host(:dir(rtl)) [part="previous"] {
     transform: rotate(0deg);
   }
   :host(:dir(rtl)) [part="next"] {
     transform: rotate(180deg);
   }
-  /* One month's weekday header + day grid, as a single synchronized horizontal scroll region.
-     A single month is a fixed 7-(or, with-week-numbers, 8-)column x --lr-cell-size grid -- at
-     size="xl" (48px cells) or with the extra with-week-numbers column, that fixed width can
-     exceed a narrow (e.g. 320px) allocation. Shrinking the cells with a @container step was
-     rejected: dense calendar geometry still owes a >=24px WCAG 2.5.8 tap target (see the sizing
-     ladder comment on :host above, whose floor is exactly 24px), so a further per-allocation
-     shrink could push size="2xs" cells under that floor. Scrolling instead, unconditionally,
-     keeps every cell at its authored token size regardless of allocation -- the same fixed-size
-     track choice already used for lr-widget's/lr-stepper's/lr-tab-group's own horizontally
-     overflowing rows via the shared ScrollOverflowController (see date-picker.class.ts's
-     constructor). Both rows live in one scroll container (rather than each independently) so they
-     scroll in lockstep and the weekday labels stay aligned over their matching day column. */
+  /* One scroll region for both rows, so they scroll in lockstep with the labels over their day
+     column. The fixed 7- (8 with with-week-numbers) column x --lr-cell-size grid can exceed a
+     narrow 320px allocation at size="xl" (48px cells). A @container shrink was rejected: the sizing
+     ladder's floor is exactly the 24px WCAG 2.5.8 tap target, so size="2xs" could go under it.
+     Scrolling keeps every cell at its token size -- the fixed-track choice
+     lr-widget/lr-stepper/lr-tab-group share through ScrollOverflowController (see
+     date-picker.class.ts's constructor). */
   .calendar-scroll {
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-x: auto;
-    /* Paired explicitly with overflow-x, not left implicit -- pinning one axis to a non-'visible'
-       value forces the other axis's used value to 'auto' too if unset, which can paint a phantom
-       empty vertical scrollbar on a classic (non-overlay) scrollbar platform even when nothing
-       needs vertical scrolling (the same bug already found and fixed once on lr-tab-group and
-       lr-stepper). */
+    /* Explicit: pinning one axis to a non-'visible' value forces the other's used value to
+       'auto', painting a phantom vertical scrollbar on classic (non-overlay) scrollbar platforms
+       -- fixed once already on lr-tab-group and lr-stepper. */
     overflow-y: hidden;
   }
-  /* Edge fade, gated on the region actually overflowing -- ScrollOverflowController toggles
-     data-scroll-overflow from a real scrollWidth/clientWidth measurement, matching
-     lr-stepper's/lr-widget's identical treatment. Painting it unconditionally would fade the
-     first/last day column of every month that already fits its allocation. */
+  /* Edge fade gated on real overflow: ScrollOverflowController toggles data-scroll-overflow from a
+     scrollWidth/clientWidth measurement, as lr-stepper/lr-widget do. Unconditional, it would fade
+     the first/last day column of every month that already fits. */
   .calendar-scroll[data-scroll-overflow] {
     -webkit-mask-image: linear-gradient(
       to right,
@@ -285,10 +265,9 @@ export const styles = css`
   [part~="day-outside"] {
     color: var(--lr-date-picker-day-outside-color, var(--lr-color-text-quiet));
   }
-  /* no-pressed-state: this is not a hover treatment. The :hover half only restates the resting
-     text colour so an adjacent-month day inside the selected range keeps full contrast once
-     [part~='day']:hover repaints its background; the pressed feedback for these cells is that same
-     [part~='day']:active rule above, which they match too. */
+  /* no-pressed-state: not a hover treatment -- the :hover half restates the resting text colour so
+     a selected range's adjacent-month day keeps contrast under [part~='day']:hover; pressed
+     feedback comes from [part~='day']:active. */
   [part~="day-outside"][part~="day-range-inner"],
   [part~="day-outside"][part~="day-range-inner"]:hover:not(:disabled) {
     color: var(--lr-date-picker-range-color, var(--lr-color-text));

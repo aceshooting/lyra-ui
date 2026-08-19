@@ -5,17 +5,16 @@ export const styles = css`
     display: contents;
   }
 
-  /* Positioned by internal/positioner.js's place() -- same fixed/z-index
-     shape as lr-combobox's/lr-select's own [part='listbox']. Closed
-     state: invisible + slightly raised, transitioning in on :host([open]),
-     same as those two. */
+  /* Positioned by internal/positioner.js's place(); same fixed/z-index shape and closed state
+     (invisible, slightly raised, transitioning in on :host([open])) as lr-combobox's/lr-select's
+     own [part='listbox']. */
   [part='listbox'] {
     position: fixed;
     z-index: var(--lr-layer-dropdown);
     box-sizing: border-box;
-    /* Clamped against internal/positioner.js's place()-published available-space custom
-       properties (see menu.styles.ts's/combobox.styles.ts's identical [part='listbox']
-       treatment) so this popup can't overflow off-screen on a short/keyboard-shrunk viewport. */
+    /* Clamped against place()'s published available-space custom properties (same [part='listbox']
+       treatment as menu.styles.ts/combobox.styles.ts) so the popup cannot overflow off-screen on a
+       short or keyboard-shrunk viewport. */
     max-block-size: min(var(--lr-size-16rem), var(--lr-positioner-available-block-size, var(--lr-size-16rem)));
     overflow-y: auto;
     overflow-x: clip;
@@ -58,19 +57,18 @@ export const styles = css`
     border-radius: var(--lr-radius);
     cursor: pointer;
   }
-  /* --lr-mention-popover-option-active-bg indirection (rather than the bare --lr-color-brand-quiet
-     token) lets a consumer retheme just this component's highlighted/active suggestion row
-     without repainting every other component that reuses the same shared brand-quiet token --
-     same indirection lr-select's/lr-combobox's identical-looking [part='option'][data-active]
-     background is missing (checklist's own named example for this check). */
+  /* The --lr-mention-popover-option-active-bg indirection, not the bare --lr-color-brand-quiet
+     token, retints just this component's active suggestion row without repainting every other user
+     of the shared token -- the indirection lr-select's/lr-combobox's identical-looking
+     [part='option'][data-active] background lacks. */
   [part='option']:hover,
   [part='option'][data-active] {
     background: var(--lr-mention-popover-option-active-bg, var(--lr-color-brand-quiet));
   }
-  /* Mixed from the same overridable highlight the hover/active-row rule uses, so a consumer who
-     retints --lr-mention-popover-option-active-bg gets a matching pressed state for free. This also
-     serves the [part='option-description'] hover rule below, which is a descendant treatment of this
-     same row rather than a hover state of its own. */
+  /* Mixed from the same overridable highlight the hover/active-row rule uses, so retinting
+     --lr-mention-popover-option-active-bg gets a matching pressed state for free. It also covers
+     the [part='option-description'] hover rule below, a descendant treatment of this row rather
+     than a hover state of its own. */
   [part='option']:active {
     background: color-mix(
       in oklab,
@@ -106,14 +104,11 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  /* --lr-color-text-quiet-on-brand-quiet fails WCAG AA (~4.24:1, needs
-     4.5:1) -- unlike lr-combobox's/lr-select's identical-looking
-     [part='option'][data-active] background (which never has this problem
-     in practice, since those default their active index to -1/none until a
-     user actually arrows through the list), this component always opens
-     with row 0 pre-highlighted (see the activeIndex field's own doc), so the
-     active/quiet-text combination is the default state, not an edge case --
-     it must pass contrast on its own. */
+  /* --lr-color-text-quiet-on-brand-quiet fails WCAG AA (~4.24:1, needs 4.5:1).
+     lr-combobox's/lr-select's identical-looking [part='option'][data-active] never hits this,
+     their active index defaulting to -1/none until a user arrows the list; here row 0 is
+     pre-highlighted on open (see the activeIndex field's own doc), so active/quiet-text is the
+     default state, not an edge case, and must pass contrast alone. */
   [part='option']:hover [part='option-description'],
   [part='option'][data-active] [part='option-description'] {
     color: var(--lr-color-text);

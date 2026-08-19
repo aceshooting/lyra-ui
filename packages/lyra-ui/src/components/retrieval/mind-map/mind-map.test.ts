@@ -1314,6 +1314,44 @@ it('falls back to the default ring gap for a non-numeric --lr-mind-map-ring-gap'
   expect(distance).to.be.closeTo(96, 0.5); // parseFloat(...) is NaN -> DEFAULT_RING_GAP_PX
 });
 
+it('resolves a case-insensitive REM unit against the live root font size, not as raw pixels', async () => {
+  const originalFontSize = document.documentElement.style.fontSize;
+  document.documentElement.style.fontSize = '32px';
+  try {
+    const el = (await fixture(
+      html`<lr-mind-map
+        style="--lr-mind-map-ring-gap: 6REM"
+        .topics=${topics}
+      ></lr-mind-map>`
+    )) as LyraMindMap;
+    await el.updateComplete;
+    const root = nodePosition(el, 'Knowledge Graph RAG');
+    const child = nodePosition(el, 'Knowledge graphs');
+    const distance = Math.hypot(child.x - root.x, child.y - root.y);
+    // CSS units are case-insensitive. A lowercase-only unit test would read '6REM' as a bare
+    // number and space the ring 6px from the hub instead of 6 * the live 32px root font size.
+    expect(distance).to.be.closeTo(192, 0.5);
+  } finally {
+    document.documentElement.style.fontSize = originalFontSize;
+  }
+});
+
+it('falls back to the default ring gap for a unit with no resolvable pixel length, instead of reading it as pixels', async () => {
+  const el = (await fixture(
+    html`<lr-mind-map
+      style="--lr-mind-map-ring-gap: 6pt"
+      .topics=${topics}
+    ></lr-mind-map>`
+  )) as LyraMindMap;
+  await el.updateComplete;
+  const root = nodePosition(el, 'Knowledge Graph RAG');
+  const child = nodePosition(el, 'Knowledge graphs');
+  const distance = Math.hypot(child.x - root.x, child.y - root.y);
+  // A number-plus-unrecognized-unit value must not collapse to its bare number (6px would put
+  // every ring node practically on top of the hub); the documented default applies instead.
+  expect(distance).to.be.closeTo(96, 0.5);
+});
+
 it('uses a plain px --lr-mind-map-ring-gap value directly, without unit conversion', async () => {
   const el = (await fixture(
     html`<lr-mind-map
@@ -1342,10 +1380,13 @@ it('resolves an em-unit --lr-mind-map-ring-gap against the live host font-size',
   expect(distance).to.be.closeTo(48, 0.5); // 3 * the default 16px host font-size
 });
 
-it('falls back to the default ring gap when an em-unit host font-size cannot be parsed', async () => {
+it('resolves an em-unit ring gap against the root font size when the host has no readable font-size', async () => {
   const el = (await fixture(html`<lr-mind-map></lr-mind-map>`)) as LyraMindMap;
   el.topics = topics;
   await el.updateComplete;
+  const rootFontSize = Number.parseFloat(
+    getComputedStyle(document.documentElement).fontSize
+  );
   const originalGetComputedStyle = window.getComputedStyle;
   window.getComputedStyle = ((element: Element) => {
     if (element === el) {
@@ -1359,7 +1400,10 @@ it('falls back to the default ring gap when an em-unit host font-size cannot be 
   }) as typeof window.getComputedStyle;
   try {
     const internals = el as unknown as { ringGapPx(): number };
-    expect(internals.ringGapPx()).to.equal(96); // '' -> NaN host font-size -> DEFAULT_RING_GAP_PX
+    // An element with no computed font-size of its own inherits the document root's, so an `em`
+    // length anchors there rather than discarding the authored gap -- the shared resolveCssLength()
+    // contract every unit-resolving component in the library now follows.
+    expect(internals.ringGapPx()).to.equal(2 * rootFontSize);
   } finally {
     window.getComputedStyle = originalGetComputedStyle;
   }

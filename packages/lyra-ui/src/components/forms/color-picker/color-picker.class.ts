@@ -4,7 +4,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
-import { nextId, srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import { place } from '../../../internal/positioner.js';
 import { isRtl, rtlAwarePlacement } from '../../../internal/rtl.js';
 import { activateOverlay, composedContains, type OverlayHandle } from '../../../internal/overlay-manager.js';
@@ -1228,7 +1228,13 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     const hasLabel = this.withLabel || this.hasLabel || Boolean(this.label);
     const hasHint = this.withHint || this.hasHint || Boolean(this.hint);
     const hasError = this.hasError || Boolean(this.errorText);
-    const name = this.accessibleLabel || (!hasLabel ? this.localize('colorPicker') : '');
+    // Presence-based (`hostAriaLabel`), not truthiness-based: `accessibleLabel` defaults to `''`,
+    // so reading the property alone cannot tell an absent `aria-label` from an explicitly empty
+    // one, and the localized fallback quietly reinstated a name the author had suppressed.
+    // The labelledby companion below stays truthiness-based on purpose, exactly as lr-otp-input's
+    // does: it asks whether the host supplies a *real* name, and an empty one supplies none --
+    // suppressing the host name must not orphan a rendered visible label from the control it names.
+    const name = hostAriaLabel(this) ?? (!hasLabel ? this.localize('colorPicker') : '');
     const labelledBy = !this.accessibleLabel && hasLabel ? this.labelId : '';
     const userInvalid = this.internals.states.has('user-invalid');
     const invalid = hasError || userInvalid;

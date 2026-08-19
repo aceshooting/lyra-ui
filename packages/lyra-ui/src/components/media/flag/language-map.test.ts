@@ -60,7 +60,7 @@ describe('localeNativeName', () => {
 
   it('pairs with the flag mapping to describe a locale', () => {
     expect(languageToCountry('pt-BR')).to.equal('br');
-    expect(LANGUAGE_TO_COUNTRY.fr).to.equal('fr');
+    expect(LANGUAGE_TO_COUNTRY['fr']).to.equal('fr');
     expect(localeNativeName('pt-BR')).to.contain('Brasil');
   });
 

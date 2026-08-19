@@ -11,6 +11,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { styles } from './graph-query-builder.styles.js';
 import type { LyraSelect } from '../../forms/select/select.class.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import {
   getFormOwner,
   installCustomErrorProperty,
@@ -496,7 +497,13 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
 
   constructor() {
     super();
-    this.internals = this.safeAttachInternals();
+    // Degrades to the shared `createFallbackInternals()` stand-in rather than throwing in an
+    // environment without a working `attachInternals()` (a downstream consumer's happy-dom test
+    // suite): merely constructing -- or importing -- this component must not hard-crash there.
+    // Form participation is genuinely unavailable in that environment and stays inert, but the
+    // stand-in tracks real validity flags, so `checkValidity()`/`validity`/`validationMessage`
+    // keep answering this control's own constraints instead of claiming valid unconditionally.
+    this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
     installInvalidEventAlias(this, (init: { cancelable: true }) => this.emit('lr-invalid', null, init));
@@ -507,37 +514,6 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     this.removalFocusGeneration++;
     this.pendingRemovalFocus = undefined;
     super.disconnectedCallback();
-  }
-
-  /** `attachInternals()` throws in any environment without a real `ElementInternals`
-   *  implementation (e.g. a downstream consumer's happy-dom test suite) -- merely constructing
-   *  (or importing) this component must not hard-crash there. Falls back to an inert stand-in:
-   *  form participation and validity reporting are unavailable in that environment (there is no
-   *  polyfillable substitute), but rendering and every non-form-associated feature keep working. */
-  private safeAttachInternals(): ElementInternals {
-    if (typeof (globalThis as { ElementInternals?: unknown }).ElementInternals === 'undefined') {
-      return this.inertInternals();
-    }
-    try {
-      return this.attachInternals();
-    } catch {
-      return this.inertInternals();
-    }
-  }
-
-  private inertInternals(): ElementInternals {
-    return {
-      form: null,
-      labels: [] as unknown as NodeList,
-      validity: {} as ValidityState,
-      validationMessage: '',
-      willValidate: false,
-      setFormValue: () => {},
-      setValidity: () => {},
-      checkValidity: () => true,
-      reportValidity: () => true,
-      states: new Set<string>(),
-    } as unknown as ElementInternals;
   }
 
   get form(): HTMLFormElement | null {

@@ -1,4 +1,10 @@
-import { fixture, expect, oneEvent, html } from "@open-wc/testing";
+import {
+  fixture,
+  expect,
+  oneEvent,
+  html,
+  waitUntil,
+} from "@open-wc/testing";
 import "./widget.js";
 import type { LyraWidget } from "./widget.js";
 import { styles } from "./widget.styles.js";
@@ -2574,4 +2580,152 @@ it("actually renders no mask under forced colors, in both LTR and RTL, while onl
   } finally {
     await setForcedColors("none");
   }
+});
+
+describe("view-toggle pressed feedback", () => {
+  /** Resolves what a `declaration` computes to *inside this component's shadow root*, where the
+   *  `--lr-*` design tokens live. */
+  function resolvedInShadow(
+    el: LyraWidget,
+    declaration: string,
+    property: string
+  ): string {
+    const probe = document.createElement("span");
+    probe.setAttribute("style", declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  async function nextFrames(): Promise<void> {
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve))
+    );
+  }
+
+  async function moveMouseTo(target: HTMLElement): Promise<void> {
+    target.scrollIntoView({ block: "center", inline: "center" });
+    await nextFrames();
+    const rect = target.getBoundingClientRect();
+    await sendMouse({
+      type: "move",
+      position: [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ],
+    });
+    await nextFrames();
+  }
+
+  async function themed(): Promise<LyraWidget> {
+    const wrapper = (await fixture(html`
+      <div
+        style="--lr-widget-view-toggle-active-bg: rgb(0, 51, 102); --lr-widget-view-toggle-hover-bg: rgb(9, 121, 5);"
+      >
+        <lr-widget
+          label="Usage"
+          .views=${[
+            { viewId: "chart", label: "Chart" },
+            { viewId: "table", label: "Table" },
+          ]}
+        >
+          <div slot="view-chart">chart</div>
+          <div slot="view-table">table</div>
+        </lr-widget>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector("lr-widget") as LyraWidget;
+    await el.updateComplete;
+    return el;
+  }
+
+  it("darkens the PRESSED view toggle while it is held", async function () {
+    if (window.matchMedia("(hover: none), (pointer: coarse)").matches)
+      this.skip();
+    const el = await themed();
+    const pressed = el.shadowRoot!.querySelector(
+      '[part="view-toggle"][aria-pressed="true"]'
+    ) as HTMLElement;
+    expect(pressed != null, "expected a pressed view toggle").to.equal(true);
+    expect(getComputedStyle(pressed).backgroundColor).to.equal(
+      "rgb(0, 51, 102)"
+    );
+
+    const held = resolvedInShadow(
+      el,
+      "background: color-mix(in oklab, rgb(0, 51, 102), var(--lr-color-mix-partner) var(--lr-color-mix-active))",
+      "background-color"
+    );
+    expect(held).to.not.equal("rgb(0, 51, 102)");
+
+    try {
+      await resetMouse();
+      await moveMouseTo(pressed);
+      // Hovering the pressed toggle deliberately keeps its own fill -- the hover rule sits below
+      // the [aria-pressed='true'] rule on purpose, exactly like lr-tab-group's selected tab.
+      expect(getComputedStyle(pressed).backgroundColor).to.equal(
+        "rgb(0, 51, 102)"
+      );
+      await sendMouse({ type: "down" });
+      await waitUntil(
+        () => getComputedStyle(pressed).backgroundColor === held,
+        "the pressed view toggle kept its resting fill while held"
+      );
+    } finally {
+      await sendMouse({ type: "up" });
+      await resetMouse();
+    }
+  });
+
+  it("darkens an UNPRESSED view toggle while it is held -- the contrast case", async function () {
+    if (window.matchMedia("(hover: none), (pointer: coarse)").matches)
+      this.skip();
+    const el = await themed();
+    const unpressed = el.shadowRoot!.querySelector(
+      '[part="view-toggle"][aria-pressed="false"]'
+    ) as HTMLElement;
+    const held = resolvedInShadow(
+      el,
+      "background: color-mix(in oklab, rgb(9, 121, 5), var(--lr-color-mix-partner) var(--lr-color-mix-active))",
+      "background-color"
+    );
+    try {
+      await resetMouse();
+      await moveMouseTo(unpressed);
+      expect(getComputedStyle(unpressed).backgroundColor).to.equal(
+        "rgb(9, 121, 5)"
+      );
+      await sendMouse({ type: "down" });
+      await waitUntil(
+        () => getComputedStyle(unpressed).backgroundColor === held,
+        "the unpressed view toggle kept its hover fill while held"
+      );
+    } finally {
+      await sendMouse({ type: "up" });
+      await resetMouse();
+    }
+  });
+
+  it("restores the pressed toggle's resting fill once the pointer is released", async function () {
+    if (window.matchMedia("(hover: none), (pointer: coarse)").matches)
+      this.skip();
+    const el = await themed();
+    const pressed = el.shadowRoot!.querySelector(
+      '[part="view-toggle"][aria-pressed="true"]'
+    ) as HTMLElement;
+    try {
+      await resetMouse();
+      await moveMouseTo(pressed);
+      await sendMouse({ type: "down" });
+      await sendMouse({ type: "up" });
+      await waitUntil(
+        () =>
+          getComputedStyle(pressed).backgroundColor === "rgb(0, 51, 102)",
+        "the pressed view toggle never returned to its resting fill"
+      );
+    } finally {
+      await resetMouse();
+    }
+  });
 });

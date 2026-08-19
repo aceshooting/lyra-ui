@@ -13,9 +13,8 @@ export const styles = css`
     padding: var(--lr-space-s); border: 0; background: var(--lr-color-surface); color: var(--lr-color-text); font: inherit; text-align: start; cursor: pointer;
   }
   [part='run-trigger']:hover, [part='cancel']:hover, [part='retry']:hover { background: var(--lr-color-surface-raised); }
-  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
-     --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
-     than hover in both light and dark themes rather than repeating it. */
+  /* Pressed is the hover tint pushed a further --lr-color-mix-active toward --lr-color-mix-partner,
+     which follows the text colour -- a distinctly deeper step in both light and dark themes. */
   [part='run-trigger']:active, [part='cancel']:active, [part='retry']:active {
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }

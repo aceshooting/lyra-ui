@@ -6,6 +6,7 @@ import type {
   DataGridColumn,
   DataGridCsvOptions,
   DataGridExportOptions,
+  DataGridFilterType,
   DataGridState,
 } from "./data-grid-types.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
@@ -2807,6 +2808,7 @@ it("accepts foreign-realm event targets and ignores nested interactive activatio
       event: MouseEvent,
       item: unknown,
       column: DataGridColumn<Person>,
+      columnIdValue: string,
       index: number
     ): void;
     processedClientRows: Array<{ kind: "row"; row: Person }>;
@@ -4060,7 +4062,9 @@ it("drops per-column state for columns that disappear", async () => {
   element.columnOrder = ["score", "name", "team"];
   element.pinColumn("score", "left");
   element.toggleColumn("team", false);
-  element.setColumnWidth("score", 320);
+  // (id, width, emit, finished?) -- the two-argument call this replaces left `emit` undefined,
+  // i.e. exactly the `emit: false` the other call sites in this file spell out.
+  element.setColumnWidth("score", 320, false);
   await element.updateComplete;
   expect(element.getColumnPin("score")).to.equal("left");
 
@@ -6712,5 +6716,21 @@ describe("data-grid processing helpers", () => {
       })
     ).to.equal("＝SUM(A1:A2)");
     expect(serialize(-5)).to.equal("-5");
+  });
+});
+
+describe("explicitly empty host aria-label", () => {
+  it("keeps the grid explicitly unnamed instead of falling back to the label property", async () => {
+    const explicit = await dataGrid(
+      html`<lr-data-grid label="People" aria-label=""></lr-data-grid>`
+    );
+    const table = explicit.shadowRoot!.querySelector('[part="table"]')!;
+    expect(table.hasAttribute("aria-label")).to.equal(true);
+    expect(table.getAttribute("aria-label")).to.equal("");
+
+    const omitted = await dataGrid();
+    expect(
+      omitted.shadowRoot!.querySelector('[part="table"]')!.getAttribute("aria-label")
+    ).to.equal("People");
   });
 });

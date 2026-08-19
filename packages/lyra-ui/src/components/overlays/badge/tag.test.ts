@@ -281,7 +281,7 @@ describe('withRemove', () => {
   it('constructs its live-label observer in the adopted owner realm', async () => {
     const frame = document.createElement('iframe');
     document.body.append(frame);
-    const frameWindow = frame.contentWindow!;
+    const frameWindow = frame.contentWindow as Window & typeof globalThis;
     const frameDocument = frame.contentDocument!;
     const descriptor = Object.getOwnPropertyDescriptor(frameWindow, 'MutationObserver');
     const NativeMutationObserver = frameWindow.MutationObserver;

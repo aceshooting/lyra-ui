@@ -48,9 +48,9 @@ export const styles = css`
     border-radius: var(--lr-radius-xs);
   }
   /* The handoff button has no fill of its own, so both states tint the transparent surface toward
-     --lr-color-mix-partner (which follows the text colour): it darkens in a light theme, lightens in
-     a dark one. Previously a hand-rolled 8% mix against --lr-color-text -- same idea, but a literal
-     no consumer could retune and a strength no other control in the library shared. */
+     --lr-color-mix-partner, which follows the text colour: darker in a light theme, lighter in a
+     dark one. Not the former hand-rolled 8% mix against --lr-color-text -- a literal no consumer
+     could retune, at a strength no other control in the library shared. */
   [part='handoff']:hover {
     background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
@@ -63,6 +63,19 @@ export const styles = css`
   }
   [part='handoff'][data-active] {
     background: var(--lr-agent-trace-handoff-active-bg, var(--lr-color-brand-quiet));
+  }
+  /* The active entry's own held state: the [data-active] rule directly above ties the generic
+     :hover/:active arms at (0,2,0) and, written after them, takes the background back, so without
+     this the active entry acknowledges nothing when clicked. Losing the hover tint there is
+     deliberate, the active fill being the point; losing the press is not. Mixes from
+     --lr-agent-trace-handoff-active-bg rather than transparent, so a retinted active fill gets a
+     deeper tier of itself. */
+  [part='handoff'][data-active]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-agent-trace-handoff-active-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
 
   [part='tree'] {

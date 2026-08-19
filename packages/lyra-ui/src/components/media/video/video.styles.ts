@@ -62,6 +62,14 @@ export const styles = css`
     color: var(--controls-color, var(--lr-color-on-strong-overlay));
   }
 
+  /* Behind an active poster the controls bar hides its own play button, leaving only the poster's
+     big one. The display: inline-grid above is author origin and so beats the UA's
+     "[hidden] { display: none }" at any specificity, which left a duplicate play button painted
+     over the poster and, inline-grid keeping a box, still Tab reachable. */
+  .icon-button-stack[hidden] {
+    display: none;
+  }
+
   .icon-button-stack > button,
   .icon-button-stack > .control-icon-layer {
     grid-area: 1 / 1;

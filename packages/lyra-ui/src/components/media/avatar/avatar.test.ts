@@ -674,3 +674,31 @@ it('preserves explicit-empty host naming semantics', async () => {
   expect(iconBase.hasAttribute('aria-label')).to.equal(false);
   expect(icon.shadowRoot!.querySelector('[part="icon"]')!.getAttribute('aria-hidden')).to.equal('true');
 });
+
+describe('a slotted [hidden] glyph', () => {
+  it('is removed from the rendered box, not just from the accessibility tree', async () => {
+    const hiddenGlyph = (await fixture(html`
+      <lr-avatar label="AI assistant"
+        ><svg id="gone" hidden slot="icon" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"></circle></svg
+      ></lr-avatar>
+    `)) as LyraAvatar;
+    await hiddenGlyph.updateComplete;
+    const gone = hiddenGlyph.querySelector<SVGElement>('#gone')!;
+    expect(getComputedStyle(gone).display).to.equal('none');
+    expect(gone.getClientRects().length).to.equal(0);
+
+    // The companion proves the [part='icon'] ::slotted(svg) rule is still live, so the assertion
+    // above cannot pass merely because the avatar stopped styling its slotted glyph at all.
+    const shownGlyph = (await fixture(html`
+      <lr-avatar label="AI assistant"
+        ><svg id="shown" slot="icon" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"></circle></svg
+      ></lr-avatar>
+    `)) as LyraAvatar;
+    await shownGlyph.updateComplete;
+    const shown = shownGlyph.querySelector<SVGElement>('#shown')!;
+    expect(getComputedStyle(shown).display).to.equal('block');
+    expect(shown.getClientRects().length).to.equal(1);
+  });
+});

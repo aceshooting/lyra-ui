@@ -4,10 +4,9 @@ export const styles = css`
   :host {
     display: inline-flex;
     max-inline-size: 100%;
-    /* Per-status accent -- one custom property swapped by the :host([status])
-       rules below rather than repeating background/color per part per status.
-       Defaults to the 'pending' tone so an unset/unknown status still reads
-       as neutral instead of unstyled. */
+    /* Per-status accent: one custom property swapped by the :host([status]) rules below, rather
+       than repeating background/color per part per status. Defaults to the 'pending' tone so an
+       unset or unknown status still reads as neutral, not unstyled. */
     --_lr-tool-call-chip-accent: var(--lr-color-text-quiet);
     --_lr-tool-call-chip-bg: var(--lr-color-surface);
     --_lr-tool-call-chip-border: var(--lr-color-border);
@@ -29,10 +28,8 @@ export const styles = css`
     --_lr-tool-call-chip-bg: var(--lr-color-danger-quiet);
     --_lr-tool-call-chip-border: transparent;
   }
-  /* 'denied' reads as a policy rejection, not a runtime failure -- the
-     warning (not danger) tint keeps it visually distinct from 'error',
-     matching lr-tool-result-dialog's identical status vocabulary/tone so
-     the two components agree on what "denied" looks like. */
+  /* 'denied' is a policy rejection, not a runtime failure -- the warning tint, not danger, keeps
+     it distinct from 'error' and matches lr-tool-result-dialog's identical status tones. */
   :host([status="denied"]) {
     --_lr-tool-call-chip-accent: var(--lr-color-warning);
     --_lr-tool-call-chip-bg: var(--lr-color-warning-quiet);
@@ -64,10 +61,10 @@ export const styles = css`
   [part="base"]:hover {
     border-color: var(--lr-color-brand);
   }
-  /* The hover moves the border only, which leaves the pressed step nothing to deepen -- so pressed
-     tints the chip's own fill toward --lr-color-mix-partner (which follows the text colour). The
-     fill is already a custom property, so this one declaration covers all five status tints without
-     restating any of them, and darkens in a light theme while lightening in a dark one. */
+  /* Hover moves the border only, leaving the pressed step nothing to deepen, so pressed tints the
+     chip's own fill toward --lr-color-mix-partner, which follows the text colour. The fill is
+     already a custom property, so one declaration covers all five status tints, darkening in a
+     light theme and lightening in a dark one. */
   [part="base"]:active {
     background: color-mix(
       in oklab,
@@ -90,16 +87,14 @@ export const styles = css`
   [part="icon"] svg {
     display: block;
   }
-  /* A three-quarter arc (not a full ring) is what actually reads as
-     spinning once rotated -- a full circle looks identical at every
-     rotation frame. */
+  /* A three-quarter arc, not a full ring: a full circle looks identical at every rotation
+     frame. */
   :host([status="running"]) [part="icon"] svg {
     animation: lr-tool-call-chip-spin
       var(--lr-tool-call-chip-spin, var(--_lr-tool-call-chip-spin)) infinite;
   }
-  /* Subtler than the spin -- a slow opacity breathe, so a list of several
-     still-queued chips doesn't compete visually with any 'running' ones
-     next to it. */
+  /* Subtler than the spin: a slow opacity breathe, so several still-queued chips do not compete
+     visually with any 'running' ones next to them. */
   :host([status="pending"]) [part="icon"] svg {
     animation: lr-tool-call-chip-pulse var(--lr-transition-ambient) infinite;
   }
@@ -118,11 +113,10 @@ export const styles = css`
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    /* Full-strength text, not --lr-color-text-quiet -- this sits on top of
-       the per-status *-quiet tint backgrounds above (e.g. success-quiet),
-       and text-quiet's gray fails WCAG AA contrast against several of those
-       tints even though it comfortably passes against the plain surface
-       background used by the resting/denied states. */
+    /* Full-strength text, not --lr-color-text-quiet: this sits on the per-status *-quiet tint
+       backgrounds above (e.g. success-quiet), and text-quiet's gray fails WCAG AA contrast against
+       several of them even though it passes against the plain surface of the resting/denied
+       states. */
     color: var(--lr-color-text);
     font-size: var(--lr-size-0-6875rem);
     font-weight: var(--lr-font-weight-semibold);
@@ -184,11 +178,9 @@ export const styles = css`
     white-space: nowrap;
   }
 
-  /* Positioned by internal/positioner.js's place() -- see combobox's
-     [part='listbox'] for the identical fixed/z-index/max-size shape. Unlike
-     that popup this one has no open/close transition: a tooltip that
-     tracks the pointer/focus target benefits from appearing instantly, not
-     chasing a fade. */
+  /* Positioned by internal/positioner.js's place() -- the same fixed/z-index/max-size shape as
+     combobox's [part='listbox'], but with no open/close transition: a tooltip tracking the
+     pointer/focus target should appear instantly, not chase a fade. */
   [part="tooltip"] {
     position: fixed;
     z-index: var(--lr-layer-dropdown);

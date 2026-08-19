@@ -28,8 +28,8 @@ export const styles = css`
     cursor: pointer;
     border-radius: var(--lr-radius);
   }
-  /* chevronIcon() renders a right-pointing chevron with no baked-in rotation (see icons.ts) --
-     rotate the whole button, matching lr-tree-item's identical [part='toggle'] rotation approach. */
+  /* chevronIcon() bakes in no rotation (see icons.ts), so the whole button rotates -- as
+     lr-tree-item's [part='toggle'] does. */
   [part='move-up-button'] {
     transform: rotate(-90deg);
   }

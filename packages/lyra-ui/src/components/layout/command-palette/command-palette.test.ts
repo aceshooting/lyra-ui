@@ -1,4 +1,11 @@
-import { fixture, expect, html, oneEvent } from "@open-wc/testing";
+import {
+  fixture,
+  expect,
+  html,
+  oneEvent,
+  waitUntil,
+} from "@open-wc/testing";
+import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import "./command-palette.js";
 import type { LyraCommandPalette } from "./command-palette.js";
 import { styles } from "./command-palette.styles.js";
@@ -832,8 +839,10 @@ it("ignores repeated hotkeys and gives one last-connected palette ownership", as
 
 it("defines distinct active-plus-pressed and forced-color current-row paint", () => {
   const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
+  // The pressed arm must carry the [data-active='true'] compound at FULL specificity -- see the
+  // rendered-probe tests near the end of this file, which are what actually prove it applies.
   expect(css).to.match(
-    /\[part='command'\]\[data-active='true'\]\):active:where\(:not\(:disabled\)\)/
+    /\[part='command'\]\[data-active='true'\]:active:where\(:not\(:disabled\)\)/
   );
   expect(css).to.match(
     /@media \(forced-colors: active\).*\[part='command'\]\[data-active='true'\].*outline:/
@@ -1236,4 +1245,120 @@ it("bridges the search input's native focus/blur out through the shadow boundary
   const blurEvent = await blurPromise;
   expect(blurEvent.bubbles).to.be.true;
   expect(blurEvent.composed).to.be.true;
+});
+
+describe("pressed feedback on the keyboard-highlighted row", () => {
+  /** Resolves what a `declaration` computes to *inside this component's shadow root*, where the
+   *  `--lr-*` design tokens live. */
+  function resolvedInShadow(
+    el: LyraCommandPalette,
+    declaration: string,
+    property: string
+  ): string {
+    const probe = document.createElement("span");
+    probe.setAttribute("style", declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  async function nextFrames(): Promise<void> {
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve))
+    );
+  }
+
+  async function moveMouseTo(target: HTMLElement): Promise<void> {
+    target.scrollIntoView({ block: "center", inline: "center" });
+    await nextFrames();
+    const rect = target.getBoundingClientRect();
+    await sendMouse({
+      type: "move",
+      position: [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ],
+    });
+    await nextFrames();
+  }
+
+  async function openThemed(): Promise<LyraCommandPalette> {
+    const wrapper = (await fixture(html`
+      <div style="--lr-command-palette-active-bg: rgb(0, 51, 102);">
+        <lr-command-palette
+          .commands=${[
+            { commandId: "save", label: "Save" },
+            { commandId: "close", label: "Close" },
+          ]}
+        ></lr-command-palette>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector(
+      "lr-command-palette"
+    ) as LyraCommandPalette;
+    el.openPalette();
+    await el.updateComplete;
+    return el;
+  }
+
+  it("darkens the highlighted row while it is held under the pointer", async function () {
+    if (window.matchMedia("(hover: none), (pointer: coarse)").matches)
+      this.skip();
+    const el = await openThemed();
+    const row = el.shadowRoot!.querySelector(
+      '[part="command"][data-active="true"]'
+    ) as HTMLElement;
+    expect(row != null, "expected a highlighted command row").to.equal(true);
+    expect(getComputedStyle(row).backgroundColor).to.equal("rgb(0, 51, 102)");
+
+    const pressed = resolvedInShadow(
+      el,
+      "background: color-mix(in oklab, rgb(0, 51, 102), var(--lr-color-mix-partner) var(--lr-color-mix-active))",
+      "background-color"
+    );
+    expect(pressed).to.not.equal("rgb(0, 51, 102)");
+
+    try {
+      await resetMouse();
+      await moveMouseTo(row);
+      // mouseenter keeps the hovered row the highlighted one, so this is still the
+      // data-active row -- exactly the combination the press rule has to out-rank.
+      expect(row.getAttribute("data-active")).to.equal("true");
+      await sendMouse({ type: "down" });
+      await waitUntil(
+        () => getComputedStyle(row).backgroundColor === pressed,
+        "the highlighted row kept its resting fill while held"
+      );
+    } finally {
+      await sendMouse({ type: "up" });
+      await resetMouse();
+    }
+  });
+
+  it("restores the highlighted row's resting fill once the pointer is released", async function () {
+    if (window.matchMedia("(hover: none), (pointer: coarse)").matches)
+      this.skip();
+    const el = await openThemed();
+    // The click that ends the press selects the command and closes the palette, taking the row
+    // being asserted on with it -- vetoing the close keeps the row mounted so the released state
+    // is observable at all.
+    el.addEventListener("lr-close", (event) => event.preventDefault());
+    const row = el.shadowRoot!.querySelector(
+      '[part="command"][data-active="true"]'
+    ) as HTMLElement;
+    try {
+      await resetMouse();
+      await moveMouseTo(row);
+      await sendMouse({ type: "down" });
+      await sendMouse({ type: "up" });
+      expect(el.open).to.equal(true);
+      await waitUntil(
+        () => getComputedStyle(row).backgroundColor === "rgb(0, 51, 102)",
+        "the highlighted row never returned to its resting fill"
+      );
+    } finally {
+      await resetMouse();
+    }
+  });
 });

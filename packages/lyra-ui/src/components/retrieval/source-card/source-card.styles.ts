@@ -14,20 +14,18 @@ export const styles = css`
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
   }
-  /* Density escape -- same convention as lr-empty's compact. Source cards render in lists, so the
-     tuned values sit behind inline var() fallbacks (rather than a :host declaration, which every
-     instance re-declares and so shadows any ancestor value) letting a list retune every card at
-     once from the outside; the fallbacks are the pre-existing values scaled down one step, so an
-     unset card renders unchanged. */
+  /* Density escape, as lr-empty's compact. Cards render in lists, so the tuned values sit behind
+     inline var() fallbacks rather than a :host declaration every instance would re-declare,
+     shadowing any ancestor value; a list can then retune every card at once. The fallbacks are the
+     pre-existing values one step down, so an unset card is unchanged. */
   :host([compact]) [part='base'] {
     padding: var(--lr-source-card-compact-padding, var(--lr-space-xs));
     gap: var(--lr-source-card-compact-gap, var(--lr-space-2xs));
   }
-  /* MUST stay after :host([compact]): both selectors are :host([x]) [part='base'], i.e. equal
-     specificity, so source order alone decides which padding/gap wins when a card is both compact
-     and plain. plain is the stronger statement ("no chrome at all"), so it goes last. The title and
-     toggle affordances are brand-colored text with a hover underline, never a border, so they stay
-     legible with no chrome behind them. */
+  /* MUST stay after :host([compact]): both are :host([x]) [part='base'], equal specificity, so
+     source order alone decides which padding/gap wins on a card that is both. plain is the stronger
+     statement -- no chrome at all -- so it goes last; its title and toggle affordances are
+     brand-colored text with a hover underline, never a border, so they stay legible without it. */
   :host([frame='plain']) [part='base'] {
     padding: 0;
     border: 0;
@@ -55,9 +53,9 @@ export const styles = css`
   [part='title']:hover {
     text-decoration: underline;
   }
-  /* Both affordances here are transparent-backed brand-colored text (see the frame='plain' note
-     above), so the pressed signal is a wash mixed from that transparent base -- the label itself has
-     to keep its brand color to stay readable as a link. */
+  /* Both affordances are transparent-backed brand-colored text (see the frame='plain' note above),
+     so the pressed signal is a wash mixed from that transparent base; the label keeps its brand
+     color to stay readable as a link. */
   [part='title']:active {
     text-decoration: underline;
     background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));

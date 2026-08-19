@@ -3795,7 +3795,7 @@ describe("coverage: draw guard branches", () => {
     setMatrixData(el, { values: [[1]] });
     await el.updateComplete;
     const original = HTMLCanvasElement.prototype.getContext;
-    // @ts-expect-error -- force a null 2D context to exercise the defensive early return
+    // Force a null 2D context to exercise the defensive early return.
     HTMLCanvasElement.prototype.getContext = () => null;
     try {
       expect(() =>
@@ -6198,7 +6198,7 @@ describe("coverage: additional edge-path gaps", () => {
     )) as LyraHeatmap;
     await el.updateComplete;
     const original = HTMLCanvasElement.prototype.getContext;
-    // @ts-expect-error -- force a null 2D context to exercise the defensive early return
+    // Force a null 2D context to exercise the defensive early return.
     HTMLCanvasElement.prototype.getContext = () => null;
     try {
       expect(() =>
@@ -6274,7 +6274,7 @@ describe("coverage: additional edge-path gaps", () => {
     setCalendarData(el, { days: [{ date: "2026-03-01", value: 5 }] });
     await el.updateComplete;
     const original = HTMLCanvasElement.prototype.getContext;
-    // @ts-expect-error -- force a null 2D context to exercise the defensive early return
+    // Force a null 2D context to exercise the defensive early return.
     HTMLCanvasElement.prototype.getContext = () => null;
     try {
       expect(() =>
@@ -6504,7 +6504,7 @@ describe("coverage: additional edge-path gaps", () => {
     setCalendarData(el, { days: [{ date: "2026-01-01", value: 1 }] });
     await el.updateComplete;
     const original = HTMLCanvasElement.prototype.getContext;
-    // @ts-expect-error -- force a null 2D context to exercise the defensive early return
+    // Force a null 2D context to exercise the defensive early return.
     HTMLCanvasElement.prototype.getContext = () => null;
     try {
       expect(() =>

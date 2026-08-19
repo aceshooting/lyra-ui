@@ -46,9 +46,9 @@ export const styles = css`
     min-block-size: var(--lr-icon-button-size);
     padding: var(--lr-size-4px) var(--lr-space-xs);
     /* Per-level indent computed in CSS from the plain depth number the component writes inline,
-       rather than a pre-formatted dimension: that keeps the step a retheme-able token and lets the
-       indent be capped, so a deeply nested tree cannot push its labels off-screen with no way back.
-       Same shape lr-tree-item already uses. */
+       not a pre-formatted dimension: that keeps the step a retheme-able token and lets the indent
+       be capped, so a deeply nested tree cannot push its labels off-screen. Same shape as
+       lr-tree-item. */
     padding-inline-start: calc(
       var(--lr-space-xs) +
         min(
@@ -87,9 +87,9 @@ export const styles = css`
   [part="item"]:hover {
     background: color-mix(in srgb, var(--lr-color-text) 6%, transparent);
   }
-  /* The row itself is the control here -- clicking anywhere in it toggles the source (the
-     [part='checkbox'] box inside is a painted div, not a focusable target), so the row earns a
-     pressed state of its own rather than deferring to something nested. */
+  /* The row itself is the control -- clicking anywhere in it toggles the source, and the
+     [part='checkbox'] inside is a painted div, not a focusable target -- so the row earns its own
+     pressed state rather than deferring to something nested. */
   [part="item"]:active {
     background: color-mix(
       in oklab,

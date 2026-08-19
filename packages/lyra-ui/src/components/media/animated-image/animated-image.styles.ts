@@ -4,11 +4,9 @@ export const styles = css`
   :host {
     display: inline-block;
     max-inline-size: 100%;
-    /* Mirrors wa-animated-image/sl-animated-image's --control-box-size and
-       --icon-size (component-prefixed per this library's own convention) --
-       both chain through the existing icon-button-size token rather than a
-       new bespoke literal, so the toggle reads at the same scale as
-       lr-sequence-playback's own play/pause button. */
+    /* Mirrors wa-animated-image/sl-animated-image's --control-box-size and --icon-size,
+       component-prefixed per this library's convention. Both chain through the existing
+       --lr-icon-button-size, so the toggle reads at lr-sequence-playback's play/pause scale. */
     --_lr-animated-image-control-box-size: var(
       --control-box-size,
       var(--lr-icon-button-size)
@@ -17,9 +15,8 @@ export const styles = css`
       --icon-size,
       calc(var(--lr-icon-button-size) * 0.35)
     );
-    /* Same purpose/default as --lr-media-card-max-height -- caps the
-       rendered media's block-size so one oversized animated image can't blow
-       out a layout. */
+    /* Same purpose and default as --lr-media-card-max-height: caps the rendered media's
+       block-size so one oversized animated image can't blow out a layout. */
     --_lr-animated-image-max-height: var(--lr-size-20rem);
   }
 
@@ -29,8 +26,8 @@ export const styles = css`
     max-inline-size: 100%;
   }
 
-  /* image/canvas overlap in the same grid cell so the crossfade below is a
-     pure opacity swap with no layout shift. */
+  /* image/canvas overlap in one grid cell, so the crossfade below is a pure opacity swap with no
+     layout shift. */
   [part="image"],
   [part="canvas"] {
     grid-area: 1 / 1;
@@ -52,13 +49,10 @@ export const styles = css`
     pointer-events: none;
     transition: opacity var(--lr-transition-fast);
   }
-  /* [data-loaded] is a private, JS-driven hook (not part of the public
-     contract -- same pattern as this library's existing [data-invalid]
-     hooks) that keeps the live <img> visible while still loading or after a
-     decode failure, so the browser's own loading/broken-image affordance is
-     never hidden behind an undrawn canvas. Only once a frame has actually
-     been captured does the reflected [playing] host attribute get to decide
-     which of the two is shown. */
+  /* [data-loaded] is a private JS-driven hook, not public contract, like this library's
+     [data-invalid]: it keeps the live <img> visible while loading or after a decode failure, so the
+     browser's own loading/broken-image affordance is never hidden behind an undrawn canvas. Only
+     once a frame is captured does the reflected [playing] attribute decide which shows. */
   :host([data-loaded]:not([playing])) [part="image"] {
     opacity: 0;
     pointer-events: none;
@@ -111,16 +105,14 @@ export const styles = css`
     -webkit-tap-highlight-color: transparent;
     transition: background-color var(--lr-transition-fast);
   }
-  /* Keep internal state qualifiers low-specificity so sibling rules in this sheet remain easy to
-     compose. Consumer ::part() authority follows the shadow cascade, independently of this
-     selector's specificity. */
+  /* Internal state qualifiers stay low-specificity so sibling rules in this sheet compose easily;
+     consumer ::part() authority follows the shadow cascade, independent of this specificity. */
   :where([part="play-button"]):hover:where(:not(:disabled)) {
     background: color-mix(in srgb, var(--lr-color-surface) 100%, transparent);
   }
-  /* Pressed goes one step past hover: hover only finishes opacifying the translucent scrim, so on
-     its own it cannot register a click at all once the button is already fully opaque. Mixing the
-     opaque surface toward --lr-color-mix-partner moves in whichever direction the theme's own
-     surface needs. */
+  /* Pressed goes a step past hover, which only finishes opacifying the translucent scrim and so
+     registers nothing once the button is fully opaque. Mixing the opaque surface toward
+     --lr-color-mix-partner moves whichever way the theme's surface needs. */
   :where([part="play-button"]):active:where(:not(:disabled)) {
     background: color-mix(
       in oklab,
@@ -155,10 +147,9 @@ export const styles = css`
     line-height: var(--lr-line-height-none);
     pointer-events: none;
   }
-  /* Both play-icon/pause-icon slots render persistently (see the class doc)
-     and are toggled via the native hidden attribute; a plain .icon display
-     rule at equal specificity is not guaranteed to lose to the UA [hidden]
-     rule, so the override is pinned explicitly here. */
+  /* Both play-icon/pause-icon slots render persistently (see the class doc), toggled by the native
+     hidden attribute; a .icon display rule at equal specificity is not guaranteed to lose to the UA
+     [hidden] rule, so the override is pinned here. */
   .icon[hidden] {
     display: none;
   }

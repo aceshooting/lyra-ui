@@ -881,3 +881,27 @@ describe("v9 controlled and immutable contracts", () => {
     expect(leaked).to.equal(0);
   });
 });
+
+describe("explicitly empty host aria-label", () => {
+  it("keeps the region explicitly unnamed instead of falling back to the label property", async () => {
+    const explicit = (await fixture(
+      html`<lr-document-library
+        label="Library"
+        aria-label=""
+        .documents=${docs}
+      ></lr-document-library>`
+    )) as LyraDocumentLibrary;
+    await explicit.updateComplete;
+    const base = explicit.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.hasAttribute("aria-label")).to.equal(true);
+    expect(base.getAttribute("aria-label")).to.equal("");
+
+    const omitted = (await fixture(
+      html`<lr-document-library label="Library" .documents=${docs}></lr-document-library>`
+    )) as LyraDocumentLibrary;
+    await omitted.updateComplete;
+    expect(
+      omitted.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
+    ).to.equal("Library");
+  });
+});

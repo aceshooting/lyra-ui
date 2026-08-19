@@ -51,7 +51,8 @@ nonnegative dimensions.
 - `lr-load` — `detail: { pageCount }` — the document reached `ready`. `page` is reset to `1` first.
 - `lr-page-change` — `detail: { page, pageCount }` — fired for scroll-driven page crossings as well
   as `page` assignments and `nextPage()`/`previousPage()`/`goToPage()`.
-- `lr-zoom-change` — `detail: { zoom }`.
+- `lr-zoom-change` — `detail: { zoom }` — fired for `zoom` assignments as well as
+  `zoomIn()`/`zoomOut()`. Never fired for the initial `1`, only for a transition away from it.
 - `lr-search-change` — `detail: { query, matchCount, matchCountExact, activeIndex }` — from `search()`/`searchNext()`/
   `searchPrevious()`/`clearSearch()` and effective-locale re-evaluation. A `src` change invalidates document-relative matches and emits
   the canonical reset `{ query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 }`.
@@ -65,6 +66,30 @@ nonnegative dimensions.
 - `lr-page-viewer-state-change` — `detail.snapshot` is the same immutable atomic state exposed by
   `pageViewerSnapshot` (`identity`, `status`, `page`, `pageCount`). `identity` changes for every load,
   including same-count replacements.
+
+**`lr-page-change`/`lr-zoom-change` are state broadcasts, not user-intent signals.** This differs
+deliberately from the same-named `<lr-pagination>` event and from `<lr-pan-zoom>`'s `lr-zoom-change`,
+and the distinction is worth internalizing before wiring a handler. Pagination and pan-zoom are
+*controlled*: pagination never mutates its own `page`, so its event is a request the host applies,
+and pan-zoom's `zoom` is bound by a parent, so echoing a programmatic write back would feed a loop.
+This viewer instead *owns* `page` and `zoom` — scrolling the page list changes `page` with no
+consumer action at all — so there is no useful "the user did this" subset to isolate, and every
+accepted transition is announced identically: scrolling, `nextPage()`/`previousPage()`/`goToPage()`,
+`zoomIn()`/`zoomOut()`, anchor resolution, the reset to page 1 when a new `src` finishes loading,
+and a plain `viewer.page = 3` / `viewer.zoom = 2` assignment. A handler that mirrors the event back
+into the property it came from is therefore idempotent rather than looping, but it is also
+redundant — read the property, or `pageViewerSnapshot`, instead.
+
+A write that clamps or rounds back onto the value already in effect is not a transition and stays
+silent: on a 3-page document already showing page 1, `viewer.page = -7` and `viewer.page = 1.4` both
+settle on page 1 and emit nothing, and `viewer.zoom = 999` at 4× emits nothing.
+
+For page-addressed integrations prefer the atomic `pageViewerSnapshot` /
+`lr-page-viewer-state-change` channel over this pair: it carries page, count, load status and
+document `identity` together, and a late subscriber can read the current value synchronously instead
+of having missed the announcement. `<lr-page-rail>` binds that channel for any viewer exposing
+`pageViewerSnapshot` — including this one — and falls back to `lr-load`/`lr-page-change` only for
+older structural sources that do not.
 
 **Methods:** `nextPage()`, `previousPage()`, `zoomIn()`, and `zoomOut()` update the corresponding
 controlled state within its supported range. `getPageText(page)` resolves the raw reading-order text

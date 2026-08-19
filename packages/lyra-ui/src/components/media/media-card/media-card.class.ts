@@ -112,6 +112,14 @@ function detectKind(mimeType: string): LyraMediaCardKind {
  * control's own purpose label, and an explicitly empty host name does not
  * leave the still-interactive nested action unnamed.
  *
+ * **Decorative images.** `alt` is optional rather than empty-by-default, so
+ * `alt=""` -- the HTML idiom for a purely decorative image -- reaches the
+ * rendered `<img>` verbatim instead of collapsing into the unset case and
+ * picking up a generated description. Leaving `alt` off keeps the
+ * `filename`-then-generic fallback. The `<video>` label is deliberately
+ * outside that carve-out: an empty accessible name would leave an
+ * interactive player unnamed rather than mark it decorative.
+ *
  * @customElement lr-media-card
  * @event lr-media-open - An image card or video `open-button` requested consumer-owned viewing.
  *   `detail: { src, filename }`; noncancelable notification.
@@ -174,9 +182,12 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
    *  filename, and folded into the accessible name of the whole card. */
   @property() filename = '';
 
-  /** Alt text for the image case (and reused as a video label fallback).
-   *  Falls back to `filename`, then a generic per-kind description. */
-  @property() alt = '';
+  /** Alt text for the image case (and reused as a video label fallback). Unset falls back to
+   *  `filename`, then a generic per-kind description; explicitly `""` marks the image decorative,
+   *  matching `<lr-image-viewer>`/`<lr-document-preview>`. The `<video>` label is deliberately
+   *  outside that carve-out: an empty accessible name would leave an interactive player unnamed
+   *  rather than mark it decorative, so an empty `alt` still falls through there. */
+  @property() alt?: string;
 
   /** Accessible-name input. A declarative `aria-label` names the host; a property-only assignment
    *  names the internal action when no host label is present. Nested actions otherwise keep a
@@ -225,10 +236,15 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   }
 
   private get imgAlt(): string {
-    return this.alt || this.filename || this.localize('mediaCardImageAttachment');
+    // `??`, not `||`: `alt=""` is the HTML idiom for a decorative image, and collapsing it into
+    // the unset case made that impossible to express -- every image got a generated description.
+    return this.alt ?? (this.filename || this.localize('mediaCardImageAttachment'));
   }
 
   private get videoLabel(): string {
+    // Deliberately `||` where `imgAlt` uses `??`. This is the `<video>`'s aria-label, and an
+    // empty accessible name does not mark a player decorative -- it leaves an interactive control
+    // unnamed, the same failure the class doc rules out for an explicitly empty host name.
     return this.alt || this.filename || this.localize('mediaCardVideoAttachment');
   }
 

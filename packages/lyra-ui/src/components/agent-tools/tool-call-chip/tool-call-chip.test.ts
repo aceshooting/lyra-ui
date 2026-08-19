@@ -333,7 +333,7 @@ describe('icon override precedence', () => {
     const slot = el.shadowRoot!.querySelector('slot[name="icon"]') as HTMLSlotElement;
     const assigned = slot.assignedElements({ flatten: true });
     expect(assigned).to.have.length(1);
-    expect(assigned[0].id).to.equal('custom');
+    expect(assigned[0]!.id).to.equal('custom');
   });
 });
 

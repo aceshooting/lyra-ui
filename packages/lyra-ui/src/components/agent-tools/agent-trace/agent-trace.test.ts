@@ -1,5 +1,6 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './agent-trace.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraAgentTrace } from './agent-trace.js';
 import type { LyraSpan } from '../trace-tree/span.js';
 import type { LyraTraceTree } from '../trace-tree/trace-tree.class.js';
@@ -152,7 +153,7 @@ describe('lr-agent-trace', () => {
     // Decorative here -- this component's own [part="handoff"] button already carries the
     // accessible name, so the divider itself is hidden from the accessibility tree rather than
     // firing its own mount-time live-region announcement redundantly for every entry at once.
-    expect(dividers[0].getAttribute('aria-hidden')).to.equal('true');
+    expect(dividers[0]!.getAttribute('aria-hidden')).to.equal('true');
   });
 
   it('gives each handoff button an accessible name built from the same handoffToAgent/handoffFromToAgent strings lr-handoff-divider itself uses', async () => {
@@ -382,5 +383,115 @@ describe('lr-agent-trace', () => {
       const el = await activeFixture();
       await expect(el).to.be.accessible();
     });
+  });
+});
+
+describe('active-handoff pointer feedback', () => {
+  /** Resolves what a `declaration` computes to *inside this component's shadow root*, where the
+   *  `--lr-*` design tokens live. */
+  function resolvedInShadow(el: LyraAgentTrace, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  async function themed(): Promise<LyraAgentTrace> {
+    const el = (await fixture(html`
+      <lr-agent-trace
+        style="--lr-transition-fast: 0s; --lr-agent-trace-handoff-active-bg: rgb(0, 51, 102);"
+        .spans=${SPANS}
+        .activeSpanId=${'sub-agent'}
+      ></lr-agent-trace>
+    `)) as LyraAgentTrace;
+    await el.updateComplete;
+    return el;
+  }
+
+  async function moveMouseTo(target: HTMLElement): Promise<void> {
+    target.scrollIntoView({ block: 'center', inline: 'center' });
+    const rect = target.getBoundingClientRect();
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+  }
+
+  it('deepens the ACTIVE handoff entry while it is held', async function () {
+    if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
+    const el = await themed();
+    const active = el.shadowRoot!.querySelector('[part="handoff"][data-active]') as HTMLElement;
+    expect(active != null, 'expected an active handoff entry').to.equal(true);
+    expect(getComputedStyle(active).backgroundColor).to.equal('rgb(0, 51, 102)');
+    const held = resolvedInShadow(
+      el,
+      'background: color-mix(in oklab, rgb(0, 51, 102), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+      'background-color',
+    );
+    expect(held).to.not.equal('rgb(0, 51, 102)');
+
+    try {
+      await resetMouse();
+      await moveMouseTo(active);
+      // The active entry deliberately keeps its own fill while merely hovered -- the active
+      // treatment is the point, and hover already reads on every other entry.
+      expect(getComputedStyle(active).backgroundColor).to.equal('rgb(0, 51, 102)');
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(active).backgroundColor === held,
+        'the held active handoff entry kept its resting fill',
+      );
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  });
+
+  it('deepens an INACTIVE handoff entry while it is held -- the contrast case', async function () {
+    if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
+    const el = await themed();
+    const inactive = el.shadowRoot!.querySelector('[part="handoff"]:not([data-active])') as HTMLElement;
+    const held = resolvedInShadow(
+      el,
+      'background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+      'background-color',
+    );
+
+    try {
+      await resetMouse();
+      await moveMouseTo(inactive);
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(inactive).backgroundColor === held,
+        'the held inactive handoff entry kept its resting fill',
+      );
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  });
+
+  it("restores the active entry's resting fill once the pointer is released", async function () {
+    if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
+    const el = await themed();
+    const active = el.shadowRoot!.querySelector('[part="handoff"][data-active]') as HTMLElement;
+    try {
+      await resetMouse();
+      await moveMouseTo(active);
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(active).backgroundColor !== 'rgb(0, 51, 102)',
+        'the held active handoff entry kept its resting fill',
+      );
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+    await waitUntil(
+      () => getComputedStyle(active).backgroundColor === 'rgb(0, 51, 102)',
+      'the released active handoff entry never returned to its active fill',
+    );
   });
 });

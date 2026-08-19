@@ -1,0 +1,43 @@
+{
+  // Type-check the test suite. `tsconfig.json` deliberately excludes `src/**/*.test.ts`
+  // (it is the emit/type config for the shipped library, and tests are neither emitted nor
+  // published), which meant ~490 test files were type-checked by nothing at all: a
+  // `noUncheckedIndexedAccess` violation in a test became a runtime `undefined` in the
+  // browser instead of a compile error.
+  //
+  // Same strictness as tsconfig.json -- deliberately. The production tree is checked with
+  // `noUncheckedIndexedAccess`/`noPropertyAccessFromIndexSignature`/`strict`, and a test
+  // asserting on `rows[0].textContent` has exactly the same undefined-at-runtime exposure
+  // as production code doing it. Only emit-shaped options are turned off here.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    // Tests import shared harness helpers from `test/` (wtr-mouse, wtr-media,
+    // resize-observer-noise, expected-stale-attributes), which sit outside `src`.
+    // tsconfig.type-tests.json widens rootDir the same way for the same reason.
+    "rootDir": ".",
+    // Mocha's BDD globals (describe/it/before*/after*) are injected by
+    // @web/test-runner-mocha at runtime and declared by nothing this package already
+    // depends on -- @open-wc/testing only re-exports chai/`fixture` as real modules, and
+    // @web/test-runner-mocha ships no ambient declarations. @types/mocha is therefore a
+    // real devDependency, listed here explicitly so the production `tsconfig.json` keeps
+    // NOT seeing `it`/`describe` as globals.
+    //
+    // Chai's `expect` needs no entry: it is imported from '@open-wc/testing', whose types
+    // pull @types/chai + @types/chai-dom + chai-a11y-axe in through the module graph.
+    "types": ["mocha"]
+  },
+  // tsconfig.json's own `exclude` lists `src/**/*.test.ts` -- `extends` inherits `exclude`,
+  // so without this reset the include glob below would match nothing and the whole check
+  // would silently pass on zero files.
+  "exclude": [],
+  // `src/**/*.d.ts` is not optional: ambient declarations are only auto-included when a
+  // glob matches them, and `src/components/viewers/docx-viewer/mammoth-browser.d.ts` is the
+  // only thing that types `mammoth/mammoth.browser.js`. Without it, any test that transitively
+  // reaches docx-loader.ts reports a TS7016 that `tsc -p tsconfig.json` does not.
+  // tsconfig.type-tests.json includes the same glob for the same reason.
+  "include": ["src/**/*.test.ts", "src/**/*.d.ts", "test/**/*.ts"]
+}

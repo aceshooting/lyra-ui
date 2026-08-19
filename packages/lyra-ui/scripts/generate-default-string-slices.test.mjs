@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { DEFAULT_STRING_SLICE_EXCLUSIONS } from './default-string-slice-exclusions.mjs';
 import {
   catalogEntries,
   generateDefaultStringSlices,
@@ -553,7 +555,22 @@ export class LyraKbd extends LyraElement {
 `,
   );
 
-  await generateDefaultStringSlices({ packageDir: configuredFalsePositiveFixture, write: true });
+  // This case DOES exercise the real exclusion list -- the fixture mirrors the real source paths
+  // (forms/select, forms/radio, forms/input) precisely so the shipped entries apply to it. But the
+  // list also covers components this fixture does not contain, and validateConfiguredExclusions
+  // fails closed on an entry it cannot find, so pass only the subset whose paths exist here. That
+  // keeps the stale-entry guard armed for everything the fixture does model, without pinning the
+  // fixture to every component that ever earns an exclusion.
+  const fixtureExclusions = Object.fromEntries(
+    Object.entries(DEFAULT_STRING_SLICE_EXCLUSIONS).filter(([file]) =>
+      existsSync(path.join(configuredFalsePositiveFixture, file)),
+    ),
+  );
+  await generateDefaultStringSlices({
+    packageDir: configuredFalsePositiveFixture,
+    write: true,
+    exclusions: fixtureExclusions,
+  });
   const slices = new Map(await Promise.all([
     ['select', path.join(select, 'select.class.ts')],
     ['radio', path.join(radio, 'radio.class.ts')],
@@ -591,6 +608,7 @@ export class LyraKbd extends LyraElement {
   const checked = await generateDefaultStringSlices({
     packageDir: configuredFalsePositiveFixture,
     write: false,
+    exclusions: fixtureExclusions,
   });
   assert.equal(checked.rewrittenFileCount, 0, 'the configured target slices stay clean in check mode');
   assert.equal(checked.generatedChanged, false, 'the configured target catalog stays clean in check mode');
@@ -607,6 +625,7 @@ export class LyraKbd extends LyraElement {
     generateDefaultStringSlices({
       packageDir: configuredFalsePositiveFixture,
       write: true,
+      exclusions: fixtureExclusions,
       beforeWrite: async () => {
         await writeFile(selectFile, `${staleSelect}\n// Concurrent authored edit.\n`);
       },
@@ -622,6 +641,7 @@ export class LyraKbd extends LyraElement {
   await generateDefaultStringSlices({
     packageDir: configuredFalsePositiveFixture,
     write: true,
+    exclusions: fixtureExclusions,
   });
 
   const cleanSelectAfterTargetRace = await readFile(selectFile, 'utf8');
@@ -636,6 +656,7 @@ export class LyraKbd extends LyraElement {
     generateDefaultStringSlices({
       packageDir: configuredFalsePositiveFixture,
       write: true,
+      exclusions: fixtureExclusions,
       beforeWrite: async () => {
         await writeFile(radioFile, `${cleanRadio}\n// Concurrent clean-graph edit.\n`);
       },
@@ -656,6 +677,7 @@ export class LyraKbd extends LyraElement {
   await generateDefaultStringSlices({
     packageDir: configuredFalsePositiveFixture,
     write: true,
+    exclusions: fixtureExclusions,
   });
 
   await assert.rejects(

@@ -1645,6 +1645,40 @@ describe('lr-video control surface', () => {
     expect(controlPlay.closest<HTMLElement>('.icon-button-stack')?.hidden).to.be.false;
   });
 
+  it('takes the poster-suppressed controls-bar play button out of layout and out of the tab order', async () => {
+    const el = await fixture<LyraVideo>(html`
+      <lr-video poster="https://example.test/poster.jpg"></lr-video>
+    `);
+    const controlPlay = button(el, 'play')!;
+    const stack = controlPlay.closest<HTMLElement>('.icon-button-stack')!;
+    expect(stack.hidden).to.be.true;
+    // .hidden alone proves nothing: .icon-button-stack declares display: inline-grid
+    // unconditionally, and an author-origin declaration outranks the UA stylesheet's
+    // [hidden] { display: none } whatever their specificities. inline-grid keeps the button
+    // painted AND focusable next to the poster's own big play button; display: none removes it
+    // from both.
+    expect(getComputedStyle(stack).display).to.equal('none');
+    expect(stack.getClientRects().length).to.equal(0);
+    expect(controlPlay.getClientRects().length).to.equal(0);
+
+    controlPlay.focus();
+    expect(el.shadowRoot!.activeElement === controlPlay).to.be.false;
+
+    // Dismissing the poster restores both the box and the tab stop.
+    const stub = stubPlayback(nativeVideo(el));
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="poster-play-button"]')!.click();
+    await stub.playResult;
+    nativeVideo(el).dispatchEvent(new Event('play'));
+    await el.updateComplete;
+    expect(stack.hidden).to.be.false;
+    // 'grid', not the authored 'inline-grid': [part='controls'] is a flex container, so it
+    // blockifies its children's outer display.
+    expect(getComputedStyle(stack).display).to.equal('grid');
+    expect(stack.getClientRects().length).to.equal(1);
+    controlPlay.focus();
+    expect(el.shadowRoot!.activeElement === controlPlay).to.be.true;
+  });
+
   it('drives fullscreen and picture-in-picture from their controls and document events', async () => {
     const fsEnabled = Object.getOwnPropertyDescriptor(document, 'fullscreenEnabled');
     const pipEnabled = Object.getOwnPropertyDescriptor(document, 'pictureInPictureEnabled');

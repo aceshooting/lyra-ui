@@ -17,10 +17,9 @@ export const styles = css`
     block-size: 100%;
     box-sizing: border-box;
   }
-  /* The tablist plus its two overflow controls. A row of its own so the controls can flank the
-     scroll container without ever becoming children of role="tablist" (whose only legal children
-     are the tabs). min-inline-size: 0 is what lets the tablist shrink below its content width and
-     therefore scroll at all. */
+  /* Tablist plus its two overflow controls: an own row lets the controls flank the scroll
+     container without becoming children of role="tablist", whose only legal children are tabs.
+     min-inline-size: 0 lets the tablist shrink below its content width and scroll at all. */
   [part="nav"] {
     display: flex;
     align-items: stretch;
@@ -39,8 +38,8 @@ export const styles = css`
     min-inline-size: 0;
   }
   :where([part~="scroll-button"]) {
-    /* Never shrinks: at the narrow allocations that produce overflow in the first place, a
-       shrinkable control would be squeezed straight through the WCAG 2.5.8 floor. */
+    /* Never shrinks: at the narrow allocations that cause overflow, a shrinkable control would be
+       squeezed through the WCAG 2.5.8 floor. */
     flex: 0 0 auto;
     display: inline-grid;
     place-items: center;
@@ -51,22 +50,19 @@ export const styles = css`
     appearance: none;
     background: none;
     border: none;
-    /* Continues the tablist's own rule across the control, so the line under the strip runs
-       unbroken from edge to edge instead of stopping short at each control. */
+    /* Continues the tablist's own rule so the line under the strip runs unbroken edge to edge. */
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     color: var(--lr-color-text-quiet);
     cursor: pointer;
     transition: color var(--lr-transition-fast),
       background var(--lr-transition-fast);
   }
-  /* The controls exist in the DOM for an overflow that may not exist yet, so they are taken out of
-     layout (and out of the accessibility tree with it) until the tablist is measured as actually
-     overflowing -- the same ScrollOverflowController measurement the edge fade above is gated on,
-     so the two affordances can never disagree. :has() on the wrapper is what lets the *preceding*
-     control react to the tablist's own state attribute: CSS has no previous-sibling combinator.
-     The whole qualifier sits in :where() so it contributes no specificity, leaving this rule at
-     (0,1,0) -- it beats the display above by order alone, and a consumer's own
-     ::part(scroll-button) ((0,1,1)) still outranks it without needing !important. */
+  /* Out of layout, and the accessibility tree with it, until ScrollOverflowController measures
+     real overflow -- the same measurement gating the edge fade, so the two affordances cannot
+     disagree. :has() on the wrapper is what lets the *preceding* control react to the tablist's
+     state attribute: CSS has no previous-sibling combinator. :where() zeroes the qualifier,
+     leaving (0,1,0) -- the base [part~='scroll-button'] rule's weight, so source order alone
+     decides. */
   :where([part="nav"]:not(:has([part~="tablist"][data-scroll-overflow])))
     [part~="scroll-button"] {
     display: none;
@@ -74,8 +70,8 @@ export const styles = css`
   :where([part~="scroll-button"][hidden]) {
     display: none;
   }
-  /* Same treatment as [part="tab"], so the controls read as part of the strip rather than as two
-     foreign buttons bolted to its ends. */
+  /* Same treatment as [part="tab"], so the controls read as part of the strip, not as two foreign
+     buttons bolted to its ends. */
   :where([part~="scroll-button"]):where(:hover) {
     color: var(--lr-tab-group-scroll-button-hover-color, var(--lr-color-text));
   }
@@ -90,9 +86,9 @@ export const styles = css`
     );
     color: var(--lr-tab-group-scroll-button-active-color, var(--lr-color-text));
   }
-  /* Firefox suppresses native :active when the control's mousedown keeps focus on the tab. The
-     short-lived attribute mirrors that state there. The base and each state selector are wrapped
-     in :where(), so source order applies the state without blocking a consumer part override. */
+  /* Firefox suppresses native :active when the control's mousedown keeps focus on the tab; this
+     short-lived attribute mirrors that state there. Every scroll-button rule is :where()-wrapped
+     to (0,1,0), so source order alone decides which state paints. */
   :where([part~="scroll-button"]):where([data-pressed]) {
     background: var(
       --lr-tab-group-scroll-button-active-bg,
@@ -104,8 +100,7 @@ export const styles = css`
     );
     color: var(--lr-tab-group-scroll-button-active-color, var(--lr-color-text));
   }
-  /* Reachable only by script (the controls are tabindex="-1"), but a consumer that focuses one must
-     still see where focus went. */
+  /* The controls are tabindex="-1", so focus is script-only -- but it must still be visible. */
   [part~="scroll-button"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
@@ -116,10 +111,9 @@ export const styles = css`
     align-items: center;
   }
   /* internal/icons.ts ships one direction-free chevron pointing right; the *wrapping part* points
-     it, never the svg. LTR: the start control points left, the end control right. RTL: the whole
-     row is mirrored by flex layout, so the meanings swap with it -- "toward the inline start" is
-     physically rightward. Hence the mirror moves from one control to the other rather than being
-     added to both. */
+     it, never the svg. LTR: start points left, end right. RTL: flex mirrors the whole row, so
+     inline-start is physically rightward and the mirror moves between the controls rather than
+     being added to both. */
   [part~="scroll-button-start"] [part="scroll-button-glyph"] {
     transform: scaleX(-1);
   }
@@ -129,15 +123,12 @@ export const styles = css`
   :host(:dir(rtl)) [part~="scroll-button-end"] [part="scroll-button-glyph"] {
     transform: scaleX(-1);
   }
-  /* Edge affordance, gated on the tablist actually overflowing -- ScrollOverflowController toggles
-     data-scroll-overflow from a real scrollWidth/clientWidth measurement; scrolling itself stays
-     native, with no scroll listener. Painted unconditionally (as it used to be) it fades the first
-     and last tab of a row that fits, for no reason.
-     data-scroll-start/data-scroll-end are wrapped in :where() purely to keep these rules'
-     specificity pinned to the plain [data-scroll-overflow] baseline, so the later forced-colors
-     override (same base selector, later in the stylesheet) still wins the tie by source order
-     rather than losing to these more-specific-looking selectors, which would otherwise leave the
-     gradient mask painted even under forced-colors. */
+  /* Edge affordance gated on real overflow: ScrollOverflowController toggles data-scroll-overflow
+     from a scrollWidth/clientWidth measurement; scrolling stays native, with no scroll listener.
+     Unconditional, it fades the first and last tab of a row that fits.
+     data-scroll-start/data-scroll-end sit in :where() to pin these rules to the plain
+     [data-scroll-overflow] baseline, so the later same-selector forced-colors override wins the
+     tie on source order rather than leaving the gradient mask painted. */
   [part~="tablist"][data-scroll-overflow]:where([data-scroll-start][data-scroll-end]) {
     -webkit-mask-image: linear-gradient(
       to right,
@@ -225,8 +216,8 @@ export const styles = css`
     appearance: none;
     background: none;
     border: none;
-    /* Sits directly over the tablist's own border-block-end so the accent
-       underline below replaces it, pixel for pixel, when selected. */
+    /* Sits over the tablist's own border-block-end so the selected accent underline replaces it
+       pixel for pixel. */
     border-block-end: var(--lr-border-width-medium) solid transparent;
     margin-block-end: var(--lr-size-neg-1px);
     padding: var(--lr-space-s) var(--lr-space-xs);
@@ -235,9 +226,8 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     cursor: pointer;
     white-space: nowrap;
-    /* inline-flex only matters once a tab-icon part is also present (gap
-       has no effect with a single child) -- a text-only tab lays out
-       identically to the previous plain inline-block button. */
+    /* inline-flex matters only when a tab-icon is present -- gap does nothing with a single child,
+       so a text-only tab lays out as the plain inline-block button did. */
     display: inline-flex;
     align-items: center;
     gap: var(--lr-space-xs);
@@ -249,18 +239,17 @@ export const styles = css`
     flex: 0 0 auto;
     align-items: center;
   }
-  /* Reads its own prop, not the shared --lr-color-text token: recoloring the selected tab must
-     never repaint hovered-unselected tabs with the selected color. :where() zeroes the wrapped
-     selectors' specificity contribution, leaving only :hover itself -- (0,1,0) total, so a
-     consumer's own ::part(tab):hover override ((0,1,1)) always wins without needing !important
-     (mirrors lr-attachment-trigger's identical fix). */
+  /* Its own hook, not the shared --lr-color-text token: recoloring the selected tab must never
+     repaint hovered-unselected tabs. :where() leaves only :hover, so this is (0,1,0), below the
+     [part='tab'][aria-selected='true'] rule's (0,2,0) further down -- the selected tab keeps its
+     own colour under the pointer. */
   :where([part="tab"]):hover:where(:not([aria-disabled="true"])) {
     color: var(--lr-tab-group-hover-color, var(--lr-color-text));
   }
-  /* Hover lifts only the label colour here, so the pressed state adds a surface to be a visible
-     step past it: the tab's own transparent fill mixed toward --lr-color-mix-partner, which lands
-     as the partner colour at --lr-color-mix-active alpha over whatever the tablist sits on. A
-     disabled tab has pointer-events: none and never reaches it. */
+  /* Hover lifts only the label colour, so the pressed step adds a surface: the tab's transparent
+     fill mixed toward --lr-color-mix-partner, landing as that colour at --lr-color-mix-active
+     alpha over whatever the tablist sits on. A disabled tab has pointer-events: none and never
+     reaches it. */
   :where([part="tab"]):active:where(:not([aria-disabled="true"])) {
     background: var(
       --lr-tab-group-active-bg,
@@ -275,9 +264,9 @@ export const styles = css`
       var(--lr-tab-group-hover-color, var(--lr-color-text))
     );
   }
-  /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on any
-     ancestor and a :host declaration can never shadow that. Unset, each falls back to the token the
-     rule used before the hooks existed, so the rendering is unchanged. */
+  /* Inline var() fallbacks rather than :host-declared properties: a :host declaration would shadow
+     a value a consumer set on an ancestor. Unset, each falls back to the token the rule used
+     before the hooks existed, so the rendering is unchanged. */
   [part="tab"][aria-selected="true"] {
     color: var(--lr-tab-group-selected-color, var(--lr-color-brand));
     border-block-end-color: var(
@@ -298,8 +287,7 @@ export const styles = css`
   }
   [part="tab"][aria-disabled="true"] {
     cursor: not-allowed;
-    /* No :hover color change and no pointer feedback -- the click handler
-       already no-ops on a disabled tab, this just matches it visually. */
+    /* pointer-events: none matches the click handler, which already no-ops on a disabled tab. */
     pointer-events: none;
     opacity: var(--lr-opacity-disabled);
   }
@@ -319,10 +307,9 @@ export const styles = css`
     min-block-size: 0;
     overflow: auto;
   }
-  /* no-pressed-state: the panel is a container for whatever the consumer slotted into the tab, not
-     a target -- pressing it activates nothing, and :active matches the ancestors of whatever was
-     pressed, so a click on any control inside the panel would flash this outline around all of
-     it. */
+  /* no-pressed-state: the panel is a container for slotted content, not a target -- :active also
+     matches the ancestors of whatever was pressed, so clicking any control inside would flash this
+     outline around the whole panel. */
   [part="panel"]:hover {
     outline: var(--lr-border-width-thin) solid var(--lr-color-border);
     outline-offset: var(--lr-focus-ring-offset);
@@ -340,9 +327,9 @@ export const styles = css`
     }
   }
 
-  /* Placement. The base flex direction moves the strip relative to the panels; start/end are
-     logical, so row/row-reverse mirror under RTL with no :dir() rule. A vertical strip trades
-     its block-end rule for an inline-end one, in the matching logical direction. */
+  /* Placement: the base flex direction moves the strip relative to the panels. start/end are
+     logical, so row/row-reverse mirror under RTL with no :dir() rule; a vertical strip trades its
+     block-end rule for the matching inline-end one. */
   :host([placement="bottom"]) [part~="base"] {
     flex-direction: column-reverse;
   }
@@ -359,9 +346,9 @@ export const styles = css`
     inset-block-start: calc(-1 * var(--lr-border-width-medium));
     inset-block-end: auto;
   }
-  /* A vertical strip renders no scroll controls at all. Its nav keeps its natural width for short
-     labels, but is allowed to shrink and capped so one unbroken label cannot consume the panel's
-     entire allocation. Keep the fallback inline: consumers can set it on the group or an ancestor. */
+  /* A vertical strip renders no scroll controls. Its nav keeps natural width for short labels, may
+     shrink, and is capped so one unbroken label cannot consume the panel's entire allocation.
+     Inline fallback so consumers can set it on the group or an ancestor. */
   :host([placement="start"]) [part="nav"],
   :host([placement="end"]) [part="nav"] {
     flex: 0 1 auto;
@@ -394,8 +381,8 @@ export const styles = css`
     max-block-size: 100%;
     border-block-end: none;
   }
-  /* The vertical nav is deliberately single-line: clipping the visual label preserves a compact
-     side rail while the full label remains the tab's accessible name. */
+  /* Deliberately single-line: clipping the visual label keeps a compact side rail, and the full
+     label stays the tab's accessible name. */
   :host([placement="start"]) [part="tab"],
   :host([placement="end"]) [part="tab"] {
     min-inline-size: 0;
@@ -411,8 +398,8 @@ export const styles = css`
     border-inline-start: var(--track-width, var(--lr-border-width-thin)) solid
       var(--track-color, var(--lr-color-border));
   }
-  /* The horizontal edge fade measures inline overflow; a vertical strip scrolls in the block
-     direction instead, so the mask would dim the wrong ends. */
+  /* The edge fade measures inline overflow; a vertical strip scrolls in block, so the mask would
+     dim the wrong ends. */
   :host([placement="start"]) [part~="tablist"][data-scroll-overflow],
   :host([placement="end"]) [part~="tablist"][data-scroll-overflow] {
     -webkit-mask-image: none;

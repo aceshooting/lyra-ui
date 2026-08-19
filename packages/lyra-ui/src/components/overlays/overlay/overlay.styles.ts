@@ -1,29 +1,26 @@
 import { css } from 'lit';
 
-/* The arrow rules are shared verbatim by the popover and the tooltip; only the size custom
-   property differs, which is why each sheet declares its own copy against its own token name. */
+/* Popover and tooltip share the arrow rules verbatim; only the size custom property differs, so
+   each sheet declares its own copy against its own token name. */
 export const styles = css`
   :host { display: inline-block; }
   [part='trigger'] { display: inline-block; }
   [part~='popup'] {
-    /* Fixed from the start (not only once JS positions it on open) so the closed popup --
-       sized to its full slotted content -- never occupies a box in the host's normal flow.
-       Otherwise a closed dropdown/popover inflates its own inline-block host to the popup's
-       content size, and that invisible-but-still-hit-testable box sits on top of unrelated
-       page content until the trigger is first clicked and place() takes over positioning.
-       Physical top/left, not inset-block-start/inset-inline-start: positioner.ts's place()
-       always overwrites this via the physical style.left/style.top, which only cleanly
-       overrides a same-property CSS default. Under RTL, inset-inline-start resolves to the
-       different physical property "right", so both right:0 (from here) and the JS's left:Npx
-       would stay simultaneously active -- and per the CSS2.1 over-constrained resolution rules
-       for a direction:rtl containing block, left is the one silently discarded, pinning the
-       popup to the viewport's right edge no matter what Floating UI computed. Physical
-       properties here sidestep that entirely, matching what JS always sets. */
+    /* Fixed from the start, not only once JS positions it on open, so the closed popup -- sized to
+       its full slotted content -- never occupies a box in normal flow; otherwise it inflates its
+       inline-block host to the popup's content size and that invisible but hit-testable box covers
+       unrelated page content until the first click hands over to place(). Physical top/left, not
+       inset-block-start/inset-inline-start: positioner.ts's place() overwrites them via
+       style.left/style.top, which only cleanly overrides a same-property CSS default. Under RTL
+       inset-inline-start resolves to the physical "right", leaving right:0 and the JS's left:Npx
+       both active, and CSS2.1 over-constrained resolution in a direction:rtl containing block
+       discards left -- pinning the popup to the viewport's right edge whatever Floating UI
+       computed. */
     position: fixed;
     top: 0;
-    /* policy-allow(physical-css): must stay the same physical property positioner.ts's place()
-       overwrites via style.left; inset-inline-start would leave right:0 active under RTL and the
-       over-constrained resolution would discard the JS-written left (see the comment above). */
+    /* policy-allow(physical-css): must stay the same physical property place() overwrites via
+       style.left; inset-inline-start would leave right:0 active under RTL and over-constrained
+       resolution would discard the JS-written left (see above). */
     left: 0;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-popover));
     max-inline-size: min(var(--max-width, var(--lr-overlay-max-inline-size, var(--lr-size-20rem))), var(--lr-positioner-available-inline-size, var(--lr-size-20rem)));
@@ -39,9 +36,9 @@ export const styles = css`
   [part~='popup'] { opacity: 1; transform: translateY(0); }
   :host([data-closing]) [part~='popup'][data-hidden] { visibility: visible; }
   [part~='content'] { padding: var(--lr-space-m); }
-  /* An arrow protrudes past the popup's edge, so the scroll container has to move inwards for it
-     -- an overflow: auto popup would clip the arrow away entirely. Scoped to the arrow case so a
-     popover without one keeps its previous box model exactly. */
+  /* An arrow protrudes past the popup's edge, so the scroll container moves inwards for it -- an
+     overflow: auto popup would clip the arrow away entirely. Scoped to the arrow case so an
+     arrowless popover keeps its box model exactly. */
   [part~='popup']:where([data-has-arrow]) { overflow: visible; }
   [part~='popup']:where([data-has-arrow]) [part~='content'] {
     overflow: auto;
@@ -54,8 +51,8 @@ export const styles = css`
     rotate: 45deg;
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    /* Only the two outward-facing edges of the rotated square should read as the popup's border;
-       the other two sit under the panel. */
+    /* Only the two outward-facing edges of the rotated square read as the popup's border; the
+       other two sit under the panel. */
     clip-path: polygon(100% 0, 100% 100%, 0 100%);
   }
 `;
@@ -70,9 +67,9 @@ export const tooltipStyles = css`
   [part~='popup'][data-hidden] { visibility: hidden; opacity: 0; pointer-events: none; }
   [part~='popup'] { opacity: 1; }
   :host([data-closing]) [part~='popup'][data-hidden] { visibility: visible; }
-  /* A tooltip popup has no inner scroll wrapper to move the overflow onto, so switching it to
-     visible for the arrow trades internal scrolling for a visible arrow. Reach for
-     <lr-popover> when a floating surface needs both. */
+  /* A tooltip popup has no inner scroll wrapper to move the overflow onto, so switching to
+     visible trades internal scrolling for a visible arrow. Use <lr-popover> when both are
+     needed. */
   [part~='popup']:where([data-has-arrow]) { overflow: visible; }
   [part~='arrow'] {
     position: absolute;

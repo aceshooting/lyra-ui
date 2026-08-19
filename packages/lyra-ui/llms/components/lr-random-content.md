@@ -101,3 +101,16 @@ behavior warning; direct SVG candidates and the documented animation vocabulary 
   used (a11y-tree inconsistencies across engines).
 - Slot/focus microtasks and autoplay never queue new selection work while detached; reconnecting
   starts again from current state rather than replaying stale work.
+- Non-selected candidates are hidden by the component's own `::slotted([hidden])` rule, not by the
+  UA's. `::slotted(*)` sets `display: inline-block` on every candidate, and an author-origin
+  declaration always beats the user-agent `[hidden] { display: none }` — so the rule that restores
+  the native meaning of `hidden` is load-bearing, and an author overriding `display` on
+  `::slotted` content from outside must keep the hidden case at `display: none`.
+  `hidden="until-found"` is exempted, exactly as the UA rule exempts it.
+- **Before script runs, the first candidate is the one that shows.** Selection happens after the
+  first client render and works by setting `hidden`/`aria-hidden` on light-DOM siblings, which Lit
+  hydration never compares, so a server renderer can never produce it. Every candidate after the
+  first is therefore hidden by CSS until a selection has been applied: a server-rendered page — or
+  one whose script never runs — paints one candidate rather than the whole pool. Randomness itself
+  cannot survive SSR (there is no shared seed), so order the pool if a specific candidate should be
+  the pre-hydration one. With `items > 1` the pre-hydration paint is still a single candidate.

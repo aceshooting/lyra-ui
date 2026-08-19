@@ -32,10 +32,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* no-pressed-state: [part='search-input'] is a text field. A press on it is answered by the field
-     taking focus and raising its focus ring, which is both stronger than any momentary pressed tint
-     and outlasts the mouse button; a second, competing flash on mousedown would only add noise to
-     the one interaction that already has unambiguous feedback. */
+  /* no-pressed-state: [part='search-input'] is a text field -- a press is answered by focus raising
+     the focus ring, which is stronger than any momentary pressed tint and outlasts the mouse
+     button, so a competing mousedown flash would only add noise. */
   [part='search-input']:hover {
     border-color: var(--lr-color-brand);
   }
@@ -54,14 +53,13 @@ export const styles = css`
     display: flex;
     flex-direction: column;
   }
-  /* The internal list has to fill whatever height this component was given, instead of scrolling
-     inside lr-virtual-list's own 24rem --lr-virtual-list-height default. Deliberately *not*
-     --lr-virtual-list-height: 100%: that percentage resolves against this host, which is a flex
-     item, so in an auto-height container it chains to auto and the viewport either collapses to
-     zero (no rows) or grows to the full un-virtualized content height (rows). Making the list host
-     a column flex container instead turns the shipped block-size: 24rem on [part='base'] into its
-     *flex-basis*: it grows to fill a bounded pane, shrinks below 24rem in a short one, and in an
-     auto-height container falls back to exactly the 24rem it renders at today. */
+  /* The internal list must fill whatever height this component was given, not scroll inside
+     lr-virtual-list's own 24rem --lr-virtual-list-height default. Deliberately *not*
+     --lr-virtual-list-height: 100%: that percentage resolves against this host, a flex item, so in
+     an auto-height container it chains to auto and the viewport collapses to zero (no rows) or
+     grows to the full un-virtualized content height (rows). A column flex container turns the
+     shipped block-size: 24rem on [part='base'] into its *flex-basis*: it fills a bounded pane,
+     shrinks below 24rem in a short one, and falls back to 24rem in an auto-height container. */
   lr-virtual-list {
     flex: 1 1 auto;
     min-block-size: 0;
@@ -87,10 +85,10 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
   }
   /* sticky-groups: the pinned copy of the current group header. lr-virtual-list ships that layer
-     pointer-transparent, because it is a copy of a row that already exists; this component's header
-     owns a real collapse toggle, so it opts back in. Everything else about the copy -- padding,
-     background, the toggle and icon -- comes from the group-header/group-toggle/group-icon rules
-     around this one, which the copy shares by rendering the same parts. */
+     pointer-transparent since it copies an existing row; this component's header owns a real
+     collapse toggle, so it opts back in. Padding, background, toggle and icon come from the
+     group-header/group-toggle/group-icon rules around this one, which the copy shares by rendering
+     the same parts. */
   lr-virtual-list::part(sticky-group) {
     pointer-events: auto;
   }
@@ -141,9 +139,9 @@ export const styles = css`
     min-inline-size: 0;
   }
   /* row-start/row-actions (see thread-list.class.ts) are plain <span>s, so they default to
-     display: inline -- an ordinary text baseline box with descender strut height. Their
-     content is adornments (icon/avatar, action buttons), not text, so center them on a flex
-     line instead; row-content/row-meta hold real text and keep their own inline/block flow. */
+     display: inline -- a text baseline box with descender strut height. Their content is adornments
+     (icon/avatar, action buttons), not text, so center them on a flex line; row-content/row-meta
+     hold real text and keep their own flow. */
   lr-virtual-list::part(row-start),
   lr-virtual-list::part(row-actions) {
     display: inline-flex;
@@ -153,8 +151,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    /* Keep the glyph compact while giving the interactive box the shared
-       minimum target size. */
+    /* Compact glyph in an interactive box at the shared minimum target size. */
     inline-size: var(--lr-size-1-5rem);
     block-size: var(--lr-size-1-5rem);
     min-inline-size: var(--lr-icon-button-size);

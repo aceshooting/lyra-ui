@@ -97,11 +97,9 @@ export const styles = css`
   [part="vote-button"]:hover {
     background: var(--lr-color-brand-quiet);
   }
-  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
-     --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
-     than hover in both light and dark themes rather than repeating it. Placed before the selected
-     rule deliberately: once a vote is cast, the selected treatment is the state worth showing, and
-     the button's own :hover already answers the pointer. */
+  /* Pressed pushes the hovered tint a further --lr-color-mix-active toward --lr-color-mix-partner,
+     which follows the text colour, so it is a deeper step than hover in both themes, not a repeat.
+     */
   [part="vote-button"]:active {
     background: color-mix(
       in oklab,
@@ -109,7 +107,12 @@ export const styles = css`
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  [part="vote-button"]:where([data-selected]) {
+  /* After the two arms above and at their own (0,2,0), so source order hands the cast vote its
+     selected fill under the pointer -- the generic brand-quiet hover tint reads as unselected.
+     Wrapping [data-selected] in :where() dropped this to (0,1,0) and inverted that: both pointer
+     arms won and the documented --lr-compare-panel-selected-background vanished under the pointer.
+     The held state is restored by the rule below, not by yielding here. */
+  [part="vote-button"][data-selected] {
     background: var(
       --lr-compare-panel-selected-background,
       var(--lr-color-brand-quiet)
@@ -122,6 +125,21 @@ export const styles = css`
     font-weight: var(
       --lr-compare-panel-selected-font-weight,
       var(--lr-font-weight-semibold)
+    );
+  }
+  /* The selected button's own held state, at (0,3,0) so it out-ranks the [data-selected] rule above.
+     Re-clicking an already-voted button re-emits the cancelable lr-vote, which a host commonly
+     answers by advancing to the next pair, so the press must land visibly; losing the hover tint
+     there is the deliberate half of the trade. Mixes from --lr-compare-panel-selected-background so
+     a retinted selection gets a deeper tier of itself, not the stock token. */
+  [part="vote-button"][data-selected]:active {
+    background: color-mix(
+      in oklab,
+      var(
+        --lr-compare-panel-selected-background,
+        var(--lr-color-brand-quiet)
+      ),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
   [part="vote-button"]:disabled {

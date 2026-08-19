@@ -793,8 +793,6 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
       @lr-zoom-change=${this.onFrameZoomChange}
       @focus=${(event: Event) => event.stopPropagation()}
       @blur=${(event: Event) => event.stopPropagation()}
-      @lr-focus=${(event: Event) => event.stopPropagation()}
-      @lr-blur=${(event: Event) => event.stopPropagation()}
     >
       <div
         part="rotation-frame"

@@ -3,15 +3,12 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    /* Makes the host a query container so the @container rule below reacts to the bar's own
-       allocated width (a chat transcript, a split pane, a narrow dialog) instead of the
-       viewport's. */
+    /* Query container, so the @container rule below reacts to the bar's own allocated width, not
+       the viewport's. */
     container: lr-confirm-bar / inline-size;
-    /* inline-size containment strips the box of content-based intrinsic sizing, so without this
-       fallback the bar collapses to a sliver in any shrink-to-fit context (a flex row, a centered
-       grid cell, a fit-content wrapper) -- the same pairing every other inline-size query
-       container in the library declares (eval-result, mcp-app, prompt-studio). The compact host
-       state sets container: none and is unaffected either way. */
+    /* inline-size containment removes content-based intrinsic sizing, so without this fallback the
+       bar collapses to a sliver in any shrink-to-fit context -- the pairing eval-result, mcp-app
+       and prompt-studio also declare. The compact host sets container: none and is unaffected. */
     contain-intrinsic-inline-size: var(--lr-size-20rem);
     min-inline-size: 0;
     max-inline-size: 100%;
@@ -45,16 +42,11 @@ export const styles = css`
     justify-content: flex-end;
     gap: var(--lr-space-s);
   }
-  /* deny-button/approve-button are <lr-button> hosts (see confirm-bar.class.ts's render()) --
-     their own padding/border/background/color/hover/focus-visible/disabled chrome lives entirely
-     inside lr-button's own styles.ts, driven by its "variant" property. A rule declared here
-     against [part='deny-button']/[part='approve-button'] directly would either double up a visual
-     effect lr-button already applies internally (hover brightness, disabled opacity both compound
-     when applied on both the outer host and the inner native button) or be silently dead
-     (:focus-visible never matches this outer host -- real DOM focus lands on the native <button>
-     nested one shadow level down, inside lr-button's own shadow root, never on the host itself).
-     Only cross-cutting FLEX-ITEM sizing concerns belong here -- the @container rule below is
-     exactly that, and is unaffected by what part="deny-button"/"approve-button" resolves to. */
+  /* deny-button/approve-button are <lr-button> hosts (see render()): all their chrome lives in
+     lr-button's styles.ts, keyed off its variant. Styling those parts here would compound what
+     lr-button already applies (hover brightness, disabled opacity, on host and inner button) or be
+     silently dead -- :focus-visible never matches the outer host, focus landing on the native
+     <button> in lr-button's shadow root. Only cross-cutting FLEX-ITEM sizing belongs here. */
   [part='status'] {
     display: flex;
     align-items: center;
@@ -71,6 +63,10 @@ export const styles = css`
   :host([decision='denied']) [part='status'] {
     color: var(--lr-confirm-bar-denied-color, var(--lr-color-danger));
   }
+  /* no-hover-state: [part='status'] is a read-only decision readout, not a pointer target; it
+     takes a focus ring only because focus moves there before the buttons unmount (class doc), and
+     a hover tint would advertise an interaction it lacks. The real targets [part='approve-button']
+     and [part='deny-button'] are composed <lr-button>s carrying their own hover. */
   [part='status']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -85,18 +81,15 @@ export const styles = css`
     }
   }
 
-  /* Density escape -- same convention as lr-agent-run's/lr-commit-card's compact, and purely a
-     density and layout knob: the card border, radius and background all stay, and frame='plain'
-     below is what drops them. The tuned values sit behind inline var() fallbacks (rather than a
-     :host declaration, which every instance would re-declare and so shadow any ancestor value) so a
-     consumer can retune the density from outside without restating the whole rule. */
+  /* Density escape, matching lr-agent-run's and lr-commit-card's compact: density and layout only,
+     so the card border, radius and background stay -- frame='plain' below drops those. Tuned
+     values sit behind inline var() fallbacks, not a :host declaration every instance would
+     re-declare and so shadow an ancestor value. */
   :host([compact]) {
     display: inline-flex;
-    /* The container query above measures *this* host. A compact bar exists precisely to be dropped
-       into a narrow slot (a table cell, a card action row), so that query would fire essentially
-       always and stretch the buttons to fill -- the exact opposite of the intent. Dropping the
-       query container is what neutralizes it: with no containment here and (normally) no ancestor
-       container either, the max-inline-size: 20rem query simply never matches. */
+    /* The container query above measures this host, and a compact bar lives in narrow slots, so it
+       would fire nearly always and stretch the buttons -- the opposite of the intent. With no
+       containment here and normally no ancestor container, max-inline-size: 20rem never matches. */
     container: none;
   }
   :host([compact]) [part='base'] {
@@ -113,31 +106,27 @@ export const styles = css`
   :host([compact]) [part='footer'] {
     flex: 0 0 auto;
   }
-  /* Once decided the buttons unmount and [part='footer'] is left holding only the (usually
-     unassigned) footer slot -- a zero-size flex item that would still consume one gap mid-row.
-     display: contents drops that box so the row closes up, while any real footer-slotted
-     content simply becomes a direct flex item of the row instead. */
+  /* Once decided the buttons unmount and [part='footer'] holds only the usually unassigned footer
+     slot: a zero-size flex item still eating one gap mid-row. Dropping the box closes the row up
+     and promotes any real slotted content to a direct flex item. */
   :host([compact][decision]) [part='footer'] {
     display: contents;
   }
-  /* Chrome escape -- the shared frame='plain' treatment, same convention as lr-agent-run's and
-     lr-result-card's. MUST stay after both :host([variant='danger']) [part='base'] and
-     :host([compact]) [part='base']: all three are equal-specificity, so source order alone decides
-     which border/padding wins. plain is the stronger statement ('no chrome at all'), so it goes
-     last. The Deny/Approve lr-buttons keep their own border/background -- that chrome is theirs,
-     not the card's -- so a chrome-less bar still has a visible interactive affordance. */
+  /* Chrome escape: the shared frame='plain' treatment, matching lr-agent-run and lr-result-card.
+     MUST stay after :host([variant='danger']) [part='base'] and :host([compact]) [part='base'] --
+     all three are equal-specificity, so source order decides, and plain ('no chrome at all') is
+     the stronger statement. The Deny/Approve lr-buttons keep their own border/background, so a
+     chrome-less bar keeps a visible affordance. */
   :host([frame='plain']) [part='base'] {
     padding: 0;
     border: 0;
     border-radius: 0;
     background: transparent;
   }
-  /* NOTE: the undecided [part='status'] is deliberately NOT collapsed here, in either presentation.
-     [part='status']:empty above never actually matches (the part's lit template leaves
-     whitespace-only text nodes behind, and Chromium's :empty ignores only comments), and that dead
-     rule is load-bearing by accident: decide() focuses [part='status'] synchronously *before*
-     setting this.decision, so anything that made the undecided status display: none would leave
-     .focus() a no-op and drop focus to <body> the moment the buttons unmount. An empty flex item
-     is zero-sized in both presentations; the only cost is one trailing gap at the end of a compact
-     row. See llms/agent-tools.md. */
+  /* The undecided [part='status'] is deliberately NOT collapsed in either presentation.
+     [part='status']:empty above never matches (the lit template leaves whitespace-only text nodes;
+     Chromium's :empty ignores only comments), and that dead rule matters: decide() focuses
+     [part='status'] before setting this.decision, so display: none there would no-op .focus() and
+     drop focus to <body> as the buttons unmount. The zero-sized item costs one trailing gap in a
+     compact row. See llms/agent-tools.md. */
 `;

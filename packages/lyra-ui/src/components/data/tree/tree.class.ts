@@ -5,6 +5,7 @@ import {
   type LyraEventDetailSnapshot,
 } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { tag } from '../../../internal/prefix.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { styles } from './tree.styles.js';
@@ -1445,7 +1446,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
       <div
         part="base tree"
         role="tree"
-        aria-label=${this.label || this.getAttribute('aria-label') || nothing}
+        aria-label=${hostAriaLabel(this) ?? (this.label || nothing)}
         aria-multiselectable=${String(this.selection === 'multiple' || this.selection === 'leaf-multiple')}
         @focusin=${this.onTreeFocusIn}
         @keydown=${this.onTreeKeyDown}

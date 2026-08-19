@@ -1033,3 +1033,21 @@ describe('lr-condition-builder v9 contract', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe('explicitly empty host aria-label', () => {
+  it('keeps the semantic group explicitly unnamed instead of substituting the localized fallback', async () => {
+    const explicit = (await fixture(
+      html`<lr-condition-builder aria-label=""></lr-condition-builder>`,
+    )) as LyraConditionBuilder;
+    await explicit.updateComplete;
+    const base = explicit.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.hasAttribute('aria-label')).to.equal(true);
+    expect(base.getAttribute('aria-label')).to.equal('');
+
+    const omitted = (await fixture(
+      html`<lr-condition-builder></lr-condition-builder>`,
+    )) as LyraConditionBuilder;
+    await omitted.updateComplete;
+    expect(omitted.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Query builder');
+  });
+});

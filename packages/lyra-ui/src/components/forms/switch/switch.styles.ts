@@ -4,23 +4,19 @@ export const styles = css`
   :host {
     display: inline-block;
     max-inline-size: 100%;
-    /* Component-local geometry knobs (defined on :host so each instance can
-       tune its own geometry) — a fully-rounded pill/thumb
-       needs a radius well past --lr-radius's small 0.375rem default, so
-       it's expressed here rather than bent onto that shared token.
-       Both track dimensions ride the shared size ladder
-       (internal/sizes.styles.ts): the track is half the tier's control height, and its inline size
-       keeps the 1.8:1 aspect ratio the control has always had. At the default "m" tier that is
-       exactly the 1.25rem x 2.25rem it shipped with before it had a size at all. */
+    /* Component-local geometry knobs on :host so each instance can tune its own. A fully-rounded
+       pill/thumb needs a radius well past --lr-radius's 0.375rem default, so it lives here rather
+       than bent onto that shared token. Both track dimensions ride the shared size ladder
+       (internal/sizes.styles.ts): half the tier's control height, inline size at the control's
+       long-standing 1.8:1 ratio -- at "m", exactly the 1.25rem x 2.25rem it shipped with. */
     --_lr-switch-track-block-size: calc(var(--lr-form-control-height) * 0.5);
     --_lr-switch-track-inline-size: calc(
       var(--lr-switch-track-block-size, var(--_lr-switch-track-block-size)) *
         1.8
     );
     --_lr-switch-thumb-offset: var(--lr-size-2px);
-    /* The track's resting fill, named so the hover and press mixes below have exactly one base to
-       move away from in BOTH states -- the unchecked grey and the checked brand -- rather than two
-       rules each restating a colour. */
+    /* The track's resting fill, named so the hover and press mixes below have exactly one base in
+       BOTH states -- unchecked grey and checked brand -- not two rules restating a colour. */
     --_lr-switch-track-fill: var(--lr-color-border);
   }
   .switch-layout {
@@ -42,15 +38,12 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* Gives mouse users the same 'this is interactive' cue the :focus-visible ring above already
-     gives keyboard users, and a press that reads as deeper than the hover. Gated on
-     :host(:not(:disabled)) the same way lr-checkbox's/lr-radio's [part~='base']:hover rules are
-     (this control isn't a native button, so a bare [part~='base']:hover would otherwise also fire
-     while disabled).
-     Both land on the TRACK, and both are colour mixes. This was a filter: brightness() lift on
-     [part~='base'] before 8.0.0, which was wrong twice over: a filter multiplies every channel, so
-     it moved the track only by luck of its tone, and it applies to the whole subtree, so it faded
-     the label text sitting next to the track as well. */
+  /* Mouse-pointer parity with the :focus-visible ring above, plus a deeper press. Gated on
+     :host(:not(:disabled)) like lr-checkbox's/lr-radio's [part~='base']:hover rules -- not a native
+     button, so a bare [part~='base']:hover would also fire while disabled. Both land on the TRACK
+     as colour mixes: the pre-8.0.0 filter: brightness() lift on [part~='base'] multiplied every
+     channel (moving the track only by luck of its tone) and applied to the whole subtree (fading
+     the label text beside it). */
   :host(:not(:disabled)) .switch-layout:hover [part~="track"] {
     background: var(
       --lr-switch-track-hover-fill,
@@ -80,13 +73,11 @@ export const styles = css`
     position: relative;
     flex: 0 0 auto;
     /* content-box, not the library-wide border-box default: the thumb is absolutely positioned
-       against this element's padding box, and its own size/travel math (below) is derived from
-       these same declared dimensions. Under border-box, a consumer-added ::part(track) border
-       would eat into the padding box without the thumb shrinking to match, breaking clearance
-       symmetry on the far edge. content-box keeps the padding box exactly this declared size
-       regardless of any border width, so an added border grows the track's outer footprint
-       instead -- the same "sits outside, doesn't touch the fill" effect the docs already point
-       consumers wanting a rim toward via outline. */
+       against this element's padding box and its size/travel math below derives from these declared
+       dimensions, so under border-box a consumer-added ::part(track) border would eat the padding
+       box without the thumb shrinking to match, breaking far-edge clearance symmetry. content-box
+       grows the outer footprint instead -- the "sits outside, doesn't touch the fill" effect the
+       docs point a consumer wanting a rim toward via outline. */
     box-sizing: content-box;
     inline-size: var(
       --width,
@@ -145,9 +136,8 @@ export const styles = css`
     );
     border-radius: 50%;
     background: var(--lr-switch-thumb-fill, var(--lr-color-surface));
-    /* Animates the logical 'inset-inline-start' rather than a physical
-       'transform: translateX()' so the slide direction mirrors correctly
-       under dir="rtl" — consistent with this library's CSS-logical-
+    /* Animates the logical 'inset-inline-start' rather than a physical 'transform: translateX()',
+       so the slide direction mirrors correctly under dir="rtl" -- this library's CSS-logical-
        properties approach to RTL (see internal/lyra-element.ts). */
     transition: inset-inline-start var(--lr-transition-fast);
   }
@@ -179,10 +169,9 @@ export const styles = css`
     );
   }
 
-  /* No explicit "display" here (unlike e.g. lr-combobox's
-     [part='form-control-label']), so the UA stylesheet's default
-     "[hidden] { display: none }" rule needs no author-side override to
-     take effect when hasLabelSlot is false. */
+  /* No explicit "display" here (unlike lr-combobox's [part='form-control-label']), so the UA
+     stylesheet's default "[hidden] { display: none }" rule needs no author-side override when
+     hasLabelSlot is false. */
   [part="label"] {
     font-size: var(--lr-font-size-md-sm);
     color: var(--lr-color-text);

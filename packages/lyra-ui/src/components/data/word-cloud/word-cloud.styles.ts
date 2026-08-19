@@ -3,11 +3,10 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    /* Categorical palette for words with no explicit color/group, cycled by
-       index (and reused per-group once a group's first color is assigned).
-       Data-driven literals, same rationale as lr-heatmap's
-       --lr-heatmap-scale-lo/-hi -- exposed as retheme-able custom
-       properties instead of hardcoded in word-cloud.ts. */
+    /* Categorical palette for words with no explicit color/group, cycled by index and reused
+       per-group once a group's first color is assigned. Data-driven, so retheme-able custom
+       properties rather than literals in word-cloud.ts, as with lr-heatmap's
+       --lr-heatmap-scale-lo/-hi. */
     --_lr-word-cloud-color-1-default: var(--lr-color-brand);
     --_lr-word-cloud-color-2-default: var(--lr-color-success);
     --_lr-word-cloud-color-3-default: var(--lr-color-warning);

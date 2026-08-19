@@ -4,9 +4,8 @@ export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
-    /* Query container for the narrow-allocation rate-select cap below -- matches
-       lr-video's own [part='controls'] select narrow-container pattern, the proven fix for
-       this exact failure mode in a sibling media component. */
+    /* Query container for the narrow-allocation rate-select cap below -- matches lr-video's own
+       [part='controls'] select narrow-container pattern. */
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
     --_lr-av-player-transcript-height: var(--lr-size-16rem);
@@ -37,14 +36,12 @@ export const styles = css`
     max-inline-size: 100%;
   }
   [part='rate-select'] {
-    /* A flex item's default min-width:auto floors it at its content's min-content size --
-       for a native <select> that's driven by its widest <option> text, which can be long
-       (localized playback-rate labels). inline-size/max-inline-size alone don't override that
-       floor; min-inline-size:0 does, letting the select actually shrink to fit a narrow
-       container instead of forcing it to overflow. That flex-shrink alone is not a hard
-       guarantee across engines once the option text is long enough -- the @container rule below
-       backstops it with lr-video's own [part='controls'] select pattern: a fixed max-inline-size
-       once the host itself is narrow, independent of content length or available flex space. */
+    /* A flex item's default min-width:auto floors it at min-content -- for a native <select>, its
+       widest <option> text, which localized playback-rate labels make long.
+       inline-size/max-inline-size do not override that floor; min-inline-size:0 does. Shrinking is
+       not a hard cross-engine guarantee once the option text is long enough, so the @container rule
+       below backstops it with lr-video's [part='controls'] select pattern: a fixed max-inline-size
+       once the host is narrow, independent of content length or available flex space. */
     min-inline-size: 0;
     inline-size: 100%;
     max-inline-size: 100%;
@@ -97,8 +94,8 @@ export const styles = css`
   }
   [part='timeline'] {
     block-size: var(--lr-size-3rem);
-    /* The time axis stays physically LTR under RTL, matching native media controls -- a
-       documented exception. */
+    /* The time axis stays physically LTR under RTL, matching native media controls -- a documented
+       exception. */
     direction: ltr;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
@@ -108,9 +105,8 @@ export const styles = css`
   [part='timeline']:hover {
     border-color: var(--lr-color-brand);
   }
-  /* The timeline is itself the seek target (a pointer press scrubs), so it earns a pressed state,
-     and it has to read as more than the hover border alone: the surface shifts under the pointer
-     while the border keeps the hover accent. */
+  /* The timeline is itself the seek target -- a pointer press scrubs -- so it earns a pressed state
+     beyond the hover border: the surface shifts while the border keeps the hover accent. */
   [part='timeline']:active {
     border-color: var(--lr-color-brand);
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
@@ -127,18 +123,15 @@ export const styles = css`
     inline-size: 100%;
     block-size: 100%;
   }
-  /* Inline var() fallbacks (rather than :host-declared properties, which every instance would
-     re-declare and so shadow any ancestor value) so a consumer can retint just this component's
-     highlight-marker tones without hijacking the shared --lr-color-success/warning/danger/brand
-     tokens used everywhere else in their theme. Unset, each falls back to the same color-mix()
-     this rendered before the hatch existed, so the default rendering is unchanged. */
-  /* Each tone sets a private marker-fill default, while the public
-     --lr-av-player-marker-fill remains an inherited/direct-host override at the use site. That
-     indirection is what lets the hover/active rules
-     mix from whichever fill the marker actually has: a background-mix written against the untoned
-     default would flatten every toned marker to brand the moment the pointer touched it, and a
-     per-tone hover/active pair would be ten near-identical rules. The public
-     --lr-av-player-*-bg knobs are untouched -- they are still what each fill falls back through. */
+  /* Inline var() fallbacks, not :host-declared properties, which every instance would re-declare and
+     so shadow any ancestor value: a consumer retints just this component's marker tones without
+     hijacking the shared --lr-color-success/warning/danger/brand tokens. Unset, each falls back to
+     the color-mix() rendered before, so default rendering is unchanged. */
+  /* Each tone sets a private marker-fill default; the public --lr-av-player-marker-fill stays an
+     inherited/direct-host override at the use site. That indirection lets hover/active mix from
+     whichever fill the marker actually has: mixing against the untoned default would flatten every
+     toned marker to brand on hover, and per-tone pairs would be ten near-identical rules. Each fill
+     still falls back through the untouched public --lr-av-player-*-bg knobs. */
   [part='timeline-marker'] {
     position: absolute;
     inset-block: 0;
@@ -159,9 +152,9 @@ export const styles = css`
   .timeline-markers [part='timeline-marker'] {
     pointer-events: auto;
   }
-  /* Was filter: brightness(1.2), which multiplies every channel: it lightened a dark marker,
-     darkened nothing at all on a fully saturated one, did nothing whatsoever to a pure-white fill,
-     and -- because filter applies to the subtree -- dragged the marker's own label with it. */
+  /* Not filter: brightness(1.2), which multiplies every channel: it lightened a dark marker, did
+     nothing to a fully saturated or pure-white fill, and applied to the subtree, dragging the
+     marker's own label with it. */
   [part='timeline-marker']:hover {
     background: color-mix(in oklab, var(--lr-av-player-marker-fill, var(--_lr-av-player-marker-fill)), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
@@ -183,16 +176,15 @@ export const styles = css`
   [part='transcript'] {
     --lr-virtual-list-height: var(--lr-av-player-transcript-height, var(--_lr-av-player-transcript-height));
   }
-  /* The cue parts below are emitted by renderCue() but committed into <lr-virtual-list>'s OWN shadow
-     root, so a bare [part='cue'] selector here can never reach them -- it would resolve against this
-     component's shadow tree, which holds none of those nodes, leaving each cue on the raw UA button
-     appearance. The one-shadow-hop ::part() form is what actually matches, and the paired exportparts
-     on the <lr-virtual-list> element re-exposes the same names to a consumer.
+  /* renderCue() emits the cue parts into <lr-virtual-list>'s OWN shadow root, so a bare
+     [part='cue'] here can never reach them -- it resolves against this component's tree, leaving
+     each cue on the raw UA button appearance. The one-shadow-hop ::part() form matches, and
+     exportparts on <lr-virtual-list> re-exposes the names to a consumer.
 
-     State variants ride a part *list* (e.g. part="cue cue-current") rather than an attribute:
-     ::part() has part~= semantics, but Shadow Parts forbids an attribute selector after ::part(), so
-     ::part(cue)[aria-current='true'] is invalid CSS. The aria-current/data-* attributes stay on the
-     button for semantics and scripting; the extra part token is what the stylesheet keys off. */
+     State variants ride a part *list* (part="cue cue-current"), not an attribute: ::part() has
+     part~= semantics, but Shadow Parts forbids an attribute selector after it, so
+     ::part(cue)[aria-current='true'] is invalid CSS. aria-current/data-* stay on the button for
+     semantics and scripting. */
   lr-virtual-list::part(cue) {
     display: block;
     inline-size: 100%;
@@ -207,13 +199,13 @@ export const styles = css`
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
-  /* Declared before ::part(cue-current) below so the current cue's own background always wins on
-     specificity-tie source order, even while it's also being hovered. */
+  /* Before ::part(cue-current) below, so the current cue's own background wins the specificity tie
+     on source order even while hovered. */
   lr-virtual-list::part(cue):hover {
     background: var(--lr-color-brand-quiet);
   }
-  /* Kept alongside the hover rule, ahead of ::part(cue-current), for the same source-order reason:
-     the current cue's own fill still wins over both transient states. */
+  /* Ahead of ::part(cue-current) for the same source-order reason: the current cue's own fill still
+     wins over both transient states. */
   lr-virtual-list::part(cue):active {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }

@@ -74,7 +74,8 @@ import "@aceshooting/lyra-ui/components/conversation/message-parts/message-parts
 - `lr-copy` event — Passthrough from rendered JSON content.
 - `lr-highlight-activate` event — Passthrough from rendered Markdown.
 - `lr-link-click` event — Passthrough from rendered Markdown.
-- `lr-preview-request` event — Cancelable passthrough from a rendered attachment.
+- `lr-preview-request` event — Passthrough from a rendered attachment. Not cancelable as of 10.0.0:
+  `<lr-attachment-chip>` dropped the flag, since it owns no preview default action to veto.
 - `lr-remove` event — Passthrough from a rendered attachment.
 - `lr-render-error` event — Passthrough from rendered Markdown, tool-result, or widget content.
 - `lr-retry` event — Passthrough from a rendered attachment.

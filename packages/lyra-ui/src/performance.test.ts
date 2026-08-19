@@ -15,7 +15,7 @@ import type { LyraVirtualList } from './components/layout/virtual-list/virtual-l
 import type { LyraLiteChart, LyraLiteChartSeries } from './components/charts/chart/lite-chart.js';
 import type { LyraHeatmap } from './components/data/heatmap/heatmap.js';
 import type { LyraTable, TableColumn } from './components/data/table/table.js';
-import type { LyraGraph, GraphNode, GraphLink } from './components/retrieval/graph/graph.js';
+import type { LyraGraph, LyraGraphNode, LyraGraphLink } from './components/retrieval/graph/graph.js';
 import type { LyraFlowCanvas, FlowNode, FlowEdge, FlowRunDecorations } from './components/data/flow-canvas/flow-canvas.js';
 import type { LyraMindMap, LyraTopic } from './components/retrieval/mind-map/mind-map.js';
 import type { LyraNotebookViewer } from './components/viewers/notebook-viewer/notebook-viewer.js';
@@ -301,11 +301,11 @@ it('keeps canvas-mode graph selection churn within the large-graph budget', asyn
       style="width:960px;height:640px"
     ></lr-graph>`,
   )) as LyraGraph;
-  const nodes: GraphNode[] = Array.from({ length: GRAPH_NODE_COUNT }, (_, index) => ({
+  const nodes: LyraGraphNode[] = Array.from({ length: GRAPH_NODE_COUNT }, (_, index) => ({
     id: `n${index}`,
     label: `Node ${index}`,
   }));
-  const links: GraphLink[] = Array.from({ length: GRAPH_LINK_COUNT }, (_, index) => ({
+  const links: LyraGraphLink[] = Array.from({ length: GRAPH_LINK_COUNT }, (_, index) => ({
     source: `n${index % GRAPH_NODE_COUNT}`,
     target: `n${(index * 7 + 1) % GRAPH_NODE_COUNT}`,
   }));

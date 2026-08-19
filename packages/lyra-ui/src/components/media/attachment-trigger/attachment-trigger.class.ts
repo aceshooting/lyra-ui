@@ -2,6 +2,7 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { styles } from './attachment-trigger.styles.js';
@@ -409,7 +410,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
 
   private renderSingleTrigger(capability: LyraAttachmentCapability): TemplateResult {
     const meta = CAPABILITY_META[capability];
-    const hostLabel = this.hasAttribute('aria-label') ? (this.getAttribute('aria-label') ?? '') : null;
+    const hostLabel = hostAriaLabel(this);
     const label = hostLabel ?? this.accessibleLabel ?? this.localize(meta.triggerKey);
     return html`
       <button
@@ -430,7 +431,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
 
   private renderMenu(): TemplateResult {
     const addLabel = this.localize('attachmentAdd');
-    const hostLabel = this.hasAttribute('aria-label') ? (this.getAttribute('aria-label') ?? '') : null;
+    const hostLabel = hostAriaLabel(this);
     const accessibleLabel = hostLabel ?? this.accessibleLabel ?? addLabel;
     return html`
       <lr-dropdown

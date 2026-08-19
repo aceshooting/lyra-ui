@@ -337,7 +337,10 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
 plain-text contract even when a separate WA `label` override is present.
 
 **Events:** `lr-option-change` — bubbles when the option's label or selectable data changes so
-its parent `lr-combobox` or `lr-select` can refresh its normalized option rows.
+its parent `lr-combobox` or `lr-select` can refresh its normalized option rows. It is a private
+child-to-parent refresh signal, not a picker event: the owning `lr-combobox`/`lr-select` consumes
+it and stops it, so it never reaches a listener on the picker host (whose own contract is
+`lr-change`/`lr-input`/`change`/`input`). Listen on the `<lr-option>` itself to observe it.
 
 **Slots:** default (visible label), `start`/`end` (WA adornments), and `prefix`/`suffix` (Shoelace
 aliases). `start` and `prefix` project into one leading wrapper; `end` and `suffix` project into one

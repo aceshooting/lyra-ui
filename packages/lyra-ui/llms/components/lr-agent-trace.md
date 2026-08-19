@@ -31,7 +31,9 @@ hierarchical trace tree from one shared `spans` array.
   (`'agent' | 'llm' | 'tool' | 'retriever' | 'embedding' | 'other'`). Empty shows every kind;
   pre-settable (e.g. to hide `retriever`/`embedding` by default) and readable back after
   `lr-span-visibility-change`
-- `label: string = ''` — forwarded to the composed `lr-trace-tree`
+- `label?: string` — forwarded to the composed `lr-trace-tree`. Omission leaves that tree's own
+  `label` unset so it localizes its own default; any supplied string (including `''`) is
+  forwarded verbatim
 - `showTokens: boolean = false` (attribute `show-tokens`), `showCost: boolean = false` (attribute
   `show-cost`), `showBars: boolean = true` (attribute `show-bars`, renamed from `hideBars` in
   9.0.0 to match the positive polarity of its two siblings above — default inverted so the

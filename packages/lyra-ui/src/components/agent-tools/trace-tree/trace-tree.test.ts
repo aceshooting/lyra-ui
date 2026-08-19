@@ -1,4 +1,5 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './trace-tree.js';
 import type { LyraTraceTree } from './trace-tree.js';
 import type { LyraSpan } from './span.js';
@@ -959,5 +960,36 @@ describe('lr-trace-tree', () => {
         await expect(el).to.be.accessible();
       }
     });
+  });
+  it('keeps a hover tint on the active row, not only on the inactive ones', async () => {
+    const el = (await fixture(
+      html`<lr-trace-tree active-span-id="search" .spans=${SPANS}></lr-trace-tree>`,
+    )) as LyraTraceTree;
+    await el.updateComplete;
+    const active = el.shadowRoot!.querySelector<HTMLElement>('[part="row"][data-active]')!;
+    const inactive = el.shadowRoot!.querySelector<HTMLElement>('[part="row"]:not([data-active])')!;
+    expect(active.getAttribute('data-id')).to.equal('search');
+    const centre = (element: HTMLElement): [number, number] => {
+      const rect = element.getBoundingClientRect();
+      return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+    };
+    await resetMouse();
+    const activeRest = getComputedStyle(active).backgroundColor;
+    const inactiveRest = getComputedStyle(inactive).backgroundColor;
+    try {
+      await sendMouse({ type: 'move', position: centre(inactive) });
+      await waitUntil(
+        () => getComputedStyle(inactive).backgroundColor !== inactiveRest,
+        'an inactive row never picked up a hover tint',
+      );
+      await sendMouse({ type: 'move', position: centre(active) });
+      await waitUntil(
+        () => getComputedStyle(active).backgroundColor !== activeRest,
+        'the selected row stayed on its active fill under the pointer, so the row a user is most ' +
+          'likely to hover next is the one row that acknowledges nothing',
+      );
+    } finally {
+      await resetMouse();
+    }
   });
 });

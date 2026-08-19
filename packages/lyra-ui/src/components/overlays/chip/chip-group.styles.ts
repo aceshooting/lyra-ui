@@ -10,11 +10,9 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
   }
-  /* Deliberately its own local pill styling rather than instantiating a
-     real <lr-chip> in the shadow DOM for this -- keeps the group's
-     rendering self-contained instead of depending on chip.ts's internal
-     shape, the same way this family's overlay-shaped components duplicate
-     rather than nest one another. */
+  /* Local pill styling rather than a real <lr-chip> in the shadow DOM: keeps the group
+     self-contained instead of depending on chip.ts's internal shape, the way this family's
+     overlay-shaped components duplicate rather than nest one another. */
   [part='overflow-indicator'] {
     display: inline-flex;
     align-items: center;
@@ -38,18 +36,17 @@ export const styles = css`
       border-color var(--lr-transition-fast),
       color var(--lr-transition-fast);
   }
-  /* Dashed border marks it as a structural "more" affordance, distinct at a
-     glance from the solid-bordered real chips it sits alongside. */
+  /* Dashed border marks a structural more affordance, distinct at a glance from the
+     solid-bordered real chips beside it. */
   [part='overflow-indicator']:hover {
     border-color: var(--lr-color-brand);
     color: var(--lr-color-text);
   }
-  /* Pressed adds what the hover deliberately leaves alone -- a fill -- so the press is a visible
-     step further in, not a restatement. The surface is mixed toward --lr-color-mix-partner (which
-     follows the text colour), so the tint darkens on a light theme and lightens on a dark one
-     without this rule knowing which is in force. The border and text treatments are restated
-     rather than inherited from the hover rule because keyboard activation (Space/Enter on the
-     focused indicator) raises :active with no :hover at all. */
+  /* Pressed adds the fill hover leaves alone, a step further in rather than a restatement. The
+     surface mixes toward --lr-color-mix-partner, which follows the text colour, so the tint
+     darkens on light themes and lightens on dark. Border and text are restated, not inherited,
+     because keyboard activation (Space/Enter on the focused indicator) raises :active with no
+     :hover. */
   [part='overflow-indicator']:active {
     border-color: var(--lr-color-brand);
     color: var(--lr-color-text);
@@ -59,11 +56,10 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* :where() zeroes the [aria-expanded='true'] qualifier's specificity contribution -- otherwise
-     this (0,2,0) rule would beat a consumer's own ::part(overflow-indicator) color override
-     whenever the picker is open. Color and border style route through scoped cssprops (mirroring
-     lr-widget's [aria-pressed='true'] treatment) so a consumer can retint or reshape just the
-     expanded state without hijacking the shared tokens used everywhere else. */
+  /* The :where() zeroes the [aria-expanded='true'] qualifier, holding this at (0,1,0) -- below
+     the (0,2,0) :hover and :active rules above, so pointer feedback still reads while the picker
+     is open. Colour and border style route through scoped cssprops, as lr-widget's
+     [aria-pressed='true'] does, so a consumer can retint or reshape the expanded state alone. */
   [part='overflow-indicator']:where([aria-expanded='true']) {
     border-style: var(--lr-chip-group-overflow-expanded-border-style, solid);
     color: var(--lr-chip-group-overflow-expanded-color, var(--lr-color-text));

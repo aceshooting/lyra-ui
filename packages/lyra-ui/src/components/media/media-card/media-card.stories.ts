@@ -63,6 +63,21 @@ export const AccessibleActionLabel: Story = {
   `,
 };
 
+export const DecorativeImage: Story = {
+  name: 'Decorative image (explicit empty alt)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'An explicit `alt=""` reaches the rendered `<img>` verbatim, marking a purely decorative attachment as such. Omitting `alt` instead falls back to `filename`, then to a localized generic description — the two are distinguishable because `alt` is optional rather than empty-by-default.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-media-card src=${SAMPLE_IMAGE} kind="image" filename="divider.png" alt=""></lr-media-card>
+  `,
+};
+
 export const Video: Story = {
   render: () => html`
     <lr-media-card src=${SAMPLE_VIDEO} kind="video" filename="walkthrough.mp4"></lr-media-card>

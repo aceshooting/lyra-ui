@@ -22,10 +22,24 @@ export const styles = css`
     border-color: var(--lr-agent-eval-dashboard-active-border, var(--lr-color-brand));
     background: var(--lr-agent-eval-dashboard-active-background, var(--lr-color-brand-quiet));
   }
+  /* The selected chip's own hover step: plain [part='metric']:hover above is (0,2,0), exactly what
+     [part='metric'][aria-pressed='true'] scores, and the pressed rule wins that tie on source
+     order, leaving the selected chip dead under the pointer. :where() keeps the state qualifier out
+     of the count, so this stays (0,2,0) and the ordering below still hands :active the press. Mixed
+     from the pressed fill rather than the unselected hover fill, so retinting
+     --lr-agent-eval-dashboard-active-background keeps a hover step a tier deeper in that colour;
+     matches lr-test-results' filter-toggle, the same chip shape in this family. */
+  [part='metric']:where([aria-pressed='true']):hover {
+    background: color-mix(
+      in oklab,
+      var(--lr-agent-eval-dashboard-active-background, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+    );
+  }
   /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
-     --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
-     than hover in both light and dark themes. It must stay after the [aria-pressed='true'] rule: the
-     two selectors are both (0,2,0), so source order alone decides whether pressing an
+     --lr-color-mix-partner (which follows the text colour), a distinctly deeper step than hover in
+     light and dark themes alike. MUST stay after the [aria-pressed='true'] rule and its hover
+     companion: all three selectors are (0,2,0), so source order alone decides whether pressing an
      already-selected metric shows any feedback at all. */
   [part='metric']:active {
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));

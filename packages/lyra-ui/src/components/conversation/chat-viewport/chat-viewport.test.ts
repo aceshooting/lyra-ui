@@ -1029,6 +1029,47 @@ describe("unread divider (slotted mode)", () => {
     expect(parseFloat(divider.style.top)).to.equal(80); // 2 rows * 40px
   });
 
+  it("repositions the divider for a post-mount unreadStartIndex change within a single update", async () => {
+    const el = (await fixture(
+      html`<lr-chat-viewport style="block-size:200px" unread-start-index="1"
+        >${Array.from({ length: 5 }, (_, i) => row(`m${i}`))}</lr-chat-viewport
+      >`
+    )) as LyraChatViewport;
+    await el.updateComplete;
+    await nextFrame();
+
+    el.unreadStartIndex = 3;
+    // `updateComplete` resolves `false` exactly when a property written during the update cycle
+    // scheduled *another* update -- the same condition behind Lit's dev-mode "scheduled an update
+    // after an update completed" warning, which `WTR_STRICT_CONSOLE=1` (full-engine.yml) turns
+    // into a thrown error that rejects this very promise. Measuring the divider's offset after
+    // the commit and writing it back to reactive state is precisely that pattern, so this
+    // assertion is red in both modes until the measurement moves ahead of render.
+    const settledInOneUpdate = await el.updateComplete;
+    expect(
+      settledInOneUpdate,
+      "repositioning the unread divider must not schedule a second update"
+    ).to.equal(true);
+
+    // Geometry, not just presence: [part='unread-divider'] is translateY(-50%)'d over its own
+    // `top`, so its vertical center must land on the leading edge of the first unread row.
+    const divider = el.shadowRoot!.querySelector(
+      '[part="unread-divider"]'
+    ) as HTMLElement;
+    const boundary = el.querySelector(
+      "[data-lr-chat-viewport-unread-boundary]"
+    ) as HTMLElement;
+    const firstUnread = boundary.nextElementSibling as HTMLElement;
+    expect(firstUnread.textContent?.trim()).to.equal("m3");
+    const dividerRect = divider.getBoundingClientRect();
+    const firstUnreadRect = firstUnread.getBoundingClientRect();
+    expect(
+      dividerRect.top + dividerRect.height / 2,
+      "the divider must render centered on the top edge of the first unread row"
+    ).to.be.closeTo(firstUnreadRect.top, 1);
+    expect(parseFloat(divider.style.top)).to.equal(120); // 3 rows * 40px
+  });
+
   it("renders no divider when unreadStartIndex is null", async () => {
     const el = (await fixture(
       html`<lr-chat-viewport style="block-size:200px"

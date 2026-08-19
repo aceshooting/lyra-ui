@@ -1562,6 +1562,31 @@ describe("active-state cssprop escape hatches", () => {
     expect(getComputedStyle(toggle).borderTopColor).to.equal("rgb(0, 51, 102)");
   });
 
+  it("gives the pressed annotate-toggle its own press feedback", async () => {
+    const { toggle } = await withAnnotateActive();
+    const rect = toggle.getBoundingClientRect();
+    const centre: [number, number] = [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
+    await resetMouse();
+    const resting = getComputedStyle(toggle).backgroundColor;
+    try {
+      await sendMouse({ type: "move", position: centre });
+      await sendMouse({ type: "down" });
+      // Losing the hover tint on a toggle that is already on is a deliberate call (see the
+      // stylesheet); losing the press is not -- hover says "this is a target", a press says "your
+      // click landed", and annotation mode is exactly the control a user re-clicks to turn off.
+      await waitUntil(
+        () => getComputedStyle(toggle).backgroundColor !== resting,
+        "pressing the already-on annotate toggle showed no feedback at all",
+      );
+      await sendMouse({ type: "up" });
+    } finally {
+      await resetMouse();
+    }
+  });
+
   it("--lr-image-viewer-highlight-active-color recolors the active highlight outline", async () => {
     const { box } = await withActiveHighlight(
       "--lr-image-viewer-highlight-active-color: rgb(0, 51, 102)"
@@ -2170,7 +2195,7 @@ it("gives 90/270-degree media an axis-swapped scroll footprint in every fit and 
   }
 });
 
-it("contains pan-zoom focus aliases and forwards collision-resistant frame parts", async () => {
+it("contains pan-zoom focus events and forwards collision-resistant frame parts", async () => {
   const style = document.createElement("style");
   style.textContent =
     "lr-image-viewer::part(frame-viewport) { border-top-width: 7px; }";
@@ -2186,12 +2211,11 @@ it("contains pan-zoom focus aliases and forwards collision-resistant frame parts
     let focusEvents = 0;
     let aliases = 0;
     el.addEventListener("focus", () => focusEvents++);
+    // 9.0.0 removed the v8 lr-focus/lr-blur aliases, so nothing under the frame can emit one --
+    // asserted here so a reintroduced alias shows up as an escaped event rather than silently.
     el.addEventListener("lr-focus", () => aliases++);
     frame.dispatchEvent(
       new FocusEvent("focus", { bubbles: true, composed: true })
-    );
-    frame.dispatchEvent(
-      new CustomEvent("lr-focus", { bubbles: true, composed: true })
     );
     expect([focusEvents, aliases]).to.deep.equal([0, 0]);
     const viewport = frame.shadowRoot!.querySelector(

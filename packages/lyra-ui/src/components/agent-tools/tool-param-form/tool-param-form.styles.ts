@@ -33,11 +33,10 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
     font-weight: var(--lr-font-weight-semibold);
   }
-  /* The shared required marker (internal/form-control.styles.ts). This is the
-     one component where "required" is per FIELD rather than per host, which is
-     why that sheet carries a second selector keyed on
-     [part="field"][data-required] alongside the usual :host([required]) one.
-     Boolean and enum labels are owned by their nested <lr-select> instead. */
+  /* The shared required marker (internal/form-control.styles.ts). The one component where
+     "required" is per FIELD, not per host, which is why that sheet carries a second selector on
+     [part="field"][data-required] beside the usual :host([required]). Boolean and enum labels
+     belong to their nested <lr-select>. */
   ${formControlRequiredMarker}
 
   [part='field'] > lr-select,

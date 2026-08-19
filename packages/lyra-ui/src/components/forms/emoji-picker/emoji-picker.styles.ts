@@ -13,11 +13,10 @@ export const styles = css`
     --_lr-emoji-picker-item-radius-default: var(--lr-radius-xs);
     --_lr-emoji-picker-row-height-default: calc(max(var(--lr-icon-button-size), var(--lr-emoji-picker-item-size, var(--_lr-emoji-picker-item-size-default))) + var(--lr-space-l));
   }
-  /* An emoji cell is a square tap target in a dense grid, not a form-control row, so this is the
-     component's own ladder rather than the shared --lr-form-control-height one: the two agree from
-     m upwards, but the shared 2xs/xs/s steps (20/24/30px) would take a cell in a grid of hundreds
-     under a comfortable tap target. It still matches both spellings of every tier, the same way
-     internal/sizes.styles.ts does, so size="small" is honoured here too. */
+  /* A dense grid of square tap targets, not form-control rows, so this is the component's own
+     ladder, not the shared --lr-form-control-height: they agree from m up, but the shared 2xs/xs/s
+     steps (20/24/30px) would drop a cell under a comfortable tap target. Both spellings of every
+     tier match, as in internal/sizes.styles.ts, so size='small' is honoured. */
   :host([size='2xs']) {
     --_lr-emoji-picker-item-size-default: var(--lr-size-1-5rem);
     --_lr-emoji-picker-glyph-size-default: var(--lr-font-size-sm);
@@ -49,9 +48,8 @@ export const styles = css`
     color: var(--lr-color-text);
     font-size: var(--lr-font-size-md-sm);
   }
-  /* [part]:empty never matches -- the part always contains a literal <slot> child element
-     regardless of assigned content -- so real emptiness is tracked in JS (hasLabelSlot/
-     hasHintSlot/hasErrorSlot) and reflected via the hidden attribute instead. */
+  /* [part]:empty never matches -- the part always holds a literal <slot> child -- so emptiness is
+     tracked in JS (hasLabelSlot/hasHintSlot/hasErrorSlot) and reflected as the hidden attribute. */
   [part='form-control-label'][hidden],
   [part='hint'][hidden],
   [part='error'][hidden] {
@@ -75,11 +73,9 @@ export const styles = css`
     padding: var(--lr-space-s);
     background: var(--lr-color-surface);
   }
-  /* :host(:disabled), not :host([disabled]) -- this is a form-associated custom element
-     (FormAssociated mixin -> static formAssociated = true), so the UA computes its disabled
-     state (and therefore :disabled/:enabled matching) the same way it does for a native form
-     control: from its own disabled content attribute *or* an ancestor <fieldset disabled>'s
-     cascade. */
+  /* :host(:disabled), not :host([disabled]): as a form-associated element (FormAssociated mixin ->
+     static formAssociated = true), :disabled tracks its own disabled attribute or an ancestor
+     <fieldset disabled>'s cascade, exactly like a native control. */
   :host(:disabled) [part='base'] {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
@@ -100,9 +96,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* no-pressed-state: pressing a search field places a caret, it does not activate a target --
-     there is no "did my click register?" gap to fill, and the engaged state it leads to is already
-     drawn by the :focus-visible rule above. Native text inputs have no pressed treatment either. */
+  /* no-pressed-state: pressing a search field places a caret rather than activating a target, and
+     the engaged state it leads to is already drawn by :focus-visible above. Native text inputs
+     have no pressed treatment either. */
   [part='search']:hover:not(:disabled) {
     border-color: var(--lr-emoji-picker-search-hover-border-color, var(--lr-color-brand));
   }
@@ -121,12 +117,10 @@ export const styles = css`
   [part='grid'] {
     scrollbar-gutter: stable;
   }
-  /* Off-flow geometry probes (not parts -- never exposed to consumers). A custom property's
-     computed value is an unresolved token stream ('2.5rem', 'calc(2.5rem + 1rem)'), never a pixel
-     length, so the windowed layout resolves each geometry token by assigning it to one of these
-     boxes and reading that box's used inline size back. Absolutely positioned and hidden, so they
-     take part in layout (a box is what makes a used size exist) without painting or affecting the
-     grid. */
+  /* Off-flow geometry probes, not parts -- never exposed to consumers. A custom property computes
+     to an unresolved token stream ('2.5rem', 'calc(2.5rem + 1rem)'), never a pixel length, so the
+     windowed layout assigns each geometry token to one of these boxes and reads its used inline
+     size back. Hidden and absolute: a box is needed for a used size, but must not paint. */
   [data-probe='root'] {
     position: absolute;
     inset-block-start: 0;
@@ -177,10 +171,9 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
   }
   [part='emoji'] {
-    /* The item box and its glyph both scale with --lr-emoji-picker-item-size/-glyph-size (unlike
-       a small icon in a padded button, the glyph fills most of the box, so it has to track the
-       box or it clips/looks lost). Keep the complete interactive target at the shared icon-button
-       floor even when a consumer selects a smaller visual size. */
+    /* Box and glyph both scale with --lr-emoji-picker-item-size and -glyph-size: the glyph fills
+       most of the box, so it clips or looks lost if it does not track it. The interactive target
+       still holds the shared icon-button floor at any smaller visual size. */
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -195,9 +188,9 @@ export const styles = css`
     font-size: var(--lr-emoji-picker-glyph-size, var(--_lr-emoji-picker-glyph-size-default));
     cursor: pointer;
   }
-  /* State hooks are inline fallbacks rather than :host declarations, so an ancestor theme can
-     customize one state without being shadowed. The former active-bg hook remains a compatibility
-     fallback for hover and roving-active; committed selection and pointer press are independent. */
+  /* State hooks are inline fallbacks, not :host declarations, so an ancestor theme customizing one
+     state is not shadowed. The former active-bg hook stays a compatibility fallback for hover and
+     roving-active; committed selection and pointer press are independent. */
   [part='emoji']:hover:not(:disabled) {
     background: var(
       --lr-emoji-picker-hover-bg,
@@ -232,10 +225,9 @@ export const styles = css`
     outline-color: var(--lr-emoji-picker-pressed-outline-color, var(--lr-color-brand));
     outline-style: double;
   }
-  /* Negative offset (matches [part='textarea']:focus-visible in code-editor.styles.ts), not the
-     usual positive one -- the grid's own gap is only --lr-emoji-picker-gap-default (2px), the same
-     as --lr-focus-ring-offset, so a positive offset would let the ring bleed into the neighboring
-     cell instead of staying legible around the focused one. */
+  /* Negative offset, matching [part='textarea']:focus-visible in code-editor.styles.ts: the grid's
+     --lr-emoji-picker-gap-default (2px) equals --lr-focus-ring-offset, so a positive offset would
+     bleed the ring into the neighboring cell. */
   [part='emoji']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
@@ -247,9 +239,8 @@ export const styles = css`
     text-align: center;
     color: var(--lr-color-text-quiet);
   }
-  /* The load-error surface says something went wrong rather than "nothing matched", so it carries
-     the danger foreground the rest of the library uses for a failed operation -- the two states
-     are otherwise the same box in the same place, and would be indistinguishable at a glance. */
+  /* Load-error means something failed, not 'nothing matched', so it takes the library's danger
+     foreground -- the two states are otherwise the same box in the same place. */
   [part='load-error'] {
     color: var(--lr-color-danger);
   }
@@ -266,13 +257,18 @@ export const styles = css`
       outline: var(--lr-border-width-thin) dashed Highlight;
       outline-offset: calc(var(--lr-focus-ring-offset) * -1);
     }
-    [part='emoji'][data-active] {
-      outline: var(--lr-border-width-thin) dotted Highlight;
-    }
+    /* Same order as the base block above, same reason: [aria-selected='true'] and [data-active]
+       are both (0,2,0) and both declare an outline, so source order decides what a
+       selected-and-active emoji shows. It must be the active descendant, since selection also has
+       background and color to speak with; reversed, the roving marker vanished on the committed
+       selection. */
     [part='emoji'][aria-selected='true'] {
       color: HighlightText;
       background: Highlight;
       outline: var(--lr-border-width-medium) solid Highlight;
+    }
+    [part='emoji'][data-active] {
+      outline: var(--lr-border-width-thin) dotted Highlight;
     }
     [part='emoji']:active:not(:disabled) {
       color: HighlightText;

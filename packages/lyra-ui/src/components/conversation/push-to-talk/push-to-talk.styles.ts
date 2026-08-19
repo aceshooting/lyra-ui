@@ -36,15 +36,16 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  /* :where() zeroes the wrapped selectors' specificity contribution, leaving this at (0,1,0) --
-     matches lr-attachment-trigger's fixed convention, so a consumer's ::part(trigger):hover
-     override ((0,1,1)) still wins without needing !important. */
+  /* :where() leaves this at (0,1,0) so the pressed rule below -- same specificity, later in source
+     order -- still wins during the hold. It buys nothing against a consumer's own
+     ::part(trigger):hover: encapsulation context sorts before specificity, so an outer normal
+     declaration wins whatever this rule weighs. */
   :where([part='trigger']):hover:where(:not(:disabled)) {
     background: var(--lr-color-brand-quiet);
   }
-  /* Press-and-hold is this component's entire interaction, so the pressed fill is not decoration:
-     it is the "I am registering your hold" signal, and it appears the instant the pointer goes
-     down -- before the recording state and its pulse ring have anything to show. */
+  /* Press-and-hold is this component's entire interaction, so the pressed fill is the
+     hold-registered signal, not decoration; it appears the instant the pointer goes down, before
+     the recording state and its pulse ring have anything to show. */
   :where([part='trigger']):active:where(:not(:disabled)) {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
@@ -66,8 +67,8 @@ export const styles = css`
     position: absolute;
     inset: calc(-1 * var(--lr-size-4px));
     border-radius: 50%;
-    /* The aggregate recording color remains the shared fallback, while the ring can be retinted
-       independently from the trigger's border and foreground. */
+    /* The aggregate recording color stays the shared fallback; the ring can be retinted
+       independently of the trigger's border and foreground. */
     border: var(--lr-border-width-medium) solid
       var(
         --lr-push-to-talk-pulse-recording-border-color,

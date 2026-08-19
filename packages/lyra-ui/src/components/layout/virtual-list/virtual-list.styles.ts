@@ -4,41 +4,32 @@ export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
-    /* Consumer-tunable viewport height, same pattern as --lr-chart-height --
-       a virtualized list is meaningless without a bounded scroll extent, so
-       this ships a sane default rather than collapsing to 0 when a caller
-       forgets to size the host. */
+    /* Consumer-tunable viewport height, same pattern as --lr-chart-height -- a virtualized list
+       needs a bounded scroll extent, not a collapse to 0. */
     --_lr-virtual-list-height: var(--lr-size-24rem);
   }
   [part="base"] {
     position: relative;
     min-inline-size: 0;
     block-size: var(--lr-virtual-list-height, var(--_lr-virtual-list-height));
-    /* Ordinary row content inherits overflow-wrap: anywhere below, while
-       consumer content that explicitly opts out with white-space: nowrap
-       remains reachable through this scrollport. */
+    /* Rows inherit overflow-wrap: anywhere below; content opting out with white-space: nowrap
+       stays reachable through this scrollport. */
     overflow-x: auto;
     overflow-y: auto;
-    /* A fast fling shouldn't also scroll the page behind this list once it
-       hits either end. */
+    /* A fast fling must not scroll the page behind this list at either end. */
     overscroll-behavior: contain;
   }
   [part="base"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    /* Negative (inward) so the ring isn't clipped by this element's own
-       overflow:auto -- an outward ring (every other component's convention)
-       would otherwise be cut off along the scrolling edges. */
+    /* Inward: the outward ring every other component uses is clipped along the scrolling edges by
+       this element's own overflow:auto. */
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
-  /* [part="base"] unconditionally carries tabindex="0" (a real, always-focusable target, not a
-     decorative element) -- this pairs a subtler preview of the same outline treatment for mouse
-     users, who otherwise get no indication the scroll region is interactive/keyboard-navigable at
-     all. Deliberately a plain border color rather than the focus-ring's own brand color, so hover
-     still reads as a preview and the eventual :focus-visible ring stays visually distinct.
-     Negative (inward) offset for the same reason as :focus-visible above. */
-  /* no-pressed-state: this is the scroll port, not a target -- pressing it activates nothing, and
-     :active matches the ancestors of whatever was pressed, so clicking any row (or a row action
-     inside one) would flash this outline around the entire list. */
+  /* [part="base"] always carries tabindex="0", so mouse users need a hint it is interactive. A plain
+     border color, not the focus ring's brand color, keeps the ring distinct; inward offset for the
+     reason above. */
+  /* no-pressed-state: the scroll port activates nothing, and :active matches the ancestors of
+     whatever was pressed, so clicking any row would flash this outline around the entire list. */
   [part="base"]:hover {
     outline-width: var(
       --lr-virtual-list-hover-outline-width,
@@ -66,40 +57,30 @@ export const styles = css`
     min-inline-size: 0;
     inline-size: 100%;
     box-sizing: border-box;
-    /* renderItem content is caller supplied. Default to a real wrapping
-       opportunity so a long unbroken value neither widens the list nor stays
-       at the fallback auto-row estimate. A consumer can still set
-       white-space: nowrap on its own content when horizontal scrolling is
-       the intended interaction. */
+    /* Caller-supplied renderItem content: a wrapping opportunity keeps a long unbroken value from
+       widening the list or staying at the fallback auto-row estimate. A consumer opts out with
+       white-space: nowrap for horizontal scrolling. */
     overflow-wrap: anywhere;
-    /* Every row's position updates via this transform on every scroll-driven
-       re-render -- hinting the compositor avoids a full repaint per frame. */
+    /* Row positions update via this transform on every scroll-driven re-render -- the compositor
+       hint avoids a full repaint per frame. */
     will-change: transform;
   }
-  /* The will-change: transform above makes every row its own stacking context, and rows otherwise
-     carry no z-index -- so they paint in DOM order and each row paints over the previous one.
-     Anything a row renders that overflows its own box (a popup from an lr-menu in a row action, a
-     tooltip, an outward focus ring) is therefore painted *underneath* the following rows, no matter
-     how high its own z-index is: that z-index only orders siblings inside the row's own context.
-     The last row always looks correct, which is why a small fixture never catches it.
+  /* will-change: transform makes each row its own stacking context and rows carry no z-index, so
+     they paint in DOM order: anything overflowing a row (an lr-menu popup, a tooltip, an outward
+     focus ring) paints under the following rows however high its own z-index, which only orders
+     siblings within that row.
 
-     :focus-within lifts the row while something inside it holds focus. An open lr-dropdown is included
-     explicitly as well: opening a menu can trigger a virtual measurement/render pass after the
-     menu moves focus, and that pass can transiently drop focus to <body> while the fixed popup
-     remains open. Keying the layer to the popup's own durable open state prevents that valid
-     imperative-open path from falling back under later rows.
-
-     The value deliberately matches [part='group'] below rather than exceeding it, so the two land
-     on the same layer and DOM order decides: groups render before the rows, so an active row wins
-     while the group header remains non-interactive decoration. */
+     lr-dropdown[open] joins :focus-within because a measurement/render pass after the menu moves
+     focus can transiently drop focus to <body> with the fixed popup still open. The value matches
+     [part='group'] below rather than exceeding it, so both share a layer and DOM order decides:
+     groups render first, so an active row wins. */
   [part="row"]:where(:focus-within, :has(lr-dropdown[open])) {
     z-index: var(--lr-layer-content);
   }
-  /* lr-thread-list's renderItem callback is rendered inside this shadow root, so descendant
-     content such as a rich excerpt's <mark> cannot be reached by the thread-list stylesheet or
-     by a consumer rule following ::part(row-excerpt). Keep the selector pinned to the callback's
-     dedicated part so marks in other virtualized row hooks retain their own semantics. The public
-     properties inherit from lr-thread-list through this host and remain component-scoped. */
+  /* lr-thread-list's renderItem output lands in this shadow root, so an excerpt's <mark> is
+     unreachable from the thread-list stylesheet or a rule following ::part(row-excerpt). Pinned to
+     that callback's own part so other virtualized row hooks keep their semantics; the public
+     properties inherit from lr-thread-list through this host and stay component-scoped. */
   [part="row"] [part~="row-excerpt"] mark {
     background: var(
       --lr-thread-list-excerpt-highlight-background,
@@ -124,31 +105,25 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
     pointer-events: none;
   }
-  /* The pinned copy of the group the viewport is currently inside. Native position: sticky cannot
-     be used on the group markers or rows themselves -- they are absolutely positioned and
-     transform-offset by the windowing math, which makes sticky structurally inert -- so this is a
-     separate in-flow layer.
-
-     It lives inside [part='spacer'] rather than beside it: the spacer's own height is set explicitly
-     from the offsets array and every row inside it is absolutely positioned, so an in-flow child
-     here contributes nothing to any other element's position. An in-flow sibling of the spacer would
-     instead consume real flow height at the top of the scroll container and push every row down by
-     its own height. Sticking still works because the scrollport is [part='base'] and the spacer's
-     box spans the entire scrollable extent.
-
-     z-index matches [part='group'] and a focused [part='row'] rather than exceeding it: this layer
-     is rendered after both, so DOM order already paints it on top. */
+  /* Pinned copy of the group the viewport is inside. position: sticky is inert on the group markers
+     and rows -- they are absolutely positioned and transform-offset by the windowing math -- so
+     this is a separate in-flow layer. Inside [part='spacer'], not beside it: the spacer's height
+     comes from the offsets array and its rows are absolutely positioned, so an in-flow child moves
+     nothing, while an in-flow sibling would consume flow height at the top of the scroll container
+     and push every row down. Sticking works because the scrollport is [part='base'] and the spacer
+     spans the whole scrollable extent. z-index matches [part='group'] and a focused [part='row']
+     rather than exceeding it: this renders after both, so DOM order already paints it on top. */
   [part="sticky-group"] {
     position: sticky;
     inset-block-start: 0;
     z-index: var(--lr-layer-content);
-    /* This is an inert, aria-hidden visual copy of a real row. Pointer input passes through so the
-       copy never creates a mouse-only action while its semantic/keyboard owner is virtualized. */
+    /* An inert, aria-hidden copy of a real row: pointer input passes through so it never creates a
+       mouse-only action while its semantic/keyboard owner is virtualized. */
     pointer-events: none;
   }
-  /* Scrolled above the first group there is nothing to pin. The band stays in the DOM anyway so its
-     height remains measurable (the scroll inset is sized from it), but it must show nothing:
-     visibility, not display, because a display: none box has no height to measure. */
+  /* Nothing to pin above the first group. The band stays in the DOM so its height stays measurable
+     (the scroll inset is sized from it) -- visibility, not display, since a display: none box has
+     no height to measure. */
   [part="sticky-group"][data-inactive] {
     visibility: hidden;
   }

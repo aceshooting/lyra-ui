@@ -27,13 +27,12 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
     text-align: end;
   }
-  /* Every header VALUE holds caller-supplied text that is routinely one unbreakable token --
-     an email address has no spaces, and neither does a long RFC-822 date -- so each needs
-     overflow-wrap: anywhere to shrink inside a narrow host. Without it the grid's min-content
-     floor is the widest address, which pushes [part='base'] past its own allocation no matter
-     how narrow the host gets (the labels column is auto-sized, the value column is
-     minmax(0, 1fr), so only the value's own wrapping can relieve it). Applied to the values
-     only -- the *-label parts are short localized words in the auto-sized column. */
+  /* Every header VALUE holds caller-supplied text that is routinely one unbreakable token -- an
+     email address has no spaces, nor a long RFC-822 date -- so each needs overflow-wrap: anywhere
+     to shrink inside a narrow host. Without it the grid's min-content floor is the widest address,
+     pushing [part='base'] past its allocation however narrow the host gets: the labels column is
+     auto-sized and the value column minmax(0, 1fr), so only the value's wrapping relieves it.
+     Values only -- the *-label parts are short localized words in the auto-sized column. */
   [part="from"],
   [part="to"],
   [part="date"] {

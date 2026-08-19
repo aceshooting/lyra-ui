@@ -1,4 +1,6 @@
-import { fixture, expect, html, oneEvent } from "@open-wc/testing";
+import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
+import { sendKeys } from "@web/test-runner-commands";
+import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import "./embedding-explorer.js";
 import type {
   EmbeddingPoint,
@@ -504,5 +506,143 @@ describe("lr-embedding-explorer", () => {
       new MouseEvent('click', { bubbles: true, composed: true })
     );
     expect((await selected).detail).to.deep.equal({ point: first });
+  });
+});
+
+// Regression: [part='point'][data-selected='true'] .point-marker is (0,3,0), exactly like the
+// generic :hover/:focus-visible and :active marker rules above it, and sits last -- so on a
+// SELECTED point it won both contests. Two consequences, one of them an accessibility defect:
+// the press feedback was dead, and because [part='point'] and its :hover/:focus-visible rules all
+// declare `outline: none`, the marker's stroke IS the entire focus indicator, which made a focused
+// selected point pixel-for-pixel identical to a resting selected one. Focus arrives by real Tab:
+// Firefox declines :focus-visible for a programmatic focus with no keyboard interaction behind it.
+describe("selected point pointer/focus feedback", () => {
+  async function selectedFixture(): Promise<{
+    el: LyraEmbeddingExplorer;
+    before: HTMLElement;
+  }> {
+    const wrapper = (await fixture(html`
+      <div>
+        <button type="button">before</button>
+        <lr-embedding-explorer
+          selected-point-id="a"
+          .points=${points}
+        ></lr-embedding-explorer>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector(
+      "lr-embedding-explorer"
+    ) as LyraEmbeddingExplorer;
+    await el.updateComplete;
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve))
+    );
+    return { el, before: wrapper.querySelector("button") as HTMLElement };
+  }
+
+  const markerOf = (el: LyraEmbeddingExplorer, index: number): SVGElement =>
+    el.shadowRoot!.querySelector(
+      `[part="point"][data-index="${index}"] .point-marker`
+    ) as SVGElement;
+
+  it("thickens a SELECTED point's ring once it is keyboard-focused", async () => {
+    const { el, before } = await selectedFixture();
+    const point = el.shadowRoot!.querySelector(
+      '[part="point"][data-index="0"]'
+    ) as SVGGElement;
+    expect(
+      point.getAttribute("data-selected"),
+      "sanity: point 0 must be the selected one"
+    ).to.equal("true");
+    const marker = markerOf(el, 0);
+    const resting = getComputedStyle(marker).strokeWidth;
+
+    before.focus();
+    let guard = 0;
+    while (guard++ < 8 && el.shadowRoot!.activeElement !== point) {
+      await sendKeys({ press: "Tab" });
+    }
+    expect(
+      el.shadowRoot!.activeElement === point,
+      "Tab must reach the selected point"
+    ).to.equal(true);
+    expect(
+      getComputedStyle(marker).strokeWidth,
+      "a focused selected point must not look identical to a resting selected one"
+    ).to.not.equal(resting);
+    // The selection colour survives -- focus escalates the width channel, it does not repaint the
+    // ring in some other colour and drop the "this one is selected" signal.
+    expect(getComputedStyle(marker).stroke).to.equal(
+      getComputedStyle(markerOf(el, 0)).stroke
+    );
+  });
+
+  it("thickens a SELECTED point's ring further while it is held", async () => {
+    const { el } = await selectedFixture();
+    const marker = markerOf(el, 0);
+    const resting = getComputedStyle(marker).strokeWidth;
+    const rect = marker.getBoundingClientRect();
+    const position: [number, number] = [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
+    try {
+      await sendMouse({ type: "move", position });
+      await waitUntil(
+        () => getComputedStyle(marker).strokeWidth !== resting,
+        "a hovered selected point kept its resting ring"
+      );
+      const hovered = getComputedStyle(marker).strokeWidth;
+
+      await sendMouse({ type: "down" });
+      await waitUntil(
+        () => getComputedStyle(marker).strokeWidth !== hovered,
+        "a held selected point produced no press feedback at all"
+      );
+    } finally {
+      await sendMouse({ type: "up" });
+      await resetMouse();
+    }
+  });
+
+  // Contrast case: the unselected escalation is untouched, so the fix cannot be "every marker is
+  // thick now".
+  it("leaves an UNSELECTED point's own hover/press escalation unchanged", async () => {
+    const { el } = await selectedFixture();
+    const marker = markerOf(el, 1);
+    expect(
+      (
+        el.shadowRoot!.querySelector(
+          '[part="point"][data-index="1"]'
+        ) as SVGGElement
+      ).getAttribute("data-selected"),
+      "sanity: point 1 must be unselected"
+    ).to.equal("false");
+    const resting = getComputedStyle(marker).strokeWidth;
+    const rect = marker.getBoundingClientRect();
+    const position: [number, number] = [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
+    try {
+      await sendMouse({ type: "move", position });
+      await waitUntil(
+        () => getComputedStyle(marker).strokeWidth !== resting,
+        "a hovered unselected point drew no ring"
+      );
+      const hovered = getComputedStyle(marker).strokeWidth;
+      // The unselected hovered ring is the medium step -- the same width a SELECTED point carries
+      // at rest, which is precisely why the selected point needed an escalation of its own.
+      expect(getComputedStyle(markerOf(el, 0)).strokeWidth).to.equal(hovered);
+
+      await sendMouse({ type: "down" });
+      await waitUntil(
+        () => getComputedStyle(marker).strokeWidth !== hovered,
+        "a held unselected point produced no press feedback"
+      );
+    } finally {
+      await sendMouse({ type: "up" });
+      await resetMouse();
+    }
   });
 });

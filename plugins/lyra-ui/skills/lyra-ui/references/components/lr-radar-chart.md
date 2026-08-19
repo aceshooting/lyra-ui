@@ -67,7 +67,7 @@ together. The mirrored hooks are `--border-color-1`,
 `zoom` is set, and `chartjs-plugin-datalabels` only once `data-labels`/`stack-totals` is set.
 
 ```html
-<lr-bar-chart legend></lr-bar-chart>
+<lr-bar-chart></lr-bar-chart>
 <lr-pie-chart></lr-pie-chart>
 <script>
   document.querySelector('lr-bar-chart').labels = ['A', 'B'];

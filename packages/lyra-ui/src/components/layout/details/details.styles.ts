@@ -5,22 +5,21 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
     max-inline-size: 100%;
-    /* The disclosure's density knobs, both pointed at the shared size ladder so the tiers live in
-       one place. Spacing reads the ladder's INLINE padding knob: a stacked panel's block rhythm is
-       generous like a control's inline padding, while the ladder's own block padding exists to fit
-       text inside a fixed control height and would collapse the summary row. The 'm' tier resolves
-       to the same --lr-space-m this panel always used, so an un-sized disclosure is unchanged. */
+    /* The disclosure's density knobs, both on the shared size ladder so the tiers live in one
+       place. Spacing reads the ladder's INLINE padding knob: a stacked panel's block rhythm is as
+       generous as a control's inline padding, while the ladder's block padding exists to fit text
+       in a fixed control height and would collapse the summary row. The 'm' tier is the
+       --lr-space-m this panel always used, so an un-sized disclosure is unchanged. */
     --_lr-details-font-size: var(--lr-form-control-font-size);
     --_lr-details-spacing: var(--lr-form-control-padding-inline);
   }
   [part~="base"] {
-    /* flex-wrap, not grid: the header-actions part must render as a peer of the summary row
-       instead of nested inside it (nesting an interactive control inside <summary> would make
-       every press on it also toggle the panel), while [part="content"] still needs its own full
-       width on the row below. A CSS Grid column spanned by both a "row 1" item and content's own
-       "row 2" span couples their track sizing -- content's long-text max-content demand starves
-       the row-1 columns. flex-basis: 100% on content instead forces its own wrapped line with no
-       such coupling: line 1 (summary + header-actions) sizes independently of line 2 (content). */
+    /* flex-wrap, not grid: header-actions must be a peer of the summary row, not nested inside it
+       -- an interactive control inside <summary> would make every press on it toggle the panel --
+       while [part="content"] still needs full width on the row below. A grid column spanned by
+       both a "row 1" item and content's "row 2" couples their track sizing, and content's
+       long-text max-content demand starves the row-1 columns. flex-basis: 100% gives content its
+       own wrapped line, so line 1 sizes independently of line 2. */
     display: flex;
     flex-wrap: wrap;
     border: var(--lr-border-width-thin) solid

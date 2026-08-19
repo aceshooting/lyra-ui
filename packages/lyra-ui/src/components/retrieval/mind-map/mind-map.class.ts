@@ -10,6 +10,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { resolveCssLength } from '../../../internal/css-length.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
   acquireAnnouncementSink,
@@ -253,34 +254,18 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
   }
 
   /** Resolves `--lr-mind-map-ring-gap` to a real used pixel value for whatever unit it carries --
-   *  a live root/host font-size read for rem/em, matching `lr-table`'s own `minimumResizeWidth()`
-   *  fix for the identical problem (a hardcoded `* 16` gets ring spacing wrong on any page whose
-   *  root font-size isn't the browser default 16px). */
+   *  a live root/host font-size read for rem/em (a hardcoded `* 16` gets ring spacing wrong on any
+   *  page whose root font-size isn't the browser default 16px), delegated to the shared
+   *  `resolveCssLength()` so every unit-resolving component agrees on what a length means. A value
+   *  in a unit that cannot be resolved to a used pixel length here (`ch`, `pt`, `calc()`, a bare
+   *  `%` with no base) falls back to the default gap rather than being read as raw pixels. */
   private ringGapPx(): number {
     const ownerWindow = this.ownerDocument.defaultView;
     const hostStyle = ownerWindow?.getComputedStyle(this) ?? this.style;
     const raw =
       hostStyle.getPropertyValue('--lr-mind-map-ring-gap').trim() ||
       hostStyle.getPropertyValue('--_lr-mind-map-ring-gap').trim();
-    if (!raw) return DEFAULT_RING_GAP_PX;
-    const value = parseFloat(raw);
-    if (!Number.isFinite(value)) return DEFAULT_RING_GAP_PX;
-    if (raw.endsWith('rem')) {
-      const rootStyle =
-        ownerWindow?.getComputedStyle(this.ownerDocument.documentElement) ??
-        this.ownerDocument.documentElement.style;
-      const rootFontSize = Number.parseFloat(rootStyle.fontSize);
-      return Number.isFinite(rootFontSize)
-        ? value * rootFontSize
-        : DEFAULT_RING_GAP_PX;
-    }
-    if (raw.endsWith('em')) {
-      const hostFontSize = Number.parseFloat(hostStyle.fontSize);
-      return Number.isFinite(hostFontSize)
-        ? value * hostFontSize
-        : DEFAULT_RING_GAP_PX;
-    }
-    return value;
+    return resolveCssLength(raw, { host: this }) ?? DEFAULT_RING_GAP_PX;
   }
 
   private relayout(): void {

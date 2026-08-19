@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { isNonBlankIdentity } from '../retrieval-identity.js';
 import { place } from '../../../internal/positioner.js';
 import { nextId } from '../../../internal/a11y.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { styles } from './entity-chip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -17,14 +18,6 @@ export interface LyraEntityChipEventMap {
 }
 
 const HIDE_DELAY_MS = 200;
-
-/** A node counts as real preview content if it's an element not assigned to some other named
- *  slot, or non-whitespace text -- mirrors `lr-citation-badge`'s identical `isRealPreviewNode`. */
-function isRealPreviewNode(n: Node): boolean {
-  return n.nodeType === Node.ELEMENT_NODE
-    ? !(n as Element).hasAttribute('slot')
-    : (n.textContent ?? '').trim().length > 0;
-}
 
 /**
  * `<lr-entity-chip>` — an inline `@entity` mention for agent prose: flow content,
@@ -73,23 +66,33 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
    *  type id. */
   @property({ attribute: 'type-label' }) typeLabel?: string;
 
-  @state() private hasPreviewSlot = false;
   @state() private popoverOpen = false;
 
   @query('[part="base"]') private buttonEl?: HTMLButtonElement;
   @query('[part="popover"]') private popoverEl?: HTMLElement;
 
   private readonly popoverId = nextId('entity-chip-popover');
+  /** The default slot's preview content is often bare text (no wrapping element at all), so an
+   *  element-only check never counts it, and a `[part]` always contains a literal `<slot>` child
+   *  regardless of assignment, so `:empty` never matches either. The shared controller answers the
+   *  same "does this slot carry real consumer content" question every other presence-driven
+   *  component asks, seeded before the first render and kept live afterwards. */
+  private readonly slotPresence = new SlotPresenceController(this);
   private cleanupPositioner?: () => void;
   private hideTimer?: ReturnType<typeof setTimeout>;
   private hovering = false;
   private focused = false;
 
+  private get hasPreviewSlot(): boolean {
+    return this.slotPresence.has();
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (!this.hasUpdated) {
-      this.hasPreviewSlot = Array.from(this.childNodes).some(isRealPreviewNode);
-    }
+    // The slot can be emptied out from under an already-open popover (e.g. a consumer clearing
+    // preview content asynchronously) -- nothing left to show, so don't leave an empty panel
+    // floating open.
+    if (this.popoverOpen && !this.hasPreviewSlot) this.hidePreviewNow();
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -133,13 +136,6 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
       type: typeText,
     });
   }
-
-  private onSlotChange = (e: Event): void => {
-    this.hasPreviewSlot = (e.target as HTMLSlotElement)
-      .assignedNodes({ flatten: true })
-      .some(isRealPreviewNode);
-    if (!this.hasPreviewSlot) this.hidePreviewNow();
-  };
 
   private showPreview(): void {
     if (!this.hasPreviewSlot) return;
@@ -236,7 +232,7 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
           inert
           ?hidden=${!this.popoverOpen}
         >
-          <slot @slotchange=${this.onSlotChange}></slot>
+          <slot></slot>
         </div>
       </span>
     `;

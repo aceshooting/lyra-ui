@@ -357,6 +357,10 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     return Math.max(0, messages.length - MAX_RENDERED_MESSAGES);
   }
 
+  /** Bound to every named slot whose assignment `render()` reads back through `hasSlotted()` --
+   *  `messages` (which decides how `safeUnreadStartIndex` is projected), `details`, and `composer`.
+   *  A slot assignment change alone schedules no Lit update, so without this the branch is only
+   *  ever evaluated at mount. */
   private onNamedSlotChange = (): void => {
     this.requestUpdate();
   };
@@ -448,7 +452,9 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
               .unreadStartIndex=${this.safeUnreadStartIndex}
               aria-label=${this.localize('agentWorkspaceConversation')}
             >
-              <slot name="messages">${this.renderMessages()}</slot>
+              <slot name="messages" @slotchange=${this.onNamedSlotChange}
+                >${this.renderMessages()}</slot
+              >
             </lr-chat-viewport>
           </section>
           <aside

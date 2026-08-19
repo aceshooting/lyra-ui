@@ -1394,3 +1394,19 @@ describe('barred from constraint validation', () => {
     expect(el.checkValidity(), 'checkValidity() inside a disabled fieldset').to.be.true;
   });
 });
+
+describe('explicitly empty host aria-label', () => {
+  it('keeps the trigger explicitly unnamed instead of substituting the localized fallback', async () => {
+    const explicit = (await fixture(
+      html`<lr-locale-picker aria-label=""></lr-locale-picker>`,
+    )) as LyraLocalePicker;
+    await explicit.updateComplete;
+    const explicitTrigger = trigger(explicit);
+    expect(explicitTrigger.hasAttribute('aria-label')).to.equal(true);
+    expect(explicitTrigger.getAttribute('aria-label')).to.equal('');
+
+    const omitted = (await fixture(html`<lr-locale-picker></lr-locale-picker>`)) as LyraLocalePicker;
+    await omitted.updateComplete;
+    expect(trigger(omitted).getAttribute('aria-label')).to.equal('Language');
+  });
+});

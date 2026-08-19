@@ -1,4 +1,5 @@
 import { fixture, expect, html } from "@open-wc/testing";
+import { sendKeys } from "@web/test-runner-commands";
 import { LitElement, type PropertyValues } from "lit";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { tag } from "../../../internal/prefix.js";
@@ -3465,5 +3466,98 @@ describe("defensive edge cases", () => {
     await el.updateComplete;
     expect(el.layout).to.have.length(1);
     expect(el.layout[0]!.x).to.equal(4);
+  });
+});
+
+// Regression: [part="cell"][data-collision] and [part="cell"]:focus-visible are both (0,2,0) and
+// both declare `outline`/`outline-offset`, and the collision rule is written later -- so a focused
+// cell that entered the collision preview lost its focus indicator outright. The danger outline
+// winning the OUTLINE channel is the right call (it is the more urgent signal, and it is the only
+// channel that state has), so the fix does not reorder them; it gives focus a second channel
+// instead. Collision is only ever set during a drag/resize preview, which is exactly when a
+// keyboard user most needs to know which tile they are holding.
+describe("collision preview must not erase the focus indicator", () => {
+  async function focusedGrid(): Promise<{
+    el: LyraDashboardGrid;
+    cell: HTMLElement;
+    other: HTMLElement;
+  }> {
+    const wrapper = (await fixture(html`
+      <div style="--lr-dashboard-grid-collision-outline-color: rgb(9, 9, 9)">
+        <button type="button">before</button>
+        <lr-dashboard-grid cells-draggable></lr-dashboard-grid>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector(
+      "lr-dashboard-grid"
+    ) as LyraDashboardGrid;
+    el.layout = twoCells();
+    await el.updateComplete;
+    const cells = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]');
+    const cell = cells[0]!;
+    (wrapper.querySelector("button") as HTMLElement).focus();
+    let guard = 0;
+    while (guard++ < 8 && el.shadowRoot!.activeElement !== cell) {
+      await sendKeys({ press: "Tab" });
+    }
+    expect(
+      el.shadowRoot!.activeElement === cell,
+      "Tab must reach the first cell"
+    ).to.equal(true);
+    return { el, cell, other: cells[1]! };
+  }
+
+  it("keeps the danger outline while a colliding cell is focused", async () => {
+    const { cell } = await focusedGrid();
+    const focusRing = getComputedStyle(cell).outlineColor;
+    expect(focusRing, "sanity: a focused cell must draw a ring").to.not.equal(
+      "rgb(9, 9, 9)"
+    );
+    cell.setAttribute("data-collision", "");
+    expect(
+      getComputedStyle(cell).outlineColor,
+      "the collision outline is the more urgent signal and keeps the outline channel"
+    ).to.equal("rgb(9, 9, 9)");
+  });
+
+  it("still renders a focus indicator on a colliding FOCUSED cell, on a second channel", async () => {
+    const { cell, other } = await focusedGrid();
+    const focusRing = getComputedStyle(cell).outlineColor;
+    expect(
+      getComputedStyle(cell).boxShadow,
+      "sanity: a plain focused cell needs no second channel"
+    ).to.equal("none");
+
+    cell.setAttribute("data-collision", "");
+    const shadow = getComputedStyle(cell).boxShadow;
+    expect(
+      shadow,
+      "a focused colliding cell must still say it is focused somehow"
+    ).to.not.equal("none");
+    expect(
+      shadow.includes(focusRing),
+      `expected the focus ring colour ${focusRing} in ${shadow}`
+    ).to.equal(true);
+
+    // ...and it is the FOCUS that draws it, not the collision: an unfocused colliding cell stays
+    // exactly as it was.
+    other.setAttribute("data-collision", "");
+    expect(getComputedStyle(other).boxShadow).to.equal("none");
+    expect(getComputedStyle(other).outlineColor).to.equal("rgb(9, 9, 9)");
+  });
+
+  it("preserves the drag/resize lift shadow underneath that focus ring", async () => {
+    const { cell } = await focusedGrid();
+    cell.setAttribute("data-dragging", "");
+    const lift = getComputedStyle(cell).boxShadow;
+    expect(lift, "sanity: a dragged cell rides on the overlay shadow").to.not.equal(
+      "none"
+    );
+    cell.setAttribute("data-collision", "");
+    const combined = getComputedStyle(cell).boxShadow;
+    expect(
+      combined.includes(lift),
+      `expected the lift shadow ${lift} to survive inside ${combined}`
+    ).to.equal(true);
   });
 });

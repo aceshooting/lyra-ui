@@ -4,20 +4,17 @@ export const styles = css`
   :host {
     display: inline-flex;
     max-inline-size: 100%;
-    /* Per-status accent -- one custom property swapped by the :host([status])
-       rules below rather than repeating background/border per part per
-       status. Mirrors lr-tool-call-chip's identical
-       --lr-tool-call-chip-accent/-bg/-border trio, so a chip's tone
-       vocabulary reads the same everywhere in the library. Defaults to the
-       'pending' tone so an unset/unknown status still reads as neutral
-       instead of unstyled. */
+    /* Per-status accent -- one custom property swapped by the :host([status]) rules below rather
+       than repeating background/border per part per status. Mirrors lr-tool-call-chip's identical
+       --lr-tool-call-chip-accent/-bg/-border trio, so a chip's tone vocabulary reads the same
+       library-wide. Defaults to the 'pending' tone so an unset or unknown status reads neutral,
+       not unstyled. */
     --_lr-attachment-chip-accent: var(--lr-color-text-quiet);
     --_lr-attachment-chip-bg: var(--lr-color-surface);
     --_lr-attachment-chip-border: var(--lr-color-border);
-    /* Compact-mode thumbnail size -- a dedicated token rather than reusing
-       --lr-icon-button-size (the one token in this library with no
-       --lr-theme-* fallback chain), so a consumer can retheme just the compact thumbnail
-       independent of every other icon-button-sized control. */
+    /* Compact-mode thumbnail size -- a dedicated token rather than --lr-icon-button-size (the one
+       token in this library with no --lr-theme-* fallback chain), so a consumer can retheme just
+       the compact thumbnail independent of every other icon-button-sized control. */
     --_lr-attachment-chip-compact-thumbnail-size: var(--lr-size-1-75rem);
     --_lr-attachment-chip-compact-font-size: var(--lr-font-size-xs);
     --_lr-attachment-chip-compact-gap: var(--lr-size-0-25rem);
@@ -35,8 +32,7 @@ export const styles = css`
     inline-size: var(--lr-attachment-chip-compact-thumbnail-size, var(--_lr-attachment-chip-compact-thumbnail-size));
     block-size: var(--lr-attachment-chip-compact-thumbnail-size, var(--_lr-attachment-chip-compact-thumbnail-size));
   }
-  /* The action buttons remain at the shared hit-area floor in compact mode, even though the
-     thumbnail itself is smaller. */
+  /* Action buttons keep the shared hit-area floor in compact mode, though the thumbnail shrinks. */
   :host([compact]) [part='retry-button'],
   :host([compact]) [part='preview-button'],
   :host([compact]) [part='remove-button'] {
@@ -57,8 +53,8 @@ export const styles = css`
     --_lr-attachment-chip-bg: var(--lr-color-danger-quiet);
     --_lr-attachment-chip-border: transparent;
   }
-  /* Optional neutral-positive tint for a finished upload -- subtler than
-     'uploading'/'error' since there's nothing left for the user to act on. */
+  /* Optional neutral-positive tint for a finished upload -- subtler than 'uploading'/'error',
+     since nothing is left for the user to act on. */
   :host([status='success']) {
     --_lr-attachment-chip-accent: var(--lr-color-success);
     --_lr-attachment-chip-bg: var(--lr-color-success-quiet);
@@ -88,8 +84,8 @@ export const styles = css`
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    /* Reuses the shared icon-button box size as a ready-made "small square
-       glyph/image slot" token rather than inventing a new one-off dimension. */
+    /* Reuses the shared icon-button box size as a ready-made "small square glyph/image slot"
+       token rather than a new one-off dimension. */
     inline-size: var(--lr-icon-button-size);
     block-size: var(--lr-icon-button-size);
     overflow: hidden;
@@ -122,11 +118,9 @@ export const styles = css`
     color: var(--lr-color-text);
   }
   [part='size'] {
-    /* Full-strength text, not --lr-color-text-quiet -- this sits on top of
-       the per-status *-quiet tint backgrounds above (e.g. danger-quiet), and
-       text-quiet's gray fails WCAG AA contrast against several of those
-       tints even though it comfortably passes against the plain surface
-       background used by the resting state. Same fix, same rationale, as
+    /* Full-strength text, not --lr-color-text-quiet -- this sits on the per-status *-quiet tint
+       backgrounds above (e.g. danger-quiet), where text-quiet's gray fails WCAG AA against several
+       of them even though it passes against the plain resting surface. Same fix as
        lr-tool-call-chip's identical [part='duration']/[part='category']. */
     color: var(--lr-color-text);
     font-variant-numeric: tabular-nums;
@@ -169,11 +163,10 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    /* Full --lr-icon-button-size floor (not the min()-capped --lr-size-1-75rem
-       compromise some inline/dense controls use elsewhere) -- an attachment chip is
-       wide enough for its action buttons to meet the same tappable-size floor as a
-       standalone icon button, matching [part='thumbnail'] above, which already sizes
-       to this same token. */
+    /* Full --lr-icon-button-size floor, not the min()-capped --lr-size-1-75rem compromise some
+       inline/dense controls use -- an attachment chip is wide enough for its action buttons to
+       meet a standalone icon button's tappable floor, matching [part='thumbnail'] above, which
+       already sizes to this token. */
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     padding: 0;
@@ -198,9 +191,9 @@ export const styles = css`
   :where([part='remove-button']):hover {
     background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
   }
-  /* Pressed is the same tint carried further -- --lr-color-mix-active (22%) against the hover
-     rule's 8%, mixed from the buttons' own transparent fill, so the step is plainly visible while a
-     theme can still flatten or exaggerate every pressed state in the library from one knob. */
+  /* Pressed carries the same tint further: --lr-color-mix-active (22%) against the hover rule's
+     8%, mixed from the buttons' own transparent fill, so the step is plainly visible while one
+     theme knob still flattens or exaggerates every pressed state in the library. */
   :where([part='retry-button']):active,
   :where([part='preview-button']):active,
   :where([part='remove-button']):active {

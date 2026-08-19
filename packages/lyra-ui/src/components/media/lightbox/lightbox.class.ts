@@ -725,8 +725,6 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
             .accessibleLabel=${positionText || null}
             @focus=${(event: Event) => event.stopPropagation()}
             @blur=${(event: Event) => event.stopPropagation()}
-            @lr-focus=${(event: Event) => event.stopPropagation()}
-            @lr-blur=${(event: Event) => event.stopPropagation()}
           ></lr-pan-zoom>
           ${count > 1
             ? html`

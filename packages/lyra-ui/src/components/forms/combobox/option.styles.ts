@@ -27,7 +27,25 @@ export const styles = css`
     background: var(--lr-option-hover-bg, var(--lr-color-brand-quiet));
   }
 
-  [part~='base']:active {
+  /* Same shape as the current-qualified :active arm below, same reason: the plain hover rule above
+     and :host(:state(current)) [part~='base'] are both (0,3,0), and the later one swallowed hover
+     on the current option -- the row a roving-tabindex listbox leaves under the pointer. These
+     arms are (0,4,0) so they out-rank it, and precede the :active block so a press still beats
+     hover. Invisible with the default tokens (both fall back to --lr-color-brand-quiet), visible
+     once a consumer retints --lr-option-hover-bg alone. */
+  :host(:state(current):state(hover)) [part~='base'],
+  :host(:state(current)) [part~='base']:hover {
+    background: var(--lr-option-hover-bg, var(--lr-color-brand-quiet));
+  }
+
+  /* The second selector is not redundant: a mousedown focuses a focusable option, turning the host
+     'current' on focusin, and :host(:state(current)) [part~='base'] below is (0,3,0) while a bare
+     [part~='base']:active is only (0,2,0). Without the current-qualified arm -- (0,4,0), so it
+     wins wherever it sits -- the current background swallowed the pressed one on every press an
+     option receives in a roving-tabindex listbox. The two disabled :active rules below are also
+     (0,4,0) and come later, so they still clear this background when disabled. */
+  [part~='base']:active,
+  :host(:state(current)) [part~='base']:active {
     background: var(
       --lr-option-active-bg,
       color-mix(

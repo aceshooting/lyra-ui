@@ -18,12 +18,9 @@ export const styles = css`
     gap: var(--lr-space-xs);
     padding: var(--lr-space-xs) var(--lr-space-s);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
-    /* --lr-color-surface (not -brand-quiet) -- pairing
-       --lr-color-text-quiet (the toggle/copy-button color below) against
-       --lr-color-brand-quiet fails WCAG AA contrast in this token
-       palette; --lr-color-surface is the same header background
-       lr-json-viewer's own toolbar already uses with that same text
-       color. */
+    /* --lr-color-surface, not -brand-quiet: --lr-color-text-quiet (the toggle/copy-button color
+       below) fails WCAG AA against --lr-color-brand-quiet in this palette. -surface is the same
+       header background lr-json-viewer's toolbar uses with that same text color. */
     background: var(--lr-color-surface);
     font-family: var(--lr-font);
   }
@@ -61,18 +58,15 @@ export const styles = css`
     display: inline-flex;
     transition: transform var(--lr-transition-fast);
   }
-  /* Chevron points at the content: rotated (pointing down) while expanded,
-     resting (pointing right) while collapsed -- same rotation direction as
-     lr-thinking-panel's and lr-json-viewer's own toggles. */
+  /* Chevron points at the content: rotated down while expanded, resting right while collapsed --
+     same rotation direction as lr-thinking-panel's and lr-json-viewer's toggles. */
   :host(:not([collapsed])) [part='toggle'] .chevron {
     transform: rotate(90deg);
   }
-  /* RTL: the resting (collapsed) chevron mirrors to point left, the
-     conventional mirrored disclosure-triangle direction for RTL. Scoped to
-     [collapsed] specifically (rather than a plain :dir(rtl) rule) so it
-     never has to compete with the rule above for the expanded state, which
-     needs no mirroring: rotating this left-right-asymmetric glyph 90deg
-     already produces a left-right-symmetric down chevron. */
+  /* RTL: the collapsed chevron mirrors to point left, the conventional mirrored disclosure
+     direction. Scoped to [collapsed] rather than a plain :dir(rtl) rule so it never competes with
+     the rule above -- the expanded state needs no mirroring, since rotating this asymmetric glyph
+     90deg already yields a symmetric down chevron. */
   :host([collapsed]:dir(rtl)) [part='toggle'] .chevron {
     transform: scaleX(-1);
   }
@@ -96,12 +90,10 @@ export const styles = css`
     white-space: nowrap;
     padding: var(--lr-size-0-0625rem) var(--lr-size-0-4375rem);
     border-radius: var(--lr-radius-pill);
-    /* --lr-color-brand + -brand-quiet (not -text-quiet + -surface) --
-       this pill needs to read as distinct from the [part="header"]
-       background it sits on (also -surface as of the comment above), and
-       -brand on -brand-quiet is a pairing already relied on elsewhere in
-       this library (e.g. hover states below) that passes contrast, unlike
-       -text-quiet on -brand-quiet. */
+    /* --lr-color-brand on -brand-quiet, not -text-quiet on -surface: the pill must read as distinct
+       from the [part="header"] background it sits on (also -surface, per the comment above), and
+       brand-on-brand-quiet is a pairing already relied on elsewhere here that passes contrast,
+       unlike -text-quiet on -brand-quiet. */
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
     font-size: var(--lr-size-0-6875rem);
@@ -109,9 +101,8 @@ export const styles = css`
     text-transform: uppercase;
     letter-spacing: var(--lr-size-0-02em);
   }
-  /* Pushed to the end of the header whether or not filename/language
-     precede it -- margin-inline-start:auto works whether this is the first
-     flex child (copyable alone) or the last of several. */
+  /* Pushed to the end of the header whether or not filename/language precede it --
+     margin-inline-start: auto works as the first flex child or the last of several. */
   [part='copy-button'] {
     flex: 0 0 auto;
     margin-inline-start: auto;
@@ -167,49 +158,52 @@ export const styles = css`
   [part='pre'] {
     margin: 0;
     padding: var(--lr-space-s) var(--lr-space-m);
-    /* The body owns scrolling, so this descendant's painted box must grow to the longest
-       unwrapped line instead of stopping at the body's initially visible width. The 100%
-       minimum keeps short code filling the scrollport; max-content extends the background and
-       line-state painting through the full horizontal overflow range. */
+    /* The body owns scrolling, so this descendant's painted box must grow to the longest unwrapped
+       line, not stop at the body's visible width. The 100% minimum keeps short code filling the
+       scrollport; max-content extends the background and line-state painting through the full
+       overflow range. */
     box-sizing: border-box;
     inline-size: max-content;
     min-inline-size: 100%;
-    /* Source code is read left-to-right regardless of the surrounding document
-       direction -- like every code surface (VS Code, GitHub, devtools). Without
-       this, an ancestor dir="rtl" bidi-reorders each line (a trailing ';' jumps
-       to the visual start, an opening brace wraps to its own bottom line) and
-       right-aligns the block, making valid code look syntactically broken. The
-       header (filename/language/copy/toggle) is a separate part and still mirrors.
-       isolate keeps any RTL run *inside* a string/comment from leaking out and
-       reordering the surrounding code. Matches phone-input's calling-code and
-       terminal/stack-trace's own dir="ltr" content locks. */
+    /* Source code reads left-to-right whatever the document direction. Without this an ancestor
+       dir="rtl" bidi-reorders each line (a trailing ';' jumps to the visual start, an opening brace
+       wraps to its own bottom line) and right-aligns the block, so valid code looks syntactically
+       broken. The header is a separate part and still mirrors. isolate stops an RTL run inside a
+       string or comment leaking out and reordering the code. Matches phone-input's calling-code and
+       terminal/stack-trace's dir="ltr" locks. */
     direction: ltr;
     unicode-bidi: isolate;
-    /* A default background so the plain-fallback path still reads as a
-       proper code block -- shiki's own inline background-color (part of the
-       generated-token-colors exception documented in code-block.ts's
-       tokenize()) silently overrides this the moment highlighting succeeds,
-       since an element's own style attribute always wins over an external
-       stylesheet rule at equal or lower specificity. */
+    /* A default background so the plain-fallback path still reads as a code block. shiki's own
+       inline background-color (the generated-token-colors exception documented in code-block.ts's
+       tokenize()) overrides it the moment highlighting succeeds, since a style attribute always
+       beats an external rule at equal or lower specificity. */
     background: var(--lr-color-surface);
     font-family: var(--lr-code-block-font, var(--lr-font-mono));
     font-size: inherit;
     line-height: var(--lr-line-height-normal);
     white-space: pre;
-    /* Tab width, defaulting to the same value as --lr-code-editor-tab-size so the editable surface
-       and the read-only ones agree on what a literal tab looks like. The default lives here as a
-       var() fallback rather than as a :host declaration: a :host rule is re-stamped on every
-       instance and shadows any inherited value, so a page- or container-level declaration could
-       never reach it. lr-markdown/lr-markdown-core carry the same fallback for their own code-block
-       part -- they are sibling custom elements, not descendants, so no single rule covers both.
-       Never written as an inline tab-size: shiki puts its own style attribute on the highlighted
-       <pre>, and an inline declaration is the one thing a host override cannot beat. */
+    /* Tab width, defaulting to --lr-code-editor-tab-size so editable and read-only surfaces agree
+       on a literal tab. A var() fallback, not a :host declaration: :host is re-stamped per instance
+       and shadows any inherited value, so a page- or container-level declaration could never reach
+       it. lr-markdown and lr-markdown-core carry the same fallback for their own code-block part --
+       siblings, not descendants, so no one rule covers both. Never inline: shiki stamps its own
+       style attribute on the <pre>, which a host override cannot beat. */
     tab-size: var(--lr-code-block-tab-size, 2);
   }
+  /* One grid row per line, in BOTH line-numbers modes. A line must be a full-width row or the
+     highlight background below paints behind the glyphs only -- a one-character highlighted line
+     becomes an 8px swatch; this was once scoped to .line-numbers, so the default code block never
+     got it. Grid rather than block because both renderers separate lines with a literal newline
+     text node (shiki's output, and renderPlainCode()'s newline join, which keeps the textContent of
+     <code> equal to the source): a block container boxes each into a blank row, doubling row
+     spacing, while grid drops whitespace-only runs, so N lines render as N rows. The row tracks the
+     grid's max-content column, which the <pre> sizes to the longest line, so the highlight extends
+     through the full horizontal scroll range. */
   [part='code'] {
+    display: grid;
     font-family: inherit;
   }
-  [part='pre'].line-numbers .line {
+  [part='pre'] .line {
     display: block;
   }
   [part='pre'] .line-number {
@@ -220,25 +214,20 @@ export const styles = css`
     text-align: end;
     user-select: none;
   }
-  /* A highlighted line, from either highlight-lines or a line-range entry in highlights --
-     stamped identically by codeBlockLineTransformer (shiki path) and renderPlainCode() (plain
-     path). See the dark-mode block below for why this needs its own !important there.
-
-     --lr-code-block-highlighted-line-bg is an inline var() fallback rather than a :host
-     declaration, for the same reason --lr-code-block-active-line-outline-color below is: a :host
-     declaration is re-stamped on every instance and would shadow any ancestor/theme-level value,
-     which is exactly what a state-styling override hook must not do. Unset, it resolves to
-     --lr-color-warning-quiet -- byte-identical to before it existed. */
+  /* A highlighted line, from highlight-lines or a line-range entry in highlights -- stamped
+     identically by codeBlockLineTransformer (shiki) and renderPlainCode() (plain). See the
+     dark-mode block below for why it needs its own !important there.
+     --lr-code-block-highlighted-line-bg is a var() fallback, not a :host declaration, for the
+     reason given at --lr-code-block-active-line-outline-color below; unset it resolves to
+     --lr-color-warning-quiet. */
   [part='pre'] [data-highlighted] {
     background: var(--lr-code-block-highlighted-line-bg, var(--lr-color-warning-quiet));
   }
-  /* The active highlight (highlights entry matching activeHighlightId) gets an outline on top of
-     any background -- inset so it doesn't add to the line's own box size.
-
-     --lr-code-block-active-line-outline-color is an inline var() fallback rather than a :host
-     declaration on purpose: a :host declaration is re-stamped on every instance and would shadow
-     any ancestor/theme-level value, which is exactly what a state-styling override hook must not
-     do. Unset, it resolves to --lr-color-brand -- byte-identical to before it existed. */
+  /* The active highlight (the highlights entry matching activeHighlightId) adds an outline over any
+     background -- inset, so it does not grow the line's box.
+     --lr-code-block-active-line-outline-color is a var() fallback, not a :host declaration: :host
+     is re-stamped per instance and would shadow any ancestor or theme value, which a state-styling
+     override hook must not do. Unset it resolves to --lr-color-brand. */
   [part='pre'] [data-active] {
     outline: var(--lr-border-width-thin) solid var(--lr-code-block-active-line-outline-color, var(--lr-color-brand));
     outline-offset: calc(-1 * var(--lr-border-width-thin));
@@ -260,10 +249,15 @@ export const styles = css`
     text-align: start;
     cursor: pointer;
   }
-  :where([part='pre']) :where(button.line-gutter):hover {
+  /* Both pointer arms carry the full [part='pre'] button.line-gutter compound, like the
+     :focus-visible rule below. The resting rule directly above is (0,2,1) and declares background:
+     none, so a :where()-zeroed (0,1,0) arm matches the button and then loses the background to it
+     -- the gutter looked identical hovered, held and idle, while the keyboard path worked. Any
+     rewrite must stay at least as specific as that resting rule. */
+  [part='pre'] button.line-gutter:hover {
     background: var(--lr-color-brand-quiet);
   }
-  :where([part='pre']) :where(button.line-gutter):active {
+  [part='pre'] button.line-gutter:active {
     background: color-mix(
       in oklab,
       var(--lr-color-brand-quiet),
@@ -274,26 +268,17 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
-  /*
-   * Activates shiki's "dual themes" dark variant. codeToHtml() (see
-   * tokenize() in code-block.ts) renders every token with its *light* color
-   * as a plain inline color/background-color and its *dark* color stashed in
-   * the --shiki-dark/--shiki-dark-bg custom properties shiki itself defines
-   * inline on the same elements -- shiki's own documented pattern for
-   * toggling them is exactly this: an external stylesheet rule that
-   * reassigns color/background-color from those variables. This requires
-   * !important because an inline style="..." attribute always outranks an
-   * external stylesheet at any selector specificity short of !important --
-   * there's no other way for a page-level rule to override an element's own
-   * style attribute. This is the one legitimate exception to "every color is
-   * a --lr-* token" in this file: these values come from shiki's theme
-   * data, not this library's design tokens.
-   */
-  /* Gated on [part='body'][data-dark-theme='true'] (kept live by the shared ThemeWatcher, off the
-     component's own resolved --lr-color-text/--lr-color-surface) rather
-     than the OS-level prefers-color-scheme media query directly -- a consumer who sets
-     --lr-theme-color-* explicitly, independent of the OS's own setting, must still get the dark
-     shiki theme, matching every other --lr-color-* token's consumer-overrides-first resolution. */
+  /* Activates shiki's dual-themes dark variant. codeToHtml() (tokenize() in code-block.ts) renders
+     each token's LIGHT color inline and stashes its DARK one in the --shiki-dark and
+     --shiki-dark-bg properties shiki defines inline on the same elements; reassigning
+     color/background-color from those variables in an external stylesheet is shiki's own documented
+     toggle. !important is required because an inline style attribute outranks an external
+     stylesheet at any specificity short of it. The one legitimate exception here to every color
+     being a --lr-* token: these values are shiki's theme data, not this library's. */
+  /* Gated on [part='body'][data-dark-theme='true'] (kept live by the shared ThemeWatcher off the
+     component's resolved --lr-color-text and --lr-color-surface) rather than prefers-color-scheme
+     -- a consumer who sets --lr-theme-color-* independently of the OS must still get the dark shiki
+     theme, matching every --lr-color token's consumer-overrides-first resolution. */
   [part='body'][data-dark-theme='true'] [part='pre'],
   [part='body'][data-dark-theme='true'] [part='pre'] span {
     color: var(--shiki-dark, inherit) !important;

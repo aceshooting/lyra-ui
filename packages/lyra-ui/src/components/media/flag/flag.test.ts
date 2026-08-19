@@ -606,6 +606,34 @@ it('rejects an A-to-B-to-A stale native event even when the source identity repe
   expect(currentA.hasAttribute('hidden')).to.be.false;
 });
 
+it('keeps the still-loading image out of the layout instead of painting a second box below the skeleton', async () => {
+  const el = await fixture<LyraFlag>(html`<lr-flag src="/pending-flag.svg"></lr-flag>`);
+  const image = el.shadowRoot!.querySelector('img')!;
+  expect(image.hasAttribute('hidden')).to.be.true;
+  // The attribute alone proves nothing: [part='image'] declares display: block unconditionally,
+  // and an author-origin declaration outranks the UA stylesheet's own [hidden] { display: none }
+  // whatever their specificities. Assert the painted box, which is what a user sees.
+  expect(getComputedStyle(image).visibility).to.equal('hidden');
+  expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(1);
+  const hostBox = el.getBoundingClientRect();
+  const loadingBox = image.getBoundingClientRect();
+  expect(Math.round(loadingBox.top)).to.equal(Math.round(hostBox.top));
+  expect(Math.round(loadingBox.bottom)).to.equal(Math.round(hostBox.bottom));
+  // display: none would satisfy every assertion above and still be wrong: the img is
+  // loading="lazy", and Chromium never starts a lazy fetch for an element that generates no box,
+  // so the load event below would never arrive in a real browser.
+  expect(getComputedStyle(image).display).to.equal('block');
+
+  image.dispatchEvent(new Event('load'));
+  await el.updateComplete;
+  expect(image.hasAttribute('hidden')).to.be.false;
+  expect(getComputedStyle(image).visibility).to.equal('visible');
+  expect(image.getClientRects().length).to.equal(1);
+  const loadedBox = image.getBoundingClientRect();
+  expect(Math.round(loadedBox.width)).to.equal(Math.round(hostBox.width));
+  expect(Math.round(loadedBox.height)).to.equal(Math.round(hostBox.height));
+});
+
 it('turns a current native image failure into the localized contained error state', async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <span style="display:inline">before <lr-flag src="/broken.svg"></lr-flag> after</span>
@@ -909,21 +937,40 @@ it('calls super.adoptedCallback so owner-realm locale and direction caches are i
 });
 
 describe('alpha-3 country codes and the unresolved fallback', () => {
+  // `registerLyraFlagPeer()` takes no arguments -- it only hands back the already-installed
+  // `@aceshooting/lyra-flags` resolver -- so passing it a stub object silently discarded it and
+  // left these tests running against the real peer package. `setFlagUrlResolver()` is the actual
+  // injection seam (same restore idiom as the describes above).
+  afterEach(() => setFlagUrlResolver(registerLyraFlagPeer()));
+
+  // A loadable, code-dependent stub asset: the resolved alpha-2 code is embedded in the SVG's
+  // <title>, so two codes that map to the same country produce a byte-identical URL and two that
+  // do not cannot collide.
+  const stubFlagSrc = (code: string) =>
+    `data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3Ctitle%3E${code}%3C/title%3E%3C/svg%3E`;
+
   it('resolves an alpha-3 country to the same flag as its alpha-2', async () => {
     // Length alone disambiguates the two ISO 3166-1 code spaces, so no format hint is needed.
-    registerLyraFlagPeer({ flagUrl: (code: string) => `/flags/${code}.svg` });
+    setFlagUrlResolver(async (code: string) => stubFlagSrc(code));
     const alpha3 = (await fixture(html`<lr-flag country="FRA"></lr-flag>`)) as LyraFlag;
     const alpha2 = (await fixture(html`<lr-flag country="fr"></lr-flag>`)) as LyraFlag;
     await waitUntil(() => alpha3.shadowRoot!.querySelector('img') !== null);
     await waitUntil(() => alpha2.shadowRoot!.querySelector('img') !== null);
+    const resolved = alpha3.shadowRoot!.querySelector('img')!.getAttribute('src')!;
     expect(
-      alpha3.shadowRoot!.querySelector('img')!.getAttribute('src'),
+      resolved,
       'alpha-3 reaches the same asset as alpha-2'
     ).to.equal(alpha2.shadowRoot!.querySelector('img')!.getAttribute('src'));
+    // Discriminating: two equal strings prove nothing unless the code that reached the resolver is
+    // the alpha-2 form.
+    expect(
+      decodeURIComponent(resolved).includes('<title>fr</title>'),
+      'FRA was mapped to fr before the resolver ever saw it'
+    ).to.be.true;
   });
 
   it('marks a code that cannot resolve as unresolved rather than an error', async () => {
-    registerLyraFlagPeer({ flagUrl: (code: string) => `/flags/${code}.svg` });
+    setFlagUrlResolver(async (code: string) => stubFlagSrc(code));
     // SUN is the withdrawn code for the former Soviet Union: real data in a longitudinal dataset,
     // not a mistake, so it must not render error wording.
     const el = (await fixture(html`<lr-flag country="SUN"></lr-flag>`)) as LyraFlag;
@@ -937,7 +984,7 @@ describe('alpha-3 country codes and the unresolved fallback', () => {
   });
 
   it('renders slotted fallback content in place of the flag', async () => {
-    registerLyraFlagPeer({ flagUrl: (code: string) => `/flags/${code}.svg` });
+    setFlagUrlResolver(async (code: string) => stubFlagSrc(code));
     const el = (await fixture(html`
       <lr-flag country="SUN"><span slot="fallback" id="ph">—</span></lr-flag>
     `)) as LyraFlag;
@@ -951,7 +998,7 @@ describe('alpha-3 country codes and the unresolved fallback', () => {
   });
 
   it('renders the fallback property as a placeholder image when no slot content is given', async () => {
-    registerLyraFlagPeer({ flagUrl: (code: string) => `/flags/${code}.svg` });
+    setFlagUrlResolver(async (code: string) => stubFlagSrc(code));
     const el = (await fixture(
       html`<lr-flag country="SUN" fallback="/placeholder.svg"></lr-flag>`
     )) as LyraFlag;
@@ -962,7 +1009,7 @@ describe('alpha-3 country codes and the unresolved fallback', () => {
   });
 
   it('leaves a resolvable code untouched, so the fallback is inert by default', async () => {
-    registerLyraFlagPeer({ flagUrl: (code: string) => `/flags/${code}.svg` });
+    setFlagUrlResolver(async (code: string) => stubFlagSrc(code));
     const el = (await fixture(
       html`<lr-flag country="fr" fallback="/placeholder.svg"></lr-flag>`
     )) as LyraFlag;

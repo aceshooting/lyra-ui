@@ -63,15 +63,12 @@ export const styles = css`
       transition: none !important;
     }
   }
-  /* Composed content that is deliberately NOT a menu item, rendered outside
-     the role="menu" list (arbitrary content inside role="menu" is an
-     aria-required-children violation). Both wrappers collapse to no box at
-     all while their slot is unfilled, which is what keeps a menu that uses
-     neither slot rendering exactly as it did before they existed.
-     An :empty selector cannot drive that: Chromium's :empty does not ignore
-     the whitespace-only text nodes Lit leaves inside a part, so the rule
-     would silently never match -- the host attributes below are set from the
-     slots' own slotchange instead. */
+  /* Composed content deliberately NOT a menu item, rendered outside the role="menu" list --
+     arbitrary content inside role="menu" is an aria-required-children violation. Both wrappers
+     collapse to no box while their slot is unfilled, so a menu using neither renders as before.
+     :empty cannot drive that: Chromium's :empty does not ignore the whitespace-only text nodes Lit
+     leaves inside a part, so the rule would never match -- the host attributes below come from the
+     slots' own slotchange. */
   [part='header'],
   [part='footer'] {
     flex: 0 0 auto;
@@ -81,8 +78,8 @@ export const styles = css`
   :host(:not([data-has-footer])) [part='footer'] {
     display: none;
   }
-  /* The divider only earns its keep when there are items on the other side of
-     it -- a header above an empty list would otherwise draw a stray rule. */
+  /* The divider only earns its keep when there are items on the other side -- a header above an
+     empty list would otherwise draw a stray rule. */
   :host(:not([data-list-empty])) [part='header'] {
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
@@ -92,9 +89,8 @@ export const styles = css`
   [part='list'] {
     display: flex;
     flex-direction: column;
-    /* The list, not a filled header/footer, is what scrolls when the popup
-       runs out of room -- min-block-size:0 is what lets it shrink below its
-       content height inside the popup's own column. */
+    /* The list, not a filled header/footer, scrolls when the popup runs out of room --
+       min-block-size:0 lets it shrink below its content height inside the popup's own column. */
     flex: 0 1 auto;
     min-block-size: 0;
     max-block-size: min(
@@ -106,9 +102,9 @@ export const styles = css`
     padding: var(--lr-space-xs);
     outline: none;
   }
-  /* A plain <hr> divider between item groups -- native <hr> already carries
-     an implicit ARIA role of "separator", exactly what role="menu" expects
-     between groups of menuitem children, so no role attribute needs adding. */
+  /* A plain <hr> divider between item groups: native <hr> already carries the implicit ARIA role
+     "separator", exactly what role="menu" expects between groups of menuitem children, so no role
+     attribute is needed. */
   ::slotted(hr) {
     border: none;
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);

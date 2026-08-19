@@ -29,10 +29,10 @@ export const styles = css`
     background-size: 200% 100%;
     animation: lr-skeleton-sheen var(--lr-transition-ambient) infinite;
   }
-  /* background-position percentages are physical, so the sheen highlight always travels
-     left-to-right; play the same keyframes backwards under RTL so it sweeps in the reading
-     direction. animation-direction (not a second animation-name) leaves the reduced-motion
-     'animation: none !important' below fully in charge of disabling it. */
+  /* background-position percentages are physical, so the sheen always travels left-to-right; play
+     the same keyframes backwards under RTL to sweep in the reading direction. animation-direction
+     rather than a second animation-name leaves the reduced-motion 'animation: none !important'
+     below in charge of disabling it. */
   :host(:dir(rtl)) [part~='indicator'][data-effect='sheen'] {
     animation-direction: reverse;
   }

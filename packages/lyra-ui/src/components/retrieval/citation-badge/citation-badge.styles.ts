@@ -5,11 +5,10 @@ export const styles = css`
     display: inline-flex;
     vertical-align: baseline;
     line-height: var(--lr-line-height-none);
-    /* Per-status private defaults -- one pair changed by the :host([status]) rules below rather
-       than repeating background/color. An inherited or direct public hook remains authoritative;
-       per part per status. 'default' (and any unrecognized status) stays
-       plain/neutral -- transparent background, quiet text -- rather than
-       inventing a seventh visual tone for "no signal at all". */
+    /* Per-status private defaults -- the :host([status]) rules below change one pair instead of
+       repeating background/color; a public hook, inherited or direct, stays authoritative per part
+       per status. 'default' and any unrecognized status stay plain/neutral -- transparent
+       background, quiet text -- not a seventh visual tone for "no signal at all". */
     --_lr-citation-badge-accent: var(--lr-color-text-quiet);
     --_lr-citation-badge-bg: transparent;
     --_lr-citation-badge-border: transparent;
@@ -25,9 +24,8 @@ export const styles = css`
     --_lr-citation-badge-accent: var(--lr-color-warning);
     --_lr-citation-badge-bg: var(--lr-color-warning-quiet);
   }
-  /* Deliberately its own danger tone, not grouped with 'low' -- see the
-     component doc's status-coloring note: "hasn't been checked" reads as a
-     distinct (riskier) claim from "checked but uncertain". */
+  /* Deliberately its own danger tone, not grouped with 'low' -- "hasn't been checked" reads as a
+     distinct, riskier claim than "checked but uncertain" (see the component doc). */
   :host([status="unverified"]) {
     --_lr-citation-badge-accent: var(--lr-color-danger);
     --_lr-citation-badge-bg: var(--lr-color-danger-quiet);
@@ -40,10 +38,10 @@ export const styles = css`
   [part="base"] {
     display: inline-flex;
     align-items: baseline;
-    /* Cross-axis stays baseline (the badge number sits on the surrounding text's baseline), but
-       the main axis must centre: the min-inline-size hit-area floor below is far wider than the
-       one- or two-digit label it usually holds, and the default justify-content
-       (normal => flex-start) left that number hugging the badge's leading edge. */
+    /* Cross-axis stays baseline (the number sits on the surrounding text's baseline); the main axis
+       must centre, since the min-inline-size hit-area floor below is far wider than a one- or
+       two-digit label and the default justify-content (normal => flex-start) left that number
+       hugging the leading edge. */
     justify-content: center;
     box-sizing: border-box;
     min-inline-size: var(--lr-icon-button-size);
@@ -70,9 +68,9 @@ export const styles = css`
       var(--_lr-citation-badge-accent)
     );
   }
-  /* Pressed goes further than the hover border alone: the badge's own per-status fill mixed toward
-     --lr-color-mix-partner. That works for the 'default' status too, whose fill is transparent --
-     the mix simply resolves to the partner at --lr-color-mix-active alpha. */
+  /* Pressed goes past the hover border alone: the badge's own per-status fill mixed toward
+     --lr-color-mix-partner. Works for 'default' too, whose fill is transparent -- the mix resolves
+     to the partner at --lr-color-mix-active alpha. */
   [part="base"]:active {
     border-color: var(
       --lr-citation-badge-accent,
@@ -93,11 +91,9 @@ export const styles = css`
     opacity: 0.7;
   }
 
-  /* Positioned by internal/positioner.js's place() -- same fixed/z-index/
-     max-size shape as lr-tool-call-chip's own [part='tooltip']. No open/
-     close transition, for the same reason that one has none: a preview
-     that tracks the pointer/focus target should appear instantly, not
-     chase a fade. */
+  /* Positioned by internal/positioner.js's place() -- same fixed/z-index/max-size shape as
+     lr-tool-call-chip's own [part='tooltip'], and no open/close transition for the same reason: a
+     preview tracking the pointer/focus target should appear instantly, not chase a fade. */
   [part="popover"] {
     position: fixed;
     z-index: var(--lr-layer-dropdown);

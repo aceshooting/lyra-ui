@@ -1,3 +1,29 @@
+## Breaking changes in 10.0.0
+
+`<lr-swatch-picker>` drops the three members it carried through 9.x as documented one-major
+back-compat aliases, each with a like-for-like replacement that has shipped since. The `options`
+property is now `items` — same frozen owned-snapshot contract, still `attribute: false`, so no
+markup changes. The `label` property/attribute is now `accessibleLabel` (attribute `aria-label`), or
+the host `aria-label` directly; this is the one worth grepping for, because an un-updated
+`<lr-swatch-picker label="Brand colours">` leaves the internal `role="radiogroup"` with no accessible
+name at all rather than failing loudly. And the exported `SwatchOption` type is now
+`SwatchPickerItem`. The item shape itself is unchanged, including its own per-item `label` field,
+which is a different member and stays.
+
+Also corrected in 10.0.0 — not breaking, but visible. A specificity sweep found rules that were
+meant to win yet were losing to another rule in the same shadow stylesheet, so their declarations
+never applied at all. In this family: arrow-keying onto the already-selected option in
+`<lr-select>` or `<lr-combobox>` produces a visible keyboard highlight again — `[aria-selected="true"]`
+was written after the active-descendant rule at equal specificity and swallowed it, so the highlight
+was absent exactly on the row a user is most likely to arrow onto first. `appearance="filled"` has a
+focus indicator again on `<lr-combobox>` and `<lr-date-input>`, both of which previously had none:
+the appearance rule out-ranked `:focus-within`, and the only `outline` in the focus rule was
+`solid transparent`. Both now express appearance as private custom properties, so no `[part]` rule
+can out-rank another. `<lr-option>` and `<lr-time-range>`'s active preset regain their pointer
+feedback, and `<lr-token-input>` can now veto all three of its mutations (`lr-add` and
+`lr-token-edit` became cancelable alongside `lr-remove`, which already was — additive; see that
+section).
+
 ## Setter-only `null` clearing in 8.0.0
 
 Several mapped string IDLs accept `null` on assignment without widening their read type. This is a
@@ -416,7 +442,10 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
 plain-text contract even when a separate WA `label` override is present.
 
 **Events:** `lr-option-change` — bubbles when the option's label or selectable data changes so
-its parent `lr-combobox` or `lr-select` can refresh its normalized option rows.
+its parent `lr-combobox` or `lr-select` can refresh its normalized option rows. It is a private
+child-to-parent refresh signal, not a picker event: the owning `lr-combobox`/`lr-select` consumes
+it and stops it, so it never reaches a listener on the picker host (whose own contract is
+`lr-change`/`lr-input`/`change`/`input`). Listen on the `<lr-option>` itself to observe it.
 
 **Slots:** default (visible label), `start`/`end` (WA adornments), and `prefix`/`suffix` (Shoelace
 aliases). `start` and `prefix` project into one leading wrapper; `end` and `suffix` project into one
@@ -3022,9 +3051,10 @@ gemstone?: GemstoneKey }`; a valid CSS `color` is used as the
   the selected glow/shine defaults.
 - `accessibleLabel: string = ''` (attribute `aria-label`) — accessible name copied to the internal
   `role="radiogroup"`; attribute presence wins, including an explicitly empty name.
-- `options` and `SwatchOption` remain compatibility aliases for `items` and `SwatchPickerItem`;
-  new code uses the canonical sibling radiogroup vocabulary. The former invisible `label` IDL also
-  remains as a compatibility fallback after `aria-label`/`accessibleLabel`.
+- The 9.x compatibility aliases were removed in 10.0.0: `options` is `items`, the exported
+  `SwatchOption` type is `SwatchPickerItem`, and the former invisible `label` IDL is
+  `accessibleLabel`/`aria-label`. The canonical sibling radiogroup vocabulary is now the only
+  spelling.
 - `disabled: boolean = false` (reflected) — locks the whole picker. Every swatch renders as a real
   `disabled` `<button>`, so it leaves the tab sequence and cannot be activated; arrow/Home/End
   navigation and host `click()` become no-ops; and the swatches dim to `--lr-opacity-disabled` with

@@ -23,9 +23,8 @@ export const styles = css`
     block-size: 100%;
     overflow: hidden;
   }
-  /* MapLibre creates these nodes inside the container above, hence inside this component's
-     shadow root. Page-level peer CSS cannot reach them; the wrapper owns the layout and
-     interaction rules for the MapLibre capabilities it exposes. */
+  /* MapLibre creates these nodes inside the container above, so inside this shadow root: page-level
+     peer CSS cannot reach them, and the wrapper owns their layout and interaction rules. */
   .maplibregl-canvas-container {
     inline-size: 100%;
     block-size: 100%;
@@ -88,11 +87,9 @@ export const styles = css`
     flex-direction: column-reverse;
   }
   /*
-   * anchor-left/anchor-right are assigned by MapLibre at runtime from physical viewport
-   * collision detection (which side of the map container has room for the popup relative to
-   * the marker's screen position) -- they are not related to page text direction and must
-   * never be re-mirrored for dir="rtl", or the popup's tip decouples from the marker it points
-   * at.
+   * anchor-left/anchor-right are assigned by MapLibre at runtime from physical viewport collision
+   * detection -- which side of the container has room for the popup -- not page text direction, and
+   * must never be re-mirrored for dir="rtl", or the popup's tip decouples from its marker.
    */
   .maplibregl-popup-anchor-left {
     flex-direction: row;
@@ -191,8 +188,8 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
-  /* Mirrors docx-viewer.styles.ts's identical [part='error'] treatment for the same "optional
-     peer dependency missing" failure shape. */
+  /* Mirrors docx-viewer.styles.ts's identical [part='error'] treatment for the same
+     missing-optional-peer-dependency failure shape. */
   [part='error'] {
     margin: 0;
     padding: var(--lr-space-l);
@@ -217,8 +214,8 @@ export const styles = css`
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    /* Overlay step: the legend is a floating cluster pinned over the tiles, so it reads as a layer
-       above the map rather than a panel resting beside it. */
+    /* The legend is pinned over the tiles, so it reads as a layer above the map, not a panel
+       beside it. */
     box-shadow: var(--lr-shadow-m);
     font-size: var(--lr-font-size-xs);
   }
@@ -247,9 +244,9 @@ export const styles = css`
     flex: 0 0 auto;
     white-space: nowrap;
   }
-  /* Flex row order already follows inherited direction, putting the low caption at inline-start.
-     Mirror the physical gradient so its colors stay aligned with those captions -- same fix, and
-     same reasoning, as lr-heatmap's own RTL rule. */
+  /* Flex row order already follows inherited direction, putting the low caption at inline-start, so
+     the physical gradient mirrors to keep its colors aligned -- same fix as lr-heatmap's RTL rule.
+     */
   :host(:dir(rtl)) .legend-gradient .gradient-bar {
     transform: scaleX(-1);
   }
@@ -314,8 +311,8 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
 
-  /* MapLibre's attribution control is generated in the same shadow-local container. Keep it
-     anchored over the map and use Lyra's own surface, typography, and interaction tokens. */
+  /* MapLibre's attribution control is generated in the same shadow-local container: anchored over
+     the map, on Lyra's own surface, typography, and interaction tokens. */
   .maplibregl-ctrl-top-left,
   .maplibregl-ctrl-top-right,
   .maplibregl-ctrl-bottom-left,

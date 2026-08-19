@@ -4,34 +4,29 @@ import { formControlRequiredMarker } from '../../../internal/form-control.styles
 export const styles = css`
   :host {
     display: block;
-    /* Geometry from the shared form-control ladder (internal/sizes.styles.ts, pulled in ahead of
-       this sheet by select.class.ts): one scale for lr-button/lr-input/lr-select/lr-combobox/
-       lr-date-input instead of five hand-maintained copies. The ladder matches both spellings of
-       every tier in one selector list, so size="small" is size="s" here for free. */
+    /* Geometry from the shared form-control ladder (internal/sizes.styles.ts, loaded by
+       select.class.ts ahead of this sheet): one scale for
+       lr-button/lr-input/lr-select/lr-combobox/lr-date-input. It matches both tier spellings, so
+       size="small" is size="s". */
     --_lr-select-trigger-padding: var(--lr-form-control-padding-block)
       var(--lr-form-control-padding-inline);
     --_lr-select-trigger-min-height: var(--lr-form-control-height);
     --_lr-select-font-size: var(--lr-form-control-font-size);
     --_lr-select-expand-size: var(--lr-size-1-75rem);
-    /* The trigger's own adornment gap is deliberately NOT taken from the ladder: it does not vary
-       by tier there either, and the ladder's value is tuned for a button's icon-beside-label
-       spacing, which is tighter than a field wants between an adornment and its label. */
+    /* The trigger's adornment gap deliberately skips the ladder: it does not vary by tier, and the
+       ladder's value is tuned for button icon-beside-label spacing, tighter than a field wants. */
     --_lr-select-gap: var(--lr-space-xs);
     --_lr-select-radius: var(--lr-form-control-radius);
     --_lr-select-tag-padding: var(--lr-space-2xs) var(--lr-space-xs);
     --_lr-select-tag-font-size: var(--lr-font-size-sm);
-    /* --lr-select-trigger-height is intentionally NOT declared here. It is a consumer-facing
-       escape hatch consumed only through the two var() fallbacks on [part='trigger'] below;
-       declaring any value for it (even 'auto') makes those fallback arms unreachable, which is
-       what previously left --lr-select-trigger-min-height as dead code. Leaving it genuinely
-       undeclared keeps both arms live, so the per-tier floor falls out of the fallback with no
-       extra specificity rules, and setting the property from anywhere (inline style, an ancestor,
-       an outer-tree rule) pins an exact height. */
+    /* --lr-select-trigger-height is deliberately undeclared: it is read only through the two var()
+       fallbacks on [part='trigger'] below, so any declared value (even auto) dead-arms them -- how
+       --lr-select-trigger-min-height became dead code. The per-tier floor then falls out of the
+       fallback, and any override pins an exact height. */
   }
-  /* Only the decorative expand glyph still needs per-tier rules: it sizes an icon box, not the
-     control row, so the shared ladder has nothing to say about it. Both spellings of the aliased
-     tier are matched here exactly as the ladder does, so size="small" can never take the s tier's
-     padding with the default tier's chevron. */
+  /* Only the decorative expand glyph needs per-tier rules -- it sizes an icon box, not the control
+     row. Both tier spellings are matched as the ladder does, so size="small" cannot take the s
+     tier's padding with the default chevron. */
   :host([size="2xs"]),
   :host([size="xs"]) {
     --_lr-select-expand-size: var(--lr-size-1rem);
@@ -46,21 +41,17 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
     font-weight: var(--lr-font-weight-semibold);
   }
-  /* :empty never matches here -- the part always contains a literal slot
-     child element regardless of assigned/text content -- so real emptiness
-     is tracked in JS (hasLabelSlot) and reflected via the hidden attribute
-     instead (same fix as [part~='hint']/[part='error'] below, and as
-     lr-combobox). Without this, the required-asterisk ::after below
-     (which attaches to this box) renders a stray ' *' with nothing before
-     it whenever label is unset. */
+  /* :empty never matches (the part always holds a literal slot child), so emptiness is tracked in
+     JS via hasLabelSlot and reflected with hidden -- same fix as [part~='hint']/[part='error']
+     below and lr-combobox. Without it the required-asterisk ::after renders a stray ' *' when label
+     is unset. */
   [part="form-control-label"][hidden] {
     display: none;
   }
   ${formControlRequiredMarker}
 
-  /* Pill only retunes the shared radius property, so the single consumption point on
-     [part='trigger'] stays the only place a corner radius is read -- and a consumer's own
-     --lr-select-radius override (an inline style or an outer-tree rule) still wins over it. */
+  /* Pill only retunes the shared radius property, so [part='trigger'] stays the single place a
+     radius is read and a consumer's --lr-select-radius override still wins. */
   :host([pill]) {
     --_lr-select-radius: var(--lr-radius-pill);
   }
@@ -69,11 +60,9 @@ export const styles = css`
     border-color: transparent;
   }
 
-  /* Positioning context for [part='clear-button'], which is a *sibling* of the trigger rather
-     than a child: the trigger is a real <button>, and a nested button would be invalid
-     interactive-content nesting that no keyboard or AT user could ever reach. The wrapper is
-     display: block so the trigger's own box (and therefore every existing size/height contract)
-     is unchanged. */
+  /* Positioning context for [part='clear-button'], a sibling not a child: the trigger is a
+     <button>, and a nested button is invalid interactive content no keyboard or AT user could
+     reach. display: block leaves the trigger's box, and its size/height contracts, unchanged. */
   .control {
     position: relative;
     display: grid;
@@ -114,15 +103,13 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* :where() zeroes the wrapped selectors' specificity contribution, keeping this at (0,1,0) --
-     matches lr-model-select's/lr-attachment-trigger's fixed convention, so a consumer's own
-     ::part(trigger):hover override ((0,1,1)) still wins without needing !important. */
+  /* :where() keeps this at (0,1,0), as in lr-model-select/lr-attachment-trigger, so a consumer's
+     ::part(trigger):hover ((0,1,1)) still wins without !important. */
   :where([part="trigger"]):hover:where(:not(:disabled)) {
     background: var(--lr-select-trigger-hover-bg, var(--lr-color-brand-quiet));
   }
-  /* Pressed: the same quiet brand tint the hover lands on, carried further toward
-     --lr-color-mix-partner (which follows the text colour), so the press is visibly deeper than
-     the hover instead of a repeat of it. Same :where() zeroing as the hover above, so a consumer's
+  /* Pressed: the hover's quiet brand tint carried further toward --lr-color-mix-partner (which
+     follows the text colour), so the press reads deeper. Same :where() zeroing as the hover, so
      ::part(trigger):active still wins. */
   :where([part="trigger"]):active:where(:not(:disabled)) {
     background: var(
@@ -134,9 +121,9 @@ export const styles = css`
       )
     );
   }
-  /* Appearance treatments. outlined is the base rule above, so only the other four restate
-     what they change. Each keeps the same box, border width and radius -- only the fill, the
-     border color and (for accent) the text color move. */
+  /* Appearance treatments. outlined is the base rule above, so the other four restate only what
+     changes: same box, border width and radius; only fill, border color and (for accent) text color
+     move. */
   :host([appearance="filled"]) [part="trigger"] {
     background: var(--lr-color-surface-raised);
     border-color: transparent;
@@ -153,8 +140,8 @@ export const styles = css`
     border-color: transparent;
     color: var(--lr-color-on-brand);
   }
-  /* On the loud brand fill the quiet-text tokens below would sit at far too low a contrast --
-     the placeholder, the expand icon and the chips all ride the on-brand text color instead. */
+  /* The quiet-text tokens below are far too low-contrast on the loud brand fill, so placeholder,
+     expand icon and chips ride the on-brand text color. */
   :host([appearance="accent"])
     [part="trigger"]
     .trigger-label[data-placeholder],
@@ -166,13 +153,16 @@ export const styles = css`
   :host([appearance="accent"]) [part~="tag"] {
     background: color-mix(in srgb, currentColor 20%, transparent);
   }
-  /* Each appearance restates the hover feedback: the treatments above out-specify the shared
-     hover rule further up, so without these the pointer affordance would silently disappear for
-     every appearance except the default outlined. */
+  /* Every appearance restates the hover feedback: the treatments above out-specify the shared hover
+     rule, so otherwise only outlined keeps a pointer affordance. :host([filled]) is listed for the
+     same reason, not as a duplicate of :host([appearance='filled']) -- the boolean alias is pure
+     CSS (select.class.ts never derives appearance from it) and its (0,3,0) fill rule out-ranks the
+     shared (0,1,0) rules. */
   :host([appearance="filled"])
     :where([part="trigger"]):hover:where(:not(:disabled)),
   :host([appearance="filled-outlined"])
     :where([part="trigger"]):hover:where(:not(:disabled)),
+  :host([filled]) :where([part="trigger"]):hover:where(:not(:disabled)),
   :host([appearance="plain"])
     :where([part="trigger"]):hover:where(:not(:disabled)) {
     background: var(--lr-select-trigger-hover-bg, var(--lr-color-brand-quiet));
@@ -181,6 +171,7 @@ export const styles = css`
     :where([part="trigger"]):active:where(:not(:disabled)),
   :host([appearance="filled-outlined"])
     :where([part="trigger"]):active:where(:not(:disabled)),
+  :host([filled]) :where([part="trigger"]):active:where(:not(:disabled)),
   :host([appearance="plain"])
     :where([part="trigger"]):active:where(:not(:disabled)) {
     background: var(
@@ -192,10 +183,10 @@ export const styles = css`
       )
     );
   }
-  /* The loud fill has no quieter tint to move to, so it shifts toward --lr-color-mix-partner --
-     which follows the text colour, i.e. darkens in the light theme and lightens in the dark one,
-     both times away from the fill. Same two shares every other pressed/hovered surface in the
-     library uses, rather than the hand-written 12% this pair carried before 8.0.0. */
+  /* The loud fill has no quieter tint to move to, so it shifts toward --lr-color-mix-partner, which
+     follows the text colour -- darker in light, lighter in dark, always away from the fill. Same
+     two shares as every other hovered/pressed surface, not the hand-written 12% this pair carried
+     before 8.0.0. */
   :host([appearance="accent"])
     :where([part="trigger"]):hover:where(:not(:disabled)) {
     background: var(
@@ -254,9 +245,9 @@ export const styles = css`
   .trigger-label[data-placeholder] {
     color: var(--lr-color-text-quiet);
   }
-  /* In multiple mode the real, independently-focusable tags are a sibling layered over the
-     trigger. The shared sr-only rule keeps this complete joined value available to assistive
-     technology without painting a duplicate underneath the chips. */
+  /* In multiple mode the real focusable tags are a sibling layered over the trigger; the shared
+     sr-only rule keeps this joined value available to assistive technology without painting a
+     duplicate under the chips. */
 
   /* Multi-select chip row. Wraps rather than scrolls, so a long selection grows the trigger's
      block size instead of hiding chips behind an invisible scroll axis. */
@@ -279,9 +270,8 @@ export const styles = css`
     padding-block: var(--lr-form-control-padding-block);
     pointer-events: none;
   }
-  /* [part~=] because the overflow chip carries two part names ('tag tag-overflow'), and an exact
-     [part='tag'] match would skip it -- state lives in the part name because a state selector
-     after ::part() never matches. */
+  /* [part~=] because the overflow chip carries two names ('tag tag-overflow'); state lives in the
+     part name because a state selector after ::part() never matches. */
   [part~="tag"] {
     display: inline-flex;
     align-items: center;
@@ -342,9 +332,9 @@ export const styles = css`
   }
 
   /* Sits in the trigger's reserved inline-end band (see .control[data-clearable] below), outboard
-     of the expand icon: the trigger is a <button>, so the clear action cannot live inside it and
-     has to be overlaid from the wrapper instead. Reserving the band with padding rather than
-     overlapping keeps the trigger's own content clear of it in both directions. */
+     of the expand icon: the trigger is a <button>, so the clear action is overlaid from the
+     wrapper. Padding reserves the band rather than overlapping, keeping the trigger's content
+     clear. */
   [part="clear-button"] {
     position: absolute;
     z-index: var(--lr-layer-content);
@@ -376,9 +366,9 @@ export const styles = css`
     color: var(--lr-color-text);
   }
   /* Pressed: the hover's quiet-to-full text step plus a fill, mixing the page surface toward
-     --lr-color-mix-partner at the stronger active share -- mirrors <lr-input>'s own
-     clear-button/password-toggle pressed rule, so the two controls feel identical under the thumb.
-     The button already carries --lr-select-radius, so the fill lands as a rounded chip. */
+     --lr-color-mix-partner at the stronger active share -- mirrors <lr-input>'s
+     clear-button/password-toggle. The button carries --lr-select-radius, so the fill lands as a
+     rounded chip. */
   [part="clear-button"]:active {
     color: var(--lr-color-text);
     background: color-mix(
@@ -422,11 +412,10 @@ export const styles = css`
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-dropdown));
     box-sizing: border-box;
     max-block-size: var(--lr-size-18rem);
-    /* Per the CSS overflow spec, pinning one axis to a non-'visible' value forces the other
-       axis's used value to 'auto' too (never staying 'visible') -- an implicit overflow-x: auto
-       here risks a phantom horizontal scrollbar from sub-pixel rounding even though this listbox
-       only ever scrolls vertically. Pin overflow-x explicitly instead. Same fix as lr-tab-group'
-       tablist (overflow-x: auto; overflow-y: hidden;), just on the opposite axis. */
+    /* Per the CSS overflow spec, pinning one axis to a non-'visible' value forces the other to
+       'auto', and an implicit overflow-x: auto risks a phantom horizontal scrollbar from sub-pixel
+       rounding on a vertical-only listbox. Pin it explicitly -- same fix as lr-tab-group' tablist,
+       opposite axis. */
     overflow-y: auto;
     overflow-x: hidden;
     inline-size: max-content;
@@ -441,9 +430,9 @@ export const styles = css`
     border-radius: var(--lr-radius);
     /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
     box-shadow: var(--lr-shadow-m);
-    /* Closed state: invisible + slightly raised. visibility (not
-       display:none) so opacity/transform can actually transition; hit-testing
-       and a11y exposure stay off since this part is already position:fixed. */
+    /* Closed state: invisible and slightly raised. visibility rather than display:none so
+       opacity/transform can transition; the part is already position:fixed, so hit-testing and a11y
+       exposure stay off. */
     visibility: hidden;
     opacity: 0;
     transform: translateY(var(--lr-size-neg-0-25rem));
@@ -491,30 +480,11 @@ export const styles = css`
     text-align: start;
     cursor: pointer;
   }
-  [part="option"]:hover,
-  [part="option"][data-active] {
-    /* Per-component indirection (with an inline var() fallback to the shared brand-quiet token)
-       -- same fix as lr-command-palette's/lr-notebook-viewer's identical active-row pattern -- so
-       a consumer can retheme just this row state without hijacking --lr-color-brand-quiet
-       library-wide. */
-    background: var(--lr-select-option-active-bg, var(--lr-color-brand-quiet));
-  }
-  /* Pressed row. A pointer-down on an option commits a selection and closes the listbox, so this
-     is the last frame the user sees before the panel goes away -- it has to read as deeper than
-     the hover it replaces, not the same. Mixes the same row tint (consumer override included)
-     toward --lr-color-mix-partner. */
-  [part="option"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-select-option-active-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
-  }
   [part="option"][aria-selected="true"] {
-    /* Per-component indirection (inline var() fallbacks to the shared brand tokens, so unset
-       rendering is byte-for-byte unchanged) -- mirrors the active-bg indirection above and
-       lr-segmented's/lr-tab-group' selected-state tokens -- so a consumer can retheme just the
-       selected row without hijacking --lr-color-brand library-wide. */
+    /* Per-component indirection (var() fallbacks to the shared brand tokens leave unset rendering
+       unchanged), like the active-bg indirection below and lr-segmented's/lr-tab-group'
+       selected-state tokens, so the selected row is rethemeable without hijacking --lr-color-brand.
+       */
     background: var(--lr-select-option-selected-bg, transparent);
     border-color: var(
       --lr-select-option-selected-border,
@@ -524,6 +494,29 @@ export const styles = css`
     font-weight: var(
       --lr-select-option-selected-font-weight,
       var(--lr-font-weight-semibold)
+    );
+  }
+  /* Must stay AFTER the [aria-selected='true'] rule above: all four are (0,2,0) on the same row, so
+     source order alone decides the background. Reversed, the selected rule's
+     --lr-select-option-selected-bg (transparent by default) swallowed hover, press and
+     [data-active] -- the aria-activedescendant highlight -- so an arrow-keyed selected option
+     showed nothing. The selected row keeps its affordance either way: that rule paints
+     border-color/color/font-weight. */
+  [part="option"]:hover,
+  [part="option"][data-active] {
+    /* Per-component indirection with a var() fallback to the shared brand-quiet token -- as in
+       lr-command-palette/lr-notebook-viewer -- so this row state is rethemeable without hijacking
+       --lr-color-brand-quiet. */
+    background: var(--lr-select-option-active-bg, var(--lr-color-brand-quiet));
+  }
+  /* Pressed row. Pointer-down commits the selection and closes the listbox, so this is the last
+     frame the user sees and has to read deeper than the hover it replaces. Mixes the same row tint
+     (consumer override included) toward --lr-color-mix-partner. */
+  [part="option"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-select-option-active-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
   [part="option"][aria-disabled="true"] {

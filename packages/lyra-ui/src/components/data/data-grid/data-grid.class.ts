@@ -21,7 +21,7 @@ import {
   finiteRange,
 } from '../../../internal/numbers.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import {
   writeClipboardText,
@@ -3826,8 +3826,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   }
 
   protected override render(): TemplateResult {
-    const accessibleName =
-      this.getAttribute('aria-label') || this.label || undefined;
+    const accessibleName = hostAriaLabel(this) ?? (this.label || undefined);
     const detailCount = this.rowDetail
       ? this.displayItems.filter(
           (item) =>

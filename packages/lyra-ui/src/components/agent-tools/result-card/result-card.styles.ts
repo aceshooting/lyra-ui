@@ -14,10 +14,9 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
   }
   /* Density escape -- same convention as lr-agent-run's compact. The tuned values sit behind
-     inline var() fallbacks (rather than a :host declaration, which every instance would
-     re-declare and so shadow any ancestor value) so a consumer can retune them from outside
-     without restating the whole rule; the fallbacks are the pre-existing values, so an unset
-     card renders unchanged. */
+     inline var() fallbacks, not a :host declaration, which every instance would re-declare and so
+     shadow any ancestor value; the fallbacks are the pre-existing values, so an unset card renders
+     unchanged. */
   :host([compact]) [part='header'] {
     padding: var(--lr-result-card-compact-header-padding, var(--lr-space-xs));
     gap: var(--lr-result-card-compact-header-gap, var(--lr-space-xs));

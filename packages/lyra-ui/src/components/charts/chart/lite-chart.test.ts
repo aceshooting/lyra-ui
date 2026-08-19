@@ -3522,3 +3522,28 @@ describe('scale="logarithmic"', () => {
     expect(gridYs.every((y) => Number.isFinite(y)), 'no NaN gridline geometry').to.be.true;
   });
 });
+
+it('preserves an explicitly empty host aria-label on the semantic SVG instead of the derived chart name', async () => {
+  const explicit = (await fixture(html`
+    <lr-lite-chart
+      aria-label=""
+      accessible-label="Legacy chart label"
+      .labels=${['a']}
+      .datasets=${[{ label: 'A', data: [1] }]}
+    ></lr-lite-chart>
+  `)) as LyraLiteChart;
+  await explicit.updateComplete;
+  const explicitSvg = explicit.shadowRoot!.querySelector('svg')!;
+  expect(explicitSvg.hasAttribute('aria-label')).to.equal(true);
+  expect(explicitSvg.getAttribute('aria-label')).to.equal('');
+
+  const omitted = (await fixture(html`
+    <lr-lite-chart
+      accessible-label="Legacy chart label"
+      .labels=${['a']}
+      .datasets=${[{ label: 'A', data: [1] }]}
+    ></lr-lite-chart>
+  `)) as LyraLiteChart;
+  await omitted.updateComplete;
+  expect(omitted.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal('Legacy chart label');
+});

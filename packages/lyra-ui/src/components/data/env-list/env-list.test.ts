@@ -1,4 +1,5 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './env-list.js';
 import type { LyraEnvList } from './env-list.js';
 import { styles } from './env-list.styles.js';
@@ -447,4 +448,61 @@ it('renders the masked-value announcement visually hidden, not as visible text',
   const rect = marker.getBoundingClientRect();
   expect(rect.width, 'sr-only marker width').to.be.at.most(1);
   expect(rect.height, 'sr-only marker height').to.be.at.most(1);
+});
+
+describe('explicitly empty host aria-label', () => {
+  it('keeps the list explicitly unnamed instead of falling back to the label property', async () => {
+    const entries = [{ name: 'NODE_ENV', value: 'production', secret: false }];
+    const explicit = (await fixture(
+      html`<lr-env-list label="Environment" aria-label="" .entries=${entries}></lr-env-list>`,
+    )) as LyraEnvList;
+    await explicit.updateComplete;
+    const base = explicit.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.hasAttribute('aria-label')).to.equal(true);
+    expect(base.getAttribute('aria-label')).to.equal('');
+
+    const omitted = (await fixture(
+      html`<lr-env-list label="Environment" .entries=${entries}></lr-env-list>`,
+    )) as LyraEnvList;
+    await omitted.updateComplete;
+    expect(omitted.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Environment');
+  });
+});
+
+it('keeps a hover tint on a revealed toggle, not only on the hidden ones', async () => {
+  const el = (await fixture(html`
+    <lr-env-list .entries=${[
+      { name: 'TOKEN_A', value: 'aaa', secret: true },
+      { name: 'TOKEN_B', value: 'bbb', secret: true },
+    ]}></lr-env-list>
+  `)) as LyraEnvList;
+  await el.updateComplete;
+  const buttons = Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part="reveal-button"]'));
+  expect(buttons).to.have.lengthOf(2);
+  buttons[0]!.click();
+  await el.updateComplete;
+  const revealed = el.shadowRoot!.querySelector<HTMLElement>('[part="reveal-button"][aria-pressed="true"]')!;
+  const hidden = el.shadowRoot!.querySelector<HTMLElement>('[part="reveal-button"][aria-pressed="false"]')!;
+  const centre = (element: HTMLElement): [number, number] => {
+    const rect = element.getBoundingClientRect();
+    return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+  };
+  await resetMouse();
+  const revealedRest = getComputedStyle(revealed).backgroundColor;
+  const hiddenRest = getComputedStyle(hidden).backgroundColor;
+  try {
+    await sendMouse({ type: 'move', position: centre(hidden) });
+    await waitUntil(
+      () => getComputedStyle(hidden).backgroundColor !== hiddenRest,
+      'a hidden-value reveal toggle never picked up a hover tint',
+    );
+    await sendMouse({ type: 'move', position: centre(revealed) });
+    await waitUntil(
+      () => getComputedStyle(revealed).backgroundColor !== revealedRest,
+      'the revealed toggle stayed on its pressed fill under the pointer -- and since that fill is ' +
+        'the same brand-quiet the hover uses, it reads exactly like a hovered hidden row',
+    );
+  } finally {
+    await resetMouse();
+  }
 });

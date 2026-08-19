@@ -4,6 +4,7 @@ import type { LyraEmojiPicker, EmojiPickerGroup } from './emoji-picker.js';
 import { styles } from './emoji-picker.styles.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { setForcedColors } from '../../../../test/wtr-media.js';
 
 const groups: EmojiPickerGroup[] = [
   {
@@ -2048,4 +2049,66 @@ describe('optional-peer load failure', () => {
     // Disconnected: must no-op rather than throw or reach the (now-released) sink.
     expect(() => internals.announcePeerLoadFailure()).to.not.throw();
   });
+});
+
+// Regression: inside @media (forced-colors: active), [part='emoji'][data-active] was declared
+// BEFORE [part='emoji'][aria-selected='true']. Both are (0,2,0) and both declare `outline`, so the
+// selected rule won and the roving active-descendant marker disappeared the moment it landed on
+// the committed selection -- in the one display mode that exists to make state legible. The base
+// (non-forced-colors) block already declares them the other way round, so the two modes disagreed.
+it('keeps the active-descendant marker visible on the SELECTED emoji under forced colors', async () => {
+  const el = await connectEmojiPicker();
+  el.groups = groups;
+  await el.updateComplete;
+  const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')];
+  const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+  buttons[0]!.click();
+  await el.updateComplete;
+  expect(buttons[0]!.getAttribute('aria-selected'), 'sanity: emoji 0 is the committed selection').to.equal(
+    'true',
+  );
+
+  // Park the roving active descendant on a DIFFERENT emoji first, so the selected one can be read
+  // in its selection-only state.
+  grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await el.updateComplete;
+  expect(buttons[0]!.hasAttribute('data-active'), 'sanity: emoji 0 is not the active descendant').to.be
+    .false;
+
+  try {
+    await setForcedColors('active');
+    const selectionOnly = getComputedStyle(buttons[0]!).outlineStyle;
+    expect(selectionOnly, 'sanity: a selected emoji draws a solid outline here').to.equal('solid');
+
+    grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    await el.updateComplete;
+    expect(
+      buttons[0]!.hasAttribute('data-active'),
+      'sanity: the active descendant is back on the selected emoji',
+    ).to.be.true;
+    expect(
+      getComputedStyle(buttons[0]!).outlineStyle,
+      'the active-descendant marker must stay distinguishable on the selected emoji',
+    ).to.not.equal(selectionOnly);
+  } finally {
+    await setForcedColors('none');
+  }
+});
+
+// The two modes must agree on which of the pair wins; the base block already gets this right, and
+// pinning it keeps a future edit from "fixing" forced colors by inverting the ordinary case.
+it('marks the active descendant on the selected emoji outside forced colors too', async () => {
+  const el = await connectEmojiPicker();
+  el.groups = groups;
+  await el.updateComplete;
+  const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')];
+  const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+  buttons[0]!.click();
+  await el.updateComplete;
+  grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await el.updateComplete;
+  const selectionOnly = getComputedStyle(buttons[0]!).outlineStyle;
+  grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  await el.updateComplete;
+  expect(getComputedStyle(buttons[0]!).outlineStyle).to.not.equal(selectionOnly);
 });

@@ -3,6 +3,7 @@ import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { place } from '../../../internal/positioner.js';
 import { nextId } from '../../../internal/a11y.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './citation-badge.styles.js';
@@ -55,18 +56,6 @@ const STATUS_MESSAGE_KEY: Record<CitationBadgeStatus, string | null> = {
 // keyboard blur — those are intentional dismissals, not transient pointer
 // travel, so they close immediately.
 const HIDE_DELAY_MS = 200;
-
-// The default slot's preview content is often plain text (see the Statuses
-// story: "No source has confirmed this yet.") with no wrapping element at
-// all, so an Element-only check (e.g. Array.from(children)/assignedElements)
-// never counts it. Mirrors result-field.ts's hasRealContent: a node counts as
-// real preview content if it's an element not assigned to some other named
-// slot, or non-whitespace text.
-function isRealPreviewNode(n: Node): boolean {
-  return n.nodeType === Node.ELEMENT_NODE
-    ? !(n as Element).hasAttribute('slot')
-    : (n.textContent ?? '').trim().length > 0;
-}
 
 /**
  * `<lr-citation-badge>` — an inline `[n]` citation marker with a hover/
@@ -196,17 +185,21 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
    *  (`"Citation {index}, {label}"`). */
   @property() label = '';
 
-  // A `[part]` always contains a literal `<slot>` child regardless of
-  // assigned content, so `:empty` never matches — real emptiness is tracked
-  // in JS instead, same fix lr-tool-call-chip's hasDetailSlot/lr-stat's
-  // hasIcon etc. already establish.
-  @state() private hasPreviewSlot = false;
   @state() private popoverOpen = false;
 
   @query('[part="base"]') private buttonEl?: HTMLButtonElement;
   @query('[part="popover"]') private popoverEl?: HTMLElement;
 
   private readonly popoverId = nextId('citation-badge-popover');
+  // A `[part]` always contains a literal `<slot>` child regardless of
+  // assigned content, so `:empty` never matches — real emptiness is tracked
+  // in JS instead, same fix lr-tool-call-chip's hasDetailSlot/lr-stat's
+  // hasIcon etc. already establish. The preview is often plain text (see the
+  // Statuses story: "No source has confirmed this yet.") with no wrapping
+  // element at all, so an element-only check would miss it; the shared
+  // controller counts non-whitespace text as real content, seeds before the
+  // first render, and stays live afterwards.
+  private readonly slotPresence = new SlotPresenceController(this);
   private cleanupPositioner?: () => void;
   private hideTimer?: ReturnType<typeof setTimeout>;
   // Hover and focus are tracked as independent "keep it open" reasons —
@@ -216,11 +209,16 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   private hovering = false;
   private focused = false;
 
+  private get hasPreviewSlot(): boolean {
+    return this.slotPresence.has();
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (!this.hasUpdated) {
-      this.hasPreviewSlot = Array.from(this.childNodes).some(isRealPreviewNode);
-    }
+    // The slot can be emptied out from under an already-open popover (e.g. a
+    // consumer clearing preview content asynchronously) — nothing left to
+    // show, so don't leave an empty panel floating open.
+    if (this.popoverOpen && !this.hasPreviewSlot) this.hidePreviewNow();
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -272,16 +270,6 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
         })
       : citationLabel;
   }
-
-  private onSlotChange = (e: Event): void => {
-    this.hasPreviewSlot = (e.target as HTMLSlotElement)
-      .assignedNodes({ flatten: true })
-      .some(isRealPreviewNode);
-    // The slot can be emptied out from under an already-open popover (e.g. a
-    // consumer clearing preview content asynchronously) — nothing left to
-    // show, so don't leave an empty panel floating open.
-    if (!this.hasPreviewSlot) this.hidePreviewNow();
-  };
 
   // Named showPreview/hidePreviewNow (not show/hidePopover) to avoid
   // colliding with the standard HTML Popover API's own
@@ -423,7 +411,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
           inert
           ?hidden=${!this.popoverOpen}
         >
-          <slot @slotchange=${this.onSlotChange}></slot>
+          <slot></slot>
         </div>
       </span>
     `;

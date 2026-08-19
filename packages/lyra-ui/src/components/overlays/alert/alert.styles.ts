@@ -51,6 +51,15 @@ export const styles = css`
       transform var(--lr-duration-fast) var(--lr-easing-standard);
   }
 
+  /* A queued alert renders its base with both hidden and inert. inert is platform-enforced, but
+     hidden did nothing: the display: grid above is author origin and beats the UA
+     "[hidden] { display: none }" whatever their specificities, leaving the surface laid out. The
+     queue path also hides the host from <lr-toast>'s side, so nothing looked wrong; this keeps the
+     alert's own half of the contract true, matching the [part='icon'][hidden] guard below. */
+  [part='base'][hidden] {
+    display: none;
+  }
+
   :host([data-alert-showing]) [part='base'],
   :host([data-alert-hiding]) [part='base'] {
     opacity: 0;

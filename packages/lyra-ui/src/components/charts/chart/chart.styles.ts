@@ -11,13 +11,10 @@ export const styles = css`
     block-size: auto;
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
-    /* Chart.js renders to canvas, not the DOM, so it can't consume CSS
-       var() directly — chart.ts's themeColors() resolves these once per
-       draw() via getComputedStyle, same pattern as heatmap.ts's scale-lo/-hi.
-       Each is its own token (rather than reusing the semantic ones directly)
-       so a host can retheme just the chart's grid/ticks/legend/tooltip
-       without affecting unrelated text/border/surface colors elsewhere in
-       the component, while still defaulting to those semantic tokens. */
+    /* Chart.js renders to canvas, not the DOM, so it cannot consume a CSS var() -- chart.ts's
+       themeColors() resolves these once per draw() via getComputedStyle, same pattern as
+       heatmap.ts's scale-lo/-hi. Each has its own token, defaulting to a semantic one, so a host
+       can retheme the chart's grid/ticks/legend/tooltip alone. */
     --_lr-chart-grid-color: var(--lr-color-border);
     --_lr-chart-tick-color: var(--lr-color-text-quiet);
     --_lr-chart-legend-color: var(--lr-color-text);
@@ -91,11 +88,10 @@ export const styles = css`
   [part~='legend-item'] {
     display: inline-flex;
     align-items: center;
-    /* Both axes: a short series name leaves the swatch+label pair narrower than the
-       min-inline-size hit-area floor below, and the default justify-content
-       (normal => flex-start) dumped that slack on the trailing side. Safe against long names --
-       overflow-wrap below wraps them instead of overflowing, so there is no slack left to
-       redistribute and this becomes a no-op. */
+    /* Both axes: a short series name leaves the swatch+label pair narrower than the min-inline-size
+       hit-area floor below, and the default justify-content (normal => flex-start) dumped that
+       slack on the trailing side. A long name is safe -- overflow-wrap below wraps it, leaving no
+       slack and making this a no-op. */
     justify-content: center;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
@@ -114,8 +110,8 @@ export const styles = css`
   [part~='legend-item']:where(:hover) {
     background: var(--lr-chart-legend-item-hover-bg, var(--lr-color-brand-quiet));
   }
-  /* Pressed: the same quiet brand tint pushed further toward the text colour, so the
-     mousedown that toggles the series is visibly distinct from merely pointing at it. */
+  /* Pressed: the quiet brand tint pushed further toward the text colour, so the mousedown that
+     toggles the series reads as distinct from merely pointing at it. */
   [part~='legend-item']:where(:active) {
     background: var(
       --lr-chart-legend-item-active-bg,
@@ -144,10 +140,10 @@ export const styles = css`
       'warning'
       'table';
   }
-  /* Column 1 vs column 2, not physical left vs right: a grid numbers its columns along the inline
-     axis, so this pair mirrors itself under dir=rtl. The host resolves every legend-position value
-     (logical alias, literal physical edge, or auto) into whichever column lands on the intended
-     physical edge once that single mirror has been applied -- see legendGridPlacement(). */
+  /* Column 1 vs column 2, not physical left vs right: a grid numbers columns along the inline axis,
+     so this pair mirrors itself under dir=rtl. The host resolves every legend-position value
+     (logical alias, physical edge, or auto) into the column that lands on the intended physical
+     edge after that mirror -- see legendGridPlacement(). */
   [part='base']:where([data-legend-position='inline-start']) {
     grid-template-areas:
       'legend plot'
@@ -189,14 +185,13 @@ export const styles = css`
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
   }
-  /* no-pressed-state: the canvas is a role="application" keyboard surface with no click handler of
-     its own -- pressing it activates a datum *inside* the bitmap, which no CSS rule can reach, and
-     re-outlining the whole plot on mousedown would read as the entire chart being the target. */
+  /* no-pressed-state: the canvas is a role="application" keyboard surface with no click handler --
+     a press activates a datum *inside* the bitmap, which no CSS rule can reach, and re-outlining
+     the whole plot on mousedown would read as the entire chart being the target. */
   [part='canvas']:hover {
-    /* Scoped so a consumer can retint/resize just this hover outline (e.g. to make it more
-       prominent) without also affecting every other --lr-border-width-thin consumer on the page
-       -- the same indirection rationale as the --lr-chart-grid-color/-tick-color/etc. block
-       above, applied to a state-specific rule instead of a :host-level default. */
+    /* Scoped so a consumer can retint or resize just this hover outline without affecting every
+       other --lr-border-width-thin consumer on the page -- the --lr-chart-grid-color/-tick-color
+       indirection above, applied to a state-specific rule. */
     outline: var(--lr-chart-canvas-hover-outline-width, var(--lr-border-width-thin)) solid
       var(--lr-chart-grid-color, var(--_lr-chart-grid-color));
     outline-offset: var(--lr-focus-ring-offset);
@@ -262,8 +257,8 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* Mirrors map.styles.ts's identical [part='error'] treatment for the same "optional
-     peer dependency missing" failure shape. */
+  /* Mirrors map.styles.ts's identical [part='error'] treatment for the same "optional peer
+     dependency missing" failure shape. */
   [part='error'] {
     margin: 0;
     padding: var(--lr-space-l);

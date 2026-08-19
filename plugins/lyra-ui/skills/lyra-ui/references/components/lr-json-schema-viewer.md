@@ -21,7 +21,8 @@ It intentionally does not fetch remote references or validate values.
 
 **Properties:** clone-owned, bounded, frozen `schema: JsonSchemaNode | null = null` and
 `issues: readonly SchemaValidationIssue[] = []` (attribute: false); reassign a new schema record or
-issue array after changes. `selectedPath: string = ''` (attribute `selected-path`);
+issue array after changes. `selectedPath: string | null = null` (attribute `selected-path`) —
+`null` means no selection, while the empty string is the valid JSON Pointer for the schema root;
 `maxDepth: number = 20` (attribute `max-depth`, clamped to 100); `label: string = ''`.
 
 **Exported types:** `JsonSchemaNode` covers `$ref`, type/title/description, properties/items,

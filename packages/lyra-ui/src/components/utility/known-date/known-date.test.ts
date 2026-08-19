@@ -1,4 +1,4 @@
-import { fixture, expect, oneEvent, html } from '@open-wc/testing';
+import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import './known-date.js';
 import '../../forms/input/input.js';
@@ -1392,6 +1392,32 @@ describe('field-input hover (mouse-user parity with :focus-visible)', () => {
       await resetMouse();
     }
   });
+
+  // Hover is border-only here, so an appearance that repaints the border out-ranking the hover rule
+  // leaves that appearance with no pointer feedback whatsoever -- not a dimmer one.
+  for (const appearance of ['outlined', 'filled', 'filled-outlined'] as const) {
+    it(`changes the border color on hover in the ${appearance} appearance`, async () => {
+      const el = (await fixture(html`
+        <lr-known-date appearance=${appearance} style="--lr-transition-fast: 0s"></lr-known-date>
+      `)) as LyraKnownDate;
+      await el.updateComplete;
+      const field = el.shadowRoot!.querySelector('[part="field-input"]') as HTMLElement;
+      const restBorder = getComputedStyle(field).borderTopColor;
+      const rect = field.getBoundingClientRect();
+      try {
+        await sendMouse({
+          type: 'move',
+          position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+        });
+        await waitUntil(
+          () => getComputedStyle(field).borderTopColor !== restBorder,
+          `${appearance} field never picked up its hover border`,
+        );
+      } finally {
+        await resetMouse();
+      }
+    });
+  }
 });
 
 describe('invalid-border cssprop indirection', () => {

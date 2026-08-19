@@ -831,14 +831,14 @@ async function main() {
     await runA11y(page, 'entity-card--default');
     await page.evaluate(() => {
       window.__lyraEntityActivations = [];
-      document.addEventListener('lr-entity-activate', (event) => {
+      document.addEventListener('lr-entity-select', (event) => {
         window.__lyraEntityActivations.push(event.detail);
       });
     });
     await page.locator('lr-entity-card').locator('[part="focus-button"]').click();
     const entityActivations = await page.evaluate(() => window.__lyraEntityActivations);
     if (entityActivations.length !== 1 || entityActivations[0]?.entityId !== 'e1') {
-      throw new Error(`entity-card focus button did not emit lr-entity-activate for e1: got ${JSON.stringify(entityActivations)}`);
+      throw new Error(`entity-card focus button did not emit lr-entity-select for e1: got ${JSON.stringify(entityActivations)}`);
     }
 
     await waitForCheckedStory(page, baseUrl, 'flow-canvas--default', { width: 1280, height: 800 });

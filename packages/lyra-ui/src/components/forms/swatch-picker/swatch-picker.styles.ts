@@ -3,33 +3,24 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-flex;
-    /* Lets the host shrink below its row's max-content width when it's a flex/grid
-       item in a consumer's own narrow layout -- the default min-width:auto for flex
-       items would otherwise force the row wide regardless of [part='base']'s
-       flex-wrap below. */
+    /* Lets the host shrink below its row's max-content width as a flex/grid item; the default
+       min-width: auto would force the row wide despite [part='base']'s flex-wrap below. */
     min-inline-size: 0;
-    /* Ring drawn around the selected swatch. A dedicated token (rather than reusing
-       --lr-focus-ring-color from tokens.styles.ts) so a host can retheme the
-       selection indicator independently of the :focus-visible outline and every
-       other ring color in the library, while defaulting to the brand color. */
+    /* Ring around the selected swatch. Its own token, not --lr-focus-ring-color, so the selection
+       indicator rethemes independently of the :focus-visible outline; defaults to brand. */
     --_lr-swatch-picker-selected-color: var(--lr-color-brand);
-    /* Blur radius of that same ring -- 0 by default (a crisp ring, today's look for every
-       existing consumer). A host that wants a soft glow instead sets this to a real length
-       (e.g. 0.4rem) rather than reaching for ::part(swatch)[aria-checked] from outside, which
-       isn't reliably selectable: the CSS Shadow Parts spec only allows a fixed set of
-       pseudo-classes after ::part(), not arbitrary attribute selectors, so that combinator can
-       silently fail to match depending on the engine. */
+    /* Blur radius of that ring, 0 by default (a crisp ring). A host wanting a soft glow sets a real
+       length rather than ::part(swatch)[aria-checked], which Shadow Parts does not allow -- only a
+       fixed set of pseudo-classes may follow ::part(), so an attribute selector there can silently
+       fail to match. */
     --_lr-swatch-picker-selected-blur: 0;
-    /* Pulsing "shine" duration for the selected swatch -- 0s (the default) is a no-op (today's
-       static look for every existing consumer, and unaffected by this token at all: a 0-duration
-       animation resolves to its end state instantly and imperceptibly). A host sets a real
-       duration (e.g. 1.6s) to make the selected swatch rhythmically brighten and settle back. A
-       separate filter: brightness() animation (not box-shadow, which
-       --lr-swatch-picker-selected-blur above already owns) so the two compose freely without
-       fighting over the same CSS property, and so this reads identically for a plain color circle
-       and an icon swatch alike -- filter applies to the whole element including a slotted icon,
-       with no icon-specific branching needed (unlike the box-shadow/drop-shadow split below, which
-       needs one precisely because box-shadow doesn't reach into a transparent box's own content). */
+    /* Pulsing shine duration for the selected swatch; 0s (the default) is a no-op, since a
+       0-duration animation resolves to its end state instantly. It animates filter: brightness()
+       rather than box-shadow, which --lr-swatch-picker-selected-blur above already owns, so the two
+       compose without fighting over one property. filter also covers a slotted icon, so this reads
+       the same for a plain color circle and an icon swatch with no branching -- unlike the
+       box-shadow and drop-shadow split below, which needs one because box-shadow does not reach
+       into a transparent box's content. */
     --_lr-swatch-picker-shine-duration: 0s;
     --_lr-swatch-picker-gemstone-selected-blur: var(--lr-size-0-5rem);
     --_lr-swatch-picker-gemstone-shine-duration: var(--lr-transition-ambient);
@@ -40,11 +31,10 @@ export const styles = css`
     );
     --_lr-swatch-picker-gap: var(--lr-space-xs);
   }
-  /* A swatch is a square tap target in a wrapping grid, not a form-control row, so this is the
-     component's own ladder rather than the shared --lr-form-control-height one: the two agree from
-     m upwards, but the shared 2xs/xs steps (20/24px) would put a swatch at or under the WCAG 2.5.8
-     minimum with no margin. It still matches both spellings of every tier, the same way
-     internal/sizes.styles.ts does, so size="small" is honoured here too. */
+  /* A swatch is a square tap target in a wrapping grid, not a form-control row, so it has its own
+     ladder: it agrees with --lr-form-control-height from m up, but the shared 2xs/xs steps
+     (20/24px) would land at or under the WCAG 2.5.8 minimum. Both tier spellings still match, as in
+     internal/sizes.styles.ts. */
   :host([size="2xs"]) {
     --_lr-swatch-picker-hit-size: var(--lr-size-1-5rem);
     --_lr-swatch-picker-fill-size: var(
@@ -100,14 +90,12 @@ export const styles = css`
   }
   [part="swatch"] {
     box-sizing: border-box;
-    /* The interactive hit target is sized via the component-scoped --lr-swatch-picker-hit-size
-       (default --lr-size-2-5rem, swapped per size tier below, floored at 24px for WCAG 2.5.8),
-       while the *visible* fill is sized independently via --lr-swatch-picker-fill-size (default
-       --lr-size-1-5rem, also swapped per tier) -- rendered on the separate
-       [part='swatch-fill']/[part='swatch-icon'] child below and centered via flex, not by resizing
-       this button itself. A swatch's own fill/icon is what previously doubled as the clickable box;
-       splitting them keeps the dense picker grid's visual density unchanged while still growing the
-       real click/tap area. */
+    /* The hit target is sized by --lr-swatch-picker-hit-size (default --lr-size-2-5rem, per tier
+       below, floored at 24px for WCAG 2.5.8); the VISIBLE fill by --lr-swatch-picker-fill-size
+       (default --lr-size-1-5rem, also per tier) on the separate
+       [part='swatch-fill']/[part='swatch-icon'] child, centered via flex rather than by resizing
+       this button. The fill used to double as the clickable box; splitting them grows the tap area
+       without changing the dense grid's density. */
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -124,7 +112,7 @@ export const styles = css`
     border-radius: 50%;
     background: none;
     /* Exposes the option's color to a slotted icon (part='swatch-icon') via currentColor -- inert
-       when no icon is present, since [part='swatch-fill'] paints its own background-color instead. */
+       with no icon, since [part='swatch-fill'] paints its own background. */
     color: var(--lr-swatch-color);
     cursor: pointer;
   }
@@ -141,13 +129,13 @@ export const styles = css`
     );
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: 50%;
-    /* Per-swatch fill from the option's color, set inline by swatch-picker.class.ts.
-       Read through a var() (rather than an inline background-color declaration) so a
-       consumer's ::part(swatch-fill) background rule can still win when overriding it. */
+    /* Per-swatch fill from the option's color, set inline by swatch-picker.class.ts. Read through a
+       var(), not an inline background-color, so a consumer's ::part(swatch-fill) rule can still
+       win. */
     background-color: var(--lr-swatch-color);
     transition: transform var(--lr-transition-fast);
-    /* The fill is the option's data, not component chrome. Preserve it while the enclosing button
-       and its focus/selection affordances continue to use system colors in forced-colors mode. */
+    /* The fill is the option's data, not chrome: keep it while the button and its focus/selection
+       affordances use system colors in forced-colors mode. */
     forced-color-adjust: none;
   }
   [part="swatch-icon"] {
@@ -162,9 +150,9 @@ export const styles = css`
       --lr-swatch-picker-fill-size,
       var(--_lr-swatch-picker-fill-size)
     );
-    /* gemstoneGlyph() follows the icon convention of a 1em intrinsic box. Establish that em from
-       the visible fill token here so the SVG fills this wrapper instead of inheriting the browser's
-       smaller default button font size. Consumer-provided em-sized icons benefit identically. */
+    /* Sets the em from the visible fill token: gemstoneGlyph() -- and any em-sized consumer icon --
+       has a 1em intrinsic box, which would otherwise inherit the browser's smaller default button
+       font-size. */
     font-size: var(
       --lr-swatch-picker-fill-size,
       var(--_lr-swatch-picker-fill-size)
@@ -172,10 +160,9 @@ export const styles = css`
     transition: transform var(--lr-transition-fast);
     forced-color-adjust: none;
   }
-  /* The disabled arm keys off the button's own native :disabled, which is exactly what render()
-     binds -- not :host([disabled]) -- so the swatch that is actually inert is the swatch that
-     actually dims. (:host(:disabled) would be dead code here: this control is deliberately not
-     form-associated, so the UA never computes a FACE disabled state for the host.) */
+  /* Keys off the button's own native :disabled, which is what render() binds, so the swatch that is
+     inert is the swatch that dims. :host(:disabled) would be dead code: this control is
+     deliberately not form-associated, so the UA computes no disabled state for the host. */
   [part="swatch"]:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
@@ -192,13 +179,12 @@ export const styles = css`
   [part="swatch"][aria-checked="true"] [part="swatch-icon"] {
     transform: scale(1.2);
   }
-  /* The pressed state is expressed as scale, not as a colour mix, because this part's fill IS the
-     option's colour -- tinting it would misreport the value the swatch exists to show. Pressing
-     pushes the raised swatch back down past its resting size, so the press reads as a physical
-     depress against the hover lift rather than as a second, slightly-larger lift.
-     Deliberately placed AFTER the aria-checked rule above: the two selectors are the same
-     specificity (0,3,0), so ordering is the only thing that lets the already-selected swatch --
-     the one most likely to be pressed again -- show any pressed feedback at all. */
+  /* A scale, not a colour mix: this part's fill IS the option's colour, and tinting it would
+     misreport the value the swatch exists to show. The press pushes the raised swatch back below
+     its resting size, so it reads as a depress against the hover lift, not a second lift.
+     Deliberately AFTER the aria-checked rule above -- both are (0,3,0), so order is the only thing
+     giving the already-selected swatch, the likeliest one to be pressed again, any pressed
+     feedback. */
   [part="swatch"]:not(:disabled):active [part="swatch-fill"],
   [part="swatch"]:not(:disabled):active [part="swatch-icon"] {
     transform: scale(0.95);
@@ -230,19 +216,15 @@ export const styles = css`
       filter: brightness(1.4);
     }
   }
-  /* An icon option renders its own shape instead of the plain filled circle, so the box-shadow ring
-     above (drawn around [part='swatch-fill']'s true shape) doesn't apply to it at all -- render()
-     only ever mounts one of [part='swatch-fill']/[part='swatch-icon'] per swatch (see
-     swatch-picker.class.ts), so this selector and the one above never both match the same swatch.
-     Swap to a drop-shadow on the icon itself, which follows its real rendered shape.
-
-     The shine gets its OWN keyframe here (rather than sharing the fill's) because both effects
-     land on filter for an icon, and a running animation outranks an author-normal declaration:
-     a brightness-only keyframe would win the cascade and blank this glow out entirely for the
-     whole animation -- i.e. for every swatch in mode="gemstone", where the shine is on by default.
-     The keyframe therefore re-states the drop-shadow alongside the brightness so the two compose,
-     and the static declaration below stays as the path taken when the animation isn't running
-     (--lr-swatch-picker-shine-duration: 0s, and prefers-reduced-motion). */
+  /* An icon option renders its own shape, so the box-shadow ring above (drawn around
+     [part='swatch-fill']'s shape) does not apply -- render() mounts only one of
+     [part='swatch-fill'] and [part='swatch-icon'] per swatch, so the two selectors never both
+     match. Use a drop-shadow, which follows the icon's real rendered shape. The shine needs its OWN
+     keyframe: both effects land on filter for an icon, and a running animation outranks an
+     author-normal declaration, so a brightness-only keyframe would blank this glow for the whole
+     animation -- every mode="gemstone" swatch, where the shine is on by default. The keyframe
+     therefore re-states drop-shadow alongside brightness; the static declaration below covers the
+     not-running case (--lr-swatch-picker-shine-duration: 0s, and prefers-reduced-motion). */
   [part="swatch"][aria-checked="true"] [part="swatch-icon"] {
     filter: drop-shadow(
       0 0
@@ -293,12 +275,10 @@ export const styles = css`
         brightness(1.4);
     }
   }
-  /* The scale is redundant selection feedback (the ring already conveys it), so keep the
-     transform but drop its easing under reduced-motion -- the swatch snaps rather than glides.
-     The shine animation stops outright (a steady brightness, not a pulsing one) rather than
-     merely losing its own easing, matching prefers-reduced-motion's intent for anything that
-     loops -- a host that opted into --lr-swatch-picker-shine-duration still gets a selected
-     swatch, just without the rhythmic brightening. */
+  /* Under reduced motion the scale keeps its transform but loses its easing -- the ring already
+     conveys selection, so the swatch may snap. The looping shine stops outright at a steady
+     brightness rather than merely losing its easing, per prefers-reduced-motion's intent for
+     anything that loops. */
   @media (prefers-reduced-motion: reduce) {
     [part="swatch-fill"],
     [part="swatch-icon"] {

@@ -1,12 +1,13 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './flow-canvas.js';
 import '../../overlays/empty/empty.js';
 import '../flow-controls/flow-controls.js';
 import '../flow-minimap/flow-minimap.js';
 import type { LyraFlowCanvas, FlowNode, FlowEdge, FlowStructureSnapshot } from './flow-canvas.js';
 import { FLOW_PALETTE_MIME_TYPE } from './flow-canvas.js';
-import { styles } from './flow-canvas.styles.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { sendKeys } from '@web/test-runner-commands';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const motionMatchMedia = (matches: boolean): typeof window.matchMedia =>
   ((query: string) =>
@@ -814,12 +815,27 @@ describe('pan & zoom', () => {
     }
   });
 
+  // Focus arrives by real Tab rather than viewport.focus(). :focus-visible is modality-dependent:
+  // Firefox declines it outright for a programmatic focus, and every engine declines it once the
+  // last interaction was a pointer -- so a .focus()-driven version of this test passes or fails
+  // according to whether some earlier test in this file happened to move the mouse.
   it('renders a visible focus indicator on the keyboard-operable viewport', async () => {
-    const el = (await fixture(html`<lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>`)) as LyraFlowCanvas;
+    const wrapper = (await fixture(html`
+      <div>
+        <button type="button">before</button>
+        <lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-flow-canvas') as LyraFlowCanvas;
     el.nodes = nodes;
     await el.updateComplete;
     const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
-    viewport.focus();
+    (wrapper.querySelector('button') as HTMLElement).focus();
+    let guard = 0;
+    while (guard++ < 8 && el.shadowRoot!.activeElement !== viewport) {
+      await sendKeys({ press: 'Tab' });
+    }
+    expect(el.shadowRoot!.activeElement === viewport, 'Tab must reach the viewport').to.equal(true);
     const outline = getComputedStyle(viewport);
     expect(outline.outlineStyle).to.not.equal('none');
     expect(Number.parseFloat(outline.outlineWidth)).to.be.greaterThan(0);
@@ -2784,12 +2800,45 @@ describe('--lr-flow-canvas-node-selected-outline-color', () => {
 });
 
 describe('--lr-flow-canvas-node-hover-outline-color', () => {
-  it('references the cssprop with a fallback to --lr-color-border-strong in the :hover rule', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    const rule = css.match(/\[part='node'\]:hover\s*\{([^}]+)\}/)?.[1] ?? '';
-    expect(rule).to.match(
-      /outline:[^;]*var\(--lr-flow-canvas-node-hover-outline-color,\s*var\(--lr-color-border-strong\)\)/,
+  // Was a stylesheet-text regex pinning the :hover rule's `outline` declaration. The rendered form
+  // below proves the same fallback chain AND that the rule actually wins its cascade under a real
+  // pointer -- which a text match cannot see at all -- and it no longer breaks when that rule's
+  // selector list is legitimately extended.
+  it('falls back to --lr-color-border-strong when the cssprop is unset, under a real hover', async () => {
+    const el = (await fixture(
+      html`<lr-flow-canvas style="inline-size: 600px; block-size: 300px"></lr-flow-canvas>`,
+    )) as LyraFlowCanvas;
+    el.nodes = nodes;
+    await el.updateComplete;
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve)),
     );
+    const node = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    const rect = node.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => getComputedStyle(node).outlineStyle !== 'none',
+        'the hovered node drew no outline, so there is nothing to read the fallback off',
+      );
+      const unset = getComputedStyle(node).outlineColor;
+      el.style.setProperty(
+        '--lr-flow-canvas-node-hover-outline-color',
+        'var(--lr-color-border-strong)',
+      );
+      expect(getComputedStyle(node).outlineColor).to.equal(unset);
+      // ...and the property really is the knob, so the comparison above is not two no-ops agreeing.
+      el.style.setProperty('--lr-flow-canvas-node-hover-outline-color', 'rgb(77, 66, 55)');
+      expect(getComputedStyle(node).outlineColor).to.equal('rgb(77, 66, 55)');
+    } finally {
+      await resetMouse();
+    }
   });
 
   it('cascades the cssprop onto [part="node"]', async () => {
@@ -2836,36 +2885,214 @@ describe('connect-gesture and drop-active outline cssprop indirection', () => {
   });
 });
 
-describe('mouse-hover feedback on nodes and edges', () => {
-  // :hover cannot be synthesized in this test runner (no real pointer), so per this repo's
-  // documented exception for genuinely-unsynthesizable pseudo-classes, this asserts against the
-  // stylesheet source instead of a rendered/computed effect.
-  it('declares a :hover rule for both [part="node"] and [part="edge"], matching their :focus-visible affordance', () => {
-    const css = styles.cssText;
-    expect(css).to.match(/\[part='node'\]:hover\s*\{/);
-    expect(css).to.match(/\[part='edge'\]:hover\s*\{/);
-  });
-});
+describe('pointer feedback on nodes and edges', () => {
+  // These assertions used to match the stylesheet TEXT with a regex, on the stated premise that
+  // ':hover cannot be synthesized in this test runner'. That premise is wrong -- test/wtr-mouse.ts
+  // drives a real pointer over Web Test Runner's own command channel, and several suites in this
+  // repo already use it -- and the shortcut costs exactly the thing that matters here: a selector
+  // being PRESENT in the sheet says nothing about whether it wins its cascade, which is the entire
+  // failure mode this component's :hover/:active/[aria-pressed] rules keep running into. A regex
+  // pinning a selector list is also broken by every legitimate edit to that list; this one was,
+  // twice in one day. Everything below reads getComputedStyle on the real element under a real
+  // pointer instead.
 
-describe('selected-state must not mask hover/active feedback on a node', () => {
-  // :hover/:active cannot be synthesized in this test runner (no real pointer), so per this
-  // repo's documented exception for genuinely-unsynthesizable pseudo-classes, this asserts
-  // against the stylesheet source order instead of a rendered/computed effect. [part='node']:hover,
-  // [part='node']:active, and [part='node'][data-selected] all resolve to the same specificity
-  // (0,2,0), so whichever is declared LAST always wins regardless of which states are actually
-  // active on the element. [data-selected] must therefore be declared BEFORE :hover and :active,
-  // or hovering/press-dragging an already-selected node would show no outline-color/weight change
-  // from its static selected ring.
-  it('declares [part="node"][data-selected] before [part="node"]:hover and [part="node"]:active', () => {
-    const css = styles.cssText;
-    const selectedIndex = css.search(/\[part='node'\]\[data-selected\]\s*\{/);
-    const hoverIndex = css.search(/\[part='node'\]:hover\s*\{/);
-    const activeIndex = css.search(/\[part='node'\]:active\s*\{/);
-    expect(selectedIndex).to.be.greaterThan(-1);
-    expect(hoverIndex).to.be.greaterThan(-1);
-    expect(activeIndex).to.be.greaterThan(-1);
-    expect(selectedIndex).to.be.lessThan(hoverIndex);
-    expect(selectedIndex).to.be.lessThan(activeIndex);
+  // Two nodes spaced far enough apart that the drawn edge between them is a long horizontal run
+  // with no node card over it -- the only way a pointer can land on the 1.5/2.5px stroke itself
+  // rather than on the wide transparent [part='edge-hit-area'] twin painted immediately before it.
+  const spacedNodes: FlowNode[] = [
+    { id: 'a', position: { x: 0, y: 0 }, data: { label: 'Fetch' } },
+    { id: 'b', position: { x: 600, y: 0 }, data: { label: 'Summarize' } },
+  ];
+
+  // A node card is a nested custom element (lr-flow-node) that lays itself out after the canvas's
+  // own updateComplete resolves, so every rect measured straight off updateComplete is stale --
+  // by pointer-press time the node had already moved 129px, which silently turned a "the press
+  // changed the outline" assertion into "the pointer fell off the node". Two frames is the settle.
+  async function settleLayout(): Promise<void> {
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve)),
+    );
+  }
+
+  async function spacedFixture(selectEdge: boolean): Promise<LyraFlowCanvas> {
+    const el = (await fixture(
+      html`<lr-flow-canvas style="inline-size: 900px; block-size: 300px"></lr-flow-canvas>`,
+    )) as LyraFlowCanvas;
+    el.nodes = spacedNodes;
+    el.edges = edges;
+    if (selectEdge) el.selectedEdgeIds = ['a-b'];
+    await el.updateComplete;
+    await settleLayout();
+    return el;
+  }
+
+  function centreOf(target: Element): [number, number] {
+    const rect = target.getBoundingClientRect();
+    return [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
+  }
+
+  it('gives an unselected node a rendered hover outline, and a heavier one while it is held', async () => {
+    const el = await spacedFixture(false);
+    el.style.setProperty('--lr-flow-canvas-node-hover-outline-color', 'rgb(1, 2, 3)');
+    const node = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    expect(
+      getComputedStyle(node).outlineStyle,
+      'sanity: a resting unselected node draws no outline at all',
+    ).to.equal('none');
+    try {
+      await sendMouse({ type: 'move', position: centreOf(node) });
+      await waitUntil(
+        () => getComputedStyle(node).outlineStyle !== 'none',
+        'a hovered node drew no outline',
+      );
+      expect(getComputedStyle(node).outlineColor).to.equal('rgb(1, 2, 3)');
+      const hoveredWidth = getComputedStyle(node).outlineWidth;
+
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(node).outlineWidth !== hoveredWidth,
+        'a held node kept its hover outline weight',
+      );
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  });
+
+  // [part='node'][data-selected], [part='node']:hover and [part='node']:active are all (0,2,0), so
+  // source order alone settles them; the selected ring is declared first precisely so the pointer
+  // states still read on top of it. Two literal paint hooks make that provable by colour rather
+  // than by reading the sheet.
+  it('layers hover and press feedback over an ALREADY-SELECTED node instead of freezing on its ring', async () => {
+    const el = await spacedFixture(false);
+    el.style.setProperty('--lr-flow-canvas-node-selected-outline-color', 'rgb(9, 9, 9)');
+    el.style.setProperty('--lr-flow-canvas-node-hover-outline-color', 'rgb(1, 2, 3)');
+    el.selectedNodeIds = ['a'];
+    await el.updateComplete;
+    await settleLayout();
+    const node = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    expect(
+      getComputedStyle(node).outlineColor,
+      'sanity: the selected paint hook must apply while resting',
+    ).to.equal('rgb(9, 9, 9)');
+    const restingWidth = getComputedStyle(node).outlineWidth;
+    try {
+      await sendMouse({ type: 'move', position: centreOf(node) });
+      await waitUntil(
+        () => getComputedStyle(node).outlineColor === 'rgb(1, 2, 3)',
+        'a hovered selected node kept its static selected ring',
+      );
+      expect(getComputedStyle(node).outlineWidth).to.not.equal(restingWidth);
+
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(node).outlineWidth === restingWidth,
+        'a held selected node never stepped its outline weight back up',
+      );
+      expect(getComputedStyle(node).outlineColor).to.equal('rgb(1, 2, 3)');
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  });
+
+  it('thickens an edge on hover, both on its own stroke and through its wide hit area', async () => {
+    const el = await spacedFixture(false);
+    const edge = el.shadowRoot!.querySelector('[part="edge"]') as SVGPathElement;
+    const resting = getComputedStyle(edge).strokeWidth;
+    // A straight horizontal path has a zero-height geometry box, so its vertical centre IS the
+    // drawn line -- no rounding slack to miss the stroke by.
+    const [cx, cy] = centreOf(edge);
+    expect(
+      (el.shadowRoot!.elementFromPoint(cx, cy) as Element | null)?.getAttribute('part'),
+      'sanity: the stroke centre must be the edge itself',
+    ).to.equal('edge');
+    try {
+      await sendMouse({ type: 'move', position: [cx, cy] });
+      await waitUntil(
+        () => getComputedStyle(edge).strokeWidth !== resting,
+        'a hovered edge kept its resting stroke weight',
+      );
+      const hovered = getComputedStyle(edge).strokeWidth;
+
+      // 8px off the stroke is the transparent 40px-wide hit-area twin, whose whole purpose is to
+      // make the edge reachable; the sibling-combinator arm carries the same feedback there.
+      expect(
+        (el.shadowRoot!.elementFromPoint(cx, cy - 8) as Element | null)?.getAttribute('part'),
+        'sanity: 8px off the stroke must be the hit area',
+      ).to.equal('edge-hit-area');
+      await sendMouse({ type: 'move', position: [cx, cy - 8] });
+      await waitUntil(
+        () => getComputedStyle(edge).strokeWidth === hovered,
+        'hovering the wide hit area gave its edge no feedback',
+      );
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  // Regression: [part='edge'][aria-pressed='true'] was declared AFTER [part='edge']:active. Both
+  // are (0,2,0) and both declare stroke-width, so the selected edge's static 2.5 clamped the
+  // press's 3.5 straight back down and pressing an already-selected edge was a visual no-op --
+  // the exact thing the :active rule's own comment says the 3.5 exists to clear. Stroke weight is
+  // the only channel an edge has, so nothing else was covering for it.
+  it('thickens an ALREADY-SELECTED edge while it is held on its own stroke', async () => {
+    const el = await spacedFixture(true);
+    const edge = el.shadowRoot!.querySelector('[part="edge"]') as SVGPathElement;
+    expect(edge.getAttribute('aria-pressed'), 'sanity: the edge must be the selected one').to.equal(
+      'true',
+    );
+    const resting = getComputedStyle(edge).strokeWidth;
+    const [cx, cy] = centreOf(edge);
+    expect(
+      (el.shadowRoot!.elementFromPoint(cx, cy) as Element | null)?.getAttribute('part'),
+      'sanity: the press must land on the edge itself, not a node card or the hit area',
+    ).to.equal('edge');
+    try {
+      await sendMouse({ type: 'move', position: [cx, cy] });
+      await waitUntil(() => edge.matches(':hover'), 'the edge never reported itself hovered');
+      // Hover on a selected edge is deliberately inert: :hover and [aria-pressed='true'] declare
+      // the same 2.5, so nothing is visible and nothing is being masked.
+      expect(getComputedStyle(edge).strokeWidth).to.equal(resting);
+
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(edge).strokeWidth !== resting,
+        'a held selected edge kept its selected stroke weight -- the press produced no feedback',
+      );
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  });
+
+  // The sibling-combinator arm reaches the same 3.5 through a HIGHER specificity
+  // ([part='edge-hit-area']:active + [part='edge'] is (0,3,0): three compound parts), so it already
+  // out-ranked [aria-pressed='true']. Pinning it keeps the fix for the (0,2,0) arm from being
+  // mistaken for the only working path, and guards the wide-target affordance itself.
+  it('thickens an already-selected edge held through its wide transparent hit area', async () => {
+    const el = await spacedFixture(true);
+    const edge = el.shadowRoot!.querySelector('[part="edge"]') as SVGPathElement;
+    const resting = getComputedStyle(edge).strokeWidth;
+    const [cx, cy] = centreOf(edge);
+    expect(
+      (el.shadowRoot!.elementFromPoint(cx, cy - 8) as Element | null)?.getAttribute('part'),
+      'sanity: 8px off the stroke must be the hit area, not the edge',
+    ).to.equal('edge-hit-area');
+    try {
+      await sendMouse({ type: 'move', position: [cx, cy - 8] });
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(edge).strokeWidth !== resting,
+        'a selected edge held through its hit area kept its selected stroke weight',
+      );
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
   });
 });
 
@@ -3211,4 +3438,70 @@ it('floors a consumer-authored node card to the WCAG 2.5.8 tap-target minimum', 
   // rather than the 40px --lr-icon-button-size floor reserved for compact icon controls.
   expect(box.width, 'node inline hit area').to.be.at.least(24);
   expect(box.height, 'node block hit area').to.be.at.least(24);
+});
+
+
+
+// Same cascade shape as lr-dashboard-grid's [part="cell"][data-collision], and settled the same
+// way: [part='viewport'][data-drop-active] and [part='viewport']:focus-visible are both (0,2,0)
+// and both declare `outline`, with drop-active written later. The drop target outline keeping the
+// outline channel is right -- it is the only channel that state has -- but the keyboard user who
+// focused the canvas must not be left with no focus indicator at all while an external drag is
+// over it, so focus moves to a box-shadow ring.
+describe('drop-active must not erase the viewport focus indicator', () => {
+  async function focusedViewport(): Promise<{ el: LyraFlowCanvas; viewport: HTMLElement }> {
+    const wrapper = (await fixture(html`
+      <div style="--lr-flow-canvas-drop-active-outline-color: rgb(9, 9, 9)">
+        <button type="button">before</button>
+        <lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-flow-canvas') as LyraFlowCanvas;
+    el.nodes = nodes;
+    await el.updateComplete;
+    const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    (wrapper.querySelector('button') as HTMLElement).focus();
+    let guard = 0;
+    while (guard++ < 8 && el.shadowRoot!.activeElement !== viewport) {
+      await sendKeys({ press: 'Tab' });
+    }
+    expect(el.shadowRoot!.activeElement === viewport, 'Tab must reach the viewport').to.equal(true);
+    return { el, viewport };
+  }
+
+  it('hands the outline channel to the drop-target treatment, and the focus ring to box-shadow', async () => {
+    const { viewport } = await focusedViewport();
+    const focusRing = getComputedStyle(viewport).outlineColor;
+    expect(focusRing, 'sanity: a focused viewport draws a ring').to.not.equal('rgb(9, 9, 9)');
+    expect(
+      getComputedStyle(viewport).boxShadow,
+      'sanity: a plain focused viewport needs no second channel',
+    ).to.equal('none');
+
+    viewport.setAttribute('data-drop-active', '');
+    expect(
+      getComputedStyle(viewport).outlineStyle,
+      'the drop-target outline keeps the outline channel',
+    ).to.equal('dashed');
+    expect(getComputedStyle(viewport).outlineColor).to.equal('rgb(9, 9, 9)');
+    const shadow = getComputedStyle(viewport).boxShadow;
+    expect(shadow, 'a focused drop-active viewport must still say it is focused').to.not.equal(
+      'none',
+    );
+    expect(
+      shadow.includes(focusRing),
+      `expected the focus ring colour ${focusRing} in ${shadow}`,
+    ).to.equal(true);
+  });
+
+  it('draws that ring for focus only, not for the drop state itself', async () => {
+    const el = (await fixture(
+      html`<lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>`,
+    )) as LyraFlowCanvas;
+    el.nodes = nodes;
+    await el.updateComplete;
+    const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    viewport.setAttribute('data-drop-active', '');
+    expect(getComputedStyle(viewport).boxShadow).to.equal('none');
+  });
 });

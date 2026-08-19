@@ -4,7 +4,7 @@ export const styles = css`
   :host {
     display: block;
     /* Makes the host a query container so the @container rule below reacts to the frame's own
-       allocated width (a sidebar, a split pane, a dialog) instead of the viewport's. */
+       allocated width -- a sidebar, a split pane, a dialog -- instead of the viewport's. */
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
@@ -62,8 +62,8 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
   }
   /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
-     --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
-     than hover in both light and dark themes rather than repeating it. */
+     --lr-color-mix-partner (which follows the text colour), a distinctly deeper step than hover in
+     light and dark themes alike rather than a repeat of it. */
   [part='take-over-button']:active,
   [part='stop-button']:active {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
@@ -89,6 +89,13 @@ export const styles = css`
     inline-size: 100%;
     block-size: 100%;
     object-fit: contain;
+  }
+  /* The display above is author-origin and outranks the UA stylesheet's own
+     '[hidden] { display: none }', so a consumer-supplied viewport surface (a live canvas or iframe
+     swapped out while the session is idle) would still paint over the frame. The find-in-page
+     carve-out matches the library's other ::slotted([hidden]) overrides. */
+  ::slotted([hidden]:not([hidden='until-found' i])) {
+    display: none;
   }
   [part='ping'] {
     position: absolute;

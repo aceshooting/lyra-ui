@@ -171,7 +171,7 @@ describe('lr-contact-viewer', () => {
   });
   it('forwards document anchors/highlights and advertises its text contracts', () => {
     const definition = getDefaultDocumentRendererRegistry().get('text/vcard')!;
-    const highlights: LyraHighlight[] = [{ id: 'contact', anchor: { kind: 'text-quote', exact: 'Ada' } }];
+    const highlights: LyraHighlight[] = [{ id: 'contact', anchor: { kind: 'text-quote', quote: 'Ada' } }];
     const anchor = { kind: 'fragment' as const, id: 'contact' };
     const rendered = definition.render!({
       name: 'team.vcf',

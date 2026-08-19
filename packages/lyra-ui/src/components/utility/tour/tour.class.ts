@@ -434,7 +434,9 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
    *  step's own `heading`, matching `lr-dialog`'s `accessibleLabel` pattern. Most consumers
    *  won't need this since each step already has a meaningful name via `heading`; setting it
    *  makes the *same* string name every step's panel. Set as a plain `aria-label` attribute on
-   *  `<lr-tour>` itself, not a public JS property. */
+   *  `<lr-tour>` itself, not a public JS property. An explicitly empty `aria-label=""` suppresses
+   *  the panel's accessible name outright rather than falling back to the heading or step count --
+   *  again as `lr-dialog` does. */
   @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
 
   @state() private unanchored = false;
@@ -882,11 +884,20 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     const total = this.steps.length;
     const isLastStep = this.activeIndex >= total - 1;
     const headingName = (step.heading ?? '').trim();
-    const suppliedName = this.accessibleLabel?.trim() ?? '';
+    // Presence-based, matching lr-dialog's `hostAriaLabel !== null` test: `aria-label=""` is the
+    // author declaring the panel has no accessible name, which is a different statement from not
+    // declaring one. Reading it truthily did not merely ignore that -- with a `heading` present it
+    // re-named the dialog from the visible heading via aria-labelledby, so suppressing the name
+    // silently produced a different one. Whitespace joins the empty case because it cannot yield an
+    // accessible name either.
+    const authoredName = this.accessibleLabel;
+    const useHeading = authoredName === null && headingName.length > 0;
+    const suppliedName = authoredName?.trim() ?? '';
     const fallbackName = this.localize('tourStepOf', undefined, {
       current: this.formatProgressNumber(this.activeIndex + 1),
       total: this.formatProgressNumber(total),
     });
+    const panelName = authoredName === null ? fallbackName : suppliedName;
     const hasBodyContent = this.hasSlotContent || !!step.content;
     const describedBy = [hasBodyContent ? this.bodyId : '', this.showProgress ? this.progressTextId : '']
       .filter((id) => id.length > 0)
@@ -915,8 +926,8 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
             role="dialog"
             aria-modal=${step.interactiveTarget ? 'false' : 'true'}
             tabindex="-1"
-            aria-label=${suppliedName || !headingName ? suppliedName || fallbackName : nothing}
-            aria-labelledby=${suppliedName || !headingName ? nothing : this.headingId}
+            aria-label=${useHeading ? nothing : panelName}
+            aria-labelledby=${useHeading ? this.headingId : nothing}
             aria-describedby=${describedBy || nothing}
             ?data-unanchored=${this.unanchored}
             @keydown=${this.onPopoverKeyDown}

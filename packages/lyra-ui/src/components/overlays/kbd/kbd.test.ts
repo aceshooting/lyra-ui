@@ -249,7 +249,7 @@ describe('<lr-kbd> rendering', () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     const seps = base.querySelectorAll('.sep');
     expect(seps.length).to.equal(1);
-    expect(seps[0].textContent).to.equal('+');
+    expect(seps[0]!.textContent).to.equal('+');
   });
 
   it('sets role="img" and an aria-label spelling the shortcut out in words', async () => {

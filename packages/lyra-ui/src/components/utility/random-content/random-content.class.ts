@@ -59,6 +59,16 @@ export interface LyraRandomContentEventMap {
  * Reactive selection changes written while detached and rendered during reconnection are part of
  * that silent baseline; a later explicit `randomize()` is still announced.
  *
+ * **Before script runs, the first candidate is the one that shows.** Selection happens in
+ * `firstUpdated()`, which a server renderer never executes, and it works by setting
+ * `hidden`/`aria-hidden` on light-DOM siblings — something Lit's hydration diffing never inspects,
+ * so no amount of first-render seeding can make the server agree. The shadow stylesheet therefore
+ * hides every candidate after the first until a selection has actually been applied: a
+ * server-rendered page (and a page whose script never runs at all) paints one candidate rather
+ * than the entire pool, and hydration swaps that one for the chosen one instead of collapsing N
+ * down to one. Randomness itself is genuinely unavailable server-side — there is no seed to share
+ * — so authors who need a *specific* pre-hydration candidate order the pool accordingly.
+ *
  * `fade-left`/`fade-right` are physical-direction transforms (matching the
  * upstream naming this component mirrors), not "previous/next" navigational
  * semantics like a carousel chevron, so they are deliberately **not**
@@ -144,6 +154,19 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   }
 
   @query('slot') private slotEl?: HTMLSlotElement;
+  @query('[part="base"]') private baseEl?: HTMLElement;
+
+  /**
+   * Whether a selection has ever been applied to the pool. Drives `[part='base']`'s
+   * `data-unselected` marker, which is what keeps a server-rendered page from painting the whole
+   * candidate pool (see the class doc's SSR note).
+   *
+   * Deliberately NOT a reactive `@state`: it flips inside `applySelection()`, reached from
+   * `firstUpdated()`, and a reactive write there schedules a second update purely to drop one
+   * attribute -- Lit's change-in-update warning, for no rendered difference. The attribute is
+   * removed imperatively instead; every later render commits the same `false` and leaves it off.
+   */
+  private hasAppliedSelection = false;
 
   private timer?: number;
   private timerWindow?: Window;
@@ -379,6 +402,10 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
       this.reconcileManagedPool(pool);
       this.applyManagedSelection(pool, selected);
     });
+    // A real selection now owns hidden/aria-hidden on every candidate, so the pre-selection
+    // stylesheet rule must stop applying. See `hasAppliedSelection` for why this is imperative.
+    this.hasAppliedSelection = true;
+    this.baseEl?.removeAttribute('data-unselected');
   }
 
   private captureAuthorStateMutations(records: MutationRecord[]): void {
@@ -641,6 +668,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
       <div
         part="base"
         ?data-multiple=${multiple}
+        ?data-unselected=${!this.hasAppliedSelection}
         role=${hostLabel === null ? nothing : 'group'}
         aria-label=${hostLabel === null ? nothing : hostLabel}
         @focusin=${this.onFocusIn}

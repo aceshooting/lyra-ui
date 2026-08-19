@@ -28,8 +28,8 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   /* no-pressed-state: a press on a text field lands the caret rather than activating a control, so
-     a pressed tint would show only for the length of the mousedown and then be replaced by the
-     :focus-visible ring above, which is the state that actually persists and communicates. */
+     a pressed tint would last only the mousedown before the :focus-visible ring above -- the state
+     that actually persists and communicates -- replaced it. */
   [part='search']:hover {
     border-color: var(--lr-color-border-strong);
   }
@@ -70,18 +70,16 @@ export const styles = css`
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }
-  /* :where() zeroes the wrapped attribute-selector/pseudo-class contribution, leaving only
-     :hover/:focus-visible itself -- (0,1,0) total, functionally identical selection to
-     [part='item']:not([aria-disabled='true']):hover ((0,3,0)) but now losing (on the
-     pseudo-element tiebreak) to a consumer's own ::part(item):hover override ((0,1,1)) without
-     that consumer needing !important. Matches attachment-trigger.styles.ts's low-specificity pattern. */
+  /* :where() zeroes the wrapped attribute-selector and pseudo-class, leaving :hover/:focus-visible
+     alone at (0,1,0). Unwrapped, [part='item']:not([aria-disabled='true']):hover is (0,3,0) and
+     out-ranks the source-later :active rule below, leaving a dragged item with no pressed fill. */
   :where([part='item']):hover:where(:not([aria-disabled='true'])),
   :where([part='item']):focus-visible:where(:not([aria-disabled='true'])) {
     background: var(--lr-color-surface-hover, var(--lr-color-border));
   }
-  /* These items are drag sources (cursor: grab above), so the pressed state is the moment the drag
-     starts -- the deeper fill and the grabbing cursor together. Kept in the same :where() shape as
-     the hover rule so a consumer's ::part(item):active still outranks it. */
+  /* These items are drag sources (cursor: grab above), so the press is the moment the drag starts:
+     deeper fill plus the grabbing cursor. Same :where() shape as the hover rule, so the two tie at
+     (0,1,0) and source order hands this one the press. */
   :where([part='item']):active:where(:not([aria-disabled='true'])) {
     background: color-mix(in oklab, var(--lr-color-surface-hover, var(--lr-color-border)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
     cursor: grabbing;

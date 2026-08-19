@@ -1,4 +1,4 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -117,10 +117,6 @@ export class LyraFileIcon extends LyraElement {
   @property() label?: string;
   /** Immutable metadata authority for this instance. */
   @property({ attribute: false }) registry: LyraFileTypeMetadataRegistry = defaultFileTypeMetadataRegistry;
-
-  protected override willUpdate(changed: PropertyValues<this>): void {
-    super.willUpdate(changed);
-  }
 
   private resolveMetadata(): LyraResolvedFileTypeMetadata {
     try {

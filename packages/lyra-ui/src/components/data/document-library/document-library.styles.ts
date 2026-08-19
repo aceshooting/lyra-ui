@@ -51,9 +51,9 @@ export const styles = css`
   [part='clear-selection']:hover {
     text-decoration: underline;
   }
-  /* Pressed deepens the link colour on top of the hovered underline: an underline alone cannot get
-     "more underlined", so the press would otherwise be indistinguishable from the hover it starts
-     from. The mix follows --lr-color-mix-partner (the text colour), so it darkens a light theme and
+  /* Pressed deepens the link colour on top of the hovered underline: an underline cannot get more
+     underlined, so the press would otherwise be indistinguishable from the hover it starts from.
+     The mix follows --lr-color-mix-partner, the text colour, so it darkens a light theme and
      lightens a dark one instead of always doing one of the two. */
   [part='clear-selection']:active {
     color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));

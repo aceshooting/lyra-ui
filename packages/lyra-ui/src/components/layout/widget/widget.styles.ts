@@ -3,9 +3,8 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    /* Fullscreen scrim color -- component-specific so a host can retheme it
-       without a raw literal leaking into the public API (no shared
-       --lr-*-overlay token exists in the design system to resolve through). */
+    /* Fullscreen scrim color -- component-scoped: no shared --lr-*-overlay token exists to resolve
+       through, and a host still needs a retheme hook rather than a raw literal. */
     --_lr-widget-overlay-color: var(--lr-color-overlay);
     --_lr-widget-fullscreen-inset: max(
         var(--lr-space-l),
@@ -97,18 +96,13 @@ export const styles = css`
     overflow-x: auto;
     overflow-y: hidden;
   }
-  /* Edge fade on either header row, gated on that row actually overflowing -- its own
-     ScrollOverflowController toggles data-scroll-overflow from a real scrollWidth/clientWidth
-     measurement. Painting it unconditionally is not harmless: at the 2rem-per-edge default a row
-     narrower than its own two fades renders half-transparent and reads as disabled. One-sided and
-     RTL-aware, matching lr-tab-group/lr-segmented/lr-stepper: data-scroll-start/data-scroll-end
-     (also from ScrollOverflowController, logical and live-updated on scroll) report which edge(s)
-     genuinely still have more to reach, so a row scrolled fully to one edge fades only the other
-     -- a row resting at its start no longer dims that already-fully-visible start edge.
-     data-scroll-start/data-scroll-end are wrapped in :where() purely to keep these rules'
-     specificity pinned to the same [data-scroll-overflow]-only baseline as before -- so the later
-     forced-colors override (same base selectors, later in the stylesheet) still wins its tie by
-     source order rather than losing to these more-specific-looking selectors. */
+  /* Edge fade gated on real overflow: ScrollOverflowController sets data-scroll-overflow from a
+     scrollWidth/clientWidth measurement, and unconditionally a row narrower than its own two
+     2rem-per-edge fades reads as half-transparent and disabled. One-sided and RTL-aware like
+     lr-tab-group/lr-segmented/lr-stepper via data-scroll-start/data-scroll-end (same controller,
+     logical, live on scroll). :where() pins specificity to the [data-scroll-overflow]-only
+     baseline, so the later forced-colors override on the same base selectors wins by source
+     order. */
   [part="actions"][data-scroll-overflow]:where([data-scroll-start][data-scroll-end]),
   [part="view-toggles"][data-scroll-overflow]:where(
       [data-scroll-start][data-scroll-end]
@@ -212,12 +206,10 @@ export const styles = css`
     display: inline-flex;
     flex: 0 1 auto;
     align-items: center;
-    /* Both axes, matching collapse-button/fullscreen-button. Cross-axis centering alone left an
-       icon-only toggle visibly off-center: min-inline-size floors the pill at the square
-       icon-button size, so a 13px glyph inside a 40px pill has ~11px of slack that the default
-       justify-content (normal => flex-start) dumps entirely on the trailing side -- 4.5px off
-       true center once the asymmetric inline padding is counted. A labeled toggle is unaffected
-       (its content already fills the pill, which sizes to fit). */
+    /* Both axes, matching collapse-button/fullscreen-button: min-inline-size floors the pill at the
+       square icon-button size, so a 13px glyph in a 40px pill has ~11px of slack that the default
+       justify-content (normal => flex-start) dumped on the trailing side -- 4.5px off true center
+       once the asymmetric inline padding counts. A labeled toggle fills its fit-sized pill. */
     justify-content: center;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
@@ -242,12 +234,10 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  /* :where() zeroes the wrapped selector's specificity contribution, leaving only :hover itself,
-     mirroring lr-pagination's/lr-table's low-specificity rule for this exact selector shape --
-     a consumer's own ::part(view-toggle):hover can win without !important. Colors route through
-     scoped --lr-widget-view-toggle-hover-*, mirroring the [aria-pressed='true'] rule below, so a
-     consumer can retint just the hover state without hijacking the shared brand-quiet/text tokens
-     used everywhere else. */
+  /* :where() zeroes the wrapped selector to (0,1,0), below the
+     [part='view-toggle'][aria-pressed='true'] rule at (0,2,0), so the pressed toggle keeps its own
+     fill under the pointer. Scoped --lr-widget-view-toggle-hover-* colors, mirroring that rule,
+     retint hover alone without hijacking the shared brand-quiet/text tokens. */
   :where([part="view-toggle"]):hover {
     background: var(
       --lr-widget-view-toggle-hover-bg,
@@ -255,10 +245,11 @@ export const styles = css`
     );
     color: var(--lr-widget-view-toggle-hover-color, var(--lr-color-text));
   }
-  /* Whatever fill hover resolved to -- including a consumer's own
-     --lr-widget-view-toggle-hover-bg -- mixed further toward --lr-color-mix-partner, so a retinted
-     hover keeps a pressed step that is deeper than it rather than one pinned to the stock token.
-     Same zeroed specificity as the hover rule above, for the same reason. */
+  /* Mixes whatever hover resolved to, including a consumer's --lr-widget-view-toggle-hover-bg,
+     toward --lr-color-mix-partner, so a retinted hover keeps a deeper pressed step. Zeroed
+     specificity like the hover rule, so the two tie and source order gives this one the press.
+     Unpressed toggles only: the pressed one is out-ranked by the [aria-pressed='true'] rule below
+     and has its own press rule after it. */
   :where([part="view-toggle"]):active {
     background: color-mix(
       in oklab,
@@ -267,12 +258,10 @@ export const styles = css`
     );
     color: var(--lr-widget-view-toggle-hover-color, var(--lr-color-text));
   }
-  /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on any
-     ancestor without a :host declaration shadowing that. ::part(view-toggle)[aria-pressed='true'] is
-     invalid CSS (an attribute selector cannot follow ::part), so recoloring the pressed toggle used
-     to require hijacking the shared --lr-color-brand-quiet/--lr-color-brand tokens, repainting
-     everything else that reads them. Unset, each falls back to the token the rule used before, so
-     the rendering is unchanged. */
+  /* Inline var() fallbacks, not :host declarations, which would shadow an ancestor's value.
+     ::part(view-toggle)[aria-pressed='true'] is invalid CSS (an attribute selector cannot follow
+     ::part), so recoloring the pressed toggle otherwise means hijacking the shared
+     --lr-color-brand-quiet/--lr-color-brand tokens. Unset, each falls back to the prior token. */
   [part="view-toggle"][aria-pressed="true"] {
     background: var(
       --lr-widget-view-toggle-active-bg,
@@ -280,6 +269,20 @@ export const styles = css`
     );
     color: var(--lr-widget-view-toggle-active-color, var(--lr-color-brand));
     border-color: var(--lr-widget-view-toggle-active-border-color, transparent);
+  }
+  /* The pressed toggle's own held state at (0,3,0): the [aria-pressed='true'] rule above ((0,2,0))
+     declares the same background and color as the generic :active rule and out-ranks it, so without
+     this the selected view acknowledges nothing when clicked. Losing the hover tint there is
+     deliberate; losing the press is not. Mixes from --lr-widget-view-toggle-active-bg, not the
+     hover prop. lr-tab-group and lr-stepper need no equivalent -- their selected-state rules
+     declare no background, so the generic :active fill still reaches a selected tab or step. */
+  [part="view-toggle"][aria-pressed="true"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-widget-view-toggle-active-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+    color: var(--lr-widget-view-toggle-active-color, var(--lr-color-brand));
   }
   [part="view-toggle"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -318,15 +321,14 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* Chevron points at the content: rotated (pointing down) while expanded, resting (pointing right)
-     while collapsed -- same convention as lr-code-block's/lr-json-viewer's own toggles. */
+  /* Chevron points at the content: rotated down while expanded, resting right while collapsed --
+     same convention as lr-code-block's/lr-json-viewer's own toggles. */
   :host(:not([collapsed])) [part="collapse-button"] {
     transform: rotate(90deg);
   }
-  /* RTL: the resting (collapsed) chevron mirrors to point left -- the conventional mirrored
-     disclosure-triangle direction for RTL. Scoped to [collapsed] specifically (rather than a plain
-     :dir(rtl) rule) so it never competes with the rule above for the expanded state, which needs no
-     mirroring: rotating this left-right-asymmetric glyph 90deg already produces a symmetric chevron. */
+  /* RTL: the collapsed chevron mirrors to point left, the conventional disclosure direction. Scoped
+     to [collapsed] so it never competes with the rule above for the expanded state, which needs no
+     mirroring -- rotating this left-right-asymmetric glyph 90deg yields a symmetric chevron. */
   :host([collapsed]:dir(rtl)) [part="collapse-button"] {
     transform: scaleX(-1);
   }
@@ -352,8 +354,8 @@ export const styles = css`
       var(--_lr-widget-fullscreen-inset, 0)
     );
     z-index: calc(var(--lr-overlay-stack-index, var(--lr-layer-modal)) + 1);
-    /* Top of the scale: fullscreen is a modal layer sitting above [part="backdrop"], and it is the
-       only state in which this widget stops being resting chrome. */
+    /* Top of the scale: fullscreen is a modal layer above [part="backdrop"] and the only state in
+       which this widget stops being resting chrome. */
     box-shadow: var(--lr-shadow-xl);
   }
   :host([fullscreen]) [part="body"] {

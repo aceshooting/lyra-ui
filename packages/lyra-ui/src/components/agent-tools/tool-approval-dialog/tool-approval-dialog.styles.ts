@@ -2,17 +2,14 @@ import { css } from 'lit';
 
 export const styles = css`
   :host {
-    /* Backdrop scrim color -- component-specific so a host can retheme it
-       without a raw literal leaking into the public API (no shared
-       --lr-*-overlay token exists in the design system to resolve through,
-       same rationale as lr-dialog's --lr-dialog-overlay-color and
-       lr-tool-select-dialog's --lr-tool-select-dialog-overlay-color). */
+    /* Backdrop scrim color -- component-specific so a host retunes it without a raw literal in
+       the public API, there being no shared overlay token to resolve through. Same as lr-dialog's
+       --lr-dialog-overlay-color and lr-tool-select-dialog's
+       --lr-tool-select-dialog-overlay-color. */
     --_lr-tool-approval-dialog-overlay-color: var(--lr-color-overlay);
-    /* Contained here (rather than a bare font-family literal on the
-       textarea) so a host page can retheme it -- same rationale as
-       lr-json-viewer's --lr-json-viewer-font; raw args are code, not
-       prose, so the editor gets the same monospace treatment as that
-       viewer's own tree rendering. */
+    /* A token rather than a bare font-family literal on the textarea, so a host page can retheme
+       it -- as lr-json-viewer's --lr-json-viewer-font. Raw args are code, not prose, so the editor
+       gets that viewer's monospace treatment. */
     --_lr-tool-approval-dialog-mono-font: var(--lr-font-mono);
     display: none;
     position: fixed;
@@ -83,11 +80,9 @@ export const styles = css`
     overflow: auto;
   }
   [part="args-view"] {
-    /* lr-json-viewer grows with its content by default (its own
-       max-height is 'none'); this component's [part='body'] is what caps
-       and scrolls it instead, so it stays consistent with the plain
-       [part='args-editor'] textarea below, which has no scroll cap of its
-       own either. */
+    /* lr-json-viewer grows with its content (its own max-height is 'none'); [part='body'] caps and
+       scrolls it instead, matching the [part='args-editor'] textarea below, which has no scroll
+       cap of its own either. */
     flex: 1 1 auto;
     min-block-size: 0;
   }
@@ -112,16 +107,14 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* Gives mouse users the same 'this is interactive' cue the :focus-visible ring above already
-     gives keyboard users -- mirrors lr-textarea's [part='textarea']:hover pattern, gated via
-     :host(:not([pending])) rather than :not(:disabled) since this raw <textarea> is not a
-     form-associated control and carries no disabled state of its own; a decision in flight
-     (pending reflected) freezes it to readonly instead, so hover shouldn't relight it. */
-  /* no-pressed-state: pressing inside a text surface places a caret, it does not actuate anything.
-     The mousedown that would match :active is the same gesture that focuses the field, so a pressed
-     treatment would render for one frame between the hover border and the focus ring and read as a
-     flicker; focus is this control's real "you are acting on me" state (mirrors lr-textarea's
-     identical reasoning for its own [part='textarea']). */
+  /* The mouse-side counterpart of the :focus-visible ring above, mirroring lr-textarea's
+     [part='textarea']:hover. Gated on :host(:not([pending])), not :not(:disabled): this raw
+     <textarea> is not form-associated and has no disabled state, and pending freezes it to
+     readonly, so hover shouldn't relight it. */
+  /* no-pressed-state: pressing inside a text surface places a caret, it actuates nothing. The
+     mousedown matching :active is the gesture that focuses the field, so a pressed treatment would
+     flicker for a frame between hover border and focus ring; focus is the real acting-on-me state,
+     as in lr-textarea's [part='textarea']. */
   :host(:not([pending])) [part="args-editor"]:not([aria-invalid="true"]):hover {
     border-color: var(
       --lr-tool-approval-dialog-hover-border-color,
@@ -153,17 +146,15 @@ export const styles = css`
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
   [part="footer"] ::slotted(*) {
-    /* Any consumer-supplied footer content sits ahead of the built-in
-       buttons and soaks up the row's remaining space, so it reads as
-       start-aligned while Deny/Edit/Approve stay pinned to the end (the
-       row itself is justify-content: flex-end for the empty-slot case). */
+    /* Consumer-supplied footer content precedes the built-in buttons and soaks up the remaining
+       space, reading as start-aligned while Deny/Edit/Approve stay pinned to the end; the row's own
+       justify-content: flex-end covers the empty-slot case. */
     margin-inline-end: auto;
   }
 
   /* deny-button/approve-button are <lr-button> hosts (see tool-approval-dialog.class.ts's
-     render()); their own padding/border/background/color/hover/focus-visible/disabled chrome now
-     lives entirely inside lr-button's own styles.ts. edit-button alone stays a raw <button> and
-     keeps its own rules below. */
+     render()), so all their chrome lives inside lr-button's own styles.ts. edit-button alone stays
+     a raw <button> and keeps its own rules below. */
   [part="edit-button"] {
     font: inherit;
     font-size: var(--lr-font-size-md-sm);
@@ -177,10 +168,9 @@ export const styles = css`
   :where([part="edit-button"]):not(:disabled):hover {
     background: var(--lr-color-brand-quiet);
   }
-  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
-     --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
-     than hover in both light and dark themes rather than repeating it. The lr-button-hosted
-     Deny/Approve siblings get the equivalent step from lr-button's own styles. */
+  /* Pressed is the hover tint pushed a further --lr-color-mix-active toward --lr-color-mix-partner
+     (which follows the text colour), a deeper step in both themes. The lr-button-hosted
+     Deny/Approve siblings get the equivalent from lr-button's own styles. */
   :where([part="edit-button"]):not(:disabled):active {
     background: color-mix(
       in oklab,

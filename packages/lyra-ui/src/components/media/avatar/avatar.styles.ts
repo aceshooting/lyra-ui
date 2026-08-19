@@ -33,12 +33,11 @@ export const styles = css`
     --_lr-avatar-size: var(--lr-size-5rem);
     --_lr-avatar-font-size: var(--lr-font-size-xl);
   }
-  /* Deliberately NOT the shared internal/variants.styles.ts sheet. That sheet re-points the
-     generic slots at the 45-slot semantic grid's contrast-checked pairing, where text on a quiet
-     fill is on-quiet (a near-black/near-white). An avatar's initials are the accent itself --
-     they read in the variant's own loud colour on that variant's quiet tint -- so adopting the
-     grid pairing here would repaint every non-neutral avatar, and the neutral default (a
-     --lr-color-border circle, not a neutral-fill-quiet one) with it. */
+  /* Deliberately NOT the shared internal/variants.styles.ts sheet, which points the generic slots
+     at the 45-slot semantic grid's contrast-checked pairing, where text on a quiet fill is
+     on-quiet. An avatar's initials ARE the accent -- the variant's loud colour on its quiet tint
+     -- so that pairing would repaint every non-neutral avatar, and the neutral default (a
+     --lr-color-border circle, not neutral-fill-quiet) with it. */
   :host([variant='brand']) {
     --_lr-avatar-bg: var(--lr-color-brand-quiet);
     --_lr-avatar-color: var(--lr-color-brand);
@@ -86,15 +85,20 @@ export const styles = css`
   [part='icon'] ::slotted(svg) {
     display: block;
   }
-  /* The native [hidden] UA rule alone would lose to [part='icon']'s own
-     'display: inline-flex' above at equal specificity -- same fix
-     lr-chip's/lr-stat's identical [part='icon'][hidden] already applies. */
+  /* The display above is author-origin, outranking the UA '[hidden] { display: none }', so a
+     hidden slotted glyph would still paint -- the [part='icon'][hidden] guard below covers only
+     the wrapper. */
+  [part='icon'] ::slotted([hidden]:not([hidden='until-found' i])) {
+    display: none;
+  }
+  /* The native [hidden] UA rule alone would lose to [part='icon']'s own 'display: inline-flex'
+     above at equal specificity -- same fix as lr-chip's and lr-stat's [part='icon'][hidden]. */
   [part='icon'][hidden] {
     display: none;
   }
-  /* Both glyph slots stay mounted at every tier so their slotchange handlers keep firing; the
-     inactive one is collapsed rather than removed. Stated explicitly instead of leaning on the
-     UA [hidden] rule, since a slot's own 'display: contents' default makes that easy to break. */
+  /* Both glyph slots stay mounted at every tier so slotchange keeps firing; the inactive one is
+     collapsed, not removed. Stated explicitly rather than leaning on the UA [hidden] rule, which
+     a slot's own 'display: contents' default makes easy to break. */
   [part='icon'] slot[hidden] {
     display: none;
   }

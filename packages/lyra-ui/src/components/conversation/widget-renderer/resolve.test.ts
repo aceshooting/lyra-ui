@@ -2,6 +2,7 @@ import { expect } from "@open-wc/testing";
 import {
   createWidgetDocument,
   resolveTree,
+  WIDGET_MAX_STRING_LENGTH,
   type ResolveContext,
   type LyraWidgetNode,
 } from "./resolve.js";
@@ -621,5 +622,153 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
     const source = `${await response.text()}\n${await rendererResponse.text()}`;
     expect(source).to.not.include("innerHTML");
     expect(source).to.not.include("document.createElement");
+  });
+});
+
+describe("string-length ceiling", () => {
+  const overLong = (extra = 1_000): string =>
+    "x".repeat(WIDGET_MAX_STRING_LENGTH + extra);
+
+  it("truncates an over-long text child and reports it once through the warning channel", () => {
+    const warnings: string[] = [];
+    const resolved = resolveTree(
+      { type: "row", children: [overLong(), overLong(5)] },
+      ctx(createWidgetTypeRegistry(), warnings)
+    );
+
+    const texts = (resolved as { children: Array<{ text?: string }> }).children;
+    expect(texts.map((child) => child.text?.length ?? -1)).to.deep.equal([
+      WIDGET_MAX_STRING_LENGTH,
+      WIDGET_MAX_STRING_LENGTH,
+    ]);
+    expect(
+      warnings.filter((warning) => warning.includes("string cap"))
+    ).to.have.lengthOf(1);
+  });
+
+  it("truncates an over-long allowlisted string prop and the built-in text value", () => {
+    const registry = createWidgetTypeRegistry([
+      [
+        "card",
+        {
+          tag: "lr-card",
+          interaction: "none",
+          props: { appearance: "string" },
+        },
+      ],
+    ]);
+    const warnings: string[] = [];
+    const resolved = resolveTree(
+      {
+        type: "col",
+        children: [
+          { type: "card", props: { appearance: overLong() } },
+          { type: "text", props: { value: overLong() } },
+        ],
+      },
+      ctx(registry, warnings)
+    );
+
+    const children = (
+      resolved as { children: Array<{ props: Record<string, unknown> }> }
+    ).children;
+    expect((children[0]!.props["appearance"] as string).length).to.equal(
+      WIDGET_MAX_STRING_LENGTH
+    );
+    expect((children[1]!.props["value"] as string).length).to.equal(
+      WIDGET_MAX_STRING_LENGTH
+    );
+    expect(
+      warnings.filter((warning) => warning.includes("string cap"))
+    ).to.have.lengthOf(2);
+  });
+
+  it("truncates an over-long bound value and its fallback, not just literal props", () => {
+    const registry = createWidgetTypeRegistry();
+    const bound = resolveTree(
+      {
+        type: "text",
+        id: "bound",
+        props: { value: { $bind: "/label" } },
+      } as unknown as LyraWidgetNode,
+      ctx(registry, [], { label: overLong() })
+    );
+    expect(
+      ((bound as { props: Record<string, unknown> }).props["value"] as string)
+        .length
+    ).to.equal(WIDGET_MAX_STRING_LENGTH);
+
+    const fallback = resolveTree(
+      {
+        type: "text",
+        id: "fallback",
+        props: { value: { $bind: "/missing", fallback: overLong() } },
+      } as unknown as LyraWidgetNode,
+      ctx(registry, [], {})
+    );
+    expect(
+      (
+        (fallback as { props: Record<string, unknown> }).props[
+          "value"
+        ] as string
+      ).length
+    ).to.equal(WIDGET_MAX_STRING_LENGTH);
+  });
+
+  it("bounds strings in the createWidgetDocument snapshot too", () => {
+    const document = createWidgetDocument({
+      type: "row",
+      props: { note: overLong() },
+      children: [overLong()],
+    });
+    expect((document.root.props?.["note"] as string).length).to.equal(
+      WIDGET_MAX_STRING_LENGTH
+    );
+    expect((document.root.children?.[0] as string).length).to.equal(
+      WIDGET_MAX_STRING_LENGTH
+    );
+  });
+
+  it("never splits a surrogate pair when truncating", () => {
+    // Two code units per code point behind one leading BMP character, so the
+    // cap index lands on a high surrogate and a naive slice would strand it.
+    const astral = `a${"\u{1F600}".repeat(WIDGET_MAX_STRING_LENGTH)}`;
+    const resolved = resolveTree({ type: "row", children: [astral] }, ctx());
+    const text = (resolved as { children: Array<{ text: string }> })
+      .children[0]!.text;
+    expect(text.length).to.equal(WIDGET_MAX_STRING_LENGTH - 1);
+    expect(text.codePointAt(text.length - 2)).to.equal(0x1f600);
+    expect(
+      [...text].slice(1).every((character) => character === "\u{1F600}")
+    ).to.equal(true);
+    expect([...text][0]).to.equal("a");
+  });
+
+  it("leaves a string at or below the cap byte-identical and unwarned", () => {
+    const exact = "y".repeat(WIDGET_MAX_STRING_LENGTH);
+    const warnings: string[] = [];
+    const resolved = resolveTree(
+      {
+        type: "row",
+        children: [exact, { type: "text", props: { value: "short" } }],
+      },
+      ctx(createWidgetTypeRegistry(), warnings)
+    );
+    const children = (
+      resolved as {
+        children: Array<{ text?: string; props?: Record<string, unknown> }>
+      }
+    ).children;
+    expect(children[0]!.text).to.equal(exact);
+    expect(children[1]!.props?.["value"]).to.equal("short");
+    expect(warnings).to.have.lengthOf(0);
+
+    const document = createWidgetDocument({
+      type: "row",
+      props: { note: exact },
+      children: [exact],
+    });
+    expect(document.root.props?.["note"]).to.equal(exact);
+    expect(document.root.children?.[0]).to.equal(exact);
   });
 });

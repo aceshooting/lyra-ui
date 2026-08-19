@@ -8,10 +8,12 @@ import {
 } from "@open-wc/testing";
 import "./pdf-viewer.js";
 import "../../layout/virtual-list/virtual-list.js";
+import "../page-rail/page-rail.js";
 import {
   findDocumentRenderer,
   loadDocumentRenderer,
 } from "../document-viewer/registry.js";
+import type { LyraPageRail } from "../page-rail/page-rail.js";
 import type { LyraPdfViewer } from "./pdf-viewer.js";
 import { styles } from "./pdf-viewer.styles.js";
 
@@ -477,6 +479,95 @@ describe("lr-pdf-viewer", () => {
       el.zoom = 999;
       await el.updateComplete;
       expect(el.zoom).to.equal(4); // clamped to the maximum supported zoom
+    } finally {
+      restore();
+    }
+  });
+
+  // `lr-page-change`/`lr-zoom-change` are state broadcasts, so a programmatic `page`/`zoom` write is
+  // announced exactly like a toolbar click -- but only when the value the viewer settled on actually
+  // differs from the one it was already showing. `willUpdate()` clamps out of range writes, and a
+  // write that clamps straight back onto the current page/zoom changed nothing to announce.
+  it("stays silent when a page or zoom write clamps back onto the current value", async () => {
+    const el = (await fixture(
+      html`<lr-pdf-viewer></lr-pdf-viewer>`
+    )) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(3));
+    const restore = stubFetch();
+    try {
+      el.src = "https://example.test/report.pdf";
+      await waitFor(el, '[part="page-indicator"]');
+      expect(el.page).to.equal(1);
+      expect(el.zoom).to.equal(1);
+      let pageChanges = 0;
+      let zoomChanges = 0;
+      el.addEventListener("lr-page-change", () => pageChanges++);
+      el.addEventListener("lr-zoom-change", () => zoomChanges++);
+
+      el.page = -7; // clamps back to page 1, which is already showing
+      await el.updateComplete;
+      expect(el.page).to.equal(1);
+      expect(pageChanges).to.equal(0);
+
+      el.page = 1.4; // rounds back to page 1, which is already showing
+      await el.updateComplete;
+      expect(el.page).to.equal(1);
+      expect(pageChanges).to.equal(0);
+
+      el.page = 2; // a real programmatic move is still announced
+      await el.updateComplete;
+      expect(pageChanges).to.equal(1);
+
+      el.zoom = 4; // a real programmatic zoom is still announced
+      await el.updateComplete;
+      expect(zoomChanges).to.equal(1);
+
+      el.zoom = 999; // clamps back to 4x, which is already applied
+      await el.updateComplete;
+      expect(el.zoom).to.equal(4);
+      expect(zoomChanges).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
+
+  // The rail's legacy `lr-load`/`lr-page-change` binding is reserved for structural sources with no
+  // `pageViewerSnapshot`; this viewer has one, so the rail rides the atomic snapshot channel and
+  // `lr-page-change` is not load-bearing for it. Pinned here because it is exactly what a future
+  // "make programmatic writes silent" refactor would silently break.
+  it("keeps a wired lr-page-rail in sync through the snapshot, not lr-page-change", async () => {
+    const el = (await fixture(
+      html`<lr-pdf-viewer></lr-pdf-viewer>`
+    )) as LyraPdfViewer;
+    const rail = (await fixture(
+      html`<lr-page-rail></lr-page-rail>`
+    )) as LyraPageRail;
+    installFakeLoader(el, fakeDocument(5));
+    const restore = stubFetch();
+    try {
+      el.src = "https://example.test/report.pdf";
+      await waitFor(el, '[part="page-indicator"]');
+      rail.viewer = el;
+      await rail.updateComplete;
+      expect(rail.page).to.equal(1);
+
+      // A purely programmatic page write still reaches the rail.
+      el.page = 3;
+      await el.updateComplete;
+      await rail.updateComplete;
+      expect(rail.page).to.equal(3);
+      expect(el.pageViewerSnapshot.page).to.equal(3);
+
+      // ...and it arrives through the snapshot: the legacy event alone moves nothing.
+      el.dispatchEvent(
+        new CustomEvent("lr-page-change", {
+          detail: { page: 5, pageCount: 5 },
+          bubbles: true,
+          composed: true,
+        })
+      );
+      await rail.updateComplete;
+      expect(rail.page).to.equal(3);
     } finally {
       restore();
     }

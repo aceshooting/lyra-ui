@@ -2867,6 +2867,37 @@ describe("lr-date-input implicit form submission", () => {
   });
 });
 
+describe("focus indicator per appearance", () => {
+  for (const appearance of ["outlined", "filled", "filled-outlined"] as const) {
+    it(`retints the ${appearance} input row's border while focus is inside it (WCAG 2.4.7)`, async () => {
+      const el = (await fixture(html`
+        <lr-date-input
+          appearance=${appearance}
+          style="--lr-transition-fast: 0s; --lr-date-input-focus-border-color: rgb(1, 2, 3);"
+        ></lr-date-input>
+      `)) as LyraDateInput;
+      await el.updateComplete;
+      const wrapper = el.shadowRoot!.querySelector<HTMLElement>(
+        '[part="input-wrapper"]'
+      )!;
+      const field = el.shadowRoot!.querySelector<HTMLInputElement>(
+        '[part="input"]'
+      )!;
+      const resting = getComputedStyle(wrapper).borderTopColor;
+      field.focus();
+      await el.updateComplete;
+      const focused = getComputedStyle(wrapper).borderTopColor;
+      expect(focused, `${appearance} focus-within border`).to.equal(
+        "rgb(1, 2, 3)"
+      );
+      expect(focused, `${appearance} focus vs resting border`).to.not.equal(
+        resting
+      );
+      field.blur();
+    });
+  }
+});
+
 describe("reviewed date-input parity surface", () => {
   it("exposes and reflects reviewed wrapper and delegated defaults", async () => {
     const el = (await fixture(

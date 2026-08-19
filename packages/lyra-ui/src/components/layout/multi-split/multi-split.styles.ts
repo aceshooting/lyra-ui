@@ -7,13 +7,11 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     block-size: 100%;
-    /* Component-specific -- not a shared design token, so a consumer can
-       retheme it without a raw literal leaking into the public API (same
-       rationale as lr-app-rail's --lr-app-rail-overlay-color). */
+    /* Component-specific, not a shared token: lets a consumer retheme without a raw literal in
+       the public API -- matches lr-app-rail's --lr-app-rail-overlay-color. */
     --_lr-multi-split-overlay-color: var(--lr-color-overlay);
-    /* The divider owns a real target gutter instead of extending a pseudo
-       element over either neighboring panel. Only the centered line is
-       painted; the full track remains available for pointer/keyboard input. */
+    /* A real target gutter, not a pseudo element over the neighbors: only the centered line
+       paints, the whole track takes pointer/keyboard input. */
     --_lr-multi-split-divider-target-size: max(
       var(--lr-icon-button-size),
       var(--lr-size-3px)
@@ -21,8 +19,7 @@ export const styles = css`
   }
   [part="base"] {
     display: flex;
-    /* Anchor for the 'floating' collapse state's absolutely-positioned
-       overlay panel (set inline by multi-split.class.ts's updated()). */
+    /* Anchor for the absolutely-positioned 'floating' overlay panel, set inline by updated(). */
     position: relative;
     inline-size: 100%;
     min-inline-size: 0;
@@ -30,14 +27,13 @@ export const styles = css`
     block-size: 100%;
   }
   ::slotted(*) {
-    /* Honest no-JS/first-hydration fallback before child count and live sizes can be observed.
-       Browser reconciliation writes a more specific inline flex value once available. */
+    /* No-JS/first-hydration fallback; an inline flex value replaces it once child count and live
+       sizes are observable. */
     flex: 1 1 0;
     min-inline-size: 0;
     max-inline-size: 100%;
-    /* Direct panels own their overflow. The zero minimum lets a fixed-height
-       split shrink each flex item along the block axis instead of letting
-       long content expand the base and escape into following content. */
+    /* Panels own their overflow. The zero block minimum lets a fixed-height split shrink flex
+       items rather than let long content expand the base into following content. */
     min-block-size: 0;
     max-block-size: 100%;
     overflow: auto;
@@ -74,9 +70,9 @@ export const styles = css`
     background: var(--lr-color-border);
     pointer-events: none;
   }
-  /* :where() zeroes the [orientation='vertical'] qualifier's specificity contribution -- otherwise
-     this (0,3,0) rule would beat a consumer's own ::part(divider) inline-size/cursor override
-     whenever orientation="vertical" is set. */
+  /* :where() drops this from (0,3,0) to (0,1,0); at (0,3,0) its cursor: row-resize out-ranks the
+     (0,2,0) [part='divider'][aria-disabled='true'] rule below, and a divider beside a collapsed
+     pane advertises a drag it refuses. */
   :host(:where([orientation="vertical"])) [part="divider"] {
     inline-size: 100%;
     min-inline-size: min(
@@ -98,20 +94,18 @@ export const styles = css`
     inset-block: calc((100% - var(--lr-size-3px)) / 2);
     inset-inline: 0;
   }
-  /* orientationBreakpoint's live axis -- only present while that feature is opted into (see
-     multi-split.class.ts's updated()), so it can override the authored orientation rules above by source
-     order alone (equal specificity) whenever the effective axis diverges from it. */
+  /* orientationBreakpoint's live axis, present only when that feature is opted into (updated()).
+     Equal specificity to the authored orientation rules above, so source order wins when the
+     effective axis diverges. */
   :host([data-effective-orientation="vertical"]) [part="base"] {
     flex-direction: column;
   }
   :host([data-effective-orientation="horizontal"]) [part="base"] {
     flex-direction: row;
   }
-  /* Same :where() treatment as [orientation='vertical'] above, applied to both effective-axis
-     variants -- these are the higher-specificity rules orientationBreakpoint's live axis relies on
-     to override the authored orientation by source order (see the comment above), so without
-     :where() they'd beat a consumer's ::part(divider) override even more readily than the
-     authored-orientation rules do. */
+  /* Same :where() flattening as [orientation='vertical'] above, on both effective-axis variants:
+     these override the authored orientation by source order, and must stay under the
+     [part='divider'][aria-disabled='true'] cursor rule below. */
   :host(:where([data-effective-orientation="vertical"])) [part="divider"] {
     inline-size: 100%;
     min-inline-size: min(
@@ -158,9 +152,9 @@ export const styles = css`
   [part="divider"]:hover::before {
     background: var(--lr-color-brand);
   }
-  /* The drag itself. Pointer capture holds :active for the whole gesture, so the divider stays at
-     the deeper mix from mousedown until release -- and a divider adjacent to a collapsed pane
-     never reaches it, since [aria-disabled='true'] below takes its pointer events away. */
+  /* Pointer capture holds :active for the whole gesture, so the deeper mix persists from mousedown
+     to release; a divider beside a collapsed pane never reaches it -- [aria-disabled='true'] below
+     removes its pointer events. */
   [part="divider"]:active::before {
     background: color-mix(
       in oklab,
@@ -172,55 +166,39 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* The divider adjacent to a rail/floating-collapsed pane (see multi-split.class.ts's
-     isDividerDisabled()) — the collapsing panel's own live flex/order/inline-size
-     are set inline by updated() (see the floating rule below for why); this only
-     covers the divider's own drag/hover affordance and the floating panel's
-     elevation, which read more naturally as stylesheet rules than one-off inline
-     styles. */
+  /* The divider beside a rail/floating-collapsed pane (isDividerDisabled()). The collapsing
+     panel's live flex/order/inline-size are set inline by updated(); only the divider's drag/hover
+     affordance and the floating panel's elevation stay stylesheet rules. */
   [part="divider"][aria-disabled="true"] {
     cursor: default;
     pointer-events: none;
   }
-  /* The 'floating' collapse state's overlay "card" look. inline-size (and
-     flex/order) stay inline, set by multi-split.class.ts's updated(): it's the
-     panel's own live, draggable sizes[i] percent -- the exact value it renders at
-     in the 'wide' state too, by design (see updated()'s comment), so there's no
-     visual size jump the moment it un-floats. position/inset-block/the
-     inset-inline-* edge below are a fixed, config-driven default -- always the
-     same literal values, never per-render computed data -- so they live here
-     instead, as ordinary stylesheet rules a consumer's own CSS can override at
-     normal specificity, no !important fight required. (Only inline-size is
-     genuinely live; a consumer wanting a different floating width should set
-     .sizes instead of overriding this rule -- overriding it here would fight
-     the live sync back on every drag/resize.) z-index is above [part="backdrop"]
-     (below), so the drawer renders on top of its own scrim. */
+  /* The 'floating' overlay card. inline-size, flex and order stay inline, set by updated() from
+     the live sizes[i] percent -- the value 'wide' renders at, so un-floating never jumps; retune
+     via .sizes, since the live sync undoes an override here. position, inset-block and the
+     inset-inline-* edge below are fixed defaults, so consumer CSS overrides them at normal
+     specificity without !important. z-index above [part="backdrop"] covers the drawer's scrim. */
   ::slotted([data-collapse-state="floating"]) {
     position: absolute;
     inset-block: 0;
     z-index: var(--lr-layer-content);
     background: var(--lr-color-surface);
     border-radius: var(--lr-radius);
-    /* Modal step: this is a drawer rendered above its own scrim (see [part='backdrop'] below), not
-       an anchored popup, so it takes the modal tier. */
+    /* Modal tier: a drawer above its own scrim ([part='backdrop'] below), not an anchored popup. */
     box-shadow: var(--lr-shadow-l);
   }
-  /* Which edge the floating drawer anchors to mirrors collapse ('start'/'end'
-     LOGICAL positions -- see the collapse property doc), already reflected onto
-     the host, so it needs no separate per-panel marker. Exactly one of these two
-     ever matches at a time (collapse is never both). */
+  /* The drawer's anchor edge mirrors collapse (LOGICAL 'start'/'end', per its property doc),
+     already reflected on the host, so no per-panel marker is needed; collapse is never both, so
+     exactly one rule matches. */
   :host([collapse="start"]) ::slotted([data-collapse-state="floating"]) {
     inset-inline-start: 0;
   }
   :host([collapse="end"]) ::slotted([data-collapse-state="floating"]) {
     inset-inline-end: 0;
   }
-  /* The 'floating' drawer's scrim -- only rendered while collapseState is
-     'floating' and open (see multi-split.class.ts's render()). Scoped to [part="base"]
-     (position: absolute against its position: relative ancestor) rather than
-     a viewport-fixed overlay like lr-app-rail's mobile backdrop: the
-     floating panel itself is only ever positioned relative to this
-     component's own box, never the full page. */
+  /* The 'floating' drawer's scrim, rendered only while collapseState is 'floating' and open (see
+     render()). Absolute against [part="base"], not viewport-fixed like lr-app-rail's mobile
+     backdrop -- the floating panel is positioned against this component's box, never the page. */
   [part="backdrop"] {
     position: absolute;
     inset: 0;
@@ -230,10 +208,8 @@ export const styles = css`
       var(--_lr-multi-split-overlay-color)
     );
   }
-  /* Rail-clamped content can easily overflow the fixed rail-width — clip it
-     rather than letting it blow out the layout; the panel's own content is
-     expected to adapt to the narrower width itself (e.g. via a container
-     query), this is just a safety net. */
+  /* Safety net: rail-clamped content can overflow the fixed rail width, so clip rather than blow
+     out the layout; the panel's content should adapt itself, e.g. via a container query. */
   ::slotted([data-collapse-state="rail"]) {
     overflow: hidden;
   }

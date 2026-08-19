@@ -22,11 +22,11 @@ export const styles = css`
       var(--_lr-csv-viewer-max-height)
     );
   }
-  /* Vertical overflow is capped/scrolled by [part='body'] above; horizontal overflow of the grid
-     itself is this element's own concern -- both axes are pinned non-visible on purpose (per the
-     CSS overflow spec, pinning only overflow-x forces overflow-y's used value to 'auto' too,
-     risking a phantom/empty scrollbar from sub-pixel rounding on a grid that never actually
-     overflows vertically -- matching tabs.styles.ts's fix for the identical bug shape). */
+  /* [part='body'] above caps and scrolls vertical overflow; horizontal overflow of the grid is
+     this element's own concern. Both axes pinned non-visible deliberately: per the CSS overflow
+     spec, pinning only overflow-x forces overflow-y's used value to 'auto', risking a phantom
+     scrollbar from sub-pixel rounding on a grid that never overflows vertically. Same fix as
+     tabs.styles.ts. */
   [part='sheet'] {
     overflow-x: auto;
     overflow-y: hidden;
@@ -52,11 +52,10 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text);
   }
-  /* renderRow()/renderCell()'s output for a DATA row is passed to <lr-virtual-list> as its
-     .renderItem callback and ends up rendered inside THAT component's own shadow root -- a plain
-     [part=] selector above, scoped to this component's own shadow root, only ever reaches the
-     header row (rendered directly by this component, not through virtual-list). ::part() is what
-     reaches one shadow boundary in, matching dataset-viewer's identical precedent. */
+  /* renderRow()/renderCell()'s output for a DATA row is <lr-virtual-list>'s .renderItem callback,
+     so it renders inside THAT component's shadow root: a plain [part=] selector above reaches only
+     the header row, which this component renders directly. ::part() reaches one shadow boundary
+     in, matching dataset-viewer. */
   lr-virtual-list::part(data-row) {
     display: grid;
     min-inline-size: max-content;
@@ -71,13 +70,16 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text);
   }
-  /* A highlighted cell reaches the DOM through that same virtualized path, so it needs the same
-     one-shadow-hop selector -- and the same outline tokens <lr-dataset-viewer> gives its own
-     cell-highlight, so a highlight reads identically across the table viewers. The active/inactive
-     distinction can't be expressed as a [data-active] attribute selector chained onto ::part()
-     (unsupported), so renderCell() sets a private active default inline. The public hook stays an
-     inheritable input and wins over that default. The nested action owns the focus ring while the
-     structural cell keeps the highlight outline. */
+  /* A highlighted cell arrives through that same virtualized path, so it needs the same
+     one-shadow-hop selector and the same outline tokens <lr-dataset-viewer> gives its own
+     cell-highlight, keeping highlights identical across the table viewers. A [data-active]
+     selector cannot chain onto ::part() (unsupported), so renderCell() sets a private active
+     default inline; the public hook stays an inheritable input and wins over it. The nested action
+     owns the focus ring, the structural cell the highlight outline. */
+  /* no-hover-state: pointer feedback belongs to the nested [part='cell-highlight-action'], sized
+     to cover this cell edge to edge (see its inline-size/min-block-size rules below), so a pointer
+     anywhere on the highlighted cell already hovers that button; a second treatment here would
+     double-tint the same gesture. */
   [part~='cell-highlight'],
   lr-virtual-list::part(cell-highlight) {
     outline: var(--lr-border-width-medium) solid
@@ -103,8 +105,8 @@ export const styles = css`
     white-space: nowrap;
     cursor: pointer;
   }
-  /* Mouse users get the same "this is interactive" feedback keyboard users already get from the
-     focus-visible ring below -- matching dataset-viewer's cell-highlight-action hover treatment. */
+  /* Mouse users get the interactive feedback keyboard users already get from the focus-visible
+     ring below -- matching dataset-viewer's cell-highlight-action hover treatment. */
   [part='cell-highlight-action']:hover,
   lr-virtual-list::part(cell-highlight-action):hover {
     background: var(--lr-color-brand-quiet);

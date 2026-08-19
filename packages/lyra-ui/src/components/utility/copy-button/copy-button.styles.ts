@@ -29,9 +29,9 @@ export const styles = css`
     -webkit-tap-highlight-color: transparent;
     transition: background-color var(--lr-transition-fast);
   }
-  /* :where() keeps this rule's specificity low ((0,1,0)) so a consumer's own
-     ::part(base):hover override ((0,1,1)) wins without needing !important --
-     see lr-attachment-trigger's identical fix for the same reasoning. */
+  /* :where() keeps this at (0,1,0), tying it with the pressed rule and with
+     [part~='base-success']/[part~='base-error'] below -- see their comment for what the tie buys.
+     */
   :where([part~='base']:not(:disabled)):hover {
     background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
     color: var(--lr-color-text);
@@ -40,9 +40,8 @@ export const styles = css`
     background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
     color: var(--lr-color-text);
   }
-  /* After the hover and pressed rules, at equal specificity, so hovering or holding the failed
-     button still changes its background (the interactive affordance) without repainting the failure
-     color away. */
+  /* After the hover and pressed rules at equal specificity, so hovering or holding the failed button
+     still changes its background without repainting the failure color away. */
   [part~='base-success'] {
     color: var(--success-color, var(--lr-color-success));
   }

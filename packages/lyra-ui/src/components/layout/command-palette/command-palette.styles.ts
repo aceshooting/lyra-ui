@@ -44,8 +44,8 @@ export const styles = css`
     overflow: hidden;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    /* Modal-panel surface, not the page surface -- in dark mode the two would be the same
-       near-black and the palette would read as a scrim with a floating list on it. */
+    /* Modal-panel surface, not the page surface -- in dark mode the two are the same near-black
+       and the palette would read as a scrim with a floating list on it. */
     background: var(--lr-color-surface-overlay);
     /* Modal layer, top step: the palette floats free on all four edges over its own scrim,
        exactly like a centered lr-dialog. */
@@ -143,9 +143,9 @@ export const styles = css`
       var(--lr-color-brand-quiet)
     );
   }
-  /* Same fill as hover (including a consumer's own --lr-command-palette-active-bg), mixed further
-     toward --lr-color-mix-partner so the press reads as a deeper step of the same highlight. Kept
-     at the hover rule's own zeroed specificity for the same reason it was zeroed. */
+  /* Same fill as hover, a consumer's own --lr-command-palette-active-bg included, mixed further
+     toward --lr-color-mix-partner for a deeper step of the same highlight. Kept at the hover
+     rule's zeroed specificity so the two tie and source order hands this one the press. */
   :where([part="command"]):active:where(:not(:disabled)) {
     background: color-mix(
       in oklab,
@@ -154,17 +154,22 @@ export const styles = css`
     );
   }
   /* Inline var() fallback rather than a :host-declared property, so a consumer can set it on any
-     ancestor without a :host declaration shadowing that. ::part(command)[data-active='true'] is
-     invalid CSS (an attribute selector cannot follow ::part), so highlighting the active row used to
-     require hijacking the shared --lr-color-brand-quiet token, repainting everything else that reads
-     it. Unset, it falls back to that token, so the rendering is unchanged. */
+     ancestor without a :host declaration shadowing it. ::part(command)[data-active='true'] is
+     invalid CSS (an attribute selector cannot follow ::part), so highlighting the active row used
+     to mean hijacking the shared --lr-color-brand-quiet token and repainting every other reader.
+     Unset, this falls back to that token, so the rendering is unchanged. */
   [part="command"][data-active="true"] {
     background: var(
       --lr-command-palette-active-bg,
       var(--lr-color-brand-quiet)
     );
   }
-  :where([part="command"][data-active="true"]):active:where(:not(:disabled)) {
+  /* Full specificity on the [data-active='true'] compound, deliberately: (0,3,0) is what it takes
+     to beat the resting [part='command'][data-active='true'] rule directly above ((0,2,0)). In
+     :where() it drops to (0,1,0), the resting fill wins, and the highlighted row shows no press at
+     all -- which is every row a pointer presses, since mouseenter moves the highlight to whatever
+     row is hovered. */
+  [part="command"][data-active="true"]:active:where(:not(:disabled)) {
     background: color-mix(
       in oklab,
       var(--lr-command-palette-active-bg, var(--lr-color-brand-quiet)),

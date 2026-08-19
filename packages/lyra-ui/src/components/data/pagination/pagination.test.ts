@@ -2213,3 +2213,114 @@ describe("Web Awesome navigation surface", () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe("page-input pointer feedback", () => {
+  async function themed(): Promise<LyraPagination> {
+    const wrapper = (await fixture(html`
+      <div
+        style="
+          --lr-pagination-hover-bg: rgb(9, 121, 5);
+          --lr-pagination-hover-border-color: rgb(1, 2, 3);
+          --lr-pagination-active-bg: rgb(0, 51, 102);
+          --lr-pagination-active-border-color: rgb(4, 5, 6);
+        "
+      >
+        <lr-pagination
+          format="compact"
+          total="95"
+          page-size="10"
+        ></lr-pagination>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector("lr-pagination") as LyraPagination;
+    await el.updateComplete;
+    return el;
+  }
+
+  async function moveMouseTo(target: HTMLElement): Promise<void> {
+    target.scrollIntoView({ block: "center", inline: "center" });
+    const rect = target.getBoundingClientRect();
+    await sendMouse({
+      type: "move",
+      position: [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ],
+    });
+  }
+
+  it("tints the compact page input while it is hovered", async function () {
+    if (window.matchMedia("(hover: none), (pointer: coarse)").matches)
+      this.skip();
+    const el = await themed();
+    const input = el.shadowRoot!.querySelector(
+      '[part="page-input"]'
+    ) as HTMLElement;
+    expect(input != null, "expected a compact page input").to.equal(true);
+
+    try {
+      await resetMouse();
+      await moveMouseTo(input);
+      await waitUntil(() => {
+        const style = getComputedStyle(input);
+        return (
+          style.backgroundColor === "rgb(9, 121, 5)" &&
+          style.borderTopColor === "rgb(1, 2, 3)"
+        );
+      }, "the hovered page input never painted the hover fill/border");
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it("deepens the compact page input while it is held", async function () {
+    if (window.matchMedia("(hover: none), (pointer: coarse)").matches)
+      this.skip();
+    const el = await themed();
+    const input = el.shadowRoot!.querySelector(
+      '[part="page-input"]'
+    ) as HTMLElement;
+
+    try {
+      await resetMouse();
+      await moveMouseTo(input);
+      await sendMouse({ type: "down" });
+      await waitUntil(() => {
+        const style = getComputedStyle(input);
+        return (
+          style.backgroundColor === "rgb(0, 51, 102)" &&
+          style.borderTopColor === "rgb(4, 5, 6)"
+        );
+      }, "the held page input never painted the pressed fill/border");
+    } finally {
+      await sendMouse({ type: "up" });
+      await resetMouse();
+    }
+  });
+
+  it("keeps the invalid border on a hovered out-of-range page input", async function () {
+    if (window.matchMedia("(hover: none), (pointer: coarse)").matches)
+      this.skip();
+    const el = await themed();
+    el.style.setProperty("--lr-pagination-invalid-border", "rgb(7, 8, 9)");
+    const input = el.shadowRoot!.querySelector(
+      '[part="page-input"]'
+    ) as HTMLInputElement;
+    input.value = "999";
+    input.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(input.getAttribute("aria-invalid")).to.equal("true");
+
+    try {
+      await resetMouse();
+      await moveMouseTo(input);
+      await waitUntil(
+        () => getComputedStyle(input).backgroundColor === "rgb(9, 121, 5)",
+        "the hovered invalid page input never painted the hover fill"
+      );
+      expect(getComputedStyle(input).borderTopColor).to.equal("rgb(7, 8, 9)");
+    } finally {
+      await resetMouse();
+    }
+  });
+});

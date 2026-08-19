@@ -1,10 +1,13 @@
 import { expect } from '@open-wc/testing';
 import {
   canonicalizeLyraLocale,
+  getLyraLocale,
   getLyraLocaleDirection,
   registerLyraLocale,
   resolveLocalizedParts,
+  resolveLyraLocale,
   resolveLyraString,
+  setLyraLocale,
 } from './localization-runtime.js';
 
 // Most of localization-runtime.ts is already exercised indirectly, at high volume, through every
@@ -82,4 +85,78 @@ it('clears the bounded identity/candidate caches under sustained unique-locale p
   // still produce the correct, stable identity.
   expect(canonicalizeLyraLocale('zz-cache-pressure-0')).to.equal('zz-cache-pressure-0');
   expect(canonicalizeLyraLocale('zz-cache-pressure-139')).to.equal('zz-cache-pressure-139');
+});
+
+/** Builds `<div lang="x-outer"><div lang=""><span></span></div></div>`, appended to the document
+ *  so `:lang()` (which only matches in a rendered tree) can attest to the platform contract. */
+function langBlockedTree(): { outer: HTMLElement; blocked: HTMLElement; leaf: HTMLElement } {
+  const outer = document.createElement('div');
+  outer.setAttribute('lang', 'x-outer');
+  const blocked = document.createElement('div');
+  blocked.setAttribute('lang', '');
+  const leaf = document.createElement('span');
+  blocked.append(leaf);
+  outer.append(blocked);
+  document.body.append(outer);
+  return { outer, blocked, leaf };
+}
+
+it('matches the platform: lang="" is "language unknown" and blocks inheritance, not an absent attribute', () => {
+  // HTML's language-of-a-node algorithm stops at the nearest ancestor carrying `lang` "regardless
+  // of its value", and defines the empty string as "the primary language is unknown". CSS
+  // `:lang()` matches off that same computation, so the engine itself attests to it here rather
+  // than the assertion resting on a quoted spec sentence.
+  const { outer, blocked, leaf } = langBlockedTree();
+  const previous = getLyraLocale();
+  try {
+    setLyraLocale('');
+    expect(outer.matches(':lang(x-outer)')).to.equal(true);
+    expect(blocked.matches(':lang(x-outer)')).to.equal(false);
+    expect(leaf.matches(':lang(x-outer)')).to.equal(false);
+
+    // ...and the library resolves the same way: an empty `lang` refuses the ancestor's locale
+    // instead of falling through to it.
+    expect(resolveLyraLocale(blocked)).to.equal('en');
+    expect(resolveLyraLocale(leaf)).to.equal('en');
+    expect(resolveLyraLocale(outer)).to.equal('x-outer');
+  } finally {
+    setLyraLocale(previous);
+    outer.remove();
+  }
+});
+
+it('lets setLyraLocale() supply the locale a lang="" subtree refuses to inherit', () => {
+  const { outer, leaf } = langBlockedTree();
+  const previous = getLyraLocale();
+  try {
+    setLyraLocale('x-explicit');
+    // `lang=""` withdraws the subtree from DOM language *inheritance*; the app-level locale is not
+    // inherited from an ancestor, so it still applies.
+    expect(resolveLyraLocale(leaf)).to.equal('x-explicit');
+    expect(resolveLyraLocale(outer)).to.equal('x-outer');
+  } finally {
+    setLyraLocale(previous);
+    outer.remove();
+  }
+});
+
+it('treats an empty `locale` as unset, so that element lang and its ancestors still resolve', () => {
+  // `locale` is this library's own attribute and carries no HTML empty-string semantics: an empty
+  // one simply declares nothing, and must not block what an absent one would have allowed.
+  const outer = document.createElement('div');
+  outer.setAttribute('lang', 'x-outer');
+  const host = document.createElement('div');
+  host.setAttribute('locale', '');
+  outer.append(host);
+  document.body.append(outer);
+  const previous = getLyraLocale();
+  try {
+    setLyraLocale('');
+    expect(resolveLyraLocale(host)).to.equal('x-outer');
+    host.setAttribute('lang', 'x-element');
+    expect(resolveLyraLocale(host)).to.equal('x-element');
+  } finally {
+    setLyraLocale(previous);
+    outer.remove();
+  }
 });

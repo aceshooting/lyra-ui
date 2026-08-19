@@ -2502,8 +2502,15 @@ it("is accessible while the scroll controls are showing", async () => {
 });
 
 it("lets a consumer's own ::part(scroll-button) rule beat the internal hidden state", async () => {
-  // The internal "not overflowing, so stay out of layout" rule keeps its qualifier in :where(),
-  // so it never out-specifies the ::part() override a consumer would reach for.
+  // Reads the rendered `display`, so it does measure the real cascade outcome -- but NOT for the
+  // reason the internal :where() suggests. The cascade's encapsulation-context step (CSS Cascade 5)
+  // is sorted BEFORE specificity: between two NORMAL declarations from different shadow contexts
+  // the outer (consumer) one wins outright, whatever the inner rule's specificity. Verified
+  // empirically -- this assertion passes unchanged with the :where() stripped off the internal
+  // "not overflowing, so stay out of layout" rule (which would raise it to (0,4,0)). What it does
+  // discriminate against is an !important inside the shadow stylesheet, since the context ordering
+  // inverts for important declarations; adding one to that rule turns this red with
+  // `expected 'none' to equal 'flex'`.
   const host = await fixture(html`
     <div>
       <style>

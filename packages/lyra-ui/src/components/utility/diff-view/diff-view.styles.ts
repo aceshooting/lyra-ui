@@ -40,11 +40,10 @@ export const styles = css`
     min-inline-size: 0;
   }
   [part="line"] {
-    /* Lives here (rather than on the ancestor pre element) so layout="split" -- whose lines sit
-       inside [part='side'], not a pre -- inherits the same monospace typography as the default
-       unified pre. font-family/font-size/line-height are all inheritable, so moving them here
-       from pre is visually identical for the unified layout (same computed values, just set
-       directly instead of inherited). */
+    /* Here rather than on the ancestor pre element so layout="split" -- whose lines sit inside
+       [part='side'], not a pre -- gets the same monospace typography as the default unified pre.
+       font-family, font-size and line-height are all inheritable, so the move is visually identical
+       for the unified layout: same computed values, set directly instead of inherited. */
     font-family: var(--lr-diff-view-font, var(--_lr-diff-view-font));
     font-size: var(--lr-font-size-sm);
     line-height: var(--lr-line-height-snug);
@@ -56,13 +55,13 @@ export const styles = css`
     min-inline-size: 100%;
   }
   [part="line"]:not([data-type="fold"]) {
-    /* Diffed source code is read left-to-right regardless of the surrounding document direction --
-       same rationale (and matching fix shape) as code-block.styles.ts's [part='pre']: without this,
-       an ancestor dir="rtl" bidi-reorders each line and right-aligns the block, making valid code
-       look syntactically broken. isolate keeps any RTL run inside a string/comment from leaking out
-       and reordering the surrounding code. Excludes [data-type='fold'] -- that line renders a
-       localized message ("N unchanged lines"), not code, and must keep following the ambient
-       (possibly RTL) direction like ordinary UI text. */
+    /* Diffed source reads left-to-right whatever the document direction -- same rationale and fix
+       shape as code-block.styles.ts's [part='pre']: without this an ancestor dir="rtl"
+       bidi-reorders each line and right-aligns the block, making valid code look syntactically
+       broken. isolate stops an RTL run inside a string or comment leaking out and reordering the
+       code around it. [data-type='fold'] is excluded: it renders a localized message ("N unchanged
+       lines"), not code, and must follow the ambient, possibly RTL, direction like ordinary UI
+       text. */
     direction: ltr;
     unicode-bidi: isolate;
   }

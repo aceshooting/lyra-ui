@@ -4,11 +4,10 @@ export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
-    /* Namespaced sizing surface, fed by the bare Shoelace-compat names. An unprefixed custom
-       property inherits, so a single --handle-size anywhere up the tree would otherwise silently
-       retune this component along with every other one reading a generically-named property.
-       Consumers override the --lr-image-comparer-* names on an ancestor or the host; the compat
-       names remain the private defaults' fallback source. */
+    /* Namespaced sizing surface fed by the bare Shoelace-compat names: an unprefixed property
+       inherits, so one --handle-size up the tree would silently retune every component reading
+       that generic name. Consumers override the --lr-image-comparer-* names on an ancestor or the
+       host; the compat names stay the private defaults' fallback source. */
     --_lr-image-comparer-divider-width: var(
       --divider-width,
       var(--lr-size-1px)
@@ -41,13 +40,12 @@ export const styles = css`
   [part~="base"][data-orientation="vertical"] [part="before"] {
     clip-path: inset(0 0 calc(100% - var(--lr-comparer-position, 50%)) 0);
   }
-  /* clip-path's inset() only accepts physical top/right/bottom/left offsets -- no logical
-     equivalent exists -- while [part='divider'] below is positioned with the logical
-     inset-inline-start, which the browser already mirrors under RTL on its own. Without this
-     override the clipped 'before' region stays pinned to the physical-left portion regardless of
-     direction, while the divider (and native range-input handle) move to the right under RTL,
-     visibly desyncing the boundary from the line the user is dragging. Vertical orientation is a
-     block-axis split, unaffected by inline direction, so it's excluded and keeps its own rule above. */
+  /* clip-path's inset() takes only physical top/right/bottom/left offsets, with no logical
+     equivalent, while [part='divider'] below uses inset-inline-start, which the browser mirrors
+     under RTL. Without this the clipped 'before' region stays pinned physically left while the
+     divider and native range handle move right, desyncing the boundary from the dragged line.
+     Vertical orientation splits the block axis, unaffected by inline direction, so it is excluded
+     and keeps its own rule above. */
   :host(:dir(rtl)) [part="before"] {
     clip-path: inset(0 0 0 calc(100% - var(--lr-comparer-position, 50%)));
   }
@@ -63,6 +61,13 @@ export const styles = css`
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
+  /* The display declaration above is author-origin, so it outranks the UA stylesheet's
+     '[hidden] { display: none }' and a hidden slotted child would still paint a hit-testable box.
+     Restated here with the UA rule's find-in-page carve-out, so 'hidden' keeps meaning hidden. */
+  [part="before"] ::slotted([hidden]:not([hidden="until-found" i])),
+  [part="after"] ::slotted([hidden]:not([hidden="until-found" i])) {
+    display: none;
+  }
   [part="divider"] {
     position: absolute;
     z-index: var(--lr-layer-popover);
@@ -73,8 +78,8 @@ export const styles = css`
       var(--_lr-image-comparer-divider-width)
     );
     background: var(--lr-color-surface);
-    /* Card step, not the overlay step: the shadow here only has to keep a hairline legible against
-       arbitrary imagery on both sides -- a wider blur reads as a smudge along the seam. */
+    /* Card step, not the overlay step: the shadow only keeps a hairline legible against arbitrary
+       imagery on both sides -- a wider blur reads as a smudge along the seam. */
     box-shadow: var(--lr-shadow-s);
     pointer-events: none;
   }
@@ -90,10 +95,10 @@ export const styles = css`
   }
   [part="handle"] {
     position: absolute;
-    /* --lr-layer-tooltip does not exist (no fallback -> z-index: auto, stacking the interaction
-       wrapper BELOW [part='before']'s clipped pointer-events-enabled region and intercepting its
-       own drag/click input). Matching [part='divider']'s own --lr-layer-popover is sufficient: the
-       handle renders after the divider, so an equal z-index still wins the paint-order tie. */
+    /* --lr-layer-tooltip does not exist; with no fallback that is z-index: auto, stacking this
+       wrapper BELOW [part='before']'s clipped pointer-events region, which then eats the
+       drag/click. Matching [part='divider']'s --lr-layer-popover suffices: the handle renders
+       after the divider, so an equal z-index still wins the paint-order tie. */
     z-index: var(--lr-layer-popover);
     inset: 0;
   }
@@ -107,16 +112,14 @@ export const styles = css`
     cursor: ew-resize;
   }
   [part~="base"][data-orientation="vertical"] [part="input"] {
-    /* A native <input type="range"> always maps pointer position along its own inline axis,
-       which defaults to horizontal-tb -- so without this override, dragging up/down over the
-       visibly vertical divider does nothing; only a horizontal drag (invisible, off to the
-       side) would move the thumb. writing-mode: vertical-lr switches the input's inline axis to
-       run top-to-bottom, matching [part='divider']'s own top-anchored inset-block-start above.
-       direction is pinned to ltr (rather than left to inherit an ambient dir="rtl") because
-       vertical-lr's inline progression reverses to bottom-to-top under direction: rtl, which
-       would desync the native handle's value from the always-top-to-bottom divider position --
-       the same block-axis-is-unaffected-by-inline-direction invariant the 'before' clip-path
-       override above already relies on for vertical orientation. */
+    /* A native <input type="range"> maps pointer position along its own inline axis, horizontal-tb
+       by default, so without this a drag up/down over the visibly vertical divider does nothing
+       and only an invisible sideways drag moves the thumb. vertical-lr runs that axis
+       top-to-bottom, matching [part='divider']'s top-anchored inset-block-start above. direction
+       is pinned to ltr, not inherited from an ambient dir="rtl", because vertical-lr reverses to
+       bottom-to-top under direction: rtl and desyncs the native handle's value from the
+       always-top-to-bottom divider -- the same block-axis invariant the 'before' clip-path
+       override above relies on. */
     writing-mode: vertical-lr;
     direction: ltr;
     cursor: ns-resize;
@@ -179,14 +182,13 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* [part='input'] is a fully-transparent full-bleed native <input type="range">. Keep hover
-     feedback on the divider too, so the full drag surface responds even when the pointer isn't
-     directly over the small visible handle. */
+  /* [part='input'] is a fully-transparent full-bleed native <input type="range">, so hover feedback
+     goes on the divider and the whole drag surface responds, not just the small visible handle. */
   [part~="base"]:has([part="input"]:hover) [part="divider"] {
     background: var(--lr-color-brand);
   }
-  /* Pressed rides the same :has() indirection as the hover rule above: the transparent full-bleed
-     input has nothing of its own to tint, so mid-drag the seam deepens past its hover accent. */
+  /* Same :has() indirection as the hover rule above -- the transparent full-bleed input has
+     nothing of its own to tint, so mid-drag the seam deepens past its hover accent. */
   [part~="base"]:has([part="input"]:active) [part="divider"] {
     background: color-mix(
       in oklab,

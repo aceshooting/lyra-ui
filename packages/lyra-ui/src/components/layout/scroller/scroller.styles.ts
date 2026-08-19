@@ -5,11 +5,10 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
     max-inline-size: 100%;
-    /* --lr-scroller-shadow-color/-size are the Lyra-prefixed aliases of the upstream
-       --shadow-color/--shadow-size cssprops (see the class JSDoc) -- resolved once here so every
-       edge-shadow rule below reads one effective value instead of repeating the full three-level
-       fallback chain at each use site, same indirection lr-split-panel/lr-dock-panel already use
-       for their own component-scoped tokens. */
+    /* --lr-scroller-shadow-color and -size are the Lyra-prefixed aliases of the upstream
+       --shadow-color and --shadow-size cssprops (see the class JSDoc), resolved once here so each
+       edge-shadow rule below reads one value instead of repeating the three-level fallback chain
+       -- the same indirection lr-split-panel and lr-dock-panel use. */
     --_lr-scroller-effective-shadow-color: var(
       --lr-scroller-shadow-color,
       var(--shadow-color, var(--lr-color-surface))
@@ -115,11 +114,10 @@ export const styles = css`
   }
 
   [part~="control"] {
-    /* Keep the glyph-sized control compact by default (--lr-scroller-control-size
-       is a consumer-tunable custom property, not this floor) while still giving the
-       interactive box the shared minimum target size -- same "small glyph, padded hit
-       box" pattern as lr-code-block's/lr-json-viewer's [part='toggle']. Covers
-       both previous and next (the shared part on both, per csspart doc above). */
+    /* A compact glyph-sized control (tuned by --lr-scroller-control-size, not this floor) whose
+       interactive box still meets the shared minimum target -- the small-glyph, padded-hit-box
+       pattern of lr-code-block's and lr-json-viewer's [part='toggle']. Covers previous and next,
+       which share this part. */
     display: inline-grid;
     place-items: center;
     inline-size: var(--lr-scroller-control-size, var(--lr-size-2rem));
@@ -156,11 +154,10 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
 
-  /* previous/next are the same rendered button as [part='control'] above (each
-     button's part attribute carries both tokens, e.g. part="control previous", so
-     this needs the token-matching ~= form, not =, to actually hit it) -- this
-     restates the identical floor directly against each individual part name too,
-     since a shadow-part guard lookup is per-name, not per-rendered-element. */
+  /* previous and next are the same rendered button as [part='control'] above -- each carries both
+     tokens (part='control previous'), so this needs the token-matching ~= form, not =. The floor
+     is restated per part name because a shadow-part guard lookup is per-name, not
+     per-rendered-element. */
   [part~="previous"],
   [part~="next"] {
     min-inline-size: var(--lr-icon-button-size);

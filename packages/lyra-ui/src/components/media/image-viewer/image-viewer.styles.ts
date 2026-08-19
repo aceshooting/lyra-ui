@@ -60,8 +60,10 @@ export const styles = css`
   [part="annotate-toggle"]:hover {
     background: var(--lr-color-brand-quiet);
   }
-  /* Declared here rather than after the [aria-pressed='true'] rule below so the toggle's own "on"
-     fill keeps winning the source-order tie, exactly as it already does against :hover. */
+  /* Declared before the [aria-pressed='true'] rule below so the toggle's own 'on' fill wins the
+     source-order tie, as it already does against :hover. Covers UNPRESSED toggles only -- an 'on'
+     annotate-toggle takes the dedicated (0,3,0) press rule beside that pressed rule, since losing
+     hover on an already-on toggle is deliberate but losing the press is not. */
   [part="fit-control"]:active,
   [part="rotate-button"]:active,
   [part="annotate-toggle"]:active {
@@ -98,6 +100,19 @@ export const styles = css`
       var(--lr-color-brand)
     );
   }
+  /* Its own (0,3,0) rule: the (0,2,0) rule above declares the same background as the generic
+     :active rule and comes after it, so without this an 'on' toggle acknowledges no press. Losing
+     hover is deliberate -- a lone mode indicator whose 'on' fill is the whole signal, unlike the
+     filter chips of lr-test-results, lr-agent-eval-dashboard, lr-env-list and lr-trace-tree, which
+     keep hover on the selected member. Mixing from --lr-image-viewer-annotate-active-bg keeps a
+     retinted fill's press a deeper tier of itself. */
+  [part="annotate-toggle"][aria-pressed="true"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-image-viewer-annotate-active-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
   [part="rotation-frame"] {
     position: relative;
     display: inline-block;
@@ -119,8 +134,8 @@ export const styles = css`
     transition: transform var(--lr-transition-base);
     outline: none;
   }
-  /* 'actual' size intentionally keeps the image at its natural pixel dimensions -- undo the
-     100% cap above (and the 'width'/'contain' image constraints below) for that mode. */
+  /* 'actual' keeps the image at its natural pixel dimensions -- undo the 100% cap above and the
+     'width'/'contain' image constraints below for that mode. */
   :host([fit="actual"]) [part="image-wrapper"] {
     max-inline-size: none;
   }
@@ -129,11 +144,10 @@ export const styles = css`
       transition: none;
     }
   }
-  /* The embedded pan-zoom's own [part='content'] sizes to its slotted content's natural
-     size by default (a max-content track), which leaves percentage sizing on the image below with
-     no definite basis to resolve against. Giving it the viewport's own inline size here is what
-     lets 'contain'/'width' scale the image to the available frame instead of its raw natural
-     pixel dimensions -- 'actual' leaves the default max-content sizing alone. */
+  /* The embedded pan-zoom's [part='content'] defaults to a max-content track, leaving percentage
+     sizing on the image below no definite basis. Giving it the viewport's inline size is what lets
+     'contain' and 'width' scale to the available frame rather than natural pixels; 'actual' keeps
+     the max-content default. */
   :host([fit="contain"]) [part="frame"]::part(content),
   :host([fit="width"]) [part="frame"]::part(content) {
     inline-size: 100%;
@@ -157,13 +171,11 @@ export const styles = css`
     position: absolute;
     inset: 0;
   }
-  /* Each tone sets --lr-image-viewer-highlight-fill rather than background directly, and the one
-     background declaration here reads it. That indirection is what lets the hover/active rules mix
-     from whichever fill a given highlight actually has: a background-mix written against the
-     untoned default would flatten every toned box to brand the instant the pointer touched it, and
-     a per-tone hover/active pair would be ten near-identical rules. The public
-     --lr-image-viewer-highlight-*-bg knobs are untouched -- still what each fill falls back
-     through. */
+  /* Each tone sets --lr-image-viewer-highlight-fill instead of background, and the single
+     background declaration reads it, so hover/active mix from whichever fill a highlight has.
+     Mixing against the untoned default would flatten every toned box to brand on hover, and
+     per-tone pairs would be ten near-identical rules. The public
+     --lr-image-viewer-highlight-*-bg knobs still back each fill. */
   [part="highlight"] {
     position: absolute;
     min-inline-size: var(--lr-icon-button-size);
@@ -240,10 +252,9 @@ export const styles = css`
       var(--lr-focus-ring-offset)
     );
   }
-  /* Was filter: brightness(), which multiplies every channel -- so it lightened a dark highlight,
-     did nothing at all to a white one, and (filter applying to the whole subtree) dragged
-     [part='highlight-label']'s text along with the box. Mixing the fill alone toward
-     --lr-color-mix-partner always moves, and only the fill moves. */
+  /* filter: brightness() multiplies every channel: it lightened a dark highlight, did nothing to a
+     white one, and, applying to the whole subtree, dragged [part='highlight-label']'s text with
+     the box. Mixing the fill toward --lr-color-mix-partner always moves, and moves only that. */
   [part="highlight"]:hover {
     background: color-mix(
       in oklab,
@@ -271,12 +282,10 @@ export const styles = css`
   [part="highlight-label"] {
     position: absolute;
     inset-block-start: calc(var(--lr-size-1-5em) * -1);
-    /* policy-allow(physical-css): the parent [part='highlight'] box is deliberately positioned with
-       physical left/top (see renderHighlights()'s comment -- region rects are physical
-       percent-of-image coordinates over a raster that never mirrors). The parent itself never moves
-       under RTL, so a logical inset here would flip this label to the box's opposite corner while
-       the box stayed put. Matching the parent's physical coordinate system keeps the label anchored
-       to the box's left edge in both directions. */
+    /* policy-allow(physical-css): the parent [part='highlight'] is positioned with physical
+       left/top -- region rects are physical percent-of-image coordinates over a raster that never
+       mirrors (see renderHighlights()). The parent never moves under RTL, so a logical inset would
+       flip this label to the opposite corner while the box stayed put. */
     left: 0;
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text);

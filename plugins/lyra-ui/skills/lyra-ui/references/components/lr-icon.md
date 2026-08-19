@@ -6,7 +6,7 @@
 - **Class** `LyraIcon`, also available unregistered from `@aceshooting/lyra-ui/components/utility/icon/icon.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecated property** `autoWidth` / `auto-width` since `8.0.0`; use property `canvas="auto"`; removal not before `10.0.0` — autoWidth is a boolean compatibility spelling that cannot express fixed canvas sizes; canvas covers both automatic and explicit sizing.
+- **Deprecated property** `autoWidth` / `auto-width` since `8.0.0`; use property `canvas="auto"`; removal not before `10.0.0` — autoWidth is a boolean compatibility spelling that cannot express fixed canvas sizes; canvas covers both automatic and explicit sizing. That version is a policy floor, not a plan: `wa-icon` still publishes its own deprecated `auto-width` attribute, so this alias is removed only when upstream's is.
 - **Optional peers** `dompurify` — see `llms/peers.md`
 - **Themeable via** 4 parts, 45 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

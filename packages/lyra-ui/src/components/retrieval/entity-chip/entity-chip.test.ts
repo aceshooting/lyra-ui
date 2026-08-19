@@ -1,4 +1,5 @@
-import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './entity-chip.js';
 import type { LyraEntityChip } from './entity-chip.js';
 
@@ -243,6 +244,55 @@ it('shows the popover on hover when preview content is slotted, and hides it on 
   ).to.be.true;
 });
 
+it('force-closes an already-open preview when its content is removed from the slot', async () => {
+  const el = (await fixture(
+    html`<lr-entity-chip text="Marie Curie"
+      ><p>Physicist, 1867-1934</p></lr-entity-chip
+    >`
+  )) as LyraEntityChip;
+  const wrapper = el.shadowRoot!.querySelector('.wrapper') as HTMLElement;
+  const popover = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+  wrapper.dispatchEvent(new Event('pointerenter', { bubbles: true }));
+  await el.updateComplete;
+  expect(popover.hasAttribute('hidden'), 'precondition: popover is open').to.be
+    .false;
+
+  el.querySelector('p')!.remove();
+  // slotchange fires asynchronously after the light-DOM mutation.
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await el.updateComplete;
+
+  expect(
+    popover.hasAttribute('hidden'),
+    'popover must close once its preview content is emptied out from under it'
+  ).to.be.true;
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')!.hasAttribute(
+      'aria-describedby'
+    ),
+    'and the emptied popover must stop being advertised as the description'
+  ).to.be.false;
+});
+
+it('gains the hover affordance when preview content arrives after the first render', async () => {
+  const el = (await fixture(
+    html`<lr-entity-chip text="Marie Curie"></lr-entity-chip>`
+  )) as LyraEntityChip;
+  const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+  expect(button.hasAttribute('aria-describedby')).to.be.false;
+
+  el.append(document.createTextNode('Physicist, 1867-1934'));
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await el.updateComplete;
+
+  expect(
+    button.getAttribute('aria-describedby'),
+    'bare slotted text added later still counts as real preview content'
+  ).to.equal(
+    (el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement).id
+  );
+});
+
 it('is accessible with and without preview content', async () => {
   const el = (await fixture(
     html`<lr-entity-chip text="Marie Curie" type="person"></lr-entity-chip>`
@@ -406,5 +456,80 @@ describe('preview show/hide across pointer and focus', () => {
     wrapper(el).dispatchEvent(new Event('pointerleave', { bubbles: true }));
     await el.updateComplete;
     expect(hidden(el)).to.be.true;
+  });
+});
+
+describe('disabled affordance (an entity-less chip)', () => {
+  const base = (el: LyraEntityChip): HTMLButtonElement =>
+    el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+
+  const center = (node: Element): [number, number] => {
+    const rect = node.getBoundingClientRect();
+    return [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ];
+  };
+
+  it('paints and feels disabled while an enabled sibling keeps its hover and press feedback', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <lr-entity-chip entity-id="e17" text="Marie Curie"></lr-entity-chip>
+        <lr-entity-chip text="Marie Curie"></lr-entity-chip>
+      </div>
+    `);
+    const [enabled, disabled] = [
+      ...wrapper.querySelectorAll('lr-entity-chip'),
+    ] as LyraEntityChip[];
+    await enabled.updateComplete;
+    await disabled.updateComplete;
+    const enabledBase = base(enabled);
+    const disabledBase = base(disabled);
+    // entity-id is public and omitting it IS the disabled state, so this is reachable by any
+    // consumer -- and the button really is disabled. What follows asserts the rendered result,
+    // because the IDL flag alone was true the whole time the chip looked and felt enabled.
+    expect(enabledBase.disabled).to.be.false;
+    expect(disabledBase.disabled).to.be.true;
+
+    expect(getComputedStyle(enabledBase).cursor).to.equal('pointer');
+    expect(getComputedStyle(disabledBase).cursor).to.equal('not-allowed');
+    expect(Number(getComputedStyle(enabledBase).opacity)).to.equal(1);
+    expect(Number(getComputedStyle(disabledBase).opacity)).to.be.lessThan(1);
+
+    const enabledResting = getComputedStyle(enabledBase).backgroundColor;
+    const disabledResting = getComputedStyle(disabledBase).backgroundColor;
+    try {
+      await resetMouse();
+      await sendMouse({ type: 'move', position: center(enabledBase) });
+      await waitUntil(
+        () => getComputedStyle(enabledBase).backgroundColor !== enabledResting,
+        'an enabled chip must still light up under the pointer',
+      );
+      const enabledHover = getComputedStyle(enabledBase).backgroundColor;
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(enabledBase).backgroundColor !== enabledHover,
+        'an enabled chip must still darken under a press',
+      );
+      await sendMouse({ type: 'up' });
+
+      await sendMouse({ type: 'move', position: center(disabledBase) });
+      await waitUntil(
+        () => getComputedStyle(enabledBase).backgroundColor === enabledResting,
+        'the pointer should have left the enabled chip',
+      );
+      expect(
+        getComputedStyle(disabledBase).backgroundColor,
+        'a disabled chip must not light up under the pointer',
+      ).to.equal(disabledResting);
+      await sendMouse({ type: 'down' });
+      expect(
+        getComputedStyle(disabledBase).backgroundColor,
+        'a disabled chip must not react to a press either',
+      ).to.equal(disabledResting);
+      await sendMouse({ type: 'up' });
+    } finally {
+      await resetMouse();
+    }
   });
 });

@@ -456,3 +456,136 @@ describe('lr-compare-panel', () => {
     }
   });
 });
+
+describe('selected vote-button pointer feedback', () => {
+  /** Resolves what a `declaration` computes to *inside this component's shadow root*, where the
+   *  `--lr-*` design tokens live. */
+  function resolvedInShadow(el: LyraComparePanel, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  async function themed(): Promise<LyraComparePanel> {
+    const el = (await fixture(html`
+      <lr-compare-panel
+        vote="a"
+        style="--lr-transition-fast: 0s; --lr-compare-panel-selected-background: rgb(0, 51, 102);"
+      ></lr-compare-panel>
+    `)) as LyraComparePanel;
+    await el.updateComplete;
+    return el;
+  }
+
+  async function moveMouseTo(target: HTMLElement): Promise<void> {
+    target.scrollIntoView({ block: 'center', inline: 'center' });
+    const rect = target.getBoundingClientRect();
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+  }
+
+  it('keeps the selected fill under the pointer instead of reverting to the generic hover tint', async function () {
+    if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
+    const el = await themed();
+    const selected = el.shadowRoot!.querySelector('[part="vote-button"][data-selected]') as HTMLElement;
+    expect(selected != null, 'expected a selected vote button').to.equal(true);
+    expect(getComputedStyle(selected).backgroundColor).to.equal('rgb(0, 51, 102)');
+
+    try {
+      await resetMouse();
+      await moveMouseTo(selected);
+      // Poll rather than assert immediately: a hover repaint that DOES happen needs a frame to
+      // land, so an instant assertion would pass for the wrong reason.
+      await waitUntil(
+        () => getComputedStyle(selected).borderTopColor !== '',
+        'the hovered vote button never resolved a computed style'
+      );
+      expect(getComputedStyle(selected).backgroundColor).to.equal('rgb(0, 51, 102)');
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('deepens the SELECTED vote button while it is held', async function () {
+    if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
+    const el = await themed();
+    const selected = el.shadowRoot!.querySelector('[part="vote-button"][data-selected]') as HTMLElement;
+    const held = resolvedInShadow(
+      el,
+      'background: color-mix(in oklab, rgb(0, 51, 102), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+      'background-color'
+    );
+    expect(held).to.not.equal('rgb(0, 51, 102)');
+
+    try {
+      await resetMouse();
+      await moveMouseTo(selected);
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(selected).backgroundColor === held,
+        'the held selected vote button never painted a pressed step off its selected fill'
+      );
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  });
+
+  it('deepens an UNSELECTED vote button while it is held -- the contrast case', async function () {
+    if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
+    const el = await themed();
+    const unselected = el.shadowRoot!.querySelector(
+      '[part="vote-button"]:not([data-selected])'
+    ) as HTMLElement;
+    const hovered = resolvedInShadow(el, 'background: var(--lr-color-brand-quiet)', 'background-color');
+    const held = resolvedInShadow(
+      el,
+      'background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+      'background-color'
+    );
+
+    try {
+      await resetMouse();
+      await moveMouseTo(unselected);
+      await waitUntil(
+        () => getComputedStyle(unselected).backgroundColor === hovered,
+        'the hovered unselected vote button never painted the brand-quiet tint'
+      );
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(unselected).backgroundColor === held,
+        'the held unselected vote button never painted the pressed tint'
+      );
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+  });
+
+  it("restores the selected fill once the pointer is released", async function () {
+    if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
+    const el = await themed();
+    const selected = el.shadowRoot!.querySelector('[part="vote-button"][data-selected]') as HTMLElement;
+    try {
+      await resetMouse();
+      await moveMouseTo(selected);
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(selected).backgroundColor !== 'rgb(0, 51, 102)',
+        'the held selected vote button kept its resting fill'
+      );
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
+    await waitUntil(
+      () => getComputedStyle(selected).backgroundColor === 'rgb(0, 51, 102)',
+      'the released selected vote button never returned to its selected fill'
+    );
+  });
+});

@@ -10,7 +10,7 @@ import { DisclosureMotionController } from './disclosure-motion.js';
 import { styles } from './details.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_details } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** The library's one size ladder, in either spelling. */
@@ -109,7 +109,6 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     details: LYRA_DEFAULT_details,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

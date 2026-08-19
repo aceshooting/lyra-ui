@@ -102,17 +102,51 @@ const coreRawBudget = {
   // gzip budget stayed green, so this is shared implementation weight rather than a dependency leak.
   devModeDiagnosticsAllowanceBytes: 20_000,
   // The 10.0.0 public-contract pass increased the measured bundle to 4566.0 KiB raw, about 0.6 KiB
-  // beyond the preceding 4565.4 KiB ceiling. The weight is spread thin rather than concentrated:
-  // every renamed event now emits its canonical and its deprecated spelling from one gesture
-  // (entity select/activate across three retrieval components, virtual-list's visible-range pair,
-  // rag-eval's run pair, plus `lr-close` on dialog and `lr-toggle-request` on accordion); `disabled`
-  // moved onto the shared popover base; the progress ring gained `showValue`; the calendar gained a
-  // locale-derived week-start resolution path; the shared search-change detail gained
-  // `matchCountExact`; and `lr-add`/`lr-token-edit` gained the emit-check-then-mutate veto shape
-  // `lr-remove` already had. This run's peer-exclusion checks reported no eager and no bundled
-  // optional peer, and every granular per-entry gzip budget plus the button canary stayed green, so
-  // this is Lyra implementation weight rather than a dependency leak.
+  // beyond the preceding 4565.4 KiB ceiling: `disabled` moved onto the shared popover base; the
+  // progress ring gained `showValue`; the calendar gained a locale-derived week-start resolution
+  // path; the shared search-change detail gained `matchCountExact`; and `lr-add`/`lr-token-edit`
+  // gained the emit-check-then-mutate veto shape `lr-remove` already had. NOTE: this term was
+  // originally justified largely by dual-emit event aliases (every renamed event firing both its
+  // canonical and its deprecated spelling from one gesture). Those aliases were REMOVED later in
+  // the same major, so that weight is gone and this term is now larger than the surface it names --
+  // the slack is left in place deliberately rather than re-cut, because re-attributing bytes
+  // between adjacent terms invites exactly the guesswork these named allowances exist to prevent.
   publicContractV10AllowanceBytes: 10_000,
+  // The 10.0.0 remediation sweep increased the measured bundle to 4633.0 KiB raw, about 57.8 KiB
+  // beyond the preceding 4575.2 KiB ceiling (measured twice as the sweep landed: 4596.8 KiB at the
+  // halfway point, 4633.0 KiB complete). It is additive correctness work spread across many
+  // families rather than one feature: <lr-pdf-viewer> gained a public `workerSrc` plus URL
+  // validation and worker configuration; the widget resolver gained a string-length ceiling applied
+  // at five admission points; the shiki loader gained a capability guard and fail-closed paths;
+  // nine components now render stateful ARIA explicitly instead of omitting it; sixteen call sites
+  // moved onto the shared `hostAriaLabel()`; scroll-overflow edge tracking moved into the shared
+  // controller with RTL-aware start/end state and its own scroll listener; and several cascade and
+  // forced-colors corrections added selectors. Removing the event aliases and hoisting four
+  // duplicated helpers pulled the other way, so this is the net. This run's peer-exclusion checks
+  // reported no eager and no bundled optional peer, and the button canary plus every granular
+  // per-entry gzip budget stayed green, so it is Lyra implementation weight, not a dependency leak.
+  // A large share of this term WAS CSS comment text rather than rules, and that share is now gone.
+  // `css` tagged templates used to keep their comments all the way through the build -- tsc has no
+  // reason to read a template literal as CSS, and esbuild's minifier must treat a tagged template's
+  // body as opaque because the tag can read `raw` -- so 28% of all emitted style bytes shipped as
+  // explanatory prose no consumer could read. `scripts/build.mjs` now runs `stripCssComments` after
+  // compaction, removing 456,633 B from the `css` templates of 226 of the 1406 emitted modules
+  // while `src/` keeps every comment (several defects here were caught because a comment stated an
+  // invariant the code was violating). The core measurement fell from 4633.0 KiB to 4178.8 KiB raw
+  // / 948.4 KiB gzip: a 454.2 KiB return, about six times this whole allowance. The sweep's
+  // remaining non-comment weight fits inside the terms above, so nothing needs to be reserved here.
+  //
+  // Equivalence was proven rather than sampled. Across all 285 `css` templates in the emitted tree:
+  // every byte outside a template chunk is unchanged (so each `${...}` interpolation is verbatim);
+  // the CSS token streams match once comment and whitespace runs collapse to a single separator;
+  // and Chromium's CSSOM serializes both sides of all 285 templates -- 5,644 top-level rules and
+  // 49,304 declarations -- identically.
+  //
+  // The other named terms are deliberately NOT re-cut to absorb this return, which leaves the
+  // aggregate ceiling 396.4 KiB above the measurement -- looser than this budget has historically
+  // run. Re-attributing bytes between adjacent terms is exactly the guesswork these named
+  // allowances exist to prevent, so the slack is recorded here instead of hidden in a re-baseline.
+  v10RemediationSweepAllowanceBytes: 0,
 };
 
 const bundleEntries = {
@@ -198,6 +232,13 @@ const bundleEntries = {
     // 3858.5 KiB. Its separately named 10,000 B allowance raises this aggregate ceiling to
     // 3862.3 KiB, retaining about 3.8 KiB of headroom while the granular consumer budgets remain
     // unchanged.
+    //
+    // The measurement then went the other way for the first time in this entry's history. Stripping
+    // CSS comments from the emitted `css` templates (see `v10RemediationSweepAllowanceBytes`) took
+    // the bundle from 4633.0 KiB to 4178.8 KiB raw / 948.4 KiB gzip across the same 7 output files
+    // and 1073 eager modules, with zero eager and zero physically bundled optional peers. That term
+    // is now 0 and every other term is unchanged, so the ceiling below is 4,685,000 B (4575.2 KiB)
+    // against a 4178.8 KiB measurement.
     maxRawBytes:
       coreRawBudget.establishedBaselineBytes +
       coreRawBudget.stableRootRegistrationAllowanceBytes +
@@ -209,7 +250,8 @@ const bundleEntries = {
       coreRawBudget.overlayHydrationContractAllowanceBytes +
       coreRawBudget.crossFamilyRemediationSweepAllowanceBytes +
       coreRawBudget.devModeDiagnosticsAllowanceBytes +
-      coreRawBudget.publicContractV10AllowanceBytes,
+      coreRawBudget.publicContractV10AllowanceBytes +
+      coreRawBudget.v10RemediationSweepAllowanceBytes,
   },
   // The other half of the registration split, and the reason the `core` budget above could move to
   // `all.js` without losing coverage: a bare `import '@aceshooting/lyra-ui'` must still collapse to

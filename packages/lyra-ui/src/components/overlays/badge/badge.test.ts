@@ -544,3 +544,30 @@ describe('quiet-tier fill in dark mode', () => {
     }
   });
 });
+
+describe('a slotted [hidden] adornment', () => {
+  it('is removed from the rendered box in both adornment slots', async () => {
+    const el = (await fixture(html`
+      <lr-badge>
+        <span id="gone-start" slot="start" hidden>*</span>
+        <span id="shown-start" slot="start">+</span>
+        Label
+        <span id="gone-end" slot="end" hidden>!</span>
+        <span id="shown-end" slot="end">?</span>
+      </lr-badge>
+    `)) as LyraBadge;
+    await el.updateComplete;
+    for (const id of ['#gone-start', '#gone-end']) {
+      const gone = el.querySelector<HTMLElement>(id)!;
+      expect(getComputedStyle(gone).display, id).to.equal('none');
+      expect(gone.getClientRects().length, id).to.equal(0);
+    }
+    // The companions prove the adornment rules are still live, so the assertions above cannot
+    // pass merely because the badge failed to style its slotted adornments at all.
+    for (const id of ['#shown-start', '#shown-end']) {
+      const shown = el.querySelector<HTMLElement>(id)!;
+      expect(getComputedStyle(shown).display, id).to.equal('block');
+      expect(shown.getClientRects().length, id).to.equal(1);
+    }
+  });
+});

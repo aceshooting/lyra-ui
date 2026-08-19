@@ -4,11 +4,10 @@ export const styles = css`
   :host {
     display: block;
   }
-  /* Dense "label: value" single-line row by default -- the compact
-     presentation short status/duration/count content (the kind this
-     component is meant for) reads best as, versus a stacked two-line
-     layout. A consumer that prefers stacked can override this from the
-     light DOM: :host { } / [part='base'] { flex-direction: column; }. */
+  /* Dense "label: value" single-line row by default -- the short
+     status/duration/count content this component is meant for reads better
+     that way than stacked over two lines. A consumer who prefers stacked can
+     override from the light DOM: :host { } / [part='base'] { flex-direction: column; }. */
   [part='base'] {
     display: flex;
     align-items: baseline;

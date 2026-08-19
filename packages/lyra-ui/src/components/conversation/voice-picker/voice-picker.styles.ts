@@ -25,9 +25,8 @@ export const styles = css`
   [part='form-control-label'][hidden] {
     display: none;
   }
-  /* This control accepts required and renders a visible label like every other field in the
-     library, so it marks it the same way -- the [hidden] rule above is what keeps the marker from
-     orphaning a stray glyph when no label is set. */
+  /* required plus a visible label, marked like every other field; the [hidden] rule above keeps
+     the marker from orphaning a stray glyph when no label is set. */
   ${formControlRequiredMarker}
 
   .control-row {
@@ -63,8 +62,8 @@ export const styles = css`
   [part='trigger']:hover:not(:disabled) {
     border-color: var(--lr-color-brand);
   }
-  /* Hover recolors the border only; the press additionally fills the trigger, mixing its resting
-     surface toward the text color so the pressed state escalates hover instead of restating it. */
+  /* Hover recolors the border; the press also fills the trigger, mixing its resting surface toward
+     the text color, so it escalates hover rather than restating it. */
   [part='trigger']:active:not(:disabled) {
     border-color: var(--lr-color-brand);
     background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
@@ -179,16 +178,14 @@ export const styles = css`
     position: fixed;
     z-index: var(--lr-layer-dropdown);
     box-sizing: border-box;
-    /* Clamped against internal/positioner.js's place()-published available-space custom
-       properties (see menu.styles.ts's/combobox.styles.ts's identical [part='listbox']
-       treatment) so this popup can't overflow off-screen on a short/keyboard-shrunk viewport. */
+    /* Clamped against internal/positioner.js's place()-published available-space properties, as in
+       menu.styles.ts and combobox.styles.ts, so the popup can't overflow a short viewport. */
     max-block-size: min(var(--lr-size-18rem), var(--lr-positioner-available-block-size, var(--lr-size-18rem)));
     overflow-y: auto;
-    /* Pinned explicitly alongside overflow-y -- per the CSS overflow spec, once one axis is
-       forced non-'visible', the other axis's used value also computes to 'auto' (never stays
-       'visible'), risking a phantom empty horizontal scrollbar from sub-pixel rounding (the same
-       bug lr-tab-group' tablist was fixed for). inline-size is max-content below, so this axis never
-       actually needs to scroll. */
+    /* Pinned explicitly: per spec, once one axis is forced non-'visible' the other computes to
+       'auto' too, so sub-pixel rounding can raise a phantom horizontal scrollbar (the bug
+       lr-tab-group's tablist was fixed for). inline-size is max-content below, so this axis never
+       needs to scroll. */
     overflow-x: hidden;
     inline-size: max-content;
     min-inline-size: min(var(--lr-size-12rem), var(--lr-positioner-available-inline-size, var(--lr-size-12rem)));
@@ -233,19 +230,6 @@ export const styles = css`
     text-align: start;
     cursor: pointer;
   }
-  [part='option']:hover,
-  [part='option'][data-active] {
-    background: var(--lr-voice-picker-option-active-bg, var(--lr-color-brand-quiet));
-  }
-  /* Mixes the SAME --lr-voice-picker-option-active-bg the hover/active-descendant rule above uses,
-     so a consumer retinting the highlight gets a matching pressed step for free. */
-  [part='option']:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-voice-picker-option-active-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
-  }
   [part='option'][aria-selected='true'] {
     border-color: var(--lr-voice-picker-option-selected-border, var(--lr-color-brand));
     color: var(--lr-voice-picker-option-selected-color, var(--lr-color-brand));
@@ -253,6 +237,24 @@ export const styles = css`
     font-weight: var(
       --lr-voice-picker-option-selected-font-weight,
       var(--lr-font-weight-semibold)
+    );
+  }
+  /* The three row-state rules below must stay AFTER the [aria-selected='true'] rule above: all
+     four are (0,2,0) on the same row element, so source order decides the selected row's
+     background. Reversed, --lr-voice-picker-option-selected-bg (transparent by default) swallowed
+     hover, press and the [data-active] aria-activedescendant highlight. The selected rule still
+     paints border-color, color and font-weight, untouched here. */
+  [part='option']:hover,
+  [part='option'][data-active] {
+    background: var(--lr-voice-picker-option-active-bg, var(--lr-color-brand-quiet));
+  }
+  /* Mixes the SAME --lr-voice-picker-option-active-bg as the hover/active-descendant rule above,
+     so retinting the highlight gets a matching pressed step. */
+  [part='option']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-voice-picker-option-active-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
   [part='option-label'] {
@@ -304,8 +306,8 @@ export const styles = css`
     background: var(--lr-voice-picker-preview-hover-bg, var(--lr-color-brand-quiet));
     color: var(--lr-voice-picker-preview-hover-color, var(--lr-color-brand));
   }
-  /* Mixes the SAME --lr-voice-picker-preview-hover-bg the rule above uses, so a consumer retinting
-     the hover fill gets a matching pressed step without a second custom property to keep in sync. */
+  /* Mixes the SAME --lr-voice-picker-preview-hover-bg as the rule above, so retinting the hover
+     fill gets a matching pressed step with no second property to keep in sync. */
   [part='option-preview']:active {
     background: color-mix(
       in oklab,

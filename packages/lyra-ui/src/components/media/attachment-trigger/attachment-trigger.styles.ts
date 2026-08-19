@@ -1,45 +1,37 @@
 import { css } from 'lit';
 
 export const styles = css`
-  /* Fully transparent to layout, matching the nested dropdown/menu shell — the
-     visible/clickable surface is entirely the rendered button (or, in the
-     multi-capability case, lr-dropdown's trigger wrapper
-     around that same button), so this host never contributes a stray box a
-     composer's start slot would otherwise have to fight with margin/
-     inline-block quirks to line up against the textarea. */
+  /* Fully transparent to layout, matching the nested dropdown/menu shell -- the visible/clickable
+     surface is entirely the rendered button (in the multi-capability case, lr-dropdown's trigger
+     wrapper around that same button), so this host contributes no stray box for a composer's start
+     slot to fight with margin/inline-block quirks against the textarea. */
   :host {
     display: contents;
   }
 
-  /* The internal native file input never has a visible surface of its own --
-     the trigger button/menu above are the only affordance a user interacts
-     with; this input exists purely so its synthetic .click() can open the OS
-     file picker. Exposed as a part (see the class doc's @csspart) only so a
-     consumer's ::part(hidden-input) can override this in the unlikely case
-     their integration needs to. */
+  /* The internal native file input has no visible surface -- the trigger button/menu above are the
+     only affordance; it exists purely so its synthetic .click() opens the OS file picker. Exposed
+     as a part (the class doc's @csspart) only so a consumer's ::part(hidden-input) can override
+     this if their integration needs to. */
   [part='hidden-input'] {
     display: none;
   }
 
-  /* Shared visual treatment for both the single-capability button
-     ([part='trigger']) and the multi-capability button ([part='menu-trigger'])
-     slotted into lr-dropdown's trigger slot -- the latter can't reuse
-     part='trigger' itself (that name is reserved for the single-capability
-     case, so a consumer's ::part(trigger) selector unambiguously targets
-     exactly one button), so both buttons share this plain class for the
-     declarations that genuinely are identical, on top of each one's own
-     distinct part name. */
+  /* Shared visual treatment for the single-capability button ([part='trigger']) and the
+     multi-capability one ([part='menu-trigger']) slotted into lr-dropdown's trigger slot. The
+     latter cannot reuse part='trigger' -- reserved for the single-capability case so a consumer's
+     ::part(trigger) targets exactly one button -- so both share this plain class for the identical
+     declarations, on top of their own distinct part names. */
   .trigger-button {
     display: inline-flex;
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    /* Compact per the class doc -- capped well below the library's general
-       --lr-icon-button-size (meant for a standalone icon-only button) so
-       this sits comfortably inside a composer's start slot alongside a
-       textarea, matching lr-combobox's clear-button / lr-select's
-       toggle sizing convention. */
+    /* Compact per the class doc: capped well below the general
+       --lr-icon-button-size (meant for a standalone icon-only button) so this
+       sits inside a composer's start slot alongside a textarea, matching
+       lr-combobox's clear-button / lr-select's toggle sizing convention. */
     min-inline-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));
     min-block-size: min(var(--lr-icon-button-size), var(--lr-size-1-75rem));
     padding: 0;
@@ -56,8 +48,8 @@ export const styles = css`
       background-color var(--lr-transition-fast),
       color var(--lr-transition-fast);
   }
-  /* Keep internal state qualifiers low-specificity so sibling rules in this sheet remain easy to
-     compose. Consumer ::part() authority follows the shadow cascade independently. */
+  /* Internal state qualifiers stay low-specificity so sibling rules in this sheet compose easily;
+     consumer ::part() authority follows the shadow cascade independently. */
   :where(.trigger-button):hover:where(:not(:disabled)) {
     background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
     color: var(--lr-color-text);
@@ -74,29 +66,28 @@ export const styles = css`
     display: block;
   }
 
-  /* Both trigger buttons must independently meet the shared minimum tappable size
-     (--lr-icon-button-size), overriding .trigger-button's own more compact
-     min-inline-size/min-block-size above -- same tie-break-by-source-order specificity as every
-     other single-attribute-selector override in this file (equal (0,1,0) specificity to
-     .trigger-button's own (0,1,0), so this later rule wins). */
+  /* Both trigger buttons must independently meet the shared --lr-icon-button-size tappable
+     minimum, overriding .trigger-button's own more compact min-inline-size/min-block-size above:
+     both are (0,1,0), so this later rule wins on source order, the same tie-break as every other
+     single-attribute-selector override in this file. */
   [part='trigger'],
   [part='menu-trigger'] {
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
   }
 
-  /* [part='menu-trigger'] carries a second glyph (the paperclip plus this
-     disclosure chevron) alongside the single-capability [part='trigger']'s
-     one, so it alone needs a gap between them. */
+  /* [part='menu-trigger'] carries a second glyph -- the paperclip plus this
+     disclosure chevron -- where the single-capability [part='trigger'] has
+     one, so it alone needs a gap. */
   [part='menu-trigger'] {
     gap: var(--lr-space-xs);
   }
 
   /* Disclosure cue for the multi-capability trigger, matching
-     lr-combobox/lr-select's own [part='expand-icon'] convention (same
-     chevronIcon() rotated to point down) -- but sized down from their
-     dedicated-touch-target treatment since here it's a second glyph inside
-     one already-compact icon button, not its own separate control. */
+     lr-combobox/lr-select's [part='expand-icon'] convention (same
+     chevronIcon() rotated to point down) but sized down from their
+     dedicated-touch-target treatment: here it is a second glyph inside one
+     already-compact icon button, not its own separate control. */
   [part='expand-icon'] {
     display: inline-flex;
     flex: 0 0 auto;

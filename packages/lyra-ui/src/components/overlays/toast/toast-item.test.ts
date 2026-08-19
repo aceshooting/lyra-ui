@@ -1932,3 +1932,26 @@ it('accepts every LyraToastSize literal via the JS property and reflects it as a
     expect(el.getAttribute('size')).to.equal(size);
   }
 });
+
+describe('a slotted [hidden] action button', () => {
+  it('is removed from the rendered box, not just from the accessibility tree', async () => {
+    const el = (await fixture(html`
+      <lr-toast-item duration="0">
+        Item deleted
+        <button id="gone" type="button" hidden>Undo</button>
+        <button id="shown" type="button">Retry</button>
+      </lr-toast-item>
+    `)) as LyraToastItem;
+    await el.updateComplete;
+    const surface = el.shadowRoot!.querySelector<HTMLElement>('[part="toast-item"]')!;
+    await waitUntil(() => !surface.hasAttribute('hidden'), 'the toast surface never mounted');
+    const gone = el.querySelector<HTMLButtonElement>('#gone')!;
+    const shown = el.querySelector<HTMLButtonElement>('#shown')!;
+    expect(getComputedStyle(gone).display).to.equal('none');
+    expect(gone.getClientRects().length).to.equal(0);
+    // The companion proves the ::slotted(button) rule itself is still live, so the assertion
+    // above cannot pass merely because the toast failed to style its slotted actions at all.
+    expect(getComputedStyle(shown).display).to.equal('inline-block');
+    expect(shown.getClientRects().length).to.equal(1);
+  });
+});

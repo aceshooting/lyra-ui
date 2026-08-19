@@ -12,22 +12,21 @@ export const styles = css`
     --_lr-phone-input-gap-default: var(--lr-space-xs);
     --_lr-phone-input-radius-default: var(--lr-radius);
     /* The floor's six values come from the ONE shared form-control ladder
-       (internal/sizes.styles.ts) rather than a private copy, so retuning
-       --lr-theme-form-control-height-* moves this control and every sibling field together. That
-       ladder matches both spellings of every tier, which is what makes size="small" resolve here
-       without a per-component alias rule. */
+       (internal/sizes.styles.ts), not a private copy, so retuning
+       --lr-theme-form-control-height-* moves this control and every sibling field together. The
+       ladder matches both spellings of every tier, so size="small" resolves with no alias rule. */
     --_lr-phone-input-control-min-height-default: var(--lr-form-control-height);
-    /* --lr-phone-input-control-height is intentionally NOT declared here -- same convention as
-       lr-input/lr-select/lr-combobox/lr-date-input: a consumer-facing exact-height escape hatch
-       consumed only through the var() fallback on [part='input-wrapper'] below; declaring any
-       value for it here would make that fallback arm unreachable. */
+    /* --lr-phone-input-control-height is intentionally NOT declared here -- as in
+       lr-input/lr-select/lr-combobox/lr-date-input, it is a consumer-facing exact-height escape
+       hatch read only through the var() fallback on [part='input-wrapper'] below, and any value
+       here would make that fallback arm unreachable. */
   }
   :host([pill]) {
     --_lr-phone-input-radius-default: var(--lr-radius-pill);
   }
-  /* What remains per tier is this component's own glyph geometry. Padding follows the shared
+  /* What remains per tier is this component's own glyph geometry: padding follows the shared
      form-control ladder above so the country-selector action and sibling fields resolve to one
-     outer height; both spellings of a tier still match for the component-specific glyph values. */
+     outer height, and both spellings of a tier still match for the glyph values. */
   :host([size='2xs']) {
     --_lr-phone-input-font-size-default: var(--lr-font-size-2xs);
     --_lr-phone-input-flag-size-default: var(--lr-font-size-sm);
@@ -102,16 +101,11 @@ export const styles = css`
     border-color: var(--lr-phone-input-invalid-border-color, var(--lr-color-danger));
   }
 
-  /* :host(:disabled), not :host([disabled]) -- this is a form-associated
-     custom element (FormAssociated mixin -> static formAssociated = true),
-     so the UA computes its disabled state (and therefore :disabled/:enabled
-     matching) the same way it does for a native form control: from its own
-     disabled content attribute *or* an ancestor <fieldset disabled>'s
-     cascade. Keying this off the attribute selector only ever matched the
-     first case -- a field disabled purely via an ancestor fieldset had
-     effectiveDisabled correctly gating the country select/telephone input
-     underneath, but the wrapper around them still rendered at full opacity
-     with a normal cursor. */
+  /* :host(:disabled), not :host([disabled]): a form-associated custom element (FormAssociated
+     mixin -> static formAssociated = true) matches :disabled/:enabled like a native control, from
+     its own disabled content attribute *or* an ancestor <fieldset disabled>'s cascade. The
+     attribute selector caught only the first, leaving a fieldset-disabled field's wrapper at full
+     opacity with a normal cursor while effectiveDisabled correctly gated the controls inside. */
   :host(:disabled) [part='input-wrapper'] {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
@@ -124,10 +118,9 @@ export const styles = css`
     padding-inline-start: var(--lr-space-s);
   }
 
-  /* The country selector keeps the real native <select> (its popup, keyboard type-ahead, and
-     mobile pickers are irreplaceable) but stretches it invisibly over a compact decorative
-     trigger, so the closed control never clips a long localized country name and never repeats
-     the calling code shown right next to it. */
+  /* Keeps the real native <select> (irreplaceable popup, keyboard type-ahead and mobile pickers)
+     stretched invisibly over a compact decorative trigger, so the closed control never clips a
+     long localized country name nor repeats the calling code beside it. */
   [part='country'] {
     position: relative;
     display: inline-flex;
@@ -157,8 +150,8 @@ export const styles = css`
     cursor: not-allowed;
   }
 
-  /* The invisible select's popup list is still painted by the browser from these options; without
-     an explicit surface/text pairing it falls back to UA colors (a white panel in dark themes). */
+  /* The browser still paints the invisible select's popup from these options; with no explicit
+     surface/text pairing it falls back to UA colors -- a white panel in dark themes. */
   [part='country-select'] option {
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
@@ -178,11 +171,10 @@ export const styles = css`
     background: var(--lr-phone-input-country-hover-bg, var(--lr-color-brand-quiet));
   }
 
-  /* The press lands on the invisible <select> stretched over the trigger, so the pressed tint is
-     driven from the same sibling combinator as the hover above -- styling [part='country-trigger']
-     itself with :active would never match, since it is not the element being pressed. Mixing the
-     hover tint one shared step further toward the text colour keeps a consumer's
-     --lr-phone-input-country-hover-bg override in charge of both states. */
+  /* The press lands on the invisible <select> over the trigger, so the pressed tint runs through
+     the same sibling combinator as the hover above -- :active on [part='country-trigger'] itself
+     would never match, it is not the pressed element. Mixing the hover tint one shared step toward
+     the text colour keeps a --lr-phone-input-country-hover-bg override in charge of both states. */
   [part='country-select']:not(:disabled):active + [part='country-trigger'] {
     background: color-mix(
       in oklab,
@@ -191,8 +183,8 @@ export const styles = css`
     );
   }
 
-  /* The wrapper's focus-within ring marks the whole field; this inner ring additionally marks
-     that keyboard focus sits on the (invisible) country select rather than the telephone input. */
+  /* The wrapper's focus-within ring marks the whole field; this inner ring marks that keyboard
+     focus sits on the invisible country select rather than the telephone input. */
   [part='country-select']:focus-visible + [part='country-trigger'] {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
@@ -270,8 +262,8 @@ export const styles = css`
   }
 
   @media (forced-colors: active) {
-    /* Background tint is flattened to Canvas in forced-colors mode. Keep the invisible select's
-       hover/press target distinguishable with a geometry cue and system color. */
+    /* Forced colors flattens the background tint to Canvas, so the invisible select's hover/press
+       target needs a geometry cue and system color to stay distinguishable. */
     [part='country-select']:not(:disabled):hover + [part='country-trigger'] {
       outline-color: Highlight;
       outline-style: dashed;

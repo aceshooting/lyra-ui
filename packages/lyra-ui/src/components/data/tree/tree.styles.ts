@@ -7,12 +7,11 @@ export const styles = css`
   [part~='base'] {
     display: flex;
     flex-direction: column;
-    /* Fallback for a deeply-indented node whose row still overflows despite
-       the [part=label] truncation + padding-inline-start cap in tree-item.ts.
-       overflow-y is pinned explicitly alongside overflow-x: per the CSS overflow spec, leaving one
-       axis unset once the other is non-'visible' forces its used value to 'auto' too, which can show
-       a phantom/empty vertical scrollbar from sub-pixel rounding even though this tree never scrolls
-       block-wise on its own (it grows tall instead) -- mirrors <lr-tab-group>'s identical fix. */
+    /* Fallback for a deeply-indented node whose row still overflows despite the [part=label]
+       truncation and padding-inline-start cap in tree-item.ts. overflow-y is pinned explicitly:
+       per spec, leaving one axis unset once the other is non-'visible' forces it to 'auto' too,
+       which sub-pixel rounding can turn into a phantom vertical scrollbar even though this tree
+       grows tall rather than scrolling block-wise -- mirrors <lr-tab-group>'s fix. */
     overflow-x: auto;
     overflow-y: hidden;
   }

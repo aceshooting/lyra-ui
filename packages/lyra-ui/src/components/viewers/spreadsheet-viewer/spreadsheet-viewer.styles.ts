@@ -22,11 +22,10 @@ export const styles = css`
       var(--_lr-spreadsheet-viewer-max-height)
     );
   }
-  /* Vertical overflow is capped/scrolled by [part='body'] above; horizontal overflow of the grid
-     itself is [part='sheet']'s own concern below -- both axes are pinned non-visible on purpose
-     there (per the CSS overflow spec, pinning only overflow-x forces overflow-y's used value to
-     'auto' too, risking a phantom/empty scrollbar from sub-pixel rounding on a grid that never
-     actually overflows vertically -- matching lr-csv-viewer's identical two-layer fix shape). */
+  /* [part='body'] above caps and scrolls the vertical axis; [part='sheet'] below owns horizontal
+     overflow, with both axes pinned non-visible -- per the CSS overflow spec, pinning only
+     overflow-x forces overflow-y's used value to auto, risking a phantom scrollbar from sub-pixel
+     rounding on a grid that never overflows vertically. Matches lr-csv-viewer. */
   [part='sheet'] {
     overflow-x: auto;
     overflow-y: hidden;
@@ -52,11 +51,10 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text);
   }
-  /* renderRow()/renderCell()'s output for a DATA row is passed to <lr-virtual-list> as its
-     .renderItem callback and ends up rendered inside THAT component's own shadow root -- a plain
-     [part=] selector above, scoped to this component's own shadow root, only ever reaches the
-     header row (rendered directly by this component, not through virtual-list). ::part() is what
-     reaches one shadow boundary in, matching dataset-viewer's identical precedent. */
+  /* renderRow()/renderCell()'s output for a DATA row goes to <lr-virtual-list> as its .renderItem
+     callback and renders inside THAT component's shadow root, so a plain [part=] selector above
+     only reaches the header row this component renders directly. ::part() reaches one shadow
+     boundary in, matching dataset-viewer. */
   lr-virtual-list::part(data-row) {
     display: grid;
     min-inline-size: max-content;
@@ -71,10 +69,10 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text);
   }
-  /* Body cell highlights live in lr-virtual-list's shadow root, so both the structural cell and
-     its nested native action are styled through exported parts. Header highlights use the matching
-     local part selectors. A private per-cell active default crosses the shadow boundary without
-     shadowing the inherited or direct public highlight-color input. */
+  /* Body cell highlights live in lr-virtual-list's shadow root, so the cell and its nested native
+     action are styled through exported parts; header highlights use the local part selectors. A
+     private per-cell active default crosses the boundary without shadowing the inherited or
+     direct public highlight-color input. */
   [part~='cell-highlight'],
   lr-virtual-list::part(cell-highlight) {
     outline: var(--lr-border-width-medium) solid

@@ -38,8 +38,7 @@ export const styles = css`
   }
   /* The button is chromeless (border: none; background: none), so there is no fill to deepen --
      the pressed state paints one. Mixing from transparent yields --lr-color-mix-partner at
-     --lr-color-mix-active alpha, tinting whatever surface the trail sits on instead of assuming
-     one. */
+     --lr-color-mix-active alpha, tinting whatever surface the trail sits on. */
   :where(lr-breadcrumb-item:not([current]))::part(base):active {
     text-decoration: underline;
     background: color-mix(

@@ -37,9 +37,8 @@ export const styles = css`
   }
 
   /* -- status ---------------------------------------------------------------
-     'failed' gets an unmistakable treatment that does not rely on color
-     alone (see [part='status-text']); 'streaming' is a quieter accent plus
-     the pulsing dot below. */
+     'failed' gets an unmistakable treatment not relying on color alone (see [part='status-text']);
+     'streaming' is a quieter accent plus the pulsing dot below. */
   :host([status='failed']) [part='bubble'] {
     border-color: var(--lr-chat-message-failed-border-color, var(--lr-color-danger));
     background: var(--lr-chat-message-failed-bg, var(--lr-color-danger-quiet));
@@ -105,18 +104,15 @@ export const styles = css`
     display: inline-flex;
     transition: transform var(--lr-transition-fast);
   }
-  /* Chevron points at the content: rotated (pointing down) while expanded,
-     resting (pointing right) while collapsed -- same rotation direction as
-     lr-code-block's/lr-thinking-panel's own toggles. */
+  /* Chevron points at the content: down while expanded, right at rest while collapsed -- same
+     rotation direction as lr-code-block's and lr-thinking-panel's own toggles. */
   :host(:not([collapsed])) [part='collapse-button'] .chevron {
     transform: rotate(90deg);
   }
-  /* RTL: the resting (collapsed) chevron mirrors to point left, the
-     conventional mirrored disclosure-triangle direction for RTL. Scoped to
-     [collapsed] specifically -- like lr-code-block's identical rule --
-     so it never competes with the expanded-state rule above, which needs
-     no mirroring: rotating this left-right-asymmetric glyph 90deg already
-     produces a left-right-symmetric down chevron. */
+  /* RTL: the collapsed chevron mirrors to point left, the conventional mirrored disclosure-triangle
+     direction. Scoped to [collapsed], like lr-code-block's identical rule, so it never competes
+     with the expanded rule above, which needs no mirroring -- rotating this left-right-asymmetric
+     glyph 90deg already produces a symmetric down chevron. */
   :host([collapsed]:dir(rtl)) [part='collapse-button'] .chevron {
     transform: scaleX(-1);
   }
@@ -127,16 +123,12 @@ export const styles = css`
     gap: var(--lr-space-xs);
   }
 
-  /* Fully transparent to layout -- the same display:contents idiom
-     lr-attachment-trigger's :host and lr-combobox's [part='tags'] already
-     use for identical reasons. The slot itself contributes no box, so
-     whatever the host slots in here (expected to be a block-level
-     role="alert" element) becomes a direct flex item of [part='bubble'],
-     inheriting its gap, exactly as if it had been authored as a sibling of
-     [part='body']/[part='footer'] -- no ::part(failure) override needed to
-     get there. When empty, this produces zero boxes and zero footprint,
-     which is what keeps the failed state byte-identical to today's
-     rendering whenever the failure slot goes unused. */
+  /* Fully transparent to layout -- the same display:contents idiom lr-attachment-trigger's :host
+     and lr-combobox's [part='tags'] use. The slot contributes no box, so slotted content (expected
+     to be a block-level role="alert" element) becomes a direct flex item of [part='bubble'],
+     inheriting its gap as if authored beside [part='body']/[part='footer'], needing no
+     ::part(failure) override. Empty, it produces zero boxes, so an unused failure slot renders
+     unchanged. */
   [part='failure'] {
     display: contents;
   }
@@ -164,13 +156,11 @@ export const styles = css`
   :host([actions-position='outside']) [part='actions'] {
     margin-block-start: var(--lr-space-2xs);
   }
-  /* Outside the footer, [part='actions'] is no longer a flex item of [part='footer'] -- it is a
-     sibling of [part='bubble'], and the display: flex rule above blockifies its own box to span
-     the full message width. The role-conditional auto margins a few rules up only move a flex item
-     within spare space in its container; a box that already fills its container has none to
-     distribute, so they are a no-op here. Aligning the slotted content itself via justify-content
-     reaches the same visual result: pinned to the same inline edge as the role-aligned bubble
-     above it. */
+  /* Outside the footer, [part='actions'] is a sibling of [part='bubble'], not a flex item of
+     [part='footer'], and the display: flex rule above blockifies its box to the full message width.
+     The role-conditional auto margins above only move a flex item within its container's spare
+     space, so they are a no-op on a box that already fills its container; justify-content on the
+     slotted content pins it to the same inline edge as the bubble above. */
   :host([actions-position='outside'][message-role='user']) [part='actions'] {
     justify-content: flex-end;
   }
@@ -181,20 +171,16 @@ export const styles = css`
   [part='timestamp'] {
     white-space: nowrap;
   }
-  /* [part='timestamp']/[part='actions'] inherit the footer's own quiet
-     text color by default; against the brand-quiet bubble background a
-     user-role message gets, that muted color's contrast ratio drops below
-     4.5:1 (verified via axe's color-contrast rule — same failure mode as
-     the failed-state rule below), so the footer falls back to the bubble's
-     own full text color there instead. Declared before the failed-state
-     rule so an equal-specificity failed user message still gets the danger
-     footer that matches its danger-quiet background. */
+  /* [part='timestamp']/[part='actions'] inherit the footer's quiet text color, whose contrast drops
+     below 4.5:1 against the brand-quiet bubble a user-role message gets (axe's color-contrast rule
+     -- same failure mode as the failed-state rule below), so the footer takes the bubble's full
+     text color here. Declared before the failed-state rule so an equal-specificity failed user
+     message still gets the danger footer matching its danger-quiet background. */
   :host([message-role='user']) [part='footer'] {
     color: var(--lr-chat-message-user-footer-color, var(--lr-color-text));
   }
-  /* Same contrast reasoning against the danger-quiet bubble background a
-     'failed' message gets underneath it, so the whole footer switches to
-     the same --lr-color-danger already used for [part='status-text']. */
+  /* Same contrast reasoning against a 'failed' message's danger-quiet bubble beneath it, so the
+     whole footer switches to the --lr-color-danger already used for [part='status-text']. */
   :host([status='failed']) [part='footer'] {
     color: var(--lr-chat-message-failed-footer-color, var(--lr-color-danger));
   }

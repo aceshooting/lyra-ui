@@ -75,12 +75,11 @@ export const styles = css`
     inset-block-start: 0;
     inset-inline-start: 0;
     will-change: transform;
-    /* WCAG 2.5.8 floor. This element carries the pointer handlers, but its size comes entirely
-       from the consumer-authored card slotted into it, which the component invites and cannot
-       constrain. The one part that already had a floor, node-control, renders sr-only and so is
-       a keyboard proxy no pointer can reach. 24px rather than the 40px --lr-icon-button-size:
-       a node is an ordinary composite card, not a compact icon control -- same reasoning as
-       lr-media-card. */
+    /* WCAG 2.5.8 floor: this element carries the pointer handlers, but its size comes from the
+       consumer-authored slotted card, which the component cannot constrain. node-control, the one
+       part that already had a floor, is sr-only -- a keyboard proxy no pointer can reach. 24px
+       rather than the 40px --lr-icon-button-size: a node is an ordinary composite card, not a
+       compact icon control, same as lr-media-card. */
     min-inline-size: var(--lr-size-1-5rem);
     min-block-size: var(--lr-size-1-5rem);
   }
@@ -217,10 +216,10 @@ export const styles = css`
   :host([orientation='horizontal']:dir(rtl)) [part='node'] ::slotted(*) {
     transform: scaleX(-1);
   }
-  /* MUST stay before :hover/:active below: all three resolve to the same specificity (0,2,0),
-     so whichever is declared last always wins regardless of which states are actually active on
-     the element. Declaring the static selected ring first lets the pointer-feedback rules below
-     still read on top of it when a selected node is hovered or press-dragged. */
+  /* MUST stay before the :hover/:active rules below: all three are (0,2,0), so whichever is
+     declared last wins regardless of the states actually active. The static selected ring first
+     lets the pointer-feedback rules read on top of it when a selected node is hovered or
+     press-dragged. */
   [part='node'][data-selected] {
     outline: var(--lr-size-2px) solid
       var(--lr-flow-canvas-node-selected-outline-color, var(--lr-color-brand));
@@ -232,32 +231,44 @@ export const styles = css`
       var(--lr-flow-canvas-node-hover-outline-color, var(--lr-color-border-strong));
     outline-offset: var(--lr-size-2px);
   }
-  /* A node is pressed for two different gestures -- a click that selects it and a pointerdown that
-     starts a drag -- and both need to read immediately. The pointer-feedback colour is shared with
-     the hover rule above (one knob for "the pointer is on this node"); only the weight steps up, so
-     the pressed ring is unmistakably heavier than the hovered one without introducing a second
-     colour that would then have to stay in sync with it. */
+  /* A node is pressed for two gestures -- a click that selects it and a pointerdown that starts a
+     drag -- and both must read immediately. The colour is shared with the hover rule above (one
+     knob for the pointer being on this node); only the weight steps up, so the press reads heavier
+     without a second colour to keep in sync. */
   [part='node']:active {
     outline: var(--lr-size-2px) solid
       var(--lr-flow-canvas-node-hover-outline-color, var(--lr-color-border-strong));
     outline-offset: var(--lr-size-2px);
   }
-  [part='edge']:hover {
+  /* The selected edge's static weight. MUST stay above the :hover/:active rules below, the same
+     ordering discipline as [part='node'][data-selected] above: this and [part='edge']:active are
+     both (0,2,0) and both declare stroke-width, so source order alone settles them -- placed last
+     it clamped the press's 3.5 back to 2.5. Only the bare :active arm was affected; the
+     [part='edge-hit-area']:active + [part='edge'] arm is (0,3,0), three compound selectors, and
+     out-ranked it either way, so the press still worked through the fat hit target. */
+  [part='edge'][aria-pressed='true'] {
     stroke-width: 2.5;
   }
-  /* Stroke weight is the only channel an edge has: its stroke colour is the tone the consumer
-     assigned it (see the [data-tone] rules above), so tinting it on press would read as a tone
-     change rather than as feedback. 3.5 also clears the 2.5 an already-selected edge carries. */
-  [part='edge']:active {
+  /* The hit area is the wide transparent twin painted immediately before its edge, so it wins the
+     hit test everywhere outside the drawn 1.5px stroke; without the sibling selector the edge lit
+     only on the pixels it did not cover. Matching the selected rule's 2.5 is deliberate: hovering
+     an already-selected edge is a no-op because there is nothing further to say, not masking. */
+  [part='edge']:hover,
+  [part='edge-hit-area']:hover + [part='edge'] {
+    stroke-width: 2.5;
+  }
+  /* Stroke weight is the only channel an edge has: the stroke colour is the consumer's assigned
+     tone (the [data-tone] rules above), so tinting on press would read as a tone change, not
+     feedback. 3.5 also clears the 2.5 an already-selected edge carries, which it can only do from
+     below that rule -- hence the ordering above. */
+  [part='edge']:active,
+  [part='edge-hit-area']:active + [part='edge'] {
     stroke-width: 3.5;
   }
   [part='node']:has([part='node-control']:focus-visible),
   [part='edge']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
-  }
-  [part='edge'][aria-pressed='true'] {
-    stroke-width: 2.5;
   }
   [part='connection-line'] {
     fill: none;
@@ -274,9 +285,20 @@ export const styles = css`
     outline: var(--lr-size-2px) dashed var(--lr-flow-canvas-node-connect-target-outline-color, var(--lr-color-brand));
     outline-offset: var(--lr-size-2px);
   }
+  /* Declared after [part='viewport']:focus-visible at the same (0,2,0), so it takes the outline
+     channel from the focus ring while an external drag is over the canvas. The drop target has no
+     other channel, but that must not leave a keyboard user with no focus indicator, so the rule
+     below re-draws the ring on a second channel -- same shape as lr-dashboard-grid's
+     [part="cell"][data-collision] pair. */
   [part='viewport'][data-drop-active] {
     outline: var(--lr-size-2px) dashed var(--lr-flow-canvas-drop-active-outline-color, var(--lr-color-brand));
     outline-offset: calc(-1 * var(--lr-size-2px));
+  }
+  /* Inset like the viewport's own focus ring (negative outline-offset): the viewport fills the
+     host, so a ring drawn outside its border box would be clipped by the host's overflow:
+     hidden. */
+  [part='viewport'][data-drop-active]:focus-visible {
+    box-shadow: inset 0 0 0 var(--lr-focus-ring-width) var(--lr-focus-ring-color);
   }
   [part='edge'][data-running] {
     stroke-dasharray: 6 4;
@@ -285,8 +307,8 @@ export const styles = css`
   [part='edge'][data-running-static] {
     stroke-dasharray: 6 4;
   }
-  /* The JS gate only evaluates the preference at render time; this CSS branch also covers a
-     preference change while an already-rendered edge is still marching. */
+  /* The JS gate evaluates the preference only at render time; this branch also covers a change
+     while an already-rendered edge is still marching. */
   @media (prefers-reduced-motion: reduce) {
     [part='edge'][data-running] {
       animation: none;

@@ -7,6 +7,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { srOnly, nextId } from '../../../internal/a11y.js';
 import { finiteCount, finiteInteger, finiteRatio } from '../../../internal/numbers.js';
+import { resolveCssLength } from '../../../internal/css-length.js';
 import { getCollator } from '../../../internal/intl-cache.js';
 import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
 import { styles } from './table.styles.js';
@@ -51,6 +52,8 @@ const MAX_PAGE_SIZE = 500;
 const LOW_PRIORITY_MAX_INLINE_SIZE = 899.98;
 const MEDIUM_PRIORITY_MAX_INLINE_SIZE = 639.98;
 const MAX_TABLE_COLLECTION_ENTRIES = 10_000;
+
+const DEFAULT_RESIZE_MIN_WIDTH_PX = 48; // used when --lr-table-resize-min-width carries no resolvable length
 
 /** An omitted ARIA maximum defaults to 100 for `role="separator"`. Represent an author-unbounded
  * CSS maximum with the largest exact finite integer so wider pixel values stay truthful. */
@@ -1146,6 +1149,11 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     return Number.isFinite(parsed) ? parsed : undefined;
   }
 
+  /** The themed floor a column may be dragged/keyed down to, in used pixels. `rem`/`em` resolve
+   *  against the live root/own font size through the shared `resolveCssLength()` -- a hardcoded
+   *  `* 16` would pick the wrong floor on a page whose root font-size isn't the browser default.
+   *  A token in a unit with no used pixel length here (`ch`, `pt`, `calc()`, a bare `%` with no
+   *  base) falls back to DEFAULT_RESIZE_MIN_WIDTH_PX rather than being read as raw pixels. */
   private minimumResizeWidth(column: TableColumn<T>): number {
     const explicit = this.parsePixelLength(column.minWidth);
     if (explicit !== undefined) return Math.max(0, explicit);
@@ -1155,19 +1163,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       hostStyle?.getPropertyValue('--lr-table-resize-min-width').trim() ||
       hostStyle?.getPropertyValue('--_lr-table-resize-min-width-default').trim() ||
       '';
-    const value = Number.parseFloat(themed);
-    if (!Number.isFinite(value)) return 48;
-    if (themed.endsWith('rem')) {
-      const rootFontSize = Number.parseFloat(
-        ownerWindow?.getComputedStyle(this.ownerDocument.documentElement).fontSize ?? ''
-      );
-      return Number.isFinite(rootFontSize) ? Math.max(0, value * rootFontSize) : 48;
-    }
-    if (themed.endsWith('em')) {
-      const hostFontSize = Number.parseFloat(hostStyle?.fontSize ?? '');
-      return Number.isFinite(hostFontSize) ? Math.max(0, value * hostFontSize) : 48;
-    }
-    return Math.max(0, value);
+    const resolved = resolveCssLength(themed, { host: this });
+    return resolved === undefined ? DEFAULT_RESIZE_MIN_WIDTH_PX : Math.max(0, resolved);
   }
 
   private maximumResizeWidth(column: TableColumn<T>, minWidth: number): number {

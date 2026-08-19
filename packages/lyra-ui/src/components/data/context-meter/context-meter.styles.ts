@@ -38,10 +38,9 @@ export const styles = css`
     overflow: hidden;
     block-size: var(--lr-size-0-5rem);
     border-radius: calc(var(--lr-radius) * 0.5);
-    /* Quiet neutral fill for the unfilled remainder -- deliberately lighter
-       than a 'neutral'-tone segment (var(--lr-color-border) at full
-       strength below) so "counted but uncolored" data still reads as
-       visually distinct from "not counted at all". */
+    /* Quiet neutral fill for the unfilled remainder: deliberately lighter than a 'neutral'-tone
+       segment (var(--lr-color-border) at full strength below), so counted-but-uncolored data
+       stays visually distinct from not counted at all. */
     background: color-mix(in srgb, var(--lr-color-border) 30%, transparent);
   }
   [part='segment'] {
@@ -51,11 +50,10 @@ export const styles = css`
     background: var(--lr-color-border);
     transition: flex-basis var(--lr-transition-base);
   }
-  /* A hairline seam between adjacent segments -- painted in the surface
-     color rather than as real gap spacing, so two same-tone segments next
-     to each other (e.g. two 'neutral' entries) still read as separate
-     quantities instead of merging into one block. Logical property keeps it
-     RTL-correct without extra math. */
+  /* A hairline seam between adjacent segments, painted in the surface color rather than as real
+     gap spacing, so two adjacent same-tone segments (e.g. two 'neutral' entries) read as separate
+     quantities instead of one block. The logical property keeps it RTL-correct without extra
+     math. */
   [part='segment']:not(:first-of-type) {
     border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-surface);
   }
@@ -77,9 +75,9 @@ export const styles = css`
 
   /* --- legend --------------------------------------------------------- */
   /* The key grows a row per consumer-supplied segment and each label grows with translation, so it
-     wraps rather than overflowing, and every item keeps min-inline-size: 0 so a long label shrinks
-     inside its own row instead of forcing the meter's allocation wider. Same shape and the same
-     part names as lr-sequence-strip's legend. */
+     wraps rather than overflows; min-inline-size: 0 on every item shrinks a long label inside its
+     own row instead of widening the meter's allocation. Same shape and part names as
+     lr-sequence-strip's legend. */
   [part='legend'] {
     display: flex;
     flex-wrap: wrap;
@@ -100,9 +98,8 @@ export const styles = css`
     inline-size: var(--lr-context-meter-legend-swatch-size, var(--lr-size-0-625rem));
     block-size: var(--lr-context-meter-legend-swatch-size, var(--lr-size-0-625rem));
     border-radius: var(--lr-radius-xs);
-    /* The chip reproduces the option's data colour, exactly as [part='segment'] does -- same tone
-       ladder, same inline custom-property escape, so a swatch can never disagree with the band it
-       stands for. */
+    /* The chip reproduces the option's data colour as [part='segment'] does -- same tone ladder,
+       same inline custom-property escape -- so a swatch can never disagree with its band. */
     background: var(--lr-color-border);
   }
   [part='legend-swatch'][data-tone='brand'] {
@@ -125,8 +122,8 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
   /* The ring is a fixed 8em square, so a legend under it would be clipped by the host's own block
-     size. Only under show-legend does the host stop being that square: the ring keeps its declared
-     size and the key flows beneath it. */
+     size. Only under show-legend does the host stop being square: the ring keeps its declared size
+     and the key flows beneath it. */
   :host([shape='ring'][show-legend]) {
     block-size: auto;
   }
@@ -147,8 +144,8 @@ export const styles = css`
   :host([shape='ring']) [part='segment'] {
     fill: none;
     stroke: var(--lr-color-border);
-    /* Butt (not round) caps -- round caps on tightly-packed segmented arcs
-       bleed past the exact boundary and overlap the next segment's color. */
+    /* Butt caps: round caps on tightly-packed segmented arcs bleed past the exact boundary and
+       overlap the next segment's color. */
     stroke-linecap: butt;
     transition:
       stroke-dasharray var(--lr-transition-base),

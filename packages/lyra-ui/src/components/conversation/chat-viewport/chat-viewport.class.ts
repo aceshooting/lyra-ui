@@ -239,13 +239,26 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    if (!this.hasUpdated || !changed.has('follow') || !this.follow || changed.get('follow') !== false) {
-      return;
+    if (this.hasUpdated && changed.has('follow') && this.follow && changed.get('follow') === false) {
+      const pill = this.renderRoot.querySelector<HTMLElement>('[part="jump-pill"]');
+      this.followFocusRepair = pill
+        ? captureComposedFocusRepair(pill, this.transcriptFocusOwner())
+        : null;
     }
-    const pill = this.renderRoot.querySelector<HTMLElement>('[part="jump-pill"]');
-    this.followFocusRepair = pill
-      ? captureComposedFocusRepair(pill, this.transcriptFocusOwner())
-      : null;
+    // Measure *before* render, not after. The divider's `top` is a real layout measurement that
+    // has to be written back to reactive state, so taking it in `updated()` made every
+    // `unreadStartIndex` change a two-pass render -- measure, commit, re-render -- which trips
+    // Lit's "scheduled an update after an update completed" notice (a thrown error under this
+    // repo's strict-console test mode) and paints one frame at the stale offset. Measuring here
+    // folds it into the same pass: Lit picks a `willUpdate()` write up in the render that is
+    // already in flight, so no second update is ever scheduled. The measurement is valid this
+    // early because nothing the pending render changes can move the rows it reads: both elements
+    // whose presence this update can flip -- the divider itself and [part="jump-pill"] -- are
+    // `position: absolute`, so they are out of flow, and the slotted rows are light-DOM children
+    // that already reflect their final state by the time an update is scheduled at all. The first
+    // update is excluded because `renderRoot` has no [part="content"] to measure against yet;
+    // firstUpdated() -> armObservers() takes that initial measurement instead.
+    if (this.hasUpdated && changed.has('unreadStartIndex')) this.updateUnreadDividerPosition();
   }
 
   override firstUpdated(changed: PropertyValues): void {
@@ -277,14 +290,8 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
         this.emit('lr-follow-change', { following: this.follow });
       }
     }
-    // On the very first update, firstUpdated() -> armObservers() already computed this moments
-    // earlier in the same synchronous pass; recomputing it again here would be redundant (and,
-    // since @state property writes still schedule a follow-up update even when the recomputed
-    // value doesn't actually change layout between those two calls, needlessly trips Lit's
-    // "scheduled an update after an update completed" dev-mode notice).
-    if (changed.has('unreadStartIndex') && !wasMounting) {
-      this.updateUnreadDividerPosition();
-    }
+    // No unread-divider measurement here: it happens in willUpdate(), ahead of render -- see the
+    // comment there for why a post-commit measurement was wrong.
     const focusRepair = this.followFocusRepair;
     this.followFocusRepair = null;
     if (focusRepair) applyComposedFocusRepair(focusRepair);

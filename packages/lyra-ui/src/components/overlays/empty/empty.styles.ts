@@ -18,16 +18,15 @@ export const styles = css`
     inline-size: 100%;
   }
   :host([compact]) [part='base'] {
-    /* One custom property feeds both declarations from different fallback literals (today's exact
-       flex-start/start pair). Works because 'center' -- the one realistic override -- is a valid
-       value for both align-items and text-align; a consumer sets this once and both pick it up. */
+    /* One custom property feeds both declarations from different fallback literals; 'center', the
+       one realistic override, is valid for both align-items and text-align, so a consumer sets it
+       once. */
     align-items: var(--lr-empty-compact-align, flex-start);
     text-align: var(--lr-empty-compact-align, start);
     padding: var(--lr-empty-compact-padding, var(--lr-space-xs));
-    /* Same density-reduction convention as lr-file-input's :host([compact]) rule (which explicitly
-       models itself on this one): compact must shrink every dimension the base rule sets for this
-       part, not just padding -- otherwise the icon/heading/description gap stays pinned at the
-       spacious default and compact reads as internally inconsistent. */
+    /* Same density-reduction convention as lr-file-input's :host([compact]) rule, modelled on
+       this one: compact must shrink every dimension the base rule sets for this part, not just
+       padding, or the icon/heading/description gap stays pinned at the spacious default. */
     gap: var(--lr-empty-compact-gap, var(--lr-space-2xs));
   }
   [part='icon'] {
@@ -50,11 +49,9 @@ export const styles = css`
   }
   :host([compact]) [part='heading'] {
     font-weight: var(--lr-font-weight-normal);
-    /* Deliberately no fallback: when unset, this declaration is invalid at
-       computed-value time and font-size falls back to inherited -- identical
-       to today's rendering (there was no font-size override here at all). A
-       fallback like var(--lr-font-size-sm) would shrink every existing
-       compact heading that hasn't opted in to this token. */
+    /* Deliberately no fallback: unset, the declaration is invalid at computed-value time and
+       font-size inherits, as it did before this token existed. A var(--lr-font-size-sm) fallback
+       would shrink every compact heading that has not opted in. */
     font-size: var(--lr-empty-compact-font-size);
   }
   [part='description'] {

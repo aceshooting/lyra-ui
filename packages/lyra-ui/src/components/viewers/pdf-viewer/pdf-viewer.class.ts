@@ -496,9 +496,18 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  *   promise rejection.
  * @event lr-page-change - Fired when the current page changes, but only once the document is
  *   ready -- a page set while the document is still loading is reflected in the viewer snapshot
- *   rather than announced, so a late subscriber reads it instead of missing it.
- * @event lr-zoom-change - Fired when the zoom multiplier changes. Not fired for the initial value,
- *   only for a transition away from it.
+ *   rather than announced, so a late subscriber reads it instead of missing it. This is a state
+ *   broadcast, not a user-intent signal: unlike `<lr-pagination>` (which never mutates its own
+ *   `page`, so its same-named event is a request the host applies) this viewer owns `page`, and
+ *   scroll-driven crossings change it with no consumer action at all. Every accepted transition is
+ *   therefore announced the same way -- scrolling, `nextPage()`/`previousPage()`/`goToPage()`,
+ *   anchor resolution, a load resetting to page 1, and a plain `viewer.page = n` assignment
+ *   included. A write that clamps or rounds back onto the page already showing changed nothing and
+ *   is silent.
+ * @event lr-zoom-change - Fired when the zoom multiplier changes, on the same state-broadcast
+ *   contract as `lr-page-change`: a programmatic `zoom` write announces exactly like a toolbar
+ *   click. Not fired for the initial value, only for a transition away from it, and not for a
+ *   write that clamps back onto the zoom already applied.
  * @event lr-load - Fired once the document reaches `ready`. `detail: { pageCount }`.
  * @event lr-highlight-activate - A highlight was activated. `detail: { highlightId }`.
  * @event lr-text-select - A text selection ended inside a page's text layer. `detail: { text,
@@ -721,11 +730,25 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         this.emitSearchChange();
       }
     }
+    // Deliberately diffed here rather than emitted from each navigation path: this viewer owns
+    // `page`/`zoom`, so both events are state broadcasts covering every accepted transition --
+    // scroll-driven crossings, toolbar/method navigation, anchor resolution, and a bare `page = n`
+    // assignment alike. `willUpdate()` clamps out-of-range writes, though, and `changed.get()`
+    // holds the value from before the write, so comparing against it drops a write that clamped or
+    // rounded straight back onto the value already showing -- a "change" event for no change. The
+    // snapshot channel already dedupes that way inside publishPageViewerSnapshot(); this keeps the
+    // event channel honest about the same thing.
     if (changed.has('page') && this.loadState.kind === 'ready') {
-      this.emit('lr-page-change', { page: this.page, pageCount: this.loadState.pageCount });
+      if (changed.get('page') !== this.page) {
+        this.emit('lr-page-change', { page: this.page, pageCount: this.loadState.pageCount });
+      }
       this.publishPageViewerSnapshot('ready', this.loadState.pageCount);
     }
-    if (changed.has('zoom') && changed.get('zoom') !== undefined) this.emit('lr-zoom-change', { zoom: this.zoom });
+    if (
+      changed.has('zoom')
+      && changed.get('zoom') !== undefined
+      && changed.get('zoom') !== this.zoom
+    ) this.emit('lr-zoom-change', { zoom: this.zoom });
     if (changed.has('highlights') || changed.has('activeHighlightId') || localeChanged) {
       this.resolveMountedPageHighlights();
     }

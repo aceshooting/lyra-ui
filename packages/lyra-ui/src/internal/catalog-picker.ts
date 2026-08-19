@@ -73,7 +73,6 @@ interface CatalogPickerControllerOptions<T extends LyraCatalogEntry> {
   locale: () => string;
   searchableFields: (entry: T) => readonly string[];
   emitChange: (detail: CatalogPickerChangeDetail) => void;
-  emitFocusAlias: (type: 'lr-focus' | 'lr-blur') => void;
   onValueChange: (value: string, oldValue: string) => void;
   onDefaultValueChange: (value: string, oldValue: string) => void;
   onStateChange: (state: 'open' | 'query' | 'activeIndex', oldValue: boolean | string | number) => void;
@@ -400,7 +399,6 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     }
     this.options.onControlFocus?.(event);
     relayNativeEvent(this.host, event);
-    this.options.emitFocusAlias('lr-focus');
   }
 
   handleControlBlur(event: FocusEvent): void {
@@ -415,7 +413,6 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     this.options.onControlBlur?.(event);
     this.hide();
     relayNativeEvent(this.host, event);
-    this.options.emitFocusAlias('lr-blur');
   }
 
   handleComboMouseDown(event: MouseEvent): void {

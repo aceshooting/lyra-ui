@@ -4,8 +4,8 @@ export const styles = css`
   :host {
     display: block;
     /* Query container so the @container rule below reacts to this grid's own allocated inline
-       size (a dashboard-grid is commonly embedded in a panel of varying width, not the viewport)
-       -- same convention as lr-button-group/lr-control-group's own container-query approach. */
+       size -- a dashboard-grid usually sits in a panel of varying width, not the viewport. Same
+       convention as lr-button-group/lr-control-group. */
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
     min-inline-size: 0;
@@ -49,23 +49,21 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
 
-  /* The resize handle is absolutely positioned and therefore cannot contribute to the cell's
-     intrinsic block size. Apply the shared action floor only while that handle actually exists;
-     readonly and locked short cells keep their content-derived height in the stacked layout. */
+  /* An absolutely positioned resize handle cannot contribute to the cell's intrinsic block size,
+     so the shared action floor applies only while that handle exists -- readonly and locked short
+     cells keep their content-derived height in the stacked layout. */
   [part="cell"][data-resizable] {
     min-block-size: var(--lr-icon-button-size);
   }
 
-  /* A cell's slotted content (default lr-widget, or a consumer's own opaque markup) commonly
-     fills the whole cell -- a background-color hover would paint underneath it and never be
-     seen. An outline draws outside the box like [part='cell'][data-collision]'s own outline
-     below, so it stays visible above any occluding content, matching the :focus-visible ring's
-     own reliably-visible treatment for the exact same real, keyboard-navigable/draggable
-     target. */
-  /* no-pressed-state: the cell's real pressed interaction is a drag, which already has its own
-     [data-dragging] treatment below; a plain :active rule would additionally fire for every press
-     landing on the slotted widget's own buttons, since :active matches the ancestors of whatever
-     was pressed. */
+  /* Slotted content (default lr-widget, or a consumer's own opaque markup) commonly fills the
+     cell, so a background-color hover would paint underneath it. An outline draws outside the box
+     like [part='cell'][data-collision]'s below, staying visible over occluding content -- matching
+     the :focus-visible ring on this same keyboard-navigable, draggable target. */
+  /* no-pressed-state: the cell's pressed interaction is a drag, already carrying its own
+     [data-dragging] treatment below; a plain :active rule would also fire for every press landing
+     on the slotted widget's own buttons, since :active matches the ancestors of whatever was
+     pressed. */
   [part="cell"]:hover {
     outline: var(--lr-border-width-thin) solid
       var(
@@ -91,15 +89,31 @@ export const styles = css`
   [part="cell"][data-dragging],
   [part="cell"][data-resizing] {
     z-index: var(--lr-layer-content);
-    /* A tile being dragged or resized has left the resting plane and is riding above its
-       neighbours, so it takes the overlay step rather than the card step its siblings use. */
+    /* A dragged or resized tile rides above its neighbours, so it takes the overlay step rather
+       than the card step its siblings use. */
     box-shadow: var(--lr-dashboard-grid-interaction-shadow, var(--lr-shadow-m));
   }
 
+  /* Declared after [part="cell"]:focus-visible at the same (0,2,0), so an invalid drop takes the
+     outline channel -- intended, since it outranks where focus is and the outline is this state's
+     only channel. The side effect was not: the focus indicator vanished during a drag or resize
+     preview, when a keyboard user most needs it. The rule below restores it on a second channel
+     rather than reordering these two. */
   [part="cell"][data-collision] {
     outline: var(--lr-size-2px) solid
       var(--lr-dashboard-grid-collision-outline-color, var(--lr-color-danger));
     outline-offset: var(--lr-size-2px);
+  }
+
+  /* The focus ring as a box-shadow ring (lr-otp-input's shape), because the collision rule above
+     owns the outline while both states are on. It sits at the border box, inside that outline's
+     positive offset, so the two read as concentric. The lift shadow is restated here because
+     box-shadow is one property and [data-collision] only appears during a drag or resize --
+     omitting it would drop the tile back to the resting plane while colliding. */
+  [part="cell"][data-collision]:focus-visible {
+    box-shadow:
+      0 0 0 var(--lr-focus-ring-width) var(--lr-focus-ring-color),
+      var(--lr-dashboard-grid-interaction-shadow, var(--lr-shadow-m));
   }
 
   [part="resize-handle"] {
@@ -120,9 +134,9 @@ export const styles = css`
   [part="resize-handle"]:hover {
     background: var(--lr-color-brand-quiet);
   }
-  /* Unlike [part="cell"] above, this handle is a leaf button with nothing slotted inside it, so
-     :active means exactly one thing here: the resize gesture is under way. Pointer capture holds
-     it for the whole drag. */
+  /* Unlike [part="cell"] above, this handle is a leaf button with nothing slotted inside, so
+     :active means only that the resize gesture is under way; pointer capture holds it for the
+     whole drag. */
   [part="resize-handle"]:active {
     background: color-mix(
       in oklab,
@@ -135,10 +149,9 @@ export const styles = css`
     cursor: nesw-resize;
   }
 
-  /* Below the breakpoint, drop the two-dimensional grid in favor of a single stacked column --
-     each cell's authored x/y/w/h stops driving placement (document flow takes over), but the
-     cells still render in row-major spatial DOM order, so the reading order stays the same
-     one the grid itself would have shown. */
+  /* Below the breakpoint the two-dimensional grid becomes a single stacked column: authored
+     x/y/w/h stop driving placement and document flow takes over, but cells still render in
+     row-major spatial DOM order, so reading order matches what the grid would have shown. */
   @container (max-inline-size: 40rem) {
     [part="base"] {
       display: flex;

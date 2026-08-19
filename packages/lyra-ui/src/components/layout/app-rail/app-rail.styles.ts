@@ -3,15 +3,13 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    /* Establishes the containing block for [part="resizer"], which is a SIBLING of [part="base"]
-       (not a child), so [part="base"]'s own position: relative cannot anchor it. Without this the
-       absolutely-positioned resizer resolves inset-block:0 against the initial containing block
-       (the viewport), spanning full viewport height and sitting offscreen. */
+    /* Containing block for the SIBLING [part="resizer"], which [part="base"]'s own
+       position: relative cannot anchor. Without it the absolute resizer resolves inset-block:0
+       against the viewport: full viewport height, offscreen. */
     position: relative;
-    /* Component-specific sizing -- not shared design tokens, so a consumer
-       can retheme any of them without a raw literal leaking into the public
-       API (same rationale as lr-dialog's --lr-dialog-overlay-color and
-       lr-widget's --lr-widget-overlay-color). */
+    /* Component-specific sizing, not shared design tokens: rethemeable without a raw literal
+       leaking into the public API, like lr-dialog's --lr-dialog-overlay-color and lr-widget's
+       --lr-widget-overlay-color. */
     --_lr-app-rail-width: var(--lr-size-15rem);
     --_lr-app-rail-icon-width: var(--lr-size-4rem);
     --_lr-app-rail-mobile-width: var(--lr-size-18rem);
@@ -44,8 +42,8 @@ export const styles = css`
     background: var(--lr-app-rail-toggle-hover-bg, var(--lr-color-brand-quiet));
     color: var(--lr-app-rail-toggle-hover-color, var(--lr-color-brand));
   }
-  /* The fill hover already uses, mixed further toward --lr-color-mix-partner (the text colour), so
-     the pressed step is always deeper than the hover step whichever way the theme runs. */
+  /* The hover fill mixed further toward --lr-color-mix-partner (the text colour), so the pressed
+     step is always deeper than the hover step whichever way the theme runs. */
   [part="toggle"]:active {
     background: var(
       --lr-app-rail-toggle-active-bg,
@@ -72,13 +70,10 @@ export const styles = css`
     );
   }
 
-  /* [part="base"]/[part="panel"] are the SAME element -- this
-     component promotes it in place for the mobile overlay (mirrors
-     lr-widget's fullscreen mode) rather than duplicating the slotted nav
-     content into a second element, which slot projection can't do anyway
-     (a light-DOM node can only be assigned to one <slot> at a time). Its
-     part attribute switches between the two names per render, so the two
-     rulesets below are always mutually exclusive on it. */
+  /* [part="base"] and [part="panel"] are the SAME element, promoted in place for the mobile
+     overlay as lr-widget's fullscreen mode does; a second element is impossible anyway, a
+     light-DOM node assigning to one <slot> at a time. The part attribute switches names per
+     render, so the two rulesets below are mutually exclusive. */
   [part="base"] {
     /* The resizer is anchored by :host (a sibling relationship), not by this element. */
     position: relative;
@@ -90,8 +85,8 @@ export const styles = css`
     background: var(--lr-color-surface);
     padding-block-end: var(--lr-safe-area-bottom);
     overflow-y: auto;
-    /* Pin the cross axis explicitly: with only overflow-y set, overflow-x computes from visible to
-       auto and can add a spurious horizontal scrollbar when slotted header/footer content is wide. */
+    /* Pin the cross axis: with only overflow-y set, overflow-x computes from visible to auto and
+       can add a spurious horizontal scrollbar when slotted header/footer content is wide. */
     overflow-x: clip;
     transition: inline-size var(--lr-transition-base);
   }
@@ -102,11 +97,10 @@ export const styles = css`
     transition: none;
   }
 
-  /* The interactive hit target meets the shared minimum tappable size (same --lr-icon-button-size
-     floor as lr-code-block's/lr-json-viewer's [part='toggle'] and lr-swatch-picker's
-     [part='swatch']), centered on the same inset-inline-end edge the old 3px-wide box occupied --
-     while the *visible* drag line stays a slim 3px bar, rendered on the separate [part='resizer-track']
-     child below and centered via flex, not by resizing this element itself. */
+  /* The hit target takes the shared --lr-icon-button-size floor (as lr-code-block's/
+     lr-json-viewer's [part='toggle'] and lr-swatch-picker's [part='swatch'] do), centered on the
+     inset-inline-end edge the old 3px box held; the visible drag line stays a 3px bar on the
+     separate [part='resizer-track'] child, flex-centered rather than resized. */
   [part="resizer"] {
     position: absolute;
     inset-block: 0;
@@ -157,10 +151,9 @@ export const styles = css`
       var(--lr-app-rail-mobile-width, var(--_lr-app-rail-mobile-width)),
       85vw
     );
-    /* [part="panel"] is the mobile OVERLAY promotion of this element (see the note above the
-       [part="base"] rule) -- a modal drawer over a scrim, so it takes the modal-panel surface.
-       [part="base"], the docked rail in the page's own layout flow, deliberately keeps
-       --lr-color-surface: it is resting chrome, not an overlay. */
+    /* [part="panel"] is this element's mobile OVERLAY promotion (see the [part="base"] note) -- a
+       modal drawer over a scrim, hence the modal-panel surface. Docked in the page's flow,
+       [part="base"] keeps --lr-color-surface: resting chrome, not an overlay. */
     background: var(--lr-color-surface-overlay);
     padding-block-end: var(--lr-safe-area-bottom);
     /* Modal layer, lower step: an edge-anchored drawer flush with three viewport edges, matching
@@ -172,20 +165,16 @@ export const styles = css`
     transform: translateX(-100%);
     transition: transform var(--lr-transition-base);
   }
-  /* translateX is a physical transform -- CSS logical properties don't cover
-     it -- so the offscreen direction is flipped explicitly for RTL via
-     :dir() rather than needing internal/rtl.ts's JS helper (that helper is
-     for pointer/keyboard math that can't be expressed in CSS at all; this
-     can). */
+  /* translateX is physical and CSS logical properties don't cover it, so RTL flips the offscreen
+     direction with :dir() rather than internal/rtl.ts's JS helper -- that helper is for
+     pointer/keyboard math CSS can't express at all. */
   :host(:dir(rtl)) [part="panel"] {
     transform: translateX(100%);
   }
-  /* Settled-open state is transform: none, NOT translateX(0): a non-none transform (even the
-     identity) establishes a containing block for position: fixed descendants, which would trap and
-     clip consumer-slotted dropdowns/tooltips inside the open mobile panel (lyra-ui positions popups
-     with position: fixed via Floating UI, not the top layer). Transitions between translateX(-100%)
-     and none are well-defined (none interpolates as the identity matrix), so the slide-in still
-     animates. */
+  /* Settled open is transform: none, NOT translateX(0): any non-none transform, identity included,
+     is a containing block for position: fixed descendants and would trap consumer-slotted
+     dropdowns/tooltips in the open panel (lyra-ui positions popups position: fixed via Floating UI,
+     not the top layer). translateX(-100%) to none still interpolates: none is the identity. */
   :host([mode="mobile"][open]) [part="panel"] {
     transform: none;
   }

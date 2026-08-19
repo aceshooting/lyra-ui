@@ -1,24 +1,21 @@
 import { css } from 'lit';
 
 export const styles = css`
-  /* These row-chrome hooks use inline var() fallbacks rather than :host declarations, so an
-     application can set them once on a menu or another ancestor and each item inherits the value.
-     Unset, they resolve to the exact spacing and size-ladder radius this row used before. */
+  /* Inline var() fallbacks for the row-chrome hooks, not :host declarations, so an application can
+     set them once on a menu or other ancestor and every item inherits. Unset, they resolve to the
+     spacing and size-ladder radius this row used before. */
   :host {
     display: block;
-    /* place() gives every floating panel a 4px main-axis gap. Shoelace's public
-       --submenu-offset is the *final* signed distance instead: its -2px default
-       overlaps the parent menu by 2px. Keep that exact compatibility default,
-       but resolve both literals through design tokens before the class forwards
-       this internal translation to the nested menu's popup. */
+    /* place() gives every floating panel a 4px main-axis gap; Shoelace's public --submenu-offset is
+       the *final* signed distance instead, its -2px default overlapping the parent menu by 2px.
+       Keep that exact compatibility default, both literals resolved through design tokens, before
+       the class forwards this translation to the nested menu's popup. */
     --_lr-menu-item-submenu-translation: calc(
       var(--submenu-offset, calc(-1 * var(--lr-size-2px))) - var(--lr-size-4px)
     );
-    /* The host itself is the focusable role="menuitem" target (see the class
-       doc) -- the ring paints on [part='base'] instead of the host's own
-       box, matching lr-tree-item's identical :host(:focus-visible)
-       delegation, so it always hugs the visible row rather than any
-       host-level margin/inline layout quirks. */
+    /* The host is the focusable role="menuitem" target (see the class doc), but the ring paints on
+       [part='base'] -- lr-tree-item's identical :host(:focus-visible) delegation -- so it hugs the
+       visible row rather than any host-level margin/inline layout quirks. */
     outline: none;
     border-radius: var(--lr-menu-item-radius, var(--lr-form-control-radius));
   }
@@ -31,12 +28,12 @@ export const styles = css`
     display: flex;
     align-items: center;
     /* Deliberately NOT --lr-form-control-gap: that knob is the 2px rhythm between an input's own
-       inline affordances, and at this size it collides the leading icon with the label of a menu
-       row. The icon/label/chevron rhythm is constant across tiers here; only the box scales. */
+       inline affordances, and at that size the leading icon collides with a menu row's label. The
+       icon/label/chevron rhythm is constant across tiers here; only the box scales. */
     gap: var(--lr-menu-item-gap, var(--lr-space-xs));
-    /* max() rather than the bare ladder value: the ladder's bottom two tiers resolve to 20px/24px,
-       and a menu row is a pointer target, so it floors at the WCAG 2.2 SC 2.5.8 minimum. Above
-       that floor the row tracks the same heights every other control in a toolbar row uses. */
+    /* max() rather than the bare ladder value: the ladder's bottom two tiers resolve to 20px/24px
+       and a menu row is a pointer target, so it floors at the WCAG 2.2 SC 2.5.8 minimum. Above the
+       floor the row tracks the heights every other control in a toolbar row uses. */
     min-block-size: max(var(--lr-form-control-height), var(--lr-size-24px));
     padding-block: var(--lr-form-control-padding-block);
     padding-inline: var(--lr-form-control-padding-inline);
@@ -50,8 +47,8 @@ export const styles = css`
   [part='base']:hover {
     background: var(--lr-color-brand-quiet);
   }
-  /* The same fill hover uses, mixed further toward --lr-color-mix-partner (the text colour), so a
-     row that is being pressed is always a visible step past the row the pointer merely rests on. */
+  /* The hover fill mixed further toward --lr-color-mix-partner (the text colour), so a pressed row
+     is always a visible step past the row the pointer merely rests on. */
   [part='base']:active {
     background: color-mix(
       in oklab,
@@ -69,9 +66,8 @@ export const styles = css`
   :host([loading]) [part='base']:hover {
     background: none;
   }
-  /* Suppression, not a treatment: the host is the role="menuitem" target and stays in the DOM as a
-     pressable box while disabled, so without this the pressed mix above would still paint under a
-     pointer that a disabled row must not respond to. */
+  /* Suppression, not a treatment: the host stays a pressable role="menuitem" box while disabled, so
+     without this the pressed mix above would still paint under the pointer. */
   :host([disabled]) [part='base']:active,
   :host([loading]) [part='base']:active {
     background: none;
@@ -105,11 +101,9 @@ export const styles = css`
     justify-content: center;
     line-height: var(--lr-line-height-none);
   }
-  /* [part='icon'][hidden] rather than a bare :empty selector -- the part
-     always contains a literal <slot> child element regardless of assigned
-     content, so :empty never matches (same fix as lr-select's
-     [part='hint']/[part='error']). Real emptiness is tracked in JS
-     (hasIconSlot) and reflected via the hidden attribute instead. */
+  /* [hidden] rather than :empty -- the part always contains a literal <slot> child, so :empty never
+     matches (same fix as lr-select's [part='hint']/[part='error']). Emptiness is tracked in JS
+     (hasIconSlot). */
   [part~='icon'][hidden] {
     display: none;
   }
@@ -130,12 +124,11 @@ export const styles = css`
     white-space: nowrap;
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
-    /* Resolve each slotted fragment from its own first strong character (e.g. a keyboard-
-       shortcut hint like '⌘D', whose leading glyph is bidi-neutral) instead of inheriting the
-       row's ambient direction. Only the *position* of these trailing parts should mirror under
-       RTL -- the flex row above already handles that -- their own internal glyph order must stay
-       fixed, matching how the OS itself displays the shortcut. Same mechanism as
-       toast-item.styles.ts's/alert.styles.ts's identical [part="content"]/[part="message"] rules. */
+    /* Resolve each slotted fragment from its own first strong character -- a shortcut hint like
+       '⌘D' leads with a bidi-neutral glyph -- not the row's ambient direction. Only the *position*
+       of these trailing parts mirrors under RTL (the flex row above handles that); their glyph
+       order stays fixed, matching the OS. Same mechanism as toast-item.styles.ts's and
+       alert.styles.ts's [part="content"]/[part="message"] rules. */
     unicode-bidi: plaintext;
   }
   [part='details'] ::slotted(*),
@@ -160,16 +153,15 @@ export const styles = css`
       transform: rotate(360deg);
     }
   }
-  /* Only ever present in the DOM at all for a checked type="checkbox" item
-     (see menu-item.ts's render()) -- no [hidden]-toggling needed, unlike
-     [part='icon'] above, since there's no always-present <slot> child here
-     to keep visually empty in between. */
+  /* Only in the DOM for a checked type="checkbox" item (see menu-item.ts's render()), so unlike
+     [part='icon'] above it needs no [hidden] toggling -- there is no always-present <slot> child
+     here to keep visually empty. */
   [part='checkmark'] {
     flex: 0 0 auto;
     color: var(--lr-color-brand);
   }
-  /* Only in the DOM at all for a submenu parent (see menu-item.ts's render()),
-     so it needs no [hidden] bookkeeping either. */
+  /* Only in the DOM for a submenu parent (see menu-item.ts's render()), so it needs no [hidden]
+     bookkeeping either. */
   [part='submenu-icon'] {
     display: inline-flex;
     flex: 0 0 auto;
@@ -180,15 +172,14 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     line-height: var(--lr-line-height-none);
   }
-  /* The chevron points at the submenu, which opens on the inline-end side --
-     mirrored through this wrapping part rather than by swapping the glyph, so
-     the shared icon set stays direction-free. */
+  /* The chevron points at the submenu, which opens inline-end. Mirrored through this wrapping part
+     rather than by swapping the glyph, so the shared icon set stays direction-free. */
   :host(:dir(rtl)) [part='submenu-icon'] {
     transform: scaleX(-1);
   }
   :host(:dir(rtl)) {
-    /* A positive distance moves away from the parent and a negative distance
-       overlaps it, regardless of which inline edge owns the submenu. */
+    /* A positive distance moves away from the parent, a negative one overlaps it, whichever inline
+       edge owns the submenu. */
     --_lr-menu-item-submenu-translation: calc(
       var(--lr-size-4px) - var(--submenu-offset, calc(-1 * var(--lr-size-2px)))
     );

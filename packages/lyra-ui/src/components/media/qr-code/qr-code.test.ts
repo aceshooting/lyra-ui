@@ -125,6 +125,21 @@ describe('lr-qr-code', () => {
     expect(calls).to.equal(0);
   });
 
+  it('keeps base and qr-code as part aliases on the same wrapper node', async () => {
+    // `base` is the Web Awesome / Shoelace spelling: wa-qr-code deprecates it in favour of
+    // `qr-code`, while sl-qr-code still publishes it as its only part. Both tokens therefore stay
+    // on one node so a migrated `::part(base)` rule keeps matching.
+    const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
+    await el.updateComplete;
+    const wrapper = el.shadowRoot!.querySelector('[part~="qr-code"]') as HTMLElement;
+    expect(wrapper.part.contains('base')).to.equal(true);
+    // Identity as a boolean -- a DOM node in chai's actual/expected hangs the file.
+    expect(
+      el.shadowRoot!.querySelector('[part~="base"]') === wrapper,
+      'base resolves to the qr-code wrapper',
+    ).to.be.true;
+  });
+
   it('shows the loading state while the optional peer is first loading', async () => {
     const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
     (el as unknown as { loadLibrary: () => Promise<FakeQrCodeApi | null> }).loadLibrary = () => new Promise(() => {});

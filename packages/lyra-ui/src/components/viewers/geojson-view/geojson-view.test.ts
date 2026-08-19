@@ -493,7 +493,7 @@ describe('document renderer contract', () => {
     const highlights: LyraHighlight[] = [
       {
         id: 'feature',
-        anchor: { kind: 'text-quote', exact: 'feature' },
+        anchor: { kind: 'text-quote', quote: 'feature' },
       },
     ];
     const anchor = { kind: 'fragment' as const, id: 'feature' };

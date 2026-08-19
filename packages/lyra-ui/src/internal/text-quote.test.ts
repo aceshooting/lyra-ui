@@ -269,7 +269,7 @@ describe('bounded text quote indexing', () => {
     expect(Object.isFrozen(copiedRects)).to.be.true;
     expect(Object.isFrozen(copiedRect)).to.be.true;
     rect.x = 99;
-    expect(copiedRect.x).to.equal(0);
+    expect(copiedRect!.x).to.equal(0);
   });
 
   it('keeps text gathered before a hostile Range#intersectsNode throws mid-walk', () => {

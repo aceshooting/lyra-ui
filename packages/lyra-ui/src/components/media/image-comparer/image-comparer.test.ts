@@ -663,3 +663,29 @@ it('commits a dirty keyboard gesture before relaying blur', async () => {
 
   expect(sequence).to.deep.equal(['input', 'change', 'blur']);
 });
+
+describe('a slotted [hidden] comparison pane child', () => {
+  it('is removed from the rendered box in both panes', async () => {
+    const el = (await fixture(html`
+      <lr-image-comparer aria-label="Before and after">
+        <div id="gone-before" slot="before" hidden>Before, hidden</div>
+        <div id="shown-before" slot="before">Before</div>
+        <div id="gone-after" slot="after" hidden>After, hidden</div>
+        <div id="shown-after" slot="after">After</div>
+      </lr-image-comparer>
+    `)) as LyraImageComparer;
+    await el.updateComplete;
+    for (const id of ['#gone-before', '#gone-after']) {
+      const gone = el.querySelector<HTMLElement>(id)!;
+      expect(getComputedStyle(gone).display, id).to.equal('none');
+      expect(gone.getClientRects().length, id).to.equal(0);
+    }
+    // The companions prove the pane rules are still live, so the assertions above cannot pass
+    // merely because the comparer failed to style its slotted panes at all.
+    for (const id of ['#shown-before', '#shown-after']) {
+      const shown = el.querySelector<HTMLElement>(id)!;
+      expect(getComputedStyle(shown).display, id).to.equal('block');
+      expect(shown.getClientRects().length, id).to.equal(1);
+    }
+  });
+});

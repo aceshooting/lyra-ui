@@ -73,9 +73,9 @@ export const styles = css`
   }
 
   /* Each action is an <lr-button appearance="plain">, which already supplies its own pressed
-     treatment (--lr-button-active-scale) inside its shadow root. What this rule adds is the
-     toolbar's brand accent escalated one step -- a background box on the host would sit behind the
-     button's own transparent base and read as a second, misaligned control. */
+     treatment (--lr-button-active-scale) in its shadow root; this rule escalates the toolbar's
+     brand accent one step. A background box on the host would sit behind the button's transparent
+     base and read as a second, misaligned control. */
   [part~='action']:active {
     color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }

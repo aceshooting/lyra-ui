@@ -4,6 +4,7 @@ import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { AGENT_STATUS_VARIANTS } from '../../../internal/agent-status-variants.js';
 import type { AgentStatusKind, Citation, GroundedClaim, GroundingAssessment } from '../../../ai/types.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
@@ -116,21 +117,6 @@ export interface LyraEvalRunEventMap {
   'lr-example-tool-activate': CustomEvent<EvalToolActivateDetail>;
   'lr-example-tool-render-error': CustomEvent<EvalToolRenderErrorDetail>;
 }
-
-/** Badge tone per `AgentStatusKind` -- mirrors `<lr-span-waterfall>`'s own status-to-tone
- *  mapping's polarity (success/danger/warning/brand/neutral), extended for the three states
- *  `AgentStatus` has that a single span's own narrower status vocabulary doesn't. */
-const STATUS_VARIANT: Record<string, BadgeVariant> = {
-  idle: 'neutral',
-  running: 'brand',
-  queued: 'neutral',
-  collecting: 'brand',
-  'waiting-input': 'warning',
-  'waiting-approval': 'warning',
-  done: 'success',
-  error: 'danger',
-  cancelled: 'neutral',
-};
 
 const RUNNING_ERROR_KINDS = ['running', 'error'] as const;
 type CountKind = (typeof RUNNING_ERROR_KINDS)[number];
@@ -506,7 +492,7 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
       >
         <span slot="summary" part="example-summary">
           <span part="example-label">${this.exampleLabel(example, index)}</span>
-          <lr-badge part="example-status" variant=${agentStatusVariant(example.status, STATUS_VARIANT[kind] ?? 'neutral')}>${this.statusText(example.status)}</lr-badge>
+          <lr-badge part="example-status" variant=${agentStatusVariant(example.status, AGENT_STATUS_VARIANTS[kind] ?? 'neutral')}>${this.statusText(example.status)}</lr-badge>
           ${message !== undefined ? html`<span part="example-status-message">${message}</span>` : nothing}
         </span>
         ${expanded

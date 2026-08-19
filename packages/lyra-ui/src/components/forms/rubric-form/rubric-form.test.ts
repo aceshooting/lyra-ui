@@ -1179,8 +1179,8 @@ describe('lr-rubric-form', () => {
   describe('lifecycle: attachInternals guard', () => {
     it('degrades gracefully instead of throwing when ElementInternals is unavailable', async () => {
       const original = (globalThis as { ElementInternals?: unknown }).ElementInternals;
-      // @ts-expect-error -- deliberately simulating an environment (e.g. happy-dom) with no
-      // ElementInternals implementation at all.
+      // Deliberately simulating an environment (e.g. happy-dom) with no ElementInternals
+      // implementation at all.
       delete (globalThis as { ElementInternals?: unknown }).ElementInternals;
       try {
         expect(() => document.createElement('lr-rubric-form')).to.not.throw();

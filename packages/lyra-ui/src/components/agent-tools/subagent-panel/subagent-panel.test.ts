@@ -65,6 +65,53 @@ it('renders nested runs, localized statuses, tasks, and guarded progress', async
   expect(writer.getAttribute('aria-setsize')).to.equal('1');
 });
 
+it('renders the shared badge tone for every built-in lifecycle kind', async () => {
+  // The tone per kind is shared library vocabulary, not a per-component choice: the same run shown
+  // in two agent-tools components must not read as two different tones.
+  const kinds: SubagentRun['status'][] = [
+    'idle',
+    'queued',
+    'running',
+    'collecting',
+    'waiting-input',
+    'waiting-approval',
+    'done',
+    'error',
+    'cancelled',
+  ];
+  const el = (await fixture(
+    html`<lr-subagent-panel
+      .runs=${kinds.map((status, index) => ({ id: `run-${index}`, label: status, status }))}
+    ></lr-subagent-panel>`,
+  )) as LyraSubagentPanel;
+  const tones = Array.from(
+    el.shadowRoot!.querySelectorAll('[part="status"]'),
+    (badge) => badge.getAttribute('variant'),
+  );
+  expect(tones).to.deep.equal([
+    'neutral',
+    'neutral',
+    'brand',
+    'brand',
+    'warning',
+    'warning',
+    'success',
+    'danger',
+    'neutral',
+  ]);
+});
+
+it('falls back to the neutral tone for an application-defined lifecycle kind', async () => {
+  const el = (await fixture(
+    html`<lr-subagent-panel
+      .runs=${[{ id: 'custom', label: 'Rate limited', status: 'rate-limited' }]}
+    ></lr-subagent-panel>`,
+  )) as LyraSubagentPanel;
+  expect(
+    el.shadowRoot!.querySelector('[part="status"]')!.getAttribute('variant'),
+  ).to.equal('neutral');
+});
+
 it('emits full selections plus status-appropriate cancel and retry intents', async () => {
   const el = (await fixture(html`<lr-subagent-panel .runs=${runs}></lr-subagent-panel>`)) as LyraSubagentPanel;
   const selectPending = oneEvent(el, 'lr-run-activate');

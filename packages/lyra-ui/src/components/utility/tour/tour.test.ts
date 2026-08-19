@@ -1799,6 +1799,37 @@ describe('lr-tour', () => {
     expect(popover.hasAttribute('aria-labelledby')).to.be.false;
   });
 
+  it('keeps an explicitly empty host aria-label from being re-named by the step heading', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${makeSteps(2)} open aria-label=""></lr-tour>
+        ${targetButtons(2)}
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    await tour.updateComplete;
+    const popover = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+    // `aria-label=""` is HTML/ARIA's explicit "this has no accessible name". Routing the name
+    // through aria-labelledby instead does not merely ignore the author, it re-names the dialog
+    // from the visible heading behind their back.
+    expect(popover.hasAttribute('aria-labelledby')).to.be.false;
+    expect(popover.getAttribute('aria-label')).to.equal('');
+  });
+
+  it('keeps an explicitly empty host aria-label from falling back to the step-count name', async () => {
+    const tour = (await fixture(html`
+      <lr-tour
+        .steps=${[{ stepId: 'no-heading', target: '#missing-target', heading: '' }]}
+        open
+        aria-label=""
+      ></lr-tour>
+    `)) as LyraTour;
+    await tour.updateComplete;
+    const popover = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+    expect(popover.getAttribute('aria-label')).to.equal('');
+    expect(popover.hasAttribute('aria-labelledby')).to.be.false;
+  });
+
   it('gives a whitespace-heading dialog a localized fallback name with rich content and a missing target', async () => {
     const tour = (await fixture(html`
       <lr-tour .steps=${[{ stepId: 'blank-heading', target: '#missing-target', heading: '  \n  ' }]} open>

@@ -2,7 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
+import { AGENT_STATUS_VARIANTS } from '../../../internal/agent-status-variants.js';
 import { styles } from './agent-eval-dashboard.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { finiteCount } from '../../../internal/numbers.js';
@@ -26,7 +26,6 @@ export type EvaluationMetricFormat = 'number' | 'percent' | 'milliseconds' | 'cu
 export interface AgentEvaluationMetric { readonly id: string; readonly label: string; readonly value: number; readonly format?: EvaluationMetricFormat; }
 export interface AgentEvaluationDashboardRun { readonly id: string; readonly label: string; readonly status: AgentStatusValue; readonly metrics?: Readonly<Record<string, number>>; }
 export interface LyraAgentEvalDashboardEventMap { 'lr-metric-change': CustomEvent<{ metricId: string }>; 'lr-run-activate': CustomEvent<LyraEventDetailSnapshot<AgentRunActivateDetail<AgentEvaluationDashboardRun>>>; }
-const STATUS_VARIANT: Record<string, BadgeVariant> = { idle: 'neutral', queued: 'neutral', running: 'brand', collecting: 'brand', 'waiting-input': 'warning', 'waiting-approval': 'warning', done: 'success', error: 'danger', cancelled: 'neutral' };
 /**
  * `<lr-agent-eval-dashboard>` — a controlled evaluation overview with metric cards, a trend chart,
  * and run-status history. It never launches or scores evaluations. Duplicate metric or run ids
@@ -169,7 +168,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
     return html`<section part="runs" aria-label=${this.localize('evaluationDashboardRunsLabel')}><h3 part="runs-heading">${this.localize('evaluationDashboardRunsLabel')}</h3>${runs.map((run) => {
       const kind = agentStatusKind(run.status);
       const message = agentStatusMessage(run.status);
-      return html`<button part="run" type="button" @click=${() => this.emit('lr-run-activate', { runId: run.id, run })}><span part="run-label">${run.label}</span><span part="run-meta"><lr-badge part="run-status" variant=${agentStatusVariant(run.status, STATUS_VARIANT[kind] ?? 'neutral')}>${this.statusLabel(run.status)}</lr-badge>${message !== undefined ? html`<span part="run-status-message">${message}</span>` : nothing}${active && run.metrics?.[active.id] != null ? html`<span>${this.formatMetric(active, run.metrics[active.id])}</span>` : nothing}</span></button>`;
+      return html`<button part="run" type="button" @click=${() => this.emit('lr-run-activate', { runId: run.id, run })}><span part="run-label">${run.label}</span><span part="run-meta"><lr-badge part="run-status" variant=${agentStatusVariant(run.status, AGENT_STATUS_VARIANTS[kind] ?? 'neutral')}>${this.statusLabel(run.status)}</lr-badge>${message !== undefined ? html`<span part="run-status-message">${message}</span>` : nothing}${active && run.metrics?.[active.id] != null ? html`<span>${this.formatMetric(active, run.metrics[active.id])}</span>` : nothing}</span></button>`;
     })}</section>`;
   }
   override render(): TemplateResult {

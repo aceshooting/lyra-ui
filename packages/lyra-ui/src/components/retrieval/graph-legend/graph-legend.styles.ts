@@ -47,9 +47,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* Dim only the decorative (aria-hidden) swatch on opacity; re-color the text parts via the
-     quiet-text token instead of opacity, so a hidden item's label keeps AA contrast rather than
-     fading toward the background (opacity on the whole item drops label contrast below 4.5:1). */
+  /* Opacity dims only the decorative (aria-hidden) swatch; the text parts re-color through the
+     quiet-text token instead, so a hidden item's label keeps AA contrast rather than fading toward
+     the background -- opacity on the whole item drops label contrast below 4.5:1. */
   [part~='item'][data-hidden] [part='swatch'] {
     opacity: var(--lr-graph-legend-hidden-swatch-opacity, 0.5);
   }

@@ -16,9 +16,8 @@ export const styles = css`
   }
   [part="up-button"],
   [part="down-button"] {
-    /* Keep the glyph compact while giving the interactive box the shared
-       minimum target size -- same "small glyph, padded hit box" pattern as
-       lr-code-block's/lr-json-viewer's [part='toggle']. */
+    /* Compact glyph, shared minimum target size on the interactive box -- the same padded-hit-box
+       pattern as lr-code-block's/lr-json-viewer's [part='toggle']. */
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -33,8 +32,8 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     cursor: pointer;
   }
-  /* Keep authored state qualifiers low-weight and easy to compose. Consumer-part precedence is
-     verified from rendered computed style rather than inferred from selector arithmetic. */
+  /* Authored state qualifiers stay low-weight and composable; consumer-part precedence is verified
+     from rendered computed style, not from selector arithmetic. */
   :where([part="up-button"]):hover:where(:not(:disabled)),
   :where([part="down-button"]):hover:where(:not(:disabled)) {
     background: var(--lr-color-surface-raised);
@@ -54,15 +53,13 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* The pressed state is never color-alone -- the icon itself swaps to a filled glyph in
-     lockstep with aria-pressed. These color/background/border rules are additive emphasis
-     layered on top of that shape change, not the sole signal. */
-  /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on the
-     element or any ancestor and a :host declaration can never shadow that.
-     ::part(up-button)[aria-pressed='true'] is invalid CSS -- Shadow Parts forbids an attribute
-     selector after ::part() -- so retinting the pressed state used to mean hijacking the shared
-     --lr-color-success/-danger tokens, which repainted every other surface reading them. Unset,
-     each falls back to the token the rule already used, so the rendering is unchanged. */
+  /* Never color-alone: the icon swaps to a filled glyph in lockstep with aria-pressed, and these
+     color/background/border rules are additive emphasis on that shape change. */
+  /* Inline var() fallbacks, not :host-declared properties: a :host declaration would shadow a
+     value set on the element or an ancestor. ::part(up-button)[aria-pressed='true'] is invalid CSS
+     -- Shadow Parts forbids an attribute selector after ::part() -- so retinting the pressed state
+     used to mean hijacking the shared --lr-color-success/-danger tokens and repainting every
+     surface reading them. Unset, each falls back to the token the rule already used. */
   [part="up-button"][aria-pressed="true"] {
     color: var(--lr-message-feedback-up-active-color, var(--lr-color-success));
     background: var(
@@ -90,8 +87,8 @@ export const styles = css`
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }
-  /* A 0fr/1fr grid-row trick animates the disclosure's block size without measuring content --
-     min-block-size: 0 on the inner wrapper plus overflow: hidden here keeps collapsed content from
+  /* A 0fr/1fr grid row animates the disclosure's block size without measuring content;
+     min-block-size: 0 on the inner wrapper plus overflow: hidden here stops collapsed content
      leaking through during the transition. */
   [part="panel"] {
     display: grid;
@@ -146,10 +143,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* no-pressed-state: [part='comment'] is a textarea. A press on a text field is answered by the
-     field taking focus and raising its focus ring, which is both stronger than any momentary
-     pressed tint and outlasts the mouse button; a second, competing flash on mousedown would only
-     add noise to the one interaction that already has unambiguous feedback. */
+  /* no-pressed-state: [part='comment'] is a textarea -- pressing it raises the focus ring, which is
+     stronger than any momentary pressed tint and outlasts the mouse button, so a competing
+     mousedown flash would only add noise. */
   :where([part="comment"]):hover:where(:not(:disabled)) {
     border-color: var(--lr-color-brand);
   }
@@ -171,16 +167,15 @@ export const styles = css`
     overflow-wrap: anywhere;
     cursor: pointer;
   }
-  /* Hover/press are a background mix, never filter: brightness(). brightness() multiplies every
-     channel, so it lightens a dark fill and darkens a light one only by accident, does nothing at
-     all to a pure white or pure black brand color, and -- because filter applies to the whole
-     subtree -- dims the label along with the fill. Mixing the resting fill toward
-     --lr-color-mix-partner (which tracks the text color) always moves, always in the direction the
-     surface needs, and leaves the label alone. */
-  /* Gated on :not(:disabled) through the same :where() wrapper the thumb buttons use above -- a
-     submit button held disabled by the disabled or a long-lived pending state still matches :hover
-     (CSS keeps matching it on a disabled control), so an ungated rule made the one control the
-     user cannot activate look like the most activatable thing on the panel. */
+  /* Hover/press are a background mix, never filter: brightness(). Multiplying every channel
+     lightens a dark fill and darkens a light one only by accident, does nothing at all to a pure
+     white or pure black brand color, and dims the label with the fill since filter applies to the
+     whole subtree. Mixing toward --lr-color-mix-partner, which tracks the text color, always moves
+     the way the surface needs and leaves the label alone. */
+  /* Gated on :not(:disabled) through the same :where() wrapper the thumb buttons use above: a
+     submit button held disabled by the disabled or a long-lived pending state still matches
+     :hover, so an ungated rule made the one control the user cannot activate look like the most
+     activatable thing on the panel. */
   :where([part="submit-button"]):hover:where(:not(:disabled)) {
     background: color-mix(
       in oklab,
@@ -195,8 +190,8 @@ export const styles = css`
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  /* Matches the up/down thumb buttons' own disabled treatment, so every control in the component
-     reads as unavailable from the same two signals (dimmed fill, not-allowed cursor). */
+  /* Matches the thumb buttons' disabled treatment, so every control reads as unavailable from the
+     same two signals: dimmed fill and not-allowed cursor. */
   [part="submit-button"]:disabled {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
@@ -209,6 +204,6 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* 320px baseline: the panel already stacks in a flex column and the comment field is full-width
-     by construction, so no additional narrow-specific rule is needed. */
+  /* 320px baseline needs no extra rule: the panel already stacks in a flex column and the comment
+     field is full-width by construction. */
 `;

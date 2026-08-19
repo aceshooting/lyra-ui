@@ -14,12 +14,11 @@ export const styles = [
       background: var(--lr-color-surface);
       overflow: hidden;
     }
-    /* Density escape -- same convention as lr-agent-run/lr-source-card's compact. Task lists render
-       embedded in the transcript (see the class doc), so the tuned values sit behind inline var()
-       fallbacks (rather than :host declarations, which every instance would re-declare and so
-       shadow any ancestor value) letting a transcript retune every list at once from the outside;
-       header and body carry their own padding (unlike agent-run/source-card's single [part='base']
-       padding) since that's where this component already puts it. */
+    /* Density escape -- same convention as lr-agent-run/lr-source-card's compact. Values sit behind
+       inline var() fallbacks, not :host declarations that every instance re-declares and so shadows
+       an ancestor value, so a transcript can retune every embedded list at once. Header and body
+       carry their own padding, unlike agent-run/source-card's single [part='base'] padding, since
+       that is where this component puts it. */
     :host([compact]) [part="header"] {
       padding: var(
         --lr-task-list-compact-header-padding,
@@ -38,11 +37,11 @@ export const styles = [
         var(--lr-space-2xs) var(--lr-space-s) var(--lr-space-s)
       );
     }
-    /* Chrome escape -- same convention as lr-agent-run/lr-source-card's frame="plain": drops
-       the outer border/background/radius so a list nested inside a host container that already
-       draws a border (an agent-run panel, a message bubble) doesn't double it. The header/body's
-       own internal divider and padding are layout, not outer chrome, so they're untouched --
-       matching how agent-run's plain rule leaves its own Cancel/Retry button chrome alone. */
+    /* Chrome escape -- same convention as lr-agent-run/lr-source-card's frame="plain": drops the
+       outer border/background/radius so a list nested in a container that already draws a border
+       (an agent-run panel, a message bubble) doesn't double it. The header/body divider and padding
+       are layout, not outer chrome, so they stay -- as agent-run's plain rule leaves its own
+       Cancel/Retry button chrome alone. */
     :host([frame="plain"]) [part="base"] {
       border: 0;
       border-radius: 0;
@@ -71,8 +70,8 @@ export const styles = [
       background: var(--lr-color-brand-quiet);
       color: var(--lr-color-brand);
     }
-    /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
-       --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper
+    /* Pressed is the hover tint pushed a further --lr-color-mix-active toward
+       --lr-color-mix-partner, which follows the text colour, so it reads as a distinctly deeper
        step than hover in both light and dark themes rather than repeating it. */
     :where(button[part="header"]):active {
       background: color-mix(

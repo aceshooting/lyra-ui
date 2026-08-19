@@ -35,10 +35,9 @@ export const styles = css`
     min-inline-size: 0;
     border-radius: var(--lr-radius);
   }
-  /* --lr-xml-viewer-match-color indirection (rather than the bare --lr-color-warning token)
-     lets a consumer retheme just this component's (non-active) search-match indicator without
-     repainting every other warning-toned surface on the page that reads the same shared token
-     -- the same rationale as --lr-xml-viewer-active-match-color just below, for the active match. */
+  /* --lr-xml-viewer-match-color, not the bare --lr-color-warning, so a consumer retints this
+     non-active search match without touching every warning-toned surface on the page reading that
+     shared token -- as --lr-xml-viewer-active-match-color does below for the active match. */
   [part='node'][data-match] {
     outline: var(--lr-border-width-thin) dashed var(--lr-xml-viewer-match-color, var(--lr-color-warning));
   }
@@ -46,11 +45,10 @@ export const styles = css`
     outline: var(--lr-border-width-medium) solid var(--lr-xml-viewer-active-match-color, var(--lr-color-warning));
   }
   /* Host-supplied highlights. Each tone resolves into one private carrier so the row tint and the
-     action button both read from a single base -- the same shape lr-archive-viewer/lr-docx-viewer
-     use for their own tone sets, and the same quiet fill tokens, which are the ones designed to sit
-     behind body text at an accessible contrast ratio. Neutral deliberately resolves to
-     --lr-color-surface-raised rather than --lr-color-surface: tinting a row with the viewer's own
-     ambient background would render a neutral highlight as unhighlighted. */
+     action button read from a single base -- the lr-archive-viewer/lr-docx-viewer shape, on the
+     same quiet fill tokens, built to sit behind body text at an accessible contrast ratio. Neutral
+     takes --lr-color-surface-raised, not --lr-color-surface: tinting a row with the viewer's own
+     background would render it unhighlighted. */
   [part='node'][data-highlight] {
     --_lr-xml-viewer-highlight-background: var(--lr-xml-viewer-highlight-accent-background, var(--lr-color-brand-quiet));
     background: var(--_lr-xml-viewer-highlight-background);
@@ -141,9 +139,9 @@ export const styles = css`
   }
   [part='toggle'],
   [part='toggle-placeholder'] {
-    /* Keep the glyph compact while giving the interactive box the shared minimum target size.
+    /* Keep the glyph compact while the interactive box takes the shared minimum target size.
        --lr-icon-button-size is a floor, not a fixed size, so lowering it never squashes the
-       chevron below its own box. */
+       chevron. */
     inline-size: var(--lr-size-1-25rem);
     block-size: var(--lr-size-1-25rem);
     min-inline-size: var(--lr-icon-button-size);
@@ -207,12 +205,12 @@ export const styles = css`
     margin-inline-start: auto;
     opacity: 0;
   }
-  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover/
-     :focus-within themselves -- (0,1,0) total, so a consumer's own ::part(copy-button):hover
-     override ((0,1,1)) wins without needing !important -- same fix shape as
-     lr-attachment-trigger's/lr-copy-button's/lr-json-viewer's own :where()-wrapped hover rule. */
-  :where(.row):hover :where([part='copy-button']),
-  :where(.row):focus-within :where([part='copy-button']) {
+  /* Full specificity on both compounds, deliberately: this rule exists only to beat the (0,2,0)
+     '.row [part=copy-button] { opacity: 0 }' resting rule above. :where() on either compound drops
+     it to (0,1,0), so the resting rule wins from any source position and the button never fades
+     in. */
+  .row:hover [part='copy-button'],
+  .row:focus-within [part='copy-button'] {
     opacity: 1;
   }
   [part='error'] {

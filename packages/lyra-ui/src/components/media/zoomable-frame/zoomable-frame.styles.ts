@@ -35,8 +35,8 @@ export const styles = css`
     border: 0;
     background: var(--lr-color-surface);
     transform: scale(var(--lr-zoomable-frame-zoom, 1));
-    /* Iframe pixels are a physical canvas; scaling must stay pinned to its physical top-left
-       corner under both LTR and RTL rather than mirroring the embedded document. */
+    /* Iframe pixels are a physical canvas; scaling stays pinned to the physical top-left corner
+       under both LTR and RTL rather than mirroring the embedded document. */
     transform-origin: top left;
   }
 

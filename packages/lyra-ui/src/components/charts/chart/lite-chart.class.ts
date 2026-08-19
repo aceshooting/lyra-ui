@@ -3,7 +3,7 @@ import { property, state, query } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
-import { nextId, srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteAdd, finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { escapeCsvField } from '../../utility/export-button/csv.js';
@@ -1879,13 +1879,13 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       (datasetIndex) => this.datasets[datasetIndex]!.label,
     );
     const chartLabel =
-      this.getAttribute('aria-label') ||
-      this.label ||
-      this.accessibleLabel ||
-      (datasetLabels.length
-        ? getListFormat(this.effectiveLocale, { type: 'conjunction' }).format(datasetLabels)
-        : '') ||
-      this.localize('chart');
+      hostAriaLabel(this) ??
+      (this.label ||
+        this.accessibleLabel ||
+        (datasetLabels.length
+          ? getListFormat(this.effectiveLocale, { type: 'conjunction' }).format(datasetLabels)
+          : '') ||
+        this.localize('chart'));
     const marksForA11y = this.interactiveMarks();
     const tableNumberFormat = getNumberFormat(this.effectiveLocale);
     const showTableTotals = this.effectiveType === 'bar' && this.stacked && this.tableTotals;

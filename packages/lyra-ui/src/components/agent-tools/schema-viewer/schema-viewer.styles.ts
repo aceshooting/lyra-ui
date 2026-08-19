@@ -26,9 +26,9 @@ export const styles = css`
     padding: var(--lr-space-xs); border: 0; border-radius: var(--lr-radius); background: transparent; color: var(--lr-color-text); font: inherit; text-align: start; cursor: pointer;
   }
   [part='node-trigger']:hover { background: var(--lr-color-surface-raised); }
-  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
-     --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
-     than hover in both light and dark themes rather than repeating it. */
+  /* Pressed pushes the hovered tint a further --lr-color-mix-active toward
+     --lr-color-mix-partner, which follows the text colour, so it reads as a distinctly deeper
+     step than hover in either theme. */
   [part='node-trigger']:active {
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }

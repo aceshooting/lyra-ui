@@ -19,15 +19,14 @@ export const styles = css`
     min-block-size: var(--lr-icon-button-size);
     cursor: pointer;
   }
-  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
-     -- (0,1,0) total, functionally identical selection to \`[part='trigger']:hover:not(:disabled)\`
-     ((0,3,0)) but now losing (on the pseudo-element tiebreak) to a consumer's own
-     \`::part(trigger):hover\` override ((0,1,1)) without that consumer needing !important. */
+  /* :where() zeroes the wrapped selectors' specificity, leaving :hover alone at (0,1,0). Unwrapped,
+     [part='trigger']:hover:not(:disabled) is (0,3,0) and out-ranks the source-later :active rule
+     below, swallowing the pressed state. */
   :where([part='trigger']):hover:where(:not(:disabled)) {
     border-color: var(--lr-color-brand);
   }
-  /* Same :where() shape as the hover rule above, for the same reason -- a consumer's own
-     ::part(trigger):active must still win without !important. */
+  /* Same :where() shape as the hover rule above, so the two tie at (0,1,0) and source order hands
+     this one the press. */
   :where([part='trigger']):active:where(:not(:disabled)) {
     border-color: var(--lr-color-brand);
     background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
@@ -41,17 +40,12 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='menu'] {
-    /* Closed state: invisible + slightly raised. visibility (not
-       display:none) so opacity/transform can actually transition; hit-testing
-       and a11y exposure stay off since this part is already position:fixed.
-       visibility deliberately isn't in the transition list below: a
-       transitioned property's computed value only settles to its new
-       target after the UA has run an actual style-change/rendering pass,
-       which lags behind a same-tick attribute write (e.g. updated()
-       synchronously focusing the first menu item right after flipping
-       open) -- that item would still resolve as visibility: hidden (and
-       so silently fail to focus) at the moment .focus() is called. Leaving
-       visibility untransitioned makes it apply immediately, in the same
+    /* Closed state: invisible and slightly raised. visibility, not display:none, so opacity and
+       transform can transition; hit-testing and a11y exposure stay off, and this part is already
+       position:fixed. visibility is deliberately untransitioned: a transitioned property only
+       settles at its target after the UA runs a style-change/rendering pass, which lags a same-tick
+       attribute write -- updated() focusing the first menu item straight after flipping open would
+       find it still visibility: hidden and silently fail. Untransitioned, it applies in the same
        synchronous style pass as the open attribute write. */
     visibility: hidden;
     position: fixed;

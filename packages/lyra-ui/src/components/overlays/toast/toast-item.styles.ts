@@ -16,13 +16,11 @@ export const styles = css`
     --_lr-toast-font-size: var(--lr-font-size-m);
     --_lr-toast-accent-color: var(--lr-color-border);
   }
-  /* One rule for all four non-neutral variants, in place of the four one-declaration blocks that
-     stood here: the shared variants sheet has already re-pointed --lr-color-fill-* at the active
-     variant's row of the semantic grid, so the toast reads a generic slot and never names a
-     variant. Neutral is excluded rather than mapped, so its private default keeps the plain
-     --lr-color-border accent -- an ordinary informational toast must not read as a grey
-     status bar. Matching [variant] as well as :not([variant='neutral']) keeps a host that has not
-     yet reflected its default attribute on that same neutral value. */
+  /* One rule for all four non-neutral variants: the shared variants sheet already points
+     --lr-color-fill-* at the active variant's semantic-grid row. Neutral is excluded, not mapped,
+     keeping the plain --lr-color-border accent -- an informational toast must not read as a grey
+     status bar. [variant] joins :not([variant='neutral']) so an unreflected default stays
+     neutral. */
   :host([variant]:not([variant="neutral"])) {
     --_lr-toast-accent-color: var(--lr-color-fill-loud);
   }
@@ -63,9 +61,9 @@ export const styles = css`
         var(--lr-toast-accent-width, var(--_lr-toast-accent-width))
     );
     font-size: var(--lr-toast-font-size, var(--_lr-toast-font-size));
-    /* Modal-layer surface: a toast floats over arbitrary page content at the toast layer, so it
-       must not share the page surface token -- in dark mode both resolve to the same near-black
-       and the toast loses its edges against whatever it covers. */
+    /* Modal-layer surface: a toast floats over arbitrary page content and cannot share the page
+       surface token -- in dark mode both resolve to the same near-black and it loses its edges.
+       */
     background: var(--lr-color-surface-overlay);
     color: var(--lr-color-text);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -121,33 +119,24 @@ export const styles = css`
     flex: 1 1 auto;
     min-inline-size: 0;
     overflow-wrap: anywhere;
-    /* Resolve each slotted message from its own first strong character. dir="auto" on the
-       shadow wrapper cannot inspect assigned light-DOM text in every browser, while plaintext
-       participates in the flattened text run and keeps an English message/action ordered inside
-       an RTL page (and vice versa for Arabic content in LTR). */
+    /* Resolves each slotted message from its own first strong character: dir="auto" on the shadow
+       wrapper cannot inspect assigned light-DOM text in every browser, while plaintext joins the
+       flattened text run, keeping an English message/action ordered inside an RTL page and Arabic
+       inside LTR. */
     unicode-bidi: plaintext;
   }
-  /* toaster.ts's action option (and the WithIcon/Triggers stories) append a
-     plain light-DOM button as a sibling of the message text -- without
-     this, it renders with the browser's unstyled default button chrome,
-     clashing with the rest of the token-driven design. Styled as an inline
-     text action (matching the toast's own accent color) rather than a
-     boxed button, since it sits directly after the message inside the
-     content part rather than in its own layout slot. */
+  /* toaster.ts's action option and the WithIcon/Triggers stories append a plain light-DOM button
+     beside the message text; unstyled it takes the browser's default button chrome. An inline
+     text action in the toast's accent color, not a boxed button, since it sits inside the content
+     part rather than its own layout slot. */
   ::slotted(button) {
     display: inline-block;
-    /* Symmetric logical spacing remains on the correct side when plaintext bidi resolution makes
-       the slotted content's reading direction differ from the page direction.
-       !important is deliberate and load-bearing here, not stylistic: this button is a plain
-       light-DOM node toaster.ts appends as a sibling of the message text (see the comment below),
-       so a consumer's own page-level CSS -- not just this component's shadow root -- can also
-       select it directly. A ::slotted() rule from this shadow root loses the cascade to an
-       unrelated global reset placed in a CSS layer (e.g. Tailwind Preflight's own
-       margin-zeroing universal selector inside its base layer), even though that reset never
-       named this button and the rule here is unlayered -- confirmed against Storybook's own
-       tailwind.css bundle, which collapses this exact gap to 0 and renders "Item deletedUndo"
-       with no visible separator. Without !important, any consumer whose global stylesheet resets
-       margins inside a layer silently loses this spacing. */
+    /* Symmetric logical spacing survives plaintext bidi giving the slotted content a reading
+       direction differing from the page. !important is load-bearing: a consumer's own page-level
+       CSS can select this plain light-DOM button directly, and a ::slotted() rule from this
+       shadow root loses to an unrelated global reset in a CSS layer (Tailwind Preflight's
+       margin-zeroing universal selector, say) though that reset never names it and this rule is
+       unlayered. */
     margin-inline: var(--lr-space-s) !important;
     padding: 0;
     border: none;
@@ -164,6 +153,13 @@ export const styles = css`
   ::slotted(button:focus-visible) {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  /* The display above is author-origin, outranking the UA '[hidden] { display: none }', so a
+     caller hiding toaster.ts's light-DOM action button -- an undo already taken, say -- would
+     otherwise still see it painted and clickable. The find-in-page carve-out matches the
+     library's other ::slotted([hidden]) overrides. */
+  ::slotted([hidden]:not([hidden="until-found" i])) {
+    display: none;
   }
   [part="close-button"] {
     position: relative;
@@ -239,12 +235,11 @@ export const styles = css`
     background: var(--lr-toast-close-button-hover-bg, transparent);
     color: var(--lr-toast-close-button-hover-color, var(--lr-color-text));
   }
-  /* Pressed adds the fill the hover deliberately withholds: the resting button is background:none,
-     so mixing that transparent base toward --lr-color-mix-partner lands the partner colour at the
-     active share -- a scrim that darkens on a light toast and lightens on a dark one, following
-     the text colour either way. The ink change is restated because keyboard activation raises
-     :active with no :hover, and the disabled guard is carried over so a dismiss-blocked toast
-     stays visibly inert under a click. */
+  /* Pressed adds the fill hover withholds: the resting button is background:none, so mixing that
+     transparent base toward --lr-color-mix-partner lands the partner colour at the active share
+     -- a scrim following the text colour, darker on a light toast, lighter on a dark one. The ink
+     change is restated because keyboard activation raises :active with no :hover; the disabled
+     guard keeps a dismiss-blocked toast visibly inert. */
   [part="close-button"]:where(:active):where(:not([aria-disabled="true"])) {
     color: var(--lr-toast-close-button-active-color, var(--lr-color-text));
     background: var(

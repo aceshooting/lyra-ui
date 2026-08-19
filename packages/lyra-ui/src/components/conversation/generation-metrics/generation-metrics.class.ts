@@ -15,7 +15,7 @@ import { styles } from './generation-metrics.styles.js';
 import { getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_elapsedMinutesSecondsTemplate, LYRA_DEFAULT_generationStatusElapsedSeconds, LYRA_DEFAULT_generationStatusThroughput, LYRA_DEFAULT_generationStatusTokenCount, LYRA_DEFAULT_generationStatusTokensCount, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_stopGenerating } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_elapsedMinutesSecondsTemplate, LYRA_DEFAULT_generationStatusElapsedSeconds, LYRA_DEFAULT_generationStatusThroughput, LYRA_DEFAULT_generationStatusTokenCount, LYRA_DEFAULT_generationStatusTokensCount, LYRA_DEFAULT_stopGenerating } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -200,20 +200,11 @@ export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEven
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     elapsedMinutesSecondsTemplate: LYRA_DEFAULT_elapsedMinutesSecondsTemplate,
     generationStatusElapsedSeconds: LYRA_DEFAULT_generationStatusElapsedSeconds,
     generationStatusThroughput: LYRA_DEFAULT_generationStatusThroughput,
     generationStatusTokenCount: LYRA_DEFAULT_generationStatusTokenCount,
     generationStatusTokensCount: LYRA_DEFAULT_generationStatusTokensCount,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
-    open: LYRA_DEFAULT_open,
-    popover: LYRA_DEFAULT_popover,
-    progress: LYRA_DEFAULT_progress,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     stopGenerating: LYRA_DEFAULT_stopGenerating,
   };
   // GENERATED DEFAULT-STRING SLICE: END

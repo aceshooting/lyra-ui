@@ -1,4 +1,4 @@
-import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { fixture, expect, waitUntil } from '@open-wc/testing';
 import './bar-chart.js';
 import './line-chart.js';
 import './pie-chart.js';

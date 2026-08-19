@@ -896,3 +896,71 @@ describe('item activation and selection', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="cell"][data-selected]')).to.have.length(0);
   });
 });
+
+
+// Regression: [part='cell'][data-selected] declares the same `outline`/`outline-offset` the
+// [part='cell']:hover, [part='cell']:focus-visible rule does, at the identical (0,2,0) specificity,
+// and sits later in the stylesheet -- so the selection ring won outright and a focused selected
+// cell rendered pixel-for-pixel like the same cell at rest. Same ring width, different colour, so
+// only a computed-colour comparison against a genuinely focused unselected cell can see it.
+it('keeps a SELECTED cell distinguishable once focused, instead of showing only the selection ring', async () => {
+  const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
+  el.items = items;
+  el.categories = categories;
+  el.selectedIndex = 1;
+  await el.updateComplete;
+  const selected = el.shadowRoot!.querySelector<HTMLElement>('[part="cell"][data-index="1"]')!;
+  const plain = el.shadowRoot!.querySelector<HTMLElement>('[part="cell"][data-index="0"]')!;
+  expect(selected.hasAttribute('data-selected'), 'sanity: cell 1 must be the selected one').to.equal(
+    true,
+  );
+
+  const selectionRing = getComputedStyle(selected).outlineColor;
+  plain.focus();
+  // Read the reference ring while `plain` still holds focus: an unfocused cell declares no outline
+  // at all, so its computed outline-width falls back to the CSS initial `medium` (3px).
+  const focusRing = getComputedStyle(plain).outlineColor;
+  const focusRingWidth = getComputedStyle(plain).outlineWidth;
+  const focusRingOffset = getComputedStyle(plain).outlineOffset;
+  expect(
+    focusRing,
+    'sanity: the focus ring and the selection ring must be different colours for this test to discriminate',
+  ).to.not.equal(selectionRing);
+
+  selected.focus();
+  expect(
+    getComputedStyle(selected).outlineColor,
+    'a focused selected cell must show the focus ring, not just its selection ring',
+  ).to.equal(focusRing);
+  // The ring geometry is unchanged -- only the colour channel carries the focus indicator.
+  expect(getComputedStyle(selected).outlineWidth).to.equal(focusRingWidth);
+  expect(getComputedStyle(selected).outlineOffset).to.equal(focusRingOffset);
+});
+
+// The complementary half of the same cascade decision: the selection ring deliberately survives
+// hover (a hovered selected cell still reads as selected), which is only safe while focus has its
+// own answer above.
+it('leaves the selection ring in place while a selected cell is merely hovered', async () => {
+  const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
+  el.items = items;
+  el.categories = categories;
+  el.selectedIndex = 1;
+  await el.updateComplete;
+  const selected = el.shadowRoot!.querySelector<HTMLElement>('[part="cell"][data-index="1"]')!;
+  selected.scrollIntoView({ block: 'center', inline: 'center' });
+  const selectionRing = getComputedStyle(selected).outlineColor;
+  const rect = selected.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    await waitUntil(
+      () => selected.matches(':hover'),
+      'the selected cell never reported itself hovered',
+    );
+    expect(getComputedStyle(selected).outlineColor).to.equal(selectionRing);
+  } finally {
+    await resetMouse();
+  }
+});

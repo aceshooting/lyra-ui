@@ -4,9 +4,8 @@ export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
-    /* Makes the host a query container so the narrow-allocation rule below reacts to the
-       component's own allocated width (a sidebar, a split pane, a dialog) rather than the
-       viewport. */
+    /* Query container, so the narrow-allocation rule below reacts to the component's own
+       allocated width -- a sidebar, a split pane, a dialog -- rather than the viewport. */
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
@@ -63,8 +62,8 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
   }
 
-  /* Container-query lengths cannot reference custom properties. This is the documented 320px
-     narrow-allocation baseline expressed in root-relative units so it still follows the page's
+  /* Container-query lengths cannot reference custom properties, so the documented 320px
+     narrow-allocation baseline is expressed in root-relative units and still follows the page's
      type scale. */
   @container (max-inline-size: 20rem) {
     [part='condition'] {

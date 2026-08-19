@@ -12,13 +12,11 @@ export const styles = css`
     background: var(--lr-color-surface-raised);
     overflow: hidden;
   }
-  /* Chrome escape -- the shared frame="plain" treatment, same convention as lr-result-card's,
-     lr-stack-trace's, lr-task-list's, and lr-thinking-panel's. Streamed tool output is routinely
-     nested inside a container that already draws a border (an agent-run panel, a message bubble),
-     which would otherwise double the box. Only the outer card decoration goes: the toolbar/log
-     divider below is interior structure that still explains where the actions end and the log
-     begins, exactly the call task-list and thinking-panel make for their own header/body divider,
-     and the toolbar buttons' own border/hover/focus affordances never depended on this one. */
+  /* Chrome escape -- the shared frame="plain" treatment, matching lr-result-card, lr-stack-trace,
+     lr-task-list and lr-thinking-panel. Streamed tool output routinely nests in a container that
+     already draws a border, doubling the box. Only the outer card decoration goes: the toolbar/log
+     divider stays as interior structure, as in task-list's and thinking-panel's header/body
+     divider, and the toolbar buttons' own border/hover/focus never depended on it. */
   :host([frame='plain']) [part='base'] {
     border: 0;
     border-radius: 0;
@@ -31,11 +29,10 @@ export const styles = css`
     padding: var(--lr-space-xs) var(--lr-space-s);
     border-block-end: var(--lr-size-1px) solid var(--lr-color-border);
   }
-  /* Density escape -- same convention as lr-task-list's/lr-thinking-panel's compact. The tuned
-     values sit behind inline var() fallbacks (rather than a :host declaration, which every
-     instance would re-declare and so shadow any ancestor value) so a transcript can retune every
-     nested terminal at once from outside; the fallbacks are one step tighter than the regular
-     values, so an unset terminal renders exactly as before. */
+  /* Density escape -- same convention as lr-task-list's/lr-thinking-panel's compact. Inline var()
+     fallbacks, not a :host declaration every instance would re-declare and so shadow an ancestor
+     value, let a transcript retune every nested terminal at once. Each fallback is one step
+     tighter than the regular value, so an unset terminal renders as before. */
   :host([compact]) [part='toolbar'] {
     gap: var(--lr-terminal-compact-toolbar-gap, var(--lr-space-2xs));
     padding: var(--lr-terminal-compact-toolbar-padding, var(--lr-space-2xs) var(--lr-space-xs));
@@ -55,9 +52,8 @@ export const styles = css`
   [part='download-button']:hover {
     background: var(--lr-color-brand-quiet);
   }
-  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
-     --lr-color-mix-partner (which follows the text colour), so it reads as a distinctly deeper step
-     than hover in both light and dark themes rather than repeating it. */
+  /* Pressed is the hover tint pushed a further --lr-color-mix-active toward --lr-color-mix-partner,
+     which follows the text colour -- a distinctly deeper step in both light and dark themes. */
   [part='copy-button']:active,
   [part='download-button']:active {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
@@ -78,39 +74,33 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text);
   }
-  /* renderItem's returned content is committed inside <lr-virtual-list>'s own shadow root (Lit
-     renders a function-supplied template into whichever root is currently updating, regardless of
-     which module the function was defined in), so a plain [part='line'] rule here -- scoped to this
-     component's own shadow root -- would never match anything. Reaching one shadow level in through
-     a part attribute set by content this component doesn't itself template statically is exactly
-     what ::part() is for; see <lr-lightbox>'s lr-zoomable-frame[part='frame']::part(base) rule
-     for the same technique used against a statically-templated child instead of a renderItem one. */
+  /* renderItem's content is committed inside <lr-virtual-list>'s own shadow root -- Lit renders a
+     function-supplied template into whichever root is currently updating, not the defining
+     module's -- so a plain [part='line'] rule here would never match. ::part() is what reaches
+     that one level in; <lr-lightbox>'s lr-zoomable-frame[part='frame']::part(base) uses the same
+     technique against a statically-templated child. */
   lr-virtual-list::part(line) {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     padding-inline: var(--lr-space-s);
     line-height: var(--lr-line-height-normal);
   }
-  /* Only an interactive (highlight-owning) line ever carries tabindex="0" -- see renderLine() in
-     terminal.class.ts -- so :focus-visible below already resolves to just those lines with no
-     extra scoping needed: a non-interactive line is never focusable in the first place. :hover
-     can't be scoped the same way -- every line shares this one part name, and ::part() forbids a
-     trailing attribute selector (see the renderItem note above), so this is a plain pointer-hover
-     preview across all lines rather than an attribute-gated one. Reuses the same
-     --lr-color-brand-quiet token as the toolbar buttons' own hover fill above: a toned highlight's
-     semantic state-specific aliases below reassert their own tone for hover/press. */
+  /* Only an interactive (highlight-owning) line carries tabindex="0" -- renderLine() in
+     terminal.class.ts -- so :focus-visible below needs no extra scoping. :hover cannot be scoped
+     the same way: every line shares one part name and ::part() forbids a trailing attribute
+     selector, so this is a plain pointer preview across all lines. Reuses --lr-color-brand-quiet,
+     the toolbar buttons' hover fill; the semantic aliases below reassert their own tone. */
   lr-virtual-list::part(line):hover {
     background: var(--lr-color-brand-quiet);
   }
-  /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
-     --lr-color-mix-partner, matching this file's own [part='copy-button']/[part='download-button']
-     :active pattern above -- a highlight-owning line is a real activatable target (renderLine()
-     wires @click/@keydown), not a passive hover-only preview. */
+  /* Pressed is the hover tint pushed a further --lr-color-mix-active toward --lr-color-mix-partner,
+     as for [part='copy-button']/[part='download-button'] above: a highlight-owning line is a real
+     activatable target (renderLine() wires @click/@keydown), not a hover-only preview. */
   lr-virtual-list::part(line):active {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
-  /* State-specific parts keep semantic highlights intact through hover/press. They are also the
-     honest external styling surface: a consumer can deliberately override a semantic part. */
+  /* State-specific parts keep semantic highlights intact through hover/press, and give a consumer
+     a semantic part to override deliberately. */
   lr-virtual-list::part(line-highlight-accent):hover {
     background: var(--lr-terminal-highlight-accent-bg, var(--lr-color-brand-quiet));
   }
@@ -145,9 +135,8 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* The log's own half of the density escape above. Reached through the same one-hop ::part()
-     selector as the base rule (the lines live in lr-virtual-list's shadow root), and carrying the
-     host attribute selector, so it outranks that rule on both specificity and source order. */
+  /* The log's half of the density escape above: the same one-hop ::part() selector as the base
+     rule, plus the host attribute selector, so it outranks it on specificity and source order. */
   :host([compact]) lr-virtual-list::part(line) {
     padding-inline: var(--lr-terminal-compact-line-padding-inline, var(--lr-space-xs));
   }
@@ -172,18 +161,18 @@ export const styles = css`
     border: none;
     border-radius: var(--lr-radius-pill);
     padding: var(--lr-space-2xs) var(--lr-space-s);
-    /* Overlay step, not a card step: this pill is absolutely positioned over live scrollback rather
-       than resting in the layout, so it has to read as a layer above the lines it covers. */
+    /* Overlay step, not a card step: absolutely positioned over live scrollback, so it must read
+       as a layer above the lines it covers. */
     box-shadow: var(--lr-shadow-m);
     cursor: pointer;
     z-index: var(--lr-layer-content);
     transition: opacity var(--lr-transition-fast);
   }
-  /* Mixed toward --lr-color-mix-partner (which follows the text colour) rather than the
-     filter: brightness() this replaces: a filter multiplies every channel, so it lightened this
-     brand-filled pill only by luck, did nothing at all to a pure white or pure black brand colour,
-     and -- because a filter applies to the whole subtree -- dragged the pill's own label along with
-     the surface. Mixing always moves, and always in the direction the surface needs. */
+  /* Mixes toward --lr-color-mix-partner, which follows the text colour, rather than the
+     filter: brightness() this replaces: multiplying every channel did nothing at all to a pure
+     white or pure black brand colour, and a filter applies to the whole subtree, dragging the
+     pill's own label along with the surface. Mixing always moves, in the direction the surface
+     needs. */
   [part='jump-to-latest']:hover {
     background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }

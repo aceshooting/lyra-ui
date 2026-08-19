@@ -3,14 +3,13 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    /* Consumer-tunable scroll cap on [part='body'] -- 'none' means the
-       preview grows with its content until a caller opts into an internal
-       scrollbar, same contract as lr-json-viewer's identical
-       --lr-json-viewer-max-height. */
+    /* Consumer-tunable scroll cap on [part='body'] -- 'none' grows with the
+       content until a caller opts into an internal scrollbar, the same
+       contract as lr-json-viewer's --lr-json-viewer-max-height. */
     --_lr-document-preview-max-height: none;
-    /* No shared Web Awesome/Lyra monospace token exists to resolve through
-       (same gap lr-json-viewer's own --lr-json-viewer-font documents) --
-       contained here so a host page can retheme it. */
+    /* No shared Web Awesome/Lyra monospace token to resolve through (the gap
+       lr-json-viewer's --lr-json-viewer-font documents too), contained here so
+       a host page can retheme it. */
     --_lr-document-preview-font: var(--lr-font-mono);
     --_lr-document-preview-spin-duration: var(--lr-transition-ambient);
   }
@@ -61,8 +60,7 @@ export const styles = css`
   }
 
   /* -- text/*, application/json: plain, scrollable <pre> -----------------
-     No syntax highlighting -- see the class doc for why that's intentionally
-     out of scope here. */
+     No syntax highlighting -- the class doc says why it is out of scope. */
   pre.text {
     align-self: stretch;
     box-sizing: border-box;
@@ -154,9 +152,9 @@ export const styles = css`
       transparent
     );
   }
-  /* Pressed: the hovered tint pushed toward the text colour, which both deepens the hue and (since
-     the partner is opaque) raises the tint's alpha -- so the mousedown on the transparent target
-     button reads as a distinctly firmer press than merely pointing at the region. */
+  /* Pressed: the hovered tint pushed toward the text colour, deepening the hue and -- the partner
+     being opaque -- raising the tint's alpha, so a mousedown on the transparent target button
+     reads firmer than merely pointing at the region. */
   [part="region-highlight-target"]:active + [part="region-highlight"] {
     background: color-mix(
       in oklab,
@@ -254,11 +252,11 @@ export const styles = css`
       var(--lr-color-shadow)
     );
   }
-  /* Pressed continues the hover's own axis (further toward --lr-color-shadow) rather than toward
-     --lr-color-mix-partner: this button is brand-filled and its label is --lr-color-on-brand, not
-     the page text colour, so mixing the fill toward the page text would lighten it under a dark
-     theme and eat the label's contrast. --lr-color-mix-active still sets the amount, so the pressed
-     step stays themeable alongside every other pressed state in the library. */
+  /* Pressed continues the hover's own axis (further toward --lr-color-shadow) rather than
+     --lr-color-mix-partner: this button is brand-filled with an --lr-color-on-brand label, not the
+     page text colour, so mixing toward page text would lighten it under a dark theme and eat the
+     label's contrast. --lr-color-mix-active still sets the amount, keeping the pressed step
+     themeable alongside every other in the library. */
   [part="download-link"]:active {
     background: color-mix(
       in oklab,
@@ -296,9 +294,9 @@ export const styles = css`
       )
       infinite;
   }
-  /* Determinate progress reuses the same ring shape but holds a fixed
-     rotation instead of spinning -- conic-gradient renders the actual fill,
-     so the ring visually communicates a real fraction rather than motion. */
+  /* Determinate progress reuses the ring shape but holds a fixed rotation
+     instead of spinning; conic-gradient renders the actual fill, so the ring
+     shows a real fraction rather than motion. */
   .ring.determinate {
     animation: none;
     border-color: transparent;

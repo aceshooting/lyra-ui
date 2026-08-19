@@ -364,7 +364,7 @@ describe("tooltip breakdown", () => {
     ) as HTMLSlotElement;
     const assigned = slot.assignedElements({ flatten: true });
     expect(assigned).to.have.length(1);
-    expect(assigned[0].textContent).to.include("Cache-read: 500");
+    expect(assigned[0]!.textContent).to.include("Cache-read: 500");
   });
 
   it("keeps slotted tooltip rows inert even when a host supplies an interactive descendant", async () => {

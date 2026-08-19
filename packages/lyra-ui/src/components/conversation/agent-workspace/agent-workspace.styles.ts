@@ -9,13 +9,12 @@ export const styles = css`
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
-  /* The middle track is the only scroll owner: minmax(0, 1fr) lets it shrink to zero, and the
+  /* The middle track is the only scroll owner: minmax(0, 1fr) lets it shrink to zero and the
      composed lr-chat-viewport scrolls the transcript inside it. The two auto tracks are
-     content-sized on purpose -- header chrome and the composer dock should never be the thing that
-     scrolls. The trade that comes with it: content far larger than the workspace allocation (an
-     unusually tall header-actions toolbar, a tall replacement composer) first squeezes the
-     conversation track to zero and is then clipped here, with no scrollbar. Cap and scroll those
-     regions from the consumer side when that is the intended shape, through the public header and
+     content-sized on purpose -- header chrome and the composer dock must never be what scrolls.
+     The trade: content larger than the workspace allocation (a tall header-actions toolbar, a tall
+     replacement composer) squeezes the conversation track to zero and is then clipped here, with
+     no scrollbar. Cap and scroll those regions consumer-side through the public header and
      composer parts -- see the overflow note in agent-workspace.class.ts's class doc. */
   [part='base'] {
     display: grid;
@@ -93,6 +92,13 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     margin-block-end: var(--lr-space-m);
+  }
+  /* The display above is author-origin, so it outranks the UA stylesheet's own
+     '[hidden] { display: none }' and a transcript row a consumer filtered out would still paint.
+     The 'until-found' carve-out is load-bearing here, not merely consistent: transcript prose is
+     exactly what a browser's find-in-page is expected to scroll back into view. */
+  slot[name='messages']::slotted([hidden]:not([hidden='until-found' i])) {
+    display: none;
   }
   [part='messages-empty'] {
     margin-block: auto;

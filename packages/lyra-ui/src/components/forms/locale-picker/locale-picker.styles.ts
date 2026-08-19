@@ -5,25 +5,22 @@ export const styles = css`
   :host {
     display: block;
     --_lr-locale-picker-trigger-padding-default: var(--lr-space-xs) var(--lr-space-s);
-    /* Height and text size come from the ONE shared form-control ladder (internal/sizes.styles.ts)
-       rather than a private copy of the same six values. The ladder matches both spellings of every
-       tier in one selector list, so size="small" and size="s" resolve identically here with no
-       per-component alias rules. */
+    /* Height and text size come from the ONE shared form-control ladder
+       (internal/sizes.styles.ts), not a private copy. It matches both spellings of every tier, so
+       size='small' and size='s' resolve identically with no per-component alias rules. */
     --_lr-locale-picker-trigger-min-height-default: var(--lr-form-control-height);
     --_lr-locale-picker-font-size-default: var(--lr-form-control-font-size);
     --_lr-locale-picker-expand-size-default: var(--lr-size-1-75rem);
     --_lr-locale-picker-gap-default: var(--lr-space-xs);
     --_lr-locale-picker-radius-default: var(--lr-form-control-radius);
-    /* --lr-locale-picker-trigger-height is intentionally NOT declared here -- see lr-select's
-       identical convention: it is a consumer-facing escape hatch consumed only through the
-       var() fallback on [part='trigger'] below, so leaving it genuinely undeclared keeps that
-       fallback arm live. */
+    /* --lr-locale-picker-trigger-height is intentionally NOT declared here (as in lr-select): a
+       consumer escape hatch read only through the var() fallback on [part='trigger'] below, and
+       declaring it would deaden that fallback arm. */
   }
   /* What remains per tier is this component's OWN geometry -- trigger density and the decorative
-     expand glyph -- which is not a form-control height/text ladder and so is not part of the shared
-     one. Each tier matches both spellings for the same reason sizes.styles.ts does: the shared
-     ladder accepts size="small", and a trigger whose density silently ignored it would be worse than
-     one that never accepted it. */
+     expand glyph -- not a form-control height/text ladder. Each tier matches both spellings
+     because the shared ladder accepts size='small', and a trigger whose density ignored it would
+     be worse than one that never accepted it. */
   :host([size='2xs']) {
     --_lr-locale-picker-trigger-padding-default: var(--lr-size-0-0625rem) var(--lr-space-2xs);
     --_lr-locale-picker-expand-size-default: var(--lr-size-1rem);
@@ -51,9 +48,8 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
     font-weight: var(--lr-font-weight-semibold);
   }
-  /* :empty never matches here -- the part always contains a literal <slot> child element
-     regardless of assigned content -- so real emptiness is tracked via hasLabelSlot/label.length
-     and reflected via the hidden attribute instead (same fix as lr-select's identical part). */
+  /* :empty never matches -- the part always holds a literal <slot> child -- so emptiness is
+     tracked via hasLabelSlot/label.length and reflected as the hidden attribute (as lr-select). */
   [part='form-control-label'][hidden] {
     display: none;
   }
@@ -82,15 +78,14 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* :where() zeroes the wrapped selectors' specificity contribution, keeping this at (0,1,0) --
-     matches lr-select's/lr-model-select's fixed convention, so a consumer's own
-     ::part(trigger):hover override ((0,1,1)) still wins without needing !important. */
+  /* :where() keeps this at (0,1,0), the same weight as the pressed rule below, which therefore
+     wins on source order while the trigger is held. Matches lr-select and lr-model-select. */
   :where([part='trigger']):hover:where(:not(:disabled)) {
     background: var(--lr-locale-picker-trigger-hover-bg, var(--lr-color-brand-quiet));
   }
-  /* Pressed mixes that same hover tint one shared step further toward the text colour, and stays
-     inside the identical :where()/:not(:disabled) wrapping so it neither out-specifies a
-     consumer's ::part(trigger):active nor fires on a disabled trigger. */
+  /* The hover tint one shared step further toward the text colour, in the identical
+     :where()/:not(:disabled) wrapping, so it ties with the hover rule above -- source order hands
+     the press the win -- and never fires on a disabled trigger. */
   :where([part='trigger']):active:where(:not(:disabled)) {
     background: color-mix(
       in oklab,

@@ -23,8 +23,8 @@ export const styles = css`
     gap: var(--lr-space-xs);
     min-inline-size: 0;
   }
-  /* The nested control's own max-inline-size (24rem, sized for a standalone
-     dropdown) would otherwise clip a full-width row inside this card. */
+  /* The nested control's own max-inline-size (24rem, sized for a standalone dropdown) would
+     otherwise clip a full-width row inside this card. */
   [part='model-row'] lr-model-select {
     inline-size: 100%;
     max-inline-size: none;
@@ -54,10 +54,9 @@ export const styles = css`
     text-align: end;
   }
 
-  /* Compact layout: the two rows sit side by side instead of stacked, and
-     the temperature caption shrinks to an uppercase micro-label -- a denser
-     treatment for toolbars/sidebars where the vertical layout's full-height
-     rows don't fit. */
+  /* Compact layout: the two rows sit side by side instead of stacked and the temperature caption
+     shrinks to an uppercase micro-label -- denser, for toolbars/sidebars where the vertical
+     layout's full-height rows do not fit. */
   :host([layout='compact']) {
     max-inline-size: none;
   }

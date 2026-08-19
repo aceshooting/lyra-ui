@@ -2,8 +2,8 @@ import { css } from 'lit';
 
 export const styles = css`
   :host {
-    /* Backdrop scrim color -- component-specific so a host can retheme it without a raw literal
-       leaking into the public API, same rationale as lr-dialog's own --lr-dialog-overlay-color. */
+    /* Backdrop scrim color, component-specific so a host can retheme it without a raw literal in
+       the public API -- same rationale as lr-dialog's own --lr-dialog-overlay-color. */
     --_lr-tour-backdrop-color: var(--lr-color-overlay);
     --_lr-tour-spotlight-radius: var(--lr-radius);
     --_lr-tour-spotlight-ring-color: var(--lr-color-brand);
@@ -67,9 +67,9 @@ export const styles = css`
     color: var(--lr-color-text);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    /* Modal tier, not the anchored-panel tier its "popover" name suggests: this panel sits on the
-       modal layer above a full-viewport backdrop scrim (and centers itself like a dialog when
-       unanchored), so it needs the separation a menu next to live page content does not. */
+    /* Modal tier, not the anchored-panel tier the popover name suggests: it sits on the modal
+       layer above a full-viewport backdrop scrim, and centers itself like a dialog when
+       unanchored, so it needs separation a menu beside live page content does not. */
     box-shadow: var(--lr-shadow-l);
     pointer-events: auto;
     overflow: auto;
@@ -154,9 +154,8 @@ export const styles = css`
     color: var(--lr-color-on-brand);
     border-color: var(--lr-color-brand);
   }
-  /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
-     so a consumer's ::part(previous-button):hover / ::part(skip-button):hover override
-     ((0,1,1)) wins without needing !important. */
+  /* :where() leaves only :hover, so this is (0,1,0) -- the same weight as the pressed rule below,
+     which therefore wins on source order while the button is held. */
   :where([part="previous-button"]):hover:where(:not(:disabled)),
   :where([part="skip-button"]):hover {
     background: var(--lr-color-brand-quiet);
@@ -170,10 +169,9 @@ export const styles = css`
     );
   }
   /* A background mix, not filter: brightness(): a filter multiplies every channel of the subtree,
-     so it dragged this button's own --lr-color-on-brand label along with the fill, and moved
-     neither at all once the brand token was themed to pure white or pure black. Mixing the fill
-     toward --lr-color-mix-partner (which tracks the text color) always moves, and only the fill
-     moves. */
+     dragging this button's own --lr-color-on-brand label along with the fill and moving neither
+     once the brand token was themed pure white or pure black. Mixing toward
+     --lr-color-mix-partner, which tracks the text color, always moves, and moves only the fill. */
   [part="next-button"]:hover {
     background: color-mix(
       in oklab,

@@ -48,11 +48,11 @@ export const styles = css`
     );
   }
 
-  /* Pressed continues the hover's own axis (further toward --lr-color-shadow) rather than toward
-     --lr-color-mix-partner, matching <lr-document-preview>'s identical download button: the fill is
-     brand and the label is --lr-color-on-brand, so mixing toward the page text colour would lighten
-     the fill under a dark theme and eat the label's contrast. --lr-color-mix-active still sets the
-     amount, so the pressed step stays themeable with every other pressed state. */
+  /* Pressed deepens toward --lr-color-shadow, not --lr-color-mix-partner, matching
+     <lr-document-preview>'s identical download button: the fill is brand under an
+     --lr-color-on-brand label, so mixing toward the page text colour would lighten the fill in a
+     dark theme and eat the label's contrast. --lr-color-mix-active still sets the amount, keeping
+     the step themeable. */
   [part="download-link"]:active {
     background: color-mix(
       in oklab,

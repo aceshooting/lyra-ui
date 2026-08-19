@@ -1,4 +1,11 @@
-import { fixture, expect, oneEvent, html } from "@open-wc/testing";
+import {
+  fixture,
+  expect,
+  oneEvent,
+  html,
+  waitUntil,
+} from "@open-wc/testing";
+import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import "./json-viewer.js";
 import type { LyraJsonViewer } from "./json-viewer.js";
@@ -1368,19 +1375,6 @@ it("keeps per-node copy actions visible in coarse/no-hover mode without overflow
 });
 
 describe("hover-rule specificity (::part() theming escape hatch)", () => {
-  it("wraps the row's own copy-button reveal-on-hover rule in :where() so a consumer's ::part(copy-button):hover wins", () => {
-    const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
-    // Both the .row ancestor and the [part='copy-button'] target must be inside a :where() --
-    // otherwise the attribute-selector contribution alone keeps this rule out-specificitying a
-    // consumer's ::part(copy-button):hover ((0,1,1)).
-    expect(css).to.match(
-      /:where\(\.row\):hover :where\(\[part='copy-button'\]\)/
-    );
-    expect(css).to.match(
-      /:where\(\.row\):focus-within :where\(\[part='copy-button'\]\)/
-    );
-  });
-
   it("wraps the toggle's hover retheme rule in :where() so a consumer's ::part(toggle):hover wins", () => {
     const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
     expect(css).to.match(
@@ -1388,7 +1382,15 @@ describe("hover-rule specificity (::part() theming escape hatch)", () => {
     );
   });
 
-  it("a ::part(copy-button):hover override actually wins over the internal reveal rule", async () => {
+  it("a ::part(copy-button):hover override actually wins over the internal reveal rule", async function () {
+    if (window.matchMedia("(hover: none), (pointer: coarse)").matches)
+      this.skip();
+    // The reveal rule inside the shadow root is full-specificity ((0,3,0)) and this consumer
+    // selector is (0,1,1) -- it still wins, because an outer tree's declarations sort ahead of the
+    // shadow tree's regardless of specificity. Read off the rendered element under a real pointer,
+    // never off the stylesheet text: the previous version of this test asserted the selector shape
+    // instead and passed the whole time the reveal rule itself was being out-specificitied into
+    // never applying.
     const style = document.createElement("style");
     style.textContent = `lr-json-viewer::part(copy-button):hover { opacity: 0.5; }`;
     document.head.appendChild(style);
@@ -1396,16 +1398,28 @@ describe("hover-rule specificity (::part() theming escape hatch)", () => {
       const el = await withData(sample);
       el.copyable = true;
       await el.updateComplete;
-      // jsdom/browser test runners don't synthesize a real :hover pseudo-class from a dispatched
-      // event, so this is asserted via the stylesheet specificity check above (the same reasoning
-      // lr-code-block's identical gutter-button test documents) -- this test just proves the
-      // fixture still renders correctly with the competing consumer stylesheet present.
-      // One copy-button per rendered node, so assert presence (the original `.to.exist`
-      // semantics), not an exact count.
-      expect(
-        el.shadowRoot!.querySelectorAll('[part="copy-button"]').length
-      ).to.be.greaterThan(0);
+      const button = el.shadowRoot!.querySelector(
+        '.row [part="copy-button"]'
+      ) as HTMLElement;
+      button.scrollIntoView({ block: "center", inline: "center" });
+      await new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve))
+      );
+      const rect = button.getBoundingClientRect();
+      await resetMouse();
+      await sendMouse({
+        type: "move",
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => getComputedStyle(button).opacity === "0.5",
+        "the consumer's ::part(copy-button):hover opacity never took effect"
+      );
     } finally {
+      await resetMouse();
       style.remove();
     }
   });
@@ -1523,5 +1537,91 @@ describe("responsive: 320px allocation", () => {
     expect(key.scrollWidth).to.be.at.most(
       Math.ceil(key.getBoundingClientRect().width) + 1
     );
+  });
+});
+
+describe("per-row copy-button reveal", () => {
+  /** Two animation frames -- enough for a pointer move to have been dispatched and the
+   *  resulting :hover state to have been applied and painted. */
+  async function nextFrames(): Promise<void> {
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve))
+    );
+  }
+
+  async function moveMouseTo(target: HTMLElement): Promise<void> {
+    target.scrollIntoView({ block: "center", inline: "center" });
+    await nextFrames();
+    const rect = target.getBoundingClientRect();
+    await sendMouse({
+      type: "move",
+      position: [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ],
+    });
+    await nextFrames();
+  }
+
+  /** The `age` row -- a leaf row that carries both a hidden toggle and its own copy button. */
+  async function ageRow(): Promise<{ row: HTMLElement; button: HTMLElement }> {
+    const el = await withData(sample);
+    el.copyable = true;
+    await el.updateComplete;
+    const row = Array.from(el.shadowRoot!.querySelectorAll(".row")).find(
+      (candidate) =>
+        candidate.querySelector('[part="key"]')?.textContent === "age"
+    ) as HTMLElement;
+    return {
+      row,
+      button: row.querySelector('[part="copy-button"]') as HTMLElement,
+    };
+  }
+
+  it("holds a per-row copy button hidden at rest", async () => {
+    const { button } = await ageRow();
+    expect(getComputedStyle(button).opacity).to.equal("0");
+  });
+
+  it("reveals a per-row copy button while the pointer rests on its row", async function () {
+    if (window.matchMedia("(hover: none), (pointer: coarse)").matches)
+      this.skip();
+    const { row, button } = await ageRow();
+    expect(getComputedStyle(button).opacity).to.equal("0");
+    try {
+      await resetMouse();
+      await moveMouseTo(row);
+      await waitUntil(
+        () => getComputedStyle(button).opacity === "1",
+        "row :hover never revealed the per-row copy button"
+      );
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it("reveals a per-row copy button while focus is anywhere inside its row", async () => {
+    const { row, button } = await ageRow();
+    expect(getComputedStyle(button).opacity).to.equal("0");
+    // Focus a DIFFERENT control in the row, so the reveal can only come from the row's
+    // :focus-within arm -- never from the button's own :focus-visible rule.
+    const sibling = row.querySelector('[part="toggle"]') as HTMLElement;
+    sibling.removeAttribute("hidden");
+    sibling.tabIndex = 0;
+    sibling.focus();
+    await waitUntil(
+      () => getComputedStyle(button).opacity === "1",
+      "row :focus-within never revealed the per-row copy button"
+    );
+  });
+
+  it("leaves the toolbar copy button visible at rest -- it has no ancestor row", async () => {
+    const el = await withData(sample);
+    el.copyable = true;
+    await el.updateComplete;
+    const toolbarButton = el.shadowRoot!.querySelector(
+      '[part="toolbar"] [part="copy-button"]'
+    ) as HTMLElement;
+    expect(getComputedStyle(toolbarButton).opacity).to.equal("1");
   });
 });

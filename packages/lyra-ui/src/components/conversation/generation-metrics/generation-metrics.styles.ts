@@ -19,10 +19,9 @@ export const styles = css`
   }
 
   [part='elapsed'] {
-    /* Full-strength text, not the quieter --lr-color-text-quiet the rest
-       of the readout uses -- elapsed time is the one figure this component
-       always shows (tokens/throughput are optional), so it gets the higher-
-       contrast treatment to read as the primary value at a glance. */
+    /* Full-strength text, not the --lr-color-text-quiet the rest of the readout uses: elapsed
+       time is the one figure always shown (tokens and throughput are optional), so it reads as
+       the primary value. */
     color: var(--lr-color-text);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
@@ -34,11 +33,9 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
 
-  /* Segments are joined with a middot rather than a flex gap + separate
-     separator element, so a segment that doesn't render (tokens/throughput
-     are both optional, see the class doc) never leaves a dangling
-     double-gap -- the dot only ever appears immediately before a segment
-     that's actually present. */
+  /* Segments are joined with a middot rather than a flex gap plus a separator element, so a
+     segment that does not render (tokens and throughput are optional -- see the class doc) leaves
+     no dangling double gap; the dot only ever precedes a segment that is present. */
   [part='tokens']::before,
   [part='throughput']::before {
     content: '·';
@@ -51,11 +48,10 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    /* Meets the shared minimum tappable size (--lr-icon-button-size) --
-       previously shrunk below the floor (min(...) capped at 1.75rem/28px)
-       for a compact inline look, but the readout row has no width
-       constraint that requires it, so the full 40px floor applies
-       directly instead of via invisible hit-slop. */
+    /* Meets the shared minimum tappable size (--lr-icon-button-size). It was previously capped
+       below the floor at 1.75rem/28px for a compact inline look, but nothing in the readout row
+       requires that, so the full 40px floor applies directly rather than via invisible hit-slop.
+       */
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     margin-inline-start: var(--lr-space-s);
@@ -75,9 +71,9 @@ export const styles = css`
     border-color: var(--lr-color-brand);
     color: var(--lr-color-brand);
   }
-  /* Hover recolors the chrome only; the press additionally fills the disc, mixing its resting
-     surface toward the text color so the pressed state escalates the hover one instead of
-     replacing it with an unrelated color. */
+  /* Hover recolors the chrome only; the press also fills the disc, mixing its resting surface
+     toward the text color, so pressed escalates hover instead of replacing it with an unrelated
+     color. */
   [part='stop-button']:active {
     border-color: var(--lr-color-brand);
     color: var(--lr-color-brand);

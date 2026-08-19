@@ -4,13 +4,10 @@ import { formControlRequiredMarker } from '../../../internal/form-control.styles
 export const styles = css`
   :host {
     display: inline-block;
-    /* The trigger swatch is square and sits in toolbar rows beside real form controls, so its edge
-       IS the shared form-control height: it reads the ONE ladder (internal/sizes.styles.ts) rather
-       than a private copy of the same six values. That ladder matches both spellings of every tier
-       in one selector list, so size="small" and size="s" resolve identically here with no
-       per-component alias rules. The fallback arm names the default tier's own value, so the swatch
-       still paints at its documented size if this rule is ever applied without the shared ladder
-       sheet alongside it. */
+    /* Square swatch whose edge IS the shared form-control height, so it reads the one ladder
+       (internal/sizes.styles.ts), which matches both spellings per tier -- size="small" and
+       size="s" resolve identically, no alias rules. The fallback arm names the default tier's own
+       value, keeping the documented size without the ladder sheet. */
     --_lr-color-picker-swatch-size: var(
       --lr-form-control-height,
       var(--lr-size-2-5rem)
@@ -40,15 +37,14 @@ export const styles = css`
     );
     --_lr-color-picker-checker-color: var(--lr-color-border);
     --_lr-color-picker-checker-size: var(--lr-size-0-5rem);
-    /* The sRGB hue wheel's own stops. These are the algorithm's data, not a design decision, so
-       they stay literal -- but they are exposed as one overridable list because a consumer
-       theming a wide-gamut or perceptually-uniform ramp needs to replace exactly this. Both text
-       directions read the same list; only the gradient's direction differs. */
+    /* The sRGB hue wheel's own stops -- algorithm data, not a design decision, but exposed as one
+       overridable list for a wide-gamut or perceptually-uniform ramp. Both text directions read
+       this list; only the gradient direction differs. */
     --_lr-color-picker-hue-stops: hsl(0 100% 50%), hsl(60 100% 50%),
       hsl(120 100% 50%), hsl(180 100% 50%), hsl(240 100% 50%), hsl(300 100% 50%),
       hsl(360 100% 50%);
-    /* Private first-render fallbacks. The live public values are written inline on the relevant
-       color-bearing elements; an authored public value at that same element remains authoritative. */
+    /* Private first-render fallbacks; live public values are written inline on the color-bearing
+       elements, where an authored public value still wins. */
     --_lr-color-picker-swatch-color: transparent;
     --_lr-color-picker-grid-hue: transparent;
     --_lr-color-picker-opacity-gradient: none;
@@ -63,10 +59,9 @@ export const styles = css`
     color: var(--lr-color-text);
     font-size: var(--lr-font-size-md-sm);
   }
-  /* [part]:empty never matches -- the part always contains a literal <slot> child element
-     regardless of assigned content -- so real emptiness is tracked in JS (hasLabel/hasHint/
-     hasError) and reflected via the hidden attribute instead. Without this, the required marker below (which attaches to this box) would render a stray glyph with nothing before it
-     whenever label is unset. */
+  /* [part]:empty never matches -- the part always holds a literal <slot> child -- so emptiness is
+     tracked in JS (hasLabel/hasHint/hasError) and reflected via hidden; otherwise the required
+     marker attached to this box renders a stray glyph when label is unset. */
   [part~="label"][hidden] {
     display: none;
   }
@@ -98,22 +93,13 @@ export const styles = css`
       var(--lr-color-picker-checker-size, var(--_lr-color-picker-checker-size));
   }
 
-  /* These pixels communicate the selected color itself. Letting forced-colors replace them with
-     a system color makes every hue, alpha value, and palette entry indistinguishable.
-
-     The opt-out is declared on the color-bearing ELEMENTS, not on the pseudo-elements that happen
-     to paint them. The hue and opacity ramps used to be opted out only through their ::before, and
-     since forced-color-adjust is an INHERITED property that left the slider element itself
-     answering "auto" — so a consumer (or an a11y audit) reading the element's computed value was
-     told the ramp is system-controlled, which is the opposite of the truth, and any colour the
-     element itself paints (its own background, the checkerboard behind the alpha ramp) was still
-     rewritten out from under the ramp drawn on top of it. Declaring it on the element covers the
-     pseudo-element by inheritance, so one rule states one fact.
-
-     Still deliberately limited to the surfaces that ARE the data: the panel, text field, action
-     buttons, focus outlines, and disabled chrome keep the UA default. The trigger element stays off
-     the list for exactly that reason — the button's border, focus ring and disabled treatment are
-     chrome; only the two pseudo-elements painting the swatch inside it are the value. */
+  /* Forced-colors substitution would flatten every hue, alpha value and palette entry into system
+     colors. forced-color-adjust INHERITS, so the opt-out sits on the color-bearing ELEMENTS, not
+     the pseudo-elements painting them: a ::before-only opt-out left the slider element itself
+     answering auto and its own background and alpha checkerboard rewritten anyway. Limited to the
+     surfaces that ARE the data -- the panel, text field, action buttons, focus outlines, disabled
+     chrome and the trigger's own border, focus ring and disabled treatment keep the UA default,
+     only its two swatch-painting pseudo-elements being the value. */
   [part~="grid"],
   [part~="preview"],
   [part~="swatch"],
@@ -255,16 +241,15 @@ export const styles = css`
   }
 
   [part~="panel"] {
-    /* Absolutely positioned from the start (not only once JS positions it on open) so the closed
-       panel never occupies a box in the host's normal flow. The hoist option makes place() switch this to
-       fixed at runtime. Physical top/left, not the logical inset properties: place() overwrites
-       these via style.left/style.top, and under RTL inset-inline-start resolves to the physical
-       right, leaving both right:0 and left:Npx active -- the over-constrained resolution would
-       discard the JS value and pin the panel to the viewport edge. */
+    /* Absolute from the start, not only once JS positions it on open, so the closed panel
+       occupies no box in normal flow; hoist switches place() to fixed. Physical top/left, not
+       logical insets: place() writes style.left/style.top, and under RTL inset-inline-start
+       resolves to physical right -- right:0 and left:Npx both active, so over-constraint discards
+       the JS value and pins the panel to the viewport edge. */
     position: absolute;
     top: 0;
-    /* policy-allow(physical-css): must stay the same physical property positioner.ts's place()
-       overwrites via style.left; see the comment above. */
+    /* policy-allow(physical-css): must stay the physical property positioner.ts's place()
+       overwrites via style.left; see above. */
     left: 0;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-popover));
     display: flex;
@@ -323,9 +308,9 @@ export const styles = css`
       --lr-color-picker-grid-hue,
       var(--_lr-color-picker-grid-hue)
     );
-    /* The saturation/value square is defined as a white-to-transparent tint across the inline axis
-       over a transparent-to-shade wash down the block axis. Both endpoints are the achromatic
-       extremes the model itself requires, written in hsl() so no raw hex literal is involved. */
+    /* Saturation/value square: white-to-transparent across the inline axis over
+       transparent-to-shade down the block axis. Both endpoints are the achromatic extremes the
+       model requires, in hsl() so no raw hex literal. */
     background-image: linear-gradient(to bottom, transparent, hsl(0 0% 0%)),
       linear-gradient(to right, hsl(0 0% 100%), transparent);
   }
@@ -345,8 +330,8 @@ export const styles = css`
     );
     border: var(--lr-border-width-medium) solid var(--lr-color-surface);
     border-radius: 50%;
-    /* Resting chrome, not an overlay: a knob riding directly on the grid it edits, inside a panel
-       that is itself the anchored overlay -- it has to stay a step below its own container. */
+    /* Resting chrome, not an overlay: a knob on the grid it edits, inside a panel that is itself
+       the anchored overlay -- it stays a step below its own container. */
     box-shadow: var(--lr-shadow-s);
     transform: translate(-50%, -50%);
     cursor: grab;
@@ -355,10 +340,9 @@ export const styles = css`
     transform: translate(50%, -50%);
   }
 
-  /* The slider element is the pointer target and is floored at 24px (WCAG 2.5.8) even though the
-     visible ramp is the thinner --lr-color-picker-slider-block-size bar drawn by ::before inside
-     it. Growing the visible bar instead would make a colour picker look like a pair of progress
-     bars; shrinking the target to the bar would leave a 12px-tall touch target. */
+  /* The slider element is the pointer target, floored at 24px (WCAG 2.5.8); the visible ramp is
+     the thinner --lr-color-picker-slider-block-size bar ::before draws inside it. Growing the bar
+     would look like progress bars; shrinking the target leaves a 12px-tall touch target. */
   [part~="slider"] {
     position: relative;
     block-size: var(--lr-size-1-5rem);
@@ -472,9 +456,9 @@ export const styles = css`
       var(--lr-color-brand)
     );
   }
-  /* A knob's pressed state is the grab itself: the ring deepens and the cursor closes, which is
-     the whole feedback a drag has before the value starts moving. The handle's own fill is the
-     live colour, so it stays untouched here for the same reason as the trigger above. */
+  /* A knob's pressed state is the grab: the ring deepens and the cursor closes, the whole
+     feedback before the value moves. Its fill is the live colour, so it stays untouched, as with
+     the trigger. */
   [part~="grid-handle"]:where(:active),
   [part~="slider-handle"]:where(:active) {
     border-color: color-mix(
@@ -518,9 +502,9 @@ export const styles = css`
     font-family: var(--lr-font-mono);
     font-size: var(--lr-font-size-sm);
   }
-  /* no-pressed-state: pressing a text field places a caret, it does not activate a target -- there
-     is no "did my click register?" gap to fill, and the engaged state it leads to is already drawn
-     by the :focus-visible rule below. Native text inputs have no pressed treatment either. */
+  /* no-pressed-state: pressing a text field places a caret rather than activating a target, and
+     the engaged state is already drawn by :focus-visible below. Native text inputs have no
+     pressed treatment either. */
   [part~="input"]:where(:hover) {
     border-color: var(
       --lr-color-picker-hover-border-color,
@@ -558,9 +542,9 @@ export const styles = css`
       var(--lr-color-brand)
     );
   }
-  /* These two carry their own surface fill (unlike the swatches), so the pressed state is the
-     shared background mix: the button visibly sinks toward the text colour, on top of the deeper
-     edge, and lands in the same direction whether the theme is light or dark. */
+  /* These two carry their own surface fill, unlike the swatches, so pressed is the shared
+     background mix: the button sinks toward the text colour over the deeper edge, the same
+     direction in light and dark. */
   [part~="format-button"]:where(:active),
   [part~="eyedropper-button"]:where(:active) {
     border-color: color-mix(
@@ -622,9 +606,8 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* The selected palette entry is marked by a ring AND a check mark, so the selection never rides
-     on colour alone. Encoded in the part name (not an attribute selector after ::part(), which
-     never matches) so consumers can restyle the selected state too. */
+  /* Ring AND check mark, so selection never rides on colour alone. Encoded in the part name -- an
+     attribute selector after ::part() never matches -- so consumers can restyle it. */
   [part~="swatch-selected"] {
     border-color: var(--lr-color-picker-selected-border, var(--lr-color-brand));
     border-width: var(--lr-border-width-medium);

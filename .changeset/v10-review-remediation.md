@@ -25,6 +25,17 @@ its sibling `<lr-progress-bar>` has had opt-in `show-value` all along, and the r
 claimed the two share "the same value contract". They now actually do. Add `show-value` to keep the
 percentage. `aria-valuetext` still carries it either way, so the accessible value is unchanged.
 
+**`<lr-media-card>`'s `alt` becomes optional, so a decorative image is expressible.** It was
+`alt: string = ''`, and the render read `this.alt || this.filename || <localized generic>` — so an
+explicit `alt=""` was indistinguishable from an absent one and came out as `alt="Image attachment"`.
+There was no way to mark the image decorative, which is the one thing `alt=""` means in HTML. The
+type is now `alt?: string` and the render uses `??`, matching `<lr-image-viewer>` and
+`<lr-document-preview>`, which already documented that contract. Omitting `alt` is unchanged; only
+the value read back from an unset property differs (`''` becomes `undefined`), so a consumer
+comparing `el.alt === ''` should read `el.alt ?? ''`. The nested `<video controls>` label
+deliberately does NOT follow: an empty `alt` there would leave an interactive player with no
+accessible name, and "decorative" is not a state a media control can be in.
+
 **`<lr-attachment-chip>`'s `lr-preview-request` is no longer cancelable.** It was advertised as a
 veto point, but the chip never read `defaultPrevented` and owns no preview default action to
 cancel — its own docs say it "never registers or owns a viewer/overlay" — so `preventDefault()` was
@@ -54,6 +65,40 @@ which mirror `wa-accordion`'s real event names — removing them would have brok
 rather than tidied it. `lr-citation-badge` was also left alone: `lr-citation-select` is an
 established *container*-level event with a richer `{ citation }` detail that containers translate
 its `{ sourceId, index }` into, so unifying there would have delivered two shapes under one name.
+
+### Interaction, focus and visibility corrections
+
+A sweep with a CSS-specificity analyzer found rules that were supposed to win losing to another rule
+in the same shadow stylesheet, so their declarations never applied. The code read correctly and the
+tests were green; only a rendered probe showed the difference.
+
+- **The keyboard highlight is visible on the selected row again** in `<lr-select>`, `<lr-combobox>`,
+  `<lr-model-select>` and `<lr-voice-picker>`. Each had `[aria-selected="true"]` written after the
+  active-descendant rule at equal specificity, so arrow-keying onto the already-selected option
+  produced no visible highlight at all.
+- **`appearance="filled"` has a focus indicator again** on `<lr-combobox>` and `<lr-date-input>`.
+  Both had none: the appearance rule out-ranked `:focus-within`, and the only `outline` in the focus
+  rule was `solid transparent`. Both now express appearance as private custom properties, so no
+  `[part]` rule can out-rank another and the failure mode is structurally impossible.
+- **Pointer feedback restored** where a state rule or a resting rule was swallowing it:
+  `<lr-code-block>`'s line-gutter button (neither hover nor press, ever), `<lr-pagination>`'s page
+  input, `<lr-table>`'s sticky sortable header, `<lr-time-range>`'s active preset,
+  `<lr-agent-trace>`'s active handoff, `<lr-compare-panel>`'s cast vote, `<lr-flow-canvas>`'s
+  selected edge, `<lr-conversation-item>`'s open session, `<lr-option>`, `<lr-entity-chip>` and
+  `<lr-approval-queue>`.
+- **Focus rings restored** on `<lr-calendar>`'s today cell, `<lr-sequence-strip>`'s selected cell,
+  `<lr-embedding-explorer>`'s selected point, and `<lr-dashboard-grid>`/`<lr-flow-canvas>` cells in a
+  collision or drop state.
+- **`hidden` works again** where the component's own stylesheet was defeating the UA default:
+  `<lr-flag>` painted a full-size broken image beside its skeleton while loading, `<lr-video>` kept
+  the controls play button both painted and focusable behind a poster, and nine components let a
+  consumer's `hidden` slotted child stay visible.
+- **Disabled controls look disabled**: `<lr-entity-chip>` and `<lr-approval-queue>` rendered their
+  disabled buttons pixel-identical to enabled ones, with a pointer cursor and full hover feedback.
+- **`<lr-random-content>` actually hides** the candidates it is not showing; its rotation was
+  previously observable only to assistive technology.
+- **`<lr-video>` keeps captions** for a `<track>` with no `kind` attribute, whose HTML missing-value
+  default is `subtitles`.
 
 ### Additive
 

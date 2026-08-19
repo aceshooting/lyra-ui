@@ -27,8 +27,8 @@ export const styles = css`
   }
 
   /* The custom-content slot is an assignment target only: syncCustomNodes() clones its trusted SVG
-     nodes into the component-owned svg above, where they have a real SVG parent and actually
-     paint. Rendering the slot itself would place the originals a second time, outside that svg. */
+     nodes into the component-owned svg above, where they have a real SVG parent and paint.
+     Rendering the slot would place the originals a second time, outside that svg. */
   slot {
     display: none;
   }

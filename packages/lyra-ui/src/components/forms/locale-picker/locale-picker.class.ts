@@ -2,7 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { place } from '../../../internal/positioner.js';
-import { nextId } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
@@ -972,7 +972,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
           aria-expanded=${this.open ? 'true' : 'false'}
           aria-controls=${this.listId}
           aria-activedescendant=${activeId}
-          aria-label=${this.getAttribute('aria-label') || (hasLabel ? nothing : this.localize('localePickerLabel'))}
+          aria-label=${hostAriaLabel(this) ?? (hasLabel ? nothing : this.localize('localePickerLabel'))}
           aria-describedby=${describedBy || nothing}
           aria-required=${this.required ? 'true' : 'false'}
           aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}

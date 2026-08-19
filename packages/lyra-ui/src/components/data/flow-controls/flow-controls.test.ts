@@ -514,3 +514,41 @@ describe('toolbar button hover specificity', () => {
     expect(internalRule).to.contain(':where(');
   });
 });
+
+describe('explicitly empty host aria-label', () => {
+  it('keeps the toolbar group explicitly unnamed instead of substituting the localized fallback', async () => {
+    const explicit = (await fixture(
+      html`<lr-flow-controls aria-label=""></lr-flow-controls>`,
+    )) as LyraFlowControls;
+    await explicit.updateComplete;
+    const base = explicit.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.hasAttribute('aria-label')).to.equal(true);
+    expect(base.getAttribute('aria-label')).to.equal('');
+
+    const omitted = (await fixture(html`<lr-flow-controls></lr-flow-controls>`)) as LyraFlowControls;
+    await omitted.updateComplete;
+    expect(omitted.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Canvas controls');
+  });
+});
+
+describe('a slotted [hidden] action button', () => {
+  it('is removed from the rendered box, not just from the accessibility tree', async () => {
+    const el = (await fixture(html`
+      <lr-flow-controls>
+        <button id="gone" type="button" hidden>Reset view</button>
+        <button id="shown" type="button">Fit</button>
+      </lr-flow-controls>
+    `)) as LyraFlowControls;
+    await el.updateComplete;
+    const gone = el.querySelector<HTMLButtonElement>('#gone')!;
+    const shown = el.querySelector<HTMLButtonElement>('#shown')!;
+    expect(getComputedStyle(gone).display).to.equal('none');
+    expect(gone.getClientRects().length).to.equal(0);
+    // The companion proves the ::slotted(button) rule itself is still live, so the assertion
+    // above cannot pass merely because the cluster failed to style its slotted content at all.
+    // 'flex', not 'inline-flex': the button is a flex item of [part='base'], which blockifies
+    // the inline-flex the ::slotted(button) rule specifies.
+    expect(getComputedStyle(shown).display).to.equal('flex');
+    expect(shown.getClientRects().length).to.equal(1);
+  });
+});

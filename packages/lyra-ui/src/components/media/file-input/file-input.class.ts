@@ -219,6 +219,18 @@ export interface LyraFileInputEventMap {
  * @csspart file-name - Selected filename.
  * @csspart file-size - Localized selected-file size.
  * @csspart remove-button - Removes one selected file.
+ * @cssstate required - Matches while `required` is set. Style with `lr-file-input:state(required)`.
+ * @cssstate optional - Matches while `required` is not set — the complement of `required`.
+ * @cssstate valid - Matches while the control satisfies its constraints — `required`, every entry
+ * in `validators`, and any `setCustomValidity()` error.
+ * @cssstate invalid - Matches while it does not — from the very first render, before the user has
+ * touched anything. Neither this nor `user-invalid` matches while the control is barred from
+ * constraint validation (disabled, or inside a disabled fieldset).
+ * @cssstate user-valid - `valid`, but only after the user has interacted: choosing or dropping
+ * files, removing one, a blur, or a `reportValidity()` call (which is what a submit attempt runs).
+ * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
+ * rather than `invalid`: a pristine required file input is genuinely invalid, but colouring it red
+ * before the user has done anything is hostile.
  * @cssstate blank - Matches while no files are selected.
  * @cssstate dragging - Matches during an active file drag session.
  * @cssprop [--lr-file-input-font-size=var(--lr-form-control-font-size)] - Label and selected-filename

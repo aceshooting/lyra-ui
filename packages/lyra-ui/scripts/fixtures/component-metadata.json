@@ -362,7 +362,7 @@
         "usage": "::part(accordion-item)"
       },
       "removalNotBefore": "10.0.0",
-      "rationale": "The accordion-item part names the outer wrapper explicitly; base remains on that same node during the compatibility window."
+      "rationale": "The accordion-item part names the outer wrapper explicitly; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: Web Awesome still publishes its own deprecated `base` part on `wa-accordion-item`, and a mirrored tag owes its whole upstream surface, so this alias is removed only when upstream's is."
     },
     {
       "tag": "lr-file-input",
@@ -375,7 +375,7 @@
         "usage": "::part(file-input)"
       },
       "removalNotBefore": "10.0.0",
-      "rationale": "The file-input part names the interactive picker surface; base remains on that same node during the compatibility window."
+      "rationale": "The file-input part names the interactive picker surface; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-file-input` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is."
     },
     {
       "tag": "lr-file-input",
@@ -388,7 +388,7 @@
         "usage": "::part(form-control-label)"
       },
       "removalNotBefore": "10.0.0",
-      "rationale": "The form-control-label part follows the shared form-control vocabulary; label remains on that same node during the compatibility window."
+      "rationale": "The form-control-label part follows the shared form-control vocabulary; label remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-file-input` still publishes its own deprecated `label` part, so this alias is removed only when upstream's is."
     },
     {
       "tag": "lr-icon",
@@ -402,7 +402,7 @@
         "usage": "canvas=\"auto\""
       },
       "removalNotBefore": "10.0.0",
-      "rationale": "autoWidth is a boolean compatibility spelling that cannot express fixed canvas sizes; canvas covers both automatic and explicit sizing."
+      "rationale": "autoWidth is a boolean compatibility spelling that cannot express fixed canvas sizes; canvas covers both automatic and explicit sizing. That version is a policy floor, not a plan: `wa-icon` still publishes its own deprecated `auto-width` attribute, so this alias is removed only when upstream's is."
     },
     {
       "tag": "lr-known-date",
@@ -415,7 +415,7 @@
         "usage": "::part(form-control-label)"
       },
       "removalNotBefore": "10.0.0",
-      "rationale": "The form-control-label part matches the shared form-control vocabulary; label remains on that same node during the compatibility window."
+      "rationale": "The form-control-label part matches the shared form-control vocabulary; label remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-known-date` still publishes its own deprecated `label` part, so this alias is removed only when upstream's is."
     },
     {
       "tag": "lr-qr-code",
@@ -428,7 +428,7 @@
         "usage": "::part(qr-code)"
       },
       "removalNotBefore": "10.0.0",
-      "rationale": "The qr-code part names the rendered code wrapper explicitly; base remains on that same node during the compatibility window."
+      "rationale": "The qr-code part names the rendered code wrapper explicitly; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-qr-code` still publishes `base` as a deprecated part and `sl-qr-code` still publishes it as its only, undeprecated part, so this alias stays for as long as either upstream ships it."
     },
     {
       "tag": "lr-sparkline",
@@ -441,7 +441,7 @@
         "usage": "::part(sparkline)"
       },
       "removalNotBefore": "10.0.0",
-      "rationale": "The sparkline part names the rendered SVG wrapper unambiguously; base remains on that same node during the compatibility window."
+      "rationale": "The sparkline part names the rendered SVG wrapper unambiguously; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-sparkline` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is."
     },
     {
       "tag": "lr-video-playlist",
@@ -454,7 +454,7 @@
         "usage": "::part(video-playlist)"
       },
       "removalNotBefore": "10.0.0",
-      "rationale": "The video-playlist part identifies the root component explicitly; base remains on the same root node for migration compatibility."
+      "rationale": "The video-playlist part identifies the root component explicitly; base remains on the same root node for migration compatibility. That version is a policy floor, not a plan: `wa-video-playlist` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is."
     }
   ],
   "history": {
@@ -11349,7 +11349,7 @@
     "current": {
       "version": "9.1.1",
       "sourceCommit": null,
-      "manifestSha256": "4d30aca720b86eaf5ee1ae685d62fd6afd580d1f53b9b8e46325e365289c1792",
+      "manifestSha256": "3aec46b9722a8f0c57e24aba4241f7eb5e4d7d66007be16c46a1b756751fe50f",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",

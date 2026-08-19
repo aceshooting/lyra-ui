@@ -177,7 +177,7 @@ describe('lr-calendar-viewer', () => {
   it('supports a .strings override for the calendarViewerLabel fallback', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer .strings=${{ calendarViewerLabel: 'Visionneuse de calendrier' }}></lr-calendar-viewer>`); expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Visionneuse de calendrier'); });
   it('forwards document anchors/highlights and advertises its text contracts', () => {
     const definition = getDefaultDocumentRendererRegistry().get('text/calendar')!;
-    const highlights: LyraHighlight[] = [{ id: 'event', anchor: { kind: 'text-quote', exact: 'planning' } }];
+    const highlights: LyraHighlight[] = [{ id: 'event', anchor: { kind: 'text-quote', quote: 'planning' } }];
     const anchor = { kind: 'fragment' as const, id: 'event' };
     const rendered = definition.render!({
       name: 'team.ics',

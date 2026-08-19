@@ -18,6 +18,7 @@ import {
   collectSources,
   findMissingDependencies,
   htmlTemplateChunks,
+  locallyRegisteredTags,
   renderedTags,
 } from './check-component-dependencies.mjs';
 
@@ -408,6 +409,123 @@ test('a suppression for a tag that is not missing is itself a finding', () => {
   const findings = findMissingDependencies(fixture);
   assert.equal(findings.length, 1);
   assert.match(findings[0], /unused suppression/);
+});
+
+// ---------------------------------------------------------------------------
+// Local `defineElement()` registrations (the widget-renderer shape)
+// ---------------------------------------------------------------------------
+
+/**
+ * `widget-renderer.ts` reduced: an entry that imports eight side-effect-FREE `*.class.js` modules
+ * and registers them itself, because its widget registry maps a document's declarative `type` onto
+ * those elements at runtime rather than rendering them from a template. Reading only the inventory's
+ * `registrationModule` map, the checker saw an entry that registers nothing but its own tag.
+ */
+const widgetRendererFixture = () => ({
+  components: [
+    {
+      tag: 'lr-widget-renderer',
+      classModule: 'src/components/conversation/widget-renderer/widget-renderer.class.ts',
+      registrationModule: 'src/components/conversation/widget-renderer/widget-renderer.ts',
+    },
+    {
+      tag: 'lr-card',
+      classModule: 'src/components/layout/card/card.class.ts',
+      registrationModule: 'src/components/layout/card/card.ts',
+    },
+    {
+      tag: 'lr-stat',
+      classModule: 'src/components/data/stat/stat.class.ts',
+      registrationModule: 'src/components/data/stat/stat.ts',
+    },
+  ],
+  files: new Map([
+    [
+      'src/components/conversation/widget-renderer/widget-renderer.ts',
+      `export * from './widget-renderer.class.js';
+       import { LyraWidgetRenderer } from './widget-renderer.class.js';
+       import { LyraCard } from '../../layout/card/card.class.js';
+       import { LyraStat } from '../../data/stat/stat.class.js';
+       import { defineElement } from '../../../internal/prefix.js';
+       defineElement('card', LyraCard);
+       defineElement('stat', LyraStat);
+       defineElement('widget-renderer', LyraWidgetRenderer);`,
+    ],
+    ['src/components/conversation/widget-renderer/widget-renderer.class.ts', 'export class Lyra {}'],
+    ['src/components/layout/card/card.ts', REGISTRATION('card')],
+    ['src/components/layout/card/card.class.ts', 'export class Lyra {}'],
+    ['src/components/data/stat/stat.ts', REGISTRATION('stat')],
+    ['src/components/data/stat/stat.class.ts', 'export class Lyra {}'],
+  ]),
+});
+
+test('locallyRegisteredTags reads literal defineElement() calls and ignores computed names', () => {
+  const source = `
+    import { defineElement, defineElementForPackageVersion } from '../../../internal/prefix.js';
+    defineElement('card', LyraCard);
+    defineElement(\`stat\`, LyraStat);
+    defineElementForPackageVersion('badge', LyraBadge, VERSION);
+    defineElement(dynamicName, LyraUnknown);
+    const documented = "defineElement('never-registered', X)";
+  `;
+  assert.deepEqual([...locallyRegisteredTags(source, 'entry.ts')].sort(), ['lr-badge', 'lr-card', 'lr-stat']);
+});
+
+test("an entry's own defineElement() calls register those components, as in widget-renderer", () => {
+  const { findings, graph } = analyzeComponentDependencies(widgetRendererFixture());
+  assert.deepEqual(findings, []);
+  const entry = graph.find((component) => component.tag === 'lr-widget-renderer');
+  assert.deepEqual(
+    entry?.directComponents,
+    ['lr-card', 'lr-stat'],
+    'the components the entry defines itself are direct edges, not an empty dependency set',
+  );
+  assert.deepEqual(
+    entry?.transitiveComponents,
+    [],
+    'importing a class module pulls in no further registrations, so nothing is transitive here',
+  );
+});
+
+test('a locally registered component satisfies a tag the entry renders', () => {
+  const fixture = widgetRendererFixture();
+  fixture.files.set(
+    'src/components/conversation/widget-renderer/widget-renderer.class.ts',
+    'export class Lyra { render() { return html`<lr-card part="widget"></lr-card>`; } }',
+  );
+  assert.deepEqual(findMissingDependencies(fixture), []);
+});
+
+test('a locally registered component still owes ITS renders to the same entry', () => {
+  const fixture = widgetRendererFixture();
+  fixture.components.push({
+    tag: 'lr-badge',
+    classModule: 'src/components/overlays/badge/badge.class.ts',
+    registrationModule: 'src/components/overlays/badge/badge.ts',
+  });
+  fixture.files.set('src/components/overlays/badge/badge.ts', REGISTRATION('badge'));
+  fixture.files.set('src/components/overlays/badge/badge.class.ts', 'export class Lyra {}');
+  fixture.files.set(
+    'src/components/layout/card/card.class.ts',
+    'export class Lyra { render() { return html`<lr-badge part="count"></lr-badge>`; } }',
+  );
+  const findings = findMissingDependencies(fixture);
+  const inherited = findings.filter((finding) => finding.includes('widget-renderer.ts'));
+  assert.equal(inherited.length, 1, 'seeing the registration also means owning what it renders');
+  assert.match(inherited[0], /<lr-badge>/);
+  assert.match(inherited[0], /through <lr-card>, which it registers/);
+  // lr-card's own entry is separately at fault for the same render; both are real findings.
+  assert.equal(findings.length, 2);
+});
+
+test('a defineElement() for a tag outside the inventory is ignored, not reported as unknown', () => {
+  const fixture = widgetRendererFixture();
+  fixture.files.set(
+    'src/components/conversation/widget-renderer/widget-renderer.ts',
+    `${fixture.files.get('src/components/conversation/widget-renderer/widget-renderer.ts')}
+     defineElement('not-a-component', Something);`,
+  );
+  assert.deepEqual(findMissingDependencies(fixture), []);
 });
 
 // ---------------------------------------------------------------------------

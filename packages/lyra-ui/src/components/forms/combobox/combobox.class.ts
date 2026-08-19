@@ -6,7 +6,7 @@ import {
   type LyraEventDetailSnapshot,
 } from '../../../internal/lyra-element.js';
 import { place } from '../../../internal/positioner.js';
-import { nextId } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { chevronIcon, closeIcon } from '../../../internal/icons.js';
 import {
   AnchoredValidityController,
@@ -1610,7 +1610,17 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     }
   }
 
-  private onOptionChange = (): void => {
+  private onOptionChange = (e: Event): void => {
+    // The notification is sealed here rather than allowed to keep bubbling: it
+    // is a private child-to-parent refresh signal, not part of this
+    // component's event contract, and it carries the *option's* target/detail
+    // rather than the combobox's. Left uncontained it escapes the host and
+    // reaches consumer code as an undocumented, undiscoverable event; a
+    // consumer who needs to know the value moved already has
+    // `lr-change`/`change`/`input`. A listener bound directly to the
+    // `<lr-option>` still sees it -- the option is the event target, and the
+    // target's own listeners run before this slot listener.
+    e.stopPropagation();
     // Touch the `options` array reference so Lit's change-detection sees a
     // "new" value and re-renders `renderRows()`/`filtered`/`labelFor()` off
     // the options' now-current data -- the *set* of options is unchanged,
@@ -2568,7 +2578,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
               id=${this.inputId}
               part="combobox-input"
               role="combobox"
-              aria-label=${this.getAttribute('aria-label') ||
+              aria-label=${hostAriaLabel(this) ??
               (hasLabel
                 ? nothing
                 : this.placeholder || this.localize('comboboxLabel'))}

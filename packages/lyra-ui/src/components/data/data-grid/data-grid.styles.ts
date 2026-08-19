@@ -31,15 +31,14 @@ export const styles = css`
     color: var(--text-color, var(--_lr-data-grid-text-color));
   }
 
-  /* Wires the size density ladder into the values above. The "m" tier is the :host block's own
-     default, so it is intentionally absent here -- these rules only override the non-default
-     tiers, leaving "m" byte-for-byte what it always rendered.
+  /* Wires the size density ladder into the values above; "m" is the :host block's own default and
+     intentionally absent, so these rules override only the non-default tiers.
 
-     Deliberately NOT sourced from the shared sizes stylesheet's --lr-form-control-height /
-     --lr-form-control-padding-* -- that ladder is tuned for single-line form controls and its "m"
-     tier (2.5rem) sits BELOW this component's own "m" row-height (3.5rem), so borrowing it verbatim
-     would make "l" (3rem) render shorter than the default row, inverting the ladder. Each tier
-     below instead scales this component's own row-height/cell-padding baseline directly. */
+     Deliberately NOT the shared sizes stylesheet's --lr-form-control-height and
+     --lr-form-control-padding-* tokens: tuned for single-line form controls, its "m" (2.5rem) sits
+     BELOW this component's own "m" row-height (3.5rem), so borrowing it would make "l" (3rem)
+     render shorter than the default row, inverting the ladder. Each tier below scales this
+     component's own row-height/cell-padding baseline. */
   :host([size="xs"]) {
     --_lr-data-grid-cell-padding: var(--lr-space-xs);
     --_lr-data-grid-header-row-height: var(--lr-size-2rem);
@@ -116,8 +115,8 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
   }
 
-  /* Search decorations belong to WebKit's native chrome. Reset them unconditionally in both
-     entry points so the component owns the control palette on Safari as well as Chromium. */
+  /* Search decorations are WebKit native chrome; reset unconditionally in both entry points so the
+     component owns the control palette on Safari as well as Chromium. */
   [part="search"]::-webkit-search-cancel-button,
   [part="search"]::-webkit-search-decoration,
   [part="filter-panel"] input[type="search"]::-webkit-search-cancel-button,
@@ -312,9 +311,9 @@ export const styles = css`
     );
   }
 
-  /* MUST stay after the selected-row rule above: both are (0,2,0), so source order alone decides,
-     and the selected row is the one a user is most likely to hover next -- put this before and the
-     single most common hover in a selectable grid would be the one hover with no feedback. */
+  /* MUST stay after the selected-row rule above: both are (0,2,0), so source order alone decides.
+     The selected row is the one a user is most likely to hover next, so placing this first would
+     leave the commonest hover in a selectable grid with no feedback. */
   [part~="row"]:hover {
     background: var(
       --row-hover-background,
@@ -322,9 +321,9 @@ export const styles = css`
     );
   }
 
-  /* MUST stay after the selected-row rule above: both are (0,2,0), so source order alone decides,
-     and the selected row is the one a user presses to DEselect -- put this first and the single
-     most common press in a selectable grid would be the one press with no feedback. */
+  /* MUST stay after the selected-row rule above: both are (0,2,0), so source order alone decides.
+     The selected row is the one a user presses to DEselect, so placing this first would leave the
+     commonest press in a selectable grid with no feedback. */
   [part~="row"]:active {
     background: color-mix(
       in srgb,
@@ -604,9 +603,9 @@ export const styles = css`
     margin-inline-start: var(--lr-size-neg-4px);
   }
 
-  /* chevronIcon() points right by default, so 'next'/'last' render unrotated and
-     'first'/'previous' rotate to point left -- then both pairs flip under RTL, exactly like
-     lr-pagination's first/previous/next/last icons. */
+  /* chevronIcon() points right by default, so 'next'/'last' render unrotated and 'first'/'previous'
+     rotate to point left -- both pairs then flip under RTL, exactly like lr-pagination's
+     first/previous/next/last icons. */
   [part="first-icon"],
   [part="previous-icon"] {
     transform: rotate(180deg);

@@ -221,6 +221,41 @@ function moduleImports(source, file) {
   return imports;
 }
 
+/**
+ * Every `lr-*` tag a module registers *itself*, with a literal `defineElement('name', Ctor)` call.
+ *
+ * The usual registration entry registers exactly its own tag and reaches its dependencies by
+ * importing their entries, so this normally adds nothing the `registrationModule` map does not
+ * already say. `widget-renderer.ts` is the exception the checker used to be blind to: it imports
+ * eight side-effect-FREE `*.class.js` modules and calls `defineElement()` on each itself, because
+ * its widget registry maps a document's declarative `type` onto those elements at runtime and there
+ * is no template to scan. Reading only `registrationByModule`, the checker concluded that
+ * `<lr-widget-renderer>` registers nothing but itself -- and `scripts/fixtures/component-
+ * integration.json` published that as `dependencies: { direct: [], transitive: [] }`, which is
+ * simply false: importing that one module registers nine custom elements.
+ */
+export function locallyRegisteredTags(source, file) {
+  const tags = new Set();
+  if (!/\bdefineElement(?:ForPackageVersion)?\s*\(/.test(source)) return tags;
+  visitNodes(parseSource(source, file), (node) => {
+    if (node.type !== 'CallExpression') return;
+    const callee = node.callee;
+    const name =
+      callee?.type === 'Identifier'
+        ? callee.name
+        : callee?.type === 'MemberExpression' && !callee.computed && callee.property?.type === 'Identifier'
+          ? callee.property.name
+          : undefined;
+    if (name !== 'defineElement' && name !== 'defineElementForPackageVersion') return;
+    const first = node.arguments?.[0];
+    if (first?.type === 'Literal' && typeof first.value === 'string') tags.add(`lr-${first.value}`);
+    else if (first?.type === 'TemplateLiteral' && first.expressions.length === 0) {
+      tags.add(`lr-${first.quasis[0]?.value.cooked ?? ''}`);
+    }
+  });
+  return tags;
+}
+
 /** Identifiers this module extends, so a superclass's renders reach the subclass's entry. */
 function extendedNames(source, file) {
   const names = new Set();
@@ -293,6 +328,17 @@ export function analyzeComponentDependencies({ components, files }) {
     if (!extendsCache.has(file)) extendsCache.set(file, extendedNames(source(file), file));
     return extendsCache.get(file);
   };
+  const registrationCache = new Map();
+  /** The known component tags this module registers on its own, via a literal `defineElement()`. */
+  const registrationsIn = (file) => {
+    if (!registrationCache.has(file)) {
+      registrationCache.set(
+        file,
+        [...locallyRegisteredTags(source(file), file)].filter((tag) => byTag.has(tag)),
+      );
+    }
+    return registrationCache.get(file);
+  };
   const targetCache = new Map();
   const targetOf = (file, specifier) => {
     const key = `${file}\0${specifier}`;
@@ -357,6 +403,9 @@ export function analyzeComponentDependencies({ components, files }) {
     for (const file of closure) {
       const tag = registrationByModule.get(file);
       if (tag) registered.add(tag);
+      // A module may also register components other than the one it is the entry for; see
+      // locallyRegisteredTags.
+      for (const local of registrationsIn(file)) registered.add(local);
     }
 
     // tag -> the registered component whose rendering needs it (the entry's own tag wins, so the
@@ -406,10 +455,14 @@ export function analyzeComponentDependencies({ components, files }) {
           `${reason ? ` ("${reason}")` : ''} -- <${tag}> is either registered or never rendered; delete the comment`,
       );
     }
-    const directRegistered = importsOf(entry)
-      .map(({ specifier }) => targetOf(entry, specifier))
-      .map((file) => registrationByModule.get(file))
-      .filter(Boolean);
+    const directRegistered = [
+      ...importsOf(entry)
+        .map(({ specifier }) => targetOf(entry, specifier))
+        .map((file) => registrationByModule.get(file))
+        .filter(Boolean),
+      // A tag the entry defines itself is as direct an edge as one it imports an entry for.
+      ...registrationsIn(entry),
+    ];
     const directlyRendered = [...required]
       .filter(([, renderer]) => renderer === component.tag)
       .map(([tag]) => tag);

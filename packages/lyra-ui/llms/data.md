@@ -1,3 +1,27 @@
+## Breaking changes in 10.0.0
+
+`<lr-calendar>`'s `firstDayOfWeek`/`first-day-of-week` drops the bare `0`–`6` integer form and stops
+defaulting to a hardcoded Monday. The type is now exactly `LyraCalendarFirstDayOfWeek`
+(`'auto'|'sun'|'mon'|'tue'|'wed'|'thu'|'fri'|'sat'`, default `'auto'`), so there is one way to
+express a week start instead of two that had to be sanitized and wrapped against each other, and
+`'auto'` resolves through the same `resolveFirstDayOfWeek()` contract `<lr-date-picker>`/
+`<lr-date-input>` already use. An unset `<lr-calendar>` and an unset `<lr-date-picker>` on the same
+page therefore agree at last — Sunday-first under `en-US`, Monday-first under `fr-FR` — where the
+calendar previously rendered Monday-first everywhere while already formatting its weekday *labels*
+from the locale. Replace `first-day-of-week="1"` with `first-day-of-week="mon"`: a leftover numeric
+value is not mapped or clamped, it is simply an unrecognized token and falls through to Sunday. If
+the locale-independent Monday start was deliberate, keep it by writing `"mon"` explicitly instead of
+relying on the default. There is no `wa-calendar`, so no upstream mirror is affected.
+
+Also corrected in 10.0.0 — not breaking, but visible. A specificity sweep found rules that were
+meant to win yet were losing to another rule in the same shadow stylesheet, so their declarations
+never applied at all. In this family: `<lr-calendar>`'s today cell has a focus ring again (its
+`[data-today]` outline was swallowing it, leaving today's cell pixel-identical focused and at rest)
+and its adjacent-month cells take selection and pointer feedback again; `<lr-table>`'s header cell
+that is both sticky and sortable, `<lr-pagination>`'s page input, `<lr-sequence-strip>`'s selected
+cell and `<lr-flow-canvas>`'s selected edge regain hover/press/focus feedback; and
+`<lr-flow-controls>` honors a `hidden` slotted action button instead of painting it.
+
 ## `lr-sparkline`
 
 Zero-dependency inline SVG trend chart (mirrors `<wa-sparkline>`). Its default allocation is one

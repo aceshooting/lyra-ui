@@ -45,10 +45,10 @@ export const styles = css`
   }
   ${formControlRequiredMarker}
 
-  /* One real <input> stretched invisibly across the presentational segments. It remains the native
+  /* One real <input> stretched invisibly across the presentational segments: the native
      integration point for SMS autofill, IME composition, mobile keyboards and selection, while the
-     fixed-cell key/paste handlers map editing intents into the visual model. One field also keeps
-     the control to one tab stop, which is what the WAI-ARIA text-input pattern expects. */
+     fixed-cell key/paste handlers map editing intents into the visual model. It also keeps the
+     control to the single tab stop the WAI-ARIA text-input pattern expects. */
   [part~='segments'] {
     position: relative;
     display: flex;
@@ -77,8 +77,8 @@ export const styles = css`
     padding: 0;
     border: none;
     background: none;
-    /* Transparent rather than hidden: a hidden input cannot receive focus or show a native
-       autofill affordance, and opacity: 0 keeps it a real, focusable text field. */
+    /* Transparent rather than hidden: a hidden input cannot take focus or show a native autofill
+       affordance; opacity: 0 keeps it a real, focusable text field. */
     color: transparent;
     caret-color: transparent;
     font: inherit;
@@ -128,12 +128,11 @@ export const styles = css`
     user-select: none;
   }
 
-  /* Masking is display-only: the real characters stay in value and in the input the screen
-     reader reads, exactly like a password field's dots. Generated content rather than rendered
-     text, so the glyph can never reach an accessible name -- the segment boxes are aria-hidden
-     and ::after content is not exposed to assistive technology in the first place.
-     The placeholder-mask token is the same glyph in a segment that holds nothing yet, so the
-     field reads as a fixed-length code before any entry. */
+  /* Display-only masking: the real characters stay in value and in the input the screen reader
+     reads, like a password field's dots. Generated content, not rendered text, so the glyph cannot
+     reach an accessible name -- the segment boxes are aria-hidden and ::after content is not
+     exposed to assistive technology anyway. placeholder-mask is the same glyph in a still-empty
+     segment, so the field reads as a fixed-length code before any entry. */
   [part~='masked']::after,
   [part~='placeholder-mask']::after {
     content: var(--mask-char, var(--lr-otp-input-mask-char, var(--_lr-otp-input-mask-char-default)));

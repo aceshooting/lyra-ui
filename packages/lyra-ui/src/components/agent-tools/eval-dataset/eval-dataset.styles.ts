@@ -34,9 +34,9 @@ export const styles = css`
   :where([part='remove-button']):hover:where(:not(:disabled)) {
     border-color: var(--lr-color-brand);
   }
-  /* The hover recolours the border only, which leaves the pressed step nothing to deepen -- so
-     pressed tints the button's own surface fill toward --lr-color-mix-partner (which follows the
-     text colour) instead, darkening in a light theme and lightening in a dark one. */
+  /* Hover recolours the border only, leaving the pressed step nothing to deepen, so pressed tints
+     the button's own surface fill toward --lr-color-mix-partner, which follows the text colour --
+     darkening in a light theme, lightening in a dark one. */
   :where([part='add-button']):active:where(:not(:disabled)),
   :where([part='remove-button']):active:where(:not(:disabled)) {
     background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
@@ -88,7 +88,7 @@ export const styles = css`
   }
   /* no-pressed-state: a search field is a caret target, not a push target -- pointer-down places an
      insertion point and hands the affordance to :focus-visible, so a pressed tint would flash for
-     one frame and then be contradicted by the focus ring. */
+     one frame before the focus ring contradicted it. */
   :where([part='search-input']):hover:where(:not(:disabled)) {
     border-color: var(--lr-color-brand);
   }

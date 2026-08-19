@@ -23,9 +23,11 @@ columns. Consumes the same `LyraSpan[]` as `<lr-span-waterfall>`.
 under `lr-span-waterfall` above (exported from `trace-tree/span.ts`); hierarchy comes from
 `parentId`, and a span whose `parentId` is missing or doesn't resolve within the same array renders
 as a root rather than being dropped. `activeSpanId: string | null = null`
-(attribute `active-span-id`), `label: string = ''`, `showTokens: boolean = false` (attribute
+(attribute `active-span-id`), `label?: string`, `showTokens: boolean = false` (attribute
 `show-tokens`) — surfaces `tokensIn`/`tokensOut`, `showCost: boolean = false` (attribute
 `show-cost`) — surfaces `costText`, and `hideBars: boolean = false` (attribute `hide-bars`).
+`label` is an optional accessible-name override for the `role="tree"` element: omission localizes
+the default, and any supplied string — including `''` — is rendered verbatim.
 Token counts render only when finite and non-negative; invalid metrics are omitted rather than
 reaching `Intl.NumberFormat`. A row's accessible name includes its optional `detail` text as well
 as its name/status/metrics, and updates when the supplied span data changes. Every trace view uses

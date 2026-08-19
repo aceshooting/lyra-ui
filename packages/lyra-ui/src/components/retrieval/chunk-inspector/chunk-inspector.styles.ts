@@ -4,21 +4,19 @@ export const styles = css`
   :host {
     display: block;
   }
-  /* Two rendering paths, one presentation. Below \`virtualize-at\` a chunk row is committed into
-     this component's own shadow root, where a plain [part~='x'] selector matches it. Above it the
-     identical row template becomes <lr-virtual-list>'s .renderItem, and Lit commits that content
-     inside *that* component's shadow root -- a different tree, which no selector scoped to this one
-     can ever reach. lr-virtual-list::part(x) crosses exactly that one boundary, so both selectors
-     are required for every row-level part; the pairing is the same one <lr-ingestion-queue> uses
-     for its own dual-path rows.
+  /* Two rendering paths, one presentation. Below \`virtualize-at\` a chunk row lands in this
+     component's own shadow root, where [part~='x'] matches it; above it the same row template
+     becomes <lr-virtual-list>'s .renderItem and lands in *that* shadow root, out of reach of any
+     selector scoped here. lr-virtual-list::part(x) crosses exactly that one boundary, so every
+     row-level part needs both selectors -- the pairing <lr-ingestion-queue> uses for its dual-path
+     rows.
 
-     Row state is carried by an extra part *token* (chunk-current, score-fill-danger, ...) rather
-     than by the row's own attribute, because Shadow Parts forbids an attribute selector after
-     ::part(): ::part(chunk)[aria-current='true'] is invalid CSS, so the whole rule would be
-     dropped. ::part() matches against the part-name list, so a second token costs nothing and is
-     reachable from a consumer stylesheet too. The mirrored attributes (aria-current, data-tone,
-     data-clamped) stay on the elements -- they carry the semantics, and a bare [part~=] selector
-     inside this tree can still use them. */
+     Row state rides on an extra part *token* (chunk-current, score-fill-danger, ...) rather than
+     the row's own attribute: Shadow Parts forbids an attribute selector after ::part(), so
+     ::part(chunk)[aria-current='true'] is invalid CSS and the whole rule drops. ::part() matches
+     the part-name list, so a second token costs nothing and reaches consumer stylesheets too. The
+     mirrored attributes (aria-current, data-tone, data-clamped) stay on the elements: they carry
+     the semantics, and a bare [part~=] selector here can still use them. */
   [part~='chunk'],
   lr-virtual-list::part(chunk) {
     display: flex;
@@ -40,14 +38,12 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font-variant-numeric: tabular-nums;
   }
-  /* text-quiet's contrast ratio against brand-quiet lands at ~4.24:1 -- just under the WCAG AA
-     4.5:1 floor for normal-size text -- even though it comfortably passes against the plain
-     (non-current) background used the rest of the time. Same class of bug already hit and fixed in
-     lr-attachment-chip's [part='size'], lr-chat-message's [part='footer'] and lr-conversation-item's
-     [part='excerpt']/[part='timestamp']; same fix, full-strength text color once current. Paired
-     with --lr-chunk-inspector-current-bg: a consumer that restyles one has to keep the ratio, so
-     both arms of the pair are overridable. Ordered after the base score rule above, which it has to
-     win on source order (both are single-token selectors of equal specificity). */
+  /* text-quiet on brand-quiet is ~4.24:1, under the WCAG AA 4.5:1 floor for normal-size text,
+     though it passes against the plain non-current background. Same fix as lr-attachment-chip's
+     [part='size'], lr-chat-message's [part='footer'] and lr-conversation-item's
+     [part='excerpt']/[part='timestamp']: full-strength text color once current, and overridable in
+     pair with --lr-chunk-inspector-current-bg so a consumer restyling one arm keeps the ratio. MUST
+     stay after the base score rule above -- equal specificity, so source order alone decides. */
   [part~='score-current'],
   lr-virtual-list::part(score-current) {
     color: var(--lr-chunk-inspector-current-color, var(--lr-color-text));
@@ -100,9 +96,9 @@ export const styles = css`
     color: var(--lr-color-brand);
     text-decoration: underline;
   }
-  /* The pressed state adds the surface the hover underline has no room for: this button is
-     transparent-backed link chrome, so a wash mixed from that transparent base is the only thing
-     that can read as "held down" without repainting the brand-colored label. */
+  /* Hover already owns the underline, so the press adds a surface. This is transparent-backed link
+     chrome, so a wash mixed from that transparent base is the only thing that reads as "held down"
+     without repainting the brand-colored label. */
   [part~='open-button']:active,
   lr-virtual-list::part(open-button):active {
     color: var(--lr-color-brand);
@@ -118,15 +114,13 @@ export const styles = css`
   lr-virtual-list::part(title) {
     font: inherit;
   }
-  /* chunk.text is arbitrary consumer-supplied content -- it may genuinely be RTL prose (e.g. a
-     real Arabic/Hebrew search snippet). isolate (not plaintext, and never a forced dir="ltr")
-     keeps the paragraph's own edge punctuation from being reordered by the surrounding host
-     direction while still letting the browser's per-paragraph bidi detection run correctly for
-     genuinely RTL content. Without it, under dir="rtl" a trailing period (e.g. "...Curie in
-     1898.") visually jumps to the front of the line. Chromium and Firefox already default block
-     boxes to unicode-bidi: isolate (see the HTML "bidi rendering" UA-stylesheet rules), which
-     masks this on those two engines; WebKit does not, so the bug and this rule are only visible
-     cross-engine -- see this component's own dir="rtl" test. */
+  /* chunk.text is arbitrary consumer content and may genuinely be RTL prose. isolate -- not
+     plaintext, never a forced dir="ltr" -- keeps the paragraph's edge punctuation from being
+     reordered by the host direction while per-paragraph bidi detection still runs for real RTL
+     content; without it, under dir="rtl" a trailing period ("...Curie in 1898.") jumps to the front
+     of the line. Chromium and Firefox default block boxes to unicode-bidi: isolate (the HTML "bidi
+     rendering" UA rules), masking it there; WebKit does not, so this is only visible cross-engine
+     -- see this component's own dir="rtl" test. */
   [part~='text'],
   lr-virtual-list::part(text) {
     margin: 0;

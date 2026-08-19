@@ -11,7 +11,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import { nextId } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
@@ -281,10 +281,6 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     locale: () => this.effectiveLocale,
     searchableFields: (entry) => [entry.id, entry.label],
     emitChange: (detail) => this.emit('lr-change', detail),
-    // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- native focus/blur (already
-    // relayed by the controller itself) are the only focus notifications this control emits now.
-    // The controller still requires this hook, so it's a no-op rather than an omitted property.
-    emitFocusAlias: () => {},
     onValueChange: (value, oldValue) => {
       this.internals.setFormValue(value);
       this.updateValidity();
@@ -847,7 +843,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
         aria-expanded=${this.open ? 'true' : 'false'}
         aria-controls=${this.listId}
         aria-activedescendant=${activeId}
-        aria-label=${this.getAttribute('aria-label') || (hasLabel ? nothing : this.placeholder || this.localize('model'))}
+        aria-label=${hostAriaLabel(this) ?? (hasLabel ? nothing : this.placeholder || this.localize('model'))}
         aria-describedby=${describedBy || nothing}
         aria-required=${this.required ? 'true' : 'false'}
         aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
@@ -885,7 +881,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
           id=${this.controlId}
           part="combobox-input"
           role="combobox"
-          aria-label=${this.getAttribute('aria-label') || (hasLabel ? nothing : this.placeholder || this.localize('model'))}
+          aria-label=${hostAriaLabel(this) ?? (hasLabel ? nothing : this.placeholder || this.localize('model'))}
           aria-expanded=${this.open ? 'true' : 'false'}
           aria-controls=${this.listId}
           aria-activedescendant=${activeId}

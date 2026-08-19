@@ -8,10 +8,9 @@ export const styles = css`
     max-inline-size: 100%;
     box-sizing: border-box;
     --_lr-token-input-min-input-inline-size: var(--lr-size-4rem);
-    /* Two-value shorthand, block axis first: the INLINE half stays this component's own denser
-       ladder (see the per-tier blocks below), while the BLOCK half is taken from the shared
-       form-control ladder so it can never outgrow the height floor declared beside it. See the
-       [part='input-wrapper'] comment for why the block axis is not free to differ. */
+    /* Two-value shorthand, block axis first: inline half is this component's denser ladder
+       (per-tier blocks below), block half the shared form-control ladder so it cannot outgrow the
+       height floor beside it -- see the [part='input-wrapper'] comment. */
     --_lr-token-input-padding: var(--lr-form-control-padding-block)
       var(--lr-space-xs);
     --_lr-token-input-font-size: var(--lr-font-size-md-sm);
@@ -19,27 +18,22 @@ export const styles = css`
     --_lr-token-input-gap: var(--lr-space-xs);
     --_lr-token-input-token-gap: var(--lr-space-2xs);
     --_lr-token-input-radius: var(--lr-radius);
-    /* The row's height floor comes from the ONE shared form-control ladder
-       (internal/sizes.styles.ts) rather than a private copy of the same six values, so retuning
-       --lr-theme-form-control-height-* moves this control and every sibling field together. That
-       ladder matches both spellings of every tier, which is what makes size="small" resolve here
-       without a per-component alias rule. */
+    /* The row's height floor is the one shared form-control ladder (internal/sizes.styles.ts), so
+       --lr-theme-form-control-height-* retunes this control and every sibling field together; it
+       matches both tier spellings, so size="small" needs no alias rule. */
     --_lr-token-input-control-min-height: var(--lr-form-control-height);
-    /* --lr-token-input-control-height is intentionally NOT declared here -- same convention as
-       lr-input/lr-select/lr-combobox: a consumer-facing exact-height escape hatch consumed only
-       through the var() fallback on [part='input-wrapper'] below. */
+    /* --lr-token-input-control-height is deliberately not declared here, as in
+       lr-input/lr-select/lr-combobox: an exact-height escape hatch read only through the var()
+       fallback on [part='input-wrapper'] below. */
   }
   :host([pill]) {
     --_lr-token-input-radius: var(--lr-radius-pill);
   }
-  /* Inline padding, text size and chip padding stay this component's own ladder: its m tier is
-     denser than the shared one (0.25rem of inline padding and --lr-font-size-md-sm text, against the
-     ladder's 0.75rem and --lr-font-size-m). The BLOCK half of --lr-token-input-padding is the shared
-     ladder's --lr-form-control-padding-block at every tier instead, because that axis is the one the
-     row's height floor has to pay for -- see the [part='input-wrapper'] comment. Each tier matches
-     both spellings for the same reason sizes.styles.ts does -- the height ladder accepts
-     size="small", so a row whose padding silently ignored it would be worse than one that never
-     accepted it. */
+  /* Inline padding, text size and chip padding stay this component's denser ladder: m runs 0.25rem
+     and --lr-font-size-md-sm against the shared ladder's 0.75rem and --lr-font-size-m. The block
+     half stays --lr-form-control-padding-block at every tier -- that axis pays for the height floor
+     (see [part='input-wrapper']). Both tier spellings match, since the height ladder accepts
+     size="small". */
   :host([size="2xs"]) {
     --_lr-token-input-padding: var(--lr-form-control-padding-block)
       var(--lr-size-0-0625rem);
@@ -82,24 +76,20 @@ export const styles = css`
     color: var(--lr-color-text);
     font-weight: var(--lr-font-weight-semibold);
   }
-  /* The required marker comes from the one shared sheet (internal/form-control.styles.ts) like
-     every other labelled control's, so its glyph, colour and spacing are consumer-settable. The
-     rule below suppresses this component's older hand-rolled glyph -- a literal <span> the label
-     template still renders -- so the two never double up; it is dead the moment that span is
-     dropped from token-input.class.ts's render(). */
+  /* The required marker comes from the one shared sheet (internal/form-control.styles.ts), keeping
+     its glyph, colour and spacing consumer-settable. The rule below hides the older hand-rolled
+     glyph, a literal <span> the label template still renders, so the two never double up; dead
+     once that span goes. */
   :host([required]) [part="form-control-label"] > span[aria-hidden="true"] {
     display: none;
   }
   ${formControlRequiredMarker}
-  /* min-block-size is a FLOOR, and this box is border-box, so the floor only decides the rendered
-     height while the row's own content stays under it. Its content is the draft input, whose text
-     box is line-height: normal -- a metric of whatever the ambient font family resolves to, which
-     differs between machines. That is why the block padding here comes from the shared ladder rather
-     than this component's denser inline ladder: with the ladder's block padding and the zeroed
-     input padding below, the content is <= lr-input's own content at every tier (this component's
-     per-tier font-size never exceeds the ladder's), so wherever lr-input's floor wins this row's
-     floor wins too, and the two line up in a toolbar on every machine. Widen the block padding past
-     the ladder and the font's metrics -- not the ladder -- start deciding the height. */
+  /* min-block-size is a FLOOR on a border-box, so it sets the height only while content stays
+     under it -- and the content is the draft input, whose line-height: normal box is an
+     ambient-font metric varying by machine. Hence shared-ladder block padding, not the denser
+     inline one: with it and the zeroed input padding below, content is <= lr-input's at every tier
+     (per-tier font-size never exceeds the ladder's), so this row's floor wins wherever lr-input's
+     does and the two align in a toolbar. Widen past the ladder and the font decides the height. */
   [part='input-wrapper'] {
     display: flex;
     flex-wrap: wrap;
@@ -134,10 +124,10 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* padding-block: 0 rather than the UA's own 1px default -- same neutralisation lr-input applies
-     to its [part='input']. The wrapper above already owns this row's block padding; leaving the
-     UA's on as well spent two more pixels of the height floor's budget at every tier, which is what
-     used to push the dense tiers over their floor and hand the rendered height to the font. */
+  /* padding-block: 0 replaces the UA's 1px default, as lr-input does on its [part='input']: the
+     wrapper above owns this row's block padding, and the UA's spent two more pixels of the floor's
+     budget per tier, pushing the dense tiers over their floor and handing the height to the
+     font. */
   [part="input"] {
     flex: 1 1 var(--lr-token-input-input-inline-size, var(--lr-size-8rem));
     min-inline-size: var(
@@ -154,10 +144,9 @@ export const styles = css`
   [part="input"]::placeholder {
     color: var(--lr-color-text-quiet);
   }
-  /* Mirrors lr-combobox's identical [part='start']/[part='end'] wrappers: the wrapper span is
-     always present so JS can toggle its hidden attribute -- an author display rule always beats
-     the UA's own [hidden] rule regardless of specificity, so the explicit override below is
-     required once this selector declares its own display. */
+  /* Mirrors lr-combobox's [part='start']/[part='end'] wrappers: the span is always present so JS
+     can toggle hidden -- and an author display rule beats the UA's [hidden] rule at any
+     specificity, so declaring display here makes the override below required. */
   [part="start"],
   [part="end"] {
     flex: 0 0 auto;
@@ -193,11 +182,9 @@ export const styles = css`
     overflow-wrap: anywhere;
     text-overflow: ellipsis;
   }
-  /* The interactive hit target meets the shared minimum tappable size (same --lr-icon-button-size
-     floor as lr-swatch-picker's [part='swatch']), while the visible glyph (closeIcon(), rendered at
-     1em -- already compact at this control's font size) stays centered inside via flex rather than
-     growing itself, so the dense token row keeps its own compact glyph even though the button's own
-     hit-target box grows. */
+  /* The hit target takes the shared --lr-icon-button-size floor, as lr-swatch-picker's
+     [part='swatch'] does, while closeIcon() stays at 1em and is only flex-centered inside it, so
+     the dense token row keeps its compact glyph. */
   [part="remove"] {
     display: inline-flex;
     flex: 0 0 auto;
@@ -234,8 +221,8 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* Only rendered while [editable] is set, so the non-editable token row keeps its plain,
-     non-focusable text span and its exact current metrics. */
+  /* Only rendered while [editable] is set, so a non-editable token row keeps its plain,
+     non-focusable text span and its current metrics. */
   [part="token-label"] {
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
@@ -295,10 +282,9 @@ export const styles = css`
       var(--lr-color-danger)
     );
   }
-  /* :host(:disabled), not :host([disabled]) -- the native FACE pseudo-class also matches an
-     ancestor <fieldset disabled> cascade (see effectiveDisabled in token-input.class.ts), which
-     the bracket-attribute selector would miss entirely (mirrors lr-select's/lr-combobox's
-     identical fix). */
+  /* :host(:disabled), not :host([disabled]) -- only the pseudo-class matches an ancestor
+     <fieldset disabled> cascade (see effectiveDisabled in token-input.class.ts), which the
+     attribute selector misses. Mirrors lr-select/lr-combobox. */
   :host(:disabled) {
     opacity: var(--lr-opacity-disabled);
   }

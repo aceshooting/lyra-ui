@@ -5,12 +5,23 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
   }
-  /* Consumers needing an inline text-fragment swap inside a sentence can override
-     "lr-random-content { display: inline; }" from outside -- not baked in here, since
-     "display: contents" on the host risks a11y-tree inconsistencies across engines and every
-     other component in this family defaults to "display: block". */
+  /* An inline text-fragment swap is a consumer override of
+     "lr-random-content { display: inline; }", not baked in: "display: contents" on the host risks
+     a11y-tree inconsistencies across engines, and this family defaults to "display: block". */
   [part='base'] {
     min-inline-size: 0;
+  }
+  /* Show the FIRST candidate until selection is applied. Selection runs in firstUpdated(), which a
+     server renderer never executes, so a declarative-shadow-DOM page would otherwise flash the
+     whole pool and collapse to one on hydration. Not a first-render seeding problem: selection
+     mutates light-DOM siblings' hidden/aria-hidden, which Lit's hydration diffing never reads, so
+     only CSS can answer before script runs. First candidate rather than none keeps the
+     pre-hydration and script-never-ran paint a sensible "one of these", not an empty box, and
+     keeps source order the documented no-JS fallback. With items > 1 it is still one candidate --
+     a smaller shift than the whole pool, not an exact match. A pool behind a direct forwarding
+     <slot> is one child, so all its projected content shows. */
+  [part='base'][data-unselected] ::slotted(:not(:first-child)) {
+    display: none;
   }
   [part='base'][data-multiple] {
     display: flex;
@@ -46,9 +57,8 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   ::slotted(*) {
-    /* Inline candidates must establish a transformable box for directional entrance effects.
-       inline-block preserves their ordinary inline sizing while the base's flex formatting
-       context owns multi-item layout. */
+    /* Inline candidates need a transformable box for directional entrance effects; inline-block
+       keeps their ordinary inline sizing while the base's flex context owns multi-item layout. */
     display: inline-block;
     min-inline-size: 0;
     max-inline-size: 100%;
@@ -61,6 +71,14 @@ export const styles = css`
       --animation-easing,
       var(--lr-animation-easing, var(--lr-random-content-animation-easing, ease))
     );
+  }
+  /* The declaration above beats the UA stylesheet's "[hidden] { display: none }" -- author origin
+     wins over user-agent origin -- so without this a candidate carrying hidden and
+     aria-hidden="true" stayed painted, leaving every rotation visually inert with only assistive
+     technology seeing the selection. "until-found" is excluded as the UA rule excludes it, so a
+     candidate marked that way stays find-in-page revealable. */
+  ::slotted([hidden]:not([hidden='until-found' i])) {
+    display: none;
   }
   :host(:where([animation='fade'])) ::slotted(:not([hidden])) {
     animation-name: lr-random-content-fade-in;
@@ -114,9 +132,8 @@ export const styles = css`
       transform: translateY(0);
     }
   }
-  /* fade-left/fade-right are physical-direction transforms (matching the upstream naming this
-     component mirrors), not "previous/next" navigational semantics like a carousel chevron, so
-     they are deliberately not flipped under :host(:dir(rtl)). */
+  /* fade-left/fade-right are physical-direction transforms (upstream's naming), not
+     "previous/next" semantics, so they are deliberately not flipped under :host(:dir(rtl)). */
   @keyframes lr-random-content-fade-in-left {
     from {
       opacity: 0;
@@ -146,9 +163,8 @@ export const styles = css`
       transform: translateX(0);
     }
   }
-  /* The shared reduced-motion rule in tokens.styles.ts (:host *, :host *::before, ...) only
-     reaches the *shadow* tree -- it does not reach ::slotted() content, since slotted elements
-     live in the host's light DOM, not its shadow tree. Guard the entrance animation explicitly. */
+  /* tokens.styles.ts's shared reduced-motion rule (:host *, :host *::before, ...) reaches only the
+     *shadow* tree; slotted elements live in the host's light DOM, so guard this explicitly. */
   @media (prefers-reduced-motion: reduce) {
     ::slotted(*) {
       animation: none !important;

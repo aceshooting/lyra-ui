@@ -41,7 +41,7 @@ function installMatchMediaStub(
 
   owner.matchMedia = ((query: string) => {
     const match = /\(max-width:\s*([\d.]+)px\)/.exec(query);
-    const max = match ? Number.parseFloat(match[1]) : Number.NaN;
+    const max = match ? Number.parseFloat(match[1]!) : Number.NaN;
     const entry = { media: query, max, listeners: new Set<(e: MediaQueryListEvent) => void>() };
     lists.push(entry);
     return {

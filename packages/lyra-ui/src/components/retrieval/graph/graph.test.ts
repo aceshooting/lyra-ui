@@ -5713,7 +5713,20 @@ describe('coverage: private-helper direct branches', () => {
     expect(fontPx()).to.equal(10);
   });
 
-  it('falls back to a 16px assumed own font-size for an em-unit token when the own font-size cannot be parsed, even against a non-default root font-size', async () => {
+  it('falls back to the default edge-label size for a unit with no resolvable pixel length, instead of measuring it as pixels', async () => {
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+    const fontPx = (
+      el as unknown as { edgeLabelFontPx: () => number }
+    ).edgeLabelFontPx.bind(el);
+    // A number-plus-unrecognized-unit token must not collapse to its bare number, which would
+    // measure and draw edge labels at 8px; the documented default applies instead.
+    el.style.setProperty('--lr-font-size-2xs', '8pt');
+    expect(fontPx()).to.equal(10);
+    el.style.setProperty('--lr-font-size-2xs', '3ch');
+    expect(fontPx()).to.equal(10);
+  });
+
+  it('resolves an em-unit token against the root font size when the own font-size cannot be parsed', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     const fontPx = (
       el as unknown as { edgeLabelFontPx: () => number }
@@ -5732,9 +5745,10 @@ describe('coverage: private-helper direct branches', () => {
       return originalGetComputedStyle(element);
     }) as typeof window.getComputedStyle;
     try {
-      // Own font-size unusable -> the function's own `?? 16` multiplier applies regardless of the
-      // (non-default, 32px) root font-size -- this must not silently become root-relative.
-      expect(fontPx()).to.equal(32);
+      // An element with no computed font-size of its own inherits the document root's, so an `em`
+      // token tracks the live (non-default, 32px) root rather than an assumed 16px -- the shared
+      // resolveCssLength() contract every unit-resolving component in the library now follows.
+      expect(fontPx()).to.equal(64);
     } finally {
       window.getComputedStyle = originalGetComputedStyle;
       document.documentElement.style.fontSize = previousRootFontSize;

@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import type { LyraToolStatus } from '../../../internal/shared-unions.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import {
   Announcer,
   acquireAnnouncementSink,
@@ -261,7 +261,7 @@ export class LyraFlowRunStatus extends LyraElement {
 
   override render(): TemplateResult {
     const label = this.label || this.localize('flowRunStatusLabel');
-    const ariaLabel = this.getAttribute('aria-label') || label;
+    const ariaLabel = hostAriaLabel(this) ?? label;
     const { done, total, counts } = this.summary();
     const number = getNumberFormat(this.effectiveLocale);
     return html`<div part="base" role="group" aria-label=${ariaLabel}>

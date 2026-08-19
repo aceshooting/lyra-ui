@@ -69,9 +69,9 @@ export const styles = css`
 
   [part="bar-track"] {
     position: relative;
-    /* 1.5rem (24px), not a narrower duration-scaled height -- [part='bar'] is the sole
-       click/keyboard target for lr-span-select and must clear the WCAG 2.5.8 24px minimum
-       target size regardless of how thin a given bar's duration would otherwise render it. */
+    /* 1.5rem (24px), not a duration-scaled height -- [part='bar'] is the sole click/keyboard
+       target for lr-span-select and must clear the WCAG 2.5.8 24px minimum target size however
+       thin a given bar's duration would otherwise render it. */
     block-size: var(--lr-size-1-5rem);
   }
   [part="bar"] {
@@ -86,14 +86,13 @@ export const styles = css`
   [part="bar"][hidden] {
     display: none;
   }
-  /* The hover/pressed tint is a veil on a pseudo-element rather than a background swap on the bar
-     itself, because a bar's fill is one of five different things: four solid tones, a striped
-     gradient for the running tone, and a transparent dashed box for the pending one. No single
-     background declaration tints all five; one translucent overlay does. Mixing toward
-     --lr-color-mix-partner (which follows the text colour) darkens the veil in a light theme and
-     lightens it in a dark one -- which the filter: brightness() this replaces only managed by luck.
-     A filter multiplies every channel, so it moved a mid-tone bar, did nothing at all to a pure
-     white or pure black one, and applied to the whole subtree instead of just the surface. */
+  /* The hover/pressed tint is a veil on a pseudo-element, not a background swap: a bar's fill is
+     one of five things -- four solid tones, a striped gradient for running, a transparent dashed
+     box for pending -- and no single background declaration tints all five, while one translucent
+     overlay does. Mixing toward --lr-color-mix-partner (which follows the text colour) darkens the
+     veil in a light theme and lightens it in a dark one; the filter: brightness() this replaces
+     managed that only by luck, multiplying every channel, so it moved a mid-tone bar, did nothing
+     to a pure white or pure black one, and applied to the whole subtree. */
   [part="bar"]::after {
     content: "";
     position: absolute;
@@ -150,10 +149,10 @@ export const styles = css`
         var(--lr-color-border-strong)
       );
   }
-  /* background-position is physical, so the stripe crawl direction does not mirror on its own
-     under RTL; play the same keyframes backwards there. animation-direction (not a second
-     animation-name) keeps the reduced-motion 'animation: none' override below effective --
-     this rule's higher specificity would otherwise win the animation-name longhand back. */
+  /* background-position is physical, so the stripe crawl does not mirror under RTL; play the same
+     keyframes backwards there. animation-direction rather than a second animation-name keeps the
+     reduced-motion 'animation: none' override below effective -- this rule's higher specificity
+     would otherwise win the animation-name longhand back. */
   :host(:dir(rtl)) [part="bar"][data-tone="accent"] {
     animation-direction: reverse;
   }

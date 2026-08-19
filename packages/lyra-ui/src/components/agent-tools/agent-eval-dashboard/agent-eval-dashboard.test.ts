@@ -1,4 +1,5 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './agent-eval-dashboard.js';
 import type { LyraAgentEvalDashboard } from './agent-eval-dashboard.class.js';
 import type { LyraStat } from '../../data/stat/stat.class.js';
@@ -247,4 +248,41 @@ it('uses break-word, not anywhere, on heading and run-label text', async () => {
   const runLabel = el.shadowRoot!.querySelector('[part="run-label"]') as HTMLElement;
   expect(getComputedStyle(heading).overflowWrap).to.equal('break-word');
   expect(getComputedStyle(runLabel).overflowWrap).to.equal('break-word');
+});
+
+it('keeps a hover tint on the selected metric, not only on the unselected ones', async () => {
+  const el = (await fixture(html`
+    <lr-agent-eval-dashboard
+      metric-id="pass"
+      .metrics=${[
+        { id: 'pass', label: 'Pass rate', value: 0.9 },
+        { id: 'cost', label: 'Cost', value: 12 },
+      ]}
+    ></lr-agent-eval-dashboard>
+  `)) as LyraAgentEvalDashboard;
+  await el.updateComplete;
+  const selected = el.shadowRoot!.querySelector<HTMLElement>('[part="metric"][aria-pressed="true"]')!;
+  const unselected = el.shadowRoot!.querySelector<HTMLElement>('[part="metric"][aria-pressed="false"]')!;
+  const centre = (element: HTMLElement): [number, number] => {
+    const rect = element.getBoundingClientRect();
+    return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+  };
+  await resetMouse();
+  const selectedRest = getComputedStyle(selected).backgroundColor;
+  const unselectedRest = getComputedStyle(unselected).backgroundColor;
+  try {
+    await sendMouse({ type: 'move', position: centre(unselected) });
+    await waitUntil(
+      () => getComputedStyle(unselected).backgroundColor !== unselectedRest,
+      'an unselected metric never picked up a hover tint',
+    );
+    await sendMouse({ type: 'move', position: centre(selected) });
+    await waitUntil(
+      () => getComputedStyle(selected).backgroundColor !== selectedRest,
+      'the selected metric stayed on its pressed fill under the pointer, so it is the one chip in ' +
+        'the row that goes dead on hover',
+    );
+  } finally {
+    await resetMouse();
+  }
 });
