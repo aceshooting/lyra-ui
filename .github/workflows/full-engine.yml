@@ -55,6 +55,25 @@ jobs:
         browser: [firefox, webkit]
         shard: [1, 2, 3, 4, 5, 6, 7, 8]
     steps:
+      - name: Match the runner's default font resolution
+        # The image carries no DejaVu, so fontconfig resolves sans-serif to WenQuanYi Zen Hei --
+        # a CJK face with entirely different Latin metrics from the DejaVu Sans the VM runners
+        # use. Every text-measuring test then lays out against the wrong typeface; lr-card's
+        # wrap-at-the-space assertion caught it by getting one line where it expects two. This is
+        # ~1MB and one package, not install-deps' full 21MB font set, but it is still apt, so it
+        # is bounded and retried the same way.
+        run: |
+          for i in 1 2 3; do
+            if timeout -k 20 180 sh -c 'apt-get update -qq && apt-get install -y -qq fonts-dejavu-core'; then
+              fc-cache -f >/dev/null 2>&1 || true
+              fc-match sans-serif
+              exit 0
+            fi
+            echo "::warning::font install attempt $i failed; retrying"
+            rm -f /var/lib/apt/lists/lock /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend 2>/dev/null || true
+          done
+          echo "::error::could not install fonts-dejavu-core; text-metric tests would measure the wrong typeface"
+          exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
