@@ -618,6 +618,11 @@
       ]
     },
     {
+      "name": "--lr-focus-ring",
+      "description": "Composite focus-ring outline shorthand, derived from the width and color parts. Mirrors the ready-made outline value Web Awesome exposes as --wa-focus-ring so a migrating consumer has a one-to-one target instead of hand-expanding every site. Offset stays separate because outline-offset is its own property.",
+      "references": []
+    },
+    {
       "name": "--lr-focus-ring-color",
       "description": "Canonical shared component token for focus ring color.",
       "references": [

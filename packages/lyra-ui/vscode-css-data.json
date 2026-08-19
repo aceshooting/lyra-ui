@@ -1598,6 +1598,20 @@
       }
     },
     {
+      "name": "--lr-box-plot-data-table-toggle-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-box-plot>`** — Pressed background of the `dataTableToggle` disclosure button; defaults to a mix of the hover background with the shared active mix partner."
+      }
+    },
+    {
+      "name": "--lr-box-plot-data-table-toggle-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-box-plot>`** (default: `var(--lr-color-brand-quiet)`) — Hover background of the `dataTableToggle` disclosure button."
+      }
+    },
+    {
       "name": "--lr-breadcrumb-current-color",
       "description": {
         "kind": "markdown",
@@ -2183,6 +2197,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-brand-quiet)`) — Hover background of an actionable generated-table value."
+      }
+    },
+    {
+      "name": "--lr-chart-data-table-toggle-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** — Pressed background of the `dataTableToggle` disclosure button; defaults to a mix of the hover background with the shared active mix partner."
+      }
+    },
+    {
+      "name": "--lr-chart-data-table-toggle-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-color-brand-quiet)`) — Hover background of the `dataTableToggle` disclosure button."
       }
     },
     {
@@ -5102,6 +5130,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-flow-minimap>`** (default: `var(--lr-color-success)`) — Successful-node fill.\n\n**`<lr-flow-node>`** (default: `var(--lr-color-success)`) — Success status-dot color.\n\n**`<lr-flow-run-status>`** (default: `var(--lr-color-success)`) — Success count-dot color."
+      }
+    },
+    {
+      "name": "--lr-focus-ring",
+      "description": {
+        "kind": "markdown",
+        "value": "**Shared design token** — Composite focus-ring outline shorthand, derived from the width and color parts. Mirrors the ready-made outline value Web Awesome exposes as --wa-focus-ring so a migrating consumer has a one-to-one target instead of hand-expanding every site. Offset stays separate because outline-offset is its own property."
       }
     },
     {

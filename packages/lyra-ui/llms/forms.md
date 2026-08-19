@@ -1242,6 +1242,11 @@ and `dateTimeFormat(locale, options)`.
   `::part(previous):hover` still wins without `!important`.
 - `--lr-date-picker-nav-active-bg` — Pressed navigation background; defaults to the hover color
   mixed by `--lr-color-mix-active`.
+- `--lr-date-picker-preset-hover-bg`, `--lr-date-picker-preset-active-bg`, and
+  `--lr-date-picker-preset-selected-bg` (new in 10.1.0) — hover, pressed, and
+  currently-selected paint for a `presets` quick-range button. Defaults are
+  `var(--lr-color-brand-quiet)`, that hover colour mixed by `--lr-color-mix-active`, and
+  `var(--lr-color-brand)` respectively.
 - `--lr-date-picker-title-hover-color`, `--lr-date-picker-title-active-color`,
   `--lr-date-picker-title-active-bg`, and `--lr-date-picker-title-active-radius` — Month-title
   hover/press paint and pressed shape; defaults to brand, brand, brand-quiet, and
@@ -5287,6 +5292,11 @@ These named interfaces and helper signatures are available to typed integrations
   `DateRange {
   from: unknown;
   to: unknown;
+}`
+  `LyraDateRangePreset {
+  label: unknown;
+  start: unknown;
+  end: unknown;
 }`
 
 - **`components-forms-emoji-picker-emoji-types-contracts`** — Supporting data types and helpers for this component family.

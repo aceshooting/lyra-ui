@@ -12913,6 +12913,13 @@
               "test": "activates selection-view roving targets with Enter and Space, restoring focus in the destination view",
               "target": "years",
               "state": "populated"
+            },
+            {
+              "file": "src/components/forms/date-picker/date-picker.test.ts",
+              "line": 3121,
+              "test": "is accessible with a preset row",
+              "target": "el",
+              "state": "populated"
             }
           ],
           "exemption": null
@@ -25715,7 +25722,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 2480,
+              "line": 2587,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -25726,7 +25733,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 2725,
+              "line": 2832,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -25743,7 +25750,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 2719,
+              "line": 2826,
               "kind": "320px allocation test signal"
             }
           ]
@@ -25823,7 +25830,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 980,
+              "line": 1043,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

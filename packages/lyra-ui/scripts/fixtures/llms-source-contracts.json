@@ -116,6 +116,22 @@
     },
     {
       "module": "src/ai/adapters/ai-sdk.ts",
+      "exportName": "adaptAiSdkMessage",
+      "kind": "function",
+      "fingerprint": "0b3a47e937f8205cdfab",
+      "routes": [
+        "src/ai/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "ai-adapters-ai-sdk-contracts",
+        "declaration": "adaptAiSdkMessage"
+      }
+    },
+    {
+      "module": "src/ai/adapters/ai-sdk.ts",
       "exportName": "AiSdkAdapterLimits",
       "kind": "interface",
       "fingerprint": "5584b38eab240551f20a",
@@ -144,22 +160,6 @@
         "kind": "utility",
         "name": "ai-adapters-ai-sdk-contracts",
         "declaration": "AiSdkLikeMessage"
-      }
-    },
-    {
-      "module": "src/ai/adapters/ai-sdk.ts",
-      "exportName": "adaptAiSdkMessage",
-      "kind": "function",
-      "fingerprint": "0b3a47e937f8205cdfab",
-      "routes": [
-        "src/ai/index.ts"
-      ],
-      "document": "llms/shared.md",
-      "family": "shared",
-      "locator": {
-        "kind": "utility",
-        "name": "ai-adapters-ai-sdk-contracts",
-        "declaration": "adaptAiSdkMessage"
       }
     },
     {
@@ -276,6 +276,22 @@
     },
     {
       "module": "src/ai/snapshot.ts",
+      "exportName": "createProviderSnapshotBudget",
+      "kind": "function",
+      "fingerprint": "a657d642b0bfac88fb31",
+      "routes": [
+        "src/ai/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "ai-snapshot-contracts",
+        "declaration": "createProviderSnapshotBudget"
+      }
+    },
+    {
+      "module": "src/ai/snapshot.ts",
       "exportName": "ProviderSnapshotBudget",
       "kind": "interface",
       "fingerprint": "16b402eb2abb4efc4863",
@@ -304,22 +320,6 @@
         "kind": "utility",
         "name": "ai-snapshot-contracts",
         "declaration": "ProviderSnapshotLimits"
-      }
-    },
-    {
-      "module": "src/ai/snapshot.ts",
-      "exportName": "createProviderSnapshotBudget",
-      "kind": "function",
-      "fingerprint": "a657d642b0bfac88fb31",
-      "routes": [
-        "src/ai/index.ts"
-      ],
-      "document": "llms/shared.md",
-      "family": "shared",
-      "locator": {
-        "kind": "utility",
-        "name": "ai-snapshot-contracts",
-        "declaration": "createProviderSnapshotBudget"
       }
     },
     {
@@ -1230,25 +1230,6 @@
     },
     {
       "module": "src/components/agent-tools/agent-status-presentation.ts",
-      "exportName": "AgentStatusPresentation",
-      "kind": "interface",
-      "fingerprint": "44f4ae2158ede5e087de",
-      "routes": [
-        "src/all.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/agent-tools.md",
-      "family": "agent-tools",
-      "locator": {
-        "kind": "utility",
-        "name": "components-agent-tools-agent-status-presentation-contracts",
-        "declaration": "AgentStatusPresentation"
-      }
-    },
-    {
-      "module": "src/components/agent-tools/agent-status-presentation.ts",
       "exportName": "agentStatusKind",
       "kind": "function",
       "fingerprint": "06a1983039e403e92042",
@@ -1302,6 +1283,25 @@
         "kind": "utility",
         "name": "components-agent-tools-agent-status-presentation-contracts",
         "declaration": "agentStatusMessage"
+      }
+    },
+    {
+      "module": "src/components/agent-tools/agent-status-presentation.ts",
+      "exportName": "AgentStatusPresentation",
+      "kind": "interface",
+      "fingerprint": "44f4ae2158ede5e087de",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/agent-tools.md",
+      "family": "agent-tools",
+      "locator": {
+        "kind": "utility",
+        "name": "components-agent-tools-agent-status-presentation-contracts",
+        "declaration": "AgentStatusPresentation"
       }
     },
     {
@@ -2045,6 +2045,28 @@
     },
     {
       "module": "src/components/agent-tools/stack-trace/stack-trace-parse.ts",
+      "exportName": "parseStackTrace",
+      "kind": "function",
+      "fingerprint": "ca073a419c171390ffd0",
+      "routes": [
+        "src/all.ts",
+        "src/components/agent-tools/index.ts",
+        "src/components/agent-tools/stack-trace/stack-trace.ts",
+        "src/components/lr-stack-trace.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/agent-tools.md",
+      "family": "agent-tools",
+      "locator": {
+        "kind": "utility",
+        "name": "components-agent-tools-stack-trace-stack-trace-parse-contracts",
+        "declaration": "parseStackTrace"
+      }
+    },
+    {
+      "module": "src/components/agent-tools/stack-trace/stack-trace-parse.ts",
       "exportName": "StackFrame",
       "kind": "interface",
       "fingerprint": "aaa34b3f8d74e8af82c2",
@@ -2129,28 +2151,6 @@
         "kind": "utility",
         "name": "components-agent-tools-stack-trace-stack-trace-parse-contracts",
         "declaration": "StackTraceParseResult"
-      }
-    },
-    {
-      "module": "src/components/agent-tools/stack-trace/stack-trace-parse.ts",
-      "exportName": "parseStackTrace",
-      "kind": "function",
-      "fingerprint": "ca073a419c171390ffd0",
-      "routes": [
-        "src/all.ts",
-        "src/components/agent-tools/index.ts",
-        "src/components/agent-tools/stack-trace/stack-trace.ts",
-        "src/components/lr-stack-trace.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/agent-tools.md",
-      "family": "agent-tools",
-      "locator": {
-        "kind": "utility",
-        "name": "components-agent-tools-stack-trace-stack-trace-parse-contracts",
-        "declaration": "parseStackTrace"
       }
     },
     {
@@ -2247,29 +2247,6 @@
     },
     {
       "module": "src/components/agent-tools/test-results/test-results.class.ts",
-      "exportName": "TestSuiteResult",
-      "kind": "interface",
-      "fingerprint": "16d4f332d9712d6f3b0f",
-      "routes": [
-        "src/all.ts",
-        "src/components/agent-tools/index.ts",
-        "src/components/agent-tools/test-results/test-results.class.ts",
-        "src/components/agent-tools/test-results/test-results.ts",
-        "src/components/lr-test-results.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/agent-tools.md",
-      "family": "agent-tools",
-      "locator": {
-        "kind": "utility",
-        "name": "components-agent-tools-test-results-test-results-contracts",
-        "declaration": "TestSuiteResult"
-      }
-    },
-    {
-      "module": "src/components/agent-tools/test-results/test-results.class.ts",
       "exportName": "testResultDetailSlotName",
       "kind": "function",
       "fingerprint": "67c142cadcecd339e36a",
@@ -2289,6 +2266,29 @@
         "kind": "utility",
         "name": "components-agent-tools-test-results-test-results-contracts",
         "declaration": "testResultDetailSlotName"
+      }
+    },
+    {
+      "module": "src/components/agent-tools/test-results/test-results.class.ts",
+      "exportName": "TestSuiteResult",
+      "kind": "interface",
+      "fingerprint": "16d4f332d9712d6f3b0f",
+      "routes": [
+        "src/all.ts",
+        "src/components/agent-tools/index.ts",
+        "src/components/agent-tools/test-results/test-results.class.ts",
+        "src/components/agent-tools/test-results/test-results.ts",
+        "src/components/lr-test-results.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/agent-tools.md",
+      "family": "agent-tools",
+      "locator": {
+        "kind": "utility",
+        "name": "components-agent-tools-test-results-test-results-contracts",
+        "declaration": "TestSuiteResult"
       }
     },
     {
@@ -2405,46 +2405,6 @@
     },
     {
       "module": "src/components/agent-tools/tool-result-view/registry.ts",
-      "exportName": "LazyToolRendererDefinition",
-      "kind": "interface",
-      "fingerprint": "0172b84dc6efcbb8e9a2",
-      "routes": [
-        "src/all.ts",
-        "src/components/agent-tools/tool-result-view/registry.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/agent-tools.md",
-      "family": "agent-tools",
-      "locator": {
-        "kind": "utility",
-        "name": "components-agent-tools-tool-result-view-registry-contracts",
-        "declaration": "LazyToolRendererDefinition"
-      }
-    },
-    {
-      "module": "src/components/agent-tools/tool-result-view/registry.ts",
-      "exportName": "ToolRenderContext",
-      "kind": "interface",
-      "fingerprint": "30dd5f3fc56a93054eea",
-      "routes": [
-        "src/all.ts",
-        "src/components/agent-tools/tool-result-view/registry.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/agent-tools.md",
-      "family": "agent-tools",
-      "locator": {
-        "kind": "utility",
-        "name": "components-agent-tools-tool-result-view-registry-contracts",
-        "declaration": "ToolRenderContext"
-      }
-    },
-    {
-      "module": "src/components/agent-tools/tool-result-view/registry.ts",
       "exportName": "findToolRenderer",
       "kind": "function",
       "fingerprint": "3201afdbb3423c71b515",
@@ -2485,6 +2445,26 @@
     },
     {
       "module": "src/components/agent-tools/tool-result-view/registry.ts",
+      "exportName": "LazyToolRendererDefinition",
+      "kind": "interface",
+      "fingerprint": "0172b84dc6efcbb8e9a2",
+      "routes": [
+        "src/all.ts",
+        "src/components/agent-tools/tool-result-view/registry.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/agent-tools.md",
+      "family": "agent-tools",
+      "locator": {
+        "kind": "utility",
+        "name": "components-agent-tools-tool-result-view-registry-contracts",
+        "declaration": "LazyToolRendererDefinition"
+      }
+    },
+    {
+      "module": "src/components/agent-tools/tool-result-view/registry.ts",
       "exportName": "loadToolRenderer",
       "kind": "function",
       "fingerprint": "8da9743258747bfb4270",
@@ -2521,6 +2501,26 @@
         "kind": "utility",
         "name": "components-agent-tools-tool-result-view-registry-contracts",
         "declaration": "registerToolRenderer"
+      }
+    },
+    {
+      "module": "src/components/agent-tools/tool-result-view/registry.ts",
+      "exportName": "ToolRenderContext",
+      "kind": "interface",
+      "fingerprint": "30dd5f3fc56a93054eea",
+      "routes": [
+        "src/all.ts",
+        "src/components/agent-tools/tool-result-view/registry.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/agent-tools.md",
+      "family": "agent-tools",
+      "locator": {
+        "kind": "utility",
+        "name": "components-agent-tools-tool-result-view-registry-contracts",
+        "declaration": "ToolRenderContext"
       }
     },
     {
@@ -2740,28 +2740,6 @@
     },
     {
       "module": "src/components/agent-tools/trace-tree/span.ts",
-      "exportName": "normalizeLyraSpanStatus",
-      "kind": "function",
-      "fingerprint": "25dd8085569bfb5691c8",
-      "routes": [
-        "src/all.ts",
-        "src/components/agent-tools/index.ts",
-        "src/components/agent-tools/trace-tree/trace-tree.ts",
-        "src/components/lr-trace-tree.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/agent-tools.md",
-      "family": "agent-tools",
-      "locator": {
-        "kind": "utility",
-        "name": "components-agent-tools-trace-tree-span-contracts",
-        "declaration": "normalizeLyraSpanStatus"
-      }
-    },
-    {
-      "module": "src/components/agent-tools/trace-tree/span.ts",
       "exportName": "normalizeLyraSpans",
       "kind": "function",
       "fingerprint": "1ff1bab643613593114c",
@@ -2780,6 +2758,28 @@
         "kind": "utility",
         "name": "components-agent-tools-trace-tree-span-contracts",
         "declaration": "normalizeLyraSpans"
+      }
+    },
+    {
+      "module": "src/components/agent-tools/trace-tree/span.ts",
+      "exportName": "normalizeLyraSpanStatus",
+      "kind": "function",
+      "fingerprint": "25dd8085569bfb5691c8",
+      "routes": [
+        "src/all.ts",
+        "src/components/agent-tools/index.ts",
+        "src/components/agent-tools/trace-tree/trace-tree.ts",
+        "src/components/lr-trace-tree.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/agent-tools.md",
+      "family": "agent-tools",
+      "locator": {
+        "kind": "utility",
+        "name": "components-agent-tools-trace-tree-span-contracts",
+        "declaration": "normalizeLyraSpanStatus"
       }
     },
     {
@@ -3481,25 +3481,6 @@
     },
     {
       "module": "src/components/charts/chart/histogram-bin.ts",
-      "exportName": "HistogramBucket",
-      "kind": "interface",
-      "fingerprint": "eaa76789cc18f92ce11f",
-      "routes": [
-        "src/all.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/charts.md",
-      "family": "charts",
-      "locator": {
-        "kind": "utility",
-        "name": "components-charts-chart-histogram-bin-contracts",
-        "declaration": "HistogramBucket"
-      }
-    },
-    {
-      "module": "src/components/charts/chart/histogram-bin.ts",
       "exportName": "binValues",
       "kind": "function",
       "fingerprint": "985e0c51617fc5207406",
@@ -3515,6 +3496,25 @@
         "kind": "utility",
         "name": "components-charts-chart-histogram-bin-contracts",
         "declaration": "binValues"
+      }
+    },
+    {
+      "module": "src/components/charts/chart/histogram-bin.ts",
+      "exportName": "HistogramBucket",
+      "kind": "interface",
+      "fingerprint": "eaa76789cc18f92ce11f",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "utility",
+        "name": "components-charts-chart-histogram-bin-contracts",
+        "declaration": "HistogramBucket"
       }
     },
     {
@@ -3678,6 +3678,38 @@
     },
     {
       "module": "src/components/conversation/code-block/shiki-types.ts",
+      "exportName": "loadShikiHighlighterCore",
+      "kind": "function",
+      "fingerprint": "d377d0e23ed3f36e2439",
+      "routes": [
+        "src/components/conversation/code-block/code-loader.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "utility",
+        "name": "components-conversation-code-block-shiki-types-contracts",
+        "declaration": "loadShikiHighlighterCore"
+      }
+    },
+    {
+      "module": "src/components/conversation/code-block/shiki-types.ts",
+      "exportName": "normalizeShikiLanguage",
+      "kind": "function",
+      "fingerprint": "2862eed603484f78a454",
+      "routes": [
+        "src/components/conversation/code-block/code-loader.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "utility",
+        "name": "components-conversation-code-block-shiki-types-contracts",
+        "declaration": "normalizeShikiLanguage"
+      }
+    },
+    {
+      "module": "src/components/conversation/code-block/shiki-types.ts",
       "exportName": "ShikiHighlighter",
       "kind": "interface",
       "fingerprint": "0cc2a3367d380a735ce5",
@@ -3719,38 +3751,6 @@
         "kind": "utility",
         "name": "components-conversation-code-block-shiki-types-contracts",
         "declaration": "ShikiLanguageInput"
-      }
-    },
-    {
-      "module": "src/components/conversation/code-block/shiki-types.ts",
-      "exportName": "loadShikiHighlighterCore",
-      "kind": "function",
-      "fingerprint": "d377d0e23ed3f36e2439",
-      "routes": [
-        "src/components/conversation/code-block/code-loader.ts"
-      ],
-      "document": "llms/conversation.md",
-      "family": "conversation",
-      "locator": {
-        "kind": "utility",
-        "name": "components-conversation-code-block-shiki-types-contracts",
-        "declaration": "loadShikiHighlighterCore"
-      }
-    },
-    {
-      "module": "src/components/conversation/code-block/shiki-types.ts",
-      "exportName": "normalizeShikiLanguage",
-      "kind": "function",
-      "fingerprint": "2862eed603484f78a454",
-      "routes": [
-        "src/components/conversation/code-block/code-loader.ts"
-      ],
-      "document": "llms/conversation.md",
-      "family": "conversation",
-      "locator": {
-        "kind": "utility",
-        "name": "components-conversation-code-block-shiki-types-contracts",
-        "declaration": "normalizeShikiLanguage"
       }
     },
     {
@@ -3835,6 +3835,54 @@
         "kind": "utility",
         "name": "components-conversation-markdown-markdown-base-contracts",
         "declaration": "MarkdownVariantContext"
+      }
+    },
+    {
+      "module": "src/components/conversation/markdown/markdown-loader.ts",
+      "exportName": "getMarkdownDepsIfLoaded",
+      "kind": "function",
+      "fingerprint": "a3cb93735e74228576ce",
+      "routes": [
+        "src/components/conversation/markdown/markdown-loader.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "utility",
+        "name": "components-conversation-markdown-markdown-loader-contracts",
+        "declaration": "getMarkdownDepsIfLoaded"
+      }
+    },
+    {
+      "module": "src/components/conversation/markdown/markdown-loader.ts",
+      "exportName": "loadMarkdownAndSanitizer",
+      "kind": "function",
+      "fingerprint": "90cfc2c896f19c9b84ed",
+      "routes": [
+        "src/components/conversation/markdown/markdown-loader.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "utility",
+        "name": "components-conversation-markdown-markdown-loader-contracts",
+        "declaration": "loadMarkdownAndSanitizer"
+      }
+    },
+    {
+      "module": "src/components/conversation/markdown/markdown-loader.ts",
+      "exportName": "loadMarkdownDeps",
+      "kind": "function",
+      "fingerprint": "3b7b6103d800b4645291",
+      "routes": [
+        "src/components/conversation/markdown/markdown-loader.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "utility",
+        "name": "components-conversation-markdown-markdown-loader-contracts",
+        "declaration": "loadMarkdownDeps"
       }
     },
     {
@@ -3956,54 +4004,6 @@
     },
     {
       "module": "src/components/conversation/markdown/markdown-loader.ts",
-      "exportName": "getMarkdownDepsIfLoaded",
-      "kind": "function",
-      "fingerprint": "a3cb93735e74228576ce",
-      "routes": [
-        "src/components/conversation/markdown/markdown-loader.ts"
-      ],
-      "document": "llms/conversation.md",
-      "family": "conversation",
-      "locator": {
-        "kind": "utility",
-        "name": "components-conversation-markdown-markdown-loader-contracts",
-        "declaration": "getMarkdownDepsIfLoaded"
-      }
-    },
-    {
-      "module": "src/components/conversation/markdown/markdown-loader.ts",
-      "exportName": "loadMarkdownAndSanitizer",
-      "kind": "function",
-      "fingerprint": "90cfc2c896f19c9b84ed",
-      "routes": [
-        "src/components/conversation/markdown/markdown-loader.ts"
-      ],
-      "document": "llms/conversation.md",
-      "family": "conversation",
-      "locator": {
-        "kind": "utility",
-        "name": "components-conversation-markdown-markdown-loader-contracts",
-        "declaration": "loadMarkdownAndSanitizer"
-      }
-    },
-    {
-      "module": "src/components/conversation/markdown/markdown-loader.ts",
-      "exportName": "loadMarkdownDeps",
-      "kind": "function",
-      "fingerprint": "3b7b6103d800b4645291",
-      "routes": [
-        "src/components/conversation/markdown/markdown-loader.ts"
-      ],
-      "document": "llms/conversation.md",
-      "family": "conversation",
-      "locator": {
-        "kind": "utility",
-        "name": "components-conversation-markdown-markdown-loader-contracts",
-        "declaration": "loadMarkdownDeps"
-      }
-    },
-    {
-      "module": "src/components/conversation/markdown/markdown-loader.ts",
       "exportName": "preloadMarkdown",
       "kind": "function",
       "fingerprint": "3b7b6103d800b4645291",
@@ -4066,6 +4066,29 @@
     },
     {
       "module": "src/components/conversation/message-actions/toolbar-actions.ts",
+      "exportName": "isLyraToolbarActionProvider",
+      "kind": "function",
+      "fingerprint": "d357e96573cb8cac617b",
+      "routes": [
+        "src/all.ts",
+        "src/components/conversation/index.ts",
+        "src/components/conversation/message-actions/message-actions.ts",
+        "src/components/conversation/message-actions/toolbar-actions.ts",
+        "src/components/lr-message-actions.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "utility",
+        "name": "components-conversation-message-actions-toolbar-actions-contracts",
+        "declaration": "isLyraToolbarActionProvider"
+      }
+    },
+    {
+      "module": "src/components/conversation/message-actions/toolbar-actions.ts",
       "exportName": "LyraToolbarAction",
       "kind": "interface",
       "fingerprint": "5285bf043dd656192d20",
@@ -4108,29 +4131,6 @@
         "kind": "utility",
         "name": "components-conversation-message-actions-toolbar-actions-contracts",
         "declaration": "LyraToolbarActionProvider"
-      }
-    },
-    {
-      "module": "src/components/conversation/message-actions/toolbar-actions.ts",
-      "exportName": "isLyraToolbarActionProvider",
-      "kind": "function",
-      "fingerprint": "d357e96573cb8cac617b",
-      "routes": [
-        "src/all.ts",
-        "src/components/conversation/index.ts",
-        "src/components/conversation/message-actions/message-actions.ts",
-        "src/components/conversation/message-actions/toolbar-actions.ts",
-        "src/components/lr-message-actions.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/conversation.md",
-      "family": "conversation",
-      "locator": {
-        "kind": "utility",
-        "name": "components-conversation-message-actions-toolbar-actions-contracts",
-        "declaration": "isLyraToolbarActionProvider"
       }
     },
     {
@@ -4509,6 +4509,52 @@
     },
     {
       "module": "src/components/conversation/widget-renderer/registry.ts",
+      "exportName": "createWidgetTypeRegistry",
+      "kind": "function",
+      "fingerprint": "0c906d61f3bd60f4f6cf",
+      "routes": [
+        "src/all.ts",
+        "src/components/conversation/index.ts",
+        "src/components/conversation/widget-renderer/registry.ts",
+        "src/components/conversation/widget-renderer/widget-renderer.ts",
+        "src/components/lr-widget-renderer.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-widget-renderer",
+        "declaration": "createWidgetTypeRegistry"
+      }
+    },
+    {
+      "module": "src/components/conversation/widget-renderer/registry.ts",
+      "exportName": "isWidgetTypeRegistry",
+      "kind": "function",
+      "fingerprint": "81be9f516739a63caa42",
+      "routes": [
+        "src/all.ts",
+        "src/components/conversation/index.ts",
+        "src/components/conversation/widget-renderer/registry.ts",
+        "src/components/conversation/widget-renderer/widget-renderer.ts",
+        "src/components/lr-widget-renderer.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-widget-renderer",
+        "declaration": "isWidgetTypeRegistry"
+      }
+    },
+    {
+      "module": "src/components/conversation/widget-renderer/registry.ts",
       "exportName": "LyraWidgetTypeDefinition",
       "kind": "interface",
       "fingerprint": "84c092b5b4584dca8040",
@@ -4554,14 +4600,14 @@
       }
     },
     {
-      "module": "src/components/conversation/widget-renderer/registry.ts",
-      "exportName": "createWidgetTypeRegistry",
+      "module": "src/components/conversation/widget-renderer/resolve.ts",
+      "exportName": "createWidgetDocument",
       "kind": "function",
-      "fingerprint": "0c906d61f3bd60f4f6cf",
+      "fingerprint": "b2692fb787e94f7cfe10",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
-        "src/components/conversation/widget-renderer/registry.ts",
+        "src/components/conversation/widget-renderer/resolve.ts",
         "src/components/conversation/widget-renderer/widget-renderer.ts",
         "src/components/lr-widget-renderer.ts",
         "src/lyra.ts",
@@ -4573,30 +4619,7 @@
       "locator": {
         "kind": "component",
         "tag": "lr-widget-renderer",
-        "declaration": "createWidgetTypeRegistry"
-      }
-    },
-    {
-      "module": "src/components/conversation/widget-renderer/registry.ts",
-      "exportName": "isWidgetTypeRegistry",
-      "kind": "function",
-      "fingerprint": "81be9f516739a63caa42",
-      "routes": [
-        "src/all.ts",
-        "src/components/conversation/index.ts",
-        "src/components/conversation/widget-renderer/registry.ts",
-        "src/components/conversation/widget-renderer/widget-renderer.ts",
-        "src/components/lr-widget-renderer.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/conversation.md",
-      "family": "conversation",
-      "locator": {
-        "kind": "component",
-        "tag": "lr-widget-renderer",
-        "declaration": "isWidgetTypeRegistry"
+        "declaration": "createWidgetDocument"
       }
     },
     {
@@ -4714,29 +4737,6 @@
         "kind": "component",
         "tag": "lr-widget-renderer",
         "declaration": "ResolvedText"
-      }
-    },
-    {
-      "module": "src/components/conversation/widget-renderer/resolve.ts",
-      "exportName": "createWidgetDocument",
-      "kind": "function",
-      "fingerprint": "b2692fb787e94f7cfe10",
-      "routes": [
-        "src/all.ts",
-        "src/components/conversation/index.ts",
-        "src/components/conversation/widget-renderer/resolve.ts",
-        "src/components/conversation/widget-renderer/widget-renderer.ts",
-        "src/components/lr-widget-renderer.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/conversation.md",
-      "family": "conversation",
-      "locator": {
-        "kind": "component",
-        "tag": "lr-widget-renderer",
-        "declaration": "createWidgetDocument"
       }
     },
     {
@@ -6194,6 +6194,25 @@
     },
     {
       "module": "src/components/data/heatmap/heatmap.class.ts",
+      "exportName": "hexToRgb",
+      "kind": "function",
+      "fingerprint": "787a466ced1d0cfb32ab",
+      "routes": [
+        "src/components/data/heatmap/heatmap.class.ts",
+        "src/components/data/heatmap/heatmap.ts",
+        "src/components/data/index.ts",
+        "src/components/lr-heatmap.ts"
+      ],
+      "document": "llms/data.md",
+      "family": "data",
+      "locator": {
+        "kind": "utility",
+        "name": "components-data-heatmap-heatmap-contracts",
+        "declaration": "hexToRgb"
+      }
+    },
+    {
+      "module": "src/components/data/heatmap/heatmap.class.ts",
       "exportName": "MatrixCellPos",
       "kind": "interface",
       "fingerprint": "f2383b699f5aaa6fc6a7",
@@ -6213,25 +6232,6 @@
         "kind": "utility",
         "name": "components-data-heatmap-heatmap-contracts",
         "declaration": "MatrixCellPos"
-      }
-    },
-    {
-      "module": "src/components/data/heatmap/heatmap.class.ts",
-      "exportName": "hexToRgb",
-      "kind": "function",
-      "fingerprint": "787a466ced1d0cfb32ab",
-      "routes": [
-        "src/components/data/heatmap/heatmap.class.ts",
-        "src/components/data/heatmap/heatmap.ts",
-        "src/components/data/index.ts",
-        "src/components/lr-heatmap.ts"
-      ],
-      "document": "llms/data.md",
-      "family": "data",
-      "locator": {
-        "kind": "utility",
-        "name": "components-data-heatmap-heatmap-contracts",
-        "declaration": "hexToRgb"
       }
     },
     {
@@ -6779,6 +6779,29 @@
       }
     },
     {
+      "module": "src/components/forms/date-picker/date-picker.class.ts",
+      "exportName": "LyraDateRangePreset",
+      "kind": "interface",
+      "fingerprint": "5a6a42f81fd02b25e0df",
+      "routes": [
+        "src/all.ts",
+        "src/components/forms/date-picker/date-picker.class.ts",
+        "src/components/forms/date-picker/date-picker.ts",
+        "src/components/forms/index.ts",
+        "src/components/lr-date-picker.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "components-forms-date-picker-date-picker-contracts",
+        "declaration": "LyraDateRangePreset"
+      }
+    },
+    {
       "module": "src/components/forms/emoji-picker/emoji-types.ts",
       "exportName": "EmojiPickerGroup",
       "kind": "interface",
@@ -6935,6 +6958,29 @@
     },
     {
       "module": "src/components/forms/phone-input/phone-input.class.ts",
+      "exportName": "loadLibphonenumberAdapter",
+      "kind": "function",
+      "fingerprint": "b9671caf6fe7a55c2c58",
+      "routes": [
+        "src/all.ts",
+        "src/components/forms/index.ts",
+        "src/components/forms/phone-input/phone-input.class.ts",
+        "src/components/forms/phone-input/phone-input.ts",
+        "src/components/lr-phone-input.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "components-forms-phone-input-phone-input-contracts",
+        "declaration": "loadLibphonenumberAdapter"
+      }
+    },
+    {
+      "module": "src/components/forms/phone-input/phone-input.class.ts",
       "exportName": "LyraPhoneCountry",
       "kind": "interface",
       "fingerprint": "616d1ed19a73a21ff4e6",
@@ -7000,29 +7046,6 @@
         "kind": "utility",
         "name": "components-forms-phone-input-phone-input-contracts",
         "declaration": "LyraPhoneNumberAdapter"
-      }
-    },
-    {
-      "module": "src/components/forms/phone-input/phone-input.class.ts",
-      "exportName": "loadLibphonenumberAdapter",
-      "kind": "function",
-      "fingerprint": "b9671caf6fe7a55c2c58",
-      "routes": [
-        "src/all.ts",
-        "src/components/forms/index.ts",
-        "src/components/forms/phone-input/phone-input.class.ts",
-        "src/components/forms/phone-input/phone-input.ts",
-        "src/components/lr-phone-input.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/forms.md",
-      "family": "forms",
-      "locator": {
-        "kind": "utility",
-        "name": "components-forms-phone-input-phone-input-contracts",
-        "declaration": "loadLibphonenumberAdapter"
       }
     },
     {
@@ -7211,6 +7234,29 @@
     },
     {
       "module": "src/components/layout/app-rail/app-rail.class.ts",
+      "exportName": "computeAppRailMode",
+      "kind": "function",
+      "fingerprint": "57e50e39d8a48d67cd67",
+      "routes": [
+        "src/all.ts",
+        "src/components/layout/app-rail/app-rail.class.ts",
+        "src/components/layout/app-rail/app-rail.ts",
+        "src/components/layout/index.ts",
+        "src/components/lr-app-rail.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/layout.md",
+      "family": "layout",
+      "locator": {
+        "kind": "utility",
+        "name": "components-layout-app-rail-app-rail-contracts",
+        "declaration": "computeAppRailMode"
+      }
+    },
+    {
+      "module": "src/components/layout/app-rail/app-rail.class.ts",
       "exportName": "LyraAppRailModeChangeDetail",
       "kind": "interface",
       "fingerprint": "5119c398c09e8341c2f3",
@@ -7276,29 +7322,6 @@
         "kind": "utility",
         "name": "components-layout-app-rail-app-rail-contracts",
         "declaration": "LyraAppRailToggleDetail"
-      }
-    },
-    {
-      "module": "src/components/layout/app-rail/app-rail.class.ts",
-      "exportName": "computeAppRailMode",
-      "kind": "function",
-      "fingerprint": "57e50e39d8a48d67cd67",
-      "routes": [
-        "src/all.ts",
-        "src/components/layout/app-rail/app-rail.class.ts",
-        "src/components/layout/app-rail/app-rail.ts",
-        "src/components/layout/index.ts",
-        "src/components/lr-app-rail.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/layout.md",
-      "family": "layout",
-      "locator": {
-        "kind": "utility",
-        "name": "components-layout-app-rail-app-rail-contracts",
-        "declaration": "computeAppRailMode"
       }
     },
     {
@@ -8911,6 +8934,50 @@
     },
     {
       "module": "src/components/media/file-icon/file-type-metadata.ts",
+      "exportName": "createFileTypeMetadataRegistry",
+      "kind": "function",
+      "fingerprint": "c4a9295318538a35a855",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-file-icon.ts",
+        "src/components/media/file-icon/file-icon.ts",
+        "src/components/media/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-file-icon-file-type-metadata-contracts",
+        "declaration": "createFileTypeMetadataRegistry"
+      }
+    },
+    {
+      "module": "src/components/media/file-icon/file-type-metadata.ts",
+      "exportName": "getFileTypeMetadata",
+      "kind": "function",
+      "fingerprint": "6faa682c95b9a56d835c",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-file-icon.ts",
+        "src/components/media/file-icon/file-icon.ts",
+        "src/components/media/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-file-icon-file-type-metadata-contracts",
+        "declaration": "getFileTypeMetadata"
+      }
+    },
+    {
+      "module": "src/components/media/file-icon/file-type-metadata.ts",
       "exportName": "LyraFileTypeMetadata",
       "kind": "interface",
       "fingerprint": "ac81447e50088f164f28",
@@ -8995,50 +9062,6 @@
         "kind": "utility",
         "name": "components-media-file-icon-file-type-metadata-contracts",
         "declaration": "LyraResolvedFileTypeMetadata"
-      }
-    },
-    {
-      "module": "src/components/media/file-icon/file-type-metadata.ts",
-      "exportName": "createFileTypeMetadataRegistry",
-      "kind": "function",
-      "fingerprint": "c4a9295318538a35a855",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-file-icon.ts",
-        "src/components/media/file-icon/file-icon.ts",
-        "src/components/media/index.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/media.md",
-      "family": "media",
-      "locator": {
-        "kind": "utility",
-        "name": "components-media-file-icon-file-type-metadata-contracts",
-        "declaration": "createFileTypeMetadataRegistry"
-      }
-    },
-    {
-      "module": "src/components/media/file-icon/file-type-metadata.ts",
-      "exportName": "getFileTypeMetadata",
-      "kind": "function",
-      "fingerprint": "6faa682c95b9a56d835c",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-file-icon.ts",
-        "src/components/media/file-icon/file-icon.ts",
-        "src/components/media/index.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/media.md",
-      "family": "media",
-      "locator": {
-        "kind": "utility",
-        "name": "components-media-file-icon-file-type-metadata-contracts",
-        "declaration": "getFileTypeMetadata"
       }
     },
     {
@@ -9318,6 +9341,22 @@
     },
     {
       "module": "src/components/media/map/map-loader.ts",
+      "exportName": "loadMaplibre",
+      "kind": "function",
+      "fingerprint": "2a8074a325b26138506c",
+      "routes": [
+        "src/components/media/map/map-loader.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-map-loader-contracts",
+        "declaration": "loadMaplibre"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreGeoJsonDiff",
       "kind": "interface",
       "fingerprint": "1a09219c9c55ee8ee786",
@@ -9382,22 +9421,6 @@
     },
     {
       "module": "src/components/media/map/map-loader.ts",
-      "exportName": "MapLibrePopupCapability",
-      "kind": "interface",
-      "fingerprint": "7d8015f15e19b086b9db",
-      "routes": [
-        "src/components/media/map/map-loader.ts"
-      ],
-      "document": "llms/media.md",
-      "family": "media",
-      "locator": {
-        "kind": "utility",
-        "name": "components-media-map-map-loader-contracts",
-        "declaration": "MapLibrePopupCapability"
-      }
-    },
-    {
-      "module": "src/components/media/map/map-loader.ts",
       "exportName": "MaplibreModule",
       "kind": "interface",
       "fingerprint": "bc42ed17ce4c787c9df8",
@@ -9414,9 +9437,9 @@
     },
     {
       "module": "src/components/media/map/map-loader.ts",
-      "exportName": "loadMaplibre",
-      "kind": "function",
-      "fingerprint": "2a8074a325b26138506c",
+      "exportName": "MapLibrePopupCapability",
+      "kind": "interface",
+      "fingerprint": "7d8015f15e19b086b9db",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9425,14 +9448,33 @@
       "locator": {
         "kind": "utility",
         "name": "components-media-map-map-loader-contracts",
-        "declaration": "loadMaplibre"
+        "declaration": "MapLibrePopupCapability"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "buildGeoJsonPropertyDiff",
+      "kind": "function",
+      "fingerprint": "b012d9629a78240243a9",
+      "routes": [
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-map-contracts",
+        "declaration": "buildGeoJsonPropertyDiff"
       }
     },
     {
       "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapChoroplethLayer",
       "kind": "interface",
-      "fingerprint": "efefc26912170f7e129d",
+      "fingerprint": "1950cc168a8d96bf7fb1",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -9455,7 +9497,7 @@
       "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapGeoJsonDataLayer",
       "kind": "interface",
-      "fingerprint": "bbaad6d43c31460cbfcc",
+      "fingerprint": "75352ff03c2a8c90c0f6",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -9587,25 +9629,6 @@
         "kind": "utility",
         "name": "components-media-map-map-contracts",
         "declaration": "LyraMapStyleSpecification"
-      }
-    },
-    {
-      "module": "src/components/media/map/map.class.ts",
-      "exportName": "buildGeoJsonPropertyDiff",
-      "kind": "function",
-      "fingerprint": "b012d9629a78240243a9",
-      "routes": [
-        "src/components/lr-map.ts",
-        "src/components/media/index.ts",
-        "src/components/media/map/map.class.ts",
-        "src/components/media/map/map.ts"
-      ],
-      "document": "llms/media.md",
-      "family": "media",
-      "locator": {
-        "kind": "utility",
-        "name": "components-media-map-map-contracts",
-        "declaration": "buildGeoJsonPropertyDiff"
       }
     },
     {
@@ -9863,26 +9886,6 @@
     },
     {
       "module": "src/components/overlays/dialog/confirm.ts",
-      "exportName": "ConfirmOptions",
-      "kind": "interface",
-      "fingerprint": "a184e8cb9107f27f8cea",
-      "routes": [
-        "src/all.ts",
-        "src/components/overlays/dialog/confirm.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/overlays.md",
-      "family": "overlays",
-      "locator": {
-        "kind": "utility",
-        "name": "components-overlays-dialog-confirm-contracts",
-        "declaration": "ConfirmOptions"
-      }
-    },
-    {
-      "module": "src/components/overlays/dialog/confirm.ts",
       "exportName": "confirm",
       "kind": "function",
       "fingerprint": "1949576c25e7ecb13c4a",
@@ -9899,6 +9902,26 @@
         "kind": "utility",
         "name": "components-overlays-dialog-confirm-contracts",
         "declaration": "confirm"
+      }
+    },
+    {
+      "module": "src/components/overlays/dialog/confirm.ts",
+      "exportName": "ConfirmOptions",
+      "kind": "interface",
+      "fingerprint": "a184e8cb9107f27f8cea",
+      "routes": [
+        "src/all.ts",
+        "src/components/overlays/dialog/confirm.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/overlays.md",
+      "family": "overlays",
+      "locator": {
+        "kind": "utility",
+        "name": "components-overlays-dialog-confirm-contracts",
+        "declaration": "ConfirmOptions"
       }
     },
     {
@@ -10088,27 +10111,6 @@
     },
     {
       "module": "src/components/overlays/toast/toaster.ts",
-      "exportName": "ToastHandle",
-      "kind": "interface",
-      "fingerprint": "477ba32e05d25f502eb0",
-      "routes": [
-        "src/all.ts",
-        "src/components/overlays/index.ts",
-        "src/components/overlays/toast/toaster.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/overlays.md",
-      "family": "overlays",
-      "locator": {
-        "kind": "utility",
-        "name": "components-overlays-toast-toaster-contracts",
-        "declaration": "ToastHandle"
-      }
-    },
-    {
-      "module": "src/components/overlays/toast/toaster.ts",
       "exportName": "toast",
       "kind": "function",
       "fingerprint": "4b7dead9e4fe5f973b53",
@@ -10126,6 +10128,27 @@
         "kind": "utility",
         "name": "components-overlays-toast-toaster-contracts",
         "declaration": "toast"
+      }
+    },
+    {
+      "module": "src/components/overlays/toast/toaster.ts",
+      "exportName": "ToastHandle",
+      "kind": "interface",
+      "fingerprint": "477ba32e05d25f502eb0",
+      "routes": [
+        "src/all.ts",
+        "src/components/overlays/index.ts",
+        "src/components/overlays/toast/toaster.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/overlays.md",
+      "family": "overlays",
+      "locator": {
+        "kind": "utility",
+        "name": "components-overlays-toast-toaster-contracts",
+        "declaration": "ToastHandle"
       }
     },
     {
@@ -11207,25 +11230,6 @@
     },
     {
       "module": "src/components/utility/diff-view/diff-line-diff.ts",
-      "exportName": "LyraDiffOp",
-      "kind": "interface",
-      "fingerprint": "67d68b7f47fe855ba1d3",
-      "routes": [
-        "src/all.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/utility.md",
-      "family": "utility",
-      "locator": {
-        "kind": "utility",
-        "name": "components-utility-diff-view-diff-line-diff-contracts",
-        "declaration": "LyraDiffOp"
-      }
-    },
-    {
-      "module": "src/components/utility/diff-view/diff-line-diff.ts",
       "exportName": "computeLineDiff",
       "kind": "function",
       "fingerprint": "f0275d8cab650a312c5c",
@@ -11244,13 +11248,12 @@
       }
     },
     {
-      "module": "src/components/utility/export-button/csv.ts",
-      "exportName": "LyraCsvColumn",
+      "module": "src/components/utility/diff-view/diff-line-diff.ts",
+      "exportName": "LyraDiffOp",
       "kind": "interface",
-      "fingerprint": "d2f98e03e45a0df62839",
+      "fingerprint": "67d68b7f47fe855ba1d3",
       "routes": [
         "src/all.ts",
-        "src/components/utility/export-button/csv.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
         "src/ssr/all.ts"
@@ -11259,8 +11262,8 @@
       "family": "utility",
       "locator": {
         "kind": "utility",
-        "name": "components-utility-export-button-csv-contracts",
-        "declaration": "LyraCsvColumn"
+        "name": "components-utility-diff-view-diff-line-diff-contracts",
+        "declaration": "LyraDiffOp"
       }
     },
     {
@@ -11324,6 +11327,26 @@
       }
     },
     {
+      "module": "src/components/utility/export-button/csv.ts",
+      "exportName": "LyraCsvColumn",
+      "kind": "interface",
+      "fingerprint": "d2f98e03e45a0df62839",
+      "routes": [
+        "src/all.ts",
+        "src/components/utility/export-button/csv.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/utility.md",
+      "family": "utility",
+      "locator": {
+        "kind": "utility",
+        "name": "components-utility-export-button-csv-contracts",
+        "declaration": "LyraCsvColumn"
+      }
+    },
+    {
       "module": "src/components/utility/export-button/export-button.class.ts",
       "exportName": "LyraExportFormatDescriptor",
       "kind": "interface",
@@ -11344,6 +11367,29 @@
         "kind": "utility",
         "name": "components-utility-export-button-export-button-contracts",
         "declaration": "LyraExportFormatDescriptor"
+      }
+    },
+    {
+      "module": "src/components/utility/icon/icon-library.ts",
+      "exportName": "getIconLibrary",
+      "kind": "function",
+      "fingerprint": "4c6397006f847653b6b0",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-icon.ts",
+        "src/components/utility/icon/icon-library.ts",
+        "src/components/utility/icon/icon.ts",
+        "src/components/utility/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/utility.md",
+      "family": "utility",
+      "locator": {
+        "kind": "utility",
+        "name": "components-utility-icon-icon-library-contracts",
+        "declaration": "getIconLibrary"
       }
     },
     {
@@ -11390,29 +11436,6 @@
         "kind": "utility",
         "name": "components-utility-icon-icon-library-contracts",
         "declaration": "LyraIconLibraryOptions"
-      }
-    },
-    {
-      "module": "src/components/utility/icon/icon-library.ts",
-      "exportName": "getIconLibrary",
-      "kind": "function",
-      "fingerprint": "4c6397006f847653b6b0",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-icon.ts",
-        "src/components/utility/icon/icon-library.ts",
-        "src/components/utility/icon/icon.ts",
-        "src/components/utility/index.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/utility.md",
-      "family": "utility",
-      "locator": {
-        "kind": "utility",
-        "name": "components-utility-icon-icon-library-contracts",
-        "declaration": "getIconLibrary"
       }
     },
     {
@@ -11624,6 +11647,28 @@
     },
     {
       "module": "src/components/viewers/calendar-viewer/calendar-loader.ts",
+      "exportName": "clearIcalCache",
+      "kind": "function",
+      "fingerprint": "45c97f877eefaf3d0f61",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-calendar-viewer.ts",
+        "src/components/viewers/calendar-viewer/calendar-viewer.ts",
+        "src/components/viewers/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-calendar-viewer-calendar-loader-contracts",
+        "declaration": "clearIcalCache"
+      }
+    },
+    {
+      "module": "src/components/viewers/calendar-viewer/calendar-loader.ts",
       "exportName": "IcalApi",
       "kind": "interface",
       "fingerprint": "723e95de72987233fc28",
@@ -11712,28 +11757,6 @@
     },
     {
       "module": "src/components/viewers/calendar-viewer/calendar-loader.ts",
-      "exportName": "clearIcalCache",
-      "kind": "function",
-      "fingerprint": "45c97f877eefaf3d0f61",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-calendar-viewer.ts",
-        "src/components/viewers/calendar-viewer/calendar-viewer.ts",
-        "src/components/viewers/index.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-calendar-viewer-calendar-loader-contracts",
-        "declaration": "clearIcalCache"
-      }
-    },
-    {
-      "module": "src/components/viewers/calendar-viewer/calendar-loader.ts",
       "exportName": "loadIcal",
       "kind": "function",
       "fingerprint": "fec7d5102f8b93347fa1",
@@ -11797,6 +11820,24 @@
         "kind": "utility",
         "name": "components-viewers-calendar-viewer-calendar-viewer-contracts",
         "declaration": "ParsedCalendarEvent"
+      }
+    },
+    {
+      "module": "src/components/viewers/contact-viewer/vcard.ts",
+      "exportName": "parseVCards",
+      "kind": "function",
+      "fingerprint": "2d5984aa040ab28bba2f",
+      "routes": [
+        "src/components/lr-contact-viewer.ts",
+        "src/components/viewers/contact-viewer/contact-viewer.ts",
+        "src/components/viewers/index.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-contact-viewer-vcard-contracts",
+        "declaration": "parseVCards"
       }
     },
     {
@@ -11903,24 +11944,6 @@
         "kind": "utility",
         "name": "components-viewers-contact-viewer-vcard-contracts",
         "declaration": "VCardTypedValue"
-      }
-    },
-    {
-      "module": "src/components/viewers/contact-viewer/vcard.ts",
-      "exportName": "parseVCards",
-      "kind": "function",
-      "fingerprint": "2d5984aa040ab28bba2f",
-      "routes": [
-        "src/components/lr-contact-viewer.ts",
-        "src/components/viewers/contact-viewer/contact-viewer.ts",
-        "src/components/viewers/index.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-contact-viewer-vcard-contracts",
-        "declaration": "parseVCards"
       }
     },
     {
@@ -12103,6 +12126,94 @@
     },
     {
       "module": "src/components/viewers/document-viewer/registry.ts",
+      "exportName": "adaptDocumentRenderer",
+      "kind": "function",
+      "fingerprint": "1bde90fbf92c0c4cf640",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-document-viewer.ts",
+        "src/components/viewers/document-viewer/document-viewer.ts",
+        "src/components/viewers/document-viewer/registry.ts",
+        "src/components/viewers/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-document-viewer-registry-contracts",
+        "declaration": "adaptDocumentRenderer"
+      }
+    },
+    {
+      "module": "src/components/viewers/document-viewer/registry.ts",
+      "exportName": "clearDocumentRenderers",
+      "kind": "function",
+      "fingerprint": "45c97f877eefaf3d0f61",
+      "routes": [
+        "src/components/lr-document-viewer.ts",
+        "src/components/viewers/document-viewer/document-viewer.ts",
+        "src/components/viewers/document-viewer/registry.ts",
+        "src/components/viewers/index.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-document-viewer-registry-contracts",
+        "declaration": "clearDocumentRenderers"
+      }
+    },
+    {
+      "module": "src/components/viewers/document-viewer/registry.ts",
+      "exportName": "createDocumentRendererAdapter",
+      "kind": "function",
+      "fingerprint": "7f8cd9a0d91d714f2283",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-document-viewer.ts",
+        "src/components/viewers/document-viewer/document-viewer.ts",
+        "src/components/viewers/document-viewer/registry.ts",
+        "src/components/viewers/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-document-viewer-registry-contracts",
+        "declaration": "createDocumentRendererAdapter"
+      }
+    },
+    {
+      "module": "src/components/viewers/document-viewer/registry.ts",
+      "exportName": "createDocumentRendererRegistry",
+      "kind": "function",
+      "fingerprint": "32eaeed196bce722fcc0",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-document-viewer.ts",
+        "src/components/viewers/document-viewer/document-viewer.ts",
+        "src/components/viewers/document-viewer/registry.ts",
+        "src/components/viewers/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-document-viewer-registry-contracts",
+        "declaration": "createDocumentRendererRegistry"
+      }
+    },
+    {
+      "module": "src/components/viewers/document-viewer/registry.ts",
       "exportName": "DirectDocumentRendererDefinition",
       "kind": "interface",
       "fingerprint": "7db0392f9a568f1072af",
@@ -12149,6 +12260,52 @@
     },
     {
       "module": "src/components/viewers/document-viewer/registry.ts",
+      "exportName": "findDocumentRenderer",
+      "kind": "function",
+      "fingerprint": "252224602aac1867e58b",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-document-viewer.ts",
+        "src/components/viewers/document-viewer/document-viewer.ts",
+        "src/components/viewers/document-viewer/registry.ts",
+        "src/components/viewers/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-document-viewer-registry-contracts",
+        "declaration": "findDocumentRenderer"
+      }
+    },
+    {
+      "module": "src/components/viewers/document-viewer/registry.ts",
+      "exportName": "getDefaultDocumentRendererRegistry",
+      "kind": "function",
+      "fingerprint": "b505da73821259f940f2",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-document-viewer.ts",
+        "src/components/viewers/document-viewer/document-viewer.ts",
+        "src/components/viewers/document-viewer/registry.ts",
+        "src/components/viewers/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-document-viewer-registry-contracts",
+        "declaration": "getDefaultDocumentRendererRegistry"
+      }
+    },
+    {
+      "module": "src/components/viewers/document-viewer/registry.ts",
       "exportName": "LazyDocumentRendererDefinition",
       "kind": "interface",
       "fingerprint": "db86a9d622d4bbf0819a",
@@ -12168,6 +12325,29 @@
         "kind": "utility",
         "name": "components-viewers-document-viewer-registry-contracts",
         "declaration": "LazyDocumentRendererDefinition"
+      }
+    },
+    {
+      "module": "src/components/viewers/document-viewer/registry.ts",
+      "exportName": "loadDocumentRenderer",
+      "kind": "function",
+      "fingerprint": "88855f32796c0e645a48",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-document-viewer.ts",
+        "src/components/viewers/document-viewer/document-viewer.ts",
+        "src/components/viewers/document-viewer/registry.ts",
+        "src/components/viewers/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-document-viewer-registry-contracts",
+        "declaration": "loadDocumentRenderer"
       }
     },
     {
@@ -12333,163 +12513,6 @@
     },
     {
       "module": "src/components/viewers/document-viewer/registry.ts",
-      "exportName": "adaptDocumentRenderer",
-      "kind": "function",
-      "fingerprint": "1bde90fbf92c0c4cf640",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-document-viewer.ts",
-        "src/components/viewers/document-viewer/document-viewer.ts",
-        "src/components/viewers/document-viewer/registry.ts",
-        "src/components/viewers/index.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-document-viewer-registry-contracts",
-        "declaration": "adaptDocumentRenderer"
-      }
-    },
-    {
-      "module": "src/components/viewers/document-viewer/registry.ts",
-      "exportName": "clearDocumentRenderers",
-      "kind": "function",
-      "fingerprint": "45c97f877eefaf3d0f61",
-      "routes": [
-        "src/components/lr-document-viewer.ts",
-        "src/components/viewers/document-viewer/document-viewer.ts",
-        "src/components/viewers/document-viewer/registry.ts",
-        "src/components/viewers/index.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-document-viewer-registry-contracts",
-        "declaration": "clearDocumentRenderers"
-      }
-    },
-    {
-      "module": "src/components/viewers/document-viewer/registry.ts",
-      "exportName": "createDocumentRendererAdapter",
-      "kind": "function",
-      "fingerprint": "7f8cd9a0d91d714f2283",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-document-viewer.ts",
-        "src/components/viewers/document-viewer/document-viewer.ts",
-        "src/components/viewers/document-viewer/registry.ts",
-        "src/components/viewers/index.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-document-viewer-registry-contracts",
-        "declaration": "createDocumentRendererAdapter"
-      }
-    },
-    {
-      "module": "src/components/viewers/document-viewer/registry.ts",
-      "exportName": "createDocumentRendererRegistry",
-      "kind": "function",
-      "fingerprint": "32eaeed196bce722fcc0",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-document-viewer.ts",
-        "src/components/viewers/document-viewer/document-viewer.ts",
-        "src/components/viewers/document-viewer/registry.ts",
-        "src/components/viewers/index.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-document-viewer-registry-contracts",
-        "declaration": "createDocumentRendererRegistry"
-      }
-    },
-    {
-      "module": "src/components/viewers/document-viewer/registry.ts",
-      "exportName": "findDocumentRenderer",
-      "kind": "function",
-      "fingerprint": "252224602aac1867e58b",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-document-viewer.ts",
-        "src/components/viewers/document-viewer/document-viewer.ts",
-        "src/components/viewers/document-viewer/registry.ts",
-        "src/components/viewers/index.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-document-viewer-registry-contracts",
-        "declaration": "findDocumentRenderer"
-      }
-    },
-    {
-      "module": "src/components/viewers/document-viewer/registry.ts",
-      "exportName": "getDefaultDocumentRendererRegistry",
-      "kind": "function",
-      "fingerprint": "b505da73821259f940f2",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-document-viewer.ts",
-        "src/components/viewers/document-viewer/document-viewer.ts",
-        "src/components/viewers/document-viewer/registry.ts",
-        "src/components/viewers/index.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-document-viewer-registry-contracts",
-        "declaration": "getDefaultDocumentRendererRegistry"
-      }
-    },
-    {
-      "module": "src/components/viewers/document-viewer/registry.ts",
-      "exportName": "loadDocumentRenderer",
-      "kind": "function",
-      "fingerprint": "88855f32796c0e645a48",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-document-viewer.ts",
-        "src/components/viewers/document-viewer/document-viewer.ts",
-        "src/components/viewers/document-viewer/registry.ts",
-        "src/components/viewers/index.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-document-viewer-registry-contracts",
-        "declaration": "loadDocumentRenderer"
-      }
-    },
-    {
-      "module": "src/components/viewers/document-viewer/registry.ts",
       "exportName": "registerDocumentRenderer",
       "kind": "function",
       "fingerprint": "086cc4c8a653860f380f",
@@ -12536,50 +12559,6 @@
     },
     {
       "module": "src/components/viewers/docx-viewer/docx-loader.ts",
-      "exportName": "DocxDeps",
-      "kind": "interface",
-      "fingerprint": "68dc672f205ce507f5e7",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-docx-viewer.ts",
-        "src/components/viewers/docx-viewer/docx-viewer.ts",
-        "src/components/viewers/index.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-docx-viewer-docx-loader-contracts",
-        "declaration": "DocxDeps"
-      }
-    },
-    {
-      "module": "src/components/viewers/docx-viewer/docx-loader.ts",
-      "exportName": "MammothApi",
-      "kind": "interface",
-      "fingerprint": "b8946ba13c5061ce5593",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-docx-viewer.ts",
-        "src/components/viewers/docx-viewer/docx-viewer.ts",
-        "src/components/viewers/index.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-docx-viewer-docx-loader-contracts",
-        "declaration": "MammothApi"
-      }
-    },
-    {
-      "module": "src/components/viewers/docx-viewer/docx-loader.ts",
       "exportName": "clearDocxDepsCache",
       "kind": "function",
       "fingerprint": "45c97f877eefaf3d0f61",
@@ -12598,6 +12577,28 @@
         "kind": "utility",
         "name": "components-viewers-docx-viewer-docx-loader-contracts",
         "declaration": "clearDocxDepsCache"
+      }
+    },
+    {
+      "module": "src/components/viewers/docx-viewer/docx-loader.ts",
+      "exportName": "DocxDeps",
+      "kind": "interface",
+      "fingerprint": "68dc672f205ce507f5e7",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-docx-viewer.ts",
+        "src/components/viewers/docx-viewer/docx-viewer.ts",
+        "src/components/viewers/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-docx-viewer-docx-loader-contracts",
+        "declaration": "DocxDeps"
       }
     },
     {
@@ -12667,6 +12668,28 @@
       }
     },
     {
+      "module": "src/components/viewers/docx-viewer/docx-loader.ts",
+      "exportName": "MammothApi",
+      "kind": "interface",
+      "fingerprint": "b8946ba13c5061ce5593",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-docx-viewer.ts",
+        "src/components/viewers/docx-viewer/docx-viewer.ts",
+        "src/components/viewers/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-docx-viewer-docx-loader-contracts",
+        "declaration": "MammothApi"
+      }
+    },
+    {
       "module": "src/components/viewers/docx-viewer/docx-viewer.class.ts",
       "exportName": "DocxHeadingItem",
       "kind": "interface",
@@ -12714,6 +12737,28 @@
     },
     {
       "module": "src/components/viewers/email-viewer/email-loader.ts",
+      "exportName": "clearEmailDepsCache",
+      "kind": "function",
+      "fingerprint": "45c97f877eefaf3d0f61",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-email-viewer.ts",
+        "src/components/viewers/email-viewer/email-viewer.ts",
+        "src/components/viewers/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-email-viewer-email-loader-contracts",
+        "declaration": "clearEmailDepsCache"
+      }
+    },
+    {
+      "module": "src/components/viewers/email-viewer/email-loader.ts",
       "exportName": "EmailDeps",
       "kind": "interface",
       "fingerprint": "a335a34d028244ea0bce",
@@ -12732,6 +12777,72 @@
         "kind": "utility",
         "name": "components-viewers-email-viewer-email-loader-contracts",
         "declaration": "EmailDeps"
+      }
+    },
+    {
+      "module": "src/components/viewers/email-viewer/email-loader.ts",
+      "exportName": "getEmailDepsIfLoaded",
+      "kind": "function",
+      "fingerprint": "0cdbb73792727f6ffcf2",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-email-viewer.ts",
+        "src/components/viewers/email-viewer/email-viewer.ts",
+        "src/components/viewers/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-email-viewer-email-loader-contracts",
+        "declaration": "getEmailDepsIfLoaded"
+      }
+    },
+    {
+      "module": "src/components/viewers/email-viewer/email-loader.ts",
+      "exportName": "loadEmailAndSanitizer",
+      "kind": "function",
+      "fingerprint": "927d07caf33a473dd312",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-email-viewer.ts",
+        "src/components/viewers/email-viewer/email-viewer.ts",
+        "src/components/viewers/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-email-viewer-email-loader-contracts",
+        "declaration": "loadEmailAndSanitizer"
+      }
+    },
+    {
+      "module": "src/components/viewers/email-viewer/email-loader.ts",
+      "exportName": "loadEmailDeps",
+      "kind": "function",
+      "fingerprint": "276da829f0dc109954a5",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-email-viewer.ts",
+        "src/components/viewers/email-viewer/email-viewer.ts",
+        "src/components/viewers/index.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-email-viewer-email-loader-contracts",
+        "declaration": "loadEmailDeps"
       }
     },
     {
@@ -12820,94 +12931,6 @@
         "kind": "utility",
         "name": "components-viewers-email-viewer-email-loader-contracts",
         "declaration": "PostalMimeApi"
-      }
-    },
-    {
-      "module": "src/components/viewers/email-viewer/email-loader.ts",
-      "exportName": "clearEmailDepsCache",
-      "kind": "function",
-      "fingerprint": "45c97f877eefaf3d0f61",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-email-viewer.ts",
-        "src/components/viewers/email-viewer/email-viewer.ts",
-        "src/components/viewers/index.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-email-viewer-email-loader-contracts",
-        "declaration": "clearEmailDepsCache"
-      }
-    },
-    {
-      "module": "src/components/viewers/email-viewer/email-loader.ts",
-      "exportName": "getEmailDepsIfLoaded",
-      "kind": "function",
-      "fingerprint": "0cdbb73792727f6ffcf2",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-email-viewer.ts",
-        "src/components/viewers/email-viewer/email-viewer.ts",
-        "src/components/viewers/index.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-email-viewer-email-loader-contracts",
-        "declaration": "getEmailDepsIfLoaded"
-      }
-    },
-    {
-      "module": "src/components/viewers/email-viewer/email-loader.ts",
-      "exportName": "loadEmailAndSanitizer",
-      "kind": "function",
-      "fingerprint": "927d07caf33a473dd312",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-email-viewer.ts",
-        "src/components/viewers/email-viewer/email-viewer.ts",
-        "src/components/viewers/index.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-email-viewer-email-loader-contracts",
-        "declaration": "loadEmailAndSanitizer"
-      }
-    },
-    {
-      "module": "src/components/viewers/email-viewer/email-loader.ts",
-      "exportName": "loadEmailDeps",
-      "kind": "function",
-      "fingerprint": "276da829f0dc109954a5",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-email-viewer.ts",
-        "src/components/viewers/email-viewer/email-viewer.ts",
-        "src/components/viewers/index.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-email-viewer-email-loader-contracts",
-        "declaration": "loadEmailDeps"
       }
     },
     {
@@ -13142,6 +13165,54 @@
     },
     {
       "module": "src/components/viewers/pptx-viewer/pptx-loader.ts",
+      "exportName": "adaptPptxViewer",
+      "kind": "function",
+      "fingerprint": "a38b35319f6a0ac17101",
+      "routes": [
+        "src/components/viewers/pptx-viewer/pptx-loader.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-pptx-viewer-pptx-loader-contracts",
+        "declaration": "adaptPptxViewer"
+      }
+    },
+    {
+      "module": "src/components/viewers/pptx-viewer/pptx-loader.ts",
+      "exportName": "getPptxRenderer",
+      "kind": "function",
+      "fingerprint": "c0c3a4bc700b65ff9eb6",
+      "routes": [
+        "src/components/viewers/pptx-viewer/pptx-loader.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-pptx-viewer-pptx-loader-contracts",
+        "declaration": "getPptxRenderer"
+      }
+    },
+    {
+      "module": "src/components/viewers/pptx-viewer/pptx-loader.ts",
+      "exportName": "loadPptxRenderer",
+      "kind": "function",
+      "fingerprint": "d154a0f30516f233f42a",
+      "routes": [
+        "src/components/viewers/pptx-viewer/pptx-loader.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-pptx-viewer-pptx-loader-contracts",
+        "declaration": "loadPptxRenderer"
+      }
+    },
+    {
+      "module": "src/components/viewers/pptx-viewer/pptx-loader.ts",
       "exportName": "PptxRendererModule",
       "kind": "interface",
       "fingerprint": "a3b83e7e9e4f31bf64fd",
@@ -13253,98 +13324,6 @@
       }
     },
     {
-      "module": "src/components/viewers/pptx-viewer/pptx-loader.ts",
-      "exportName": "adaptPptxViewer",
-      "kind": "function",
-      "fingerprint": "a38b35319f6a0ac17101",
-      "routes": [
-        "src/components/viewers/pptx-viewer/pptx-loader.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-pptx-viewer-pptx-loader-contracts",
-        "declaration": "adaptPptxViewer"
-      }
-    },
-    {
-      "module": "src/components/viewers/pptx-viewer/pptx-loader.ts",
-      "exportName": "getPptxRenderer",
-      "kind": "function",
-      "fingerprint": "c0c3a4bc700b65ff9eb6",
-      "routes": [
-        "src/components/viewers/pptx-viewer/pptx-loader.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-pptx-viewer-pptx-loader-contracts",
-        "declaration": "getPptxRenderer"
-      }
-    },
-    {
-      "module": "src/components/viewers/pptx-viewer/pptx-loader.ts",
-      "exportName": "loadPptxRenderer",
-      "kind": "function",
-      "fingerprint": "d154a0f30516f233f42a",
-      "routes": [
-        "src/components/viewers/pptx-viewer/pptx-loader.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-pptx-viewer-pptx-loader-contracts",
-        "declaration": "loadPptxRenderer"
-      }
-    },
-    {
-      "module": "src/components/viewers/spreadsheet-viewer/spreadsheet-loader.ts",
-      "exportName": "SheetJsApi",
-      "kind": "interface",
-      "fingerprint": "f5046a9b0ede4f0f8e56",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-spreadsheet-viewer.ts",
-        "src/components/viewers/index.ts",
-        "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-spreadsheet-viewer-spreadsheet-loader-contracts",
-        "declaration": "SheetJsApi"
-      }
-    },
-    {
-      "module": "src/components/viewers/spreadsheet-viewer/spreadsheet-loader.ts",
-      "exportName": "SheetJsWorkbook",
-      "kind": "interface",
-      "fingerprint": "2ae8a474fa477d8ffe75",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-spreadsheet-viewer.ts",
-        "src/components/viewers/index.ts",
-        "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/viewers.md",
-      "family": "viewers",
-      "locator": {
-        "kind": "utility",
-        "name": "components-viewers-spreadsheet-viewer-spreadsheet-loader-contracts",
-        "declaration": "SheetJsWorkbook"
-      }
-    },
-    {
       "module": "src/components/viewers/spreadsheet-viewer/spreadsheet-loader.ts",
       "exportName": "clearSheetJsCache",
       "kind": "function",
@@ -13411,6 +13390,50 @@
       }
     },
     {
+      "module": "src/components/viewers/spreadsheet-viewer/spreadsheet-loader.ts",
+      "exportName": "SheetJsApi",
+      "kind": "interface",
+      "fingerprint": "f5046a9b0ede4f0f8e56",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-spreadsheet-viewer.ts",
+        "src/components/viewers/index.ts",
+        "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-spreadsheet-viewer-spreadsheet-loader-contracts",
+        "declaration": "SheetJsApi"
+      }
+    },
+    {
+      "module": "src/components/viewers/spreadsheet-viewer/spreadsheet-loader.ts",
+      "exportName": "SheetJsWorkbook",
+      "kind": "interface",
+      "fingerprint": "2ae8a474fa477d8ffe75",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-spreadsheet-viewer.ts",
+        "src/components/viewers/index.ts",
+        "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-spreadsheet-viewer-spreadsheet-loader-contracts",
+        "declaration": "SheetJsWorkbook"
+      }
+    },
+    {
       "module": "src/components/viewers/viewer-diagnostics.ts",
       "exportName": "LyraViewerDiagnostic",
       "kind": "interface",
@@ -13466,7 +13489,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "c3ec9eac33c478cfbdb2",
+      "fingerprint": "425ce7fbd8da21185cd9",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -13518,9 +13541,9 @@
     },
     {
       "module": "src/internal/announcer.ts",
-      "exportName": "AnnounceOptions",
-      "kind": "interface",
-      "fingerprint": "2e5e7f9c002904b05538",
+      "exportName": "acquireAnnouncementSink",
+      "kind": "function",
+      "fingerprint": "03140cc9097fa537234f",
       "routes": [
         "src/all.ts",
         "src/lyra.ts",
@@ -13534,7 +13557,7 @@
       "locator": {
         "kind": "utility",
         "name": "announcer",
-        "declaration": "AnnounceOptions"
+        "declaration": "acquireAnnouncementSink"
       }
     },
     {
@@ -13581,6 +13604,27 @@
     },
     {
       "module": "src/internal/announcer.ts",
+      "exportName": "AnnounceOptions",
+      "kind": "interface",
+      "fingerprint": "2e5e7f9c002904b05538",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts",
+        "src/utilities/announcer.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "announcer",
+        "declaration": "AnnounceOptions"
+      }
+    },
+    {
+      "module": "src/internal/announcer.ts",
       "exportName": "AnnouncerOptions",
       "kind": "interface",
       "fingerprint": "8f6ffc65920c6b63d395",
@@ -13619,27 +13663,6 @@
         "kind": "utility",
         "name": "announcer",
         "declaration": "AnnouncerTimerHost"
-      }
-    },
-    {
-      "module": "src/internal/announcer.ts",
-      "exportName": "acquireAnnouncementSink",
-      "kind": "function",
-      "fingerprint": "03140cc9097fa537234f",
-      "routes": [
-        "src/all.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts",
-        "src/utilities/announcer.ts",
-        "src/utilities/index.ts"
-      ],
-      "document": "llms/shared.md",
-      "family": "shared",
-      "locator": {
-        "kind": "utility",
-        "name": "announcer",
-        "declaration": "acquireAnnouncementSink"
       }
     },
     {
@@ -13769,27 +13792,6 @@
     },
     {
       "module": "src/internal/css-length.ts",
-      "exportName": "ResolveCssLengthOptions",
-      "kind": "interface",
-      "fingerprint": "3e260949c147a5bbed61",
-      "routes": [
-        "src/all.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts",
-        "src/utilities/css-length.ts",
-        "src/utilities/index.ts"
-      ],
-      "document": "llms/shared.md",
-      "family": "shared",
-      "locator": {
-        "kind": "utility",
-        "name": "css-length",
-        "declaration": "ResolveCssLengthOptions"
-      }
-    },
-    {
-      "module": "src/internal/css-length.ts",
       "exportName": "resolveCssLength",
       "kind": "function",
       "fingerprint": "1259ff2cfb442268f3fa",
@@ -13807,6 +13809,27 @@
         "kind": "utility",
         "name": "css-length",
         "declaration": "resolveCssLength"
+      }
+    },
+    {
+      "module": "src/internal/css-length.ts",
+      "exportName": "ResolveCssLengthOptions",
+      "kind": "interface",
+      "fingerprint": "3e260949c147a5bbed61",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts",
+        "src/utilities/css-length.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "css-length",
+        "declaration": "ResolveCssLengthOptions"
       }
     },
     {
@@ -13841,6 +13864,23 @@
         "kind": "utility",
         "name": "form-associated",
         "declaration": "createFallbackInternals"
+      }
+    },
+    {
+      "module": "src/internal/form-associated.ts",
+      "exportName": "createStringArrayFormDataState",
+      "kind": "function",
+      "fingerprint": "c984ae7de5688f8bbdc6",
+      "routes": [
+        "src/utilities/form-associated.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "form-associated",
+        "declaration": "createStringArrayFormDataState"
       }
     },
     {
@@ -13908,23 +13948,6 @@
     },
     {
       "module": "src/internal/form-associated.ts",
-      "exportName": "createStringArrayFormDataState",
-      "kind": "function",
-      "fingerprint": "c984ae7de5688f8bbdc6",
-      "routes": [
-        "src/utilities/form-associated.ts",
-        "src/utilities/index.ts"
-      ],
-      "document": "llms/shared.md",
-      "family": "shared",
-      "locator": {
-        "kind": "utility",
-        "name": "form-associated",
-        "declaration": "createStringArrayFormDataState"
-      }
-    },
-    {
-      "module": "src/internal/form-associated.ts",
       "exportName": "isEmptyFormValue",
       "kind": "function",
       "fingerprint": "5283750550b25096ab4f",
@@ -13955,6 +13978,27 @@
         "kind": "utility",
         "name": "form-associated",
         "declaration": "readStringArrayFormDataState"
+      }
+    },
+    {
+      "module": "src/internal/group-by-recency.ts",
+      "exportName": "groupByRecency",
+      "kind": "function",
+      "fingerprint": "5efecc664364bcb01c84",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts",
+        "src/utilities/group-by-recency.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "group-by-recency",
+        "declaration": "groupByRecency"
       }
     },
     {
@@ -14018,27 +14062,6 @@
         "kind": "utility",
         "name": "group-by-recency",
         "declaration": "RecencyLabels"
-      }
-    },
-    {
-      "module": "src/internal/group-by-recency.ts",
-      "exportName": "groupByRecency",
-      "kind": "function",
-      "fingerprint": "5efecc664364bcb01c84",
-      "routes": [
-        "src/all.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts",
-        "src/utilities/group-by-recency.ts",
-        "src/utilities/index.ts"
-      ],
-      "document": "llms/shared.md",
-      "family": "shared",
-      "locator": {
-        "kind": "utility",
-        "name": "group-by-recency",
-        "declaration": "groupByRecency"
       }
     },
     {
@@ -14230,6 +14253,23 @@
     },
     {
       "module": "src/internal/layered-layout.ts",
+      "exportName": "layeredLayout",
+      "kind": "function",
+      "fingerprint": "36553ee636d9ddf86dd5",
+      "routes": [
+        "src/utilities/index.ts",
+        "src/utilities/layered-layout.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "layered-layout",
+        "declaration": "layeredLayout"
+      }
+    },
+    {
+      "module": "src/internal/layered-layout.ts",
       "exportName": "LayeredLayoutEdge",
       "kind": "interface",
       "fingerprint": "b4af9f09fb3bde9111f0",
@@ -14294,23 +14334,6 @@
         "kind": "utility",
         "name": "layered-layout",
         "declaration": "LayeredLayoutResult"
-      }
-    },
-    {
-      "module": "src/internal/layered-layout.ts",
-      "exportName": "layeredLayout",
-      "kind": "function",
-      "fingerprint": "36553ee636d9ddf86dd5",
-      "routes": [
-        "src/utilities/index.ts",
-        "src/utilities/layered-layout.ts"
-      ],
-      "document": "llms/shared.md",
-      "family": "shared",
-      "locator": {
-        "kind": "utility",
-        "name": "layered-layout",
-        "declaration": "layeredLayout"
       }
     },
     {
@@ -14606,6 +14629,23 @@
     },
     {
       "module": "src/internal/overlay-manager.ts",
+      "exportName": "activateOverlay",
+      "kind": "function",
+      "fingerprint": "8ae162f5182227c7eb3f",
+      "routes": [
+        "src/utilities/index.ts",
+        "src/utilities/overlay-manager.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "overlay-manager",
+        "declaration": "activateOverlay"
+      }
+    },
+    {
+      "module": "src/internal/overlay-manager.ts",
       "exportName": "OverlayActivationOptions",
       "kind": "interface",
       "fingerprint": "ca72d38bb3fb9d1db876",
@@ -14661,23 +14701,6 @@
     },
     {
       "module": "src/internal/overlay-manager.ts",
-      "exportName": "activateOverlay",
-      "kind": "function",
-      "fingerprint": "8ae162f5182227c7eb3f",
-      "routes": [
-        "src/utilities/index.ts",
-        "src/utilities/overlay-manager.ts"
-      ],
-      "document": "llms/shared.md",
-      "family": "shared",
-      "locator": {
-        "kind": "utility",
-        "name": "overlay-manager",
-        "declaration": "activateOverlay"
-      }
-    },
-    {
-      "module": "src/internal/overlay-manager.ts",
       "exportName": "suspendLyraModalsFor",
       "kind": "function",
       "fingerprint": "e2cfb20c506c920b4998",
@@ -14691,6 +14714,40 @@
         "kind": "utility",
         "name": "overlay-manager",
         "declaration": "suspendLyraModalsFor"
+      }
+    },
+    {
+      "module": "src/internal/positioner.ts",
+      "exportName": "place",
+      "kind": "function",
+      "fingerprint": "2758be0fcbe7ce9fb1b9",
+      "routes": [
+        "src/utilities/index.ts",
+        "src/utilities/positioner.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "positioner",
+        "declaration": "place"
+      }
+    },
+    {
+      "module": "src/internal/positioner.ts",
+      "exportName": "PlacementResult",
+      "kind": "interface",
+      "fingerprint": "e4e6528d4492a0cc7421",
+      "routes": [
+        "src/utilities/index.ts",
+        "src/utilities/positioner.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "positioner",
+        "declaration": "PlacementResult"
       }
     },
     {
@@ -14712,9 +14769,9 @@
     },
     {
       "module": "src/internal/positioner.ts",
-      "exportName": "PlacementResult",
-      "kind": "interface",
-      "fingerprint": "e4e6528d4492a0cc7421",
+      "exportName": "trackRect",
+      "kind": "function",
+      "fingerprint": "f9d54ef920a54e8a5fb9",
       "routes": [
         "src/utilities/index.ts",
         "src/utilities/positioner.ts"
@@ -14724,7 +14781,7 @@
       "locator": {
         "kind": "utility",
         "name": "positioner",
-        "declaration": "PlacementResult"
+        "declaration": "trackRect"
       }
     },
     {
@@ -14750,40 +14807,6 @@
         "kind": "utility",
         "name": "positioner",
         "declaration": "VirtualAnchor"
-      }
-    },
-    {
-      "module": "src/internal/positioner.ts",
-      "exportName": "place",
-      "kind": "function",
-      "fingerprint": "2758be0fcbe7ce9fb1b9",
-      "routes": [
-        "src/utilities/index.ts",
-        "src/utilities/positioner.ts"
-      ],
-      "document": "llms/shared.md",
-      "family": "shared",
-      "locator": {
-        "kind": "utility",
-        "name": "positioner",
-        "declaration": "place"
-      }
-    },
-    {
-      "module": "src/internal/positioner.ts",
-      "exportName": "trackRect",
-      "kind": "function",
-      "fingerprint": "f9d54ef920a54e8a5fb9",
-      "routes": [
-        "src/utilities/index.ts",
-        "src/utilities/positioner.ts"
-      ],
-      "document": "llms/shared.md",
-      "family": "shared",
-      "locator": {
-        "kind": "utility",
-        "name": "positioner",
-        "declaration": "trackRect"
       }
     },
     {
@@ -14941,6 +14964,42 @@
     },
     {
       "module": "src/ssr.ts",
+      "exportName": "diagnoseLyraHydration",
+      "kind": "function",
+      "fingerprint": "8c310b7ee838fb7f8ee3",
+      "routes": [
+        "src/ssr-loader.ts",
+        "src/ssr.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "ssr-contracts",
+        "declaration": "diagnoseLyraHydration"
+      }
+    },
+    {
+      "module": "src/ssr.ts",
+      "exportName": "getLyraSsrMode",
+      "kind": "function",
+      "fingerprint": "a0518bf29d33606c2e3b",
+      "routes": [
+        "src/ssr-loader.ts",
+        "src/ssr.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "ssr-contracts",
+        "declaration": "getLyraSsrMode"
+      }
+    },
+    {
+      "module": "src/ssr.ts",
       "exportName": "LyraHydrationDiagnostic",
       "kind": "interface",
       "fingerprint": "ae0e783e65cbc9ceed7f",
@@ -14995,42 +15054,6 @@
     },
     {
       "module": "src/ssr.ts",
-      "exportName": "diagnoseLyraHydration",
-      "kind": "function",
-      "fingerprint": "8c310b7ee838fb7f8ee3",
-      "routes": [
-        "src/ssr-loader.ts",
-        "src/ssr.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/shared.md",
-      "family": "shared",
-      "locator": {
-        "kind": "utility",
-        "name": "ssr-contracts",
-        "declaration": "diagnoseLyraHydration"
-      }
-    },
-    {
-      "module": "src/ssr.ts",
-      "exportName": "getLyraSsrMode",
-      "kind": "function",
-      "fingerprint": "a0518bf29d33606c2e3b",
-      "routes": [
-        "src/ssr-loader.ts",
-        "src/ssr.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/shared.md",
-      "family": "shared",
-      "locator": {
-        "kind": "utility",
-        "name": "ssr-contracts",
-        "declaration": "getLyraSsrMode"
-      }
-    },
-    {
-      "module": "src/ssr.ts",
       "exportName": "lyraSsrElementRenderers",
       "kind": "function",
       "fingerprint": "561ae0927f11bb915153",
@@ -15067,7 +15090,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "d876b9783b3f6124817a",
+      "fingerprint": "f7251590b61175dcb4e2",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15154,38 +15177,6 @@
     },
     {
       "module": "src/theme/presets.ts",
-      "exportName": "LyraThemePreset",
-      "kind": "interface",
-      "fingerprint": "a2bac19390b0088c1031",
-      "routes": [
-        "src/theme/presets.ts"
-      ],
-      "document": "llms/shared.md",
-      "family": "shared",
-      "locator": {
-        "kind": "utility",
-        "name": "theme-presets-contracts",
-        "declaration": "LyraThemePreset"
-      }
-    },
-    {
-      "module": "src/theme/presets.ts",
-      "exportName": "LyraThemePresetChangeDetail",
-      "kind": "interface",
-      "fingerprint": "bc751845f9eecccfbd02",
-      "routes": [
-        "src/theme/presets.ts"
-      ],
-      "document": "llms/shared.md",
-      "family": "shared",
-      "locator": {
-        "kind": "utility",
-        "name": "theme-presets-contracts",
-        "declaration": "LyraThemePresetChangeDetail"
-      }
-    },
-    {
-      "module": "src/theme/presets.ts",
       "exportName": "applyLyraThemePreset",
       "kind": "function",
       "fingerprint": "24ed35f7d08bd774ebe0",
@@ -15217,35 +15208,35 @@
       }
     },
     {
-      "module": "src/theme/theme.ts",
-      "exportName": "LyraTheme",
+      "module": "src/theme/presets.ts",
+      "exportName": "LyraThemePreset",
       "kind": "interface",
-      "fingerprint": "7f46cb922dd50d2256a0",
+      "fingerprint": "a2bac19390b0088c1031",
       "routes": [
-        "src/theme/theme.ts"
+        "src/theme/presets.ts"
       ],
       "document": "llms/shared.md",
       "family": "shared",
       "locator": {
         "kind": "utility",
-        "name": "theme-theme-contracts",
-        "declaration": "LyraTheme"
+        "name": "theme-presets-contracts",
+        "declaration": "LyraThemePreset"
       }
     },
     {
-      "module": "src/theme/theme.ts",
-      "exportName": "LyraThemeBootstrapOptions",
+      "module": "src/theme/presets.ts",
+      "exportName": "LyraThemePresetChangeDetail",
       "kind": "interface",
-      "fingerprint": "e65e7152ac3b87f718a4",
+      "fingerprint": "bc751845f9eecccfbd02",
       "routes": [
-        "src/theme/theme.ts"
+        "src/theme/presets.ts"
       ],
       "document": "llms/shared.md",
       "family": "shared",
       "locator": {
         "kind": "utility",
-        "name": "theme-theme-contracts",
-        "declaration": "LyraThemeBootstrapOptions"
+        "name": "theme-presets-contracts",
+        "declaration": "LyraThemePresetChangeDetail"
       }
     },
     {
@@ -15282,6 +15273,38 @@
     },
     {
       "module": "src/theme/theme.ts",
+      "exportName": "LyraTheme",
+      "kind": "interface",
+      "fingerprint": "7f46cb922dd50d2256a0",
+      "routes": [
+        "src/theme/theme.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "theme-theme-contracts",
+        "declaration": "LyraTheme"
+      }
+    },
+    {
+      "module": "src/theme/theme.ts",
+      "exportName": "LyraThemeBootstrapOptions",
+      "kind": "interface",
+      "fingerprint": "e65e7152ac3b87f718a4",
+      "routes": [
+        "src/theme/theme.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "theme-theme-contracts",
+        "declaration": "LyraThemeBootstrapOptions"
+      }
+    },
+    {
+      "module": "src/theme/theme.ts",
       "exportName": "setLyraTheme",
       "kind": "function",
       "fingerprint": "d00779a983400d068b94",
@@ -15294,6 +15317,27 @@
         "kind": "utility",
         "name": "theme-theme-contracts",
         "declaration": "setLyraTheme"
+      }
+    },
+    {
+      "module": "src/utilities/animation-registry.ts",
+      "exportName": "getAnimation",
+      "kind": "function",
+      "fingerprint": "306d76b77b2fd6d0960f",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts",
+        "src/utilities/animation-registry.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "animation-registry",
+        "declaration": "getAnimation"
       }
     },
     {
@@ -15361,27 +15405,6 @@
     },
     {
       "module": "src/utilities/animation-registry.ts",
-      "exportName": "getAnimation",
-      "kind": "function",
-      "fingerprint": "306d76b77b2fd6d0960f",
-      "routes": [
-        "src/all.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts",
-        "src/utilities/animation-registry.ts",
-        "src/utilities/index.ts"
-      ],
-      "document": "llms/shared.md",
-      "family": "shared",
-      "locator": {
-        "kind": "utility",
-        "name": "animation-registry",
-        "declaration": "getAnimation"
-      }
-    },
-    {
-      "module": "src/utilities/animation-registry.ts",
       "exportName": "setAnimation",
       "kind": "function",
       "fingerprint": "578f58afdb02014d0ed8",
@@ -15424,23 +15447,6 @@
     },
     {
       "module": "src/utilities/defined.ts",
-      "exportName": "AllDefinedOptions",
-      "kind": "interface",
-      "fingerprint": "3f6051afb1740b01c28b",
-      "routes": [
-        "src/utilities/defined.ts",
-        "src/utilities/index.ts"
-      ],
-      "document": "llms/shared.md",
-      "family": "shared",
-      "locator": {
-        "kind": "utility",
-        "name": "defined",
-        "declaration": "AllDefinedOptions"
-      }
-    },
-    {
-      "module": "src/utilities/defined.ts",
       "exportName": "allDefined",
       "kind": "function",
       "fingerprint": "38dd573eef55b9a9b7e3",
@@ -15457,24 +15463,20 @@
       }
     },
     {
-      "module": "src/utilities/localization.ts",
-      "exportName": "LyraLocaleBridgeOptions",
+      "module": "src/utilities/defined.ts",
+      "exportName": "AllDefinedOptions",
       "kind": "interface",
-      "fingerprint": "e111ebcd1f6b5850207c",
+      "fingerprint": "3f6051afb1740b01c28b",
       "routes": [
-        "src/all.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts",
-        "src/utilities/index.ts",
-        "src/utilities/localization.ts"
+        "src/utilities/defined.ts",
+        "src/utilities/index.ts"
       ],
       "document": "llms/shared.md",
       "family": "shared",
       "locator": {
         "kind": "utility",
-        "name": "localization",
-        "declaration": "LyraLocaleBridgeOptions"
+        "name": "defined",
+        "declaration": "AllDefinedOptions"
       }
     },
     {
@@ -15499,10 +15501,31 @@
       }
     },
     {
+      "module": "src/utilities/localization.ts",
+      "exportName": "LyraLocaleBridgeOptions",
+      "kind": "interface",
+      "fingerprint": "e111ebcd1f6b5850207c",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts",
+        "src/utilities/index.ts",
+        "src/utilities/localization.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "localization",
+        "declaration": "LyraLocaleBridgeOptions"
+      }
+    },
+    {
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "4acdc15e5a2f46e46458",
+      "fingerprint": "e6fd350435609e6bd07e",
       "routes": [
         "src/vue.ts"
       ],

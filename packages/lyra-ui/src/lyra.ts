@@ -203,6 +203,7 @@ export type { LyraSelectTagRenderer } from './components/forms/select/select.cla
 export { LyraDatePicker } from './components/forms/date-picker/date-picker.class.js';
 export type {
   DateRange,
+  LyraDateRangePreset,
   LyraDatePickerDayContent,
   LyraDatePickerDisabledDates,
   LyraDatePickerFirstDayOfWeek,

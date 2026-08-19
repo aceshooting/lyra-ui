@@ -1024,6 +1024,15 @@
       },
       "themeInput": "--lr-theme-easing-standard"
     },
+    "--lr-focus-ring": {
+      "type": "string",
+      "group": "focus",
+      "scope": "shared",
+      "description": "Composite focus-ring outline shorthand, derived from the width and color parts. Mirrors the ready-made outline value Web Awesome exposes as --wa-focus-ring so a migrating consumer has a one-to-one target instead of hand-expanding every site. Offset stays separate because outline-offset is its own property.",
+      "values": {
+        "light": "var(--lr-focus-ring-width) solid var(--lr-focus-ring-color)"
+      }
+    },
     "--lr-focus-ring-color": {
       "type": "color",
       "group": "focus",

@@ -98,7 +98,8 @@ chrome remains visible. The fallback order appears below.
   `<lr-tool-approval-dialog>`, whose own docs describe an identical detail shape, so one listener
   covers all of them. A listener calling `preventDefault()` vetoes the close. Also fired (with
   reason `'unmount'`, non-cancelable there) when the dialog is removed from the DOM while still
-  open.
+  open. **But the name is not dialog-scoped** — see the target-filtering note above; nine
+  components emit `lr-close`, and several are routinely nested inside a dialog.
 
 The two `lr-after-*` events are never cancelable.
 

@@ -298,7 +298,7 @@ override a single element without touching the shared layer.
 | `--lr-transition-base` | `--lr-theme-transition-normal` | `var(--lr-duration-base) var(--lr-easing-standard)` | reducedMotion: `0.001ms linear` |
 | `--lr-transition-fast` | `--lr-theme-transition-fast` | `var(--lr-duration-fast) var(--lr-easing-standard)` | reducedMotion: `0.001ms linear` |
 
-## Derived and fixed tokens (75)
+## Derived and fixed tokens (76)
 
 These do not directly read a `--lr-theme-*` input. Aliases and computed values still follow
 the tokens or environment values they reference; fixed contract constants are intentionally
@@ -320,6 +320,7 @@ not theme inputs.
 | `--lr-color-success-quiet` | `var(--lr-color-success-fill-quiet)` | forcedColors: `Canvas` |
 | `--lr-color-warning` | `var(--lr-color-warning-fill-loud)` | forcedColors: `CanvasText` |
 | `--lr-color-warning-quiet` | `var(--lr-color-warning-fill-quiet)` | forcedColors: `Canvas` |
+| `--lr-focus-ring` | `var(--lr-focus-ring-width) solid var(--lr-focus-ring-color)` | — |
 | `--lr-mask-opaque` | `#000` | — |
 | `--lr-ramp-brand-05` | `#000002` | — |
 | `--lr-ramp-brand-10` | `#00030f` | — |

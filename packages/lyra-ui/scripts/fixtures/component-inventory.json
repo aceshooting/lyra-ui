@@ -36023,6 +36023,15 @@
             "default": "months"
           },
           {
+            "name": "presets",
+            "attribute": null,
+            "type": "readonly LyraDateRangePreset[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "previousLabel",
             "attribute": "previous-label",
             "type": "string",
@@ -36282,6 +36291,14 @@
             "deprecated": null
           },
           {
+            "name": "preset-button",
+            "deprecated": null
+          },
+          {
+            "name": "presets",
+            "deprecated": null
+          },
+          {
             "name": "previous",
             "deprecated": null
           },
@@ -36398,6 +36415,23 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-date-picker-preset-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-date-picker-preset-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-date-picker-preset-selected-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
           },
           {
             "name": "--lr-date-picker-radius",
@@ -37343,7 +37377,8 @@
             "name": "lr-close",
             "type": "CustomEvent<DialogCloseReason>",
             "cancelable": "conditional",
-            "constructor": "CustomEvent"
+            "constructor": "CustomEvent",
+            "composed": true
           },
           {
             "name": "lr-hide",

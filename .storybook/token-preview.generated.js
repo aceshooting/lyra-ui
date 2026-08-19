@@ -2758,6 +2758,14 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
     "group": "focus",
     "tokens": [
       {
+        "name": "--lr-focus-ring",
+        "type": "string",
+        "scope": "shared",
+        "values": {
+          "light": "var(--lr-focus-ring-width) solid var(--lr-focus-ring-color)"
+        }
+      },
+      {
         "name": "--lr-focus-ring-color",
         "type": "color",
         "scope": "shared",

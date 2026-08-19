@@ -2749,11 +2749,14 @@ These named interfaces and helper signatures are available to typed integrations
   field: unknown;
   stops: unknown;
   interpolation: unknown;
+  stepBaseColor: unknown;
 }`
   `LyraMapGeoJsonDataLayer {
   sourceId: unknown;
   geojson: unknown;
   tone: unknown;
+  color: unknown;
+  strokeColor: unknown;
 }`
   `LyraMapInstance {
   getCanvas: unknown;

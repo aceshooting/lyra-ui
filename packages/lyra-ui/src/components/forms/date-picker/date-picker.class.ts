@@ -191,6 +191,12 @@ export interface LyraDateRangePreset {
  * @csspart presets - The quick-range button row, rendered only in range mode with `presets` set.
  * @csspart preset-button - One quick-range button; carries `data-active` while its range is the
  *   current value.
+ * @cssprop [--lr-date-picker-preset-hover-bg=var(--lr-color-brand-quiet)] - Hover background of a
+ *   quick-range button.
+ * @cssprop --lr-date-picker-preset-active-bg - Pressed background of a quick-range button;
+ *   defaults to a mix of the hover background with the shared active mix partner.
+ * @cssprop [--lr-date-picker-preset-selected-bg=var(--lr-color-brand)] - Background and border of
+ *   the quick-range button whose range is currently selected.
  * @csspart weeknumbers - The week-number column.
  * @csspart weeknumber - One week number.
  * @csspart footer - The footer region.
