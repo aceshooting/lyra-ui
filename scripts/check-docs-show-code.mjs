@@ -54,7 +54,6 @@ const concurrency = Math.min(8, Math.max(1, Number.isFinite(requestedConcurrency
 
 const GOTO_TIMEOUT = 20_000;
 const RENDER_TIMEOUT = 20_000;
-const CLICK_TIMEOUT = 10_000;
 /** Storybook's Source block flips its own label asynchronously; re-querying sooner re-clicks it. */
 const CLICK_SETTLE_MS = 20;
 const POLL_INTERVAL_MS = 120;
@@ -162,8 +161,17 @@ async function inspectDoc(context, doc) {
         // (even with `force`, which also skips the auto-scroll a real click gets) would fail on.
         await tolerateNavigation(page, async () => {
           const control = showCode().first();
-          await control.scrollIntoViewIfNeeded({ timeout: CLICK_TIMEOUT });
-          await control.evaluate((element) => element.click());
+          // Scroll and click in one evaluate. scrollIntoViewIfNeeded waits for the element to be
+          // "stable" -- an unchanging bounding box -- and these docs pages animate enough that the
+          // wait is not always satisfiable: observed as a 10s timeout logging "18 x waiting for
+          // element to be stable" on Forms/Radio button. The click below is a native dispatch and
+          // does not need the element in view at all, so the scroll is presentational and must not
+          // be able to gate it. This sweep exists to click every control and collect console and
+          // page errors, not to assert that a demo has stopped moving.
+          await control.evaluate((element) => {
+            element.scrollIntoView({ block: 'center', inline: 'nearest' });
+            element.click();
+          });
         });
         clicked += 1;
         expanded = true;
