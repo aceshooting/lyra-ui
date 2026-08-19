@@ -290,9 +290,12 @@ every selection change and a `form.reset()` — like a native control, only anot
 **8.0 migration:** the former camel-case string property `autoCorrect` is not retained as a public
 alias. Set the boolean `autocorrect` IDL, or use `autocorrect="on"` / `autocorrect="off"` in markup.
 
-`ComboboxSourceRow = { readonly value: string; readonly label: string; readonly sub?: string; readonly icon?: unknown; readonly badge?: string |
+`ComboboxSourceRow = { readonly value: string; readonly label: string; readonly sub?: string; readonly icon?: unknown; readonly start?: unknown;
+readonly end?: unknown; readonly badge?: string |
 number; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: string; disabled?:
-boolean }` — the row shape used by the async `source` path. `icon` renders as a decorative leading
+boolean }` — the row shape used by the async `source` path. `start` and `end` (new in 10.1.0) are
+the async counterparts of `<lr-option>`'s `start`/`end` adornment slots and render as the
+`option-start` / `option-end` parts, inert and aria-hidden exactly like `icon`. `icon` renders as a decorative leading
 visual whose rendered subtree stays visible but is inert and hidden from assistive technology;
 put independent actions outside it. `badge` renders as trailing metadata, `accessibleLabel` can
 provide richer spoken text than the visible label, and `data` is retained without being rendered
@@ -5231,6 +5234,8 @@ These named interfaces and helper signatures are available to typed integrations
   label: unknown;
   sub: unknown;
   icon: unknown;
+  start: unknown;
+  end: unknown;
   badge: unknown;
   accessibleLabel: unknown;
   data: unknown;

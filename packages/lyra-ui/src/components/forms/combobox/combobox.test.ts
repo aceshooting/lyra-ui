@@ -7039,8 +7039,9 @@ describe('option adornments in the popup', () => {
     `);
     const row = rowFor(el, 'fr');
 
-    expect(row.querySelector('[part~="option-start"]'), 'no empty wrapper').to.be.null;
-    expect(row.querySelector('[part~="option-end"]'), 'no empty wrapper').to.be.null;
+    expect(row.querySelector('[part~="option-start"]') === null, 'no empty start wrapper').to.be
+      .true;
+    expect(row.querySelector('[part~="option-end"]') === null, 'no empty end wrapper').to.be.true;
   });
 
   it('keeps the adornment out of the option accessible name', async () => {
@@ -7113,8 +7114,8 @@ describe('visible-options cap', () => {
     const el = await openWith('');
     expect(el.visibleOptions).to.equal(undefined);
     expect(
-      listbox(el).style.getPropertyValue('--lr-combobox-visible-block-size'),
-      'nothing published, so the existing max-block-size chain is untouched',
+      listbox(el).style.getPropertyValue('max-block-size'),
+      'nothing applied, so the stylesheet max-block-size chain is untouched',
     ).to.equal('');
   });
 
@@ -7123,7 +7124,7 @@ describe('visible-options cap', () => {
     expect(el.visibleOptions).to.equal(3);
     const box = listbox(el);
     await waitUntil(
-      () => box.style.getPropertyValue('--lr-combobox-visible-block-size') !== '',
+      () => box.style.getPropertyValue('max-block-size') !== '',
       'the cap is measured and published',
     );
 
@@ -7135,7 +7136,7 @@ describe('visible-options cap', () => {
   it('imposes no bound when there are fewer options than the cap', async () => {
     const el = await openWith('visible-options=10', 3);
     expect(
-      listbox(el).style.getPropertyValue('--lr-combobox-visible-block-size'),
+      listbox(el).style.getPropertyValue('max-block-size'),
       'nothing to cap',
     ).to.equal('');
   });
@@ -7144,7 +7145,7 @@ describe('visible-options cap', () => {
     for (const raw of ['not-a-number', '0', '-4']) {
       const el = await openWith(`visible-options=${raw}`);
       expect(
-        listbox(el).style.getPropertyValue('--lr-combobox-visible-block-size'),
+        listbox(el).style.getPropertyValue('max-block-size'),
         `${raw} must not collapse the listbox`,
       ).to.equal('');
     }

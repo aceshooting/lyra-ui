@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 15 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-line-chart`, `lr-pie-chart`, `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`, `lr-scatter-chart` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -44,7 +44,7 @@ complete `hiddenDatasets` snapshot).
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
-`reset-zoom-button`, `description`, `notices`, `data-table`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
+`reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-toggle`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink — see
 `llms/components/lr-chart.md`).
@@ -53,7 +53,8 @@ failure transition is announced through the shared document-level light-DOM asse
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-text`, `--lr-chart-legend-item-hover-bg`,
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
-`--lr-chart-data-table-button-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
+`--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-hover-bg`,
+`--lr-chart-data-table-toggle-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
 `--lr-chart-reset-zoom-button-active-bg`, `--lr-chart-canvas-hover-outline-width`, and
 `--lr-chart-pattern-step`, plus `--lr-chart-legend-side-max` — all inherited from `LyraChart`, identical in meaning and default (see
 `lr-chart` above); each of the eight variants below reads the same set, so one rule retunes them

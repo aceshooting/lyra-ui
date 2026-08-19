@@ -4041,6 +4041,24 @@ An `lr-option` row remains bounded by its owning listbox: the default label elli
 `start`/`end` (or `prefix`/`suffix`) adornment is capped at 40% of the row. Unbroken metadata
 therefore cannot widen a 320px LTR or RTL picker.
 
+**Adornments in the popup (fixed in 10.1.0).** Before 10.1.0 this paragraph described behavior the
+code did not have: `lr-combobox` builds its popup from normalized row *data* rather than from the
+light-DOM nodes, so a slotted `start`/`end`/`prefix`/`suffix` adornment had nowhere to land and
+simply never rendered — the documented slots and their documented parts were both dead inside the
+one component `lr-option` exists to feed. They now render. The nodes are **cloned** into the row
+(`option-start` / `option-end` parts, inert and `aria-hidden`, so they never join the option's
+accessible name), which means the author's own `<lr-option>` subtree is left exactly where they put
+it rather than being moved into a shadow root as a side effect of opening a dropdown:
+
+```html
+<lr-combobox label="Country">
+  <lr-option value="fr"><lr-flag slot="start" country="fr"></lr-flag>France</lr-option>
+  <lr-option value="mt"><lr-flag slot="start" country="mt"></lr-flag>Malta</lr-option>
+</lr-combobox>
+```
+
+An async `source` row can carry the same two fields (`start`, `end`) alongside its existing `icon`.
+
 ### `lr-combobox`
 
 **Properties:**
@@ -4107,8 +4125,21 @@ therefore cannot widen a 320px LTR or RTL picker.
   mapped IDLs `inputmode` and `enterkeyhint` delegate to the corresponding camel-case native
   properties
 - `inputValue: string` — the live filter input text; programmatic writes are event-silent
-- `maxOptionsVisible: number = 3` (attribute `max-options-visible` — caps how many selected tags
-  show before collapsing to `+N`)
+- `maxOptionsVisible: number = 3` (attribute `max-options-visible` — caps how many selected **tags**
+  show before collapsing to `+N`; nothing to do with the suggestion list, see the three-caps note
+  below)
+- `visibleOptions?: number` (attribute `visible-options`, new in 10.1.0) — bounds the popup to about
+  this many suggestion rows, leaving the rest reachable by scrolling. Purely presentational: every
+  row is still rendered. Measured from where row N actually starts rather than computed from a
+  token, because a row's height varies with `sub` lines, adornments and group labels. Unset imposes
+  no bound of its own and the listbox keeps exactly its previous max-height behavior; zero,
+  negative, and non-finite values normalize to unset rather than collapsing the popup
+
+**The three caps, which are easy to confuse.** `visibleOptions` caps how many suggestion rows are
+*visible* (presentation; the rest scroll). `maxRender` caps how many suggestion rows are *rendered
+at all* (performance; the rest do not exist and are summarized by `option-overflow`).
+`maxOptionsVisible` caps how many *selected tags* show in multi-select and never touches the
+suggestion list.
 - `emptyText?: string` (attribute `empty-text`) — omission displays localized `noMatches` (`"No
 matches"` in the built-in English locale); any supplied string, including `''`, renders verbatim
 - `loadingText?: string` (attribute `loading-text`) — shown while a `source` fetch is in flight;
@@ -4171,9 +4202,12 @@ every selection change and a `form.reset()` — like a native control, only anot
 **8.0 migration:** the former camel-case string property `autoCorrect` is not retained as a public
 alias. Set the boolean `autocorrect` IDL, or use `autocorrect="on"` / `autocorrect="off"` in markup.
 
-`ComboboxSourceRow = { readonly value: string; readonly label: string; readonly sub?: string; readonly icon?: unknown; readonly badge?: string |
+`ComboboxSourceRow = { readonly value: string; readonly label: string; readonly sub?: string; readonly icon?: unknown; readonly start?: unknown;
+readonly end?: unknown; readonly badge?: string |
 number; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: string; disabled?:
-boolean }` — the row shape used by the async `source` path. `icon` renders as a decorative leading
+boolean }` — the row shape used by the async `source` path. `start` and `end` (new in 10.1.0) are
+the async counterparts of `<lr-option>`'s `start`/`end` adornment slots and render as the
+`option-start` / `option-end` parts, inert and aria-hidden exactly like `icon`. `icon` renders as a decorative leading
 visual whose rendered subtree stays visible but is inert and hidden from assistive technology;
 put independent actions outside it. `badge` renders as trailing metadata, `accessibleLabel` can
 provide richer spoken text than the visible label, and `data` is retained without being rendered
@@ -4281,7 +4315,9 @@ adornment-slot wrappers, each `hidden` while nothing is slotted into it), `tags`
 `lr-emoji-picker` so one rule styles every grouped list; it labels the `role="group"` wrapper here),
 `option`,
 `option-dot` (the leading status dot, when a row's `dotColor` is set), `option-icon` (the inert,
-aria-hidden decorative leading visual for an async row), `option-label`, `option-sub` (a row's
+aria-hidden decorative leading visual for an async row), `option-start` and `option-end` (the inert,
+aria-hidden adornments cloned from the source option's `start`/`prefix` and `end`/`suffix` slots, or
+from an async row's `start`/`end`), `option-label`, `option-sub` (a row's
 secondary line, when `sub` is set), `option-badge` (an async row's trailing metadata),
 `option-overflow` (the "+N more" indicator from `maxRender`), `error`, `hint`
 
@@ -9110,6 +9146,8 @@ These named interfaces and helper signatures are available to typed integrations
   label: unknown;
   sub: unknown;
   icon: unknown;
+  start: unknown;
+  end: unknown;
   badge: unknown;
   accessibleLabel: unknown;
   data: unknown;
@@ -10772,8 +10810,26 @@ weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
   more here". `cellText` still carries the full label to the tooltip and the keyboard announcement.
   A malformed value is ignored rather than collapsing the gutter. Calendar mode is unaffected; it
   has its own fixed weekday gutter
-- `colLabelHeight?: number` (attribute `col-label-height`) — height, in CSS px, of the matrix
-  column-label band. Unset keeps the built-in `20`
+- `colLabelHeight?: number | 'auto'` (attribute `col-label-height`, reflected, `'auto'` new in
+  10.1.0) — height, in CSS px, of the matrix column-label band, or `'auto'` to measure the labels
+  and size the band to fit them. Under a non-zero `colLabelRotation` the measurement projects each
+  label's width through the rotation, which is what makes a rotated axis usable without hand-tuning
+  a magic number. Never below the built-in `20`, and bounded above by a sanity ceiling so a
+  pathological label cannot produce an absurd canvas. Note this deliberately does **not** use
+  `rowLabelWidth`'s "40% of the host" rule: the row gutter steals width from the cells and so must
+  be bounded relative to them, whereas the canvas simply grows taller for this band and the cells
+  keep their size. Unset keeps the built-in `20`, so no existing chart reflows. A malformed value is
+  ignored
+- `colLabelRotation?: number` (attribute `col-label-rotation`, new in 10.1.0) — rotation, in
+  degrees, applied to matrix column labels. Unset or `0` paints them horizontally exactly as before.
+  In a dense matrix the per-column width is far narrower than a typical label, so horizontal labels
+  collide with their neighbours; `45` or `90` is the standard remedy. Each label rotates about an
+  anchor at its own column's centre with the label's *end* at that anchor, so it leans back over the
+  columns to its left and the last column's label cannot overflow the canvas. Values outside
+  `[0, 90]` clamp into that range and non-finite values normalize to `0`. Pair with
+  `colLabelHeight="auto"` to have the band size itself to the rotated extent. **Not mirrored under
+  `dir="rtl"`** — both grid modes deliberately retain physical LTR geometry, so leaning one axis'
+  labels the other way would be incoherent
 - `maxCellSize?: number` (attribute `max-cell-size`) — ceiling, in CSS px, on the cell size
   `fitToWidth` derives from the host width, in **both** modes. Exists because `fitToWidth` divides
   the _whole_ host width across the grid, so a 5-week calendar or a 3-column matrix in a wide pane
@@ -18449,7 +18505,26 @@ A click-triggered, light-dismiss floating surface positioned with the shared Flo
 - `accessibleLabel: string = ''` (attribute **`aria-label`**) — names the popup. An authored host
   attribute wins by presence, including `aria-label=""`; only when it is absent does the property
   or localized "Popover" ("Menu" when `popupRole` is `menu`) fallback apply
-- `popupRole: 'dialog'|'menu' = 'dialog'` (attribute `popup-role`)
+- `popupRole: 'dialog'|'menu'|'none' = 'dialog'` (attribute `popup-role`). `none` (new in 10.1.0)
+  renders **no** `role` and no generated `aria-label` on the popup surface, and leaves
+  `aria-haspopup` off the trigger, so slotted content owns its own semantics and accessible name.
+  It exists for the WAI-ARIA **disclosure navigation** pattern: a flyout of links is not an
+  application action menu (`menu` announces "menu, menu item" and expects `menuitem` children) and
+  is not an interruptive surface (`dialog`). The `aria-expanded`/`aria-controls` wiring that pattern
+  requires is unchanged, as are light dismiss, Escape, focus return, and positioning:
+
+  ```html
+  <lr-popover popup-role="none">
+    <button slot="trigger">Products</button>
+    <nav aria-label="Products">
+      <ul><li><a href="/overview">Overview</a></li><li><a href="/pricing">Pricing</a></li></ul>
+    </nav>
+  </lr-popover>
+  ```
+
+  Note there is deliberately no `aria-haspopup="none"` — that is an invalid attribute value, not a
+  neutral one, and axe reports it as a critical violation. `lr-dropdown` still pins `popupRole` to
+  `menu`; the escape hatch lives on the general-purpose primitive.
 - `disabled: boolean = false` (reflected, new in 10.0.0) — prevents opening the popover; pointer,
   keyboard, and programmatic `show()`/`open = true` are all refused while set. Becoming disabled also
   closes an already-open popover, and initial `disabled` plus `open` normalizes closed in either
@@ -21581,8 +21656,10 @@ rectangular corner radius), `--lr-flag-aspect-ratio` (default `4 / 3`), and
 image when `country` or `language` is used. Import
 `@aceshooting/lyra-ui/components/media/flag/flag-peer.js` once to opt into
 that resolver; a pre-resolved `src` works without the peer registration entry. If the peer is not
-installed, the component fails closed with localized visible `[part="error"]` text and a shared
-light-DOM assertive announcement (see gotchas).
+installed — or if `flag-peer.js` was simply never imported, which looks identical from the page —
+the component fails closed with localized visible `[part="error"]` text, a shared light-DOM
+assertive announcement, and a one-time `console.warn` naming the unresolved code and this import
+(see gotchas).
 
 Also exported from the package root:
 `languageToCountry(language: string): string | undefined` and the `LANGUAGE_TO_COUNTRY` lookup
@@ -21668,7 +21745,12 @@ import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
   `[data-lr-live-region="assertive"]` sink, so the shadow chrome itself is not live and identical
   retries remain separate additions. The failure also produces a one-time `console.warn`
   once the resolver rejects (lazy `import()`, cached module-wide so the warning fires only once per
-  page even with many `<lr-flag>` instances). An _empty_ template is a different, non-error outcome:
+  page even with many `<lr-flag>` instances). A **separate** one-time `console.warn` covers the
+  commonest setup mistake — `country`/`language` set while no resolver was ever registered, i.e.
+  `flag-peer.js` was not imported. It names the offending code and that import path, because the
+  visible `[part="error"]` state alone is indistinguishable from missing flag data. It is armed
+  once per resolver-registration generation, so a table of many flags warns once.
+  An _empty_ template is a different, non-error outcome:
   the peer resolved fine but returned no URL for that code (e.g. `country="zz"`) — no `[part="error"]`,
   no `<img>`, no warning.
 - Rendering is async even when the peer _is_ installed: `src` resolves after an `import()` +
@@ -24490,6 +24572,14 @@ property).
   ignored without evaluating script or exposing prototype-pollution keys to the merge.
 - `showDataTable: boolean = false` (attribute `show-data-table`) — makes the always-available
   accessible data table visible rather than screen-reader-only
+- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 10.1.0) — renders a
+  localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
+  reader can reveal the numbers on demand. `showDataTable` alone is all-or-nothing, which left
+  consumers wrapping a duplicated table in their own `<details>`. With the toggle on,
+  `showDataTable` becomes the disclosure's **initial** state rather than its whole behavior; the
+  table stays in the DOM in both states, so assistive technology never loses it, and the button
+  carries `aria-expanded` plus `aria-controls` pointing at the `data-table` wrapper. Unset, nothing
+  renders and behavior is identical to before.
 - `chartArea: LyraChartArea | undefined` (readonly) — current Chart.js chart-area geometry in
   canvas-local coordinates (`top`, `left`, `right`, `bottom`, `width`, `height`), when a chart is
   drawn
@@ -24609,7 +24699,7 @@ Chart.js escape hatch and is not rewritten by the simplified-surface sampler.
 wrapping DOM legend), `legend-item` (a dataset-visibility button), `legend-item-hidden` (added to
 that button while its dataset is hidden), `legend-swatch`,
 `reset-zoom-button`, `description`, `notices` (wrapper for nonfatal feature warnings and
-bounded-alternative truncation notices), `data-table`, `data-truncation` (the bounded-alternative
+bounded-alternative truncation notices), `data-table`, `data-table-toggle` (the `dataTableToggle` disclosure button), `data-truncation` (the bounded-alternative
 notice), `feature-warning` (a nonfatal missing optional-feature warning), `center` (the
 chart-area-centered wrapper for the `center` slot), `error` (neutral visible message rendered in
 place of `canvas` when the optional `chart.js` peer dependency fails to load; the failure transition
@@ -24629,7 +24719,9 @@ ancestor, not a shadow-tree descendant, since custom properties only cascade dow
 `y2Label` title text reuses `--lr-chart-tick-color` too — there's no separate title-color token),
 legend text, and tooltip background/text respectively; plus
 `--lr-chart-legend-item-hover-bg` / `--lr-chart-legend-item-active-bg`,
-`--lr-chart-data-table-button-hover-bg` / `--lr-chart-data-table-button-active-bg`, and
+`--lr-chart-data-table-button-hover-bg` / `--lr-chart-data-table-button-active-bg`,
+`--lr-chart-data-table-toggle-hover-bg` / `--lr-chart-data-table-toggle-active-bg` (the
+`dataTableToggle` disclosure button), and
 `--lr-chart-reset-zoom-button-hover-bg` / `--lr-chart-reset-zoom-button-active-bg` — independent
 background hooks for each DOM control's hover and pressed states. Hover defaults to
 `--lr-color-brand-quiet`; pressed defaults to its standard active color mix. Override one pair
@@ -25023,7 +25115,7 @@ complete `hiddenDatasets` snapshot).
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
-`reset-zoom-button`, `description`, `notices`, `data-table`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
+`reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-toggle`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink — see
 `llms/components/lr-chart.md`).
@@ -25032,7 +25124,8 @@ failure transition is announced through the shared document-level light-DOM asse
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-text`, `--lr-chart-legend-item-hover-bg`,
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
-`--lr-chart-data-table-button-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
+`--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-hover-bg`,
+`--lr-chart-data-table-toggle-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
 `--lr-chart-reset-zoom-button-active-bg`, `--lr-chart-canvas-hover-outline-width`, and
 `--lr-chart-pattern-step`, plus `--lr-chart-legend-side-max` — all inherited from `LyraChart`, identical in meaning and default (see
 `lr-chart` above); each of the eight variants below reads the same set, so one rule retunes them
@@ -25105,7 +25198,7 @@ maxSamples?)` appends finite raw samples and optionally retains only the newest 
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
-`reset-zoom-button`, `description`, `notices`, `data-table`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
+`reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-toggle`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink —
 inherited from `LyraChart`, unaffected by the binning logic).
@@ -25114,7 +25207,8 @@ inherited from `LyraChart`, unaffected by the binning logic).
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-text`, `--lr-chart-legend-item-hover-bg`,
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
-`--lr-chart-data-table-button-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
+`--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-hover-bg`,
+`--lr-chart-data-table-toggle-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
 `--lr-chart-reset-zoom-button-active-bg`, `--lr-chart-canvas-hover-outline-width`, and
 `--lr-chart-pattern-step`, plus `--lr-chart-legend-side-max` — inherited from `LyraChart`, identical in meaning, together with the
 mirrored `--border-color-1`,
@@ -25185,6 +25279,14 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 - `formatter?: LyraChartFormatter`, `valueFormatter?: LyraChartValueFormatter` — numeric axis,
   tooltip, table, summary, and export formatting; the context-object formatter takes precedence
 - `showDataTable: boolean = false` (attribute `show-data-table`) — reveals the accessible data table
+- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 10.1.0) — renders a
+  localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
+  reader can reveal the numbers on demand. `showDataTable` alone is all-or-nothing, which left
+  consumers wrapping a duplicated table in their own `<details>`. With the toggle on,
+  `showDataTable` becomes the disclosure's **initial** state rather than its whole behavior; the
+  table stays in the DOM in both states, so assistive technology never loses it, and the button
+  carries `aria-expanded` plus `aria-controls` pointing at the `data-table` wrapper. Unset, nothing
+  renders and behavior is identical to before.
 
 **Methods:** `exportData('csv'|'png')` returns spreadsheet-safe summary rows or the current canvas
 PNG data URL. `refreshTheme()` re-reads canvas theme custom properties after an ancestor theme
@@ -25223,7 +25325,7 @@ detailed sample and notice, making it the escape hatch for complete data.
 
 **CSS parts:** `base`, `plot` (the fixed-height canvas region), `canvas`, `legend`,
 `legend-item`, `legend-item-hidden` (added to a legend item while its box series is hidden),
-`legend-swatch`, `description`, `data-table`, `error` (neutral visible message shown
+`legend-swatch`, `description`, `data-table`, `data-table-toggle` (the `dataTableToggle` disclosure button), `error` (neutral visible message shown
 instead of `canvas` when the optional box-plot peer fails to load; the failure transition is
 announced through the shared document-level light-DOM assertive sink), `data-truncation` (the
 bounded-alternative sampling notice)
@@ -25240,7 +25342,10 @@ so `--lr-theme-color-chart-*` retheming reaches box plots too. `--lr-chart-patte
 `--lr-chart-canvas-hover-outline-width` (default `var(--lr-border-width-thin)`) sizes the `canvas`
 hover outline, `--lr-chart-legend-item-active-bg` and `--lr-chart-legend-item-hover-bg` retune the
 pressed and hovered legend rows, and `--lr-chart-legend-side-max` caps a side legend — the same tokens and defaults as
-`lr-chart`.
+`lr-chart`. Its own `dataTableToggle` disclosure button carries box-plot-namespaced hooks rather
+than inheriting the chart pair, since its stylesheet is not a re-export:
+`--lr-box-plot-data-table-toggle-hover-bg` (defaults to `--lr-color-brand-quiet`) and
+`--lr-box-plot-data-table-toggle-active-bg` (defaults to its standard active color mix).
 
 **Forced colors:** under `forced-colors: active` the eight-color ramp is remapped onto the small
 repeating system-color cycle the platform exposes, so series 1/4/7 (and 2/5/8, 3/6) would otherwise

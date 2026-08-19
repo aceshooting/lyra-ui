@@ -1075,6 +1075,7 @@ export type LyraBarChartSvelteProps = LyraSvelteElementProps<
   | 'config'
   | 'dataLabels'
   | 'datasets'
+  | 'dataTableToggle'
   | 'description'
   | 'formatter'
   | 'grid'
@@ -1129,6 +1130,8 @@ export type LyraBarChartSvelteProps = LyraSvelteElementProps<
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-data-table-button-active-bg'
   | '--lr-chart-data-table-button-hover-bg'
+  | '--lr-chart-data-table-toggle-active-bg'
+  | '--lr-chart-data-table-toggle-hover-bg'
   | '--lr-chart-grid-color'
   | '--lr-chart-height'
   | '--lr-chart-legend-color'
@@ -1145,6 +1148,7 @@ export type LyraBarChartSvelteProps = LyraSvelteElementProps<
   {
     'begin-at-zero'?: LyraBarChart['beginAtZero'];
     'data-labels'?: LyraBarChart['dataLabels'];
+    'data-table-toggle'?: LyraBarChart['dataTableToggle'];
     'index-axis'?: LyraBarChart['indexAxis'];
     'legend-position'?: LyraBarChart['legendPosition'];
     'scale-type'?: LyraBarChart['scaleType'];
@@ -1163,6 +1167,7 @@ export type LyraBoxPlotSvelteProps = LyraSvelteElementProps<
   LyraBoxPlot,
   | 'beginAtZero'
   | 'datasets'
+  | 'dataTableToggle'
   | 'description'
   | 'formatter'
   | 'height'
@@ -1182,6 +1187,8 @@ export type LyraBoxPlotSvelteProps = LyraSvelteElementProps<
   | 'lr-datum-activate'
   | 'lr-legend-visibility-change'
   | 'lr-point-click',
+  | '--lr-box-plot-data-table-toggle-active-bg'
+  | '--lr-box-plot-data-table-toggle-hover-bg'
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-grid-color'
   | '--lr-chart-height'
@@ -1195,6 +1202,7 @@ export type LyraBoxPlotSvelteProps = LyraSvelteElementProps<
   | '--lr-chart-tooltip-text',
   {
     'begin-at-zero'?: LyraBoxPlot['beginAtZero'];
+    'data-table-toggle'?: LyraBoxPlot['dataTableToggle'];
     'legend-position'?: LyraBoxPlot['legendPosition'];
     'show-data-table'?: LyraBoxPlot['showDataTable'];
     'y-label'?: LyraBoxPlot['yLabel'];
@@ -1284,6 +1292,7 @@ export type LyraBubbleChartSvelteProps = LyraSvelteElementProps<
   | 'config'
   | 'dataLabels'
   | 'datasets'
+  | 'dataTableToggle'
   | 'description'
   | 'formatter'
   | 'grid'
@@ -1338,6 +1347,8 @@ export type LyraBubbleChartSvelteProps = LyraSvelteElementProps<
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-data-table-button-active-bg'
   | '--lr-chart-data-table-button-hover-bg'
+  | '--lr-chart-data-table-toggle-active-bg'
+  | '--lr-chart-data-table-toggle-hover-bg'
   | '--lr-chart-grid-color'
   | '--lr-chart-height'
   | '--lr-chart-legend-color'
@@ -1354,6 +1365,7 @@ export type LyraBubbleChartSvelteProps = LyraSvelteElementProps<
   {
     'begin-at-zero'?: LyraBubbleChart['beginAtZero'];
     'data-labels'?: LyraBubbleChart['dataLabels'];
+    'data-table-toggle'?: LyraBubbleChart['dataTableToggle'];
     'index-axis'?: LyraBubbleChart['indexAxis'];
     'legend-position'?: LyraBubbleChart['legendPosition'];
     'scale-type'?: LyraBubbleChart['scaleType'];
@@ -1652,6 +1664,7 @@ export type LyraChartSvelteProps = LyraSvelteElementProps<
   | 'config'
   | 'dataLabels'
   | 'datasets'
+  | 'dataTableToggle'
   | 'description'
   | 'formatter'
   | 'grid'
@@ -1706,6 +1719,8 @@ export type LyraChartSvelteProps = LyraSvelteElementProps<
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-data-table-button-active-bg'
   | '--lr-chart-data-table-button-hover-bg'
+  | '--lr-chart-data-table-toggle-active-bg'
+  | '--lr-chart-data-table-toggle-hover-bg'
   | '--lr-chart-grid-color'
   | '--lr-chart-height'
   | '--lr-chart-legend-color'
@@ -1722,6 +1737,7 @@ export type LyraChartSvelteProps = LyraSvelteElementProps<
   {
     'begin-at-zero'?: LyraChart['beginAtZero'];
     'data-labels'?: LyraChart['dataLabels'];
+    'data-table-toggle'?: LyraChart['dataTableToggle'];
     'index-axis'?: LyraChart['indexAxis'];
     'legend-position'?: LyraChart['legendPosition'];
     'scale-type'?: LyraChart['scaleType'];
@@ -2371,6 +2387,7 @@ export type LyraComboboxSvelteProps = LyraSvelteElementProps<
   | 'validationTarget'
   | 'validators'
   | 'value'
+  | 'visibleOptions'
   | 'withClear'
   | 'withHint'
   | 'withLabel',
@@ -2424,6 +2441,7 @@ export type LyraComboboxSvelteProps = LyraSvelteElementProps<
     'max-render'?: LyraCombobox['maxRender'];
     'overflow-text'?: LyraCombobox['overflowText'];
     'source-delay'?: LyraCombobox['sourceDelay'];
+    'visible-options'?: LyraCombobox['visibleOptions'];
     'with-clear'?: LyraCombobox['withClear'];
     'with-hint'?: LyraCombobox['withHint'];
     'with-label'?: LyraCombobox['withLabel'];
@@ -3441,6 +3459,7 @@ export type LyraDoughnutChartSvelteProps = LyraSvelteElementProps<
   | 'config'
   | 'dataLabels'
   | 'datasets'
+  | 'dataTableToggle'
   | 'description'
   | 'formatter'
   | 'grid'
@@ -3495,6 +3514,8 @@ export type LyraDoughnutChartSvelteProps = LyraSvelteElementProps<
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-data-table-button-active-bg'
   | '--lr-chart-data-table-button-hover-bg'
+  | '--lr-chart-data-table-toggle-active-bg'
+  | '--lr-chart-data-table-toggle-hover-bg'
   | '--lr-chart-grid-color'
   | '--lr-chart-height'
   | '--lr-chart-legend-color'
@@ -3511,6 +3532,7 @@ export type LyraDoughnutChartSvelteProps = LyraSvelteElementProps<
   {
     'begin-at-zero'?: LyraDoughnutChart['beginAtZero'];
     'data-labels'?: LyraDoughnutChart['dataLabels'];
+    'data-table-toggle'?: LyraDoughnutChart['dataTableToggle'];
     'index-axis'?: LyraDoughnutChart['indexAxis'];
     'legend-position'?: LyraDoughnutChart['legendPosition'];
     'scale-type'?: LyraDoughnutChart['scaleType'];
@@ -4701,6 +4723,7 @@ export type LyraHeatmapSvelteProps = LyraSvelteElementProps<
   | 'cellSize'
   | 'cellText'
   | 'colLabelHeight'
+  | 'colLabelRotation'
   | 'colorSteps'
   | 'data'
   | 'domain'
@@ -4733,6 +4756,7 @@ export type LyraHeatmapSvelteProps = LyraSvelteElementProps<
     'bucket-count'?: LyraHeatmap['bucketCount'];
     'cell-size'?: LyraHeatmap['cellSize'];
     'col-label-height'?: LyraHeatmap['colLabelHeight'];
+    'col-label-rotation'?: LyraHeatmap['colLabelRotation'];
     'fit-to-width'?: LyraHeatmap['fitToWidth'];
     'max-cell-size'?: LyraHeatmap['maxCellSize'];
     'min-cell-size'?: LyraHeatmap['minCellSize'];
@@ -4777,6 +4801,7 @@ export type LyraHistogramSvelteProps = LyraSvelteElementProps<
   | 'config'
   | 'dataLabels'
   | 'datasets'
+  | 'dataTableToggle'
   | 'description'
   | 'formatter'
   | 'grid'
@@ -4833,6 +4858,8 @@ export type LyraHistogramSvelteProps = LyraSvelteElementProps<
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-data-table-button-active-bg'
   | '--lr-chart-data-table-button-hover-bg'
+  | '--lr-chart-data-table-toggle-active-bg'
+  | '--lr-chart-data-table-toggle-hover-bg'
   | '--lr-chart-grid-color'
   | '--lr-chart-height'
   | '--lr-chart-legend-color'
@@ -4849,6 +4876,7 @@ export type LyraHistogramSvelteProps = LyraSvelteElementProps<
   {
     'begin-at-zero'?: LyraHistogram['beginAtZero'];
     'data-labels'?: LyraHistogram['dataLabels'];
+    'data-table-toggle'?: LyraHistogram['dataTableToggle'];
     'index-axis'?: LyraHistogram['indexAxis'];
     'legend-position'?: LyraHistogram['legendPosition'];
     'scale-type'?: LyraHistogram['scaleType'];
@@ -5519,6 +5547,7 @@ export type LyraLineChartSvelteProps = LyraSvelteElementProps<
   | 'config'
   | 'dataLabels'
   | 'datasets'
+  | 'dataTableToggle'
   | 'description'
   | 'formatter'
   | 'grid'
@@ -5573,6 +5602,8 @@ export type LyraLineChartSvelteProps = LyraSvelteElementProps<
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-data-table-button-active-bg'
   | '--lr-chart-data-table-button-hover-bg'
+  | '--lr-chart-data-table-toggle-active-bg'
+  | '--lr-chart-data-table-toggle-hover-bg'
   | '--lr-chart-grid-color'
   | '--lr-chart-height'
   | '--lr-chart-legend-color'
@@ -5589,6 +5620,7 @@ export type LyraLineChartSvelteProps = LyraSvelteElementProps<
   {
     'begin-at-zero'?: LyraLineChart['beginAtZero'];
     'data-labels'?: LyraLineChart['dataLabels'];
+    'data-table-toggle'?: LyraLineChart['dataTableToggle'];
     'index-axis'?: LyraLineChart['indexAxis'];
     'legend-position'?: LyraLineChart['legendPosition'];
     'scale-type'?: LyraLineChart['scaleType'];
@@ -6975,6 +7007,7 @@ export type LyraPieChartSvelteProps = LyraSvelteElementProps<
   | 'config'
   | 'dataLabels'
   | 'datasets'
+  | 'dataTableToggle'
   | 'description'
   | 'formatter'
   | 'grid'
@@ -7029,6 +7062,8 @@ export type LyraPieChartSvelteProps = LyraSvelteElementProps<
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-data-table-button-active-bg'
   | '--lr-chart-data-table-button-hover-bg'
+  | '--lr-chart-data-table-toggle-active-bg'
+  | '--lr-chart-data-table-toggle-hover-bg'
   | '--lr-chart-grid-color'
   | '--lr-chart-height'
   | '--lr-chart-legend-color'
@@ -7045,6 +7080,7 @@ export type LyraPieChartSvelteProps = LyraSvelteElementProps<
   {
     'begin-at-zero'?: LyraPieChart['beginAtZero'];
     'data-labels'?: LyraPieChart['dataLabels'];
+    'data-table-toggle'?: LyraPieChart['dataTableToggle'];
     'index-axis'?: LyraPieChart['indexAxis'];
     'legend-position'?: LyraPieChart['legendPosition'];
     'scale-type'?: LyraPieChart['scaleType'];
@@ -7068,6 +7104,7 @@ export type LyraPolarAreaChartSvelteProps = LyraSvelteElementProps<
   | 'config'
   | 'dataLabels'
   | 'datasets'
+  | 'dataTableToggle'
   | 'description'
   | 'formatter'
   | 'grid'
@@ -7122,6 +7159,8 @@ export type LyraPolarAreaChartSvelteProps = LyraSvelteElementProps<
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-data-table-button-active-bg'
   | '--lr-chart-data-table-button-hover-bg'
+  | '--lr-chart-data-table-toggle-active-bg'
+  | '--lr-chart-data-table-toggle-hover-bg'
   | '--lr-chart-grid-color'
   | '--lr-chart-height'
   | '--lr-chart-legend-color'
@@ -7138,6 +7177,7 @@ export type LyraPolarAreaChartSvelteProps = LyraSvelteElementProps<
   {
     'begin-at-zero'?: LyraPolarAreaChart['beginAtZero'];
     'data-labels'?: LyraPolarAreaChart['dataLabels'];
+    'data-table-toggle'?: LyraPolarAreaChart['dataTableToggle'];
     'index-axis'?: LyraPolarAreaChart['indexAxis'];
     'legend-position'?: LyraPolarAreaChart['legendPosition'];
     'scale-type'?: LyraPolarAreaChart['scaleType'];
@@ -7591,6 +7631,7 @@ export type LyraRadarChartSvelteProps = LyraSvelteElementProps<
   | 'config'
   | 'dataLabels'
   | 'datasets'
+  | 'dataTableToggle'
   | 'description'
   | 'formatter'
   | 'grid'
@@ -7645,6 +7686,8 @@ export type LyraRadarChartSvelteProps = LyraSvelteElementProps<
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-data-table-button-active-bg'
   | '--lr-chart-data-table-button-hover-bg'
+  | '--lr-chart-data-table-toggle-active-bg'
+  | '--lr-chart-data-table-toggle-hover-bg'
   | '--lr-chart-grid-color'
   | '--lr-chart-height'
   | '--lr-chart-legend-color'
@@ -7661,6 +7704,7 @@ export type LyraRadarChartSvelteProps = LyraSvelteElementProps<
   {
     'begin-at-zero'?: LyraRadarChart['beginAtZero'];
     'data-labels'?: LyraRadarChart['dataLabels'];
+    'data-table-toggle'?: LyraRadarChart['dataTableToggle'];
     'index-axis'?: LyraRadarChart['indexAxis'];
     'legend-position'?: LyraRadarChart['legendPosition'];
     'scale-type'?: LyraRadarChart['scaleType'];
@@ -8255,6 +8299,7 @@ export type LyraScatterChartSvelteProps = LyraSvelteElementProps<
   | 'config'
   | 'dataLabels'
   | 'datasets'
+  | 'dataTableToggle'
   | 'description'
   | 'formatter'
   | 'grid'
@@ -8309,6 +8354,8 @@ export type LyraScatterChartSvelteProps = LyraSvelteElementProps<
   | '--lr-chart-canvas-hover-outline-width'
   | '--lr-chart-data-table-button-active-bg'
   | '--lr-chart-data-table-button-hover-bg'
+  | '--lr-chart-data-table-toggle-active-bg'
+  | '--lr-chart-data-table-toggle-hover-bg'
   | '--lr-chart-grid-color'
   | '--lr-chart-height'
   | '--lr-chart-legend-color'
@@ -8325,6 +8372,7 @@ export type LyraScatterChartSvelteProps = LyraSvelteElementProps<
   {
     'begin-at-zero'?: LyraScatterChart['beginAtZero'];
     'data-labels'?: LyraScatterChart['dataLabels'];
+    'data-table-toggle'?: LyraScatterChart['dataTableToggle'];
     'index-axis'?: LyraScatterChart['indexAxis'];
     'legend-position'?: LyraScatterChart['legendPosition'];
     'scale-type'?: LyraScatterChart['scaleType'];

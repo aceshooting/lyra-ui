@@ -323,7 +323,9 @@ ancestor, not a shadow-tree descendant, since custom properties only cascade dow
 `y2Label` title text reuses `--lr-chart-tick-color` too — there's no separate title-color token),
 legend text, and tooltip background/text respectively; plus
 `--lr-chart-legend-item-hover-bg` / `--lr-chart-legend-item-active-bg`,
-`--lr-chart-data-table-button-hover-bg` / `--lr-chart-data-table-button-active-bg`, and
+`--lr-chart-data-table-button-hover-bg` / `--lr-chart-data-table-button-active-bg`,
+`--lr-chart-data-table-toggle-hover-bg` / `--lr-chart-data-table-toggle-active-bg` (the
+`dataTableToggle` disclosure button), and
 `--lr-chart-reset-zoom-button-hover-bg` / `--lr-chart-reset-zoom-button-active-bg` — independent
 background hooks for each DOM control's hover and pressed states. Hover defaults to
 `--lr-color-brand-quiet`; pressed defaults to its standard active color mix. Override one pair
@@ -726,7 +728,8 @@ failure transition is announced through the shared document-level light-DOM asse
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-text`, `--lr-chart-legend-item-hover-bg`,
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
-`--lr-chart-data-table-button-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
+`--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-hover-bg`,
+`--lr-chart-data-table-toggle-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
 `--lr-chart-reset-zoom-button-active-bg`, `--lr-chart-canvas-hover-outline-width`, and
 `--lr-chart-pattern-step`, plus `--lr-chart-legend-side-max` — all inherited from `LyraChart`, identical in meaning and default (see
 `lr-chart` above); each of the eight variants below reads the same set, so one rule retunes them
@@ -808,7 +811,8 @@ inherited from `LyraChart`, unaffected by the binning logic).
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-text`, `--lr-chart-legend-item-hover-bg`,
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
-`--lr-chart-data-table-button-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
+`--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-hover-bg`,
+`--lr-chart-data-table-toggle-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
 `--lr-chart-reset-zoom-button-active-bg`, `--lr-chart-canvas-hover-outline-width`, and
 `--lr-chart-pattern-step`, plus `--lr-chart-legend-side-max` — inherited from `LyraChart`, identical in meaning, together with the
 mirrored `--border-color-1`,
@@ -942,7 +946,10 @@ so `--lr-theme-color-chart-*` retheming reaches box plots too. `--lr-chart-patte
 `--lr-chart-canvas-hover-outline-width` (default `var(--lr-border-width-thin)`) sizes the `canvas`
 hover outline, `--lr-chart-legend-item-active-bg` and `--lr-chart-legend-item-hover-bg` retune the
 pressed and hovered legend rows, and `--lr-chart-legend-side-max` caps a side legend — the same tokens and defaults as
-`lr-chart`.
+`lr-chart`. Its own `dataTableToggle` disclosure button carries box-plot-namespaced hooks rather
+than inheriting the chart pair, since its stylesheet is not a re-export:
+`--lr-box-plot-data-table-toggle-hover-bg` (defaults to `--lr-color-brand-quiet`) and
+`--lr-box-plot-data-table-toggle-active-bg` (defaults to its standard active color mix).
 
 **Forced colors:** under `forced-colors: active` the eight-color ramp is remapped onto the small
 repeating system-color cycle the platform exposes, so series 1/4/7 (and 2/5/8, 3/6) would otherwise

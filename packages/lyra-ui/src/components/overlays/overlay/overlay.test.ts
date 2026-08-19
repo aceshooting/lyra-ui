@@ -2196,7 +2196,7 @@ describe('overlay semantic and lifecycle regressions', () => {
 
     document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
     await waitUntil(() => !el.open, 'an outside pointer still dismisses');
-    expect(document.activeElement).to.equal(trigger);
+    expect(document.activeElement === trigger, 'focus returned to the trigger').to.be.true;
   });
 
   it('is accessible as a disclosure navigation', async () => {

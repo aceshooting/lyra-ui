@@ -248,6 +248,11 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  * @csspart description - The accessible box-plot summary.
  * @csspart data-table - The optional generated or slotted data table.
  * @csspart data-table-toggle - The disclosure button rendered by `dataTableToggle`.
+ * @cssprop [--lr-box-plot-data-table-toggle-hover-bg=var(--lr-color-brand-quiet)] - Hover
+ *   background of the `dataTableToggle` disclosure button.
+ * @cssprop --lr-box-plot-data-table-toggle-active-bg - Pressed background of the `dataTableToggle`
+ *   disclosure button; defaults to a mix of the hover background with the shared active mix
+ *   partner.
  * @csspart error - Static visible error shown instead of the canvas when the optional box-plot
  *   peer fails to load; its transition is announced through a shared light-DOM alert.
  * @csspart data-truncation - Explanation shown when the generated accessible alternative samples

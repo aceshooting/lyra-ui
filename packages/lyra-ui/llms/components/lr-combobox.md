@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 27 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 29 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-option` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -23,6 +23,24 @@ shared `FormAssociated` mixin — see gotchas).
 An `lr-option` row remains bounded by its owning listbox: the default label ellipsizes and each
 `start`/`end` (or `prefix`/`suffix`) adornment is capped at 40% of the row. Unbroken metadata
 therefore cannot widen a 320px LTR or RTL picker.
+
+**Adornments in the popup (fixed in 10.1.0).** Before 10.1.0 this paragraph described behavior the
+code did not have: `lr-combobox` builds its popup from normalized row *data* rather than from the
+light-DOM nodes, so a slotted `start`/`end`/`prefix`/`suffix` adornment had nowhere to land and
+simply never rendered — the documented slots and their documented parts were both dead inside the
+one component `lr-option` exists to feed. They now render. The nodes are **cloned** into the row
+(`option-start` / `option-end` parts, inert and `aria-hidden`, so they never join the option's
+accessible name), which means the author's own `<lr-option>` subtree is left exactly where they put
+it rather than being moved into a shadow root as a side effect of opening a dropdown:
+
+```html
+<lr-combobox label="Country">
+  <lr-option value="fr"><lr-flag slot="start" country="fr"></lr-flag>France</lr-option>
+  <lr-option value="mt"><lr-flag slot="start" country="mt"></lr-flag>Malta</lr-option>
+</lr-combobox>
+```
+
+An async `source` row can carry the same two fields (`start`, `end`) alongside its existing `icon`.
 
 ### `lr-combobox`
 
@@ -90,8 +108,21 @@ therefore cannot widen a 320px LTR or RTL picker.
   mapped IDLs `inputmode` and `enterkeyhint` delegate to the corresponding camel-case native
   properties
 - `inputValue: string` — the live filter input text; programmatic writes are event-silent
-- `maxOptionsVisible: number = 3` (attribute `max-options-visible` — caps how many selected tags
-  show before collapsing to `+N`)
+- `maxOptionsVisible: number = 3` (attribute `max-options-visible` — caps how many selected **tags**
+  show before collapsing to `+N`; nothing to do with the suggestion list, see the three-caps note
+  below)
+- `visibleOptions?: number` (attribute `visible-options`, new in 10.1.0) — bounds the popup to about
+  this many suggestion rows, leaving the rest reachable by scrolling. Purely presentational: every
+  row is still rendered. Measured from where row N actually starts rather than computed from a
+  token, because a row's height varies with `sub` lines, adornments and group labels. Unset imposes
+  no bound of its own and the listbox keeps exactly its previous max-height behavior; zero,
+  negative, and non-finite values normalize to unset rather than collapsing the popup
+
+**The three caps, which are easy to confuse.** `visibleOptions` caps how many suggestion rows are
+*visible* (presentation; the rest scroll). `maxRender` caps how many suggestion rows are *rendered
+at all* (performance; the rest do not exist and are summarized by `option-overflow`).
+`maxOptionsVisible` caps how many *selected tags* show in multi-select and never touches the
+suggestion list.
 - `emptyText?: string` (attribute `empty-text`) — omission displays localized `noMatches` (`"No
 matches"` in the built-in English locale); any supplied string, including `''`, renders verbatim
 - `loadingText?: string` (attribute `loading-text`) — shown while a `source` fetch is in flight;
@@ -154,9 +185,12 @@ every selection change and a `form.reset()` — like a native control, only anot
 **8.0 migration:** the former camel-case string property `autoCorrect` is not retained as a public
 alias. Set the boolean `autocorrect` IDL, or use `autocorrect="on"` / `autocorrect="off"` in markup.
 
-`ComboboxSourceRow = { readonly value: string; readonly label: string; readonly sub?: string; readonly icon?: unknown; readonly badge?: string |
+`ComboboxSourceRow = { readonly value: string; readonly label: string; readonly sub?: string; readonly icon?: unknown; readonly start?: unknown;
+readonly end?: unknown; readonly badge?: string |
 number; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: string; disabled?:
-boolean }` — the row shape used by the async `source` path. `icon` renders as a decorative leading
+boolean }` — the row shape used by the async `source` path. `start` and `end` (new in 10.1.0) are
+the async counterparts of `<lr-option>`'s `start`/`end` adornment slots and render as the
+`option-start` / `option-end` parts, inert and aria-hidden exactly like `icon`. `icon` renders as a decorative leading
 visual whose rendered subtree stays visible but is inert and hidden from assistive technology;
 put independent actions outside it. `badge` renders as trailing metadata, `accessibleLabel` can
 provide richer spoken text than the visible label, and `data` is retained without being rendered
@@ -264,7 +298,9 @@ adornment-slot wrappers, each `hidden` while nothing is slotted into it), `tags`
 `lr-emoji-picker` so one rule styles every grouped list; it labels the `role="group"` wrapper here),
 `option`,
 `option-dot` (the leading status dot, when a row's `dotColor` is set), `option-icon` (the inert,
-aria-hidden decorative leading visual for an async row), `option-label`, `option-sub` (a row's
+aria-hidden decorative leading visual for an async row), `option-start` and `option-end` (the inert,
+aria-hidden adornments cloned from the source option's `start`/`prefix` and `end`/`suffix` slots, or
+from an async row's `start`/`end`), `option-label`, `option-sub` (a row's
 secondary line, when `sub` is set), `option-badge` (an async row's trailing metadata),
 `option-overflow` (the "+N more" indicator from `maxRender`), `error`, `hint`
 

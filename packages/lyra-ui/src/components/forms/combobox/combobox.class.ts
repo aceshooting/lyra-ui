@@ -2027,20 +2027,29 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   }
 
   /**
-   * Publishes `visibleOptions` as a length the listbox stylesheet folds into its existing
-   * `max-block-size: min(...)` chain. Measured rather than computed from a token, because a row's
-   * height varies with `sub` lines, adornments, and group labels -- an estimate would cut a row in
-   * half. Measuring where row N *starts* also naturally accounts for the listbox's own padding.
+   * Applies `visibleOptions` as an inline `max-block-size` on the listbox.
    *
-   * Publishes nothing at all when the cap is unset, normalizes away, or is not actually exceeded,
-   * so the property's own fallback keeps today's behavior byte-identical.
+   * Measured rather than computed from a token, because a row's height varies with `sub` lines,
+   * adornments, and group labels -- an estimate would cut a row in half. Measuring where row N
+   * *starts* also naturally accounts for the listbox's own padding.
+   *
+   * The inline value keeps the positioner clamp inside its own `min()` rather than overriding the
+   * stylesheet's: an inline declaration beats the shadow stylesheet outright, so writing a bare
+   * pixel length here would let a capped listbox overflow the space the positioner actually has.
+   * The property is removed entirely when the cap is unset, normalizes away, or is not exceeded, so
+   * the stylesheet's own expression is what applies and behavior is unchanged.
+   *
+   * Deliberately NOT a custom property: `check-style-policy` forbids component runtime code writing
+   * a documented `@cssprop`, and rightly so -- a documented hook is consumer-owned.
    */
   private syncVisibleOptionsCap(): void {
     const listbox = (this.renderRoot as ShadowRoot | undefined)?.querySelector<HTMLElement>(
       '[part="listbox"]',
     );
     if (!listbox) return;
-    const clear = (): void => listbox.style.removeProperty('--lr-combobox-visible-block-size');
+    const clear = (): void => {
+      listbox.style.removeProperty('max-block-size');
+    };
     const requested =
       typeof this.visibleOptions === 'number' ? finiteCount(this.visibleOptions, 0) : 0;
     if (requested <= 0) return clear();
@@ -2050,7 +2059,10 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     if (!boundary) return clear();
     const cap = boundary.getBoundingClientRect().top - listbox.getBoundingClientRect().top;
     if (!Number.isFinite(cap) || cap <= 0) return clear();
-    listbox.style.setProperty('--lr-combobox-visible-block-size', `${Math.ceil(cap)}px`);
+    listbox.style.setProperty(
+      'max-block-size',
+      `min(${Math.ceil(cap)}px, var(--lr-positioner-available-block-size, var(--lr-size-18rem)))`,
+    );
   }
 
   protected override updated(changed: PropertyValues): void {

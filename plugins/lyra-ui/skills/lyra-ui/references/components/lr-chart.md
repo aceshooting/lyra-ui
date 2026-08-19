@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 15 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -162,6 +162,14 @@ property).
   ignored without evaluating script or exposing prototype-pollution keys to the merge.
 - `showDataTable: boolean = false` (attribute `show-data-table`) — makes the always-available
   accessible data table visible rather than screen-reader-only
+- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 10.1.0) — renders a
+  localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
+  reader can reveal the numbers on demand. `showDataTable` alone is all-or-nothing, which left
+  consumers wrapping a duplicated table in their own `<details>`. With the toggle on,
+  `showDataTable` becomes the disclosure's **initial** state rather than its whole behavior; the
+  table stays in the DOM in both states, so assistive technology never loses it, and the button
+  carries `aria-expanded` plus `aria-controls` pointing at the `data-table` wrapper. Unset, nothing
+  renders and behavior is identical to before.
 - `chartArea: LyraChartArea | undefined` (readonly) — current Chart.js chart-area geometry in
   canvas-local coordinates (`top`, `left`, `right`, `bottom`, `width`, `height`), when a chart is
   drawn
@@ -281,7 +289,7 @@ Chart.js escape hatch and is not rewritten by the simplified-surface sampler.
 wrapping DOM legend), `legend-item` (a dataset-visibility button), `legend-item-hidden` (added to
 that button while its dataset is hidden), `legend-swatch`,
 `reset-zoom-button`, `description`, `notices` (wrapper for nonfatal feature warnings and
-bounded-alternative truncation notices), `data-table`, `data-truncation` (the bounded-alternative
+bounded-alternative truncation notices), `data-table`, `data-table-toggle` (the `dataTableToggle` disclosure button), `data-truncation` (the bounded-alternative
 notice), `feature-warning` (a nonfatal missing optional-feature warning), `center` (the
 chart-area-centered wrapper for the `center` slot), `error` (neutral visible message rendered in
 place of `canvas` when the optional `chart.js` peer dependency fails to load; the failure transition
@@ -301,7 +309,9 @@ ancestor, not a shadow-tree descendant, since custom properties only cascade dow
 `y2Label` title text reuses `--lr-chart-tick-color` too — there's no separate title-color token),
 legend text, and tooltip background/text respectively; plus
 `--lr-chart-legend-item-hover-bg` / `--lr-chart-legend-item-active-bg`,
-`--lr-chart-data-table-button-hover-bg` / `--lr-chart-data-table-button-active-bg`, and
+`--lr-chart-data-table-button-hover-bg` / `--lr-chart-data-table-button-active-bg`,
+`--lr-chart-data-table-toggle-hover-bg` / `--lr-chart-data-table-toggle-active-bg` (the
+`dataTableToggle` disclosure button), and
 `--lr-chart-reset-zoom-button-hover-bg` / `--lr-chart-reset-zoom-button-active-bg` — independent
 background hooks for each DOM control's hover and pressed states. Hover defaults to
 `--lr-color-brand-quiet`; pressed defaults to its standard active color mix. Override one pair

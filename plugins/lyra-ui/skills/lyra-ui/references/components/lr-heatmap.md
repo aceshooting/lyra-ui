@@ -78,8 +78,26 @@ weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
   more here". `cellText` still carries the full label to the tooltip and the keyboard announcement.
   A malformed value is ignored rather than collapsing the gutter. Calendar mode is unaffected; it
   has its own fixed weekday gutter
-- `colLabelHeight?: number` (attribute `col-label-height`) — height, in CSS px, of the matrix
-  column-label band. Unset keeps the built-in `20`
+- `colLabelHeight?: number | 'auto'` (attribute `col-label-height`, reflected, `'auto'` new in
+  10.1.0) — height, in CSS px, of the matrix column-label band, or `'auto'` to measure the labels
+  and size the band to fit them. Under a non-zero `colLabelRotation` the measurement projects each
+  label's width through the rotation, which is what makes a rotated axis usable without hand-tuning
+  a magic number. Never below the built-in `20`, and bounded above by a sanity ceiling so a
+  pathological label cannot produce an absurd canvas. Note this deliberately does **not** use
+  `rowLabelWidth`'s "40% of the host" rule: the row gutter steals width from the cells and so must
+  be bounded relative to them, whereas the canvas simply grows taller for this band and the cells
+  keep their size. Unset keeps the built-in `20`, so no existing chart reflows. A malformed value is
+  ignored
+- `colLabelRotation?: number` (attribute `col-label-rotation`, new in 10.1.0) — rotation, in
+  degrees, applied to matrix column labels. Unset or `0` paints them horizontally exactly as before.
+  In a dense matrix the per-column width is far narrower than a typical label, so horizontal labels
+  collide with their neighbours; `45` or `90` is the standard remedy. Each label rotates about an
+  anchor at its own column's centre with the label's *end* at that anchor, so it leans back over the
+  columns to its left and the last column's label cannot overflow the canvas. Values outside
+  `[0, 90]` clamp into that range and non-finite values normalize to `0`. Pair with
+  `colLabelHeight="auto"` to have the band size itself to the rotated extent. **Not mirrored under
+  `dir="rtl"`** — both grid modes deliberately retain physical LTR geometry, so leaning one axis'
+  labels the other way would be incoherent
 - `maxCellSize?: number` (attribute `max-cell-size`) — ceiling, in CSS px, on the cell size
   `fitToWidth` derives from the host width, in **both** modes. Exists because `fitToWidth` divides
   the _whole_ host width across the grid, so a 5-week calendar or a 3-column matrix in a wide pane

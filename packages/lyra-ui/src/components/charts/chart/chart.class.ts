@@ -572,6 +572,11 @@ function labelText(value: unknown): string {
  *   of an actionable generated-table value.
  * @cssprop --lr-chart-data-table-button-active-bg - Pressed background of an actionable generated-
  *   table value; defaults to the standard active mix of `--lr-color-brand-quiet`.
+ * @cssprop [--lr-chart-data-table-toggle-hover-bg=var(--lr-color-brand-quiet)] - Hover background
+ *   of the `dataTableToggle` disclosure button.
+ * @cssprop --lr-chart-data-table-toggle-active-bg - Pressed background of the `dataTableToggle`
+ *   disclosure button; defaults to a mix of the hover background with the shared active mix
+ *   partner.
  * @cssprop [--lr-chart-reset-zoom-button-hover-bg=var(--lr-color-brand-quiet)] - Hover background
  *   of the reset-zoom button.
  * @cssprop --lr-chart-reset-zoom-button-active-bg - Pressed background of the reset-zoom button;

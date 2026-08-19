@@ -5059,11 +5059,14 @@ describe('data-table disclosure', () => {
 
   it('renders no toggle at all while the property is unset', async () => {
     const collapsed = await chartWith(html`<lr-chart></lr-chart>`);
-    expect(toggleButton(collapsed), 'opt-in only').to.be.null;
+    expect(toggleButton(collapsed) === null, 'opt-in only').to.be.true;
     expect(tableWrapper(collapsed).hasAttribute('data-visually-hidden')).to.be.true;
 
     const shown = await chartWith(html`<lr-chart show-data-table></lr-chart>`);
-    expect(toggleButton(shown), 'still opt-in when the table is already visible').to.be.null;
+    expect(
+      toggleButton(shown) === null,
+      'still opt-in when the table is already visible',
+    ).to.be.true;
     expect(tableWrapper(shown).hasAttribute('data-visually-hidden')).to.be.false;
   });
 

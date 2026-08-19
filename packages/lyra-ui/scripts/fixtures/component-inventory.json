@@ -9975,6 +9975,16 @@
             "default": false
           },
           {
+            "name": "data-table-toggle",
+            "property": "dataTableToggle",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "description",
             "property": "description",
             "type": "string | null",
@@ -10247,6 +10257,16 @@
           {
             "name": "dataLabels",
             "attribute": "data-labels",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "dataTableToggle",
+            "attribute": "data-table-toggle",
             "type": "boolean",
             "readonly": false,
             "reflects": false,
@@ -10549,6 +10569,10 @@
             "deprecated": null
           },
           {
+            "name": "data-table-toggle",
+            "deprecated": null
+          },
+          {
             "name": "data-truncation",
             "deprecated": null
           },
@@ -10714,6 +10738,17 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-data-table-toggle-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-chart-data-table-toggle-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
             "name": "--lr-chart-grid-color",
             "deprecated": null,
             "hasDefault": true,
@@ -10868,6 +10903,16 @@
             "default": true
           },
           {
+            "name": "data-table-toggle",
+            "property": "dataTableToggle",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "description",
             "property": "description",
             "type": "string | null",
@@ -10968,6 +11013,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "dataTableToggle",
+            "attribute": "data-table-toggle",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "description",
@@ -11133,6 +11188,10 @@
             "deprecated": null
           },
           {
+            "name": "data-table-toggle",
+            "deprecated": null
+          },
+          {
             "name": "data-truncation",
             "deprecated": null
           },
@@ -11166,6 +11225,17 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-box-plot-data-table-toggle-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-box-plot-data-table-toggle-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
           {
             "name": "--lr-chart-canvas-hover-outline-width",
             "deprecated": null,
@@ -12273,6 +12343,16 @@
             "default": false
           },
           {
+            "name": "data-table-toggle",
+            "property": "dataTableToggle",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "description",
             "property": "description",
             "type": "string | null",
@@ -12545,6 +12625,16 @@
           {
             "name": "dataLabels",
             "attribute": "data-labels",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "dataTableToggle",
+            "attribute": "data-table-toggle",
             "type": "boolean",
             "readonly": false,
             "reflects": false,
@@ -12847,6 +12937,10 @@
             "deprecated": null
           },
           {
+            "name": "data-table-toggle",
+            "deprecated": null
+          },
+          {
             "name": "data-truncation",
             "deprecated": null
           },
@@ -13007,6 +13101,17 @@
           },
           {
             "name": "--lr-chart-data-table-button-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-chart-data-table-toggle-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-chart-data-table-toggle-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
@@ -16670,6 +16775,16 @@
             "default": false
           },
           {
+            "name": "data-table-toggle",
+            "property": "dataTableToggle",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "description",
             "property": "description",
             "type": "string | null",
@@ -16967,6 +17082,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "dataTableToggle",
+            "attribute": "data-table-toggle",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "description",
@@ -17290,6 +17415,10 @@
             "deprecated": null
           },
           {
+            "name": "data-table-toggle",
+            "deprecated": null
+          },
+          {
             "name": "data-truncation",
             "deprecated": null
           },
@@ -17450,6 +17579,17 @@
           },
           {
             "name": "--lr-chart-data-table-button-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-chart-data-table-toggle-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-chart-data-table-toggle-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
@@ -26091,6 +26231,15 @@
             "hasDefault": false
           },
           {
+            "name": "visible-options",
+            "property": "visibleOptions",
+            "type": "number | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "with-clear",
             "property": "withClear",
             "type": "boolean",
@@ -26611,6 +26760,15 @@
             "hasDefault": false
           },
           {
+            "name": "visibleOptions",
+            "attribute": "visible-options",
+            "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "willValidate",
             "attribute": null,
             "type": "boolean",
@@ -26838,6 +26996,10 @@
             "deprecated": null
           },
           {
+            "name": "option-end",
+            "deprecated": null
+          },
+          {
             "name": "option-icon",
             "deprecated": null
           },
@@ -26847,6 +27009,10 @@
           },
           {
             "name": "option-overflow",
+            "deprecated": null
+          },
+          {
+            "name": "option-start",
             "deprecated": null
           },
           {
@@ -39957,6 +40123,16 @@
             "default": false
           },
           {
+            "name": "data-table-toggle",
+            "property": "dataTableToggle",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "description",
             "property": "description",
             "type": "string | null",
@@ -40229,6 +40405,16 @@
           {
             "name": "dataLabels",
             "attribute": "data-labels",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "dataTableToggle",
+            "attribute": "data-table-toggle",
             "type": "boolean",
             "readonly": false,
             "reflects": false,
@@ -40531,6 +40717,10 @@
             "deprecated": null
           },
           {
+            "name": "data-table-toggle",
+            "deprecated": null
+          },
+          {
             "name": "data-truncation",
             "deprecated": null
           },
@@ -40691,6 +40881,17 @@
           },
           {
             "name": "--lr-chart-data-table-button-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-chart-data-table-toggle-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-chart-data-table-toggle-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
@@ -55121,6 +55322,15 @@
           {
             "name": "col-label-height",
             "property": "colLabelHeight",
+            "type": "number | 'auto' | undefined",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "col-label-rotation",
+            "property": "colLabelRotation",
             "type": "number | undefined",
             "reflects": false,
             "inferred": false,
@@ -55272,6 +55482,15 @@
           {
             "name": "colLabelHeight",
             "attribute": "col-label-height",
+            "type": "number | 'auto' | undefined",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "colLabelRotation",
+            "attribute": "col-label-rotation",
             "type": "number | undefined",
             "readonly": false,
             "reflects": false,
@@ -55976,6 +56195,16 @@
             "default": false
           },
           {
+            "name": "data-table-toggle",
+            "property": "dataTableToggle",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "description",
             "property": "description",
             "type": "string | null",
@@ -56268,6 +56497,16 @@
           {
             "name": "dataLabels",
             "attribute": "data-labels",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "dataTableToggle",
+            "attribute": "data-table-toggle",
             "type": "boolean",
             "readonly": false,
             "reflects": false,
@@ -56590,6 +56829,10 @@
             "deprecated": null
           },
           {
+            "name": "data-table-toggle",
+            "deprecated": null
+          },
+          {
             "name": "data-truncation",
             "deprecated": null
           },
@@ -56750,6 +56993,17 @@
           },
           {
             "name": "--lr-chart-data-table-button-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-chart-data-table-toggle-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-chart-data-table-toggle-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
@@ -64957,6 +65211,16 @@
             "default": false
           },
           {
+            "name": "data-table-toggle",
+            "property": "dataTableToggle",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "description",
             "property": "description",
             "type": "string | null",
@@ -65229,6 +65493,16 @@
           {
             "name": "dataLabels",
             "attribute": "data-labels",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "dataTableToggle",
+            "attribute": "data-table-toggle",
             "type": "boolean",
             "readonly": false,
             "reflects": false,
@@ -65531,6 +65805,10 @@
             "deprecated": null
           },
           {
+            "name": "data-table-toggle",
+            "deprecated": null
+          },
+          {
             "name": "data-truncation",
             "deprecated": null
           },
@@ -65691,6 +65969,17 @@
           },
           {
             "name": "--lr-chart-data-table-button-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-chart-data-table-toggle-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-chart-data-table-toggle-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
@@ -83827,6 +84116,16 @@
             "default": false
           },
           {
+            "name": "data-table-toggle",
+            "property": "dataTableToggle",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "description",
             "property": "description",
             "type": "string | null",
@@ -84099,6 +84398,16 @@
           {
             "name": "dataLabels",
             "attribute": "data-labels",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "dataTableToggle",
+            "attribute": "data-table-toggle",
             "type": "boolean",
             "readonly": false,
             "reflects": false,
@@ -84401,6 +84710,10 @@
             "deprecated": null
           },
           {
+            "name": "data-table-toggle",
+            "deprecated": null
+          },
+          {
             "name": "data-truncation",
             "deprecated": null
           },
@@ -84561,6 +84874,17 @@
           },
           {
             "name": "--lr-chart-data-table-button-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-chart-data-table-toggle-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-chart-data-table-toggle-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
@@ -84760,6 +85084,16 @@
             "default": false
           },
           {
+            "name": "data-table-toggle",
+            "property": "dataTableToggle",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "description",
             "property": "description",
             "type": "string | null",
@@ -85032,6 +85366,16 @@
           {
             "name": "dataLabels",
             "attribute": "data-labels",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "dataTableToggle",
+            "attribute": "data-table-toggle",
             "type": "boolean",
             "readonly": false,
             "reflects": false,
@@ -85334,6 +85678,10 @@
             "deprecated": null
           },
           {
+            "name": "data-table-toggle",
+            "deprecated": null
+          },
+          {
             "name": "data-truncation",
             "deprecated": null
           },
@@ -85494,6 +85842,17 @@
           },
           {
             "name": "--lr-chart-data-table-button-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-chart-data-table-toggle-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-chart-data-table-toggle-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
@@ -86092,7 +86451,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "dialog"
           },
           {
             "name": "skidding",
@@ -86233,7 +86593,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "dialog"
           },
           {
             "name": "skidding",
@@ -91037,6 +91398,16 @@
             "default": false
           },
           {
+            "name": "data-table-toggle",
+            "property": "dataTableToggle",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "description",
             "property": "description",
             "type": "string | null",
@@ -91309,6 +91680,16 @@
           {
             "name": "dataLabels",
             "attribute": "data-labels",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "dataTableToggle",
+            "attribute": "data-table-toggle",
             "type": "boolean",
             "readonly": false,
             "reflects": false,
@@ -91611,6 +91992,10 @@
             "deprecated": null
           },
           {
+            "name": "data-table-toggle",
+            "deprecated": null
+          },
+          {
             "name": "data-truncation",
             "deprecated": null
           },
@@ -91771,6 +92156,17 @@
           },
           {
             "name": "--lr-chart-data-table-button-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-chart-data-table-toggle-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-chart-data-table-toggle-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
@@ -99803,6 +100199,16 @@
             "default": false
           },
           {
+            "name": "data-table-toggle",
+            "property": "dataTableToggle",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "description",
             "property": "description",
             "type": "string | null",
@@ -100075,6 +100481,16 @@
           {
             "name": "dataLabels",
             "attribute": "data-labels",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "dataTableToggle",
+            "attribute": "data-table-toggle",
             "type": "boolean",
             "readonly": false,
             "reflects": false,
@@ -100377,6 +100793,10 @@
             "deprecated": null
           },
           {
+            "name": "data-table-toggle",
+            "deprecated": null
+          },
+          {
             "name": "data-truncation",
             "deprecated": null
           },
@@ -100537,6 +100957,17 @@
           },
           {
             "name": "--lr-chart-data-table-button-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-chart-data-table-toggle-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-chart-data-table-toggle-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"

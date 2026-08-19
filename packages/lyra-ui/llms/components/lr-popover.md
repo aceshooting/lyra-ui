@@ -51,7 +51,26 @@ A click-triggered, light-dismiss floating surface positioned with the shared Flo
 - `accessibleLabel: string = ''` (attribute **`aria-label`**) — names the popup. An authored host
   attribute wins by presence, including `aria-label=""`; only when it is absent does the property
   or localized "Popover" ("Menu" when `popupRole` is `menu`) fallback apply
-- `popupRole: 'dialog'|'menu' = 'dialog'` (attribute `popup-role`)
+- `popupRole: 'dialog'|'menu'|'none' = 'dialog'` (attribute `popup-role`). `none` (new in 10.1.0)
+  renders **no** `role` and no generated `aria-label` on the popup surface, and leaves
+  `aria-haspopup` off the trigger, so slotted content owns its own semantics and accessible name.
+  It exists for the WAI-ARIA **disclosure navigation** pattern: a flyout of links is not an
+  application action menu (`menu` announces "menu, menu item" and expects `menuitem` children) and
+  is not an interruptive surface (`dialog`). The `aria-expanded`/`aria-controls` wiring that pattern
+  requires is unchanged, as are light dismiss, Escape, focus return, and positioning:
+
+  ```html
+  <lr-popover popup-role="none">
+    <button slot="trigger">Products</button>
+    <nav aria-label="Products">
+      <ul><li><a href="/overview">Overview</a></li><li><a href="/pricing">Pricing</a></li></ul>
+    </nav>
+  </lr-popover>
+  ```
+
+  Note there is deliberately no `aria-haspopup="none"` — that is an invalid attribute value, not a
+  neutral one, and axe reports it as a critical violation. `lr-dropdown` still pins `popupRole` to
+  `menu`; the escape hatch lives on the general-purpose primitive.
 - `disabled: boolean = false` (reflected, new in 10.0.0) — prevents opening the popover; pointer,
   keyboard, and programmatic `show()`/`open = true` are all refused while set. Becoming disabled also
   closes an already-open popover, and initial `disabled` plus `open` normalizes closed in either

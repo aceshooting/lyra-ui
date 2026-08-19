@@ -311,10 +311,8 @@ export const styles = css`
     position: fixed;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-dropdown));
     box-sizing: border-box;
-    /* --lr-combobox-visible-block-size is published by the visibleOptions property and falls back
-       to the original 18rem ceiling, so an unset cap resolves to exactly the previous expression. */
     max-block-size: min(
-      var(--lr-combobox-visible-block-size, var(--lr-size-18rem)),
+      var(--lr-size-18rem),
       var(--lr-positioner-available-block-size, var(--lr-size-18rem))
     );
     overflow-y: auto;

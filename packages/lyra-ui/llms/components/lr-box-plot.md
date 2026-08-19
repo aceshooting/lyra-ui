@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** `@sgratzl/chartjs-chart-boxplot`, `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 11 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -46,6 +46,14 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 - `formatter?: LyraChartFormatter`, `valueFormatter?: LyraChartValueFormatter` — numeric axis,
   tooltip, table, summary, and export formatting; the context-object formatter takes precedence
 - `showDataTable: boolean = false` (attribute `show-data-table`) — reveals the accessible data table
+- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 10.1.0) — renders a
+  localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
+  reader can reveal the numbers on demand. `showDataTable` alone is all-or-nothing, which left
+  consumers wrapping a duplicated table in their own `<details>`. With the toggle on,
+  `showDataTable` becomes the disclosure's **initial** state rather than its whole behavior; the
+  table stays in the DOM in both states, so assistive technology never loses it, and the button
+  carries `aria-expanded` plus `aria-controls` pointing at the `data-table` wrapper. Unset, nothing
+  renders and behavior is identical to before.
 
 **Methods:** `exportData('csv'|'png')` returns spreadsheet-safe summary rows or the current canvas
 PNG data URL. `refreshTheme()` re-reads canvas theme custom properties after an ancestor theme
@@ -84,7 +92,7 @@ detailed sample and notice, making it the escape hatch for complete data.
 
 **CSS parts:** `base`, `plot` (the fixed-height canvas region), `canvas`, `legend`,
 `legend-item`, `legend-item-hidden` (added to a legend item while its box series is hidden),
-`legend-swatch`, `description`, `data-table`, `error` (neutral visible message shown
+`legend-swatch`, `description`, `data-table`, `data-table-toggle` (the `dataTableToggle` disclosure button), `error` (neutral visible message shown
 instead of `canvas` when the optional box-plot peer fails to load; the failure transition is
 announced through the shared document-level light-DOM assertive sink), `data-truncation` (the
 bounded-alternative sampling notice)
@@ -101,7 +109,10 @@ so `--lr-theme-color-chart-*` retheming reaches box plots too. `--lr-chart-patte
 `--lr-chart-canvas-hover-outline-width` (default `var(--lr-border-width-thin)`) sizes the `canvas`
 hover outline, `--lr-chart-legend-item-active-bg` and `--lr-chart-legend-item-hover-bg` retune the
 pressed and hovered legend rows, and `--lr-chart-legend-side-max` caps a side legend — the same tokens and defaults as
-`lr-chart`.
+`lr-chart`. Its own `dataTableToggle` disclosure button carries box-plot-namespaced hooks rather
+than inheriting the chart pair, since its stylesheet is not a re-export:
+`--lr-box-plot-data-table-toggle-hover-bg` (defaults to `--lr-color-brand-quiet`) and
+`--lr-box-plot-data-table-toggle-active-bg` (defaults to its standard active color mix).
 
 **Forced colors:** under `forced-colors: active` the eight-color ramp is remapped onto the small
 repeating system-color cycle the platform exposes, so series 1/4/7 (and 2/5/8, 3/6) would otherwise
