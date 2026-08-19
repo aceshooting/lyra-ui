@@ -3753,6 +3753,32 @@ export function run(argv) {
   }
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+/**
+ * Whether this module was invoked as the CLI rather than imported as a library.
+ *
+ * Compares REALPATHS. Under pnpm, `node_modules/.bin/lyra-ui-migrate` resolves into a package
+ * directory that is a symlink into the virtual store, so the path the shim passes as `argv[1]`
+ * (`<cwd>/node_modules/@aceshooting/lyra-ui/dist/cli/migrate-wa.mjs`) and this module's own
+ * `import.meta.url` (`<cwd>/node_modules/.pnpm/@aceshooting+lyra-ui@<version>_<peer-suffix>/...`)
+ * never match literally. The former raw comparison therefore evaluated false on every pnpm install:
+ * `run()` never executed, so the CLI printed nothing, rewrote nothing, wrote no report -- and exited
+ * 0. That made the documented `--check` CI gate pass unconditionally, which is worse than having no
+ * gate, because it is trusted. npm and yarn were unaffected, which is how it survived.
+ *
+ * Falls back to the literal comparison only if a realpath cannot be taken (a deleted or
+ * permission-denied entry), which keeps the import-as-a-library case correct either way.
+ */
+function invokedAsCli() {
+  const invoked = process.argv[1];
+  if (!invoked) return false;
+  const here = fileURLToPath(import.meta.url);
+  try {
+    return fs.realpathSync(invoked) === fs.realpathSync(here);
+  } catch {
+    return path.resolve(invoked) === here;
+  }
+}
+
+if (invokedAsCli()) {
   process.exitCode = run(process.argv.slice(2));
 }

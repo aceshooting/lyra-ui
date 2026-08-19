@@ -17,6 +17,19 @@ For a ready-made light/dark base, import `@aceshooting/lyra-ui/theme.css` once a
 Per-component `--lr-<component>-*` custom properties (listed in each component's own section)
 override a single element without touching the shared layer.
 
+> **Why layer 1 is not merely *preferred* but *required*: an ancestor `--lr-*` override does
+> not survive a nested component boundary.** Every component re-derives the whole `--lr-*` layer
+> from `--lr-theme-*` on its **own** `:host` (that is what `LyraElement`'s shared token
+> stylesheet does). So setting, say, `--lr-color-warning-quiet` on an application element does
+> apply to that element and to plain nested markup — it looks right in review and in a shallow
+> `getComputedStyle` probe — but it is **reset at the first `lr-*` element inside another
+> `lr-*` element's shadow root** (a badge inside a table cell, say), which re-derives it back to
+> the library fallback. The override degrades silently, the deeper it is consumed, with no
+> warning. Always set the `--lr-theme-*` input instead: that layer is read through `var()` at
+> every level, so it inherits across every boundary. Per-component `--lr-<component>-*`
+> properties are the other safe lever, because no component re-declares another component's
+> namespace.
+
 ## Direct theme-backed tokens (263)
 
 | Internal token | `--lr-theme-*` input | Light/default fallback | Mode overrides |

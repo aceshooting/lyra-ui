@@ -300,10 +300,16 @@ const baseTokens = css`
     --lr-popover-viewport-clamp: var(--lr-theme-popover-viewport-clamp, 92vw);
 
     /* Focus ring — every :focus-visible rule in the library should reference
-       these three instead of hardcoding its own width/color/offset. */
+       these instead of hardcoding its own width/color/offset. --lr-focus-ring is a
+       ready-made outline shorthand composed from the first two, matching the shape
+       Web Awesome exposes so a migrating consumer has a one-to-one target instead of
+       hand-expanding every site (and silently dropping the style keyword, which yields
+       an outline that renders in some engines and not others). Offset stays separate
+       because outline-offset is its own property, not part of the outline shorthand. */
     --lr-focus-ring-width: var(--lr-theme-focus-ring-width, 2px);
     --lr-focus-ring-color: var(--lr-theme-color-focus, var(--lr-color-brand));
     --lr-focus-ring-offset: var(--lr-theme-focus-ring-offset, 2px);
+    --lr-focus-ring: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
 
     /* Minimum tappable box for an icon-only button (close/dismiss/nav
        controls). Visual icon size is unaffected; components pad out to this

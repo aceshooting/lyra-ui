@@ -221,6 +221,19 @@ it('defines the focus-ring tokens, with color aliasing the existing brand token'
   expect(await probeVar('--lr-focus-ring-color')).to.equal(await probeVar('--lr-color-brand'));
 });
 
+it('defines a composite --lr-focus-ring shorthand built from the three parts', async () => {
+  const composite = await probeVar('--lr-focus-ring');
+  expect(composite, 'a ready-made outline value, like Web Awesome exposes').to.equal(
+    `${await probeVar('--lr-focus-ring-width')} solid ${await probeVar('--lr-focus-ring-color')}`,
+  );
+});
+
+it('tracks the --lr-theme-focus-ring-* inputs through the composite shorthand', async () => {
+  expect(
+    await probeNestedVar('--lr-focus-ring', '--lr-theme-focus-ring-width: 4px'),
+  ).to.contain('4px');
+});
+
 it('defines an icon-button-size token', async () => {
   expect(await probeVar('--lr-icon-button-size')).to.equal('2.5rem');
 });

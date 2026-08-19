@@ -2494,3 +2494,52 @@ test('the public CLI requires an explicit supported origin for local defaults', 
     fs.rmSync(scratch, { recursive: true, force: true });
   }
 });
+
+// The published bin is reached through node_modules/.bin, and under pnpm the package directory is
+// a symlink into the virtual store. The entry guard compared raw paths, so argv[1] (the symlinked
+// path) never equalled import.meta.url (the realpath) and run() silently never executed: no output,
+// no rewrites, no report -- and exit 0, which made the documented `--check` CI gate pass
+// unconditionally. A gate that cannot fail is worse than no gate, so this asserts the guard is
+// symlink-tolerant by invoking the CLI through a symlink that mimics that layout.
+test('runs when invoked through a symlinked path, as a pnpm bin shim does', () => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-migrate-symlink-'));
+  try {
+    const store = path.join(scratch, 'store', 'lyra-ui', 'scripts');
+    fs.mkdirSync(store, { recursive: true });
+    for (const file of fs.readdirSync(scriptDir)) {
+      if (file.endsWith('.mjs') || file === 'fixtures') {
+        fs.cpSync(path.join(scriptDir, file), path.join(store, file), { recursive: true });
+      }
+    }
+
+    const linkDir = path.join(scratch, 'linked');
+    fs.symlinkSync(path.join(scratch, 'store', 'lyra-ui'), linkDir, 'dir');
+    const throughLink = path.join(linkDir, 'scripts', 'migrate-wa.mjs');
+    assert.notEqual(
+      fs.realpathSync(throughLink),
+      throughLink,
+      'the fixture must actually go through a symlink, or it proves nothing',
+    );
+
+    const help = spawnSync(process.execPath, [throughLink, '--help'], { encoding: 'utf8' });
+    assert.notEqual(
+      help.stdout.trim(),
+      '',
+      'the CLI must produce output when reached through a symlink',
+    );
+
+    const target = path.join(scratch, 'app');
+    fs.mkdirSync(target, { recursive: true });
+    fs.writeFileSync(path.join(target, 'a.html'), '<wa-button>Go</wa-button>\n', 'utf8');
+    const check = spawnSync(process.execPath, [throughLink, '--check', target], {
+      encoding: 'utf8',
+    });
+    assert.equal(
+      check.status,
+      1,
+      `--check must still fail through a symlink, or the CI gate is inert: ${check.stdout}${check.stderr}`,
+    );
+  } finally {
+    fs.rmSync(scratch, { recursive: true, force: true });
+  }
+});
