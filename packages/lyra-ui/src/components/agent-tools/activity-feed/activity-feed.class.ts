@@ -541,7 +541,6 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
                 .renderItem=${(item: unknown) => this.entryTemplate(item as ActivityEntry, false)}
                 .keyFunction=${(item: unknown) => (item as ActivityEntry).id}
                 aria-label=${ariaLabel}
-                @lr-visible-range-changed=${this.onVirtualListRangeChanged}
                 @lr-visible-range-change=${this.onVirtualListRangeChanged}
               ></lr-virtual-list>`
             : repeat(entries, (entry) => entry.id, (entry) => this.entryTemplate(entry, true))}

@@ -109,9 +109,13 @@ repainting everything else that reads them.
 
 ```html
 <lr-tool-call-chip status="pending"></lr-tool-call-chip>
-<lr-confirm-bar tool-name="run_shell" .args=${args}
-  @lr-approve=${(e) => run(e.detail.args)} @lr-deny=${() => cancel()}
-></lr-confirm-bar>
+<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>
+<script type="module">
+  const bar = document.querySelector("lr-confirm-bar");
+  bar.args = args;
+  bar.addEventListener("lr-approve", (e) => run(e.detail.args));
+  bar.addEventListener("lr-deny", () => cancel());
+</script>
 ```
 
 An `lr-approve`/`lr-deny` listener that needs to await its own async work before finalizing calls

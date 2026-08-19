@@ -120,9 +120,12 @@ each tone's highlighted-cell background. `--lr-notebook-viewer-highlight-active-
 `text/plain`).
 
 ```html
-<lr-notebook-viewer .notebook=${result} max-height="30rem"
-  @lr-load=${(e) => console.log(e.detail.cellCount, 'cells')}
-></lr-notebook-viewer>
+<lr-notebook-viewer max-height="30rem"></lr-notebook-viewer>
+<script type="module">
+  const viewer = document.querySelector("lr-notebook-viewer");
+  viewer.notebook = result;
+  viewer.addEventListener("lr-load", (e) => console.log(e.detail.cellCount, "cells"));
+</script>
 ```
 
 A notebook major version outside 4.0–4.5, an invalid shape, or more than 2,000 cells renders a

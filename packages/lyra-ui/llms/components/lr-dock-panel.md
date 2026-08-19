@@ -112,19 +112,16 @@ being dragged. Plus shared tokens `--lr-color-surface`, `--lr-color-border`, `--
 
 ```html
 <div style="position: relative; block-size: 100vh;">
-  <lr-dock-panel
-    edge="end"
-    extent="320px"
-    min-extent="200px"
-    max-extent="480px"
-    collapsible
-    @lr-resize-input=${(e) => updateLayoutPreview(e.detail.extent)}
-    @lr-resize-change=${(e) => persistExtent(e.detail.extent)}
-    @lr-collapse-change=${(e) => console.log(e.detail.collapsed)}
-  >
+  <lr-dock-panel edge="end" extent="320px" min-extent="200px" max-extent="480px" collapsible>
     <div>Sidebar content — a chat thread list, an inspector, anything.</div>
   </lr-dock-panel>
 </div>
+<script type="module">
+  const panel = document.querySelector("lr-dock-panel");
+  panel.addEventListener("lr-resize-input", (e) => updateLayoutPreview(e.detail.extent));
+  panel.addEventListener("lr-resize-change", (e) => persistExtent(e.detail.extent));
+  panel.addEventListener("lr-collapse-change", (e) => console.log(e.detail.collapsed));
+</script>
 ```
 
 Pointer-drag-resize admits only a primary pointer using its primary button, then mirrors

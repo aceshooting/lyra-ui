@@ -471,41 +471,11 @@ it('themes the title and date weights through the shared semibold token', async 
   expect(getComputedStyle(date).fontWeight).to.equal('700');
 });
 
-it('normalizes an out-of-range first-day-of-week instead of dropping leading days of the month', async () => {
-  // (0 - 9 + 7) % 7 === -2 in JS, which previously made the grid start on
-  // Feb 3rd instead of wrapping to the prior month -- silently dropping Feb
-  // 1-2 from the rendered 42-day window.
-  const el = (await fixture(
-    html`<lr-calendar view-date="2026-02-01" first-day-of-week="9"></lr-calendar>`,
-  )) as LyraCalendar;
-  const days = [...el.shadowRoot!.querySelectorAll('[part="day"]')] as HTMLElement[];
-  expect(days).to.have.length(42);
-  expect(days[0].dataset.date).to.equal('2026-01-27');
-  expect(days.some((day) => day.dataset.date === '2026-02-01')).to.be.true;
-  expect(days.some((day) => day.dataset.date === '2026-02-02')).to.be.true;
-});
-
 it('falls back to a sane first-day-of-week instead of producing Invalid Date for a non-numeric attribute', async () => {
   const el = (await fixture(
     html`<lr-calendar view-date="2026-07-01" first-day-of-week="not-a-number"></lr-calendar>`,
   )) as LyraCalendar;
   const days = [...el.shadowRoot!.querySelectorAll('[part="day"]')] as HTMLElement[];
-  expect(days).to.have.length(42);
-  expect(days.every((day) => /^\d{4}-\d{2}-\d{2}$/.test(day.dataset.date || ''))).to.be.true;
-});
-
-it('wraps a negative firstDayOfWeek property (not just an out-of-range attribute) into [0, 6] instead of leaving Invalid Date/NaN', async () => {
-  const el = (await fixture(html`<lr-calendar view-date="2026-02-01"></lr-calendar>`)) as LyraCalendar;
-
-  el.firstDayOfWeek = -2; // ((-2 % 7) + 7) % 7 === 5 (Friday)
-  await el.updateComplete;
-  let days = [...el.shadowRoot!.querySelectorAll('[part="day"]')] as HTMLElement[];
-  expect(days).to.have.length(42);
-  expect(days.every((day) => /^\d{4}-\d{2}-\d{2}$/.test(day.dataset.date || ''))).to.be.true;
-
-  el.firstDayOfWeek = NaN;
-  await el.updateComplete;
-  days = [...el.shadowRoot!.querySelectorAll('[part="day"]')] as HTMLElement[];
   expect(days).to.have.length(42);
   expect(days.every((day) => /^\d{4}-\d{2}-\d{2}$/.test(day.dataset.date || ''))).to.be.true;
 });
@@ -538,16 +508,15 @@ it('derives Monday-first week alignment from a Monday-first locale when first-da
   expect(firstWeekdayHeader(el)).to.equal(weekdayName('en-GB', 'mon'));
 });
 
-it('keeps first-day-of-week="1" rendering Monday-first under a locale that would otherwise default to Sunday (back-compat)', async () => {
+it('no longer treats a numeric-looking first-day-of-week attribute as a weekday index (removed back-compat form)', async () => {
+  // en-GB derives a Monday-first week (see the "derives Monday-first" test above), and the
+  // removed numeric contract also read "1" as the literal weekday index for Monday -- so both
+  // the old numeric form and plain locale derivation would render Monday-first here. Only the
+  // *current* behavior -- an unrecognized token falling back to the same plain Sunday default
+  // as any other malformed string, exactly like `lr-date-picker`/`lr-date-input` -- renders
+  // Sunday-first, which is what this asserts.
   const el = (await fixture(
-    html`<lr-calendar view-date="2026-07-01" first-day-of-week="1" locale="en-US"></lr-calendar>`,
-  )) as LyraCalendar;
-  expect(firstWeekdayHeader(el)).to.equal(weekdayName('en-US', 'mon'));
-});
-
-it('keeps first-day-of-week="0" rendering Sunday-first under a locale that would otherwise default to Monday (back-compat)', async () => {
-  const el = (await fixture(
-    html`<lr-calendar view-date="2026-07-01" first-day-of-week="0" locale="en-GB"></lr-calendar>`,
+    html`<lr-calendar view-date="2026-07-01" first-day-of-week="1" locale="en-GB"></lr-calendar>`,
   )) as LyraCalendar;
   expect(firstWeekdayHeader(el)).to.equal(weekdayName('en-GB', 'sun'));
 });

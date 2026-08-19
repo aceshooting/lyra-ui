@@ -183,6 +183,19 @@ Full rules, incidents, and patterns:
 - A backtick inside a `css`/`html` tagged template terminates the literal — including inside a
   CSS/HTML comment, which JavaScript does not treat as a comment. The parse error then points at
   an innocent line far below. `${` in a comment is the same trap.
+- **Composed-child `exportparts` is on-demand, not blanket.** `::part()` pierces exactly one shadow
+  boundary, so a composed `lr-*` child's internals are unreachable unless the parent forwards them.
+  Only ~34 of ~321 composed-child edges forward, and that is deliberate: forwarding invents new
+  permanent public part names, and most composed children are decorative or single-purpose. The rule
+  is therefore **forward when the child is the primary surface a consumer must style** — the
+  discriminator `lr-document-library` demonstrates by forwarding `row`/`cell`/`header-cell` for its
+  `lr-table` while deliberately not forwarding its search input or tag filter. When you do forward,
+  use a **collision-resistant prefix**, because one wrapper part often covers several child types
+  (`lr-condition-builder`'s `part="value"` spans four different controls with different part
+  vocabularies); `lr-image-viewer`/`lr-lightbox`'s `frame-viewport`/`frame-content`/`frame-controls`
+  aliases are the reference. Do NOT retrofit forwarding speculatively — consumers reliably file when
+  genuinely blocked (that is how `lr-filter-bar`'s and `lr-tree`'s forwarding got added), and a part
+  name added on a guess is permanent public API nobody asked for.
 - Silently-inert CSS is invisible to all tooling — assert rendered results
   (`getComputedStyle`/hit test), never stylesheet text; only pseudo-classes may follow
   `::part(x)`; encode state in the part name; and forward every documented part with

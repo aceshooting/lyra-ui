@@ -1,6 +1,11 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
-import { ScrollOverflowController, SCROLL_OVERFLOW_ATTRIBUTE } from './scroll-overflow.js';
+import {
+  ScrollOverflowController,
+  SCROLL_OVERFLOW_ATTRIBUTE,
+  SCROLL_START_ATTRIBUTE,
+  SCROLL_END_ATTRIBUTE,
+} from './scroll-overflow.js';
 
 /** A minimal `ReactiveControllerHost` that records the controller so a test can drive
  *  `hostUpdated()`/`hostDisconnected()` by hand — the controller measures real layout, so it needs
@@ -68,6 +73,17 @@ async function makeTrack(contentWidth: string): Promise<HTMLElement> {
   return (await fixture(html`
     <div style="inline-size: 100px; overflow-x: auto; white-space: nowrap;">
       <div style="inline-size: ${contentWidth}; block-size: 10px;"></div>
+    </div>
+  `)) as HTMLElement;
+}
+
+/** Same shape as `makeTrack`, but under `dir="rtl"` so the tracked element's own computed
+ *  direction (what `isRtl()` reads) is RTL -- exercising the CSSOM View convention where
+ *  `scrollLeft` runs 0 (logical start) down to a negative `extent` (logical end). */
+async function makeRtlTrack(contentWidth: string): Promise<HTMLElement> {
+  return (await fixture(html`
+    <div dir="rtl" style="inline-size: 100px; overflow-x: auto; white-space: nowrap;">
+      <div style="inline-size: ${contentWidth}; block-size: 10px; display: inline-block;"></div>
     </div>
   `)) as HTMLElement;
 }
@@ -194,5 +210,118 @@ describe('ScrollOverflowController', () => {
       ambient.restore();
       frame.remove();
     }
+  });
+
+  it('leaves both logical-edge attributes off when the content fits', async () => {
+    const track = await makeTrack('50px');
+    const host = makeHost();
+    new ScrollOverflowController(host, () => track);
+    host.update();
+    expect(track.hasAttribute(SCROLL_START_ATTRIBUTE)).to.be.false;
+    expect(track.hasAttribute(SCROLL_END_ATTRIBUTE)).to.be.false;
+  });
+
+  it('sets only the end attribute at the initial (start) scroll position of an overflowing LTR track', async () => {
+    const track = await makeTrack('400px');
+    const host = makeHost();
+    new ScrollOverflowController(host, () => track);
+    host.update();
+    expect(track.hasAttribute(SCROLL_START_ATTRIBUTE)).to.be.false;
+    expect(track.hasAttribute(SCROLL_END_ATTRIBUTE)).to.be.true;
+  });
+
+  it('flips to only the start attribute once a LTR track is scrolled to its end', async () => {
+    const track = await makeTrack('400px');
+    const host = makeHost();
+    new ScrollOverflowController(host, () => track);
+    host.update();
+
+    track.scrollLeft = track.scrollWidth - track.clientWidth;
+    track.dispatchEvent(new Event('scroll'));
+    expect(track.hasAttribute(SCROLL_START_ATTRIBUTE)).to.be.true;
+    expect(track.hasAttribute(SCROLL_END_ATTRIBUTE)).to.be.false;
+  });
+
+  it('sets both logical-edge attributes while an overflowing track sits mid-scroll', async () => {
+    const track = await makeTrack('400px');
+    const host = makeHost();
+    new ScrollOverflowController(host, () => track);
+    host.update();
+
+    const maximum = track.scrollWidth - track.clientWidth;
+    track.scrollLeft = Math.round(maximum / 2);
+    track.dispatchEvent(new Event('scroll'));
+    expect(track.hasAttribute(SCROLL_START_ATTRIBUTE)).to.be.true;
+    expect(track.hasAttribute(SCROLL_END_ATTRIBUTE)).to.be.true;
+  });
+
+  it('normalizes the logical edges under RTL, where scrollLeft runs 0 down to a negative extent', async () => {
+    const track = await makeRtlTrack('400px');
+    const host = makeHost();
+    new ScrollOverflowController(host, () => track);
+    host.update();
+    // At the logical start (scrollLeft 0 under the CSSOM View RTL convention), only the end
+    // (further into the row) should read as reachable -- the same shape the LTR test above
+    // asserts, just with the physical scrollLeft convention inverted.
+    expect(track.hasAttribute(SCROLL_START_ATTRIBUTE)).to.be.false;
+    expect(track.hasAttribute(SCROLL_END_ATTRIBUTE)).to.be.true;
+
+    const maximum = track.scrollWidth - track.clientWidth;
+    track.scrollLeft = -maximum;
+    track.dispatchEvent(new Event('scroll'));
+    expect(track.hasAttribute(SCROLL_START_ATTRIBUTE)).to.be.true;
+    expect(track.hasAttribute(SCROLL_END_ATTRIBUTE)).to.be.false;
+  });
+
+  it('re-measures on a native scroll event without waiting for a host update or ResizeObserver callback', async () => {
+    const track = await makeTrack('400px');
+    const host = makeHost();
+    new ScrollOverflowController(host, () => track);
+    host.update();
+    expect(track.hasAttribute(SCROLL_START_ATTRIBUTE)).to.be.false;
+
+    track.scrollLeft = track.scrollWidth - track.clientWidth;
+    // No host.update() call: the fix under test is that the controller's own scroll listener
+    // (not a Lit re-render) is what re-measures here.
+    track.dispatchEvent(new Event('scroll'));
+    expect(track.hasAttribute(SCROLL_START_ATTRIBUTE)).to.be.true;
+  });
+
+  it('stops listening for scroll once disconnected', async () => {
+    const track = await makeTrack('400px');
+    const host = makeHost();
+    new ScrollOverflowController(host, () => track);
+    host.update();
+    host.disconnect();
+
+    track.removeAttribute(SCROLL_START_ATTRIBUTE);
+    track.scrollLeft = track.scrollWidth - track.clientWidth;
+    track.dispatchEvent(new Event('scroll'));
+    expect(
+      track.hasAttribute(SCROLL_START_ATTRIBUTE),
+      'a detached controller must not react to a scroll event on a track it no longer owns',
+    ).to.be.false;
+  });
+
+  it('re-measures descendants added via observeExtra when their own box grows without the tracked element resizing', async () => {
+    // Reproduces the defect this lift fixes: a fixed-width track whose *content* grows (a
+    // slotted/child element's own border box, not the track's) must still flip the overflow
+    // attributes once that descendant is registered via observeExtra -- the plain ResizeObserver
+    // on the track alone cannot see this, because the track's own border box never changes.
+    const track = (await fixture(html`
+      <div style="inline-size: 100px; overflow-x: auto; white-space: nowrap;">
+        <span style="display: inline-block; inline-size: 40px; block-size: 10px;"></span>
+      </div>
+    `)) as HTMLElement;
+    const child = track.firstElementChild as HTMLElement;
+    const host = makeHost();
+    const controller = new ScrollOverflowController(host, () => track);
+    host.update();
+    expect(track.hasAttribute(SCROLL_OVERFLOW_ATTRIBUTE)).to.be.false;
+
+    controller.observeExtra([child]);
+    child.style.inlineSize = '400px';
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    expect(track.hasAttribute(SCROLL_OVERFLOW_ATTRIBUTE)).to.be.true;
   });
 });

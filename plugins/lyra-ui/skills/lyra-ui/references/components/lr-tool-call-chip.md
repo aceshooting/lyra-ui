@@ -86,11 +86,15 @@ referenced: `--lr-color-text-quiet`, `--lr-color-surface`, `--lr-color-border`,
   summary="Searching web…"
   duration-ms="820"
   call-id="call_123"
-  @lr-tool-call-chip-select=${(e) => openDetail(e.detail.callId)}
 >
   <pre slot="icon" style="display:none"></pre>
   <code>{"query": "lyra ui components"}</code>
 </lr-tool-call-chip>
+<script type="module">
+  document
+    .querySelector("lr-tool-call-chip")
+    .addEventListener("lr-tool-call-chip-select", (e) => openDetail(e.detail.callId));
+</script>
 ```
 
 The default slot's tooltip is positioned with the same `internal/positioner.js` `place()` helper

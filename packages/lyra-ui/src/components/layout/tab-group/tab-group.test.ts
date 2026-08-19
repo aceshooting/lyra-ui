@@ -14,6 +14,7 @@ import type { LyraTab } from "./tab.js";
 import type { LyraTabPanel } from "./tab-panel.js";
 import { styles } from "./tab-group.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { setForcedColors } from "../../../../test/wtr-media.js";
 
 const basic = () => html`
   <lr-tab-group>
@@ -85,11 +86,54 @@ it("declares a themeable edge fade, gated on the tablist overflowing", () => {
   expect(css).to.include("mask-image: linear-gradient");
   expect(css).to.include("var(--lr-scroll-fade-size)");
   // The gradient must live behind the overflow gate, never on the bare [part~='tablist'] rule.
-  expect(css).to.include(
-    "[part~='tablist'][data-scroll-overflow][data-scroll-end]"
-  );
+  // The per-edge conditions sit inside :where() so they cannot outrank the forced-colors override
+  // below -- see the computed-style test that follows, which is what actually proves the cascade.
+  expect(css).to.include("[part~='tablist'][data-scroll-overflow]:where(");
   expect(css).to.include("@media (forced-colors: active)");
   expect(css).to.include("mask-image: none");
+});
+
+it("actually renders no mask under forced colors, in both LTR and RTL, while only one logical edge is reachable", async () => {
+  // The stylesheet-text assertions above cannot catch a specificity regression: they prove the
+  // forced-colors override EXISTS, not that it WINS. Before the :where()-wrapping, the one-sided
+  // mask rules carried four attribute selectors against the override's two, so the gradient mask
+  // stayed painted under forced-colors -- erasing tab labels in exactly the high-contrast mode
+  // that exists to make them legible. Assert the real computed style, not the source text.
+  try {
+    await setForcedColors("active");
+    for (const direction of ["ltr", "rtl"] as const) {
+      const el = (await fixture(html`
+        <lr-tab-group dir=${direction} style="display: block; max-inline-size: 90px">
+          <lr-tab panel="input">Raw input document</lr-tab>
+          <lr-tab panel="preview">Rendered preview pane</lr-tab>
+          <lr-tab panel="settings">Settings and preferences</lr-tab>
+          <lr-tab-panel name="input">Input</lr-tab-panel>
+          <lr-tab-panel name="preview">Preview</lr-tab-panel>
+          <lr-tab-panel name="settings">Settings</lr-tab-panel>
+        </lr-tab-group>
+      `)) as LyraTabGroup;
+      const tablist = el.shadowRoot!.querySelector(
+        '[part~="tablist"]'
+      ) as HTMLElement;
+      await nextFrames();
+      expect(
+        tablist.hasAttribute("data-scroll-overflow"),
+        `${direction} sanity: tablist overflows`
+      ).to.be.true;
+      // Only one logical edge is reachable at the initial unscrolled position -- precisely the
+      // state whose one-sided selector used to outrank the forced-colors override.
+      expect(
+        tablist.hasAttribute("data-scroll-end"),
+        `${direction} sanity: one-sided scroll state`
+      ).to.be.true;
+      expect(
+        getComputedStyle(tablist).maskImage,
+        `${direction} forced-colors mask`
+      ).to.equal("none");
+    }
+  } finally {
+    await setForcedColors("none");
+  }
 });
 
 it("applies the edge fade once the tablist actually overflows", async () => {

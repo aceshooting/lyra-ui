@@ -68,11 +68,11 @@ test('checked-in metadata covers the current manifest and inventory', () => {
   );
   assert.equal(state.metadata.assignments['compatibility-stable'].length, 1);
   assert.equal(state.metadata.assignments['introduced-stable'].length, 19);
-  // Was 8 once 10.0.0 removed lr-swatch-picker's `label` and `options` properties; 13 since the
-  // 10.0.0 event-vocabulary pass deprecated five aliases in favour of canonical names
-  // (`lr-entity-activate` on entity-card/entity-chip/neighbor-list, `lr-run-select`, and
-  // `lr-visible-range-changed`). Each still fires alongside its replacement until 11.0.0.
-  assert.equal(state.metadata.deprecations.length, 13);
+  // 8 once 10.0.0 removed lr-swatch-picker's `label` and `options` properties. It was briefly 13:
+  // the 10.0.0 event-vocabulary pass first deprecated five event aliases in favour of canonical
+  // names, then removed them outright instead, since the library has no released consumers to
+  // protect and a dual-emit alias is a permanent cost. A removed event needs no deprecation record.
+  assert.equal(state.metadata.deprecations.length, 8);
 });
 
 test('new mirrors of experimental upstream media surfaces remain experimental everywhere authored', () => {

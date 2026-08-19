@@ -11,7 +11,7 @@ export type LyraDrawerPlacement = 'start' | 'end' | 'top' | 'bottom';
  * viewport. It shares Lyra's dialog focus trap, Escape/backdrop dismissal,
  * scroll lock, top-layer promotion, stacking, accessible naming,
  * `show()`/`hide()`/`close()` surface, and the whole
- * `lr-show`/`lr-after-show`/`lr-hide`/`lr-after-hide`/`lr-dialog-close` lifecycle — see
+ * `lr-show`/`lr-after-show`/`lr-hide`/`lr-after-hide`/`lr-close` lifecycle — see
  * `<lr-dialog>` for all of it. `contained` instead positions within the nearest containing block
  * as a nonmodal panel: no backdrop, inerting, focus trap, scroll lock, top layer, or global Escape.
  * Only that mode, the slide animation, `placement`, and the `--size` alias are drawer-specific.
@@ -30,7 +30,7 @@ export type LyraDrawerPlacement = 'start' | 'end' | 'top' | 'bottom';
  * @event lr-after-hide - The drawer is closed and has finished sliding out.
  * @event lr-initial-focus - Inherited cancelable event before automatic modal focus movement.
  * @event lr-request-close - Inherited cancelable built-in dismissal request with a source detail.
- * @event lr-dialog-close - Inherited conditionally cancelable close event; detail is the dismissal
+ * @event lr-close - Inherited conditionally cancelable close event; detail is the dismissal
  *   reason. Ordinary dismissal can be vetoed; an `'unmount'` notification after external removal
  *   cannot be.
  * It inherits every `<lr-dialog>` CSS part unchanged.

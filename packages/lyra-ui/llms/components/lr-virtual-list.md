@@ -6,7 +6,7 @@
 - **Class** `LyraVirtualList`, also available unregistered from `@aceshooting/lyra-ui/components/layout/virtual-list/virtual-list.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecated event** `lr-visible-range-changed` since `9.1.1`; use event `addEventListener('lr-visible-range-change', ...)`; removal not before `11.0.0` — Renamed for cross-family event-vocabulary consistency; both names fire from the same gesture with an identical detail during the compatibility window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -123,7 +123,7 @@ progress` style, and gates `lr-load-more` while a consumer's fetch is in flight.
 **Exported types:** `VirtualListRowHeight = number | 'auto'`;
 `VirtualListSource<T> = readonly T[] | VirtualListIndexedSource<T>` and
 `VirtualListIndexedSource<T> { readonly count: number; itemAt(index): T; keyAt?(index): string |
-number; indexOfKey?(key: string | number): number }`; `VirtualListRange { start: number; end: number }` (the `lr-visible-range-changed`
+number; indexOfKey?(key: string | number): number }`; `VirtualListRange { start: number; end: number }` (the `lr-visible-range-change`
 detail shape); `VirtualListGroup { key: string | number; label?: string; startIndex: number }` — the
 shape consumed by `groups` above; `VirtualListScroll { scrollTop: number; viewportHeight: number }` —
 the `lr-virtual-scroll` detail shape.
@@ -169,10 +169,9 @@ math, and any row element can be recycled or removed on the next update.
 `has-more` is true and `loading` is false; does not refire on every scroll tick while still near the
 bottom — scrolling back away from the bottom and returning, or `items` growing enough to move the
 window away from the end, re-arms it), `lr-visible-range-change` (`detail: VirtualListRange`, the
-current visible, non-overscanned item index range — fired only when it actually changes;
-`lr-visible-range-changed` is a deprecated alias fired alongside it with the identical detail object,
-removal not before 11.0.0 — it was the only past-tense `-changed` spelling among 58 `-change`-family
-events, so a convention-driven `lr-${x}-change` listener silently missed it),
+current visible, non-overscanned item index range — fired only when it actually changes; it was
+spelled `lr-visible-range-changed` before 10.0.0, the only past-tense `-changed` spelling among 58
+`-change`-family events, so a convention-driven `lr-${x}-change` listener silently missed it),
 `lr-virtual-scroll`
 (`detail: VirtualListScroll` — the scroll container moved; emitted from the same animation frame that
 already coalesces native `scroll` events, so a fling produces at most one per frame and none at all
@@ -207,8 +206,10 @@ activation target.
 
 **Optional peer deps:** none.
 
-```html
-<lr-virtual-list
+```ts
+import { html } from "lit";
+
+const view = html`<lr-virtual-list
   .items=${sessions}
   .renderItem=${(item, index) => html`
     <lr-conversation-item
@@ -223,12 +224,14 @@ activation target.
   ?has-more=${hasMorePages}
   ?loading=${isLoadingMore}
   @lr-load-more=${() => loadNextPage()}
-  @lr-visible-range-changed=${(e) => console.log('visible', e.detail.start, e.detail.end)}
-  @lr-virtual-scroll=${(e) => console.log('scroll top', e.detail.scrollTop)}
-></lr-virtual-list>
+  @lr-visible-range-change=${(e) => console.log("visible", e.detail.start, e.detail.end)}
+  @lr-virtual-scroll=${(e) => console.log("scroll top", e.detail.scrollTop)}
+></lr-virtual-list>`;
 ```
 
 ```ts
+import { html } from "lit";
+
 // No count-sized array: only the current window is read.
 const syntheticRows = {
   count: 100_000,
@@ -245,15 +248,17 @@ html`<lr-virtual-list
 ></lr-virtual-list>`;
 ```
 
-```html
-<!-- Sticky group headers: the header is a real row, so the `groups` entries are position anchors
-     only (`label: ''`); the pinned copy remains strictly presentational. -->
-<lr-virtual-list
+```ts
+import { html } from "lit";
+
+// Sticky group headers: the header is a real row, so the `groups` entries are position anchors
+// only (`label: ''`); the pinned copy remains strictly presentational.
+const view = html`<lr-virtual-list
   .items=${rows}
   .groups=${groupStarts /* [{ key: 'Today', label: '', startIndex: 0 }, …] */}
   .renderItem=${(item, index) => (item.isHeader ? headerTemplate(item) : rowTemplate(item))}
   .renderStickyGroup=${(group) => headerTemplate(group)}
-></lr-virtual-list>
+></lr-virtual-list>`;
 ```
 
 Every row is positioned by a `transform: translateY(offset)`, rather than page flow, so only a small

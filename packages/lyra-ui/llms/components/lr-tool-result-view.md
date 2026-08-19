@@ -78,12 +78,13 @@ of course pull in whatever they need (a charting library, a markdown renderer), 
 the lazy `load()` path in the registry exists for.
 
 ```html
-<lr-tool-result-view
-  tool-name="get_weather"
-  .result=${{ tempC: 21, condition: 'cloudy' }}
-  .args=${{ city: 'Brussels' }}
-  @lr-render-error=${(e) => console.warn('renderer failed', e.detail)}
-></lr-tool-result-view>
+<lr-tool-result-view tool-name="get_weather"></lr-tool-result-view>
+<script type="module">
+  const view = document.querySelector("lr-tool-result-view");
+  view.result = { tempC: 21, condition: "cloudy" };
+  view.args = { city: "Brussels" };
+  view.addEventListener("lr-render-error", (e) => console.warn("renderer failed", e.detail));
+</script>
 ```
 
 ### `registerToolRenderer()` and the tool-renderer registry (`registry.ts`)

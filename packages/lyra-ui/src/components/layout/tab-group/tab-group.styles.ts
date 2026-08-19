@@ -132,8 +132,13 @@ export const styles = css`
   /* Edge affordance, gated on the tablist actually overflowing -- ScrollOverflowController toggles
      data-scroll-overflow from a real scrollWidth/clientWidth measurement; scrolling itself stays
      native, with no scroll listener. Painted unconditionally (as it used to be) it fades the first
-     and last tab of a row that fits, for no reason. */
-  [part~="tablist"][data-scroll-overflow][data-scroll-start][data-scroll-end] {
+     and last tab of a row that fits, for no reason.
+     data-scroll-start/data-scroll-end are wrapped in :where() purely to keep these rules'
+     specificity pinned to the plain [data-scroll-overflow] baseline, so the later forced-colors
+     override (same base selector, later in the stylesheet) still wins the tie by source order
+     rather than losing to these more-specific-looking selectors, which would otherwise leave the
+     gradient mask painted even under forced-colors. */
+  [part~="tablist"][data-scroll-overflow]:where([data-scroll-start][data-scroll-end]) {
     -webkit-mask-image: linear-gradient(
       to right,
       transparent,
@@ -149,8 +154,8 @@ export const styles = css`
       transparent
     );
   }
-  [part~="tablist"][data-scroll-overflow][data-scroll-end]:not(
-      [data-scroll-start]
+  [part~="tablist"][data-scroll-overflow]:where(
+      [data-scroll-end]:not([data-scroll-start])
     ) {
     -webkit-mask-image: linear-gradient(
       to right,
@@ -165,8 +170,8 @@ export const styles = css`
       transparent
     );
   }
-  [part~="tablist"][data-scroll-overflow][data-scroll-start]:not(
-      [data-scroll-end]
+  [part~="tablist"][data-scroll-overflow]:where(
+      [data-scroll-start]:not([data-scroll-end])
     ) {
     -webkit-mask-image: linear-gradient(
       to right,
@@ -182,8 +187,8 @@ export const styles = css`
     );
   }
   :host(:dir(rtl))
-    [part~="tablist"][data-scroll-overflow][data-scroll-end]:not(
-      [data-scroll-start]
+    [part~="tablist"][data-scroll-overflow]:where(
+      [data-scroll-end]:not([data-scroll-start])
     ) {
     -webkit-mask-image: linear-gradient(
       to right,
@@ -199,8 +204,8 @@ export const styles = css`
     );
   }
   :host(:dir(rtl))
-    [part~="tablist"][data-scroll-overflow][data-scroll-start]:not(
-      [data-scroll-end]
+    [part~="tablist"][data-scroll-overflow]:where(
+      [data-scroll-start]:not([data-scroll-end])
     ) {
     -webkit-mask-image: linear-gradient(
       to right,

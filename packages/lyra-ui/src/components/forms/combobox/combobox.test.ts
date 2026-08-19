@@ -6197,26 +6197,43 @@ it("creates a new option via Enter when the create row is showing but not keyboa
   ).to.be.true;
 });
 
-it("focuses the input and opens the listbox on a mousedown inside the trigger row that is not on a button", async () => {
+it("focuses the input and opens the listbox on a mousedown inside the trigger row that is not on a button, without stealing caret placement from the input itself", async () => {
   const el = (await fixture(basic())) as LyraCombobox;
   await el.updateComplete;
   const container = el.shadowRoot!.querySelector(
     '[part="combobox"]'
   ) as HTMLElement;
-  const ev = new MouseEvent("mousedown", {
+  const input = el.shadowRoot!.querySelector(
+    '[part="combobox-input"]'
+  ) as HTMLInputElement;
+
+  // A mousedown on the chrome around the input (not the input itself, not a button) must still be
+  // cancelled -- the browser's default action there would otherwise leave focus wherever the press
+  // landed instead of on the input.
+  const containerEvent = new MouseEvent("mousedown", {
     bubbles: true,
     cancelable: true,
     composed: true,
   });
-  container.dispatchEvent(ev);
+  container.dispatchEvent(containerEvent);
   await el.updateComplete;
 
-  expect(ev.defaultPrevented).to.be.true;
+  expect(containerEvent.defaultPrevented).to.be.true;
   expect(el.open).to.be.true;
-  expect(
-    el.shadowRoot!.activeElement ===
-      el.shadowRoot!.querySelector('[part="combobox-input"]')
-  ).to.equal(true);
+  expect(el.shadowRoot!.activeElement === input).to.equal(true);
+
+  // A mousedown ON the free-text input itself must remain uncancelled -- preventing it strips the
+  // browser's native caret-placement/shift-click-selection behavior from the combobox's own text
+  // field, which is basic text editing.
+  const inputEvent = new MouseEvent("mousedown", {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+  });
+  input.dispatchEvent(inputEvent);
+  await el.updateComplete;
+
+  expect(inputEvent.defaultPrevented).to.be.false;
 });
 
 it("is a no-op the second time the same tag remove button fires before a re-render drops it", async () => {

@@ -75,9 +75,15 @@ ancestor. They exist because `::part(view-button)[aria-pressed='true']` is inval
 library-wide brand tokens as the only prior lever.
 
 ```html
-<lr-artifact-panel label="report.md" kind="document" .versions=${versions}
-  @lr-restore=${(e) => restoreVersion(e.detail.versionId)}>
-  <lr-markdown .content=${markdown}></lr-markdown>
-  <lr-code-block slot="code" language="markdown" .code=${markdown}></lr-code-block>
+<lr-artifact-panel label="report.md" kind="document">
+  <lr-markdown id="preview"></lr-markdown>
+  <lr-code-block slot="code" id="code" language="markdown"></lr-code-block>
 </lr-artifact-panel>
+<script type="module">
+  const panel = document.querySelector("lr-artifact-panel");
+  panel.versions = versions;
+  panel.querySelector("#preview").content = markdown;
+  panel.querySelector("#code").code = markdown;
+  panel.addEventListener("lr-restore", (e) => restoreVersion(e.detail.versionId));
+</script>
 ```

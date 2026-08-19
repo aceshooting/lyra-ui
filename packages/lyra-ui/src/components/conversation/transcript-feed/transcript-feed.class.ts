@@ -57,9 +57,9 @@ export interface LyraTranscriptFeedEventMap {
  *
  * @customElement lr-transcript-feed
  * @slot empty - Custom empty state. Default: the localized "No transcript yet".
- * @event lr-follow-change - `detail: { following: boolean }` — fires on every `follow` transition,
- *   whether user-driven (scroll away/jump button) or a direct host assignment. Never fires for the
- *   value already in effect on the very first render.
+ * @event lr-follow-change - `detail: { following: boolean }` — a user scroll or jump-button click
+ *   changed stick-to-bottom. Direct `follow` assignments and calling `scrollToBottom()` directly
+ *   are controlled input and do not echo an event, matching `lr-terminal`'s identical contract.
  * @csspart base - The scroll container.
  * @csspart log - The `role="log"` region wrapping final entries only.
  * @csspart interim-area - The wrapper around the interim (not-yet-final) entries, rendered as a sibling of `log`. Only rendered while at least one interim entry exists.
@@ -196,10 +196,6 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
       if (this.follow) this.scrollToBottom();
       this.announceFinalizedEntries();
     }
-    if (changed.has('follow')) {
-      if (this.follow) this.scrollToBottom();
-      if (!this._isFirstUpdate) this.emit('lr-follow-change', { following: this.follow });
-    }
   }
 
   /** Speaks every entry that has become final since the previous update. The very first update
@@ -229,7 +225,10 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
   /** Re-engages `follow` and scrolls the feed to its current bottom, instantly -- matching the
    *  shared stick-to-bottom contract. New entries can arrive in rapid succession while streaming;
    *  an animated scroll on every single one would fight itself rather than settle cleanly, so this
-   *  is a plain jump rather than a CSS-smoothed transition. */
+   *  is a plain jump rather than a CSS-smoothed transition. Imperative navigation, like a direct
+   *  `follow` assignment: does not itself emit `lr-follow-change` (see `onJumpClick`, the
+   *  user-driven wrapper that does, mirroring `lr-terminal`'s `scrollToBottom()`/`jumpToLatest()`
+   *  split). */
   scrollToBottom(): void {
     this.follow = true;
     const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement | null;
@@ -237,14 +236,27 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     base.scrollTop = base.scrollHeight;
   }
 
+  /** The sole source of a user-driven `follow` transition from scrolling: this handler runs only
+   *  in response to a real `scroll` event on `[part="base"]`, so setting `follow` here -- unlike a
+   *  generic `updated()` diff of the property, which cannot tell a user scroll from a host
+   *  assignment or this component's own `scrollToBottom()` -- is unambiguously the user's own
+   *  action, and is the only path that emits `lr-follow-change`. */
   private onScroll = (e: Event): void => {
     const base = e.currentTarget as HTMLElement;
     const atBottom = base.scrollHeight - base.scrollTop - base.clientHeight <= NEAR_BOTTOM_PX;
-    if (atBottom !== this.follow) this.follow = atBottom;
+    if (atBottom === this.follow) return;
+    this.follow = atBottom;
+    this.emit('lr-follow-change', { following: atBottom });
   };
 
+  /** The jump-button's click handler: the other user-driven source of an `lr-follow-change`
+   *  transition. Delegates the actual re-engage/scroll to `scrollToBottom()` (which does not
+   *  itself emit) and emits only when clicking it actually changed `follow` -- identical shape to
+   *  `lr-terminal`'s `jumpToLatest()`. */
   private onJumpClick = (): void => {
+    const changed = !this.follow;
     this.scrollToBottom();
+    if (changed) this.emit('lr-follow-change', { following: true });
   };
 
   private showSpeakerFor(list: LyraTranscriptEntry[], index: number): boolean {

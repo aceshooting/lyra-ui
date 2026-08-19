@@ -90,6 +90,18 @@ export function targetHitAreaContract(target) {
     return { minimumPx: 24, kind: 'wcag' };
   }
 
+  // lr-media-card's whole-card [part="base"] is an ordinary composite/native control (an <img>,
+  // or an icon+filename chip), not a compact icon-sized toggle -- see the class doc's rationale
+  // for not reaching for the 40px --lr-icon-button-size floor here. But the image kind's rendered
+  // box is driven entirely by the source image (object-fit: contain against a max-height only, no
+  // minimum), so a small/thumbnail source can otherwise render well under 24px. Scoped to
+  // mediaKind: 'image' specifically: the file-chip fallback's icon+filename+padding content
+  // already clears 24px on its own, and video's separate [part="open-button"] already carries the
+  // 40px compact floor.
+  if (component === 'lr-media-card' && part === 'base' && target.mediaKind === 'image') {
+    return { minimumPx: 24, kind: 'wcag' };
+  }
+
   if (
     (component === 'lr-span-waterfall' && part === 'bar') ||
     (component === 'lr-radio-button' && part === 'base') ||

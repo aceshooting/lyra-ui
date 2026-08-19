@@ -53,6 +53,9 @@ describable), `summary`, `tokens-in`, `tokens-out`, `cost`, `latency`, `tooltip`
     cost-text="$0.012"
     latency-ms="2350"
   ></lr-usage-badge>
-  <lr-markdown .content="${answer}"></lr-markdown>
+  <lr-markdown></lr-markdown>
 </lr-chat-message>
+<script type="module">
+  document.querySelector("lr-chat-message lr-markdown").content = answer;
+</script>
 ```

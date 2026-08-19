@@ -17,6 +17,7 @@ import {
 import {
   declaredDefaultConverter,
   trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
+import { resolveOptionalPeerCapability } from '../../../internal/optional-peer-capabilities.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_phoneInputIncomplete, LYRA_DEFAULT_phoneInputLabel, LYRA_DEFAULT_select, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
@@ -79,18 +80,47 @@ export interface LibphonenumberModuleLike<CountryCode extends string = string> {
   validatePhoneNumberLength?(input: string, defaultCountry?: CountryCode): string | undefined;
 }
 
+/** Narrows an unknown resolved peer value to the capability this loader actually calls. */
+function isLibphonenumberModule(candidate: unknown): candidate is LibphonenumberModuleLike {
+  const api = candidate as Partial<LibphonenumberModuleLike> | null;
+  return (
+    (typeof api === 'object' || typeof api === 'function') &&
+    api !== null &&
+    typeof api.getCountries === 'function' &&
+    typeof api.getCountryCallingCode === 'function' &&
+    typeof api.parsePhoneNumberFromString === 'function'
+  );
+}
+
 /**
  * Lazily creates an adapter from a `libphonenumber-js`-compatible module.
  * Keeping the loader consumer-supplied avoids a static import, so neither the
  * dependency nor its numbering metadata enters Lyra's base bundle.
  *
+ * Accepts either the module namespace directly (named exports, as `libphonenumber-js`'s own type
+ * declarations describe it) or a `{ default: {...} }`-wrapped namespace, since some bundler/CJS
+ * interop configurations resolve it that way -- the same normalization `map-loader.ts` and
+ * `spreadsheet-loader.ts` apply to their own optional peers. Rejects (with a descriptive `TypeError`
+ * naming the missing capability, not an incidental "not a function" deep inside this function) a
+ * resolved value that has neither shape, or is missing a required method, rather than silently
+ * calling into `undefined`.
+ *
  * @example
  * `el.adapter = await loadLibphonenumberAdapter(() => import('libphonenumber-js/min'))`
  */
-export async function loadLibphonenumberAdapter<CountryCode extends string>(
-  loader: () => Promise<LibphonenumberModuleLike<CountryCode>>,
+export async function loadLibphonenumberAdapter<CountryCode extends string = string>(
+  loader: () => Promise<unknown>,
 ): Promise<LyraPhoneNumberAdapter> {
-  const module = await loader();
+  const raw = await loader();
+  const resolved = resolveOptionalPeerCapability(raw, isLibphonenumberModule);
+  if (!resolved) {
+    throw new TypeError(
+      'Invalid optional peer for <lr-phone-input>: the module passed to loadLibphonenumberAdapter() ' +
+        'does not expose the getCountries/getCountryCallingCode/parsePhoneNumberFromString ' +
+        'capability libphonenumber-js provides.',
+    );
+  }
+  const module = resolved as LibphonenumberModuleLike<CountryCode>;
   const countries = Object.freeze(module.getCountries().map((code) =>
     Object.freeze({
       code: normalizeCountry(code),
@@ -923,7 +953,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
               part="country-select"
               aria-label=${this.effectiveCountryLabel}
               .value=${this.country}
-              aria-readonly=${this.readonly ? 'true' : nothing}
+              aria-readonly=${this.readonly ? 'true' : 'false'}
               ?disabled=${this.effectiveDisabled || this.readonly || rows.length === 0}
               @change=${this.onCountryChange}
             >

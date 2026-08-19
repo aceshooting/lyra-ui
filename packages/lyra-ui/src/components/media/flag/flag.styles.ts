@@ -32,7 +32,11 @@ export const styles = css`
     line-height: var(--lr-line-height-normal);
     vertical-align: baseline;
   }
-  :host([shape='circle']) {
+  /* :not([data-error]) keeps the error-state auto sizing above from being clipped back down
+     to a fixed circle box -- otherwise both rules have equal specificity and this one, being
+     later in source order, would win and clip the error text regardless of declaration order
+     above. */
+  :host([shape='circle']:not([data-error])) {
     block-size: var(--lr-size-1em);
     inline-size: var(--lr-size-1em);
   }

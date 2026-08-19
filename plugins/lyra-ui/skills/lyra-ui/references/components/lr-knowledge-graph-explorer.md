@@ -79,15 +79,14 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
 - `lr-hidden-types-change` (`detail: { hiddenTypes: string[] }`) — a node type's visibility changed
   via the composed legend. Follows the same self-toggle-then-emit contract as `lr-pin-change`/
   `lr-search-change`, so reassigning back is optional.
-- `lr-search-change` (`detail: { searchQuery: string; query: string; matchCount: number;
-  matchCountExact: boolean }`) — the user typed in the toolbar's search box. `searchQuery`/`query`
-  carry the identical value; `query` is the canonical `LyraSearchChangeDetail` field name, added
-  alongside the original `searchQuery` rather than replacing it. `matchCount` is the same live
-  node-filter total the result list and its live-region announcement already compute (`0` while the
-  query is empty). `matchCountExact` is always `true` — this component's node filter has no
-  truncating ceiling, unlike a paginated text-search viewer. There is no `activeIndex`: this is a
-  live node filter, not a cursor-based search. Already self-applied before emitting, so reassigning
-  back is optional; a direct host assignment to `searchQuery` stays silent.
+- `lr-search-change` (`detail: { query: string; matchCount: number; matchCountExact: boolean }`) —
+  the user typed in the toolbar's search box. `query` is the canonical `LyraSearchChangeDetail`
+  field name. `matchCount` is the same live node-filter total the result list and its live-region
+  announcement already compute (`0` while the query is empty). `matchCountExact` is always `true` —
+  this component's node filter has no truncating ceiling, unlike a paginated text-search viewer.
+  There is no `activeIndex`: this is a live node filter, not a cursor-based search. The component
+  has already applied the query to its own `searchQuery` property before emitting, so reassigning
+  it back is optional and a direct host assignment stays silent.
 - Bubbling straight through from composed children, unmodified: `lr-node-click`
   (`detail: { nodeId, x, y }`), `lr-link-click` (`detail: { sourceNodeId, targetNodeId, linkId? }`), `lr-community-click`
   (`detail: { communityId }`), `lr-node-expand` (`detail: { nodeId }`, from `lr-graph` and/or `lr-neighbor-list`),

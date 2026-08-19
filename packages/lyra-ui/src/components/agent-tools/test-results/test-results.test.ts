@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './test-results.js';
 import { testResultDetailSlotName, type LyraTestResults, type TestSuiteResult } from './test-results.js';
+import type { LyraEmpty } from '../../overlays/empty/empty.js';
 
 const suites: TestSuiteResult[] = [
   {
@@ -582,18 +583,50 @@ describe('lr-test-results', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="test"]').length).to.equal(1);
   });
 
-  it('renders an explicit empty state when filters hide every populated result', async () => {
+  it('renders an explicit empty state when filters hide every populated result, distinct from the genuinely-empty "no data" text', async () => {
     const el = await fixture<LyraTestResults>(html`
       <lr-test-results .suites=${suites} .statusFilter=${['running']}></lr-test-results>
     `);
-    expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
+    const empty = el.shadowRoot!.querySelector('[part="empty"]') as LyraEmpty;
+    // Compares a boolean, never the DOM node itself, as chai's actual -- a failing node/NodeList
+    // assertion hangs the whole file (see AGENTS.md's testing conventions).
+    expect(Boolean(empty)).to.be.true;
     expect(el.shadowRoot!.querySelectorAll('[part="test"]')).to.have.length(0);
+    // A filter that matches nothing on a populated run is a "no matches" state, not a "no data"
+    // state -- rendering the same "No data" text here reads as the filter being broken rather
+    // than simply empty (the run has three tests; none of them are "running").
+    expect(empty.heading).to.equal('No matches');
+    expect(empty.heading).to.not.equal('No data');
   });
 
-  it('renders lr-empty when suites is empty', async () => {
+  it('renders lr-empty with the genuinely-empty "no data" text when suites is empty', async () => {
     const el = (await fixture(html`<lr-test-results></lr-test-results>`)) as LyraTestResults;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
+    const empty = el.shadowRoot!.querySelector('lr-empty') as LyraEmpty;
+    expect(Boolean(empty)).to.be.true;
+    expect(empty.heading).to.equal('No data');
+  });
+
+  it('still renders the genuinely-empty "no data" text when a suites is empty AND a statusFilter is set (regression: must not read as a filter no-match)', async () => {
+    const el = (await fixture(
+      html`<lr-test-results .statusFilter=${['failed']}></lr-test-results>`,
+    )) as LyraTestResults;
+    await el.updateComplete;
+    const empty = el.shadowRoot!.querySelector('lr-empty') as LyraEmpty;
+    expect(Boolean(empty)).to.be.true;
+    expect(empty.heading).to.equal('No data');
+  });
+
+  it('wires the filtered-to-nothing empty heading to a .strings noMatches override', async () => {
+    const el = await fixture<LyraTestResults>(html`
+      <lr-test-results
+        .suites=${suites}
+        .statusFilter=${['running']}
+        .strings=${{ noMatches: 'Aucun résultat' }}
+      ></lr-test-results>
+    `);
+    const empty = el.shadowRoot!.querySelector('[part="empty"]') as LyraEmpty;
+    expect(empty.heading).to.equal('Aucun résultat');
   });
 
   it('prunes removed expansion identities so a reused suite/test pair starts from defaults', async () => {

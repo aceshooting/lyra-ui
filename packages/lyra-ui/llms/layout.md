@@ -1397,11 +1397,16 @@ is pending.
 between rows.
 
 ```html
-<lr-reorder-list label="Form fields" @lr-reorder=${(e) => console.log(e.detail.order)}>
+<lr-reorder-list label="Form fields">
   <lr-reorder-item value="name">Name</lr-reorder-item>
   <lr-reorder-item value="email">Email</lr-reorder-item>
   <lr-reorder-item value="phone">Phone</lr-reorder-item>
 </lr-reorder-list>
+<script type="module">
+  document
+    .querySelector("lr-reorder-list")
+    .addEventListener("lr-reorder", (e) => console.log(e.detail.order));
+</script>
 ```
 
 **Known gotchas:**
@@ -1692,7 +1697,7 @@ progress` style, and gates `lr-load-more` while a consumer's fetch is in flight.
 **Exported types:** `VirtualListRowHeight = number | 'auto'`;
 `VirtualListSource<T> = readonly T[] | VirtualListIndexedSource<T>` and
 `VirtualListIndexedSource<T> { readonly count: number; itemAt(index): T; keyAt?(index): string |
-number; indexOfKey?(key: string | number): number }`; `VirtualListRange { start: number; end: number }` (the `lr-visible-range-changed`
+number; indexOfKey?(key: string | number): number }`; `VirtualListRange { start: number; end: number }` (the `lr-visible-range-change`
 detail shape); `VirtualListGroup { key: string | number; label?: string; startIndex: number }` — the
 shape consumed by `groups` above; `VirtualListScroll { scrollTop: number; viewportHeight: number }` —
 the `lr-virtual-scroll` detail shape.
@@ -1738,10 +1743,9 @@ math, and any row element can be recycled or removed on the next update.
 `has-more` is true and `loading` is false; does not refire on every scroll tick while still near the
 bottom — scrolling back away from the bottom and returning, or `items` growing enough to move the
 window away from the end, re-arms it), `lr-visible-range-change` (`detail: VirtualListRange`, the
-current visible, non-overscanned item index range — fired only when it actually changes;
-`lr-visible-range-changed` is a deprecated alias fired alongside it with the identical detail object,
-removal not before 11.0.0 — it was the only past-tense `-changed` spelling among 58 `-change`-family
-events, so a convention-driven `lr-${x}-change` listener silently missed it),
+current visible, non-overscanned item index range — fired only when it actually changes; it was
+spelled `lr-visible-range-changed` before 10.0.0, the only past-tense `-changed` spelling among 58
+`-change`-family events, so a convention-driven `lr-${x}-change` listener silently missed it),
 `lr-virtual-scroll`
 (`detail: VirtualListScroll` — the scroll container moved; emitted from the same animation frame that
 already coalesces native `scroll` events, so a fling produces at most one per frame and none at all
@@ -1776,8 +1780,10 @@ activation target.
 
 **Optional peer deps:** none.
 
-```html
-<lr-virtual-list
+```ts
+import { html } from "lit";
+
+const view = html`<lr-virtual-list
   .items=${sessions}
   .renderItem=${(item, index) => html`
     <lr-conversation-item
@@ -1792,12 +1798,14 @@ activation target.
   ?has-more=${hasMorePages}
   ?loading=${isLoadingMore}
   @lr-load-more=${() => loadNextPage()}
-  @lr-visible-range-changed=${(e) => console.log('visible', e.detail.start, e.detail.end)}
-  @lr-virtual-scroll=${(e) => console.log('scroll top', e.detail.scrollTop)}
-></lr-virtual-list>
+  @lr-visible-range-change=${(e) => console.log("visible", e.detail.start, e.detail.end)}
+  @lr-virtual-scroll=${(e) => console.log("scroll top", e.detail.scrollTop)}
+></lr-virtual-list>`;
 ```
 
 ```ts
+import { html } from "lit";
+
 // No count-sized array: only the current window is read.
 const syntheticRows = {
   count: 100_000,
@@ -1814,15 +1822,17 @@ html`<lr-virtual-list
 ></lr-virtual-list>`;
 ```
 
-```html
-<!-- Sticky group headers: the header is a real row, so the `groups` entries are position anchors
-     only (`label: ''`); the pinned copy remains strictly presentational. -->
-<lr-virtual-list
+```ts
+import { html } from "lit";
+
+// Sticky group headers: the header is a real row, so the `groups` entries are position anchors
+// only (`label: ''`); the pinned copy remains strictly presentational.
+const view = html`<lr-virtual-list
   .items=${rows}
   .groups=${groupStarts /* [{ key: 'Today', label: '', startIndex: 0 }, …] */}
   .renderItem=${(item, index) => (item.isHeader ? headerTemplate(item) : rowTemplate(item))}
   .renderStickyGroup=${(group) => headerTemplate(group)}
-></lr-virtual-list>
+></lr-virtual-list>`;
 ```
 
 Every row is positioned by a `transform: translateY(offset)`, rather than page flow, so only a small
@@ -2178,13 +2188,17 @@ invention (no `wa-*`/`sl-*` counterpart).
   anchors to its block-end edge and does not cover the full height. Has no visual effect while the effective
   presentation resolves to `'inline'`.
 - `label: string = ''` — accessible name for the overlay presentation's `role="dialog"`, used
-  verbatim when set. When empty, falls back to the `header` slot's content: a heading element
-  (`h1`–`h6` or `[role="heading"]`) among the slotted header content wins if present, otherwise the
-  header slot's combined text content is used (mirrors `lr-dialog`'s `detectHeading()` fallback,
-  via `aria-label` rather than `aria-labelledby` since the header content is light DOM while
-  `[part="panel"]` is in shadow DOM). A panel opened with neither `label` nor header content uses
-  the localized `responsivePanel` fallback (`"Panel"` in the default locale), so its dialog is
-  never unnamed. Unused in the inline presentation, which has no dialog semantics to name.
+  verbatim when set — but a plain `aria-label` attribute on the host wins outright over `label`
+  when both are present, the standard ARIA convention for a consumer that wants full control over
+  the announced name (matching `lr-dialog`'s `accessibleLabel` pattern). When both the host
+  `aria-label` and `label` are empty, this falls back to the `header` slot's content: a heading
+  element (`h1`–`h6` or `[role="heading"]`) among the slotted header content wins if present,
+  otherwise the header slot's combined text content is used (mirrors `lr-dialog`'s
+  `detectHeading()` fallback, via `aria-label` rather than `aria-labelledby` since the header
+  content is light DOM while `[part="panel"]` is in shadow DOM). A panel opened with none of a host
+  `aria-label`, `label`, or header content uses the localized `responsivePanel` fallback (`"Panel"`
+  in the default locale), so its dialog is never unnamed. Unused in the inline presentation, which
+  has no dialog semantics to name.
 - `overlayBreakpoint: string = '768px'` (attribute `overlay-breakpoint`) — CSS length compared with
   the component's allocated inline size in `mode="auto"`; at or below it, the effective presentation
   is `'overlay'`.
@@ -2602,19 +2616,16 @@ being dragged. Plus shared tokens `--lr-color-surface`, `--lr-color-border`, `--
 
 ```html
 <div style="position: relative; block-size: 100vh;">
-  <lr-dock-panel
-    edge="end"
-    extent="320px"
-    min-extent="200px"
-    max-extent="480px"
-    collapsible
-    @lr-resize-input=${(e) => updateLayoutPreview(e.detail.extent)}
-    @lr-resize-change=${(e) => persistExtent(e.detail.extent)}
-    @lr-collapse-change=${(e) => console.log(e.detail.collapsed)}
-  >
+  <lr-dock-panel edge="end" extent="320px" min-extent="200px" max-extent="480px" collapsible>
     <div>Sidebar content — a chat thread list, an inspector, anything.</div>
   </lr-dock-panel>
 </div>
+<script type="module">
+  const panel = document.querySelector("lr-dock-panel");
+  panel.addEventListener("lr-resize-input", (e) => updateLayoutPreview(e.detail.extent));
+  panel.addEventListener("lr-resize-change", (e) => persistExtent(e.detail.extent));
+  panel.addEventListener("lr-collapse-change", (e) => console.log(e.detail.collapsed));
+</script>
 ```
 
 Pointer-drag-resize admits only a primary pointer using its primary button, then mirrors
@@ -2749,6 +2760,30 @@ former brand and active-mix values when unset.
 
 - every `appearance` renders on the _same_ `[part="base"]` element — there's no separate element per
   variant, so a `::part(base)` override applies uniformly regardless of `appearance`.
+- **a card clips, it does not scroll — and it never picks a scroll owner for you.** `[part='base']`
+  stretches to the host's allocated block-size and clips its overflow, which is what keeps a
+  full-bleed `media`/`image` child inside the rounded border. In an auto-sized row the card simply
+  grows and nothing is clipped; give it a _definite_ allocation (a fixed grid row, an explicit
+  `block-size`) and body content taller than that allocation is clipped silently, with no
+  scrollbar. Neither upstream card exposes an overflow, block-size, or scroll hook and neither does
+  this one: the public `body` part already carries the whole decision, and a `::part()` rule from
+  your tree wins over the shadow stylesheet regardless of specificity. A fixed-height tile that
+  must hold more content says so itself:
+
+  ```css
+  .tile-grid {
+    display: grid;
+    grid-template-rows: 12rem;
+  }
+  .tile-grid lr-card::part(body) {
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+  ```
+
+  `overflow` other than `visible` also zeroes the body's automatic minimum size, so that one
+  declaration is enough — the body shrinks into the tile and scrolls, and `max-block-size` /
+  `scrollbar-gutter` stay available on the same rule. The linked (`href`) card behaves identically.
 - slot-presence (`header`/`media`/`image`/`footer`/`actions`/`header-actions`/`footer-actions`) is
   tracked in JS, not via CSS `:empty` (a
   `[part]` wrapper always contains a literal `<slot>` child, so `:empty` never matches) — the same

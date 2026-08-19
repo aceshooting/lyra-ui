@@ -158,6 +158,92 @@ for (const direction of ['ltr', 'rtl'] as const) {
   });
 }
 
+it('scrolls a block-overflowing pane internally at a 320px by 160px allocation instead of clipping it, leaving the sibling pane and divider untouched', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="inline-size: 320px; block-size: 160px">
+      <lr-split-panel
+        aria-label="Resize panes with deep content"
+        style="inline-size: 100%; block-size: 100%"
+      >
+        <div slot="start" data-pane-content="start">
+          <p style="margin-block-start: 900px;">Deep start content</p>
+        </div>
+        <div slot="end" data-pane-content="end">Short end content</div>
+      </lr-split-panel>
+    </div>
+  `);
+  const element = wrapper.querySelector('lr-split-panel') as LyraSplitPanel;
+  await elementUpdated(element);
+
+  const layout = base(element);
+  const [startPanel, endPanel] = [...layout.querySelectorAll<HTMLElement>('[part~="panel"]')];
+  expect(Math.round(element.getBoundingClientRect().width)).to.equal(320);
+  expect(Math.round(element.getBoundingClientRect().height)).to.equal(160);
+
+  // The pane's own box never grows to fit its content -- the grid keeps sizing it from the
+  // divider position, not from the deep content; only the clipping behavior changes.
+  expect(layout.scrollHeight, 'base containment').to.be.at.most(layout.clientHeight + 1);
+  expect(startPanel.scrollHeight, 'deep content actually overflows').to.be.greaterThan(
+    startPanel.clientHeight,
+  );
+  expect(getComputedStyle(startPanel).overflowY).to.equal('auto');
+  expect(getComputedStyle(endPanel).overflowY).to.equal('auto');
+
+  const beforeStartRect = startPanel.getBoundingClientRect();
+  const beforeEndRect = endPanel.getBoundingClientRect();
+  const beforeDividerLeft = divider(element).getBoundingClientRect().left;
+
+  startPanel.scrollTop = startPanel.scrollHeight;
+  startPanel.dispatchEvent(new Event('scroll'));
+  await elementUpdated(element);
+
+  // Scrolling the overflowing pane moves no other geometry: not its own box, not the sibling
+  // pane, not the divider -- the pane is the scroll owner, not a driver of grid track size.
+  const afterStartRect = startPanel.getBoundingClientRect();
+  expect(afterStartRect.left).to.equal(beforeStartRect.left);
+  expect(afterStartRect.width).to.equal(beforeStartRect.width);
+  expect(afterStartRect.height).to.equal(beforeStartRect.height);
+  expect(endPanel.getBoundingClientRect().left).to.equal(beforeEndRect.left);
+  expect(divider(element).getBoundingClientRect().left).to.equal(beforeDividerLeft);
+  expect(startPanel.scrollTop).to.be.greaterThan(0);
+});
+
+it('scrolls a block-overflowing pane internally under orientation="vertical" too, without growing the row past its configured split', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="inline-size: 320px; block-size: 160px">
+      <lr-split-panel
+        orientation="vertical"
+        aria-label="Resize stacked panes with deep content"
+        style="inline-size: 100%; block-size: 100%"
+      >
+        <div slot="start" data-pane-content="start">
+          <p style="margin-block-start: 900px;">Deep start content</p>
+        </div>
+        <div slot="end" data-pane-content="end">Short end content</div>
+      </lr-split-panel>
+    </div>
+  `);
+  const element = wrapper.querySelector('lr-split-panel') as LyraSplitPanel;
+  await elementUpdated(element);
+
+  const layout = base(element);
+  const [startPanel] = [...layout.querySelectorAll<HTMLElement>('[part~="panel"]')];
+  expect(layout.scrollHeight, 'base containment').to.be.at.most(layout.clientHeight + 1);
+  expect(startPanel.scrollHeight, 'deep content actually overflows').to.be.greaterThan(
+    startPanel.clientHeight,
+  );
+  expect(getComputedStyle(startPanel).overflowY).to.equal('auto');
+
+  const beforeRect = startPanel.getBoundingClientRect();
+  startPanel.scrollTop = startPanel.scrollHeight;
+  startPanel.dispatchEvent(new Event('scroll'));
+  await elementUpdated(element);
+  const afterRect = startPanel.getBoundingClientRect();
+  expect(afterRect.top).to.equal(beforeRect.top);
+  expect(afterRect.height).to.equal(beforeRect.height);
+  expect(startPanel.scrollTop).to.be.greaterThan(0);
+});
+
 it('keeps percent and pixel positions synchronized in both directions', async () => {
   const element = (await fixture(html`
     <lr-split-panel style="inline-size: 400px; block-size: 200px"></lr-split-panel>

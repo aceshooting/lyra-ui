@@ -1352,12 +1352,23 @@ sizing), `--lr-focus-ring-*`, `--lr-transition-fast`.
 **Optional peer deps:** none.
 
 ```html
-<lr-media-card kind="image" src="https://example.com/photo.jpg" alt="Screenshot" filename="photo.jpg"
-  @lr-media-open=${(e) => openLightbox(e.detail.src)}
+<lr-media-card
+  id="image-card"
+  kind="image"
+  src="https://example.com/photo.jpg"
+  alt="Screenshot"
+  filename="photo.jpg"
 ></lr-media-card>
-<lr-media-card kind="file" src="https://example.com/report.pdf" filename="report.pdf"
-  @lr-before-media-download=${(e) => shouldUseNativeDownload || e.preventDefault()}
-></lr-media-card>
+<lr-media-card id="file-card" kind="file" src="https://example.com/report.pdf" filename="report.pdf">
+</lr-media-card>
+<script type="module">
+  document
+    .getElementById("image-card")
+    .addEventListener("lr-media-open", (e) => openLightbox(e.detail.src));
+  document
+    .getElementById("file-card")
+    .addEventListener("lr-before-media-download", (e) => shouldUseNativeDownload || e.preventDefault());
+</script>
 ```
 
 **Safe-URL checking.** `src` is validated by internal sink-specific helpers before it's
@@ -1457,10 +1468,13 @@ hidden via CSS by default, exposed as a part only so a consumer can override tha
 **Optional peer deps:** none.
 
 ```html
-<lr-attachment-trigger .capabilities=${['files', 'image', 'camera']} accept=".pdf,.docx"
-  @lr-files=${(e) => queueFiles(e.detail.capability, e.detail.files)}
-  @lr-camera-request=${openCameraFlow}
-></lr-attachment-trigger>
+<lr-attachment-trigger accept=".pdf,.docx"></lr-attachment-trigger>
+<script type="module">
+  const trigger = document.querySelector("lr-attachment-trigger");
+  trigger.capabilities = ["files", "image", "camera"];
+  trigger.addEventListener("lr-files", (e) => queueFiles(e.detail.capability, e.detail.files));
+  trigger.addEventListener("lr-camera-request", openCameraFlow);
+</script>
 ```
 
 **Known gotchas:**
@@ -1565,14 +1579,14 @@ variant's quiet tint.
 <lr-avatar label="Assistant"><svg slot="icon" viewBox="0 0 24 24"><!-- role glyph --></svg></lr-avatar>
 
 <!-- Far down a long list: defer the request, fall back to a glyph, and report a broken URL. -->
-<lr-avatar
-  image="/users/7/photo.jpg"
-  label="Ada Lovelace"
-  loading="lazy"
-  @lr-error=${(e) => reportBrokenAvatar(e.detail.image)}
->
+<lr-avatar id="lazy-avatar" image="/users/7/photo.jpg" label="Ada Lovelace" loading="lazy">
   <svg slot="icon" viewBox="0 0 24 24"><!-- fallback glyph --></svg>
 </lr-avatar>
+<script type="module">
+  document
+    .getElementById("lazy-avatar")
+    .addEventListener("lr-error", (e) => reportBrokenAvatar(e.detail.image));
+</script>
 ```
 
 **Known gotchas:**

@@ -74,20 +74,22 @@ tokens `--lr-color-surface/-border/-text-quiet/-brand/-brand-quiet/-success/-suc
 **Optional peer deps:** none.
 
 ```html
-<lr-tool-result-dialog
-  tool-name="run_query"
-  status="success"
-  duration-ms="1240"
-  ?open=${dialogOpen}
-  @lr-close=${(e) => (dialogOpen = false)}
-  @lr-maximize-change=${(e) => console.log('maximized:', e.detail.maximized)}
->
+<lr-tool-result-dialog tool-name="run_query" status="success" duration-ms="1240">
   <lr-tab-group slot="body">
     <div slot="preview" label="Preview">…</div>
-    <div slot="json" label="JSON"><lr-json-viewer .data=${result}></lr-json-viewer></div>
+    <div slot="json" label="JSON"><lr-json-viewer></lr-json-viewer></div>
   </lr-tab-group>
   <button slot="footer">Rerun</button>
 </lr-tool-result-dialog>
+<script type="module">
+  const dialog = document.querySelector("lr-tool-result-dialog");
+  dialog.querySelector("lr-json-viewer").data = result;
+  dialog.open = true;
+  dialog.addEventListener("lr-close", () => (dialog.open = false));
+  dialog.addEventListener("lr-maximize-change", (e) =>
+    console.log("maximized:", e.detail.maximized)
+  );
+</script>
 ```
 
 While open, `[part="panel"]` takes `role="dialog"` + `aria-modal="true"` with `aria-labelledby`

@@ -681,3 +681,80 @@ it("normalizes nonempty message identities before applying the 500-message windo
     "tail",
   ]);
 });
+
+describe("definite-allocation overflow", () => {
+  it("clips oversized header and composer content instead of scrolling, collapsing the conversation row", async () => {
+    const shell = await fixture<HTMLElement>(html`
+      <div style="block-size: 200px; inline-size: 40rem">
+        <lr-agent-workspace>
+          <div slot="header-actions" style="block-size: 300px">toolbar</div>
+          <div slot="composer" style="block-size: 300px">composer</div>
+        </lr-agent-workspace>
+      </div>
+    `);
+    const el = shell.querySelector<LyraAgentWorkspace>("lr-agent-workspace")!;
+    await el.updateComplete;
+    const root = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const header = el.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+    const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+
+    expect(root.clientHeight).to.be.at.most(200);
+    expect(root.scrollHeight > root.clientHeight).to.be.true;
+    expect(body.clientHeight).to.equal(0);
+    expect(
+      Math.round(header.getBoundingClientRect().bottom - root.getBoundingClientRect().bottom) > 0
+    ).to.be.true;
+  });
+
+  it("gives an oversized header toolbar its own scroll owner through ::part(header)", async () => {
+    const shell = await fixture<HTMLElement>(html`
+      <div class="workspace-shell" style="block-size: 200px; inline-size: 40rem">
+        <style>
+          .workspace-shell lr-agent-workspace::part(header) {
+            max-block-size: 64px;
+            overflow: auto;
+          }
+        </style>
+        <lr-agent-workspace>
+          <div slot="header-actions" style="block-size: 300px">toolbar</div>
+        </lr-agent-workspace>
+      </div>
+    `);
+    const el = shell.querySelector<LyraAgentWorkspace>("lr-agent-workspace")!;
+    await el.updateComplete;
+    const root = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const header = el.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+    const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+
+    expect(header.scrollHeight > header.clientHeight).to.be.true;
+    expect(root.scrollHeight).to.equal(root.clientHeight);
+    expect(body.clientHeight > 0).to.be.true;
+    header.scrollTop = 100;
+    expect(header.scrollTop > 0).to.be.true;
+  });
+
+  it("gives a tall custom composer its own scroll owner through ::part(composer)", async () => {
+    const shell = await fixture<HTMLElement>(html`
+      <div class="composer-shell" style="block-size: 200px; inline-size: 40rem">
+        <style>
+          .composer-shell lr-agent-workspace::part(composer) {
+            max-block-size: 72px;
+            overflow: auto;
+          }
+        </style>
+        <lr-agent-workspace>
+          <div slot="composer" style="block-size: 300px">composer</div>
+        </lr-agent-workspace>
+      </div>
+    `);
+    const el = shell.querySelector<LyraAgentWorkspace>("lr-agent-workspace")!;
+    await el.updateComplete;
+    const root = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const composer = el.shadowRoot!.querySelector<HTMLElement>('[part="composer"]')!;
+    const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+
+    expect(composer.scrollHeight > composer.clientHeight).to.be.true;
+    expect(root.scrollHeight).to.equal(root.clientHeight);
+    expect(body.clientHeight > 0).to.be.true;
+  });
+});

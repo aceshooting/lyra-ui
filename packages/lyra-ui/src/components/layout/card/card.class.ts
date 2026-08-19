@@ -67,6 +67,18 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * The header is allocation-responsive: long or translated header content can shrink and wrap,
  * and the actions group moves onto another line when both no longer fit side by side.
  *
+ * **Overflow is clipped, deliberately, and the card never picks a scroll owner for you.**
+ * `[part='base']` stretches to the host's allocated block-size and clips its overflow — that clip
+ * is what keeps a full-bleed `media`/`image` child inside the rounded border. So a card given a
+ * *definite* allocation (a fixed grid row, an explicit `block-size`) clips body content taller
+ * than that allocation rather than growing or scrolling; in an auto-sized row it simply grows and
+ * nothing is clipped. Neither upstream card exposes an overflow, block-size, or scroll hook, and
+ * this one deliberately adds none either: the public `body` part already carries the whole
+ * decision, and a `::part()` rule from the consumer's tree wins over the shadow stylesheet
+ * regardless of specificity. A fixed-height tile whose body must hold more content therefore says
+ * so itself — `lr-card::part(body) { overflow: auto; }` — which also leaves `max-block-size`,
+ * `scrollbar-gutter`, and `overscroll-behavior` in the consumer's hands.
+ *
  * @customElement lr-card
  * @slot - The card body.
  * @slot header - Header row content, rendered above the body.

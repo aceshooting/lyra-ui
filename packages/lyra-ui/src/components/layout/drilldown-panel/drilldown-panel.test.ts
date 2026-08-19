@@ -445,14 +445,14 @@ it("contains raw repeated child events and emits a correlated frozen drilldown e
     ...el.shadowRoot!.querySelectorAll<LyraEntityCard>("lr-entity-card"),
   ];
   await Promise.all(cards.map((card) => card.updateComplete));
-  let rawActivations = 0;
-  el.addEventListener("lr-entity-activate", () => {
-    rawActivations += 1;
+  let rawSelects = 0;
+  el.addEventListener("lr-entity-select", () => {
+    rawSelects += 1;
   });
   const translated = oneEvent(el, "lr-drilldown-entity-activate");
   cards[1]!.shadowRoot!.querySelector<HTMLElement>("lr-button")!.click();
   const event = await translated;
-  expect(rawActivations).to.equal(0);
+  expect(rawSelects).to.equal(0);
   expect(event.detail).to.deep.equal({
     nodeId: "entity-node",
     entityId: "entity-second",
@@ -460,7 +460,7 @@ it("contains raw repeated child events and emits a correlated frozen drilldown e
   expect(Object.isFrozen(event.detail)).to.equal(true);
 });
 
-it("translates the entity-card gesture exactly once, with no raw lr-entity-select escaping, even though the card fires both lr-entity-select and lr-entity-activate from one click", async () => {
+it("translates the entity-card gesture exactly once, with no raw lr-entity-select escaping", async () => {
   const el = (await fixture(
     html`<lr-drilldown-panel></lr-drilldown-panel>`
   )) as LyraDrilldownPanel;

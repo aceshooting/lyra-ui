@@ -164,6 +164,66 @@ describe('acquireHighlightHandle', () => {
     }
   });
 
+  function isPainted(root: HTMLElement, range: Range): boolean {
+    if (supportsCustomHighlights()) {
+      const registry = (globalThis as unknown as { CSS: { highlights: Map<string, { has(r: Range): boolean }> } }).CSS.highlights;
+      return registry.get('lr-highlight-flash')?.has(range) ?? false;
+    }
+    return root.querySelector('mark') != null;
+  }
+
+  it('flash() with a non-finite durationMs (NaN) falls back to the documented 1800ms default instead of throwing or firing immediately', async () => {
+    const root = makeContent('<p>Flash target text here.</p>');
+    try {
+      const owner = {};
+      const handle = acquireHighlightHandle(owner, document);
+      const range = rangeOverText(root, 'target');
+      expect(() => handle.flash(range, NaN)).to.not.throw();
+      expect(isPainted(root, range)).to.be.true;
+      // Well short of the 1800ms default -- proves NaN didn't collapse to an immediate/zero timeout.
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      expect(isPainted(root, range)).to.be.true;
+      handle.release();
+      expect(isPainted(root, range)).to.be.false;
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('flash() with a negative durationMs clamps to 0 and still resolves asynchronously, not synchronously', async () => {
+    const root = makeContent('<p>Flash target text here.</p>');
+    try {
+      const owner = {};
+      const handle = acquireHighlightHandle(owner, document);
+      const range = rangeOverText(root, 'target');
+      handle.flash(range, -50);
+      // Still painted immediately after the call -- a clamped-to-0 duration must still schedule
+      // an async timer, never an inline/synchronous clear (mirrors internal/announcer.ts).
+      expect(isPainted(root, range)).to.be.true;
+      await new Promise((resolve) => setTimeout(resolve, 40));
+      expect(isPainted(root, range)).to.be.false;
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('flash() with an Infinity durationMs clamps to the browser timer ceiling instead of throwing or firing immediately', async () => {
+    const root = makeContent('<p>Flash target text here.</p>');
+    try {
+      const owner = {};
+      const handle = acquireHighlightHandle(owner, document);
+      const range = rangeOverText(root, 'target');
+      expect(() => handle.flash(range, Infinity)).to.not.throw();
+      expect(isPainted(root, range)).to.be.true;
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      expect(isPainted(root, range)).to.be.true;
+      handle.release();
+      expect(isPainted(root, range)).to.be.false;
+    } finally {
+      root.remove();
+    }
+  });
+
   it('setActive(null) clears the active range', () => {
     const root = makeContent('<p>Active state text sample.</p>');
     try {

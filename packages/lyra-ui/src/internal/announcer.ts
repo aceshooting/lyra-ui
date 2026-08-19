@@ -56,9 +56,7 @@ const ambientTimerHost: AnnouncerTimerHost = {
  * instantiating `Announcer` directly.
  */
 export class Announcer {
-  /** Throttle window in ms. Safe to change between bursts; a flush already
-   *  scheduled keeps the deadline it was scheduled with. */
-  throttleMs: number;
+  private _throttleMs = DEFAULT_THROTTLE_MS;
 
   private readonly onFlush: (text: string) => void;
   private timerHost: AnnouncerTimerHost;
@@ -69,6 +67,19 @@ export class Announcer {
     this.throttleMs = options.throttleMs ?? DEFAULT_THROTTLE_MS;
     this.onFlush = options.onFlush;
     this.timerHost = options.timerHost ?? ambientTimerHost;
+  }
+
+  /** Throttle window in ms. Safe to change between bursts; a flush already
+   *  scheduled keeps the deadline it was scheduled with. A non-finite value (`NaN`/`Infinity`)
+   *  resets it to the documented 500ms default; a negative finite value clamps to 0 (the next
+   *  burst still schedules an async timer, never an inline/synchronous flush) -- mirrors
+   *  `<lr-live-region>`'s own `safeThrottleMs` normalization of this same field. */
+  get throttleMs(): number {
+    return this._throttleMs;
+  }
+
+  set throttleMs(value: number) {
+    this._throttleMs = finiteDuration(value, DEFAULT_THROTTLE_MS);
   }
 
   /** The latest text awaiting flush, if a burst is currently in progress. */

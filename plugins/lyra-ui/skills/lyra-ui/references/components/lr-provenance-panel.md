@@ -35,12 +35,10 @@ chip` row, one `lr-path-strip` per relationship, `lr-community-card`, `lr-chunk-
 **Events:** `lr-toggle` (`detail: { section, expanded }`, a section header was toggled —
 `section` is `'entities' | 'relationships' | 'communities' | 'chunks'`). Because the panel is a
 conduit, every affordance it renders also reaches a listener on the panel itself, and all are
-part of its typed event map: `lr-entity-select` (`detail: { entityId }`, the canonical name as of
-10.0.0, from an entity chip or community card member), `lr-entity-activate`
-(`detail: { entityId, occurrenceIndex? }`, from an entity chip, community
-card member, or path-strip node — the deprecated alias of `lr-entity-select` where both fire from
-one gesture, but still the only name a path-strip node emits, and the only one carrying
-`occurrenceIndex`), `lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
+part of its typed event map: `lr-entity-select` (`detail: { entityId }`, from an entity chip),
+`lr-entity-activate` (`detail: { entityId, occurrenceIndex? }`, from a community card member or
+path-strip node — the only name either one emits, and the only one carrying `occurrenceIndex`),
+`lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
 Space), `lr-drill` (`detail: { communityId }`, a community card's title, drill button, or overflow chip), and
 `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, a relationship path-strip
 edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) and `lr-expand`

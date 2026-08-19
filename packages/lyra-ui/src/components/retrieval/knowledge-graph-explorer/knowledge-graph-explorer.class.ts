@@ -94,20 +94,18 @@ export interface LyraKnowledgeGraphExplorerEventMap {
    *  change` already establishes), so reassigning it back is optional -- useful only for a host
    *  that wants to persist or observe pins elsewhere. */
   'lr-pin-change': CustomEvent<LyraEventDetailSnapshot<{ pinnedNodeIds: string[] }>>;
-  /** The user typed in the toolbar's search box. `detail: { searchQuery, query, matchCount,
-   *  matchCountExact }` -- `searchQuery` is the original, still-shipped member name; `query` is the
-   *  same value under the canonical `LyraSearchChangeDetail` name
-   *  (`internal/text-viewer-target.ts`), added alongside it rather than renamed in place. `matchCount`
-   *  is the same live node-filter total the search-result list and its own live-region announcement
-   *  already compute (`0` while `query` is empty). `matchCountExact` is always `true`: unlike a
-   *  paginated text-search viewer, this component's node filter has no ceiling, so it can never
-   *  truncate. This is a live node FILTER, not a cursor-based text search -- it deliberately never
-   *  carries the canonical `activeIndex` field, since it has no `searchNext`/`searchPrevious`/
-   *  active-match cursor to report. The component has already applied the query to its own
-   *  `searchQuery` before emitting, the same self-toggle-then-emit contract `lr-pin-change` follows,
-   *  so reassigning it back is optional and a direct host assignment stays silent. */
+  /** The user typed in the toolbar's search box. `detail: { query, matchCount, matchCountExact }`
+   *  -- `query` is the canonical `LyraSearchChangeDetail` field name
+   *  (`internal/text-viewer-target.ts`). `matchCount` is the same live node-filter total the
+   *  search-result list and its own live-region announcement already compute (`0` while `query`
+   *  is empty). `matchCountExact` is always `true`: unlike a paginated text-search viewer, this
+   *  component's node filter has no ceiling, so it can never truncate. This is a live node
+   *  FILTER, not a cursor-based text search -- it deliberately never carries the canonical
+   *  `activeIndex` field, since it has no `searchNext`/`searchPrevious` active-match cursor to
+   *  report. The component has already applied the query to its own `searchQuery` before
+   *  emitting, the same self-toggle-then-emit contract `lr-pin-change` follows, so reassigning it
+   *  back is optional and a direct host assignment stays silent. */
   'lr-search-change': CustomEvent<{
-    searchQuery: string;
     query: string;
     matchCount: number;
     matchCountExact: boolean;
@@ -194,10 +192,9 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * @event lr-path-request - `detail: { sourceNodeId, targetNodeId }`. See the class doc above.
  * @event lr-pin-change - `detail: { pinnedNodeIds }`. See the class doc above.
  * @event lr-search-change - The user typed in the toolbar's search box. `detail:
- *   { searchQuery, query, matchCount, matchCountExact }`. `searchQuery`/`query` carry the identical
- *   value (`query` is the canonical `LyraSearchChangeDetail` name, added alongside the original
- *   `searchQuery`); `matchCountExact` is always `true` since this component's node filter has no
- *   truncating ceiling. No `activeIndex` -- this is a live node filter, not a cursor-based search.
+ *   { query, matchCount, matchCountExact }`. `query` is the canonical `LyraSearchChangeDetail`
+ *   name; `matchCountExact` is always `true` since this component's node filter has no truncating
+ *   ceiling. No `activeIndex` -- this is a live node filter, not a cursor-based search.
  *   Direct host assignments do not emit.
  * @event lr-hidden-types-change - A node type's visibility changed via the composed legend.
  *   `detail: { hiddenTypes }`. See the class doc above. Direct host assignments do not emit.
@@ -328,12 +325,6 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   private pendingNodeId?: string;
   /** Invalidates focus work when a newer activation, direct selection, close, or disconnect wins. */
   private activationGeneration = 0;
-  /** The most recently handled `lr-entity-select`/`lr-entity-activate` detail object, by
-   *  reference. `lr-entity-card`/`lr-entity-chip`/`lr-neighbor-list` each emit both events from
-   *  one gesture, unsnapshotted and sharing one `detail` object -- `onEntityActivate` is bound to
-   *  both names, so this lets the handler recognize "already handled this gesture" and activate
-   *  exactly once, regardless of which of the two events reaches it first. */
-  private handledEntityGestureDetail?: { entityId: string };
   private internalSelectionAssignment?: { value: string | null };
   /** The exact rendered `[part="node"]` element resolved for the currently-open popover
    *  (`renderer="svg"`, direct-click path only) -- re-read on every `lr-viewport-change` so the
@@ -827,22 +818,17 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     // it returns `undefined` (not a truncated result) whenever the trimmed query is empty, hence
     // the `?? 0` rather than a truncation-driven `matchCountExact: false`.
     this.emit('lr-search-change', {
-      searchQuery: value,
       query: value,
       matchCount: this.matchingNodes()?.length ?? 0,
       matchCountExact: true,
     });
   };
 
-  /** Bound to both the canonical `lr-entity-select` and the deprecated `lr-entity-activate` on
-   *  the composed `lr-entity-card`/`lr-neighbor-list` -- both fire from one gesture, so the
-   *  detail-identity check below activates exactly once per gesture rather than twice. */
+  /** Bound to `lr-entity-select` on the composed `lr-entity-card`/`lr-neighbor-list`. */
   private onEntityActivate = (
     event: CustomEvent<{ entityId: string }>
   ): void => {
     event.stopPropagation();
-    if (event.detail === this.handledEntityGestureDetail) return;
-    this.handledEntityGestureDetail = event.detail;
     void this.activateEntity(event.detail.entityId);
   };
 
@@ -1008,7 +994,6 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
         role=${groupRole ?? nothing}
         aria-label=${groupLabel ?? nothing}
         @lr-entity-select=${this.onEntityActivate}
-        @lr-entity-activate=${this.onEntityActivate}
       >
         <div part="toolbar">
           <lr-input

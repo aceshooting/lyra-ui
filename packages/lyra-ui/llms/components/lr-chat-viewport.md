@@ -93,11 +93,16 @@ component's existing requirement of a height-bounded parent, exactly as slotted 
 inline style) still wins over the built-in one.
 
 ```html
-<lr-chat-viewport unread-start-index="12" @lr-follow-change=${(e) => console.log(e.detail.following)}>
+<lr-chat-viewport unread-start-index="12">
   <lr-chat-message message-role="user">…</lr-chat-message>
   <lr-chat-message message-role="assistant" status="streaming">
-    <lr-streaming-text streaming .content=${partial}></lr-streaming-text>
+    <lr-streaming-text streaming></lr-streaming-text>
   </lr-chat-message>
 </lr-chat-viewport>
 <lr-chat-composer status="streaming"></lr-chat-composer>
+<script type="module">
+  const viewport = document.querySelector("lr-chat-viewport");
+  viewport.querySelector("lr-streaming-text").content = partial;
+  viewport.addEventListener("lr-follow-change", (e) => console.log(e.detail.following));
+</script>
 ```

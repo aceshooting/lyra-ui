@@ -815,6 +815,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGroupObjects: 'חפצים',
   emojiPickerGroupSymbols: 'סמלים',
   emojiPickerGroupFlags: 'דגלים',
+  emojiPickerGroupUnknown: 'קבוצה {group}',
   pushToTalkRequesting: 'מבקש גישה למיקרופון…',
   pushToTalkDenied: 'הגישה למיקרופון נדחתה',
   pushToTalkError: 'ההקלטה נכשלה',

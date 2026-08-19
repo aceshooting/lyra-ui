@@ -365,32 +365,6 @@
       "rationale": "The accordion-item part names the outer wrapper explicitly; base remains on that same node during the compatibility window."
     },
     {
-      "tag": "lr-entity-card",
-      "kind": "event",
-      "name": "lr-entity-activate",
-      "since": "9.1.1",
-      "replacement": {
-        "kind": "event",
-        "name": "lr-entity-select",
-        "usage": "addEventListener('lr-entity-select', ...)"
-      },
-      "removalNotBefore": "11.0.0",
-      "rationale": "Renamed for cross-family event-vocabulary consistency; both names fire from the same gesture with an identical detail during the compatibility window."
-    },
-    {
-      "tag": "lr-entity-chip",
-      "kind": "event",
-      "name": "lr-entity-activate",
-      "since": "9.1.1",
-      "replacement": {
-        "kind": "event",
-        "name": "lr-entity-select",
-        "usage": "addEventListener('lr-entity-select', ...)"
-      },
-      "removalNotBefore": "11.0.0",
-      "rationale": "Renamed for cross-family event-vocabulary consistency; both names fire from the same gesture with an identical detail during the compatibility window."
-    },
-    {
       "tag": "lr-file-input",
       "kind": "part",
       "name": "base",
@@ -444,19 +418,6 @@
       "rationale": "The form-control-label part matches the shared form-control vocabulary; label remains on that same node during the compatibility window."
     },
     {
-      "tag": "lr-neighbor-list",
-      "kind": "event",
-      "name": "lr-entity-activate",
-      "since": "9.1.1",
-      "replacement": {
-        "kind": "event",
-        "name": "lr-entity-select",
-        "usage": "addEventListener('lr-entity-select', ...)"
-      },
-      "removalNotBefore": "11.0.0",
-      "rationale": "Renamed for cross-family event-vocabulary consistency; both names fire from the same gesture with an identical detail during the compatibility window."
-    },
-    {
       "tag": "lr-qr-code",
       "kind": "part",
       "name": "base",
@@ -468,19 +429,6 @@
       },
       "removalNotBefore": "10.0.0",
       "rationale": "The qr-code part names the rendered code wrapper explicitly; base remains on that same node during the compatibility window."
-    },
-    {
-      "tag": "lr-rag-eval-dashboard",
-      "kind": "event",
-      "name": "lr-run-select",
-      "since": "9.1.1",
-      "replacement": {
-        "kind": "event",
-        "name": "lr-run-change",
-        "usage": "addEventListener('lr-run-change', ...)"
-      },
-      "removalNotBefore": "11.0.0",
-      "rationale": "Renamed for cross-family event-vocabulary consistency; both names fire from the same gesture with an identical detail during the compatibility window."
     },
     {
       "tag": "lr-sparkline",
@@ -507,19 +455,6 @@
       },
       "removalNotBefore": "10.0.0",
       "rationale": "The video-playlist part identifies the root component explicitly; base remains on the same root node for migration compatibility."
-    },
-    {
-      "tag": "lr-virtual-list",
-      "kind": "event",
-      "name": "lr-visible-range-changed",
-      "since": "9.1.1",
-      "replacement": {
-        "kind": "event",
-        "name": "lr-visible-range-change",
-        "usage": "addEventListener('lr-visible-range-change', ...)"
-      },
-      "removalNotBefore": "11.0.0",
-      "rationale": "Renamed for cross-family event-vocabulary consistency; both names fire from the same gesture with an identical detail during the compatibility window."
     }
   ],
   "history": {
@@ -11414,7 +11349,7 @@
     "current": {
       "version": "9.1.1",
       "sourceCommit": null,
-      "manifestSha256": "ef8dd0c8d0b5ac6babdf73e1c81c074155519a523d394924b0fee5afc439a341",
+      "manifestSha256": "4d30aca720b86eaf5ee1ae685d62fd6afd580d1f53b9b8e46325e365289c1792",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",

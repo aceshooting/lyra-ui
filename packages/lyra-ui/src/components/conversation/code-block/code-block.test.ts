@@ -496,6 +496,46 @@ describe("shiki highlighting (real peer)", () => {
       hl.codeToHtml = originalCodeToHtml;
     }
   });
+
+  it("does not throw when the highlighter's getLoadedLanguages() call itself fails, and falls back to plain text -- syncHighlight() is exactly what connectedCallback() and willUpdate() both call into", async () => {
+    // An id no other test in this file uses, so the shared unsupportedLanguages cache can never
+    // make this assertion race a real (unpatched) async loadLanguage() retry -- see below.
+    const fakeLang = "spoofed-getloadedlanguages-throw-test-lang";
+    const el = (await fixture(
+      html`<lr-code-block .code=${jsSample}></lr-code-block>`
+    )) as LyraCodeBlock;
+    el.language = fakeLang;
+    await el.updateComplete;
+    await waitUntil(
+      () => internalsOf(el).shikiReady,
+      "shiki never finished loading",
+      { timeout: 8000 }
+    );
+
+    const internals = internalsOf(el);
+    // Same shared-singleton caveat as the codeToHtml test above -- must be undone.
+    const hl = internals.highlighter as unknown as {
+      getLoadedLanguages: () => string[];
+    };
+    const originalGetLoadedLanguages = hl.getLoadedLanguages;
+    try {
+      hl.getLoadedLanguages = () => {
+        throw new Error("spoofed shiki peer: getLoadedLanguages is broken");
+      };
+      // `fakeLang` is not a real shiki grammar id, so even once the safe fallback's async
+      // loadShikiLanguage() retry settles, it deterministically resolves to "still unsupported" --
+      // this assertion never races that retry the way re-checking an already-loaded language would.
+      expect(() => internals.syncHighlight()).to.not.throw();
+      await el.updateComplete;
+
+      expect(internals.highlightedHtml).to.equal(null);
+      expect(
+        el.shadowRoot!.querySelector('[part="code"]')!.textContent
+      ).to.equal(jsSample);
+    } finally {
+      hl.getLoadedLanguages = originalGetLoadedLanguages;
+    }
+  });
 });
 
 describe("languages (fine-grained shiki opt-in)", () => {

@@ -164,11 +164,11 @@ it('switches the active tab and re-renders lr-tab-group.active when a tab button
   expect(tabs.active).to.equal('chunks');
 });
 
-it('lets a deeply-nested composed event (lr-entity-activate from lr-entity-card, two shadow roots deep) bubble to the dossier host unmodified', async () => {
+it('lets a deeply-nested composed event (lr-entity-select from lr-entity-card, two shadow roots deep) bubble to the dossier host unmodified', async () => {
   const el = await populated();
   const card = el.shadowRoot!.querySelector('lr-entity-card') as LyraEntityCard;
   const focusButton = card.shadowRoot!.querySelector('[part="focus-button"]') as HTMLButtonElement;
-  const listener = oneEvent(el, 'lr-entity-activate');
+  const listener = oneEvent(el, 'lr-entity-select');
   focusButton.click();
   const event = await listener;
   expect(event.detail).to.deep.equal({ entityId: 'e1' });

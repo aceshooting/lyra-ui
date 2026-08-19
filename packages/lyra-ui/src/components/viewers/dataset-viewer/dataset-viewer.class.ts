@@ -695,7 +695,6 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
               item-role="row"
               row-index-offset="1"
               @lr-load-more=${this.stopInternalEvent}
-              @lr-visible-range-changed=${this.stopInternalEvent}
               @lr-visible-range-change=${this.stopInternalEvent}
               @lr-virtual-scroll=${this.stopInternalEvent}
             ></lr-virtual-list>

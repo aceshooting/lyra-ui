@@ -783,6 +783,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGroupObjects: '物品',
   emojiPickerGroupSymbols: '符号',
   emojiPickerGroupFlags: '旗帜',
+  emojiPickerGroupUnknown: '分组{group}',
   pushToTalkRequesting: '正在请求麦克风权限…',
   pushToTalkDenied: '麦克风权限被拒绝',
   pushToTalkError: '录音失败',

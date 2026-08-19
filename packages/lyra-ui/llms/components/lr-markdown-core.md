@@ -36,8 +36,9 @@ support (`highlights`, `activeHighlightId`, `scrollToAnchor()`, the `lr-highligh
 section above for the full write-up of shared behavior.
 
 **Properties:** `content: string = ''`, `tabSize: number = 4` (attribute `tab-size`) — the same
-finite-integer-guarded leading-indentation expansion used by `<lr-markdown>`; values outside 1–32
-or non-finite values fall back to `4`, independently of rendered code's
+finite-integer-guarded leading-indentation expansion used by `<lr-markdown>`; finite values are
+clamped to `[1, 32]` (`0` becomes `1`, `33` becomes `32`), and only non-finite values (`NaN`,
+`Infinity`) fall back to `4`, independently of rendered code's
 `--lr-code-block-tab-size`; `marked: LyraMarkedParser | undefined` (readonly, no attribute) — this
 instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'escape' | 'trusted' =
 'sanitize'` (attribute `html-mode`), `gfm: boolean = true`, `linkTarget: string | null = '_blank'` (attribute

@@ -803,6 +803,10 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   emojiPickerGroupObjects: 'Objects',
   emojiPickerGroupSymbols: 'Symbols',
   emojiPickerGroupFlags: 'Flags',
+  // Fallback heading for a built-in-loader group id this table doesn't recognize yet (today's
+  // shipped emojibase dataset only carries ids 0-9, all named above; a future dataset update could
+  // add one). `{group}` is the raw numeric group id, interpolated rather than concatenated.
+  emojiPickerGroupUnknown: 'Group {group}',
   pushToTalkRequesting: 'Requesting microphone…',
   pushToTalkDenied: 'Microphone access denied',
   pushToTalkError: 'Recording failed',

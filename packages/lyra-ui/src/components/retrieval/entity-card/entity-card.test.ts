@@ -104,22 +104,7 @@ it('localizes the degree row label via this.localize() when .strings overrides e
   ).to.include('Connexions');
 });
 
-it('emits lr-entity-activate from the built-in focus button', async () => {
-  const el = (await fixture(
-    html`<lr-entity-card></lr-entity-card>`
-  )) as LyraEntityCard;
-  el.entity = entity;
-  await el.updateComplete;
-  const button = el.shadowRoot!.querySelector(
-    '[part="focus-button"]'
-  ) as HTMLElement;
-  const listener = oneEvent(el, 'lr-entity-activate');
-  button.click();
-  const event = await listener;
-  expect(event.detail).to.deep.equal({ entityId: 'e1' });
-});
-
-it('also emits the canonical lr-entity-select from the built-in focus button, with an identical detail', async () => {
+it('emits lr-entity-select from the built-in focus button', async () => {
   const el = (await fixture(
     html`<lr-entity-card></lr-entity-card>`
   )) as LyraEntityCard;
@@ -134,7 +119,7 @@ it('also emits the canonical lr-entity-select from the built-in focus button, wi
   expect(event.detail).to.deep.equal({ entityId: 'e1' });
 });
 
-it('fires lr-entity-select and lr-entity-activate exactly once each, canonical first, from one click', async () => {
+it('fires lr-entity-select exactly once from one click', async () => {
   const el = (await fixture(
     html`<lr-entity-card></lr-entity-card>`
   )) as LyraEntityCard;
@@ -143,22 +128,13 @@ it('fires lr-entity-select and lr-entity-activate exactly once each, canonical f
   const button = el.shadowRoot!.querySelector(
     '[part="focus-button"]'
   ) as HTMLElement;
-  const order: string[] = [];
   let selectCount = 0;
-  let activateCount = 0;
   el.addEventListener('lr-entity-select', () => {
     selectCount++;
-    order.push('lr-entity-select');
-  });
-  el.addEventListener('lr-entity-activate', () => {
-    activateCount++;
-    order.push('lr-entity-activate');
   });
   button.click();
   await el.updateComplete;
   expect(selectCount).to.equal(1);
-  expect(activateCount).to.equal(1);
-  expect(order).to.deep.equal(['lr-entity-select', 'lr-entity-activate']);
 });
 
 it('hides the focus button when showFocusButton is false', async () => {

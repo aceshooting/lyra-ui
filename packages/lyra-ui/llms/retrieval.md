@@ -449,7 +449,7 @@ only that row's decorative swatch opacity. Also reads `--lr-graph-cat-1` through
 
 A dossier card for one knowledge-graph entity: type badge, description, key/value property rows,
 degree, community chip, plus a built-in "focus in graph" action. Never fetches or focuses a graph
-itself — `lr-entity-activate` is a request a host routes into `lr-graph`'s own
+itself — `lr-entity-select` is a request a host routes into `lr-graph`'s own
 `focusNode(id, options?)`.
 
 **Properties:**
@@ -475,8 +475,6 @@ number; communityId?: string }`; field names deliberately mirror `lr-graph`'s `L
   name for the same union.
 
 **Events:** `lr-entity-select` (`detail: { entityId }`, the built-in focus button was activated).
-`lr-entity-activate` is a deprecated alias fired alongside it from the same gesture with the same
-detail object; removal not before 11.0.0 — prefer `lr-entity-select`.
 
 **Slots:** default (extra body content below the property rows, e.g. a `lr-neighbor-list`),
 `actions` (extra header actions alongside the built-in focus button).
@@ -509,7 +507,7 @@ from tokens.
   };
   document
     .getElementById("card")
-    .addEventListener("lr-entity-activate", (e) =>
+    .addEventListener("lr-entity-select", (e) =>
       graph.focusNode(e.detail.entityId)
     );
 </script>
@@ -548,8 +546,6 @@ it is not copied onto the shadow button because host naming does not cross that 
 
 **Events:** `lr-entity-select` (`detail: { entityId }`, click, or Enter while focused),
 `lr-entity-open` (`detail: { entityId }`, dblclick, or Space while focused).
-`lr-entity-activate` is a deprecated alias of `lr-entity-select`, fired alongside it from the same
-gesture with the same detail object; removal not before 11.0.0. `lr-entity-open` is unaffected.
 
 **Slots:** default — rich preview content (typically a compact `lr-entity-card`), shown in a
 floating popover on hover/focus. No content means no popover and no hover affordance at all.
@@ -596,9 +592,7 @@ graph data) and never mutates a graph.
 - `label: string = ''` — fallback name for the stable group. A non-empty host `aria-label` makes
   the host the sole overall owner; an explicitly empty host label stays empty on the group
 
-**Events:** `lr-entity-select` (`detail: { entityId }`, a row's node button was activated;
-`lr-entity-activate` is a deprecated alias fired alongside it with the same detail object, removal
-not before 11.0.0),
+**Events:** `lr-entity-select` (`detail: { entityId }`, a row's node button was activated),
 `lr-node-expand` (`detail: { nodeId }`, a row's expand button was activated — deliberately the same
 name and detail shape as `lr-graph`'s own event, so one host handler serves both).
 
@@ -969,12 +963,10 @@ chip` row, one `lr-path-strip` per relationship, `lr-community-card`, `lr-chunk-
 **Events:** `lr-toggle` (`detail: { section, expanded }`, a section header was toggled —
 `section` is `'entities' | 'relationships' | 'communities' | 'chunks'`). Because the panel is a
 conduit, every affordance it renders also reaches a listener on the panel itself, and all are
-part of its typed event map: `lr-entity-select` (`detail: { entityId }`, the canonical name as of
-10.0.0, from an entity chip or community card member), `lr-entity-activate`
-(`detail: { entityId, occurrenceIndex? }`, from an entity chip, community
-card member, or path-strip node — the deprecated alias of `lr-entity-select` where both fire from
-one gesture, but still the only name a path-strip node emits, and the only one carrying
-`occurrenceIndex`), `lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
+part of its typed event map: `lr-entity-select` (`detail: { entityId }`, from an entity chip),
+`lr-entity-activate` (`detail: { entityId, occurrenceIndex? }`, from a community card member or
+path-strip node — the only name either one emits, and the only one carrying `occurrenceIndex`),
+`lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
 Space), `lr-drill` (`detail: { communityId }`, a community card's title, drill button, or overflow chip), and
 `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, a relationship path-strip
 edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) and `lr-expand`
@@ -1369,9 +1361,10 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
   `aria-label` names the dossier as a whole and is not cloned onto the strip
 
 **Events:** declares none of its own. Every composed child's event bubbles through unmodified
-(`composed: true`): `lr-entity-select` (`detail: { entityId }`, canonical as of 10.0.0),
-`lr-entity-activate` (`detail: { entityId, occurrenceIndex? }` — its deprecated alias, fired from the
-same gesture, and still the only name carrying `occurrenceIndex`), `lr-node-expand` (`detail: { nodeId }`),
+(`composed: true`): `lr-entity-select` (`detail: { entityId }`, surfaced from the embedded entity
+card or neighbor list), `lr-entity-activate` (`detail: { entityId, occurrenceIndex? }` — surfaced
+from the embedded provenance panel's own community card or relationship path strip, the only
+source carrying `occurrenceIndex`), `lr-node-expand` (`detail: { nodeId }`),
 `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-expand` (`detail: { chunkId, expanded }`),
 `lr-toggle` (`detail: { section, expanded }`), and `lr-tab-show`
 (`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'
@@ -1666,15 +1659,14 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
 - `lr-hidden-types-change` (`detail: { hiddenTypes: string[] }`) — a node type's visibility changed
   via the composed legend. Follows the same self-toggle-then-emit contract as `lr-pin-change`/
   `lr-search-change`, so reassigning back is optional.
-- `lr-search-change` (`detail: { searchQuery: string; query: string; matchCount: number;
-  matchCountExact: boolean }`) — the user typed in the toolbar's search box. `searchQuery`/`query`
-  carry the identical value; `query` is the canonical `LyraSearchChangeDetail` field name, added
-  alongside the original `searchQuery` rather than replacing it. `matchCount` is the same live
-  node-filter total the result list and its live-region announcement already compute (`0` while the
-  query is empty). `matchCountExact` is always `true` — this component's node filter has no
-  truncating ceiling, unlike a paginated text-search viewer. There is no `activeIndex`: this is a
-  live node filter, not a cursor-based search. Already self-applied before emitting, so reassigning
-  back is optional; a direct host assignment to `searchQuery` stays silent.
+- `lr-search-change` (`detail: { query: string; matchCount: number; matchCountExact: boolean }`) —
+  the user typed in the toolbar's search box. `query` is the canonical `LyraSearchChangeDetail`
+  field name. `matchCount` is the same live node-filter total the result list and its live-region
+  announcement already compute (`0` while the query is empty). `matchCountExact` is always `true` —
+  this component's node filter has no truncating ceiling, unlike a paginated text-search viewer.
+  There is no `activeIndex`: this is a live node filter, not a cursor-based search. The component
+  has already applied the query to its own `searchQuery` property before emitting, so reassigning
+  it back is optional and a direct host assignment stays silent.
 - Bubbling straight through from composed children, unmodified: `lr-node-click`
   (`detail: { nodeId, x, y }`), `lr-link-click` (`detail: { sourceNodeId, targetNodeId, linkId? }`), `lr-community-click`
   (`detail: { communityId }`), `lr-node-expand` (`detail: { nodeId }`, from `lr-graph` and/or `lr-neighbor-list`),
@@ -2279,9 +2271,7 @@ history, counts, rendering, or actions.
 
 **Events:** `lr-metric-change` (`{ metricId }`), `lr-slice-change` (`{ slice }`), and
 `lr-run-change` (`{ run }`). All are controlled intents; the component does not mutate the
-corresponding selection properties. `lr-run-select` is a deprecated alias for `lr-run-change`, fired
-alongside it with an identical detail from the same gesture; it was the lone `-select` spelling among
-three identically-shaped filter clicks. Removal not before 11.0.0 — prefer `lr-run-change`.
+corresponding selection properties.
 
 **CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
 `metric-selected`, `chart`, `runs`, `runs-heading`, `run`, `empty`.

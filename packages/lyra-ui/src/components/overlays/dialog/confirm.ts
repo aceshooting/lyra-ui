@@ -87,7 +87,7 @@ function createButton(label: string, style: string, onClick: () => void): HTMLBu
  * mounted after that request settles.
  *
  * Every dismissal path (confirm button, cancel button, Escape, backdrop
- * click) funnels through `<lr-dialog>`'s own `close()`/`lr-dialog-close`
+ * click) funnels through `<lr-dialog>`'s own `close()`/`lr-close`
  * event, so there is exactly one place that resolves the promise and tears
  * the dialog down. Because that event is cancelable, a veto leaves this
  * promise pending and the transient dialog mounted until a later accepted
@@ -135,7 +135,7 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
       dialog.appendChild(desc);
     }
 
-    dialog.addEventListener('lr-dialog-close', (event) => {
+    dialog.addEventListener('lr-close', (event) => {
       // A close veto can be installed above this transient dialog (including a capture listener
       // on document). Settle only after the event has completed its entire propagation path so a
       // later bubble listener's preventDefault() is honored too.

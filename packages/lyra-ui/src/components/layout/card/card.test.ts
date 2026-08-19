@@ -834,6 +834,77 @@ describe("lr-card", () => {
       await expect(el).to.be.accessible();
     });
   });
+
+  describe("definite-allocation overflow", () => {
+    it("clips body content that outgrows a definite allocation, because base overflow is the media corner clip", async () => {
+      const tiles = await fixture<HTMLElement>(html`
+        <div style="display: grid; grid-template-rows: 160px; inline-size: 20rem">
+          <lr-card>
+            <div style="block-size: 600px">tall body</div>
+          </lr-card>
+        </div>
+      `);
+      const el = tiles.querySelector<LyraCard>('lr-card')!;
+      await el.updateComplete;
+      const root = base(el);
+      const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+
+      expect(root.clientHeight).to.be.at.most(160);
+      expect(root.scrollHeight > root.clientHeight).to.be.true;
+      expect(
+        Math.round(body.getBoundingClientRect().bottom - root.getBoundingClientRect().bottom) > 0
+      ).to.be.true;
+    });
+
+    it("gives the body its own scroll owner through ::part(body), the documented escape hatch", async () => {
+      const tiles = await fixture<HTMLElement>(html`
+        <div class="tiles" style="display: grid; grid-template-rows: 160px; inline-size: 20rem">
+          <style>
+            .tiles lr-card::part(body) {
+              overflow: auto;
+            }
+          </style>
+          <lr-card>
+            <div style="block-size: 600px">tall body</div>
+          </lr-card>
+        </div>
+      `);
+      const el = tiles.querySelector<LyraCard>('lr-card')!;
+      await el.updateComplete;
+      const root = base(el);
+      const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+
+      expect(body.scrollHeight > body.clientHeight).to.be.true;
+      expect(root.scrollHeight).to.equal(root.clientHeight);
+      expect(
+        Math.round(body.getBoundingClientRect().bottom - root.getBoundingClientRect().bottom) <= 0
+      ).to.be.true;
+      body.scrollTop = 200;
+      expect(body.scrollTop > 0).to.be.true;
+    });
+
+    it("keeps the same ::part(body) escape hatch working inside the linked-content twin", async () => {
+      const tiles = await fixture<HTMLElement>(html`
+        <div class="linked-tiles" style="display: grid; grid-template-rows: 160px; inline-size: 20rem">
+          <style>
+            .linked-tiles lr-card::part(body) {
+              overflow: auto;
+            }
+          </style>
+          <lr-card href="#details">
+            <div style="block-size: 600px">tall body</div>
+          </lr-card>
+        </div>
+      `);
+      const el = tiles.querySelector<LyraCard>('lr-card')!;
+      await el.updateComplete;
+      const shell = el.shadowRoot!.querySelector<HTMLElement>('.linked-content')!;
+      const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+
+      expect(body.scrollHeight > body.clientHeight).to.be.true;
+      expect(shell.scrollHeight).to.equal(shell.clientHeight);
+    });
+  });
 });
 
 it("restores the declared appearance and orientation defaults when attributes are removed", async () => {

@@ -830,6 +830,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGroupObjects: 'Objets',
   emojiPickerGroupSymbols: 'Symboles',
   emojiPickerGroupFlags: 'Drapeaux',
+  emojiPickerGroupUnknown: 'Groupe {group}',
   pushToTalkRequesting: 'Demande d’accès au microphone…',
   pushToTalkDenied: 'Accès au microphone refusé',
   pushToTalkError: 'Échec de l’enregistrement',

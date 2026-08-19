@@ -57,11 +57,16 @@ is pending.
 between rows.
 
 ```html
-<lr-reorder-list label="Form fields" @lr-reorder=${(e) => console.log(e.detail.order)}>
+<lr-reorder-list label="Form fields">
   <lr-reorder-item value="name">Name</lr-reorder-item>
   <lr-reorder-item value="email">Email</lr-reorder-item>
   <lr-reorder-item value="phone">Phone</lr-reorder-item>
 </lr-reorder-list>
+<script type="module">
+  document
+    .querySelector("lr-reorder-list")
+    .addEventListener("lr-reorder", (e) => console.log(e.detail.order));
+</script>
 ```
 
 **Known gotchas:**

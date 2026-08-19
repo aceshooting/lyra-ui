@@ -105,11 +105,15 @@ referenced: `--lr-color-text-quiet`, `--lr-color-surface`, `--lr-color-border`,
   summary="Searching web…"
   duration-ms="820"
   call-id="call_123"
-  @lr-tool-call-chip-select=${(e) => openDetail(e.detail.callId)}
 >
   <pre slot="icon" style="display:none"></pre>
   <code>{"query": "lyra ui components"}</code>
 </lr-tool-call-chip>
+<script type="module">
+  document
+    .querySelector("lr-tool-call-chip")
+    .addEventListener("lr-tool-call-chip-select", (e) => openDetail(e.detail.callId));
+</script>
 ```
 
 The default slot's tooltip is positioned with the same `internal/positioner.js` `place()` helper
@@ -201,12 +205,13 @@ of course pull in whatever they need (a charting library, a markdown renderer), 
 the lazy `load()` path in the registry exists for.
 
 ```html
-<lr-tool-result-view
-  tool-name="get_weather"
-  .result=${{ tempC: 21, condition: 'cloudy' }}
-  .args=${{ city: 'Brussels' }}
-  @lr-render-error=${(e) => console.warn('renderer failed', e.detail)}
-></lr-tool-result-view>
+<lr-tool-result-view tool-name="get_weather"></lr-tool-result-view>
+<script type="module">
+  const view = document.querySelector("lr-tool-result-view");
+  view.result = { tempC: 21, condition: "cloudy" };
+  view.args = { city: "Brussels" };
+  view.addEventListener("lr-render-error", (e) => console.warn("renderer failed", e.detail));
+</script>
 ```
 
 ### `registerToolRenderer()` and the tool-renderer registry (`registry.ts`)
@@ -420,20 +425,22 @@ tokens `--lr-color-surface/-border/-text-quiet/-brand/-brand-quiet/-success/-suc
 **Optional peer deps:** none.
 
 ```html
-<lr-tool-result-dialog
-  tool-name="run_query"
-  status="success"
-  duration-ms="1240"
-  ?open=${dialogOpen}
-  @lr-close=${(e) => (dialogOpen = false)}
-  @lr-maximize-change=${(e) => console.log('maximized:', e.detail.maximized)}
->
+<lr-tool-result-dialog tool-name="run_query" status="success" duration-ms="1240">
   <lr-tab-group slot="body">
     <div slot="preview" label="Preview">…</div>
-    <div slot="json" label="JSON"><lr-json-viewer .data=${result}></lr-json-viewer></div>
+    <div slot="json" label="JSON"><lr-json-viewer></lr-json-viewer></div>
   </lr-tab-group>
   <button slot="footer">Rerun</button>
 </lr-tool-result-dialog>
+<script type="module">
+  const dialog = document.querySelector("lr-tool-result-dialog");
+  dialog.querySelector("lr-json-viewer").data = result;
+  dialog.open = true;
+  dialog.addEventListener("lr-close", () => (dialog.open = false));
+  dialog.addEventListener("lr-maximize-change", (e) =>
+    console.log("maximized:", e.detail.maximized)
+  );
+</script>
 ```
 
 While open, `[part="panel"]` takes `role="dialog"` + `aria-modal="true"` with `aria-labelledby`
@@ -565,23 +572,25 @@ assigned elements.
 dependencies of this package imported directly, not optional peers.
 
 ```html
-<lr-tool-select-dialog
-  label="Select tools"
-  .tools=${[
-    { id: 'search', name: 'Web search', category: 'Research' },
-    { id: 'python', name: 'Python', category: 'Code', description: 'Run sandboxed Python' },
-    { id: 'admin', name: 'Admin console', disabled: true, disabledReason: 'Requires admin approval' },
-  ]}
-  .selectedToolIds=${enabledToolIds}
-  ?use-defaults=${usingDefaults}
-  ?open=${dialogOpen}
-  @lr-change=${(e) => updateTools(e.detail.selectedToolIds, e.detail.useDefaults)}
-  @lr-close=${() => (dialogOpen = false)}
->
-  <button slot="footer" @click=${(e) => e.target.closest('lr-tool-select-dialog').close('done')}>
-    Done
-  </button>
+<lr-tool-select-dialog label="Select tools">
+  <button slot="footer" id="done-btn">Done</button>
 </lr-tool-select-dialog>
+<script type="module">
+  const dialog = document.querySelector("lr-tool-select-dialog");
+  dialog.tools = [
+    { id: "search", name: "Web search", category: "Research" },
+    { id: "python", name: "Python", category: "Code", description: "Run sandboxed Python" },
+    { id: "admin", name: "Admin console", disabled: true, disabledReason: "Requires admin approval" },
+  ];
+  dialog.selectedToolIds = enabledToolIds;
+  dialog.useDefaults = usingDefaults;
+  dialog.open = true;
+  dialog.addEventListener("lr-change", (e) =>
+    updateTools(e.detail.selectedToolIds, e.detail.useDefaults)
+  );
+  dialog.addEventListener("lr-close", () => (dialog.open = false));
+  dialog.querySelector("#done-btn").addEventListener("click", () => dialog.close("done"));
+</script>
 ```
 
 `useDefaults` is a single top-level switch: while `true`, every per-tool checkbox renders disabled
@@ -940,15 +949,14 @@ other text-entry surface in the library provides), plus shared tokens
 package, not an optional peer.
 
 ```html
-<lr-tool-approval-dialog
-  tool-name="send_email"
-  .args=${{ to: 'ops@example.com', subject: 'Deploy finished' }}
-  @lr-approve=${(e) => runTool(e.detail.args)}
-  @lr-deny=${() => console.log('denied')}
-  @lr-close=${(e) => console.log('closed:', e.detail)}
-></lr-tool-approval-dialog>
+<lr-tool-approval-dialog tool-name="send_email"></lr-tool-approval-dialog>
 <script type="module">
-  document.querySelector('lr-tool-approval-dialog').open = true;
+  const dialog = document.querySelector("lr-tool-approval-dialog");
+  dialog.args = { to: "ops@example.com", subject: "Deploy finished" };
+  dialog.addEventListener("lr-approve", (e) => runTool(e.detail.args));
+  dialog.addEventListener("lr-deny", () => console.log("denied"));
+  dialog.addEventListener("lr-close", (e) => console.log("closed:", e.detail));
+  dialog.open = true;
 </script>
 ```
 
@@ -1166,20 +1174,22 @@ form: `--lr-space-l/-xs/-s`, `--lr-color-border`, `--lr-radius`, `--lr-color-sur
 dependencies of this package imported directly, not optional peers.
 
 ```html
-<lr-tool-param-form
-  .schema=${{
-    type: 'object',
+<lr-tool-param-form></lr-tool-param-form>
+<script type="module">
+  const form = document.querySelector("lr-tool-param-form");
+  form.schema = {
+    type: "object",
     properties: {
-      title: { type: 'string', title: 'Title' },
-      attendees: { type: 'string', enum: ['team', 'everyone'], default: 'team' },
-      allDay: { type: 'boolean', title: 'All day' },
+      title: { type: "string", title: "Title" },
+      attendees: { type: "string", enum: ["team", "everyone"], default: "team" },
+      allDay: { type: "boolean", title: "All day" },
     },
-    required: ['title'],
-  }}
-  .value=${draftArgs}
-  @lr-input=${(e) => (draftArgs = e.detail.value)}
-  @lr-validity-change=${(e) => (formIsValid = e.detail.valid)}
-></lr-tool-param-form>
+    required: ["title"],
+  };
+  form.value = draftArgs;
+  form.addEventListener("lr-input", (e) => (draftArgs = e.detail.value));
+  form.addEventListener("lr-validity-change", (e) => (formIsValid = e.detail.valid));
+</script>
 ```
 
 This component owns no Submit/Cancel/Approve chrome — a consumer composes it inside their own dialog
@@ -1995,9 +2005,13 @@ repainting everything else that reads them.
 
 ```html
 <lr-tool-call-chip status="pending"></lr-tool-call-chip>
-<lr-confirm-bar tool-name="run_shell" .args=${args}
-  @lr-approve=${(e) => run(e.detail.args)} @lr-deny=${() => cancel()}
-></lr-confirm-bar>
+<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>
+<script type="module">
+  const bar = document.querySelector("lr-confirm-bar");
+  bar.args = args;
+  bar.addEventListener("lr-approve", (e) => run(e.detail.args));
+  bar.addEventListener("lr-deny", () => cancel());
+</script>
 ```
 
 An `lr-approve`/`lr-deny` listener that needs to await its own async work before finalizing calls
@@ -2059,9 +2073,13 @@ phase write queued while detached.
 viewport's aspect ratio.
 
 ```html
-<lr-browser-frame phase="streaming" url="https://example.com" .pings=${pings}
-  @lr-take-over=${(e) => setController(e.detail.controller)} @lr-stop=${() => stopSession()}
-></lr-browser-frame>
+<lr-browser-frame phase="streaming" url="https://example.com"></lr-browser-frame>
+<script type="module">
+  const frame = document.querySelector("lr-browser-frame");
+  frame.pings = pings;
+  frame.addEventListener("lr-take-over", (e) => setController(e.detail.controller));
+  frame.addEventListener("lr-stop", () => stopSession());
+</script>
 ```
 
 **Additional API surface:**
@@ -2135,11 +2153,17 @@ ancestor. They exist because `::part(view-button)[aria-pressed='true']` is inval
 library-wide brand tokens as the only prior lever.
 
 ```html
-<lr-artifact-panel label="report.md" kind="document" .versions=${versions}
-  @lr-restore=${(e) => restoreVersion(e.detail.versionId)}>
-  <lr-markdown .content=${markdown}></lr-markdown>
-  <lr-code-block slot="code" language="markdown" .code=${markdown}></lr-code-block>
+<lr-artifact-panel label="report.md" kind="document">
+  <lr-markdown id="preview"></lr-markdown>
+  <lr-code-block slot="code" id="code" language="markdown"></lr-code-block>
 </lr-artifact-panel>
+<script type="module">
+  const panel = document.querySelector("lr-artifact-panel");
+  panel.versions = versions;
+  panel.querySelector("#preview").content = markdown;
+  panel.querySelector("#code").code = markdown;
+  panel.addEventListener("lr-restore", (e) => restoreVersion(e.detail.versionId));
+</script>
 ```
 
 ## `lr-agent-run`

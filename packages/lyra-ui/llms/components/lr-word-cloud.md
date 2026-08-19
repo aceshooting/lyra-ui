@@ -46,9 +46,13 @@ number, color?: string, group?: string }` snapshots; malformed/hostile records a
   marking shortened strings with an ellipsis and disclosing omitted input through `[part="limit"]`.
   The returned sequence and records are frozen; reassign `words` after changes.
 - `minFontSize: number = 12` (attribute `min-font-size`) — px, applied to the lowest-weight word;
-  layout clamps positive finite values to at most 512px and uses 1px for invalid/non-positive values
+  a finite value is clamped to `[1, 512]` (so `0`/a negative value floors at `1px`, and an oversized
+  value caps at `512px`); a non-finite value (`NaN`/`Infinity`) falls back to the default `12px`
+  rather than to the `1px` floor
 - `maxFontSize: number = 48` (attribute `max-font-size`) — px, applied to the highest-weight word;
-  normalized by the same 1–512px layout bound (reversed min/max bounds are swapped)
+  clamped/defaulted the same way (a non-finite value falls back to `48px`, not to `1px`); a
+  resulting reversed pair (`minFontSize` greater than `maxFontSize`) is swapped rather than
+  inverting the weight-to-size mapping
 - `scale: 'linear'|'sqrt' = 'linear'` — `sqrt` compresses the weight→font-size mapping so one heavy
   word doesn't dwarf the rest, matching `lr-heatmap`'s `scale` property
 - `wordRotation: 'none'|'mixed' = 'none'` (attribute `word-rotation`, reflected) — `mixed` lets

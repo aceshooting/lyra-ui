@@ -62,14 +62,15 @@ export interface LyraEntityDossierConfidence {
 }
 
 export interface LyraEntityDossierEventMap
-  extends Omit<LyraNeighborListEventMap, 'lr-entity-activate' | 'lr-entity-select'>,
+  extends Omit<LyraNeighborListEventMap, 'lr-entity-select'>,
     LyraChunkInspectorEventMap,
     Omit<LyraProvenancePanelEventMap, 'lr-entity-activate' | 'lr-entity-select'>,
     Omit<LyraTabGroupEventMap, 'lr-tab-show'> {
   /** Canonical name for the "user picked this entity" gesture, surfaced unchanged from the
    *  embedded entity card or neighbor list. No composed child emits this with an
-   *  `occurrenceIndex` (only the deprecated `lr-entity-activate` alias does, via the provenance
-   *  panel's relationship path strip), so unlike that alias this stays the plain shape. */
+   *  `occurrenceIndex` (only the embedded provenance panel's own `lr-entity-activate` does, via
+   *  its community card and relationship path strip), so unlike that one this stays the plain
+   *  shape. */
   'lr-entity-select': CustomEvent<{ entityId: string }>;
   'lr-entity-activate': CustomEvent<{
     entityId: string;
@@ -112,9 +113,9 @@ export interface LyraEntityDossierEventMap
  *
  * @customElement lr-entity-dossier
  * @event lr-entity-select - Surfaced unchanged from the embedded entity card or neighbor list.
- *   `detail: { entityId }`. Fires before `lr-entity-activate`, from the same gesture.
- * @event lr-entity-activate - Surfaced unchanged from the embedded entity card or neighbor list.
- *   `detail: { entityId, occurrenceIndex? }`.
+ *   `detail: { entityId }`.
+ * @event lr-entity-activate - Surfaced unchanged from the embedded provenance panel's own
+ *   community card or relationship path strip. `detail: { entityId, occurrenceIndex? }`.
  * @event lr-node-expand - Surfaced unchanged from the embedded neighbor list.
  *   `detail: { nodeId }`.
  * @event lr-chunk-open - Surfaced unchanged from the embedded chunk inspector.

@@ -402,6 +402,7 @@ export const LYRA_DEFAULT_emojiPickerGroupPeopleBody: LyraMessage = 'People & Bo
 export const LYRA_DEFAULT_emojiPickerGroupSmileysEmotion: LyraMessage = 'Smileys & Emotion';
 export const LYRA_DEFAULT_emojiPickerGroupSymbols: LyraMessage = 'Symbols';
 export const LYRA_DEFAULT_emojiPickerGroupTravelPlaces: LyraMessage = 'Travel & Places';
+export const LYRA_DEFAULT_emojiPickerGroupUnknown: LyraMessage = 'Group {group}';
 export const LYRA_DEFAULT_emojiPickerLoadError: LyraMessage = 'Could not load emoji.';
 export const LYRA_DEFAULT_emojiPickerSearchLabel: LyraMessage = 'Search emoji';
 export const LYRA_DEFAULT_entityChipWithType: LyraMessage = '{label}, {type}';

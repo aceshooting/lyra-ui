@@ -1,5 +1,6 @@
 import type { LyraHighlightTone } from '../components/viewers/document-viewer/anchors.js';
 import { TEXT_QUOTE_LIMITS } from './text-quote.js';
+import { finiteDuration } from './numbers.js';
 
 const TONE_NAMES: LyraHighlightTone[] = ['accent', 'success', 'warning', 'danger', 'neutral'];
 const DEFAULT_FLASH_MS = 1800; // mirrors --lr-transition-ambient's default duration (see tokens.styles.ts)
@@ -125,7 +126,10 @@ export interface HighlightHandle {
   /** Marks (or clears, with `null`) this owner's single active-state range. */
   setActive(range: Range | null): void;
   /** Applies a one-shot emphasis flash to `range` for `durationMs` (default 1800, matching
-   *  `--lr-transition-ambient`'s default), then clears it automatically. */
+   *  `--lr-transition-ambient`'s default), then clears it automatically. `durationMs` is routed
+   *  through `finiteDuration()`: a non-finite value (`NaN`/`Infinity`, e.g. from an untyped
+   *  caller) falls back to the 1800ms default rather than firing immediately or never, and a
+   *  negative value clamps to 0 -- the clear still runs on a fresh async timer, never inline. */
   flash(range: Range, durationMs?: number): void;
   /** Removes every range this owner painted, across every tone/active/flash state. */
   release(): void;
@@ -287,7 +291,7 @@ function acquireFallbackHandle(_owner: object, doc: Document): HighlightHandle {
         if (generation !== flashGeneration || flashTimer !== handle) return;
         flashTimer = undefined;
         clear('lr-highlight-flash');
-      }, durationMs);
+      }, finiteDuration(durationMs, DEFAULT_FLASH_MS));
       flashTimer = handle;
     },
     release() {
@@ -327,7 +331,7 @@ function acquireCssHandle(
         if (generation !== flashGeneration || flashTimer !== handle) return;
         flashTimer = undefined;
         replaceCssOwned(state, 'lr-highlight-flash', owner, []);
-      }, durationMs);
+      }, finiteDuration(durationMs, DEFAULT_FLASH_MS));
       flashTimer = handle;
     },
     release() {

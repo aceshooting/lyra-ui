@@ -26,9 +26,16 @@ export const styles = css`
   }
   /* Reset native button/anchor chrome only where "base" is actually one of
      those (image and file-with-a-safe-link cases) -- a plain div/span never
-     had any to begin with, so this is harmless there too. */
+     had any to begin with, so this is harmless there too. These are ordinary
+     composite/native whole-card actions (an <img>, or an icon+filename chip), not a compact
+     icon-sized control, so this deliberately does not reach for the --lr-icon-button-size 40px
+     floor -- but a source image can render far smaller than that (a thumbnail, a tiny icon
+     upload), and WCAG 2.5.8 Target Size (Minimum) still applies at 24px. --lr-size-1-5rem (24px)
+     matches the floor lr-breadcrumb-item/lr-segmented/lr-map already use for the same contract. */
   button[part="base"],
   a[part="base"] {
+    min-inline-size: var(--lr-size-1-5rem);
+    min-block-size: var(--lr-size-1-5rem);
     cursor: pointer;
     padding: 0;
     -webkit-tap-highlight-color: transparent;

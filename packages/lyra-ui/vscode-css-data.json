@@ -8580,7 +8580,7 @@
       "name": "--lr-scroll-fade-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-segmented>`** (default: `2rem`) — Width of the fade at each horizontal scroll edge. The fade is applied only while the track actually overflows, so a row that fits is never dimmed.\n\n**`<lr-stepper>`** (default: `2rem`) — Width of each decorative horizontal overflow fade. Pointer-state hooks use inline `var()` fallbacks rather than a `:host` declaration, so they inherit from the stepper or any ancestor without retheming another state.\n\n**`<lr-tab-group>`** (default: `2rem`) — Width of the fade at each horizontal scroll edge. The fade is applied only while the tablist actually overflows, so a row that fits is never dimmed.\n\n**`<lr-timeline>`** (default: `2rem`) — Inline size of each edge fade while a horizontal timeline overflows. Forced-colors mode disables the masks while retaining native scrolling.\n\n**Shared design token** — Canonical shared component token for scroll fade size. Reads `--lr-theme-scroll-fade-size`."
+        "value": "**`<lr-segmented>`** (default: `2rem`) — Width of the fade at each horizontal scroll edge. The fade is applied only while the track actually overflows, so a row that fits is never dimmed.\n\n**`<lr-stepper>`** (default: `2rem`) — Width of each decorative horizontal overflow fade. Pointer-state hooks use inline `var()` fallbacks rather than a `:host` declaration, so they inherit from the stepper or any ancestor without retheming another state.\n\n**`<lr-tab-group>`** (default: `2rem`) — Width of the fade at each horizontal scroll edge. The fade is applied only while the tablist actually overflows, so a row that fits is never dimmed.\n\n**`<lr-timeline>`** (default: `2rem`) — Inline size of each edge fade while a horizontal timeline overflows. Forced-colors mode disables the masks while retaining native scrolling.\n\n**`<lr-widget>`** (default: `2rem`) — Width of the fade at each horizontal scroll edge of the `actions`/`view-toggles` header rows. The fade is applied only while a row actually overflows, so a row that fits is never dimmed. `fullscreen-inset` overrides the safe-area panel inset while the viewport-filling backdrop stays at zero by default. `compact` tightens header/body padding — same convention as `lr-empty`.\n\n**Shared design token** — Canonical shared component token for scroll fade size. Reads `--lr-theme-scroll-fade-size`."
       }
     },
     {
@@ -14264,7 +14264,7 @@
       "name": "--lr-widget-backdrop-inset",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-widget>`** (default: `0`) — The `inset` applied to `[part=\"backdrop\"]`, so the scrim can be pulled back independently of the panel. Also set inline from the `backdrop-inset` attribute. `fullscreen-inset` overrides the safe-area panel inset while the viewport-filling backdrop stays at zero by default. `compact` tightens header/body padding — same convention as `lr-empty`."
+        "value": "**`<lr-widget>`** (default: `0`) — The `inset` applied to `[part=\"backdrop\"]`, so the scrim can be pulled back independently of the panel. Also set inline from the `backdrop-inset` attribute."
       }
     },
     {

@@ -54,14 +54,14 @@ type Section = 'entities' | 'relationships' | 'communities' | 'chunks';
  *  `<lr-provenance-panel>` itself. Declaring only `lr-toggle` typed those controls out of existence
  *  for anyone building handlers off this type. */
 export interface LyraProvenancePanelEventMap
-  extends Omit<LyraCommunityCardEventMap, 'lr-entity-activate' | 'lr-entity-select'>,
-    Omit<LyraEntityChipEventMap, 'lr-entity-activate' | 'lr-entity-select'>,
-    Omit<LyraPathStripEventMap, 'lr-entity-activate' | 'lr-entity-select'>,
+  extends Omit<LyraCommunityCardEventMap, 'lr-entity-activate'>,
+    Omit<LyraEntityChipEventMap, 'lr-entity-select'>,
+    Omit<LyraPathStripEventMap, 'lr-entity-activate'>,
     LyraChunkInspectorEventMap {
   /** Canonical name for the "user picked this entity" gesture, surfaced unchanged from an
    *  embedded entity chip. No composed child emits this with an `occurrenceIndex` (only the
-   *  deprecated `lr-entity-activate` alias does, via the relationship path strip), so unlike
-   *  that alias this stays the plain shape. */
+   *  community card and the relationship path strip's own `lr-entity-activate` do), so unlike
+   *  those this stays the plain shape. */
   'lr-entity-select': CustomEvent<{ entityId: string }>;
   'lr-entity-activate': CustomEvent<{
     entityId: string;
@@ -82,9 +82,9 @@ export interface LyraProvenancePanelEventMap
  * @customElement lr-provenance-panel
  * @event lr-toggle - A section header was toggled. `detail: { section, expanded }`.
  * @event lr-entity-select - Surfaced unchanged from an embedded entity chip.
- *   `detail: { entityId }`. Fires before `lr-entity-activate`, from the same gesture.
- * @event lr-entity-activate - Surfaced unchanged from an embedded entity chip, community card, or
- *   relationship path strip. `detail: { entityId, occurrenceIndex? }`.
+ *   `detail: { entityId }`.
+ * @event lr-entity-activate - Surfaced unchanged from an embedded community card or relationship
+ *   path strip. `detail: { entityId, occurrenceIndex? }`.
  * @event lr-entity-open - Surfaced unchanged from an embedded entity chip (double-click, or Space
  *   while focused). `detail: { entityId }`.
  * @event lr-drill - Surfaced unchanged from an embedded community card's title, drill button, or

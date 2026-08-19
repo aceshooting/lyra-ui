@@ -1155,7 +1155,6 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
             .renderItem=${this.renderCell}
             .keyFunction=${(item: unknown, i: number) => (item as NotebookCell).id ?? i}
             .activeItemId=${this.activeCellIndex ?? ''}
-            @lr-visible-range-changed=${this.stopVirtualListEvent}
             @lr-visible-range-change=${this.stopVirtualListEvent}
             @lr-virtual-scroll=${this.stopVirtualListEvent}
           ></lr-virtual-list>`

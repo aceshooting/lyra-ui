@@ -6,6 +6,7 @@ import { styles } from "./segmented.styles.js";
 import "../../forms/select/select.js";
 import type { LyraSelect } from "../../forms/select/select.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { setForcedColors } from "../../../../test/wtr-media.js";
 
 const items = () => [
   { value: "day", label: "Day" },
@@ -742,6 +743,99 @@ describe("item icon", () => {
     expect(getComputedStyle(base).maskImage).to.equal("none");
   });
 
+  it("flips the edge fade on once a segment's own content grows, without any host update or [part=\"base\"] resize/scroll", async () => {
+    // The gap this guards: ScrollOverflowController's plain ResizeObserver only watches
+    // [part="base"]'s own border box. A segment's content (a long localized label swapped in, a
+    // web font finishing its swap, an icon loading) can grow scrollWidth without base's own box
+    // changing at all. Two platform confounds would otherwise mask the gap in a real browser
+    // rather than exercise it, so this fixture neutralizes both: (1) `scrollbar-width: none`
+    // removes the classic scrollbar's own reserved block-axis space, so the fits -> overflows
+    // transition itself cannot change base's clientHeight and spuriously re-trigger the existing
+    // plain ResizeObserver for an unrelated reason; (2) leaving `scrollLeft` untouched at its
+    // default `0` avoids Chromium re-firing a genuine native `scroll` event whenever an
+    // overflowing track's `scrollWidth` changes while scrolled away from position `0` -- itself
+    // a real, useful side effect of this fix's new scroll listener, but not the one this test
+    // targets. Growing the segment via an explicit flex-basis (rather than appending text, which
+    // the default `flex-shrink: 1`/`min-inline-size: 0` on [part="segment"] can simply shrink
+    // back down to fit) gives a deterministic box growth -- mirrors
+    // `<lr-timeline-item style="flex: 0 0 200px">` in timeline.test.ts. Setting it directly on
+    // the rendered segment (bypassing the `items` property, so no Lit re-render/hostUpdated() run
+    // happens either) isolates the ResizeObserver path from the synchronous hostUpdated()
+    // measurement.
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()} value="week"></lr-segmented>`
+    )) as LyraSegmented;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.style.scrollbarWidth = "none";
+    await nextFrames();
+    expect(
+      base.scrollWidth - base.clientWidth,
+      "sanity check: the row must fit before the content grows"
+    ).to.be.at.most(1);
+    expect(base.hasAttribute("data-scroll-overflow")).to.be.false;
+
+    // Pin base's own border box to its current (naturally-fitting) size -- a real fixed-width
+    // panel, so the row genuinely cannot grow its own box in response to the content change below.
+    base.style.inlineSize = `${base.getBoundingClientRect().width}px`;
+    const clientWidthBefore = base.clientWidth;
+    const clientHeightBefore = base.clientHeight;
+
+    const lastSegment = segmentButtons(el).at(-1)!;
+    lastSegment.style.flex = "0 0 400px";
+    await nextFrames();
+
+    expect(
+      base.clientWidth,
+      "sanity check: base's own inline border box must not have changed"
+    ).to.equal(clientWidthBefore);
+    expect(
+      base.clientHeight,
+      "sanity check: base's own block border box must not have changed either"
+    ).to.equal(clientHeightBefore);
+    expect(base.scrollLeft, "sanity check: never programmatically scrolled").to.equal(0);
+    expect(base.scrollWidth).to.be.greaterThan(base.clientWidth);
+    expect(base.hasAttribute("data-scroll-overflow")).to.be.true;
+    expect(getComputedStyle(base).maskImage).to.contain("linear-gradient");
+  });
+
+  it("fades only the reachable logical edge, RTL-aware, instead of dimming an edge already fully in view", async () => {
+    for (const direction of ["ltr", "rtl"] as const) {
+      const el = (await fixture(
+        html`<lr-segmented
+          dir=${direction}
+          style="max-inline-size: 80px"
+          .items=${items()}
+          value="week"
+        ></lr-segmented>`
+      )) as LyraSegmented;
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      await nextFrames();
+      expect(base.scrollWidth, `${direction} sanity: must overflow`).to.be.greaterThan(
+        base.clientWidth
+      );
+      expect(
+        base.hasAttribute("data-scroll-start"),
+        `${direction} initial start`
+      ).to.be.false;
+      expect(
+        base.hasAttribute("data-scroll-end"),
+        `${direction} initial end`
+      ).to.be.true;
+
+      const maximum = base.scrollWidth - base.clientWidth;
+      base.scrollLeft = direction === "rtl" ? -maximum : maximum;
+      base.dispatchEvent(new Event("scroll"));
+      expect(
+        base.hasAttribute("data-scroll-start"),
+        `${direction} final start`
+      ).to.be.true;
+      expect(
+        base.hasAttribute("data-scroll-end"),
+        `${direction} final end`
+      ).to.be.false;
+    }
+  });
+
   it("removes the decorative edge mask under forced colors", () => {
     const css = styles.cssText.replace(/\s+/g, " ");
     expect(css).to.contain("@media (forced-colors: active)");
@@ -750,6 +844,39 @@ describe("item icon", () => {
     );
     expect(forcedColors).to.contain("-webkit-mask-image: none");
     expect(forcedColors).to.contain("mask-image: none");
+  });
+
+  it("actually renders no mask under forced colors, in both LTR and RTL, while only one logical edge is reachable", async () => {
+    // Stylesheet-text substring checks (the test above) cannot catch a specificity regression: the
+    // one-sided mask rules above use three/four attribute selectors (higher specificity than the
+    // forced-colors override's two), so without the :where()-wrapping that keeps their specificity
+    // pinned to the plain [data-scroll-overflow] selector, the gradient mask would keep winning the
+    // cascade even under forced-colors. Assert the real computed style, not the source text.
+    try {
+      await setForcedColors("active");
+      for (const direction of ["ltr", "rtl"] as const) {
+        const el = (await fixture(
+          html`<lr-segmented
+            dir=${direction}
+            style="max-inline-size: 80px"
+            .items=${items()}
+            value="week"
+          ></lr-segmented>`
+        )) as LyraSegmented;
+        const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+        await nextFrames();
+        expect(base.hasAttribute("data-scroll-overflow"), `${direction} sanity: overflowing`).to.be
+          .true;
+        // Only one logical edge is reachable at the initial (unscrolled) position -- exactly the
+        // state whose one-sided selector has the higher specificity that must still lose to
+        // forced-colors.
+        expect(base.hasAttribute("data-scroll-end"), `${direction} sanity: one-sided state`).to.be
+          .true;
+        expect(getComputedStyle(base).maskImage, `${direction} forced-colors mask`).to.equal("none");
+      }
+    } finally {
+      await setForcedColors("none");
+    }
   });
 
   it("keeps the edge fade opaque when a consumer themes the shadow color translucent", async () => {

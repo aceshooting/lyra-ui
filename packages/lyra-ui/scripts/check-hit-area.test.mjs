@@ -33,6 +33,7 @@ const included = [
   target({ component: 'lr-segmented', part: 'segment', size: '2xs' }),
   target({ component: 'lr-segmented', part: 'segment', size: 'xs' }),
   target({ component: 'lr-embedding-explorer', part: 'point', allocationPx: 383 }),
+  target({ component: 'lr-media-card', part: 'base', mediaKind: 'image' }),
   target({ component: 'lr-graph', part: 'node', renderer: 'svg', cameraScale: 0.25 }),
   target({ component: 'lr-graph', part: 'node', renderer: 'canvas', cameraScale: 0.25 }),
   target({ component: 'lr-graph', part: 'link', renderer: 'svg', cameraScale: 0.25 }),
@@ -59,7 +60,7 @@ const included = [
 
 assert.deepEqual(
   included.map((fixture) => targetHitAreaContract(fixture)?.minimumPx),
-  [40, 40, 40, 40, 40, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24],
+  [40, 40, 40, 40, 40, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24],
   'the approved compact and physical-target states participate at their exact floors',
 );
 
@@ -137,6 +138,10 @@ const excluded = [
   target({ component: 'lr-rating', part: 'base', max: 2 }),
   target({ component: 'lr-rating', part: 'base', max: 5 }),
   target({ component: 'lr-embedding-explorer', part: 'point', allocationPx: 384 }),
+  target({ component: 'lr-media-card', part: 'base', mediaKind: 'file' }),
+  target({ component: 'lr-media-card', part: 'base', mediaKind: 'video' }),
+  target({ component: 'lr-media-card', part: 'base' }),
+  target({ component: 'lr-media-card', part: 'open-button', mediaKind: 'video' }),
   target({
     component: 'lr-graph',
     part: 'hull',

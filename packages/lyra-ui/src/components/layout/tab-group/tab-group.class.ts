@@ -258,7 +258,10 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   fixedScrollControls = false;
 
   /** The group's real unnamed slot. It is kept hidden because Lyra assigns each tab and panel to
-   * its own deterministic named slot, but remains exposed for mapped slot observation. */
+   * its own deterministic named slot, but remains exposed for mapped slot observation. Stays a
+   * writable `@query` field rather than a readonly `get`: `wa-tab-group` declares it writable, and
+   * check-pinned-upstream-manifests treats a readonly-vs-writable difference on a mirrored member
+   * as an `unsupported` surface drift -- a release blocker. */
   @query('slot:not([name])') defaultSlot!: HTMLSlotElement;
 
   @state() private tabs: TabDef[] = [];

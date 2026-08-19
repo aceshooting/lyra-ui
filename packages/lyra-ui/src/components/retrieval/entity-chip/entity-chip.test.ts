@@ -21,20 +21,7 @@ it('renders the text as its visible content, not entityId', async () => {
   );
 });
 
-it('emits lr-entity-activate on click with the entityId', async () => {
-  const el = (await fixture(
-    html`<lr-entity-chip entity-id="e17" text="Marie Curie"></lr-entity-chip>`
-  )) as LyraEntityChip;
-  const button = el.shadowRoot!.querySelector(
-    '[part="base"]'
-  ) as HTMLButtonElement;
-  const listener = oneEvent(el, 'lr-entity-activate');
-  button.click();
-  const event = await listener;
-  expect(event.detail).to.deep.equal({ entityId: 'e17' });
-});
-
-it('also emits the canonical lr-entity-select on click, with an identical detail', async () => {
+it('emits lr-entity-select on click with the entityId', async () => {
   const el = (await fixture(
     html`<lr-entity-chip entity-id="e17" text="Marie Curie"></lr-entity-chip>`
   )) as LyraEntityChip;
@@ -47,32 +34,23 @@ it('also emits the canonical lr-entity-select on click, with an identical detail
   expect(event.detail).to.deep.equal({ entityId: 'e17' });
 });
 
-it('fires lr-entity-select and lr-entity-activate exactly once each, canonical first, from one click', async () => {
+it('fires lr-entity-select exactly once from one click', async () => {
   const el = (await fixture(
     html`<lr-entity-chip entity-id="e17" text="Marie Curie"></lr-entity-chip>`
   )) as LyraEntityChip;
   const button = el.shadowRoot!.querySelector(
     '[part="base"]'
   ) as HTMLButtonElement;
-  const order: string[] = [];
   let selectCount = 0;
-  let activateCount = 0;
   el.addEventListener('lr-entity-select', () => {
     selectCount++;
-    order.push('lr-entity-select');
-  });
-  el.addEventListener('lr-entity-activate', () => {
-    activateCount++;
-    order.push('lr-entity-activate');
   });
   button.click();
   await el.updateComplete;
   expect(selectCount).to.equal(1);
-  expect(activateCount).to.equal(1);
-  expect(order).to.deep.equal(['lr-entity-select', 'lr-entity-activate']);
 });
 
-it('does not emit lr-entity-select on dblclick (only lr-entity-open, unaffected by this alias)', async () => {
+it('does not emit lr-entity-select on dblclick (only lr-entity-open)', async () => {
   const el = (await fixture(
     html`<lr-entity-chip entity-id="e17" text="Marie Curie"></lr-entity-chip>`
   )) as LyraEntityChip;

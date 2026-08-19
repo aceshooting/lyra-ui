@@ -22,7 +22,7 @@ import { loadEmojiDataCached } from './emoji-data-loader.js';
 import type { EmojiPickerItem, EmojiPickerGroup } from './emoji-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_emojiPickerEmpty, LYRA_DEFAULT_emojiPickerGridLabel, LYRA_DEFAULT_emojiPickerGroupActivities, LYRA_DEFAULT_emojiPickerGroupAnimalsNature, LYRA_DEFAULT_emojiPickerGroupComponent, LYRA_DEFAULT_emojiPickerGroupFlags, LYRA_DEFAULT_emojiPickerGroupFoodDrink, LYRA_DEFAULT_emojiPickerGroupObjects, LYRA_DEFAULT_emojiPickerGroupPeopleBody, LYRA_DEFAULT_emojiPickerGroupSmileysEmotion, LYRA_DEFAULT_emojiPickerGroupSymbols, LYRA_DEFAULT_emojiPickerGroupTravelPlaces, LYRA_DEFAULT_emojiPickerLoadError, LYRA_DEFAULT_emojiPickerSearchLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_emojiPickerEmpty, LYRA_DEFAULT_emojiPickerGridLabel, LYRA_DEFAULT_emojiPickerGroupActivities, LYRA_DEFAULT_emojiPickerGroupAnimalsNature, LYRA_DEFAULT_emojiPickerGroupComponent, LYRA_DEFAULT_emojiPickerGroupFlags, LYRA_DEFAULT_emojiPickerGroupFoodDrink, LYRA_DEFAULT_emojiPickerGroupObjects, LYRA_DEFAULT_emojiPickerGroupPeopleBody, LYRA_DEFAULT_emojiPickerGroupSmileysEmotion, LYRA_DEFAULT_emojiPickerGroupSymbols, LYRA_DEFAULT_emojiPickerGroupTravelPlaces, LYRA_DEFAULT_emojiPickerGroupUnknown, LYRA_DEFAULT_emojiPickerLoadError, LYRA_DEFAULT_emojiPickerSearchLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { EmojiPickerItem, EmojiPickerGroup };
@@ -295,6 +295,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     emojiPickerGroupSmileysEmotion: LYRA_DEFAULT_emojiPickerGroupSmileysEmotion,
     emojiPickerGroupSymbols: LYRA_DEFAULT_emojiPickerGroupSymbols,
     emojiPickerGroupTravelPlaces: LYRA_DEFAULT_emojiPickerGroupTravelPlaces,
+    emojiPickerGroupUnknown: LYRA_DEFAULT_emojiPickerGroupUnknown,
     emojiPickerLoadError: LYRA_DEFAULT_emojiPickerLoadError,
     emojiPickerSearchLabel: LYRA_DEFAULT_emojiPickerSearchLabel,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
@@ -679,10 +680,20 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     this.requestUpdate();
   };
 
-  /** Localizes only groups whose object identity came from the built-in loader. */
+  /**
+   * Localizes only groups whose object identity came from the built-in loader. A built-in group
+   * whose numeric id isn't in `BUILT_IN_GROUP_LABEL_KEYS` (none exist in the emojibase dataset
+   * shipped today, ids 0-9 are all mapped -- but a future dataset update could add one) still gets
+   * a localized heading via the generic `emojiPickerGroupUnknown` key rather than the loader's own
+   * `group.label`, which is a plain, unlocalized placeholder meant only for a caller who consumes
+   * `loadEmojiData()` directly without going through this component's rendering.
+   */
   private groupLabel(group: EmojiPickerGroup): string {
-    const labelKey = this.builtInGroups.has(group) ? BUILT_IN_GROUP_LABEL_KEYS[group.key] : undefined;
-    return labelKey ? this.localize(labelKey) : group.label;
+    if (!this.builtInGroups.has(group)) return group.label;
+    const labelKey = BUILT_IN_GROUP_LABEL_KEYS[group.key];
+    return labelKey
+      ? this.localize(labelKey)
+      : this.localize('emojiPickerGroupUnknown', undefined, { group: group.key });
   }
 
   private virtualRows(): VirtualEmojiRow[] {

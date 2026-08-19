@@ -1779,6 +1779,26 @@ it('enforces single cardinality when a populated multiple selection switches mod
   expect(el.shadowRoot!.querySelectorAll('[part="row"][aria-selected="true"]').length).to.equal(1);
 });
 
+it('states aria-multiselectable="false" explicitly for non-multiple selection modes, not merely its absence', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.rowKey = (row) => row.id;
+  await el.updateComplete;
+  const table = el.shadowRoot!.querySelector('[part="table"]') as HTMLElement;
+
+  expect(el.selectionMode).to.equal('none');
+  expect(table.getAttribute('aria-multiselectable')).to.equal('false');
+
+  el.selectionMode = 'single';
+  await el.updateComplete;
+  expect(table.getAttribute('aria-multiselectable')).to.equal('false');
+
+  el.selectionMode = 'multiple';
+  await el.updateComplete;
+  expect(table.getAttribute('aria-multiselectable')).to.equal('true');
+});
+
 it('emits lr-selection-change when a selectionMode flip silently coerces an over-large selection', async () => {
   // The interactive click/keyboard selection paths already emit lr-selection-change; this is the
   // *other* mutation site, the willUpdate() coercion that clamps a multi-row selection down to one

@@ -1323,7 +1323,10 @@ setLyraLocale("fr"); // page-level selection; see the precedence order below
 ```
 
 ```html
-<lr-toast .strings=${{ close: 'Fermer' }}></lr-toast>
+<lr-toast></lr-toast>
+<script type="module">
+  document.querySelector("lr-toast").strings = { close: "Fermer" };
+</script>
 ```
 
 **Which locale a component ends up using.** Four sources, first answer wins:
@@ -1715,7 +1718,7 @@ control) is a single tab stop using a roving `tabindex`; arrow keys move within 
 `Escape` dismisses the topmost dismissible overlay and returns focus to whatever opened it.
 `ArrowLeft`/`ArrowRight` mean previous/next and swap under `dir="rtl"`.
 
-**What that contract is verified by, precisely.** Every one of the 283 components carries at least
+**What that contract is verified by, precisely.** Every one of the 284 public tags carries at least
 one axe-core assertion in its own directory's tests, in a test that mounts its own tag; contrast
 (4.5:1 text, 3:1 control borders, in both the light and dark palettes), a 40px minimum target size,
 pressed-state coverage for every hoverable part, and `::part()` reachability are separate blocking
@@ -7534,6 +7537,7 @@ Mapped aliases are also live: `--thumb-size`, `--thumb-width`, `--thumb-height`,
 
 ```html
 <lr-slider
+  id="temperature-slider"
   name="temperature"
   min="0"
   max="2"
@@ -7542,14 +7546,11 @@ Mapped aliases are also live: `--thumb-size`, `--thumb-width`, `--thumb-height`,
   hint="Higher values make replies more varied."
   with-markers
   with-tooltip
-  .valueAsNumber=${0.7}
-  .valueFormatter=${(value, handle) => `${value * 100}%`}
-  @lr-input=${(e) => setDraftTemperature(e.detail.value)}
-  @lr-change=${(e) => commitTemperature(e.detail.value)}
 ></lr-slider>
 
 <!-- Two handles, vertical. A name submits two `price` entries. -->
 <lr-slider
+  id="price-slider"
   range
   name="price"
   orientation="vertical"
@@ -7559,8 +7560,17 @@ Mapped aliases are also live: `--thumb-size`, `--thumb-width`, `--thumb-height`,
   min-value="200"
   max-value="800"
   label="Price"
-  @lr-change=${(e) => applyPriceFilter(e.detail.minValue, e.detail.maxValue)}
 ></lr-slider>
+<script type="module">
+  const temperature = document.getElementById("temperature-slider");
+  temperature.valueAsNumber = 0.7;
+  temperature.valueFormatter = (value, handle) => `${value * 100}%`;
+  temperature.addEventListener("lr-input", (e) => setDraftTemperature(e.detail.value));
+  temperature.addEventListener("lr-change", (e) => commitTemperature(e.detail.value));
+
+  const price = document.getElementById("price-slider");
+  price.addEventListener("lr-change", (e) => applyPriceFilter(e.detail.minValue, e.detail.maxValue));
+</script>
 ```
 
 An unset `value` starts at numeric `0`, clamped into the configured domain and step grid. A reset
@@ -9909,7 +9919,13 @@ cell: (row) => unknown }` —
 - `groupLabel?: (key: string | number, rows: readonly T[]) => unknown` (attribute: false) — custom group
   header content; without it, the group key is rendered as text
 - `expandedContent?: (row: T) => unknown` (attribute: false) — enables a leading expand toggle and
-  renders a full-width detail row beneath expanded records
+  renders a full-width detail row beneath expanded records. The returned content renders inside
+  the component's shadow root, behind the `expanded-cell` part — page CSS cannot reach it, and
+  `::part(expanded-cell)` only reaches the wrapping `<td>` itself, not the descendants this
+  callback returns (the same `::part()` limitation a column's `cell(row)` anchors run into, see
+  `--lr-table-cell-link-color` below). Style such content by returning already-styled elements —
+  inline `style`, or elements that reference this table's own `--lr-*` design tokens, which
+  inherit across the shadow boundary like any custom property
 - `canExpand?: (row: T) => boolean` (attribute: false) — optional per-row gate for expansion
 - `expandedRowKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — consumer-controlled
   expanded state bounded to 10,000 keys; malformed and whitespace-only string keys are omitted while valid
@@ -10540,9 +10556,13 @@ number, color?: string, group?: string }` snapshots; malformed/hostile records a
   marking shortened strings with an ellipsis and disclosing omitted input through `[part="limit"]`.
   The returned sequence and records are frozen; reassign `words` after changes.
 - `minFontSize: number = 12` (attribute `min-font-size`) — px, applied to the lowest-weight word;
-  layout clamps positive finite values to at most 512px and uses 1px for invalid/non-positive values
+  a finite value is clamped to `[1, 512]` (so `0`/a negative value floors at `1px`, and an oversized
+  value caps at `512px`); a non-finite value (`NaN`/`Infinity`) falls back to the default `12px`
+  rather than to the `1px` floor
 - `maxFontSize: number = 48` (attribute `max-font-size`) — px, applied to the highest-weight word;
-  normalized by the same 1–512px layout bound (reversed min/max bounds are swapped)
+  clamped/defaulted the same way (a non-finite value falls back to `48px`, not to `1px`); a
+  resulting reversed pair (`minFontSize` greater than `maxFontSize`) is swapped rather than
+  inverting the weight-to-size mapping
 - `scale: 'linear'|'sqrt' = 'linear'` — `sqrt` compresses the weight→font-size mapping so one heavy
   word doesn't dwarf the rest, matching `lr-heatmap`'s `scale` property
 - `wordRotation: 'none'|'mixed' = 'none'` (attribute `word-rotation`, reflected) — `mixed` lets
@@ -12002,17 +12022,18 @@ sizes a legend chip on both axes. Otherwise the component consumes shared tokens
 **Optional peer deps:** none.
 
 ```html
-<lr-context-meter
-  label="128K context window"
-  total="128000"
-  .segments=${[
-    { label: 'System prompt', value: 2200, tone: 'neutral' },
-    { label: 'Conversation history', value: 61000, tone: 'brand' },
-    { label: 'Retrieved context', value: 30800, tone: 'warning' },
-  ]}
-></lr-context-meter>
+<lr-context-meter label="128K context window" total="128000"></lr-context-meter>
 
-<lr-context-meter shape="ring" total="128000" .segments=${segments}></lr-context-meter>
+<lr-context-meter shape="ring" total="128000"></lr-context-meter>
+<script type="module">
+  const [meter, ringMeter] = document.querySelectorAll("lr-context-meter");
+  meter.segments = [
+    { label: "System prompt", value: 2200, tone: "neutral" },
+    { label: "Conversation history", value: 61000, tone: "brand" },
+    { label: "Retrieved context", value: 30800, tone: "warning" },
+  ];
+  ringMeter.segments = segments;
+</script>
 ```
 
 An internal visually-hidden semantic node carries `role="meter"` plus `aria-valuenow`,
@@ -12074,10 +12095,9 @@ title, readonly color?, readonly data? }`; `date` is an ISO `YYYY-MM-DD` string 
   regardless of locale; it now derives from the effective locale through the same
   `resolveFirstDayOfWeek()` contract `<lr-date-picker>`/`<lr-date-input>` already use, so an unset
   `<lr-calendar>` renders Sunday-first under `en-US` and Monday-first under `fr-FR` instead of
-  disagreeing with a date picker on the same page. Still accepts a bare `0`–`6` integer
-  (`0`=Sunday … `6`=Saturday) — sanitized to a finite integer and wrapped into `0`–`6`, so a
-  malformed value can't drop days — or one of the shared weekday-name tokens (`'auto'`, then
-  `'sun'` through `'sat'`) to pin the week start independent of locale. Pass `1` explicitly to keep
+  disagreeing with a date picker on the same page. **Also breaking in 10.0.0:** the bare `0`–`6`
+  integer form is gone; the value is now one of the shared weekday-name tokens (`'auto'`, then
+  `'sun'` through `'sat'`), which pins the week start independent of locale. Pass `'mon'` to keep
   the pre-10.0.0 rendering.
 - `accessibleLabel: string = ''` (attribute `aria-label`) — names the host. The nested calendar
   section retains the localized purpose name rather than duplicating an authored host name; when
@@ -14369,11 +14389,16 @@ is pending.
 between rows.
 
 ```html
-<lr-reorder-list label="Form fields" @lr-reorder=${(e) => console.log(e.detail.order)}>
+<lr-reorder-list label="Form fields">
   <lr-reorder-item value="name">Name</lr-reorder-item>
   <lr-reorder-item value="email">Email</lr-reorder-item>
   <lr-reorder-item value="phone">Phone</lr-reorder-item>
 </lr-reorder-list>
+<script type="module">
+  document
+    .querySelector("lr-reorder-list")
+    .addEventListener("lr-reorder", (e) => console.log(e.detail.order));
+</script>
 ```
 
 **Known gotchas:**
@@ -14664,7 +14689,7 @@ progress` style, and gates `lr-load-more` while a consumer's fetch is in flight.
 **Exported types:** `VirtualListRowHeight = number | 'auto'`;
 `VirtualListSource<T> = readonly T[] | VirtualListIndexedSource<T>` and
 `VirtualListIndexedSource<T> { readonly count: number; itemAt(index): T; keyAt?(index): string |
-number; indexOfKey?(key: string | number): number }`; `VirtualListRange { start: number; end: number }` (the `lr-visible-range-changed`
+number; indexOfKey?(key: string | number): number }`; `VirtualListRange { start: number; end: number }` (the `lr-visible-range-change`
 detail shape); `VirtualListGroup { key: string | number; label?: string; startIndex: number }` — the
 shape consumed by `groups` above; `VirtualListScroll { scrollTop: number; viewportHeight: number }` —
 the `lr-virtual-scroll` detail shape.
@@ -14710,10 +14735,9 @@ math, and any row element can be recycled or removed on the next update.
 `has-more` is true and `loading` is false; does not refire on every scroll tick while still near the
 bottom — scrolling back away from the bottom and returning, or `items` growing enough to move the
 window away from the end, re-arms it), `lr-visible-range-change` (`detail: VirtualListRange`, the
-current visible, non-overscanned item index range — fired only when it actually changes;
-`lr-visible-range-changed` is a deprecated alias fired alongside it with the identical detail object,
-removal not before 11.0.0 — it was the only past-tense `-changed` spelling among 58 `-change`-family
-events, so a convention-driven `lr-${x}-change` listener silently missed it),
+current visible, non-overscanned item index range — fired only when it actually changes; it was
+spelled `lr-visible-range-changed` before 10.0.0, the only past-tense `-changed` spelling among 58
+`-change`-family events, so a convention-driven `lr-${x}-change` listener silently missed it),
 `lr-virtual-scroll`
 (`detail: VirtualListScroll` — the scroll container moved; emitted from the same animation frame that
 already coalesces native `scroll` events, so a fling produces at most one per frame and none at all
@@ -14748,8 +14772,10 @@ activation target.
 
 **Optional peer deps:** none.
 
-```html
-<lr-virtual-list
+```ts
+import { html } from "lit";
+
+const view = html`<lr-virtual-list
   .items=${sessions}
   .renderItem=${(item, index) => html`
     <lr-conversation-item
@@ -14764,12 +14790,14 @@ activation target.
   ?has-more=${hasMorePages}
   ?loading=${isLoadingMore}
   @lr-load-more=${() => loadNextPage()}
-  @lr-visible-range-changed=${(e) => console.log('visible', e.detail.start, e.detail.end)}
-  @lr-virtual-scroll=${(e) => console.log('scroll top', e.detail.scrollTop)}
-></lr-virtual-list>
+  @lr-visible-range-change=${(e) => console.log("visible", e.detail.start, e.detail.end)}
+  @lr-virtual-scroll=${(e) => console.log("scroll top", e.detail.scrollTop)}
+></lr-virtual-list>`;
 ```
 
 ```ts
+import { html } from "lit";
+
 // No count-sized array: only the current window is read.
 const syntheticRows = {
   count: 100_000,
@@ -14786,15 +14814,17 @@ html`<lr-virtual-list
 ></lr-virtual-list>`;
 ```
 
-```html
-<!-- Sticky group headers: the header is a real row, so the `groups` entries are position anchors
-     only (`label: ''`); the pinned copy remains strictly presentational. -->
-<lr-virtual-list
+```ts
+import { html } from "lit";
+
+// Sticky group headers: the header is a real row, so the `groups` entries are position anchors
+// only (`label: ''`); the pinned copy remains strictly presentational.
+const view = html`<lr-virtual-list
   .items=${rows}
   .groups=${groupStarts /* [{ key: 'Today', label: '', startIndex: 0 }, …] */}
   .renderItem=${(item, index) => (item.isHeader ? headerTemplate(item) : rowTemplate(item))}
   .renderStickyGroup=${(group) => headerTemplate(group)}
-></lr-virtual-list>
+></lr-virtual-list>`;
 ```
 
 Every row is positioned by a `transform: translateY(offset)`, rather than page flow, so only a small
@@ -15150,13 +15180,17 @@ invention (no `wa-*`/`sl-*` counterpart).
   anchors to its block-end edge and does not cover the full height. Has no visual effect while the effective
   presentation resolves to `'inline'`.
 - `label: string = ''` — accessible name for the overlay presentation's `role="dialog"`, used
-  verbatim when set. When empty, falls back to the `header` slot's content: a heading element
-  (`h1`–`h6` or `[role="heading"]`) among the slotted header content wins if present, otherwise the
-  header slot's combined text content is used (mirrors `lr-dialog`'s `detectHeading()` fallback,
-  via `aria-label` rather than `aria-labelledby` since the header content is light DOM while
-  `[part="panel"]` is in shadow DOM). A panel opened with neither `label` nor header content uses
-  the localized `responsivePanel` fallback (`"Panel"` in the default locale), so its dialog is
-  never unnamed. Unused in the inline presentation, which has no dialog semantics to name.
+  verbatim when set — but a plain `aria-label` attribute on the host wins outright over `label`
+  when both are present, the standard ARIA convention for a consumer that wants full control over
+  the announced name (matching `lr-dialog`'s `accessibleLabel` pattern). When both the host
+  `aria-label` and `label` are empty, this falls back to the `header` slot's content: a heading
+  element (`h1`–`h6` or `[role="heading"]`) among the slotted header content wins if present,
+  otherwise the header slot's combined text content is used (mirrors `lr-dialog`'s
+  `detectHeading()` fallback, via `aria-label` rather than `aria-labelledby` since the header
+  content is light DOM while `[part="panel"]` is in shadow DOM). A panel opened with none of a host
+  `aria-label`, `label`, or header content uses the localized `responsivePanel` fallback (`"Panel"`
+  in the default locale), so its dialog is never unnamed. Unused in the inline presentation, which
+  has no dialog semantics to name.
 - `overlayBreakpoint: string = '768px'` (attribute `overlay-breakpoint`) — CSS length compared with
   the component's allocated inline size in `mode="auto"`; at or below it, the effective presentation
   is `'overlay'`.
@@ -15574,19 +15608,16 @@ being dragged. Plus shared tokens `--lr-color-surface`, `--lr-color-border`, `--
 
 ```html
 <div style="position: relative; block-size: 100vh;">
-  <lr-dock-panel
-    edge="end"
-    extent="320px"
-    min-extent="200px"
-    max-extent="480px"
-    collapsible
-    @lr-resize-input=${(e) => updateLayoutPreview(e.detail.extent)}
-    @lr-resize-change=${(e) => persistExtent(e.detail.extent)}
-    @lr-collapse-change=${(e) => console.log(e.detail.collapsed)}
-  >
+  <lr-dock-panel edge="end" extent="320px" min-extent="200px" max-extent="480px" collapsible>
     <div>Sidebar content — a chat thread list, an inspector, anything.</div>
   </lr-dock-panel>
 </div>
+<script type="module">
+  const panel = document.querySelector("lr-dock-panel");
+  panel.addEventListener("lr-resize-input", (e) => updateLayoutPreview(e.detail.extent));
+  panel.addEventListener("lr-resize-change", (e) => persistExtent(e.detail.extent));
+  panel.addEventListener("lr-collapse-change", (e) => console.log(e.detail.collapsed));
+</script>
 ```
 
 Pointer-drag-resize admits only a primary pointer using its primary button, then mirrors
@@ -15721,6 +15752,30 @@ former brand and active-mix values when unset.
 
 - every `appearance` renders on the _same_ `[part="base"]` element — there's no separate element per
   variant, so a `::part(base)` override applies uniformly regardless of `appearance`.
+- **a card clips, it does not scroll — and it never picks a scroll owner for you.** `[part='base']`
+  stretches to the host's allocated block-size and clips its overflow, which is what keeps a
+  full-bleed `media`/`image` child inside the rounded border. In an auto-sized row the card simply
+  grows and nothing is clipped; give it a _definite_ allocation (a fixed grid row, an explicit
+  `block-size`) and body content taller than that allocation is clipped silently, with no
+  scrollbar. Neither upstream card exposes an overflow, block-size, or scroll hook and neither does
+  this one: the public `body` part already carries the whole decision, and a `::part()` rule from
+  your tree wins over the shadow stylesheet regardless of specificity. A fixed-height tile that
+  must hold more content says so itself:
+
+  ```css
+  .tile-grid {
+    display: grid;
+    grid-template-rows: 12rem;
+  }
+  .tile-grid lr-card::part(body) {
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+  ```
+
+  `overflow` other than `visible` also zeroes the body's automatic minimum size, so that one
+  declaration is enough — the body shrinks into the tile and scrolls, and `max-block-size` /
+  `scrollbar-gutter` stay available on the same rule. The linked (`href`) card behaves identically.
 - slot-presence (`header`/`media`/`image`/`footer`/`actions`/`header-actions`/`footer-actions`) is
   tracked in JS, not via CSS `:empty` (a
   `[part]` wrapper always contains a literal `<slot>` child, so `:empty` never matches) — the same
@@ -16978,7 +17033,7 @@ boolean, and all three drive the same code path: `el.show()` is indistinguishabl
 `el.open = true`, and `el.hide()` from `el.open = false`. The property, the reflected attribute and
 the two methods can therefore never disagree, and each method is a no-op when the overlay is already
 in the requested state. `lr-dialog` and `lr-drawer` keep `close(reason)` alongside — `hide()` plus
-the reason string that `lr-dialog-close` carries.
+the reason string that `lr-close` carries.
 
 **Four events, and where the veto sits.**
 
@@ -17002,14 +17057,12 @@ with matching timing _and_ matching cancelability — which also means Lyra 7.x 
 relying on the opposite polarity and has to be re-read.
 
 `lr-dialog` and `lr-drawer` also expose cancelable `lr-initial-focus` and `lr-request-close` veto
-points, documented in their sections. Their cancelable `lr-dialog-close` fires **after** `lr-hide`
-and before `lr-after-hide`; it carries the close reason. Vetoing `lr-hide` stops it from firing at
-all. **New in 10.0.0:** a cancelable `lr-close` with the identical `DialogCloseReason` detail fires
-alongside `lr-dialog-close` on every dismissal path, so one listener covers `lr-dialog`/`lr-drawer`
-and the `lr-tool-select-dialog`/`lr-tool-result-dialog`/`lr-tool-approval-dialog` trio, which already
-spelled it `lr-close` while explicitly mirroring this detail shape. `preventDefault()` on **either**
-name vetoes the close. Both are retained; `lr-dialog-close` is not deprecated. `lr-drawer` inherits
-`lr-close` unchanged.
+points, documented in their sections. Their cancelable `lr-close` fires **after** `lr-hide` and
+before `lr-after-hide`; it carries the close reason as `detail: DialogCloseReason`. Vetoing
+`lr-hide` stops it from firing at all, and `preventDefault()` on `lr-close` itself also vetoes the
+close. The same name is already used by the `lr-tool-select-dialog`/`lr-tool-result-dialog`/
+`lr-tool-approval-dialog` trio, which mirrors this identical detail shape, so one listener covers
+all of them. `lr-drawer` inherits `lr-close` unchanged.
 
 **The top layer.** An open `lr-dialog` or modal `lr-drawer` is promoted into the browser **top layer**
 (through `popover="manual"`) rather than stacked with `z-index`. It therefore escapes every ancestor
@@ -17425,7 +17478,7 @@ A modal panel anchored to one logical edge of the viewport. `LyraDrawer` extends
 inherits the entire dialog contract unchanged: focus trapping, Escape and opt-in backdrop dismissal,
 document scroll locking, browser **top-layer** promotion, overlay stacking, accessible naming, the
 `show()`/`hide()`/`close()` methods and the whole
-`lr-show`/`lr-after-show`/`lr-hide`/`lr-after-hide`/`lr-dialog-close` lifecycle. `contained` switches
+`lr-show`/`lr-after-show`/`lr-hide`/`lr-after-hide`/`lr-close` lifecycle. `contained` switches
 to an absolute, nonmodal panel inside the nearest containing block; only that mode, `placement`, and
 the slide animation are its own.
 
@@ -17456,10 +17509,8 @@ the slide animation are its own.
 promise settles after the matching `lr-after-*` event.
 
 **Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide`, and
-`lr-initial-focus` (cancelable), `lr-request-close` (cancelable, detail source),
-`lr-dialog-close` (`detail: DialogCloseReason`, cancelable), and `lr-close` (`detail:
-DialogCloseReason`, cancelable — the plain spelling fired alongside `lr-dialog-close` on every
-dismissal path, with identical detail and veto semantics) — all inherited unchanged from
+`lr-initial-focus` (cancelable), `lr-request-close` (cancelable, detail source), and `lr-close`
+(`detail: DialogCloseReason`, cancelable) — all inherited unchanged from
 `lr-dialog`; see that section for details and veto rules. `lr-after-show` /
 `lr-after-hide` fire once the slide animation has finished, so they are deferred by roughly one
 animation compared with the state flip.
@@ -17586,19 +17637,17 @@ chrome remains visible. The fallback order appears below.
 - `lr-request-close` — cancelable request from a built-in affordance; detail source is
   `'close-button' | 'keyboard' | 'overlay'`. Veto stops the close lifecycle. Direct `close()` and
   `hide()` calls do not emit this request event.
-- `lr-dialog-close` — cancelable, with `detail: DialogCloseReason`; emitted after `lr-hide`
-- `lr-close` — cancelable, with `detail: DialogCloseReason`; identical detail and veto semantics to
-  `lr-dialog-close`, fired alongside it on every dismissal path — the plain spelling already used by
-  `<lr-tool-select-dialog>`, `<lr-tool-result-dialog>`, and `<lr-tool-approval-dialog>`. A listener
-  calling `preventDefault()` on either event vetoes the close; both always fire, so a listener on
-  one name never misses a transition the other name already vetoed. Also fired (with reason
-  `'unmount'`, non-cancelable there like `lr-dialog-close`) when the dialog is removed from the DOM
-  while still open.
+- `lr-close` — cancelable, with `detail: DialogCloseReason`; emitted after `lr-hide`. The same name
+  is already used by `<lr-tool-select-dialog>`, `<lr-tool-result-dialog>`, and
+  `<lr-tool-approval-dialog>`, whose own docs describe an identical detail shape, so one listener
+  covers all of them. A listener calling `preventDefault()` vetoes the close. Also fired (with
+  reason `'unmount'`, non-cancelable there) when the dialog is removed from the DOM while still
+  open.
 
 The two `lr-after-*` events are never cancelable.
 
 The open sequence is `lr-show` → `lr-initial-focus` (when focus would move) → `lr-after-show`; the
-direct close sequence is `lr-hide` → `lr-dialog-close` and `lr-close` (together) → `lr-after-hide`.
+direct close sequence is `lr-hide` → `lr-close` → `lr-after-hide`.
 A built-in dismissal prepends `lr-request-close`. **Both state pre-events fire _before_ the state changes**, so reading
 `el.open` inside an `lr-show`/`lr-hide` handler returns the _old_ value — this is the polarity
 `wa-show`/`wa-hide` already had, and the opposite of what Lyra 7.x's own `lr-show`/`lr-hide` did on
@@ -17615,7 +17664,7 @@ and easing. Under `prefers-reduced-motion: reduce`, registry timing flattens to 
 frame and lifecycle remain intact. Passing `null` skips native interpolation but still emits the
 matching after-event before the method promise resolves. Because dialogs now animate on close too,
 `lr-after-hide` is normally deferred by roughly one animation. A removal while open emits
-`lr-hide`, `lr-dialog-close` and `lr-close` (both reason `'unmount'`) and `lr-after-hide` in that
+`lr-hide`, `lr-close` (reason `'unmount'`) and `lr-after-hide` in that
 order, none of them cancelable, since the element is already gone.
 
 **Stacking and the top layer:** an open dialog is promoted into the browser **top layer** (via
@@ -17705,7 +17754,7 @@ Otherwise shared tokens include `--lr-space-l/-m/-s`, `--lr-color-surface/-borde
   dlg.addEventListener("lr-after-show", () =>
     console.log("enter animation done")
   );
-  dlg.addEventListener("lr-dialog-close", (e) =>
+  dlg.addEventListener("lr-close", (e) =>
     console.log("closed:", e.detail)
   );
   dlg.addEventListener("lr-after-hide", () =>
@@ -17813,7 +17862,7 @@ their `data-lr-confirm-action` attribute.
 **Known gotchas:**
 
 - Every dismissal path (confirm button, cancel button, Escape, backdrop click) funnels through
-  `<lr-dialog>`'s own `close()`/`lr-dialog-close` event, so there is exactly one place that
+  `<lr-dialog>`'s own `close()`/`lr-close` event, so there is exactly one place that
   resolves the promise and tears the dialog down — a consumer never needs to (and shouldn't) call
   `.remove()` itself. Because the close event is cancelable, `confirm()` waits through the full
   dispatch and remains pending/mounted when a listener calls `preventDefault()`.
@@ -22672,12 +22721,23 @@ sizing), `--lr-focus-ring-*`, `--lr-transition-fast`.
 **Optional peer deps:** none.
 
 ```html
-<lr-media-card kind="image" src="https://example.com/photo.jpg" alt="Screenshot" filename="photo.jpg"
-  @lr-media-open=${(e) => openLightbox(e.detail.src)}
+<lr-media-card
+  id="image-card"
+  kind="image"
+  src="https://example.com/photo.jpg"
+  alt="Screenshot"
+  filename="photo.jpg"
 ></lr-media-card>
-<lr-media-card kind="file" src="https://example.com/report.pdf" filename="report.pdf"
-  @lr-before-media-download=${(e) => shouldUseNativeDownload || e.preventDefault()}
-></lr-media-card>
+<lr-media-card id="file-card" kind="file" src="https://example.com/report.pdf" filename="report.pdf">
+</lr-media-card>
+<script type="module">
+  document
+    .getElementById("image-card")
+    .addEventListener("lr-media-open", (e) => openLightbox(e.detail.src));
+  document
+    .getElementById("file-card")
+    .addEventListener("lr-before-media-download", (e) => shouldUseNativeDownload || e.preventDefault());
+</script>
 ```
 
 **Safe-URL checking.** `src` is validated by internal sink-specific helpers before it's
@@ -22777,10 +22837,13 @@ hidden via CSS by default, exposed as a part only so a consumer can override tha
 **Optional peer deps:** none.
 
 ```html
-<lr-attachment-trigger .capabilities=${['files', 'image', 'camera']} accept=".pdf,.docx"
-  @lr-files=${(e) => queueFiles(e.detail.capability, e.detail.files)}
-  @lr-camera-request=${openCameraFlow}
-></lr-attachment-trigger>
+<lr-attachment-trigger accept=".pdf,.docx"></lr-attachment-trigger>
+<script type="module">
+  const trigger = document.querySelector("lr-attachment-trigger");
+  trigger.capabilities = ["files", "image", "camera"];
+  trigger.addEventListener("lr-files", (e) => queueFiles(e.detail.capability, e.detail.files));
+  trigger.addEventListener("lr-camera-request", openCameraFlow);
+</script>
 ```
 
 **Known gotchas:**
@@ -22885,14 +22948,14 @@ variant's quiet tint.
 <lr-avatar label="Assistant"><svg slot="icon" viewBox="0 0 24 24"><!-- role glyph --></svg></lr-avatar>
 
 <!-- Far down a long list: defer the request, fall back to a glyph, and report a broken URL. -->
-<lr-avatar
-  image="/users/7/photo.jpg"
-  label="Ada Lovelace"
-  loading="lazy"
-  @lr-error=${(e) => reportBrokenAvatar(e.detail.image)}
->
+<lr-avatar id="lazy-avatar" image="/users/7/photo.jpg" label="Ada Lovelace" loading="lazy">
   <svg slot="icon" viewBox="0 0 24 24"><!-- fallback glyph --></svg>
 </lr-avatar>
+<script type="module">
+  document
+    .getElementById("lazy-avatar")
+    .addEventListener("lr-error", (e) => reportBrokenAvatar(e.detail.image));
+</script>
 ```
 
 **Known gotchas:**
@@ -25464,11 +25527,11 @@ entry) or a third-party PDF/office-doc viewer, but neither is a dependency of th
 
 ```html
 <lr-document-preview
+  id="text-preview"
   filename="board-notes.txt"
   mime-type="text/plain"
   src="/files/board-notes.txt"
   max-height="24rem"
-  @lr-render-error=${(e) => console.error(e.detail.error)}
 ></lr-document-preview>
 
 <!-- A host driving its own server-side conversion -->
@@ -25478,6 +25541,11 @@ entry) or a third-party PDF/office-doc viewer, but neither is a dependency of th
 <lr-document-preview filename="deck.pptx" mime-type="application/vnd.ms-powerpoint" src="/files/deck.pptx">
   <lr-code-block slot="unsupported" language="text">Open in PowerPoint to preview.</lr-code-block>
 </lr-document-preview>
+<script type="module">
+  document
+    .getElementById("text-preview")
+    .addEventListener("lr-render-error", (e) => console.error(e.detail.error));
+</script>
 ```
 
 Accessibility: after the initial silent baseline, entering `"converting"` without numeric
@@ -26396,7 +26464,9 @@ current page and
 `zoom: number = 1` is clamped to `0.25`–`4`. `maxHeight: string = ''` (attribute `max-height`) is a
 CSS length that, once set, overrides `--lr-pdf-viewer-height` — the block size of the virtualized
 page list — declaratively, writing it inline on `[part="base"]`; invalid CSS `max-height` values,
-declaration breaks, and `url()` are ignored. `anchorKinds: readonly LyraAnchorKind[] = ['page',
+declaration breaks, and `url()` are ignored. `workerSrc: string = ''` (attribute `worker-src`) is the
+URL of the PDF.js web worker chunk — see **Configuring the PDF.js worker** below.
+`anchorKinds: readonly LyraAnchorKind[] = ['page',
 'text-quote', 'region']` (this viewer's supported `LyraAnchor.kind` values for the shared
 anchor-target contract). The other inherited anchor-target properties are `highlights:
 LyraHighlight[] = []` (property only; reassign after mutation), `activeHighlightId: string | null =
@@ -26484,6 +26554,39 @@ a lazy `application/pdf` renderer with `<lr-document-viewer>` so the PDF library
 a PDF is opened. An absent `pdfjs-dist` fails closed and renders
 `[part="error"]` with the localized `pdfViewerMissingLibrary` message — there is no partial PDF
 rendering without it.
+
+**Configuring the PDF.js worker.** PDF.js renders in a web worker and rejects every document with
+`No "GlobalWorkerOptions.workerSrc" specified.` until it has been told where that worker lives. The
+worker is a separate file inside the peer (`pdfjs-dist/build/pdf.worker.min.mjs`) that only the
+application's own bundler can turn into a real URL — a bare package specifier does not resolve in a
+browser without an import map, and resolving it against this library's own module URL would point
+into `@aceshooting/lyra-ui`'s files, where no worker exists. So a bundled application supplies it,
+either way round:
+
+```ts
+// 1. Per element, through the public property/attribute.
+import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?worker&url'; // Vite; see your bundler
+const viewer = document.querySelector('lr-pdf-viewer');
+viewer.workerSrc = workerUrl;
+// or, declaratively: <lr-pdf-viewer worker-src="/assets/pdf.worker.min.mjs"></lr-pdf-viewer>
+
+// 2. Once for the whole application, on PDF.js's own singleton, before any viewer loads a document.
+import { GlobalWorkerOptions } from 'pdfjs-dist';
+GlobalWorkerOptions.workerSrc = workerUrl;
+```
+
+`workerSrc` accepts a document-relative URL (resolved against the document base) as well as an
+absolute one; only `http:`, `https:`, `blob:` and `file:` URLs are accepted, and anything else — a
+`javascript:` or `data:` URL in particular — is ignored rather than handed to `new Worker()`.
+
+`GlobalWorkerOptions` is PDF.js's process-wide singleton and the PDF.js module itself is loaded once
+per page, so `workerSrc` is applied only while that singleton is still unset. Two consequences worth
+knowing before reaching for the per-element form: a worker the application configured itself is never
+overwritten, and when several viewers carry different `workerSrc` values only the first one to load
+PDF.js takes effect for the whole page. Assigning `workerSrc` after PDF.js has already loaded is not
+silently dropped — it is re-applied on the next load — but it still cannot displace an
+already-configured worker. Option 2 above is the right choice for an application that wants one
+explicit worker everywhere.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the PDF.
@@ -26924,9 +27027,12 @@ each tone's highlighted-cell background. `--lr-notebook-viewer-highlight-active-
 `text/plain`).
 
 ```html
-<lr-notebook-viewer .notebook=${result} max-height="30rem"
-  @lr-load=${(e) => console.log(e.detail.cellCount, 'cells')}
-></lr-notebook-viewer>
+<lr-notebook-viewer max-height="30rem"></lr-notebook-viewer>
+<script type="module">
+  const viewer = document.querySelector("lr-notebook-viewer");
+  viewer.notebook = result;
+  viewer.addEventListener("lr-load", (e) => console.log(e.detail.cellCount, "cells"));
+</script>
 ```
 
 A notebook major version outside 4.0–4.5, an invalid shape, or more than 2,000 cells renders a
@@ -27931,8 +28037,9 @@ support (`highlights`, `activeHighlightId`, `scrollToAnchor()`, the `lr-highligh
 section above for the full write-up of shared behavior.
 
 **Properties:** `content: string = ''`, `tabSize: number = 4` (attribute `tab-size`) — the same
-finite-integer-guarded leading-indentation expansion used by `<lr-markdown>`; values outside 1–32
-or non-finite values fall back to `4`, independently of rendered code's
+finite-integer-guarded leading-indentation expansion used by `<lr-markdown>`; finite values are
+clamped to `[1, 32]` (`0` becomes `1`, `33` becomes `32`), and only non-finite values (`NaN`,
+`Infinity`) fall back to `4`, independently of rendered code's
 `--lr-code-block-tab-size`; `marked: LyraMarkedParser | undefined` (readonly, no attribute) — this
 instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'escape' | 'trusted' =
 'sanitize'` (attribute `html-mode`), `gfm: boolean = true`, `linkTarget: string | null = '_blank'` (attribute
@@ -28671,13 +28778,16 @@ Plus shared tokens — `--lr-space-xs/-s/-m`, `--lr-radius`,
   conversation-id="sess_123"
   label="Q3 roadmap planning"
   excerpt="Let's revisit the timeline for the launch…"
-  .timestamp=${session.updatedAt}
-  ?active=${session.id === currentSessionId}
-  @lr-select=${(e) => openSession(e.detail.conversationId)}
-  @lr-rename=${(e) => renameSession(e.detail.conversationId, e.detail.label)}
 >
   <button slot="actions" aria-label="Delete conversation">✕</button>
 </lr-conversation-item>
+<script type="module">
+  const item = document.querySelector("lr-conversation-item");
+  item.timestamp = session.updatedAt;
+  item.active = session.id === currentSessionId;
+  item.addEventListener("lr-select", (e) => openSession(e.detail.conversationId));
+  item.addEventListener("lr-rename", (e) => renameSession(e.detail.conversationId, e.detail.label));
+</script>
 ```
 
 `role="button"` lives on `[part="select-button"]`, so the row has
@@ -28926,19 +29036,18 @@ shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-
 **Optional peer deps:** none.
 
 ```html
-<lr-model-select
-  provider="openai"
-  .catalog=${[
-    { id: 'gpt-4o', label: 'GPT-4o', icon: '✦' },
-    { id: 'gpt-4o-mini', label: 'GPT-4o mini' },
-  ]}
-  value="gpt-4o"
-  placeholder="Choose a model…"
-  @lr-change=${(e) => setModel(e.detail.value, e.detail.inCatalog)}
-></lr-model-select>
+<lr-model-select provider="openai" value="gpt-4o" placeholder="Choose a model…"></lr-model-select>
 
 <!-- No fixed catalog yet: falls back to free-text entry -->
 <lr-model-select provider="ollama" placeholder="Type a model id…" allow-custom></lr-model-select>
+<script type="module">
+  const select = document.querySelector("lr-model-select");
+  select.catalog = [
+    { id: "gpt-4o", label: "GPT-4o", icon: "✦" },
+    { id: "gpt-4o-mini", label: "GPT-4o mini" },
+  ];
+  select.addEventListener("lr-change", (e) => setModel(e.detail.value, e.detail.inCatalog));
+</script>
 ```
 
 **Known gotchas:**
@@ -29516,15 +29625,15 @@ selector label), `temperature-row`, `temperature-label`, `temperature-value`
 internally (both imported unconditionally as side effects, not optional).
 
 ```html
-<lr-model-settings-panel
-  provider="OpenAI"
-  .catalog=${['gpt-4o', 'gpt-4o-mini', 'gpt-4.1']}
-  model="gpt-4o"
-  temperature="0.7"
-  @lr-change=${(e) => console.log(e.detail)}
-></lr-model-settings-panel>
+<lr-model-settings-panel provider="OpenAI" model="gpt-4o" temperature="0.7"></lr-model-settings-panel>
 
-<lr-model-settings-panel layout="compact" .catalog=${catalog}></lr-model-settings-panel>
+<lr-model-settings-panel layout="compact"></lr-model-settings-panel>
+<script type="module">
+  const [panel, compactPanel] = document.querySelectorAll("lr-model-settings-panel");
+  panel.catalog = ["gpt-4o", "gpt-4o-mini", "gpt-4.1"];
+  panel.addEventListener("lr-change", (e) => console.log(e.detail));
+  compactPanel.catalog = catalog;
+</script>
 ```
 
 The internal `lr-slider` renders with its own value readout suppressed (`.showValue=${false}`);
@@ -29950,13 +30059,18 @@ component's existing requirement of a height-bounded parent, exactly as slotted 
 inline style) still wins over the built-in one.
 
 ```html
-<lr-chat-viewport unread-start-index="12" @lr-follow-change=${(e) => console.log(e.detail.following)}>
+<lr-chat-viewport unread-start-index="12">
   <lr-chat-message message-role="user">…</lr-chat-message>
   <lr-chat-message message-role="assistant" status="streaming">
-    <lr-streaming-text streaming .content=${partial}></lr-streaming-text>
+    <lr-streaming-text streaming></lr-streaming-text>
   </lr-chat-message>
 </lr-chat-viewport>
 <lr-chat-composer status="streaming"></lr-chat-composer>
+<script type="module">
+  const viewport = document.querySelector("lr-chat-viewport");
+  viewport.querySelector("lr-streaming-text").content = partial;
+  viewport.addEventListener("lr-follow-change", (e) => console.log(e.detail.following));
+</script>
 ```
 
 ## `lr-suggestion-chips`
@@ -30004,9 +30118,14 @@ Enter/Space activate. Renders inside an internal `lr-scroller` (`orientation="ho
 `hide-scrollbar`) unless `wrap` is set.
 
 ```html
-<lr-suggestion-chips .suggestions=${followUps}
-  @lr-suggestion-select=${(e) => (composer.value = e.detail.label)}></lr-suggestion-chips>
+<lr-suggestion-chips></lr-suggestion-chips>
 <lr-chat-composer></lr-chat-composer>
+<script type="module">
+  const chips = document.querySelector("lr-suggestion-chips");
+  const composer = document.querySelector("lr-chat-composer");
+  chips.suggestions = followUps;
+  chips.addEventListener("lr-suggestion-select", (e) => (composer.value = e.detail.label));
+</script>
 ```
 
 ## `lr-thread-list`
@@ -30189,14 +30308,14 @@ short one, and falls back to exactly `24rem` in an auto-height container.
 style the pinned band with `lr-thread-list::part(group-sticky)`.
 
 ```html
-<lr-thread-list
-  searchable
-  sticky-groups
-  .threads=${threads}
-  active-conversation-id=${activeThreadId}
-  .rowActions=${['pin', 'archive', 'delete']}
-  @lr-select=${(e) => openThread(e.detail.conversationId)}
-></lr-thread-list>
+<lr-thread-list searchable sticky-groups></lr-thread-list>
+<script type="module">
+  const list = document.querySelector("lr-thread-list");
+  list.threads = threads;
+  list.activeConversationId = activeThreadId;
+  list.rowActions = ["pin", "archive", "delete"];
+  list.addEventListener("lr-select", (e) => openThread(e.detail.conversationId));
+</script>
 ```
 
 Composed with `lr-multi-split` (or `lr-app-rail` + `lr-responsive-panel`): thread-list in the start
@@ -30245,8 +30364,12 @@ assigned to `animation-duration` alone. The spinner stops outright under
 `prefers-reduced-motion: reduce`.
 
 ```html
-<lr-checkpoint checkpoint-id="ck_18" label="Before refactor" .timestamp=${t}
-  @lr-restore=${(e) => restoreTo(e.detail.checkpointId)}></lr-checkpoint>
+<lr-checkpoint checkpoint-id="ck_18" label="Before refactor"></lr-checkpoint>
+<script type="module">
+  const checkpoint = document.querySelector("lr-checkpoint");
+  checkpoint.timestamp = t;
+  checkpoint.addEventListener("lr-restore", (e) => restoreTo(e.detail.checkpointId));
+</script>
 ```
 
 ## `lr-usage-badge`
@@ -30289,8 +30412,11 @@ describable), `summary`, `tokens-in`, `tokens-out`, `cost`, `latency`, `tooltip`
     cost-text="$0.012"
     latency-ms="2350"
   ></lr-usage-badge>
-  <lr-markdown .content="${answer}"></lr-markdown>
+  <lr-markdown></lr-markdown>
 </lr-chat-message>
+<script type="module">
+  document.querySelector("lr-chat-message lr-markdown").content = answer;
+</script>
 ```
 
 ## `lr-widget-renderer`
@@ -30593,15 +30719,18 @@ stale-value row), `option-preview` (a pointer-only per-row preview icon, `tabind
 trigger), `expand-icon`, `empty`, `hint`, `error`.
 
 ```html
-<lr-voice-picker provider="elevenlabs" .catalog=${voices} allow-custom
-  @lr-change=${(e) => setVoice(e.detail.value)}
-  @lr-preview-request=${(e) => {
+<lr-voice-picker provider="elevenlabs" allow-custom></lr-voice-picker>
+<script type="module">
+  const picker = document.querySelector("lr-voice-picker");
+  picker.catalog = voices;
+  picker.addEventListener("lr-change", (e) => setVoice(e.detail.value));
+  picker.addEventListener("lr-preview-request", (e) => {
     if (!e.detail.previewUrl) {
       e.preventDefault();
       playSample(e.detail.voiceId);
     }
-  }}
-></lr-voice-picker>
+  });
+</script>
 ```
 
 **Known gotchas:**
@@ -30746,6 +30875,26 @@ optional-peer fallback.
 
 Every public data/value property is controlled: forwarded child intents bubble without mutating
 `messages`, `composerValue`, selections, run state, or persistence-owned data inside the shell.
+
+**Only the transcript scrolls.** `[part='base']` is a three-row grid — header, conversation,
+composer — and only the middle row can shrink, so the composed `lr-chat-viewport` owns the
+scrolling and the chrome rows stay put at their content size. The trade: give the workspace less
+block-size than the chrome needs and the conversation row collapses to zero first, after which the
+header or composer is clipped with no scrollbar. That takes unusually large slotted chrome — a very
+tall `header-actions` toolbar, or a `composer` replacement much taller than the built-in one — and
+the region that supplied it caps and scrolls itself through the public parts:
+
+```css
+lr-agent-workspace::part(header) {
+  max-block-size: 4rem;
+  overflow: auto;
+}
+```
+
+The same applies to `::part(composer)`. Both declarations are needed: the cap keeps the grid track
+inside the workspace, and `overflow` makes the capped region scrollable instead of spilling. No
+component-owned custom property duplicates this, because a `::part()` rule from your tree already
+wins over the shadow stylesheet regardless of specificity.
 
 ## `lr-message-parts`
 
@@ -31407,11 +31556,15 @@ referenced: `--lr-color-text-quiet`, `--lr-color-surface`, `--lr-color-border`,
   summary="Searching web…"
   duration-ms="820"
   call-id="call_123"
-  @lr-tool-call-chip-select=${(e) => openDetail(e.detail.callId)}
 >
   <pre slot="icon" style="display:none"></pre>
   <code>{"query": "lyra ui components"}</code>
 </lr-tool-call-chip>
+<script type="module">
+  document
+    .querySelector("lr-tool-call-chip")
+    .addEventListener("lr-tool-call-chip-select", (e) => openDetail(e.detail.callId));
+</script>
 ```
 
 The default slot's tooltip is positioned with the same `internal/positioner.js` `place()` helper
@@ -31503,12 +31656,13 @@ of course pull in whatever they need (a charting library, a markdown renderer), 
 the lazy `load()` path in the registry exists for.
 
 ```html
-<lr-tool-result-view
-  tool-name="get_weather"
-  .result=${{ tempC: 21, condition: 'cloudy' }}
-  .args=${{ city: 'Brussels' }}
-  @lr-render-error=${(e) => console.warn('renderer failed', e.detail)}
-></lr-tool-result-view>
+<lr-tool-result-view tool-name="get_weather"></lr-tool-result-view>
+<script type="module">
+  const view = document.querySelector("lr-tool-result-view");
+  view.result = { tempC: 21, condition: "cloudy" };
+  view.args = { city: "Brussels" };
+  view.addEventListener("lr-render-error", (e) => console.warn("renderer failed", e.detail));
+</script>
 ```
 
 ### `registerToolRenderer()` and the tool-renderer registry (`registry.ts`)
@@ -31722,20 +31876,22 @@ tokens `--lr-color-surface/-border/-text-quiet/-brand/-brand-quiet/-success/-suc
 **Optional peer deps:** none.
 
 ```html
-<lr-tool-result-dialog
-  tool-name="run_query"
-  status="success"
-  duration-ms="1240"
-  ?open=${dialogOpen}
-  @lr-close=${(e) => (dialogOpen = false)}
-  @lr-maximize-change=${(e) => console.log('maximized:', e.detail.maximized)}
->
+<lr-tool-result-dialog tool-name="run_query" status="success" duration-ms="1240">
   <lr-tab-group slot="body">
     <div slot="preview" label="Preview">…</div>
-    <div slot="json" label="JSON"><lr-json-viewer .data=${result}></lr-json-viewer></div>
+    <div slot="json" label="JSON"><lr-json-viewer></lr-json-viewer></div>
   </lr-tab-group>
   <button slot="footer">Rerun</button>
 </lr-tool-result-dialog>
+<script type="module">
+  const dialog = document.querySelector("lr-tool-result-dialog");
+  dialog.querySelector("lr-json-viewer").data = result;
+  dialog.open = true;
+  dialog.addEventListener("lr-close", () => (dialog.open = false));
+  dialog.addEventListener("lr-maximize-change", (e) =>
+    console.log("maximized:", e.detail.maximized)
+  );
+</script>
 ```
 
 While open, `[part="panel"]` takes `role="dialog"` + `aria-modal="true"` with `aria-labelledby`
@@ -31867,23 +32023,25 @@ assigned elements.
 dependencies of this package imported directly, not optional peers.
 
 ```html
-<lr-tool-select-dialog
-  label="Select tools"
-  .tools=${[
-    { id: 'search', name: 'Web search', category: 'Research' },
-    { id: 'python', name: 'Python', category: 'Code', description: 'Run sandboxed Python' },
-    { id: 'admin', name: 'Admin console', disabled: true, disabledReason: 'Requires admin approval' },
-  ]}
-  .selectedToolIds=${enabledToolIds}
-  ?use-defaults=${usingDefaults}
-  ?open=${dialogOpen}
-  @lr-change=${(e) => updateTools(e.detail.selectedToolIds, e.detail.useDefaults)}
-  @lr-close=${() => (dialogOpen = false)}
->
-  <button slot="footer" @click=${(e) => e.target.closest('lr-tool-select-dialog').close('done')}>
-    Done
-  </button>
+<lr-tool-select-dialog label="Select tools">
+  <button slot="footer" id="done-btn">Done</button>
 </lr-tool-select-dialog>
+<script type="module">
+  const dialog = document.querySelector("lr-tool-select-dialog");
+  dialog.tools = [
+    { id: "search", name: "Web search", category: "Research" },
+    { id: "python", name: "Python", category: "Code", description: "Run sandboxed Python" },
+    { id: "admin", name: "Admin console", disabled: true, disabledReason: "Requires admin approval" },
+  ];
+  dialog.selectedToolIds = enabledToolIds;
+  dialog.useDefaults = usingDefaults;
+  dialog.open = true;
+  dialog.addEventListener("lr-change", (e) =>
+    updateTools(e.detail.selectedToolIds, e.detail.useDefaults)
+  );
+  dialog.addEventListener("lr-close", () => (dialog.open = false));
+  dialog.querySelector("#done-btn").addEventListener("click", () => dialog.close("done"));
+</script>
 ```
 
 `useDefaults` is a single top-level switch: while `true`, every per-tool checkbox renders disabled
@@ -32242,15 +32400,14 @@ other text-entry surface in the library provides), plus shared tokens
 package, not an optional peer.
 
 ```html
-<lr-tool-approval-dialog
-  tool-name="send_email"
-  .args=${{ to: 'ops@example.com', subject: 'Deploy finished' }}
-  @lr-approve=${(e) => runTool(e.detail.args)}
-  @lr-deny=${() => console.log('denied')}
-  @lr-close=${(e) => console.log('closed:', e.detail)}
-></lr-tool-approval-dialog>
+<lr-tool-approval-dialog tool-name="send_email"></lr-tool-approval-dialog>
 <script type="module">
-  document.querySelector('lr-tool-approval-dialog').open = true;
+  const dialog = document.querySelector("lr-tool-approval-dialog");
+  dialog.args = { to: "ops@example.com", subject: "Deploy finished" };
+  dialog.addEventListener("lr-approve", (e) => runTool(e.detail.args));
+  dialog.addEventListener("lr-deny", () => console.log("denied"));
+  dialog.addEventListener("lr-close", (e) => console.log("closed:", e.detail));
+  dialog.open = true;
 </script>
 ```
 
@@ -32468,20 +32625,22 @@ form: `--lr-space-l/-xs/-s`, `--lr-color-border`, `--lr-radius`, `--lr-color-sur
 dependencies of this package imported directly, not optional peers.
 
 ```html
-<lr-tool-param-form
-  .schema=${{
-    type: 'object',
+<lr-tool-param-form></lr-tool-param-form>
+<script type="module">
+  const form = document.querySelector("lr-tool-param-form");
+  form.schema = {
+    type: "object",
     properties: {
-      title: { type: 'string', title: 'Title' },
-      attendees: { type: 'string', enum: ['team', 'everyone'], default: 'team' },
-      allDay: { type: 'boolean', title: 'All day' },
+      title: { type: "string", title: "Title" },
+      attendees: { type: "string", enum: ["team", "everyone"], default: "team" },
+      allDay: { type: "boolean", title: "All day" },
     },
-    required: ['title'],
-  }}
-  .value=${draftArgs}
-  @lr-input=${(e) => (draftArgs = e.detail.value)}
-  @lr-validity-change=${(e) => (formIsValid = e.detail.valid)}
-></lr-tool-param-form>
+    required: ["title"],
+  };
+  form.value = draftArgs;
+  form.addEventListener("lr-input", (e) => (draftArgs = e.detail.value));
+  form.addEventListener("lr-validity-change", (e) => (formIsValid = e.detail.valid));
+</script>
 ```
 
 This component owns no Submit/Cancel/Approve chrome — a consumer composes it inside their own dialog
@@ -33297,9 +33456,13 @@ repainting everything else that reads them.
 
 ```html
 <lr-tool-call-chip status="pending"></lr-tool-call-chip>
-<lr-confirm-bar tool-name="run_shell" .args=${args}
-  @lr-approve=${(e) => run(e.detail.args)} @lr-deny=${() => cancel()}
-></lr-confirm-bar>
+<lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>
+<script type="module">
+  const bar = document.querySelector("lr-confirm-bar");
+  bar.args = args;
+  bar.addEventListener("lr-approve", (e) => run(e.detail.args));
+  bar.addEventListener("lr-deny", () => cancel());
+</script>
 ```
 
 An `lr-approve`/`lr-deny` listener that needs to await its own async work before finalizing calls
@@ -33361,9 +33524,13 @@ phase write queued while detached.
 viewport's aspect ratio.
 
 ```html
-<lr-browser-frame phase="streaming" url="https://example.com" .pings=${pings}
-  @lr-take-over=${(e) => setController(e.detail.controller)} @lr-stop=${() => stopSession()}
-></lr-browser-frame>
+<lr-browser-frame phase="streaming" url="https://example.com"></lr-browser-frame>
+<script type="module">
+  const frame = document.querySelector("lr-browser-frame");
+  frame.pings = pings;
+  frame.addEventListener("lr-take-over", (e) => setController(e.detail.controller));
+  frame.addEventListener("lr-stop", () => stopSession());
+</script>
 ```
 
 **Additional API surface:**
@@ -33437,11 +33604,17 @@ ancestor. They exist because `::part(view-button)[aria-pressed='true']` is inval
 library-wide brand tokens as the only prior lever.
 
 ```html
-<lr-artifact-panel label="report.md" kind="document" .versions=${versions}
-  @lr-restore=${(e) => restoreVersion(e.detail.versionId)}>
-  <lr-markdown .content=${markdown}></lr-markdown>
-  <lr-code-block slot="code" language="markdown" .code=${markdown}></lr-code-block>
+<lr-artifact-panel label="report.md" kind="document">
+  <lr-markdown id="preview"></lr-markdown>
+  <lr-code-block slot="code" id="code" language="markdown"></lr-code-block>
 </lr-artifact-panel>
+<script type="module">
+  const panel = document.querySelector("lr-artifact-panel");
+  panel.versions = versions;
+  panel.querySelector("#preview").content = markdown;
+  panel.querySelector("#code").code = markdown;
+  panel.addEventListener("lr-restore", (e) => restoreVersion(e.detail.versionId));
+</script>
 ```
 
 ## `lr-agent-run`
@@ -35128,7 +35301,7 @@ only that row's decorative swatch opacity. Also reads `--lr-graph-cat-1` through
 
 A dossier card for one knowledge-graph entity: type badge, description, key/value property rows,
 degree, community chip, plus a built-in "focus in graph" action. Never fetches or focuses a graph
-itself — `lr-entity-activate` is a request a host routes into `lr-graph`'s own
+itself — `lr-entity-select` is a request a host routes into `lr-graph`'s own
 `focusNode(id, options?)`.
 
 **Properties:**
@@ -35154,8 +35327,6 @@ number; communityId?: string }`; field names deliberately mirror `lr-graph`'s `L
   name for the same union.
 
 **Events:** `lr-entity-select` (`detail: { entityId }`, the built-in focus button was activated).
-`lr-entity-activate` is a deprecated alias fired alongside it from the same gesture with the same
-detail object; removal not before 11.0.0 — prefer `lr-entity-select`.
 
 **Slots:** default (extra body content below the property rows, e.g. a `lr-neighbor-list`),
 `actions` (extra header actions alongside the built-in focus button).
@@ -35188,7 +35359,7 @@ from tokens.
   };
   document
     .getElementById("card")
-    .addEventListener("lr-entity-activate", (e) =>
+    .addEventListener("lr-entity-select", (e) =>
       graph.focusNode(e.detail.entityId)
     );
 </script>
@@ -35227,8 +35398,6 @@ it is not copied onto the shadow button because host naming does not cross that 
 
 **Events:** `lr-entity-select` (`detail: { entityId }`, click, or Enter while focused),
 `lr-entity-open` (`detail: { entityId }`, dblclick, or Space while focused).
-`lr-entity-activate` is a deprecated alias of `lr-entity-select`, fired alongside it from the same
-gesture with the same detail object; removal not before 11.0.0. `lr-entity-open` is unaffected.
 
 **Slots:** default — rich preview content (typically a compact `lr-entity-card`), shown in a
 floating popover on hover/focus. No content means no popover and no hover affordance at all.
@@ -35275,9 +35444,7 @@ graph data) and never mutates a graph.
 - `label: string = ''` — fallback name for the stable group. A non-empty host `aria-label` makes
   the host the sole overall owner; an explicitly empty host label stays empty on the group
 
-**Events:** `lr-entity-select` (`detail: { entityId }`, a row's node button was activated;
-`lr-entity-activate` is a deprecated alias fired alongside it with the same detail object, removal
-not before 11.0.0),
+**Events:** `lr-entity-select` (`detail: { entityId }`, a row's node button was activated),
 `lr-node-expand` (`detail: { nodeId }`, a row's expand button was activated — deliberately the same
 name and detail shape as `lr-graph`'s own event, so one host handler serves both).
 
@@ -35648,12 +35815,10 @@ chip` row, one `lr-path-strip` per relationship, `lr-community-card`, `lr-chunk-
 **Events:** `lr-toggle` (`detail: { section, expanded }`, a section header was toggled —
 `section` is `'entities' | 'relationships' | 'communities' | 'chunks'`). Because the panel is a
 conduit, every affordance it renders also reaches a listener on the panel itself, and all are
-part of its typed event map: `lr-entity-select` (`detail: { entityId }`, the canonical name as of
-10.0.0, from an entity chip or community card member), `lr-entity-activate`
-(`detail: { entityId, occurrenceIndex? }`, from an entity chip, community
-card member, or path-strip node — the deprecated alias of `lr-entity-select` where both fire from
-one gesture, but still the only name a path-strip node emits, and the only one carrying
-`occurrenceIndex`), `lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
+part of its typed event map: `lr-entity-select` (`detail: { entityId }`, from an entity chip),
+`lr-entity-activate` (`detail: { entityId, occurrenceIndex? }`, from a community card member or
+path-strip node — the only name either one emits, and the only one carrying `occurrenceIndex`),
+`lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
 Space), `lr-drill` (`detail: { communityId }`, a community card's title, drill button, or overflow chip), and
 `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, a relationship path-strip
 edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) and `lr-expand`
@@ -36048,9 +36213,10 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
   `aria-label` names the dossier as a whole and is not cloned onto the strip
 
 **Events:** declares none of its own. Every composed child's event bubbles through unmodified
-(`composed: true`): `lr-entity-select` (`detail: { entityId }`, canonical as of 10.0.0),
-`lr-entity-activate` (`detail: { entityId, occurrenceIndex? }` — its deprecated alias, fired from the
-same gesture, and still the only name carrying `occurrenceIndex`), `lr-node-expand` (`detail: { nodeId }`),
+(`composed: true`): `lr-entity-select` (`detail: { entityId }`, surfaced from the embedded entity
+card or neighbor list), `lr-entity-activate` (`detail: { entityId, occurrenceIndex? }` — surfaced
+from the embedded provenance panel's own community card or relationship path strip, the only
+source carrying `occurrenceIndex`), `lr-node-expand` (`detail: { nodeId }`),
 `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-expand` (`detail: { chunkId, expanded }`),
 `lr-toggle` (`detail: { section, expanded }`), and `lr-tab-show`
 (`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'
@@ -36345,15 +36511,14 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
 - `lr-hidden-types-change` (`detail: { hiddenTypes: string[] }`) — a node type's visibility changed
   via the composed legend. Follows the same self-toggle-then-emit contract as `lr-pin-change`/
   `lr-search-change`, so reassigning back is optional.
-- `lr-search-change` (`detail: { searchQuery: string; query: string; matchCount: number;
-  matchCountExact: boolean }`) — the user typed in the toolbar's search box. `searchQuery`/`query`
-  carry the identical value; `query` is the canonical `LyraSearchChangeDetail` field name, added
-  alongside the original `searchQuery` rather than replacing it. `matchCount` is the same live
-  node-filter total the result list and its live-region announcement already compute (`0` while the
-  query is empty). `matchCountExact` is always `true` — this component's node filter has no
-  truncating ceiling, unlike a paginated text-search viewer. There is no `activeIndex`: this is a
-  live node filter, not a cursor-based search. Already self-applied before emitting, so reassigning
-  back is optional; a direct host assignment to `searchQuery` stays silent.
+- `lr-search-change` (`detail: { query: string; matchCount: number; matchCountExact: boolean }`) —
+  the user typed in the toolbar's search box. `query` is the canonical `LyraSearchChangeDetail`
+  field name. `matchCount` is the same live node-filter total the result list and its live-region
+  announcement already compute (`0` while the query is empty). `matchCountExact` is always `true` —
+  this component's node filter has no truncating ceiling, unlike a paginated text-search viewer.
+  There is no `activeIndex`: this is a live node filter, not a cursor-based search. The component
+  has already applied the query to its own `searchQuery` property before emitting, so reassigning
+  it back is optional and a direct host assignment stays silent.
 - Bubbling straight through from composed children, unmodified: `lr-node-click`
   (`detail: { nodeId, x, y }`), `lr-link-click` (`detail: { sourceNodeId, targetNodeId, linkId? }`), `lr-community-click`
   (`detail: { communityId }`), `lr-node-expand` (`detail: { nodeId }`, from `lr-graph` and/or `lr-neighbor-list`),
@@ -36958,9 +37123,7 @@ history, counts, rendering, or actions.
 
 **Events:** `lr-metric-change` (`{ metricId }`), `lr-slice-change` (`{ slice }`), and
 `lr-run-change` (`{ run }`). All are controlled intents; the component does not mutate the
-corresponding selection properties. `lr-run-select` is a deprecated alias for `lr-run-change`, fired
-alongside it with an identical detail from the same gesture; it was the lone `-select` spelling among
-three identically-shaped filter clicks. Removal not before 11.0.0 — prefer `lr-run-change`.
+corresponding selection properties.
 
 **CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
 `metric-selected`, `chart`, `runs`, `runs-heading`, `run`, `empty`.

@@ -3188,3 +3188,27 @@ describe('focused node z-index lift (perf-virtualized-row-focus-within-zindex)',
     expect(getComputedStyle(wrapperA).zIndex).to.not.equal('auto');
   });
 });
+
+it('floors a consumer-authored node card to the WCAG 2.5.8 tap-target minimum', async () => {
+  // [part='node'] carries @click/@pointerdown directly, but its rendered size comes entirely from
+  // whatever card the consumer slots in -- the component's own JSDoc invites arbitrary authored
+  // cards. The only element that used to carry a floor, [part='node-control'], renders sr-only, so
+  // it is a keyboard proxy that no pointer can reach. A small authored card therefore produced a
+  // real, unfloored pointer target that shrank further under zoom-out.
+  const el = (await fixture(html`
+    <lr-flow-canvas>
+      <div node-id="tiny" style="inline-size: 8px; block-size: 8px">.</div>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  el.nodes = [{ id: 'tiny', position: { x: 0, y: 0 }, data: { label: 'Tiny' } }];
+  await el.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+
+  const node = el.shadowRoot!.querySelector('[part~="node"]') as HTMLElement;
+  expect(node, 'node rendered').to.exist;
+  const box = node.getBoundingClientRect();
+  // 24px is WCAG 2.5.8's floor, exposed as --lr-size-1-5rem; an ordinary composite card takes that
+  // rather than the 40px --lr-icon-button-size floor reserved for compact icon controls.
+  expect(box.width, 'node inline hit area').to.be.at.least(24);
+  expect(box.height, 'node block hit area').to.be.at.least(24);
+});

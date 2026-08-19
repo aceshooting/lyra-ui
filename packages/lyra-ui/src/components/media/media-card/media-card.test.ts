@@ -362,6 +362,25 @@ describe('kind="image"', () => {
     expect((img) != null).to.equal(true);
     expect(img.getAttribute('src')).to.equal(DATA_URI);
   });
+
+  it('gives the whole-card action a WCAG 2.5.8 minimum tap target even when the image itself renders far smaller than that', async () => {
+    const el = (await fixture(
+      html`<lr-media-card src=${DATA_URI} kind="image" filename="pixel.png"></lr-media-card>`,
+    )) as LyraMediaCard;
+    const img = el.shadowRoot!.querySelector('img[part="media"]') as HTMLImageElement;
+    if (!img.complete) await oneEvent(img, 'load');
+    // Sanity check: the fixture image is genuinely tiny, so a passing assertion below is
+    // evidence of a real floor, not an accident of a large source image.
+    expect(img.naturalWidth, 'fixture image must actually be sub-24px').to.be.at.most(4);
+    expect(img.naturalHeight, 'fixture image must actually be sub-24px').to.be.at.most(4);
+
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const rect = base.getBoundingClientRect();
+    expect(rect.width, 'whole-card action meets the WCAG 2.5.8 24px floor').to.be.at.least(24);
+    expect(rect.height, 'whole-card action meets the WCAG 2.5.8 24px floor').to.be.at.least(24);
+    expect(getComputedStyle(base).minInlineSize).to.equal('24px');
+    expect(getComputedStyle(base).minBlockSize).to.equal('24px');
+  });
 });
 
 describe('kind="video"', () => {

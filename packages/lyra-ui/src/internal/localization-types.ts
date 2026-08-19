@@ -780,6 +780,7 @@ export type LyraMessageKey =
   | 'emojiPickerGroupObjects'
   | 'emojiPickerGroupSymbols'
   | 'emojiPickerGroupFlags'
+  | 'emojiPickerGroupUnknown'
   | 'pushToTalkRequesting'
   | 'pushToTalkDenied'
   | 'pushToTalkError'

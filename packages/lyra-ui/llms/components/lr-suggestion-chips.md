@@ -58,7 +58,12 @@ Enter/Space activate. Renders inside an internal `lr-scroller` (`orientation="ho
 `hide-scrollbar`) unless `wrap` is set.
 
 ```html
-<lr-suggestion-chips .suggestions=${followUps}
-  @lr-suggestion-select=${(e) => (composer.value = e.detail.label)}></lr-suggestion-chips>
+<lr-suggestion-chips></lr-suggestion-chips>
 <lr-chat-composer></lr-chat-composer>
+<script type="module">
+  const chips = document.querySelector("lr-suggestion-chips");
+  const composer = document.querySelector("lr-chat-composer");
+  chips.suggestions = followUps;
+  chips.addEventListener("lr-suggestion-select", (e) => (composer.value = e.detail.label));
+</script>
 ```

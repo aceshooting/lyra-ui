@@ -8,6 +8,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
   MAX_NATIVE_PLAYBACK_RATE,
   MIN_NATIVE_PLAYBACK_RATE,
+  NATIVE_MEDIA_RELAY_EVENTS,
   NativeMediaController,
   canExitFullscreen,
   canRequestFullscreen,
@@ -203,8 +204,9 @@ function unsupportedPromise(host: Element, message: string): Promise<never> {
  * @event {Event} pause - Relayed native video event; non-bubbling, non-composed, and non-cancelable.
  * @event {Event} play - Relayed native video event; non-bubbling, non-composed, and non-cancelable.
  * @event {Event} timeupdate - Relayed native video event; non-bubbling, non-composed, and
- *   non-cancelable. Scrubbing the
- *   custom timeline also dispatches this event immediately.
+ *   non-cancelable. Scrubbing the custom timeline, or calling `seek()`, also dispatches this
+ *   event immediately and exactly once -- the corresponding native follow-up event is not
+ *   separately relayed.
  * @event {Event} volumechange - Relayed native video event; non-bubbling, non-composed, and
  *   non-cancelable.
  * @event {FocusEvent} focus - Relayed once from the internal play/pause control as a bubbling,
@@ -317,8 +319,22 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   @query('[part~="video-wrapper"]') private wrapperEl?: HTMLElement;
 
   private readonly mediaController = new NativeMediaController(this, {
+    // 'timeupdate' is deliberately excluded from the generic auto-relay: seek() fires an
+    // immediate, synchronous host 'timeupdate' of its own (below), and letting the controller's
+    // generic relay ALSO fire once the real native 'timeupdate' the HTML seeking algorithm queues
+    // for the same seek arrives would double-fire it. onNativeMediaEvent()'s own 'timeupdate' case
+    // dispatches the real-native-triggered host event instead, with the same event shape, guarded
+    // by `pendingNativeEcho.timeupdate` so a genuine seek-completion echo isn't relayed twice.
+    relayEvents: NATIVE_MEDIA_RELAY_EVENTS.filter((type) => type !== 'timeupdate'),
     onEvent: (event) => this.onNativeMediaEvent(event),
   });
+  /** One-shot guards against this component's own imperative native mutation echoing back through
+   *  `onNativeMediaEvent()` as if it were an externally-caused change. Each flag is armed
+   *  immediately before the imperative native write that will trigger the corresponding queued
+   *  native event, and consumed (cleared) by the first arrival of that event afterward -- shared
+   *  shape for both the seek() timeupdate dedup and the autoplay-muted volumechange suppression
+   *  below, rather than two independently-invented flags. */
+  private readonly pendingNativeEcho = { timeupdate: false, muted: false };
   private thumbnailGeneration = 0;
   private thumbnailAbort?: AbortController;
   private intersectionObserver?: IntersectionObserver;
@@ -424,7 +440,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     }
 
     if (changed.has('muted')) this.mediaController.muted = this.muted;
-    if (changed.has('autoplayMuted') && this.autoplayMuted) this.mediaController.muted = true;
+    if (changed.has('autoplayMuted') && this.autoplayMuted) this.forceAutoplayMuted();
 
     if (changed.has('currentTime')) {
       const max = this.mediaController.duration > 0
@@ -463,9 +479,19 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     this.mediaController.attach(video);
     if (!video) return;
     this.mediaController.volume = finiteRange(this.volume, 1, 0, 1);
-    this.mediaController.muted = this.muted || this.autoplayMuted;
+    if (this.autoplayMuted && !this.muted) this.forceAutoplayMuted();
+    else this.mediaController.muted = this.muted;
     this.mediaController.playbackRate = this.playbackRate;
   };
+
+  /** Forces the native element muted while `autoplayMuted` is the sole reason (the authored
+   *  `muted` property stays whatever it already was) -- without letting the native
+   *  'volumechange' this triggers overwrite that authored property. See
+   *  `onNativeMediaEvent()`'s 'volumechange' case, guarded by `pendingNativeEcho.muted`. */
+  private forceAutoplayMuted(): void {
+    this.pendingNativeEcho.muted = true;
+    this.mediaController.muted = true;
+  }
 
   private sourceSignature(): string {
     const nodes = [...this.children]
@@ -544,6 +570,14 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     const next = finiteRange(time, 0, 0, max);
     this.mediaController.currentTime = next;
     this.currentTime = this.mediaController.currentTime;
+    // The real native 'timeupdate' the HTML seeking algorithm queues once this seek actually
+    // completes is suppressed by `pendingNativeEcho.timeupdate` (see onNativeMediaEvent()) so a
+    // caller only ever sees this one synchronous, immediate event per seek() call.
+    this.pendingNativeEcho.timeupdate = true;
+    this.dispatchHostTimeupdate();
+  }
+
+  private dispatchHostTimeupdate(): void {
     const EventConstructor = this.ownerDocument.defaultView?.Event ?? Event;
     this.dispatchEvent(new EventConstructor('timeupdate'));
   }
@@ -553,6 +587,17 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     const next = finiteRange(rate, 1, MIN_NATIVE_PLAYBACK_RATE, MAX_NATIVE_PLAYBACK_RATE);
     this.playbackRate = next;
     this.mediaController.playbackRate = next;
+  }
+
+  /** `[data-control="rate"]`'s `<option>` values -- `PLAYBACK_RATES`, plus the current
+   *  `playbackRate` spliced in (numerically sorted) when it isn't already one of them. Mirrors
+   *  av-player's `rateOptions()`: a native `<select>` shows its first option whenever none
+   *  carries `selected`, so a `playbackRate` reached outside the fixed preset list (e.g. a native
+   *  `ratechange` from a platform media key or a picture-in-picture window) would otherwise
+   *  silently misreport the real rate. */
+  private rateSelectOptions(): readonly number[] {
+    const rates: readonly number[] = PLAYBACK_RATES;
+    return rates.includes(this.playbackRate) ? rates : [...rates, this.playbackRate].sort((a, b) => a - b);
   }
 
   /** Sets finite volume in the inclusive zero-to-one range. */
@@ -615,12 +660,28 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
         this.currentTime = 0;
         break;
       case 'timeupdate':
+        this.currentTime = this.mediaController.currentTime;
+        // Consume a pending seek()'s own echo instead of relaying this real native event too --
+        // see seek()/the mediaController construction above. A 'timeupdate' arriving with nothing
+        // pending is a genuine, externally-driven update and is relayed as usual.
+        if (this.pendingNativeEcho.timeupdate) this.pendingNativeEcho.timeupdate = false;
+        else this.dispatchHostTimeupdate();
+        break;
       case 'seeked':
         this.currentTime = this.mediaController.currentTime;
+        // The HTML seeking algorithm always queues 'timeupdate' before 'seeked' for the same
+        // completed seek, so 'seeked' arriving is this seek's final confirmation -- clear any
+        // still-pending echo guard rather than leaving it armed indefinitely (e.g. a seek issued
+        // before metadata loaded, where no native 'timeupdate' ever followed it).
+        this.pendingNativeEcho.timeupdate = false;
         break;
       case 'volumechange':
         this.volume = this.mediaController.volume;
-        this.muted = this.mediaController.muted;
+        // Consume a pending forceAutoplayMuted() echo instead of overwriting the authored `muted`
+        // property with it -- see forceAutoplayMuted()/the `autoplayMuted` JSDoc above. A
+        // 'volumechange' arriving with nothing pending is a genuine, externally-driven mute change.
+        if (this.pendingNativeEcho.muted) this.pendingNativeEcho.muted = false;
+        else this.muted = this.mediaController.muted;
         break;
       case 'ratechange':
         this.playbackRate = this.mediaController.playbackRate;
@@ -1014,7 +1075,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
                   aria-label=${this.localize('videoPlaybackSpeed')}
                   @change=${this.onRateChange}
                 >
-                  ${PLAYBACK_RATES.map((rate) => html`
+                  ${this.rateSelectOptions().map((rate) => html`
                     <option value=${String(rate)} ?selected=${rate === this.playbackRate}>
                       ${getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 2 }).format(rate)}×
                     </option>

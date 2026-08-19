@@ -75,6 +75,14 @@ export const styles = css`
     inset-block-start: 0;
     inset-inline-start: 0;
     will-change: transform;
+    /* WCAG 2.5.8 floor. This element carries the pointer handlers, but its size comes entirely
+       from the consumer-authored card slotted into it, which the component invites and cannot
+       constrain. The one part that already had a floor, node-control, renders sr-only and so is
+       a keyboard proxy no pointer can reach. 24px rather than the 40px --lr-icon-button-size:
+       a node is an ordinary composite card, not a compact icon control -- same reasoning as
+       lr-media-card. */
+    min-inline-size: var(--lr-size-1-5rem);
+    min-block-size: var(--lr-size-1-5rem);
   }
   [part='node-control'] {
     min-inline-size: var(--lr-icon-button-size);

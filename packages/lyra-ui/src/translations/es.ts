@@ -831,6 +831,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGroupObjects: 'Objetos',
   emojiPickerGroupSymbols: 'Símbolos',
   emojiPickerGroupFlags: 'Banderas',
+  emojiPickerGroupUnknown: 'Grupo {group}',
   pushToTalkRequesting: 'Solicitando el micrófono…',
   pushToTalkDenied: 'Acceso al micrófono denegado',
   pushToTalkError: 'Error en la grabación',

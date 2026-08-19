@@ -277,8 +277,9 @@ support (`highlights`, `activeHighlightId`, `scrollToAnchor()`, the `lr-highligh
 section above for the full write-up of shared behavior.
 
 **Properties:** `content: string = ''`, `tabSize: number = 4` (attribute `tab-size`) — the same
-finite-integer-guarded leading-indentation expansion used by `<lr-markdown>`; values outside 1–32
-or non-finite values fall back to `4`, independently of rendered code's
+finite-integer-guarded leading-indentation expansion used by `<lr-markdown>`; finite values are
+clamped to `[1, 32]` (`0` becomes `1`, `33` becomes `32`), and only non-finite values (`NaN`,
+`Infinity`) fall back to `4`, independently of rendered code's
 `--lr-code-block-tab-size`; `marked: LyraMarkedParser | undefined` (readonly, no attribute) — this
 instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'escape' | 'trusted' =
 'sanitize'` (attribute `html-mode`), `gfm: boolean = true`, `linkTarget: string | null = '_blank'` (attribute
@@ -1017,13 +1018,16 @@ Plus shared tokens — `--lr-space-xs/-s/-m`, `--lr-radius`,
   conversation-id="sess_123"
   label="Q3 roadmap planning"
   excerpt="Let's revisit the timeline for the launch…"
-  .timestamp=${session.updatedAt}
-  ?active=${session.id === currentSessionId}
-  @lr-select=${(e) => openSession(e.detail.conversationId)}
-  @lr-rename=${(e) => renameSession(e.detail.conversationId, e.detail.label)}
 >
   <button slot="actions" aria-label="Delete conversation">✕</button>
 </lr-conversation-item>
+<script type="module">
+  const item = document.querySelector("lr-conversation-item");
+  item.timestamp = session.updatedAt;
+  item.active = session.id === currentSessionId;
+  item.addEventListener("lr-select", (e) => openSession(e.detail.conversationId));
+  item.addEventListener("lr-rename", (e) => renameSession(e.detail.conversationId, e.detail.label));
+</script>
 ```
 
 `role="button"` lives on `[part="select-button"]`, so the row has
@@ -1272,19 +1276,18 @@ shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-
 **Optional peer deps:** none.
 
 ```html
-<lr-model-select
-  provider="openai"
-  .catalog=${[
-    { id: 'gpt-4o', label: 'GPT-4o', icon: '✦' },
-    { id: 'gpt-4o-mini', label: 'GPT-4o mini' },
-  ]}
-  value="gpt-4o"
-  placeholder="Choose a model…"
-  @lr-change=${(e) => setModel(e.detail.value, e.detail.inCatalog)}
-></lr-model-select>
+<lr-model-select provider="openai" value="gpt-4o" placeholder="Choose a model…"></lr-model-select>
 
 <!-- No fixed catalog yet: falls back to free-text entry -->
 <lr-model-select provider="ollama" placeholder="Type a model id…" allow-custom></lr-model-select>
+<script type="module">
+  const select = document.querySelector("lr-model-select");
+  select.catalog = [
+    { id: "gpt-4o", label: "GPT-4o", icon: "✦" },
+    { id: "gpt-4o-mini", label: "GPT-4o mini" },
+  ];
+  select.addEventListener("lr-change", (e) => setModel(e.detail.value, e.detail.inCatalog));
+</script>
 ```
 
 **Known gotchas:**
@@ -1862,15 +1865,15 @@ selector label), `temperature-row`, `temperature-label`, `temperature-value`
 internally (both imported unconditionally as side effects, not optional).
 
 ```html
-<lr-model-settings-panel
-  provider="OpenAI"
-  .catalog=${['gpt-4o', 'gpt-4o-mini', 'gpt-4.1']}
-  model="gpt-4o"
-  temperature="0.7"
-  @lr-change=${(e) => console.log(e.detail)}
-></lr-model-settings-panel>
+<lr-model-settings-panel provider="OpenAI" model="gpt-4o" temperature="0.7"></lr-model-settings-panel>
 
-<lr-model-settings-panel layout="compact" .catalog=${catalog}></lr-model-settings-panel>
+<lr-model-settings-panel layout="compact"></lr-model-settings-panel>
+<script type="module">
+  const [panel, compactPanel] = document.querySelectorAll("lr-model-settings-panel");
+  panel.catalog = ["gpt-4o", "gpt-4o-mini", "gpt-4.1"];
+  panel.addEventListener("lr-change", (e) => console.log(e.detail));
+  compactPanel.catalog = catalog;
+</script>
 ```
 
 The internal `lr-slider` renders with its own value readout suppressed (`.showValue=${false}`);
@@ -2296,13 +2299,18 @@ component's existing requirement of a height-bounded parent, exactly as slotted 
 inline style) still wins over the built-in one.
 
 ```html
-<lr-chat-viewport unread-start-index="12" @lr-follow-change=${(e) => console.log(e.detail.following)}>
+<lr-chat-viewport unread-start-index="12">
   <lr-chat-message message-role="user">…</lr-chat-message>
   <lr-chat-message message-role="assistant" status="streaming">
-    <lr-streaming-text streaming .content=${partial}></lr-streaming-text>
+    <lr-streaming-text streaming></lr-streaming-text>
   </lr-chat-message>
 </lr-chat-viewport>
 <lr-chat-composer status="streaming"></lr-chat-composer>
+<script type="module">
+  const viewport = document.querySelector("lr-chat-viewport");
+  viewport.querySelector("lr-streaming-text").content = partial;
+  viewport.addEventListener("lr-follow-change", (e) => console.log(e.detail.following));
+</script>
 ```
 
 ## `lr-suggestion-chips`
@@ -2350,9 +2358,14 @@ Enter/Space activate. Renders inside an internal `lr-scroller` (`orientation="ho
 `hide-scrollbar`) unless `wrap` is set.
 
 ```html
-<lr-suggestion-chips .suggestions=${followUps}
-  @lr-suggestion-select=${(e) => (composer.value = e.detail.label)}></lr-suggestion-chips>
+<lr-suggestion-chips></lr-suggestion-chips>
 <lr-chat-composer></lr-chat-composer>
+<script type="module">
+  const chips = document.querySelector("lr-suggestion-chips");
+  const composer = document.querySelector("lr-chat-composer");
+  chips.suggestions = followUps;
+  chips.addEventListener("lr-suggestion-select", (e) => (composer.value = e.detail.label));
+</script>
 ```
 
 ## `lr-thread-list`
@@ -2535,14 +2548,14 @@ short one, and falls back to exactly `24rem` in an auto-height container.
 style the pinned band with `lr-thread-list::part(group-sticky)`.
 
 ```html
-<lr-thread-list
-  searchable
-  sticky-groups
-  .threads=${threads}
-  active-conversation-id=${activeThreadId}
-  .rowActions=${['pin', 'archive', 'delete']}
-  @lr-select=${(e) => openThread(e.detail.conversationId)}
-></lr-thread-list>
+<lr-thread-list searchable sticky-groups></lr-thread-list>
+<script type="module">
+  const list = document.querySelector("lr-thread-list");
+  list.threads = threads;
+  list.activeConversationId = activeThreadId;
+  list.rowActions = ["pin", "archive", "delete"];
+  list.addEventListener("lr-select", (e) => openThread(e.detail.conversationId));
+</script>
 ```
 
 Composed with `lr-multi-split` (or `lr-app-rail` + `lr-responsive-panel`): thread-list in the start
@@ -2591,8 +2604,12 @@ assigned to `animation-duration` alone. The spinner stops outright under
 `prefers-reduced-motion: reduce`.
 
 ```html
-<lr-checkpoint checkpoint-id="ck_18" label="Before refactor" .timestamp=${t}
-  @lr-restore=${(e) => restoreTo(e.detail.checkpointId)}></lr-checkpoint>
+<lr-checkpoint checkpoint-id="ck_18" label="Before refactor"></lr-checkpoint>
+<script type="module">
+  const checkpoint = document.querySelector("lr-checkpoint");
+  checkpoint.timestamp = t;
+  checkpoint.addEventListener("lr-restore", (e) => restoreTo(e.detail.checkpointId));
+</script>
 ```
 
 ## `lr-usage-badge`
@@ -2635,8 +2652,11 @@ describable), `summary`, `tokens-in`, `tokens-out`, `cost`, `latency`, `tooltip`
     cost-text="$0.012"
     latency-ms="2350"
   ></lr-usage-badge>
-  <lr-markdown .content="${answer}"></lr-markdown>
+  <lr-markdown></lr-markdown>
 </lr-chat-message>
+<script type="module">
+  document.querySelector("lr-chat-message lr-markdown").content = answer;
+</script>
 ```
 
 ## `lr-widget-renderer`
@@ -2939,15 +2959,18 @@ stale-value row), `option-preview` (a pointer-only per-row preview icon, `tabind
 trigger), `expand-icon`, `empty`, `hint`, `error`.
 
 ```html
-<lr-voice-picker provider="elevenlabs" .catalog=${voices} allow-custom
-  @lr-change=${(e) => setVoice(e.detail.value)}
-  @lr-preview-request=${(e) => {
+<lr-voice-picker provider="elevenlabs" allow-custom></lr-voice-picker>
+<script type="module">
+  const picker = document.querySelector("lr-voice-picker");
+  picker.catalog = voices;
+  picker.addEventListener("lr-change", (e) => setVoice(e.detail.value));
+  picker.addEventListener("lr-preview-request", (e) => {
     if (!e.detail.previewUrl) {
       e.preventDefault();
       playSample(e.detail.voiceId);
     }
-  }}
-></lr-voice-picker>
+  });
+</script>
 ```
 
 **Known gotchas:**
@@ -3092,6 +3115,26 @@ optional-peer fallback.
 
 Every public data/value property is controlled: forwarded child intents bubble without mutating
 `messages`, `composerValue`, selections, run state, or persistence-owned data inside the shell.
+
+**Only the transcript scrolls.** `[part='base']` is a three-row grid — header, conversation,
+composer — and only the middle row can shrink, so the composed `lr-chat-viewport` owns the
+scrolling and the chrome rows stay put at their content size. The trade: give the workspace less
+block-size than the chrome needs and the conversation row collapses to zero first, after which the
+header or composer is clipped with no scrollbar. That takes unusually large slotted chrome — a very
+tall `header-actions` toolbar, or a `composer` replacement much taller than the built-in one — and
+the region that supplied it caps and scrolls itself through the public parts:
+
+```css
+lr-agent-workspace::part(header) {
+  max-block-size: 4rem;
+  overflow: auto;
+}
+```
+
+The same applies to `::part(composer)`. Both declarations are needed: the cap keeps the grid track
+inside the workspace, and `overflow` makes the capped region scrollable instead of spilling. No
+component-owned custom property duplicates this, because a `::part()` rule from your tree already
+wins over the shadow stylesheet regardless of specificity.
 
 ## `lr-message-parts`
 

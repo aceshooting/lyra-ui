@@ -693,7 +693,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     this.armedMode = mode;
     if (list) {
       this.listenedVirtualList = list;
-      list.addEventListener('lr-visible-range-changed', this.onVirtualRangeChanged as EventListener);
+      list.addEventListener('lr-visible-range-change', this.onVirtualRangeChanged as EventListener);
     } else {
       const content = this.contentEl;
       if (content) {
@@ -802,7 +802,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     this.contentMutationObserver?.disconnect();
     this.contentMutationObserver = undefined;
     this.listenedVirtualList?.removeEventListener(
-      'lr-visible-range-changed',
+      'lr-visible-range-change',
       this.onVirtualRangeChanged as EventListener,
     );
     this.listenedVirtualList = undefined;

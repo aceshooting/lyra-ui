@@ -537,6 +537,55 @@ it('jumps to the input value when the rendered slider fires an input event', asy
   expect(detail.currentIndex).to.equal(3);
 });
 
+it('pins ArrowLeft/ArrowRight step direction to a fixed next/previous meaning in both LTR and RTL, independent of native engine handling', async () => {
+  const el = (await fixture(html`<lr-sequence-playback item-count="5" current-index="2"></lr-sequence-playback>`)) as LyraSequencePlayback;
+  const slider = el.shadowRoot!.querySelector('[part="slider"]') as HTMLInputElement;
+
+  const cases: ReadonlyArray<{ direction: 'ltr' | 'rtl'; key: string; expected: number }> = [
+    { direction: 'ltr', key: 'ArrowRight', expected: 3 },
+    { direction: 'ltr', key: 'ArrowLeft', expected: 1 },
+    { direction: 'rtl', key: 'ArrowRight', expected: 1 },
+    { direction: 'rtl', key: 'ArrowLeft', expected: 3 },
+  ];
+
+  for (const testCase of cases) {
+    el.setAttribute('dir', testCase.direction);
+    el.currentIndex = 2;
+    await el.updateComplete;
+
+    const stepEvent = oneEvent(el, 'lr-sequence-step');
+    const keydown = new KeyboardEvent('keydown', {
+      key: testCase.key,
+      bubbles: true,
+      cancelable: true,
+    });
+    slider.dispatchEvent(keydown);
+
+    const { detail } = await stepEvent;
+    expect(
+      keydown.defaultPrevented,
+      `${testCase.direction} ${testCase.key} prevents native double handling`,
+    ).to.be.true;
+    expect(el.currentIndex, `${testCase.direction} ${testCase.key}`).to.equal(testCase.expected);
+    expect(detail.currentIndex, `${testCase.direction} ${testCase.key} event detail`).to.equal(testCase.expected);
+  }
+});
+
+it('clamps keyboard stepping at the sequence boundaries instead of wrapping or throwing', async () => {
+  const el = (await fixture(html`<lr-sequence-playback item-count="3" current-index="0"></lr-sequence-playback>`)) as LyraSequencePlayback;
+  const slider = el.shadowRoot!.querySelector('[part="slider"]') as HTMLInputElement;
+
+  slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(el.currentIndex, 'ArrowLeft at the first index stays clamped').to.equal(0);
+
+  el.currentIndex = 2;
+  await el.updateComplete;
+  slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(el.currentIndex, 'ArrowRight at the last index stays clamped').to.equal(2);
+});
+
 it('disables the rendered slider when length <= 1', async () => {
   const el = (await fixture(html`<lr-sequence-playback item-count="1"></lr-sequence-playback>`)) as LyraSequencePlayback;
   const slider = el.shadowRoot!.querySelector('[part="slider"]') as HTMLInputElement;

@@ -360,14 +360,14 @@ describe('lr-terminal', () => {
     await term.updateComplete;
     const list = term.shadowRoot!.querySelector('lr-virtual-list')!;
     // Real per-row measurement keeps settling asynchronously for a few more frames after
-    // updateComplete resolves, each capable of firing its own genuine `lr-visible-range-changed`
+    // updateComplete resolves, each capable of firing its own genuine `lr-visible-range-change`
     // -- letting it fully settle first, before registering the listener and dispatching the mocked
     // range below, avoids a late genuine event racing the mocked one (this component reacts to
     // virtual-list's real range exactly the same way it reacts to a mocked one, so whichever lands
     // last wins the assertion).
     await new Promise((resolve) => setTimeout(resolve, 100));
     const listener = oneEvent(term, 'lr-follow-change');
-    list.dispatchEvent(new CustomEvent('lr-visible-range-changed', { detail: { start: 0, end: 3 }, bubbles: true, composed: true }));
+    list.dispatchEvent(new CustomEvent('lr-visible-range-change', { detail: { start: 0, end: 3 }, bubbles: true, composed: true }));
     const event = (await listener) as CustomEvent<{ following: boolean }>;
     expect(event.detail.following).to.be.false;
     expect(term.follow).to.be.false;
@@ -378,9 +378,9 @@ describe('lr-terminal', () => {
     el.write('one\ntwo');
     await el.updateComplete;
     let leaked = false;
-    el.addEventListener('lr-visible-range-changed', () => (leaked = true));
+    el.addEventListener('lr-visible-range-change', () => (leaked = true));
     el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(
-      new CustomEvent('lr-visible-range-changed', {
+      new CustomEvent('lr-visible-range-change', {
         detail: { start: 0, end: 1 },
         bubbles: true,
         composed: true,
@@ -975,7 +975,7 @@ describe('lr-terminal', () => {
     await el.updateComplete;
     const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeItemId: unknown };
     const released = oneEvent(el, 'lr-follow-change');
-    list.dispatchEvent(new CustomEvent('lr-visible-range-changed', {
+    list.dispatchEvent(new CustomEvent('lr-visible-range-change', {
       detail: { start: 0, end: 0 },
       bubbles: true,
       composed: true,
@@ -998,7 +998,7 @@ describe('lr-terminal', () => {
     await el.updateComplete;
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
     const released = oneEvent(el, 'lr-follow-change');
-    list.dispatchEvent(new CustomEvent('lr-visible-range-changed', {
+    list.dispatchEvent(new CustomEvent('lr-visible-range-change', {
       detail: { start: 0, end: 0 },
       bubbles: true,
       composed: true,

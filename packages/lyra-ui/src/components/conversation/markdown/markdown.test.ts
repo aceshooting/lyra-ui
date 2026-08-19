@@ -1733,6 +1733,61 @@ describe("shiki highlighting (real peer)", () => {
       hl.codeToHtml = originalCodeToHtml;
     }
   });
+
+  it("does not leave an unhandled rejection when a highlighter's getLoadedLanguages() call throws, and still shows a sibling block's highlighted output (highlightPending()'s missing catch)", async () => {
+    const { loadShikiHighlighter } = await import(
+      "../code-block/code-loader.js"
+    );
+    const hl = await loadShikiHighlighter();
+    if (!hl) return; // shiki peer not installed in this environment -- covered elsewhere
+    const originalGetLoadedLanguages = hl.getLoadedLanguages;
+    let caught: unknown;
+    const onUnhandled = (e: PromiseRejectionEvent) => (caught = e.reason);
+    window.addEventListener("unhandledrejection", onUnhandled);
+    try {
+      hl.getLoadedLanguages = () => {
+        throw new Error("spoofed shiki peer: getLoadedLanguages is broken");
+      };
+      const el = (await fixture(
+        html`<lr-markdown></lr-markdown>`
+      )) as LyraMarkdown;
+      // Two fenced blocks sharing the one patched singleton: a real, already-warm "ts" grammar
+      // (which should still end up highlighted) alongside a language no shiki grammar table ever
+      // recognizes (which should permanently fall back to plain text, same as any other
+      // unsupported language) -- both go through the same broken getLoadedLanguages() call.
+      el.content =
+        "```ts\nconst x = 1;\n```\n\n```not-a-real-language-markdown-getloadedlanguages-test\nhello\n```";
+      await el.updateComplete;
+      // Long enough for the fire-and-forget highlightPending() to have rejected, if it were going
+      // to -- matches flag.test.ts's own unhandledrejection-detection margin.
+      await aTimeout(100);
+      expect(
+        caught,
+        "no unhandledrejection event should have fired"
+      ).to.be.undefined;
+
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="code-block"] span') !== null,
+        "the ts sibling block must still get highlighted even though the other block's tokenization failed",
+        { timeout: 8000 }
+      );
+      const blocks = [
+        ...el.shadowRoot!.querySelectorAll('[part="code-block"]'),
+      ] as HTMLElement[];
+      expect(blocks.length).to.equal(2);
+      expect(
+        blocks[0].querySelector("span") != null,
+        "a sibling block's successful highlight must still reach the DOM -- proves the trailing renderMarkdown() after highlightPending() still ran"
+      ).to.be.true;
+      expect(
+        blocks[1].querySelector("span") == null,
+        "the unrecognized language keeps its plain-text fallback, same as any other unsupported language"
+      ).to.be.true;
+    } finally {
+      window.removeEventListener("unhandledrejection", onUnhandled);
+      hl.getLoadedLanguages = originalGetLoadedLanguages;
+    }
+  });
 });
 
 describe("languages (fine-grained shiki opt-in) — markdown", () => {

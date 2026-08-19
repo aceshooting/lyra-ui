@@ -262,7 +262,7 @@ describe('follow / stick-to-bottom contract', () => {
     expect(base.scrollHeight - base.scrollTop - base.clientHeight).to.be.lessThan(2);
   });
 
-  it('scrollToBottom re-engages follow and performs a plain instant scroll', async () => {
+  it('scrollToBottom re-engages follow and performs a plain instant scroll, without echoing an event -- imperative navigation, not a user action', async () => {
     const el = (await fixture(
       html`<lr-transcript-feed follow="false" style="block-size: 80px"></lr-transcript-feed>`,
     )) as LyraTranscriptFeed;
@@ -278,10 +278,10 @@ describe('follow / stick-to-bottom contract', () => {
 
     expect(base.scrollHeight - base.scrollTop - base.clientHeight).to.be.lessThan(2);
     expect(el.follow).to.be.true;
-    expect(followChanges).to.equal(1);
+    expect(followChanges).to.equal(0);
   });
 
-  it('emits lr-follow-change for a direct programmatic assignment too, but never for the value already in effect on first render', async () => {
+  it('never emits lr-follow-change for a direct programmatic follow assignment, in either direction', async () => {
     const el = document.createElement('lr-transcript-feed') as LyraTranscriptFeed;
     let fired = false;
     el.addEventListener('lr-follow-change', () => (fired = true));
@@ -289,15 +289,50 @@ describe('follow / stick-to-bottom contract', () => {
     await el.updateComplete;
     expect(fired).to.be.false; // first render, no transition yet
 
-    let count = 0;
-    el.addEventListener('lr-follow-change', () => count++);
     el.follow = false;
     await el.updateComplete;
-    expect(count).to.equal(1);
+    expect(fired, 'a direct false assignment is controlled input, not a user action').to.be.false;
+
     el.follow = true;
     await el.updateComplete;
-    expect(count).to.equal(2);
+    expect(fired, 'a direct true assignment is controlled input, not a user action').to.be.false;
+
     document.body.removeChild(el);
+  });
+
+  it('emits lr-follow-change exactly once for a genuine user scroll away from the tail, and once for scrolling back to it -- even with a programmatic assignment interleaved between them', async () => {
+    const el = (await fixture(
+      html`<lr-transcript-feed style="block-size: 120px"></lr-transcript-feed>`,
+    )) as LyraTranscriptFeed;
+    el.entries = Array.from({ length: 30 }, (_, i) => ({ id: String(i), text: `line ${i}` }));
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+    const followChanges: boolean[] = [];
+    el.addEventListener('lr-follow-change', (e) =>
+      followChanges.push((e as CustomEvent<{ following: boolean }>).detail.following),
+    );
+
+    // Genuine user-driven scroll away from the tail.
+    base.scrollTop = 0;
+    base.dispatchEvent(new Event('scroll'));
+    await el.updateComplete;
+    expect(el.follow).to.be.false;
+    expect(followChanges).to.deep.equal([false]);
+
+    // A host mirroring `following` straight back into the property in its own event handler --
+    // the exact feedback-loop shape the original bug produced -- must not itself re-trigger
+    // anything: the gate keys off *who* set `follow`, not merely that it changed.
+    el.follow = false;
+    await el.updateComplete;
+    expect(followChanges, 'the redundant programmatic re-assignment echoes nothing').to.deep.equal([false]);
+
+    // Genuine user-driven scroll back to the tail.
+    base.scrollTop = base.scrollHeight - base.clientHeight;
+    base.dispatchEvent(new Event('scroll'));
+    await el.updateComplete;
+    expect(el.follow).to.be.true;
+    expect(followChanges).to.deep.equal([false, true]);
   });
 
   it('honors follow="false" as a plain HTML attribute, not just a property binding', async () => {

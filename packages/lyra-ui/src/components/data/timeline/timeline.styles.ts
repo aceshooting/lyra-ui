@@ -94,10 +94,20 @@ export const styles = css`
     overflow-y: hidden;
   }
   /* Edge affordance, gated on the strip actually overflowing -- ScrollOverflowController toggles
-     data-scroll-overflow from a real scrollWidth/clientWidth measurement; scrolling itself stays
-     native, with no scroll listener. Unconditional (as this used to be) it fades the first and
-     last item of a strip that fits. */
-  :host([orientation='horizontal']) [part='base'][data-scroll-overflow] {
+     data-scroll-overflow from a real scrollWidth/clientWidth measurement. Unconditional (as this
+     used to be) it fades the first and last item of a strip that fits. One-sided and RTL-aware,
+     matching lr-tab-group/lr-segmented/lr-stepper/lr-widget: data-scroll-start/data-scroll-end
+     (also from ScrollOverflowController, logical and live-updated on scroll) report which edge(s)
+     genuinely still have more to reach, so a strip scrolled fully to one edge fades only the
+     other -- a strip resting at its start no longer dims that already-fully-visible start edge.
+     data-scroll-start/data-scroll-end are wrapped in :where() purely to keep these rules'
+     specificity pinned to the same [data-scroll-overflow]-only baseline as before -- so the later
+     forced-colors override (same base selectors, later in the stylesheet) still wins its tie by
+     source order rather than losing to these more-specific-looking selectors. */
+  :host([orientation='horizontal'])
+    [part='base'][data-scroll-overflow]:where(
+      [data-scroll-start][data-scroll-end]
+    ) {
     -webkit-mask-image: linear-gradient(
       to right,
       transparent,
@@ -113,8 +123,78 @@ export const styles = css`
       transparent
     );
   }
+  :host([orientation='horizontal'])
+    [part='base'][data-scroll-overflow]:where(
+      [data-scroll-end]:not([data-scroll-start])
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+  }
+  :host([orientation='horizontal'])
+    [part='base'][data-scroll-overflow]:where(
+      [data-scroll-start]:not([data-scroll-end])
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+  }
+  :host(:dir(rtl)[orientation='horizontal'])
+    [part='base'][data-scroll-overflow]:where(
+      [data-scroll-end]:not([data-scroll-start])
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+  }
+  :host(:dir(rtl)[orientation='horizontal'])
+    [part='base'][data-scroll-overflow]:where(
+      [data-scroll-start]:not([data-scroll-end])
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+  }
   @media (forced-colors: active) {
-    :host([orientation='horizontal']) [part='base'][data-scroll-overflow] {
+    :host([orientation='horizontal']) [part='base'][data-scroll-overflow],
+    :host(:dir(rtl)[orientation='horizontal'])
+      [part='base'][data-scroll-overflow] {
       -webkit-mask-image: none;
       mask-image: none;
     }

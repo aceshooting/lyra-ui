@@ -810,6 +810,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGroupObjects: 'اشیاء',
   emojiPickerGroupSymbols: 'نمادها',
   emojiPickerGroupFlags: 'پرچم‌ها',
+  emojiPickerGroupUnknown: 'گروه {group}',
   pushToTalkRequesting: 'در حال درخواست دسترسی به میکروفون…',
   pushToTalkDenied: 'دسترسی به میکروفون رد شد',
   pushToTalkError: 'ضبط انجام نشد',

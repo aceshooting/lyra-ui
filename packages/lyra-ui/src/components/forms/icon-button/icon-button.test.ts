@@ -585,6 +585,7 @@ describe('lr-icon-button — mapped Shoelace surface', () => {
     el.disabled = false;
     await el.updateComplete;
     expect(anchor.getAttribute('href')).to.equal('https://example.com');
+    expect(anchor.getAttribute('aria-disabled')).to.equal('false');
     await expect(el).to.be.accessible();
   });
 

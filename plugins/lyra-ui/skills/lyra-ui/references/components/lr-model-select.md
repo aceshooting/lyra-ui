@@ -225,19 +225,18 @@ shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-
 **Optional peer deps:** none.
 
 ```html
-<lr-model-select
-  provider="openai"
-  .catalog=${[
-    { id: 'gpt-4o', label: 'GPT-4o', icon: '✦' },
-    { id: 'gpt-4o-mini', label: 'GPT-4o mini' },
-  ]}
-  value="gpt-4o"
-  placeholder="Choose a model…"
-  @lr-change=${(e) => setModel(e.detail.value, e.detail.inCatalog)}
-></lr-model-select>
+<lr-model-select provider="openai" value="gpt-4o" placeholder="Choose a model…"></lr-model-select>
 
 <!-- No fixed catalog yet: falls back to free-text entry -->
 <lr-model-select provider="ollama" placeholder="Type a model id…" allow-custom></lr-model-select>
+<script type="module">
+  const select = document.querySelector("lr-model-select");
+  select.catalog = [
+    { id: "gpt-4o", label: "GPT-4o", icon: "✦" },
+    { id: "gpt-4o-mini", label: "GPT-4o mini" },
+  ];
+  select.addEventListener("lr-change", (e) => setModel(e.detail.value, e.detail.inCatalog));
+</script>
 ```
 
 **Known gotchas:**

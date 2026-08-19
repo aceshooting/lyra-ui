@@ -208,13 +208,16 @@ export class LyraTimeline extends LyraElement {
   // kept live afterward via slotchange) rather than re-deriving it.
   @state() private slottedCount = 0;
 
-  constructor() {
-    super();
-    // Gates the horizontal [part='base'] edge fade on the strip genuinely overflowing -- see
-    // --lr-scroll-fade-size and timeline.styles.ts. Harmless in the vertical default, where the
-    // strip never scrolls inline and the attribute simply stays off.
-    observeScrollOverflow(this, () => this.renderRoot.querySelector("[part='base']"));
-  }
+  /** Gates the horizontal [part='base'] edge fade on the strip genuinely overflowing, with
+   *  one-sided/RTL-aware logical-edge state -- see --lr-scroll-fade-size and timeline.styles.ts.
+   *  Harmless in the vertical default, where the strip never scrolls inline and the attribute
+   *  simply stays off. Stored (rather than a bare statement-expression call) so `updated()` can
+   *  register each timeline item on the controller's own `ResizeObserver` via `observeExtra()`
+   *  below -- an item's own intrinsic content (a longer title, an icon loading in) can grow
+   *  scrollWidth without [part='base']'s own border box changing at all. */
+  private scrollOverflow = observeScrollOverflow(this, () =>
+    this.renderRoot.querySelector("[part='base']")
+  );
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
@@ -231,6 +234,12 @@ export class LyraTimeline extends LyraElement {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    // Each slotted item's own intrinsic geometry (a longer title, an icon loading in) can alter
+    // scroll reachability without [part='base']'s own border box changing at all -- the primary
+    // observer above only watches that one container, so every currently-slotted item rides along
+    // on its single ResizeObserver instance instead of a second one of its own. Harmless in the
+    // vertical default: observing an element the mask never reads from costs nothing.
+    this.scrollOverflow.observeExtra(this.timelineItems());
     if (changed.has('orientation') && this.getAttribute('orientation') !== this.orientation) {
       this.setAttribute('orientation', this.orientation);
     }

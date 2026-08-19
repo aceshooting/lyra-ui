@@ -13,10 +13,11 @@ hardcoded `1` (Monday) and never consulted the locale — while the very same co
 threaded `effectiveLocale` through its weekday *label* formatting. Measured, same `en-US` page:
 `<lr-calendar>` rendered `Mon Tue Wed…` while `<lr-date-picker>` rendered `Sun Mon Tue…`. The
 default is now `'auto'`, resolved through the same `resolveFirstDayOfWeek()` contract
-`<lr-date-picker>`/`<lr-date-input>` already use. The type widens to
-`number | 'auto' | 'sun' | … | 'sat'`, so an existing `first-day-of-week="1"` keeps working
-unchanged; pass `1` explicitly to keep the old rendering. There is no `wa-calendar`, so no upstream
-parity is affected.
+`<lr-date-picker>`/`<lr-date-input>` already use. The type is now exactly
+`'auto' | 'sun' | … | 'sat'`: the bare `0`–`6` integer form is gone rather than kept as a second
+spelling, so there is one way to express a week start instead of two that had to be sanitized and
+wrapped against each other. Replace `first-day-of-week="1"` with `first-day-of-week="mon"` to keep
+the old rendering. There is no `wa-calendar`, so no upstream parity is affected.
 
 **`<lr-progress-ring>` gains `show-value`, defaulting to `false`.** A determinate ring rendered its
 percentage unconditionally, with no way to suppress it short of slotting replacement content — while
@@ -29,38 +30,48 @@ veto point, but the chip never read `defaultPrevented` and owns no preview defau
 cancel — its own docs say it "never registers or owns a viewer/overlay" — so `preventDefault()` was
 a no-op. The flag is removed rather than left as a promise the component cannot keep.
 
-### Event vocabulary: canonical names, aliases retained
+### Event vocabulary: one name per event
 
-Each renamed event now fires **both** names from the same gesture with an identical detail object.
-The old name is deprecated with removal not before 11.0.0, so nothing breaks in 10.0.0.
+Several events had two spellings. 10.0.0 keeps the canonical name and **removes the old one
+outright** rather than shipping a deprecated alias into a library that has no released consumers
+yet — a dual-emit alias is a permanent tax paid to protect users who do not exist.
 
-- `<lr-entity-card>`, `<lr-entity-chip>`, `<lr-neighbor-list>`: `lr-entity-select` is canonical;
-  `lr-entity-activate` is the alias. (`lr-citation-badge` was deliberately left alone —
-  `lr-citation-select` is an established *container*-level event with a richer `{ citation }` detail
-  that containers translate its `{ sourceId, index }` into, so unifying there would have delivered
-  two different shapes under one name.)
-- `<lr-virtual-list>`: `lr-visible-range-change` is canonical; `lr-visible-range-changed` is the
-  alias. It was the only past-tense `-changed` spelling among 58 `-change`-family events, so a
-  convention-driven listener silently missed it — on a component embedded in eight-plus viewers.
-- `<lr-rag-eval-dashboard>`: `lr-run-change` is canonical; `lr-run-select` is the alias. Three
-  identically-shaped filter clicks were spelled with two different verbs.
+Rename the listener; the detail object is unchanged in every case.
+
+| Removed | Use instead | On |
+|---|---|---|
+| `lr-entity-activate` | `lr-entity-select` | `<lr-entity-card>`, `<lr-entity-chip>`, `<lr-neighbor-list>` |
+| `lr-visible-range-changed` | `lr-visible-range-change` | `<lr-virtual-list>` |
+| `lr-run-select` | `lr-run-change` | `<lr-rag-eval-dashboard>` |
+| `lr-dialog-close` | `lr-close` | `<lr-dialog>`, `<lr-drawer>` |
+
+`lr-visible-range-changed` was the only past-tense `-changed` spelling among 58 `-change`-family
+events, so a convention-driven listener silently missed it — on a component embedded in ten viewers.
+
+Two deliberate non-removals. `<lr-community-card>` and `<lr-path-strip>` keep `lr-entity-activate`:
+it is their only name and never was an alias. `<lr-accordion>` keeps `lr-expand`/`lr-collapse`,
+which mirror `wa-accordion`'s real event names — removing them would have broken upstream parity
+rather than tidied it. `lr-citation-badge` was also left alone: `lr-citation-select` is an
+established *container*-level event with a richer `{ citation }` detail that containers translate
+its `{ sourceId, index }` into, so unifying there would have delivered two shapes under one name.
 
 ### Additive
 
 - **`lr-search-change` detail is consistent again.** `<lr-terminal>` and `<lr-av-player>` now emit
   the canonical `LyraSearchChangeDetail` including `matchCountExact`, which 18 of 21 emitters already
   did. This matters most on `<lr-terminal>`, which truncates at 10,000 matches and previously had no
-  way to signal that its count was a lower bound. `<lr-knowledge-graph-explorer>` adds `query`
-  (alongside its retained `searchQuery`) plus `matchCount`/`matchCountExact`; it deliberately carries
-  no `activeIndex`, being a live node filter rather than a cursor-based search.
+  way to signal that its count was a lower bound. `<lr-knowledge-graph-explorer>`'s detail is now exactly
+  `{ query, matchCount, matchCountExact }` — `searchQuery` is replaced by the canonical `query`
+  rather than carried beside it; it deliberately has no `activeIndex`, being a live node filter
+  rather than a cursor-based search. (The `searchQuery` *property* is unaffected.)
 - **`<lr-token-input>` can veto all three mutations.** `lr-add` and `lr-token-edit` are now
   cancelable, matching `lr-remove`, which already was. A vetoed add keeps the typed draft so the user
   can correct it; a vetoed edit leaves the inline editor open with the edited text intact.
-- **`<lr-dialog>` also emits `lr-close`** with the identical `DialogCloseReason` detail, alongside the
-  retained `lr-dialog-close`. `preventDefault()` on either vetoes. `<lr-drawer>` inherits it.
+- **`<lr-dialog>`'s close event is `lr-close`** (`DialogCloseReason` detail, cancelable);
+  `<lr-drawer>` inherits it. See the removal table above.
 - **`<lr-accordion>` also emits a cancelable `lr-toggle-request`** (`{ collapsed, item }`) alongside
-  `lr-expand`/`lr-collapse`, matching the convention `<lr-code-block>`/`<lr-chat-message>` use.
-  `preventDefault()` on either vetoes the transition.
+  its upstream-mirroring `lr-expand`/`lr-collapse`, matching the convention
+  `<lr-code-block>`/`<lr-chat-message>` use. `preventDefault()` on either vetoes the transition.
 - **`<lr-popover>` gains `disabled`.** Both `<lr-tooltip>` and its own subclass `<lr-dropdown>` had
   it; the base did not. `<lr-dropdown>` now inherits it, with byte-identical behavior.
 - **`<lr-table>` emits `lr-selection-change`** when a `selectionMode` flip to `'single'` coerces a

@@ -466,7 +466,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
               @focus=${() => this.onCellFocus(index)}
               @keydown=${(e: KeyboardEvent) => this.onCellKeyDown(e, index)}
               @click=${() => this.activateItem(index)}
-              aria-current=${this.isSelected(index) ? 'true' : nothing}
+              aria-current=${this.isSelected(index) ? 'true' : 'false'}
               ?data-selected=${this.isSelected(index)}
             >
               ${item.marker ? html`<span part="marker"></span>` : nothing}

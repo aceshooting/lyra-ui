@@ -863,6 +863,9 @@ describe('item activation and selection', () => {
     expect(cellAt(el, 1).getAttribute('aria-current'), 'announced as current').to.equal('true');
     expect(cellAt(el, 1).hasAttribute('data-selected'), 'and styleable').to.be.true;
     expect(cellAt(el, 0).hasAttribute('data-selected'), 'siblings unaffected').to.be.false;
+    expect(cellAt(el, 0).getAttribute('aria-current'), 'non-current cells render an explicit false').to.equal(
+      'false',
+    );
   });
 
   it('does not move the selection itself, leaving the consumer in control', async () => {

@@ -1275,7 +1275,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         .hint=${prop.description ?? ''}
         .errorText=${errorMessage}
         .required=${false}
-        aria-required=${required ? 'true' : nothing}
+        aria-required=${required ? 'true' : 'false'}
         .value=${typeof effective === 'string' ? effective : ''}
         ?disabled=${this.effectiveDisabled}
         @input=${this.stopNestedControlEvent}
@@ -1296,8 +1296,8 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         type="text"
         id=${fieldId}
         aria-describedby=${describedBy || nothing}
-        aria-required=${required ? 'true' : nothing}
-        aria-invalid=${errorMessage ? 'true' : nothing}
+        aria-required=${required ? 'true' : 'false'}
+        aria-invalid=${errorMessage ? 'true' : 'false'}
         autocomplete=${prop.autocomplete || nothing}
         .spellcheck=${prop.spellcheck ?? true}
         autocapitalize=${prop.autocapitalize || nothing}
@@ -1320,8 +1320,8 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         id=${fieldId}
         step=${prop.type === 'integer' ? '1' : 'any'}
         aria-describedby=${describedBy || nothing}
-        aria-required=${required ? 'true' : nothing}
-        aria-invalid=${errorMessage ? 'true' : nothing}
+        aria-required=${required ? 'true' : 'false'}
+        aria-invalid=${errorMessage ? 'true' : 'false'}
         .value=${numValue}
         ?disabled=${this.effectiveDisabled}
         @input=${(e: Event) => this.onNumberInput(key, e)}
@@ -1337,7 +1337,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         .hint=${prop.description ?? ''}
         .errorText=${errorMessage}
         .required=${false}
-        aria-required=${required ? 'true' : nothing}
+        aria-required=${required ? 'true' : 'false'}
         .value=${selected}
         ?disabled=${this.effectiveDisabled}
         @input=${this.stopNestedControlEvent}

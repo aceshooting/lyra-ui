@@ -376,7 +376,10 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   private readonly monthId = nextId('known-date-month');
   private readonly yearId = nextId('known-date-year');
 
-  /** Hidden native date mirror used by integrations that inspect native constraints directly. */
+  /** Hidden native date mirror used by integrations that inspect native constraints directly.
+   *  Stays a writable `@query` field rather than a readonly `get`: `wa-known-date` declares it
+   *  writable, and check-pinned-upstream-manifests treats a readonly-vs-writable difference on a
+   *  mirrored member as an `unsupported` surface drift -- a release blocker. */
   @query('input[data-value-input]') valueInput!: HTMLInputElement;
   private validationTargetOverride?: HTMLElement;
 

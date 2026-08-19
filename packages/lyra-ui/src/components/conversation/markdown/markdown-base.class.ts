@@ -406,6 +406,18 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
 
     try {
       await processPendingHighlights(work, tokenizeOne);
+    } catch (error) {
+      // tokenizePendingHighlight()'s own layers (loadShikiHighlighter()/loadShikiHighlighterCore()'s
+      // load-time capability validation, shikiHasLoadedLanguage()'s tolerant check,
+      // tokenizeMarkdownHighlight()'s own try/catch) already absorb every failure mode they know
+      // about into a `null`/`false` result, not a throw -- this is the last-resort backstop for
+      // anything unexpected that still escapes that pipeline. Swallowed here rather than surfaced
+      // as an `lr-render-error` because a single pending block's tokenization failure isn't a
+      // document-level render failure; the block simply keeps (or falls through to) its plain-text
+      // fallback. Without this catch, `void this.highlightPending(...)`'s fire-and-forget call in
+      // `renderMarkdown()` would leave an unhandled rejection AND skip the `renderMarkdown()` call
+      // below, silently withholding every other already-tokenized block's highlighted output too.
+      console.warn('<lr-markdown>/<lr-markdown-core> failed to tokenize a pending highlight:', error);
     } finally {
       for (const { key } of work) this.inFlightHighlightKeys.delete(key);
     }

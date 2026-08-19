@@ -311,3 +311,46 @@ export const NarrowHeaderActions: Story = {
     </lr-card>
   `,
 };
+
+/**
+ * A definite allocation clips; the public `body` part is where a consumer opts into scrolling.
+ */
+export const FixedHeightTileGrid: Story = {
+  name: 'Fixed-height tiles: clipped body vs. scrolling body',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`[part="base"]` stretches to the host allocation and clips its overflow — that clip is what keeps a full-bleed `media`/`image` child inside the rounded border. In an auto-sized row a card just grows, but in a fixed grid row body content taller than the row is clipped silently. The card exposes no overflow hook of its own, because the public `body` part already carries the whole decision: one `::part(body) { overflow: auto }` rule is enough, since a non-visible overflow also zeroes the body automatic minimum size so it can shrink into the tile. The left tile is the clipped default, the right one the escape hatch.',
+      },
+    },
+  },
+  render: () => html`
+    <div class="card-tile-grid">
+      <style>
+        .card-tile-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 16rem);
+          grid-template-rows: 12rem;
+          gap: var(--lr-space-m);
+        }
+        .card-tile-grid lr-card.scrolls::part(body) {
+          overflow: auto;
+          overscroll-behavior: contain;
+        }
+      </style>
+      <lr-card>
+        <span slot="header" style="font-weight:600;">Clipped (default)</span>
+        <p>Sizing notes for the rooftop array, the inverter selection, and the expected shading losses.</p>
+        <p>Everything past the bottom edge of this tile is clipped, with no scrollbar and no affordance.</p>
+        <p>That is the same overflow rule that keeps a slotted image inside the rounded corners.</p>
+      </lr-card>
+      <lr-card class="scrolls">
+        <span slot="header" style="font-weight:600;">Scrolling body</span>
+        <p>Sizing notes for the rooftop array, the inverter selection, and the expected shading losses.</p>
+        <p>The body owns its own scrolling here, so the card keeps its tile height and its corners.</p>
+        <p>Set <code>max-block-size</code> or <code>scrollbar-gutter</code> on the same rule when you need them.</p>
+      </lr-card>
+    </div>
+  `,
+};

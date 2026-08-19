@@ -545,7 +545,11 @@ test('the checked-in inventory is executable and carries its explicit event-pref
       '',
     ].join('\n'),
   );
-  assert.deepEqual(result.warnings, []);
+  assert.equal(result.warnings.length, 1);
+  assert.equal(result.warnings[0].warningCode, 'BEHAVIOR_REVIEW_REQUIRED');
+  assert.equal(result.warnings[0].upstreamTag, 'sl-animation');
+  assert.deepEqual(result.warnings[0].behaviorReviewFlags, ['reduced-motion-default']);
+  assert.match(result.warnings[0].message, /prefers-reduced-motion/u);
 });
 
 test('imperative construction requiring unassigned inserted defaults is blocked at the tag literal', () => {
@@ -2433,7 +2437,7 @@ test('the public CLI dry-runs, reports, applies, and remains idempotent', () => 
       });
     const dry = invoke('--dry-run', `--report=${reportPath}`, source);
     assert.equal(dry.status, 0, dry.stderr);
-    assert.match(dry.stdout, /1 file\(s\) scanned, 1 changed, 3 rewrite\(s\), 0 warning\(s\)\./);
+    assert.match(dry.stdout, /1 file\(s\) scanned, 1 changed, 3 rewrite\(s\), 1 warning\(s\)\./);
     assert.match(dry.stdout, /Dry run only -- no source files were written\./);
     assert.equal(fs.readFileSync(source, 'utf8'), input);
     const dryReport = JSON.parse(fs.readFileSync(reportPath, 'utf8'));

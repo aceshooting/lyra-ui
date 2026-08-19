@@ -93,6 +93,19 @@ export interface LyraAgentWorkspaceEventMap {
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
+ * **The transcript is the only region that scrolls.** `[part='base']` is a three-row grid —
+ * header, conversation, composer — where only the middle row can shrink, so the composed
+ * `<lr-chat-viewport>` owns the scrolling and the chrome rows stay put. Header and composer
+ * content are therefore sized by their own content: give the workspace less block-size than they
+ * need and the conversation row collapses to zero first, after which the chrome is clipped with no
+ * scrollbar. That only happens with unusually large slotted chrome — a very tall `header-actions`
+ * toolbar, or a `composer` replacement much taller than the built-in one — and the fix belongs to
+ * whoever supplied it, through the public parts:
+ * `lr-agent-workspace::part(header) { max-block-size: 4rem; overflow: auto; }` (the same applies
+ * to `::part(composer)`). No component-owned custom property duplicates that, because a
+ * `::part()` rule from the consumer's tree already wins over the shadow stylesheet regardless of
+ * specificity and can set the cap and the overflow together.
+ *
  * @customElement lr-agent-workspace
  * @slot messages - Replaces the data-driven transcript message list.
  * @slot details - Replaces the built-in run/tool/retrieval/grounding/context details pane.

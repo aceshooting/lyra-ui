@@ -317,6 +317,24 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
     relayNativeEvent(this, event);
   };
 
+  // Native <input type=range> ArrowLeft/ArrowRight direction under dir="rtl" is NOT consistent
+  // across engines (WebKit steps opposite of Chromium/Firefox), so the "next/previous" meaning
+  // is pinned here in JS rather than left to the browser. Mirrors
+  // image-comparer.class.ts's keyboardPosition().
+  private keyboardStepDelta(key: string): number | undefined {
+    const rtl = this.effectiveDirection === 'rtl';
+    if (key === 'ArrowLeft') return rtl ? 1 : -1;
+    if (key === 'ArrowRight') return rtl ? -1 : 1;
+    return undefined;
+  }
+
+  private onSliderKeyDown = (event: KeyboardEvent): void => {
+    const delta = this.keyboardStepDelta(event.key);
+    if (delta === undefined) return;
+    event.preventDefault();
+    this.goTo(finiteCount(this.currentIndex, 0, this.maxIndex) + delta);
+  };
+
   override render(): TemplateResult {
     const maxIndex = this.maxIndex;
     const currentIndex = finiteCount(this.currentIndex, 0, maxIndex);
@@ -347,6 +365,7 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
           })}
           ?disabled=${disabled}
           @input=${(e: Event) => this.goTo(Number((e.target as HTMLInputElement).value) - 1)}
+          @keydown=${this.onSliderKeyDown}
           @focus=${this.onControlFocus}
           @blur=${this.onControlBlur}
         />

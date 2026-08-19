@@ -125,6 +125,14 @@ export const styles = css`
        exactly equals the glyph height, so selection aligns with the canvas. */
     line-height: var(--lr-line-height-none);
     opacity: 1;
+    /* Nothing in this layer is ever meant to paint: it is an invisible, selectable overlay sitting on
+       top of glyphs the canvas underneath already painted. The per-run rule below cannot carry that
+       alone, because part='text-span' is stamped onto PDF.js's generated runs only after render()
+       resolves -- so every run is unreachable by it while the layer is being built, and permanently
+       for any run left behind by a render that aborted partway. Declaring transparency on the
+       container makes it the inherited default for whatever PDF.js creates in here, parted or not;
+       the runs and the search marks re-declare it and are unaffected. */
+    color: transparent;
   }
   :host(:dir(rtl)) lr-virtual-list::part(text-layer) {
     transform: translateX(50%);

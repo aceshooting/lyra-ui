@@ -33,8 +33,7 @@ const overscanConverter = {
   },
 };
 
-/** `lr-visible-range-change` detail (also used by the deprecated `lr-visible-range-changed`
- *  alias) -- the current visible (non-overscanned) item index range. */
+/** `lr-visible-range-change` detail -- the current visible (non-overscanned) item index range. */
 export interface LyraVirtualListRange {
   start: number;
   end: number;
@@ -117,9 +116,6 @@ export interface LyraVirtualListScroll {
 
 export interface LyraVirtualListEventMap {
   'lr-visible-range-change': CustomEvent<LyraVirtualListRange>;
-  /** @deprecated Use `lr-visible-range-change` instead; retained as an identical-detail alias
-   *  until v11. */
-  'lr-visible-range-changed': CustomEvent<LyraVirtualListRange>;
   'lr-load-more': CustomEvent<null>;
   'lr-virtual-scroll': CustomEvent<LyraVirtualListScroll>;
 }
@@ -249,9 +245,6 @@ export interface LyraVirtualListEventMap {
  * @event lr-visible-range-change - `detail: { start, end }` (see
  *   `LyraVirtualListRange`) — the current visible (non-overscanned) item index
  *   range, fired only when it actually changes.
- * @event lr-visible-range-changed - Deprecated alias for `lr-visible-range-change`, retained with
- *   an identical `detail` and fired alongside it for backward compatibility. Prefer
- *   `lr-visible-range-change`; this alias is slated for removal in v11.
  * @event lr-virtual-scroll - `detail: { scrollTop, viewportHeight }` (see
  *   `LyraVirtualListScroll`) — the scroll container moved. Emitted from the same
  *   `requestAnimationFrame` tick that already coalesces native `scroll`
@@ -1523,16 +1516,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       return;
     this.lastEmittedStart = this.visibleStart;
     this.lastEmittedEnd = this.visibleEnd;
-    // Hot path (runs on every visible-range change during scrolling): build the detail once and
-    // dispatch it under both names rather than constructing it twice. `lr-visible-range-changed`
-    // is a deprecated alias for `lr-visible-range-change`, kept emitting with identical detail
-    // until v11.
-    const detail: LyraVirtualListRange = {
+    this.emit('lr-visible-range-change', {
       start: this.visibleStart,
       end: this.visibleEnd,
-    };
-    this.emit('lr-visible-range-change', detail);
-    this.emit('lr-visible-range-changed', detail);
+    });
   }
 
   private maybeFireLoadMore(): void {

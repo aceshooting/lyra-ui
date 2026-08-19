@@ -982,7 +982,15 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  `expandedRowKeys`. Table-level (not per-column) since the panel spans
    *  every column via `colspan`. Setting this makes every row render a
    *  leading chevron-toggle cell before all data columns; omit for no
-   *  leading cell at all (unchanged output). */
+   *  leading cell at all (unchanged output). The returned content renders inside this
+   *  component's shadow root, behind the `expanded-cell` part -- page-level CSS selectors cannot
+   *  reach it, and `::part(expanded-cell)` only reaches that wrapping `<td>`, not the descendants
+   *  this callback returns (`::part()` is a pseudo-element; only pseudo-classes may follow it, so
+   *  `::part(expanded-cell) .child` never matches, the same limitation `cell(row)`'s returned
+   *  anchors run into). Style such content by returning already-styled elements -- inline
+   *  `style`, or elements that reference this table's own `--lr-*` design tokens, which inherit
+   *  across the shadow boundary like any custom property -- rather than depending on a
+   *  page-level selector to find it. */
   @property({ attribute: false }) expandedContent?: (row: T) => unknown;
   /** Gates whether a given row gets an interactive chevron/toggle at all,
    *  when `expandedContent` is set. Omit to make every row expandable. A
@@ -2693,7 +2701,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
             aria-labelledby=${this.accessibleLabel == null && !hasHostAriaLabel && this.caption
               ? this.captionId
               : nothing}
-            aria-multiselectable=${this.selectionMode === 'multiple' ? 'true' : nothing}
+            aria-multiselectable=${String(this.selectionMode === 'multiple')}
             ?data-has-column-widths=${hasColumnWidths}
             data-layout=${effectiveLayout}
             @click=${this.onTableClick}

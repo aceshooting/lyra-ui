@@ -47,8 +47,16 @@ export const styles = css`
      unconditionally ("a low-cost affordance that needs no observers"), which is only harmless when
      there IS overflow: at the 2rem-per-edge default a two-option row (Overall | Daily) is narrower
      than its own two fades, so both labels rendered half-transparent and the control read as
-     disabled. */
-  [part="base"][data-scroll-overflow] {
+     disabled. One-sided and RTL-aware, matching lr-tab-group: data-scroll-start/data-scroll-end
+     (also from ScrollOverflowController, logical and live-updated on scroll) report which edge(s)
+     genuinely still have more to reach, so a track scrolled fully to one edge fades only the other
+     -- a track resting at its start no longer dims that already-fully-visible start edge.
+     data-scroll-start/data-scroll-end are wrapped in :where() below purely to keep these rules'
+     specificity pinned at the same (0,2,0) as the plain [data-scroll-overflow] selector -- so the
+     later forced-colors override (same base selector, later in the stylesheet) still wins the tie
+     by source order rather than losing to these more-specific-looking selectors, which would
+     otherwise leave the gradient mask painted even under forced-colors. */
+  [part="base"][data-scroll-overflow]:where([data-scroll-start][data-scroll-end]) {
     -webkit-mask-image: linear-gradient(
       to right,
       transparent,
@@ -60,6 +68,72 @@ export const styles = css`
       to right,
       transparent,
       var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+  }
+  [part="base"][data-scroll-overflow]:where(
+      [data-scroll-end]:not([data-scroll-start])
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+  }
+  [part="base"][data-scroll-overflow]:where(
+      [data-scroll-start]:not([data-scroll-end])
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+  }
+  :host(:dir(rtl))
+    [part="base"][data-scroll-overflow]:where(
+      [data-scroll-end]:not([data-scroll-start])
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+  }
+  :host(:dir(rtl))
+    [part="base"][data-scroll-overflow]:where(
+      [data-scroll-start]:not([data-scroll-end])
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
       var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
       transparent
     );
@@ -146,7 +220,8 @@ export const styles = css`
     box-shadow: var(--lr-segmented-selected-shadow, var(--lr-shadow-xs));
   }
   @media (forced-colors: active) {
-    [part="base"][data-scroll-overflow] {
+    [part="base"][data-scroll-overflow],
+    :host(:dir(rtl)) [part="base"][data-scroll-overflow] {
       -webkit-mask-image: none;
       mask-image: none;
     }

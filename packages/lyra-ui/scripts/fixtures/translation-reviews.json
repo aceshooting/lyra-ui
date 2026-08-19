@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "source": {
     "path": "src/internal/localization.ts#DEFAULT_STRINGS",
-    "keyCount": 1266,
-    "sha256": "sha256:ec764a0fd36dca5bef5672a8f91e37daeddf6f8c383153c80f8157f8ec103977"
+    "keyCount": 1267,
+    "sha256": "sha256:7dde949b5e426a823fbfed84c6ce51855cfe9cf8ed69907384ad202c5d11a50b"
   },
   "upstreamLocaleBreadth": {
     "webAwesome": {
@@ -167,24 +167,24 @@
       "locale": "fa",
       "direction": "rtl",
       "source": {
-        "keyCount": 1266,
-        "sha256": "sha256:ec764a0fd36dca5bef5672a8f91e37daeddf6f8c383153c80f8157f8ec103977"
+        "keyCount": 1267,
+        "sha256": "sha256:7dde949b5e426a823fbfed84c6ce51855cfe9cf8ed69907384ad202c5d11a50b"
       },
       "catalog": {
-        "keyCount": 1266,
-        "sha256": "sha256:a320074ef474d9ad48f62eaa9b83ea8b290e9f319d01c88897bff390a49be0c5"
+        "keyCount": 1267,
+        "sha256": "sha256:97da30e1a881df46d4e415e844dd6e48635602979a5dfd917a7968c9d8410d96"
       },
       "translator": {
         "status": "complete-original",
         "role": "project localization contributor",
-        "completedAt": "2026-08-14",
-        "evidence": "Drafted afresh from DEFAULT_STRINGS, then terminology-corrected and structurally validated in this repository; no upstream translated text was consulted. The 9.0 catalog changes through the 1,264-key source snapshot were translated in source order and submitted for independent follow-up review."
+        "completedAt": "2026-08-19",
+        "evidence": "Drafted afresh from DEFAULT_STRINGS, then terminology-corrected and structurally validated in this repository; no upstream translated text was consulted. The 9.0 catalog changes through the 1,264-key source snapshot were translated in source order and submitted for independent follow-up review. Updated 2026-08-19 for a single added key, emojiPickerGroupUnknown (\"Group {group}\", a fallback heading for an emoji group id the built-in table does not recognise). An AI-assisted independent review on 2026-08-19 checked the new string across all 10 shipped catalogs for meaning, UI register, preservation of the single {group} placeholder, and per-locale placeholder spacing conventions verified against existing entries in each catalog. One correction was required: Simplified Chinese initially spaced the numeric placeholder (\"分组 {group}\"), which contradicts the established convention in that catalog (第{line}行, 前{count}个); it was corrected to 分组{group}. Japanese retains its space, matching that catalog's own convention ({line} 行目). After correction all 10 were approved."
       },
       "reviewer": {
         "status": "approved",
         "role": "independent localization reviewer",
-        "reviewedAt": "2026-08-14",
-        "evidence": "An AI-assisted independent follow-up review on 2026-08-14 reviewed the 11 previously added messages across DEFAULT_STRINGS, the message-key type, generated component slices, call sites, and all 10 shipped catalogs. It checked meaning, UI register, grammar, RTL punctuation, established trace and test terminology, placeholder sets and semantic order, and source/catalog ordering, with particular scrutiny of Persian and Hebrew. Five trace-span terminology corrections were required in Arabic, Spanish, Persian, French, and Russian, plus one Persian software-test terminology correction. After correction, all 11 messages were approved. A separate independent AI-assisted review on 2026-08-14 then reviewed the two new file-input rejection messages across all 10 shipped catalogs for exact read-failure and folder-entry-limit meaning, natural grammar, established file/folder/item terminology, locale punctuation, and exact leading `{filename}` preservation; all 20 translated values were approved without correction. No new English-identical allowlist entry was required. Exact 1,264-key source, Persian, and Hebrew snapshots were verified; default-string reachability passed across 284 class files, and translation-review schema/freshness tests passed. No upstream translated text was consulted. These AI-assisted code-and-language reviews do not claim human or native-speaker identity."
+        "reviewedAt": "2026-08-19",
+        "evidence": "An AI-assisted independent follow-up review on 2026-08-14 reviewed the 11 previously added messages across DEFAULT_STRINGS, the message-key type, generated component slices, call sites, and all 10 shipped catalogs. It checked meaning, UI register, grammar, RTL punctuation, established trace and test terminology, placeholder sets and semantic order, and source/catalog ordering, with particular scrutiny of Persian and Hebrew. Five trace-span terminology corrections were required in Arabic, Spanish, Persian, French, and Russian, plus one Persian software-test terminology correction. After correction, all 11 messages were approved. A separate independent AI-assisted review on 2026-08-14 then reviewed the two new file-input rejection messages across all 10 shipped catalogs for exact read-failure and folder-entry-limit meaning, natural grammar, established file/folder/item terminology, locale punctuation, and exact leading `{filename}` preservation; all 20 translated values were approved without correction. No new English-identical allowlist entry was required. Exact 1,264-key source, Persian, and Hebrew snapshots were verified; default-string reachability passed across 284 class files, and translation-review schema/freshness tests passed. No upstream translated text was consulted. These AI-assisted code-and-language reviews do not claim human or native-speaker identity. Updated 2026-08-19 for a single added key, emojiPickerGroupUnknown (\"Group {group}\", a fallback heading for an emoji group id the built-in table does not recognise). An AI-assisted independent review on 2026-08-19 checked the new string across all 10 shipped catalogs for meaning, UI register, preservation of the single {group} placeholder, and per-locale placeholder spacing conventions verified against existing entries in each catalog. One correction was required: Simplified Chinese initially spaced the numeric placeholder (\"分组 {group}\"), which contradicts the established convention in that catalog (第{line}行, 前{count}个); it was corrected to 分组{group}. Japanese retains its space, matching that catalog's own convention ({line} 行目). After correction all 10 were approved."
       },
       "englishIdenticalAllowlist": [
         {
@@ -369,24 +369,24 @@
       "locale": "he",
       "direction": "rtl",
       "source": {
-        "keyCount": 1266,
-        "sha256": "sha256:ec764a0fd36dca5bef5672a8f91e37daeddf6f8c383153c80f8157f8ec103977"
+        "keyCount": 1267,
+        "sha256": "sha256:7dde949b5e426a823fbfed84c6ce51855cfe9cf8ed69907384ad202c5d11a50b"
       },
       "catalog": {
-        "keyCount": 1266,
-        "sha256": "sha256:f632bfe41700356f66326ad93d9c33982e01c2511eae7a633213138a5d1ee1bd"
+        "keyCount": 1267,
+        "sha256": "sha256:87865b1754d9a3a1bed830f0e023e84b7d2b38b686eb6b420356c097d11381b3"
       },
       "translator": {
         "status": "complete-original",
         "role": "project localization contributor",
-        "completedAt": "2026-08-14",
-        "evidence": "Drafted afresh from DEFAULT_STRINGS, then terminology-corrected and structurally validated in this repository; no upstream translated text was consulted. The 9.0 catalog changes through the 1,264-key source snapshot were translated in source order and submitted for independent follow-up review."
+        "completedAt": "2026-08-19",
+        "evidence": "Drafted afresh from DEFAULT_STRINGS, then terminology-corrected and structurally validated in this repository; no upstream translated text was consulted. The 9.0 catalog changes through the 1,264-key source snapshot were translated in source order and submitted for independent follow-up review. Updated 2026-08-19 for a single added key, emojiPickerGroupUnknown (\"Group {group}\", a fallback heading for an emoji group id the built-in table does not recognise). An AI-assisted independent review on 2026-08-19 checked the new string across all 10 shipped catalogs for meaning, UI register, preservation of the single {group} placeholder, and per-locale placeholder spacing conventions verified against existing entries in each catalog. One correction was required: Simplified Chinese initially spaced the numeric placeholder (\"分组 {group}\"), which contradicts the established convention in that catalog (第{line}行, 前{count}个); it was corrected to 分组{group}. Japanese retains its space, matching that catalog's own convention ({line} 行目). After correction all 10 were approved."
       },
       "reviewer": {
         "status": "approved",
         "role": "independent localization reviewer",
-        "reviewedAt": "2026-08-14",
-        "evidence": "An AI-assisted independent follow-up review on 2026-08-14 reviewed the 11 previously added messages across DEFAULT_STRINGS, the message-key type, generated component slices, call sites, and all 10 shipped catalogs. It checked meaning, UI register, grammar, RTL punctuation, established trace and test terminology, placeholder sets and semantic order, and source/catalog ordering, with particular scrutiny of Persian and Hebrew. Five trace-span terminology corrections were required in Arabic, Spanish, Persian, French, and Russian, plus one Persian software-test terminology correction. After correction, all 11 messages were approved. A separate independent AI-assisted review on 2026-08-14 then reviewed the two new file-input rejection messages across all 10 shipped catalogs for exact read-failure and folder-entry-limit meaning, natural grammar, established file/folder/item terminology, locale punctuation, and exact leading `{filename}` preservation; all 20 translated values were approved without correction. No new English-identical allowlist entry was required. Exact 1,264-key source, Persian, and Hebrew snapshots were verified; default-string reachability passed across 284 class files, and translation-review schema/freshness tests passed. No upstream translated text was consulted. These AI-assisted code-and-language reviews do not claim human or native-speaker identity."
+        "reviewedAt": "2026-08-19",
+        "evidence": "An AI-assisted independent follow-up review on 2026-08-14 reviewed the 11 previously added messages across DEFAULT_STRINGS, the message-key type, generated component slices, call sites, and all 10 shipped catalogs. It checked meaning, UI register, grammar, RTL punctuation, established trace and test terminology, placeholder sets and semantic order, and source/catalog ordering, with particular scrutiny of Persian and Hebrew. Five trace-span terminology corrections were required in Arabic, Spanish, Persian, French, and Russian, plus one Persian software-test terminology correction. After correction, all 11 messages were approved. A separate independent AI-assisted review on 2026-08-14 then reviewed the two new file-input rejection messages across all 10 shipped catalogs for exact read-failure and folder-entry-limit meaning, natural grammar, established file/folder/item terminology, locale punctuation, and exact leading `{filename}` preservation; all 20 translated values were approved without correction. No new English-identical allowlist entry was required. Exact 1,264-key source, Persian, and Hebrew snapshots were verified; default-string reachability passed across 284 class files, and translation-review schema/freshness tests passed. No upstream translated text was consulted. These AI-assisted code-and-language reviews do not claim human or native-speaker identity. Updated 2026-08-19 for a single added key, emojiPickerGroupUnknown (\"Group {group}\", a fallback heading for an emoji group id the built-in table does not recognise). An AI-assisted independent review on 2026-08-19 checked the new string across all 10 shipped catalogs for meaning, UI register, preservation of the single {group} placeholder, and per-locale placeholder spacing conventions verified against existing entries in each catalog. One correction was required: Simplified Chinese initially spaced the numeric placeholder (\"分组 {group}\"), which contradicts the established convention in that catalog (第{line}行, 前{count}个); it was corrected to 分组{group}. Japanese retains its space, matching that catalog's own convention ({line} 行目). After correction all 10 were approved."
       },
       "englishIdenticalAllowlist": [
         {

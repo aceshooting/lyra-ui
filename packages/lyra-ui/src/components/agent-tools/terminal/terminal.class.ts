@@ -1022,7 +1022,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
             .keyFunction=${(item: unknown) => (item as TerminalLine).number}
             .activeItemId=${this.scrollTargetLineNumber ?? ''}
             row-height=${this.wrap ? 'auto' : '24'}
-            @lr-visible-range-changed=${this.onVisibleRangeChanged}
+            @lr-visible-range-change=${this.onVisibleRangeChanged}
           ></lr-virtual-list>
           ${!this.follow && this.lines.length > 0
             ? html`<button part="jump-to-latest" type="button" @click=${this.jumpToLatest}>

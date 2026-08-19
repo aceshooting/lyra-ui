@@ -102,23 +102,25 @@ assigned elements.
 dependencies of this package imported directly, not optional peers.
 
 ```html
-<lr-tool-select-dialog
-  label="Select tools"
-  .tools=${[
-    { id: 'search', name: 'Web search', category: 'Research' },
-    { id: 'python', name: 'Python', category: 'Code', description: 'Run sandboxed Python' },
-    { id: 'admin', name: 'Admin console', disabled: true, disabledReason: 'Requires admin approval' },
-  ]}
-  .selectedToolIds=${enabledToolIds}
-  ?use-defaults=${usingDefaults}
-  ?open=${dialogOpen}
-  @lr-change=${(e) => updateTools(e.detail.selectedToolIds, e.detail.useDefaults)}
-  @lr-close=${() => (dialogOpen = false)}
->
-  <button slot="footer" @click=${(e) => e.target.closest('lr-tool-select-dialog').close('done')}>
-    Done
-  </button>
+<lr-tool-select-dialog label="Select tools">
+  <button slot="footer" id="done-btn">Done</button>
 </lr-tool-select-dialog>
+<script type="module">
+  const dialog = document.querySelector("lr-tool-select-dialog");
+  dialog.tools = [
+    { id: "search", name: "Web search", category: "Research" },
+    { id: "python", name: "Python", category: "Code", description: "Run sandboxed Python" },
+    { id: "admin", name: "Admin console", disabled: true, disabledReason: "Requires admin approval" },
+  ];
+  dialog.selectedToolIds = enabledToolIds;
+  dialog.useDefaults = usingDefaults;
+  dialog.open = true;
+  dialog.addEventListener("lr-change", (e) =>
+    updateTools(e.detail.selectedToolIds, e.detail.useDefaults)
+  );
+  dialog.addEventListener("lr-close", () => (dialog.open = false));
+  dialog.querySelector("#done-btn").addEventListener("click", () => dialog.close("done"));
+</script>
 ```
 
 `useDefaults` is a single top-level switch: while `true`, every per-tool checkbox renders disabled

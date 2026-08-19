@@ -6,7 +6,7 @@
 - **Class** `LyraEntityCard`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/entity-card/entity-card.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecated event** `lr-entity-activate` since `9.1.1`; use event `addEventListener('lr-entity-select', ...)`; removal not before `11.0.0` — Renamed for cross-family event-vocabulary consistency; both names fire from the same gesture with an identical detail during the compatibility window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -17,7 +17,7 @@
 
 A dossier card for one knowledge-graph entity: type badge, description, key/value property rows,
 degree, community chip, plus a built-in "focus in graph" action. Never fetches or focuses a graph
-itself — `lr-entity-activate` is a request a host routes into `lr-graph`'s own
+itself — `lr-entity-select` is a request a host routes into `lr-graph`'s own
 `focusNode(id, options?)`.
 
 **Properties:**
@@ -43,8 +43,6 @@ number; communityId?: string }`; field names deliberately mirror `lr-graph`'s `L
   name for the same union.
 
 **Events:** `lr-entity-select` (`detail: { entityId }`, the built-in focus button was activated).
-`lr-entity-activate` is a deprecated alias fired alongside it from the same gesture with the same
-detail object; removal not before 11.0.0 — prefer `lr-entity-select`.
 
 **Slots:** default (extra body content below the property rows, e.g. a `lr-neighbor-list`),
 `actions` (extra header actions alongside the built-in focus button).
@@ -77,7 +75,7 @@ from tokens.
   };
   document
     .getElementById("card")
-    .addEventListener("lr-entity-activate", (e) =>
+    .addEventListener("lr-entity-select", (e) =>
       graph.focusNode(e.detail.entityId)
     );
 </script>

@@ -222,7 +222,7 @@ it('waits for capture-phase close vetoes before settling or removing the dialog'
   let settled = false;
   void promise.then(() => { settled = true; });
   const veto = (event: Event): void => event.preventDefault();
-  document.addEventListener('lr-dialog-close', veto, { capture: true });
+  document.addEventListener('lr-close', veto, { capture: true });
   try {
     footerButtons(dialog)[1].click();
     await new Promise<void>((resolve) => queueMicrotask(resolve));
@@ -231,7 +231,7 @@ it('waits for capture-phase close vetoes before settling or removing the dialog'
     expect(dialog.isConnected).to.be.true;
     expect(dialog.open).to.be.true;
   } finally {
-    document.removeEventListener('lr-dialog-close', veto, { capture: true });
+    document.removeEventListener('lr-close', veto, { capture: true });
   }
 
   footerButtons(dialog)[1].click();

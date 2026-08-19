@@ -1116,7 +1116,7 @@ it("cancels an estimate correction on manual scroll intent and source replacemen
   expect(internals.pendingScrollCorrection === undefined).to.equal(true);
 });
 
-it("emits lr-visible-range-changed once the container is measured after mount", async () => {
+it("emits lr-visible-range-change once the container is measured after mount", async () => {
   const el = document.createElement("lr-virtual-list") as LyraVirtualList;
   el.setAttribute("style", "--lr-virtual-list-height:200px");
   el.setAttribute("row-height", "40");
@@ -1124,42 +1124,11 @@ it("emits lr-visible-range-changed once the container is measured after mount", 
   el.renderItem = renderText;
   el.keyFunction = numberKey;
 
-  const eventPromise = oneEvent(el, "lr-visible-range-changed");
+  const eventPromise = oneEvent(el, "lr-visible-range-change");
   document.body.appendChild(el);
   const ev = await eventPromise;
   expect(ev.detail.start).to.equal(0);
   expect(ev.detail.end).to.be.greaterThan(0);
-  el.remove();
-});
-
-it("emits the canonical lr-visible-range-change alongside the legacy lr-visible-range-changed alias, both exactly once with identical detail", async () => {
-  const el = document.createElement("lr-virtual-list") as LyraVirtualList;
-  el.setAttribute("style", "--lr-virtual-list-height:200px");
-  el.setAttribute("row-height", "40");
-  el.items = Array.from({ length: 30 }, (_, i) => i);
-  el.renderItem = renderText;
-  el.keyFunction = numberKey;
-
-  let canonicalCount = 0;
-  let legacyCount = 0;
-  const canonicalPending = oneEvent(el, "lr-visible-range-change");
-  const legacyPending = oneEvent(el, "lr-visible-range-changed");
-  el.addEventListener("lr-visible-range-change", () => canonicalCount++);
-  el.addEventListener("lr-visible-range-changed", () => legacyCount++);
-
-  document.body.appendChild(el);
-  const [canonical, legacy] = await Promise.all([
-    canonicalPending,
-    legacyPending,
-  ]);
-  await nextFrame();
-  await el.updateComplete;
-
-  expect(canonical.detail.start).to.equal(0);
-  expect(canonical.detail.end).to.be.greaterThan(0);
-  expect(legacy.detail).to.deep.equal(canonical.detail);
-  expect(canonicalCount, "canonical name fires exactly once").to.equal(1);
-  expect(legacyCount, "legacy alias fires exactly once").to.equal(1);
   el.remove();
 });
 
@@ -1172,12 +1141,12 @@ it("re-emits a populated range after an empty transition restores the same windo
   el.renderItem = renderText;
   el.keyFunction = numberKey;
 
-  const initialRange = oneEvent(el, "lr-visible-range-changed");
+  const initialRange = oneEvent(el, "lr-visible-range-change");
   document.body.appendChild(el);
   try {
     const initial = await initialRange;
     const ranges: Array<{ start: number; end: number }> = [];
-    el.addEventListener("lr-visible-range-changed", (event) => {
+    el.addEventListener("lr-visible-range-change", (event) => {
       const { start, end } = (
         event as CustomEvent<{ start: number; end: number }>
       ).detail;
@@ -1215,7 +1184,7 @@ it("coalesces rapid scroll events into a single visible-range recompute per anim
 
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   let count = 0;
-  el.addEventListener("lr-visible-range-changed", () => count++);
+  el.addEventListener("lr-visible-range-change", () => count++);
 
   base.scrollTop = 100;
   base.dispatchEvent(new Event("scroll"));
@@ -2521,7 +2490,7 @@ describe("public scroll container and lr-virtual-scroll", () => {
     let scrollEvents = 0;
     let rangeEvents = 0;
     el.addEventListener("lr-virtual-scroll", () => scrollEvents++);
-    el.addEventListener("lr-visible-range-changed", () => rangeEvents++);
+    el.addEventListener("lr-visible-range-change", () => rangeEvents++);
 
     // 3px: far less than the 40px row height, so the rendered index range cannot change.
     base.scrollTop = 3;
@@ -2534,7 +2503,7 @@ describe("public scroll container and lr-virtual-scroll", () => {
     );
     expect(
       rangeEvents,
-      "lr-visible-range-changed is not a substitute"
+      "lr-visible-range-change is not a substitute"
     ).to.equal(0);
   });
 

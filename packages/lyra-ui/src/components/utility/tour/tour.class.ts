@@ -326,7 +326,7 @@ function snapshotTourSteps(value: unknown): readonly Readonly<LyraTourStep>[] {
  * @event lr-tour-end - Fired by `end()` (and by `next()` on the last step, with reason
  *   `'completed'`). `detail: LyraTourEndReason`. Conditionally cancelable: every ordinary end can be
  *   vetoed, while `'unmount'` cannot because the element is already being removed -- mirrors
- *   `lr-dialog-close` exactly.
+ *   `lr-dialog`'s own `lr-close` exactly.
  * @event lr-tour-target-missing - The active step's `target` did not resolve to a connected
  *   element. `detail: { index, step }`. Not cancelable -- informational. The tour does not
  *   auto-end; it renders that step's popover unanchored (viewport-centered, no spotlight cutout)

@@ -2,6 +2,7 @@ import { expect } from '@open-wc/testing';
 import { loadMaplibre, loadMaplibreModule, type MaplibreModule } from './map-loader.js';
 
 const MAP_METHODS = [
+  'getCanvas',
   'getCenter',
   'getZoom',
   'setCenter',

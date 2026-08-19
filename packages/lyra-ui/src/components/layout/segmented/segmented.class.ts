@@ -180,14 +180,15 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
 
   private rehomeSegmentFocus = false;
 
-  constructor() {
-    super();
-    // Gates the [part="base"] edge fade on the track genuinely overflowing -- see
-    // --lr-scroll-fade-size and segmented.styles.ts.
-    observeScrollOverflow(this, () =>
-      this.renderRoot.querySelector('[part="base"]')
-    );
-  }
+  /** Gates the [part="base"] edge fade on the track genuinely overflowing, with one-sided/RTL-aware
+   *  logical-edge state -- see --lr-scroll-fade-size and segmented.styles.ts. Stored (rather than a
+   *  bare statement-expression call) so `updated()` can register each segment on the controller's
+   *  own `ResizeObserver` via `observeExtra()` below -- a segment's own intrinsic content (a longer
+   *  localized label, an icon loading in) can grow scrollWidth without [part="base"]'s own border
+   *  box changing at all, which the plain per-track observation alone cannot see. */
+  private scrollOverflow = observeScrollOverflow(this, () =>
+    this.renderRoot.querySelector('[part="base"]')
+  );
 
   private select(item: Readonly<LyraSegmentedItem>): void {
     if (item.disabled || item === this.selectedItem) return;
@@ -226,6 +227,13 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    // Each segment's own intrinsic geometry (a label, image, font, or slot change) can alter scroll
+    // reachability without [part="base"]'s own border box changing at all -- the primary observer
+    // above only watches that one container, so every current segment rides along on its single
+    // ResizeObserver instance instead of a second one of its own.
+    this.scrollOverflow.observeExtra(
+      this.renderRoot.querySelectorAll('[part="segment"]')
+    );
     if (this.rehomeSegmentFocus) {
       this.rehomeSegmentFocus = false;
       this.renderRoot

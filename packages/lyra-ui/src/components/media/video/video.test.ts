@@ -429,6 +429,23 @@ describe('lr-video public contract', () => {
     expect(media.muted).to.be.false;
   });
 
+  it('does not let the native volumechange caused by autoplay-muted overwrite the authored muted property', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video autoplay-muted></lr-video>`);
+    const media = nativeVideo(el);
+    expect(el.muted, 'authored muted stays false immediately after the forced mute').to.be.false;
+    expect(media.muted, 'the native element is actually muted').to.be.true;
+
+    // The forced `mediaController.muted = true` above queues a real native 'volumechange' the
+    // same way any other native mute toggle would; simulate its arrival explicitly, matching this
+    // file's existing convention of dispatching synthetic native events on a src-less <video>
+    // fixture (see the "relays X once" loop above) since no real media pipeline runs here.
+    media.dispatchEvent(new Event('volumechange'));
+    await el.updateComplete;
+
+    expect(el.muted, 'the authored muted property must stay false per the documented contract').to.be.false;
+    expect(el.getState().muted, 'the effective/native mute state still reports true').to.be.true;
+  });
+
   for (const type of ['ended', 'error', 'loadedmetadata', 'pause', 'play', 'timeupdate', 'volumechange']) {
     it(`relays ${type} once as a native non-crossing Event`, async () => {
       const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
@@ -443,6 +460,41 @@ describe('lr-video public contract', () => {
       expect(received[0].cancelable).to.be.false;
     });
   }
+
+  it('fires exactly one host timeupdate per programmatic seek() with a real loaded <video>, not a duplicate from the native relay', async () => {
+    // A property-mocked <video> (as used elsewhere in this file) never actually fires a native
+    // 'timeupdate'/'seeked' pair on its own -- setting `.currentTime` is just a plain property
+    // assignment there, so it cannot exercise the real double-relay this test guards against. This
+    // loads the genuine, small (2s h264) fixture the repo already ships for media-card/Storybook
+    // so the real HTML seeking algorithm (which queues BOTH a 'timeupdate' and a 'seeked' native
+    // event once a seek completes) actually runs.
+    const fixtureUrl = new URL('../media-card/fixtures/sample.mp4', import.meta.url).href;
+    const el = await fixture<LyraVideo>(html`<lr-video src=${fixtureUrl}></lr-video>`);
+    const media = nativeVideo(el);
+
+    await new Promise<void>((resolve) => {
+      if (media.readyState >= HTMLMediaElement.HAVE_METADATA) resolve();
+      else media.addEventListener('loadedmetadata', () => resolve(), { once: true });
+    });
+    expect(media.duration, 'the real fixture must report a finite, positive duration').to.be.greaterThan(0);
+
+    const received: Event[] = [];
+    el.addEventListener('timeupdate', (event) => received.push(event));
+
+    const target = media.duration / 2;
+    el.seek(target);
+    expect(received.length, 'seek() dispatches its own synchronous host timeupdate').to.equal(1);
+
+    // Wait for the real native 'seeked' event -- the HTML seeking algorithm queues it alongside a
+    // native 'timeupdate' once the underlying seek actually completes -- then give that paired
+    // 'timeupdate' relay one more macrotask to land before asserting the final count.
+    await new Promise<void>((resolve) => {
+      media.addEventListener('seeked', () => resolve(), { once: true });
+    });
+    await aTimeout(50);
+
+    expect(received.length, 'seek() must not double-fire host timeupdate via the native relay').to.equal(1);
+  });
 
   it('renders exact base/video-wrapper aliases and the documented public parts', async () => {
     const el = await fixture<LyraVideo>(html`
@@ -1546,6 +1598,32 @@ describe('lr-video control surface', () => {
     media.dispatchEvent(new Event('ratechange'));
     await el.updateComplete;
     expect(el.playbackRate).to.equal(2);
+  });
+
+  it('renders exactly one selected rate option, splicing in an off-preset playbackRate reached via a native ratechange', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video controls="full"></lr-video>`);
+    const media = nativeVideo(el);
+    Object.defineProperties(media, {
+      duration: { configurable: true, value: 30 },
+      currentTime: { configurable: true, value: 0, writable: true },
+      playbackRate: { configurable: true, value: 1, writable: true },
+    });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+
+    // A native ratechange can report a rate outside the fixed PLAYBACK_RATES preset list -- e.g.
+    // a platform media-key or picture-in-picture window rate change.
+    Object.defineProperty(media, 'playbackRate', { configurable: true, value: 1.9, writable: true });
+    media.dispatchEvent(new Event('ratechange'));
+    await el.updateComplete;
+
+    expect(el.playbackRate).to.equal(1.9);
+    const select = el.shadowRoot!.querySelector<HTMLSelectElement>('[data-control="rate"]')!;
+    const options = [...select.options];
+    const selected = options.filter((option) => option.selected);
+    expect(selected.length, 'exactly one option must be selected').to.equal(1);
+    expect(Number(selected[0]!.value), 'the selected option must reflect the real off-preset rate').to.equal(1.9);
+    expect(select.value).to.equal('1.9');
   });
 
   it('starts playback from the poster overlay', async () => {

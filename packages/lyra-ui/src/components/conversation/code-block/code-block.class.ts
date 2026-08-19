@@ -13,6 +13,7 @@ import {
   loadShikiLanguage,
   loadShikiHighlighterCore,
   normalizeShikiLanguage,
+  shikiHasLoadedLanguage,
   type ShikiHighlighter,
   type ShikiHighlighterCore,
   type ShikiLanguageInput,
@@ -514,7 +515,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
       this.highlightedHtml = null;
       return;
     }
-    if (hl.getLoadedLanguages().includes(lang)) {
+    if (shikiHasLoadedLanguage(hl, lang)) {
       this.highlightedHtml = this.tokenize(hl, lang);
       return;
     }

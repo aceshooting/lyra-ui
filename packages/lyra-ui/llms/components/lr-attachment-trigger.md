@@ -74,10 +74,13 @@ hidden via CSS by default, exposed as a part only so a consumer can override tha
 **Optional peer deps:** none.
 
 ```html
-<lr-attachment-trigger .capabilities=${['files', 'image', 'camera']} accept=".pdf,.docx"
-  @lr-files=${(e) => queueFiles(e.detail.capability, e.detail.files)}
-  @lr-camera-request=${openCameraFlow}
-></lr-attachment-trigger>
+<lr-attachment-trigger accept=".pdf,.docx"></lr-attachment-trigger>
+<script type="module">
+  const trigger = document.querySelector("lr-attachment-trigger");
+  trigger.capabilities = ["files", "image", "camera"];
+  trigger.addEventListener("lr-files", (e) => queueFiles(e.detail.capability, e.detail.files));
+  trigger.addEventListener("lr-camera-request", openCameraFlow);
+</script>
 ```
 
 **Known gotchas:**

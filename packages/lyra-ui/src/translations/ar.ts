@@ -843,6 +843,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGroupObjects: 'الأشياء',
   emojiPickerGroupSymbols: 'الرموز',
   emojiPickerGroupFlags: 'الأعلام',
+  emojiPickerGroupUnknown: 'المجموعة {group}',
   pushToTalkRequesting: 'جارٍ طلب إذن الميكروفون…',
   pushToTalkDenied: 'تم رفض الوصول إلى الميكروفون',
   pushToTalkError: 'فشل التسجيل',

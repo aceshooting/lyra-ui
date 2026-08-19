@@ -2,10 +2,12 @@ import { GREYCAT_LANGUAGE } from './greycat-language.js';
 import {
   SHIKI_DARK_THEME,
   SHIKI_LIGHT_THEME,
+  isShikiHighlighter,
   normalizeShikiLanguage,
   type ShikiHighlighter,
   type ShikiLanguageInput,
 } from './shiki-types.js';
+import { resolveOptionalPeerCapability } from '../../../internal/optional-peer-capabilities.js';
 
 // Preserve the established full-loader module surface. Lean components import the peer-neutral
 // and fine-grained leaves directly so this module's `import('shiki')` cannot enter their graph.
@@ -35,6 +37,20 @@ const CUSTOM_LANGUAGES: Record<string, ShikiLanguageInput> = {
   greycat: GREYCAT_LANGUAGE,
 };
 
+/** The shape of the `shiki` module namespace this loader actually calls -- the highlighter
+ *  `createHighlighter()` produces is validated separately by `isShikiHighlighter()` below. */
+interface ShikiModule {
+  createHighlighter(options: Record<string, unknown>): Promise<unknown>;
+}
+
+function isShikiModule(candidate: unknown): candidate is ShikiModule {
+  return (
+    (typeof candidate === 'object' || typeof candidate === 'function') &&
+    candidate !== null &&
+    typeof (candidate as ShikiModule).createHighlighter === 'function'
+  );
+}
+
 /**
  * Lazily loads the optional peer dependency `shiki` once per page and builds
  * (and caches) a single `Highlighter` instance seeded with `SHIKI_THEMES` and
@@ -52,13 +68,26 @@ const CUSTOM_LANGUAGES: Record<string, ShikiLanguageInput> = {
 export function loadShikiHighlighter(): Promise<ShikiHighlighter | null> {
   if (!highlighter) {
     highlighter = import('shiki')
-      .then(
-        (mod) =>
-          mod.createHighlighter({
-            themes: [SHIKI_LIGHT_THEME, SHIKI_DARK_THEME],
-            langs: [],
-          }) as unknown as ShikiHighlighter
-      )
+      .then(async (mod) => {
+        // Handles both the flat-namespace shape a native ESM `shiki` import produces and a
+        // `{ default }`-wrapped shape a CJS-interop bundler/test harness might produce instead.
+        const shikiModule = resolveOptionalPeerCapability(mod, isShikiModule);
+        if (!shikiModule) {
+          throw new Error(
+            'Invalid optional peer `shiki`: missing `createHighlighter` capability.'
+          );
+        }
+        const instance = await shikiModule.createHighlighter({
+          themes: [SHIKI_LIGHT_THEME, SHIKI_DARK_THEME],
+          langs: [],
+        });
+        if (!isShikiHighlighter(instance)) {
+          throw new Error(
+            'Invalid optional peer `shiki`: `createHighlighter()` did not produce a usable highlighter capability.'
+          );
+        }
+        return instance;
+      })
       .catch((err) => {
         console.warn(
           '<lr-code-block> needs the optional peer dependency `shiki` for syntax highlighting — install it ' +
@@ -69,6 +98,24 @@ export function loadShikiHighlighter(): Promise<ShikiHighlighter | null> {
       });
   }
   return highlighter;
+}
+
+/**
+ * Safely reports whether `lang` is already loaded into `hl`, tolerating a highlighter whose
+ * `getLoadedLanguages()` itself throws -- treated the same as "not loaded", which routes the
+ * caller into the existing unhighlighted-fallback path instead of throwing out of it.
+ * `loadShikiHighlighter()`/`loadShikiHighlighterCore()` already validate a highlighter's
+ * capability *shape* at load time, so `hl` here is never missing the method outright; this
+ * additionally tolerates a shape-valid peer whose method throws only when actually called (a
+ * load-time shape check alone cannot catch that). Shared by `loadShikiLanguage()` below and
+ * `<lr-code-block>`'s own synchronous per-render check in `syncHighlight()`.
+ */
+export function shikiHasLoadedLanguage(hl: ShikiHighlighter, lang: string): boolean {
+  try {
+    return hl.getLoadedLanguages().includes(lang);
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -86,7 +133,7 @@ export async function loadShikiLanguage(
   lang: string
 ): Promise<boolean> {
   const normalizedLanguage = normalizeShikiLanguage(lang);
-  if (hl.getLoadedLanguages().includes(normalizedLanguage)) return true;
+  if (shikiHasLoadedLanguage(hl, normalizedLanguage)) return true;
   if (unsupportedLanguages.has(normalizedLanguage)) return false;
   try {
     await hl.loadLanguage(

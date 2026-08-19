@@ -24,6 +24,29 @@ it('defaults throttleMs to 500 when not provided', () => {
   expect(a.throttleMs).to.equal(500);
 });
 
+it('sanitizes a non-finite throttleMs passed to the constructor to the 500ms default', () => {
+  expect(new Announcer({ throttleMs: NaN, onFlush: () => {} }).throttleMs).to.equal(500);
+  expect(new Announcer({ throttleMs: Infinity, onFlush: () => {} }).throttleMs).to.equal(500);
+  expect(new Announcer({ throttleMs: -Infinity, onFlush: () => {} }).throttleMs).to.equal(500);
+});
+
+it('sanitizes a negative finite throttleMs passed to the constructor by clamping to 0', () => {
+  expect(new Announcer({ throttleMs: -100, onFlush: () => {} }).throttleMs).to.equal(0);
+});
+
+it('sanitizes a non-finite/negative throttleMs assigned after construction the same way', () => {
+  const a = new Announcer({ throttleMs: THROTTLE_MS, onFlush: () => {} });
+
+  a.throttleMs = NaN;
+  expect(a.throttleMs).to.equal(500);
+
+  a.throttleMs = Infinity;
+  expect(a.throttleMs).to.equal(500);
+
+  a.throttleMs = -100;
+  expect(a.throttleMs).to.equal(0);
+});
+
 it('flushes a single announce() call after the throttle window elapses', async () => {
   const flushes: string[] = [];
   const a = new Announcer({

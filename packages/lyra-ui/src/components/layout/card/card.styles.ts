@@ -31,6 +31,13 @@ export const styles = css`
     box-sizing: border-box;
     color: inherit;
     text-decoration: none;
+    /* Load-bearing, not incidental: it clips a full-bleed media/image child to the rounded border,
+       so removing it squares off the corners of every slotted image. The consequence, paired with
+       the stretched block-size above, is that a card in a DEFINITE allocation (a fixed grid row,
+       an explicit block-size) clips body content taller than that allocation instead of growing
+       or scrolling. Neither upstream card exposes an overflow, block-size, or scroll hook, so the
+       scroll owner stays a consumer decision made through the public body part -- see the
+       overflow note in card.class.ts's class doc. */
     overflow: hidden;
   }
   .linked-shell {
@@ -55,6 +62,8 @@ export const styles = css`
     box-sizing: border-box;
     color: inherit;
     text-decoration: none;
+    /* Same corner clip and same consequence as the base rule above; this is the href variant's
+       visible twin, so the two must keep identical overflow behavior. */
     overflow: hidden;
     border-radius: var(--border-radius, var(--lr-radius));
     pointer-events: none;

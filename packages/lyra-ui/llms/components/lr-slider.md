@@ -204,6 +204,7 @@ Mapped aliases are also live: `--thumb-size`, `--thumb-width`, `--thumb-height`,
 
 ```html
 <lr-slider
+  id="temperature-slider"
   name="temperature"
   min="0"
   max="2"
@@ -212,14 +213,11 @@ Mapped aliases are also live: `--thumb-size`, `--thumb-width`, `--thumb-height`,
   hint="Higher values make replies more varied."
   with-markers
   with-tooltip
-  .valueAsNumber=${0.7}
-  .valueFormatter=${(value, handle) => `${value * 100}%`}
-  @lr-input=${(e) => setDraftTemperature(e.detail.value)}
-  @lr-change=${(e) => commitTemperature(e.detail.value)}
 ></lr-slider>
 
 <!-- Two handles, vertical. A name submits two `price` entries. -->
 <lr-slider
+  id="price-slider"
   range
   name="price"
   orientation="vertical"
@@ -229,8 +227,17 @@ Mapped aliases are also live: `--thumb-size`, `--thumb-width`, `--thumb-height`,
   min-value="200"
   max-value="800"
   label="Price"
-  @lr-change=${(e) => applyPriceFilter(e.detail.minValue, e.detail.maxValue)}
 ></lr-slider>
+<script type="module">
+  const temperature = document.getElementById("temperature-slider");
+  temperature.valueAsNumber = 0.7;
+  temperature.valueFormatter = (value, handle) => `${value * 100}%`;
+  temperature.addEventListener("lr-input", (e) => setDraftTemperature(e.detail.value));
+  temperature.addEventListener("lr-change", (e) => commitTemperature(e.detail.value));
+
+  const price = document.getElementById("price-slider");
+  price.addEventListener("lr-change", (e) => applyPriceFilter(e.detail.minValue, e.detail.maxValue));
+</script>
 ```
 
 An unset `value` starts at numeric `0`, clamped into the configured domain and step grid. A reset

@@ -240,7 +240,7 @@ export class LyraAppRailItem extends LyraElement {
           rel=${this.target ? 'noopener noreferrer' : nothing}
           aria-label=${label ?? nothing}
           aria-disabled="false"
-          aria-current=${this.current ? 'page' : nothing}
+          aria-current=${this.current ? 'page' : 'false'}
           @mouseenter=${this.onFocusShow}
           @mouseleave=${this.onBlurHide}
           @focus=${this.onFocusShow}
@@ -256,7 +256,7 @@ export class LyraAppRailItem extends LyraElement {
         ?disabled=${this.disabled}
         aria-disabled=${this.disabled ? 'true' : 'false'}
         aria-label=${label ?? nothing}
-        aria-current=${this.current ? 'page' : nothing}
+        aria-current=${this.current ? 'page' : 'false'}
         @mouseenter=${this.onFocusShow}
         @mouseleave=${this.onBlurHide}
         @focus=${this.onFocusShow}

@@ -56,9 +56,13 @@ phase write queued while detached.
 viewport's aspect ratio.
 
 ```html
-<lr-browser-frame phase="streaming" url="https://example.com" .pings=${pings}
-  @lr-take-over=${(e) => setController(e.detail.controller)} @lr-stop=${() => stopSession()}
-></lr-browser-frame>
+<lr-browser-frame phase="streaming" url="https://example.com"></lr-browser-frame>
+<script type="module">
+  const frame = document.querySelector("lr-browser-frame");
+  frame.pings = pings;
+  frame.addEventListener("lr-take-over", (e) => setController(e.detail.controller));
+  frame.addEventListener("lr-stop", () => stopSession());
+</script>
 ```
 
 **Additional API surface:**

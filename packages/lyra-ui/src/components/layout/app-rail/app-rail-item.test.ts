@@ -336,12 +336,12 @@ it('marks the base part aria-current="page" when current', async () => {
   expect(base.getAttribute("aria-current")).to.equal("page");
 });
 
-it("omits aria-current when not current", async () => {
+it('renders aria-current="false" (not omitted) when not current', async () => {
   const el = (await fixture(
     html`<lr-app-rail-item href="/home">Home</lr-app-rail-item>`
   )) as LyraAppRailItem;
   const base = el.shadowRoot!.querySelector('[part="base"]')!;
-  expect(base.hasAttribute("aria-current")).to.be.false;
+  expect(base.getAttribute("aria-current")).to.equal("false");
 });
 
 it("reflects current as a host attribute", async () => {
@@ -363,13 +363,13 @@ describe("current", () => {
     expect(base.getAttribute("aria-current")).to.equal("page");
   });
 
-  it("defaults to false and omits aria-current entirely", async () => {
+  it('defaults to false and renders aria-current="false" (not omitted)', async () => {
     const el = (await fixture(
       html`<lr-app-rail-item href="/inbox">Inbox</lr-app-rail-item>`
     )) as LyraAppRailItem;
     expect(el.current).to.be.false;
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
-    expect(base.hasAttribute("aria-current")).to.be.false;
+    expect(base.getAttribute("aria-current")).to.equal("false");
   });
 
   it("reflects on the button-rendering path too (no href)", async () => {
@@ -379,6 +379,15 @@ describe("current", () => {
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
     expect(base.tagName).to.equal("BUTTON");
     expect(base.getAttribute("aria-current")).to.equal("page");
+  });
+
+  it('renders aria-current="false" (not omitted) on the button-rendering path too', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail-item>Settings</lr-app-rail-item>`
+    )) as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.tagName).to.equal("BUTTON");
+    expect(base.getAttribute("aria-current")).to.equal("false");
   });
 });
 

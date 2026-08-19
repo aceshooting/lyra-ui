@@ -154,11 +154,11 @@ entry) or a third-party PDF/office-doc viewer, but neither is a dependency of th
 
 ```html
 <lr-document-preview
+  id="text-preview"
   filename="board-notes.txt"
   mime-type="text/plain"
   src="/files/board-notes.txt"
   max-height="24rem"
-  @lr-render-error=${(e) => console.error(e.detail.error)}
 ></lr-document-preview>
 
 <!-- A host driving its own server-side conversion -->
@@ -168,6 +168,11 @@ entry) or a third-party PDF/office-doc viewer, but neither is a dependency of th
 <lr-document-preview filename="deck.pptx" mime-type="application/vnd.ms-powerpoint" src="/files/deck.pptx">
   <lr-code-block slot="unsupported" language="text">Open in PowerPoint to preview.</lr-code-block>
 </lr-document-preview>
+<script type="module">
+  document
+    .getElementById("text-preview")
+    .addEventListener("lr-render-error", (e) => console.error(e.detail.error));
+</script>
 ```
 
 Accessibility: after the initial silent baseline, entering `"converting"` without numeric

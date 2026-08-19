@@ -14,6 +14,7 @@ import { attachInternalsSafely } from '../../../internal/form-associated.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
 import { isDateObject } from '../../../internal/dom-guards.js';
 import {
   dispatchNativeEvent,
@@ -319,6 +320,30 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   // the view the user navigated to), so they must not force the view back to
   // `selection.from`'s month -- only an externally-set `value` should do that.
   private suppressViewSync = false;
+
+  constructor() {
+    super();
+    // `months` renders 1 or 2 `.calendar-scroll` regions (one per visible month), each
+    // independently able to overflow its own allocation (size="xl", with-week-numbers's extra
+    // column) -- see the comment on `.calendar-scroll` in date-picker.styles.ts for why this
+    // scrolls rather than shrinks. Two independent controllers, one per region, mirror
+    // lr-widget's own two-row wiring (`[part="actions"]`/`[part="view-toggles"]`) rather than a
+    // single shared one, since either region can overflow on its own regardless of the other.
+    observeScrollOverflow(
+      this,
+      () =>
+        this.renderRoot.querySelectorAll('.calendar-scroll')[0] as
+          | HTMLElement
+          | undefined
+    );
+    observeScrollOverflow(
+      this,
+      () =>
+        this.renderRoot.querySelectorAll('.calendar-scroll')[1] as
+          | HTMLElement
+          | undefined
+    );
+  }
 
   private get effectiveMode(): CalendarMode {
     return normalizeCalendarMode(this.mode);
@@ -1273,46 +1298,50 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
           </div>
         </slot>
       </div>
-      <div part="weekdays">
-        ${labels.map((l) => html`<span part="weekday">${l}</span>`)}
-      </div>
-      <div class="calendar-body">
-        ${this.withWeekNumbers
-          ? html`<div part="weeknumbers" aria-hidden="true">
-              ${matrix.map(
-                (week) =>
-                  html`<span part="weeknumber"
-                    >${getNumberFormat(this.effectiveLocale).format(
-                      weekNumber(week[0]!)
-                    )}</span
-                  >`
-              )}
-            </div>`
-          : nothing}
-        <div
-          part="grid"
-          role="grid"
-          aria-labelledby=${titleId}
-          @keydown=${this.onGridKey}
-        >
-          ${matrix.map((week) => {
-            const rowHasVisibleDay = week.some((d) => d.getMonth() === month);
-            return html`<div part="week" role="row">
-              ${week.map((d) =>
-                this.renderDay(
-                  d,
-                  month,
-                  selection,
-                  min,
-                  max,
-                  today,
-                  rowHasVisibleDay,
-                  fallbackFocusDate,
-                  dayLabelFmt
-                )
-              )}
-            </div>`;
-          })}
+      <div class="calendar-scroll">
+        <div part="weekdays">
+          ${labels.map((l) => html`<span part="weekday">${l}</span>`)}
+        </div>
+        <div class="calendar-body">
+          ${this.withWeekNumbers
+            ? html`<div part="weeknumbers" aria-hidden="true">
+                ${matrix.map(
+                  (week) =>
+                    html`<span part="weeknumber"
+                      >${getNumberFormat(this.effectiveLocale).format(
+                        weekNumber(week[0]!)
+                      )}</span
+                    >`
+                )}
+              </div>`
+            : nothing}
+          <div
+            part="grid"
+            role="grid"
+            aria-labelledby=${titleId}
+            @keydown=${this.onGridKey}
+          >
+            ${matrix.map((week) => {
+              const rowHasVisibleDay = week.some(
+                (d) => d.getMonth() === month
+              );
+              return html`<div part="week" role="row">
+                ${week.map((d) =>
+                  this.renderDay(
+                    d,
+                    month,
+                    selection,
+                    min,
+                    max,
+                    today,
+                    rowHasVisibleDay,
+                    fallbackFocusDate,
+                    dayLabelFmt
+                  )
+                )}
+              </div>`;
+            })}
+          </div>
         </div>
       </div>
     </div>`;
@@ -1596,7 +1625,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
       }
     }
     return html`<div part="base date-picker">
-      <div>
+      <div class="content">
         ${this.effectiveView === 'days'
           ? html`<div part="months">${monthEls}</div>`
           : this.renderView(today)}

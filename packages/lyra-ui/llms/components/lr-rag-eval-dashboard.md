@@ -6,7 +6,7 @@
 - **Class** `LyraRagEvalDashboard`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecated event** `lr-run-select` since `9.1.1`; use event `addEventListener('lr-run-change', ...)`; removal not before `11.0.0` — Renamed for cross-family event-vocabulary consistency; both names fire from the same gesture with an identical detail during the compatibility window.
+- **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
 - **Themeable via** 13 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -37,9 +37,7 @@ history, counts, rendering, or actions.
 
 **Events:** `lr-metric-change` (`{ metricId }`), `lr-slice-change` (`{ slice }`), and
 `lr-run-change` (`{ run }`). All are controlled intents; the component does not mutate the
-corresponding selection properties. `lr-run-select` is a deprecated alias for `lr-run-change`, fired
-alongside it with an identical detail from the same gesture; it was the lone `-select` spelling among
-three identically-shaped filter clicks. Removal not before 11.0.0 — prefer `lr-run-change`.
+corresponding selection properties.
 
 **CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
 `metric-selected`, `chart`, `runs`, `runs-heading`, `run`, `empty`.

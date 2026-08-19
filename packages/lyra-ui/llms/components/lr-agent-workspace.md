@@ -126,3 +126,23 @@ optional-peer fallback.
 
 Every public data/value property is controlled: forwarded child intents bubble without mutating
 `messages`, `composerValue`, selections, run state, or persistence-owned data inside the shell.
+
+**Only the transcript scrolls.** `[part='base']` is a three-row grid — header, conversation,
+composer — and only the middle row can shrink, so the composed `lr-chat-viewport` owns the
+scrolling and the chrome rows stay put at their content size. The trade: give the workspace less
+block-size than the chrome needs and the conversation row collapses to zero first, after which the
+header or composer is clipped with no scrollbar. That takes unusually large slotted chrome — a very
+tall `header-actions` toolbar, or a `composer` replacement much taller than the built-in one — and
+the region that supplied it caps and scrolls itself through the public parts:
+
+```css
+lr-agent-workspace::part(header) {
+  max-block-size: 4rem;
+  overflow: auto;
+}
+```
+
+The same applies to `::part(composer)`. Both declarations are needed: the cap keeps the grid track
+inside the workspace, and `overflow` makes the capped region scrollable instead of spilling. No
+component-owned custom property duplicates this, because a `::part()` rule from your tree already
+wins over the shadow stylesheet regardless of specificity.

@@ -112,15 +112,14 @@ other text-entry surface in the library provides), plus shared tokens
 package, not an optional peer.
 
 ```html
-<lr-tool-approval-dialog
-  tool-name="send_email"
-  .args=${{ to: 'ops@example.com', subject: 'Deploy finished' }}
-  @lr-approve=${(e) => runTool(e.detail.args)}
-  @lr-deny=${() => console.log('denied')}
-  @lr-close=${(e) => console.log('closed:', e.detail)}
-></lr-tool-approval-dialog>
+<lr-tool-approval-dialog tool-name="send_email"></lr-tool-approval-dialog>
 <script type="module">
-  document.querySelector('lr-tool-approval-dialog').open = true;
+  const dialog = document.querySelector("lr-tool-approval-dialog");
+  dialog.args = { to: "ops@example.com", subject: "Deploy finished" };
+  dialog.addEventListener("lr-approve", (e) => runTool(e.detail.args));
+  dialog.addEventListener("lr-deny", () => console.log("denied"));
+  dialog.addEventListener("lr-close", (e) => console.log("closed:", e.detail));
+  dialog.open = true;
 </script>
 ```
 

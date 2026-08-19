@@ -416,7 +416,7 @@ describe("dialog wiring", () => {
     const dialog = el.shadowRoot!.querySelector("lr-dialog")!;
     const eventPromise = oneEvent(el, "lr-close");
     dialog.dispatchEvent(
-      new CustomEvent<DialogCloseReason>("lr-dialog-close", {
+      new CustomEvent<DialogCloseReason>("lr-close", {
         detail: "escape",
         bubbles: true,
         composed: true,
@@ -428,6 +428,9 @@ describe("dialog wiring", () => {
   });
 
   it("consumes the raw child close event when emitting the translated wrapper event", async () => {
+    // The internal shell dialog's own `lr-close` and the viewer's own translated `lr-close`
+    // share the same name -- `onDialogClose()` must `stopPropagation()` the raw one, or a
+    // listener at the wrapper would see this fire twice per dismissal instead of once.
     const wrapper = await fixture(
       html`<div><lr-document-viewer open name="f"></lr-document-viewer></div>`
     );
@@ -435,19 +438,16 @@ describe("dialog wiring", () => {
       "lr-document-viewer"
     ) as LyraDocumentViewer;
     const dialog = el.shadowRoot!.querySelector("lr-dialog")!;
-    let rawClose = 0;
     let wrapperClose = 0;
-    wrapper.addEventListener("lr-dialog-close", () => rawClose++);
     wrapper.addEventListener("lr-close", () => wrapperClose++);
     dialog.dispatchEvent(
-      new CustomEvent("lr-dialog-close", {
+      new CustomEvent("lr-close", {
         detail: "escape",
         bubbles: true,
         composed: true,
       })
     );
-    expect(rawClose).to.equal(0);
-    expect(wrapperClose).to.equal(1);
+    expect(wrapperClose, "the raw dialog-internal event must not also reach the wrapper").to.equal(1);
   });
 
   it("does not close the viewer when a registered renderer closes its own descendant dialog", async () => {
@@ -471,13 +471,14 @@ describe("dialog wiring", () => {
     const rendererDialog = el.shadowRoot!.querySelector(
       "#renderer-dialog"
     ) as HTMLElement;
-    let rawCloses = 0;
-    let wrapperCloses = 0;
-    wrapper.addEventListener("lr-dialog-close", () => rawCloses++);
-    wrapper.addEventListener("lr-close", () => wrapperCloses++);
+    // `onDialogClose()` only intercepts (and stops) a close event whose `target` is the shell
+    // dialog itself; this descendant renderer dialog's own `lr-close` must therefore reach the
+    // wrapper unmodified rather than being consumed or translated into a second event.
+    let closes = 0;
+    wrapper.addEventListener("lr-close", () => closes++);
 
     rendererDialog.dispatchEvent(
-      new CustomEvent<DialogCloseReason>("lr-dialog-close", {
+      new CustomEvent<DialogCloseReason>("lr-close", {
         detail: "close-button",
         bubbles: true,
         composed: true,
@@ -485,8 +486,7 @@ describe("dialog wiring", () => {
     );
 
     expect(el.open).to.equal(true);
-    expect(rawCloses).to.equal(1);
-    expect(wrapperCloses).to.equal(0);
+    expect(closes, "the descendant dialog's own close event still reaches the wrapper, exactly once").to.equal(1);
   });
 
   it("renders a download action and emits lr-download for safe sources", async () => {

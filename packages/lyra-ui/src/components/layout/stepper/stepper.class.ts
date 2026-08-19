@@ -292,13 +292,14 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
       )
   );
 
-  constructor() {
-    super();
-    // Gates the horizontal [part="base"] edge fade on the track genuinely overflowing -- see
-    // --lr-scroll-fade-size and stepper.styles.ts. Independent of the orientation controller
-    // above: the vertical rules zero the mask out regardless of this attribute.
-    observeScrollOverflow(this, () => this.baseEl);
-  }
+  /** Gates the horizontal [part="base"] edge fade on the track genuinely overflowing, with
+   *  one-sided/RTL-aware logical-edge state -- see --lr-scroll-fade-size and stepper.styles.ts.
+   *  Independent of the orientation controller above: the vertical rules zero the mask out
+   *  regardless of this attribute. Stored (rather than a bare statement-expression call) so
+   *  `updated()` can register each step on the controller's own `ResizeObserver` via
+   *  `observeExtra()` below -- a step's own intrinsic content (a longer localized label, an icon
+   *  loading in) can grow scrollWidth without [part="base"]'s own border box changing at all. */
+  private scrollOverflow = observeScrollOverflow(this, () => this.baseEl);
 
   /** The live layout/navigation axis after applying `orientationBreakpoint` -- identical to
    *  `orientation` whenever that's unset. See the class doc. */
@@ -384,6 +385,13 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    // Each step's own intrinsic geometry (a label, image, font, or slot change) can alter scroll
+    // reachability without [part="base"]'s own border box changing at all -- the primary observer
+    // above only watches that one container, so every current step rides along on its single
+    // ResizeObserver instance instead of a second one of its own.
+    this.scrollOverflow.observeExtra(
+      this.renderRoot.querySelectorAll('[part="step"]')
+    );
     if (this.pendingStepFocus !== undefined) {
       const focusedOccurrence = this.pendingStepFocus;
       this.pendingStepFocus = undefined;

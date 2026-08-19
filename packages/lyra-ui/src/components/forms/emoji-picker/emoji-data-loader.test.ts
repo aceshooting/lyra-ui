@@ -58,10 +58,36 @@ it('keeps localization metadata out of the public group result while retaining E
   expect(result!.map((g) => g.label)).to.deep.equal(['Smileys & Emotion', 'Animals & Nature', 'Flags']);
 });
 
-it('falls back to a generated label for an unknown group id without adding metadata', async () => {
+it('falls back to the bare numeric id for an unknown group id, leaving localization to the picker itself', async () => {
+  // The loader has no `localize()` in scope (a plain module, not a component), so it must not bake
+  // assembled English prose ("Group 42") into `label` for an id `GROUP_LABELS` doesn't recognize --
+  // `<lr-emoji-picker>`'s own `groupLabel()` is what localizes an unrecognized built-in group id, via
+  // the `emojiPickerGroupUnknown` DEFAULT_STRINGS key. See emoji-picker.test.ts for that coverage.
   const result = await loadEmojiData(() => Promise.resolve([{ emoji: '🛸', group: 42, annotation: 'flying saucer' }]));
   expect('labelKey' in result![0]).to.be.false;
-  expect(result![0].label).to.equal('Group 42');
+  expect(result![0].label).to.equal('42');
+});
+
+it('fails closed (null + warning) for a malformed peer module, distinct from a genuinely empty one', async () => {
+  const warnings: unknown[] = [];
+  const originalWarn = console.warn;
+  console.warn = (...args: unknown[]) => warnings.push(args);
+  try {
+    // Neither a bare array nor a `{ default: [...] }` namespace -- e.g. a broken or spoofed peer.
+    // Before the fix, this silently folded into `[]`, indistinguishable from a peer that legitimately
+    // has no data.
+    const result = await loadEmojiData(() => Promise.resolve({ notAnArray: true }));
+    expect(result).to.equal(null);
+    expect(warnings.length).to.equal(1);
+  } finally {
+    console.warn = originalWarn;
+  }
+});
+
+it('resolves a genuinely empty array as [] rather than folding it into the malformed-module failure', async () => {
+  const result = await loadEmojiData(() => Promise.resolve([]));
+  expect(result === null).to.be.false;
+  expect(result!.length).to.equal(0);
 });
 
 it('caches the result across repeated loadEmojiDataCached() calls', async () => {

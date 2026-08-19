@@ -282,7 +282,7 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
         aria-expanded=${this.triggerExpanded ?? nothing}
         aria-controls=${this.triggerControls || nothing}
         aria-describedby=${this.triggerDescribedBy || nothing}
-        aria-disabled=${disabled ? 'true' : nothing}
+        aria-disabled=${disabled ? 'true' : 'false'}
         tabindex=${disabled ? '-1' : nothing}
         @focus=${this.onFocus}
         @blur=${this.onBlur}

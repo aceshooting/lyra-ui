@@ -27,8 +27,16 @@ export const styles = css`
      data-scroll-overflow from a real scrollWidth/clientWidth measurement. Unconditional (as this
      used to be) it fades the first and last step of a stepper that fits. The vertical-axis rules
      below still reset it to 'none' at higher specificity, so it cannot bleed into that axis even
-     if a visible-overflow measurement happens to trip the attribute. */
-  [part="base"][data-scroll-overflow] {
+     if a visible-overflow measurement happens to trip the attribute. One-sided and RTL-aware,
+     matching lr-tab-group/lr-segmented: data-scroll-start/data-scroll-end (also from
+     ScrollOverflowController, logical and live-updated on scroll) report which edge(s) genuinely
+     still have more to reach, so a track scrolled fully to one edge fades only the other -- a
+     track resting at its start no longer dims that already-fully-visible start edge.
+     data-scroll-start/data-scroll-end are wrapped in :where() purely to keep these rules'
+     specificity pinned to the same [data-scroll-overflow]-only baseline as before -- so the later
+     forced-colors override (same base selectors, later in the stylesheet) still wins its tie by
+     source order rather than losing to these more-specific-looking selectors. */
+  [part="base"][data-scroll-overflow]:where([data-scroll-start][data-scroll-end]) {
     -webkit-mask-image: linear-gradient(
       to right,
       transparent,
@@ -40,6 +48,72 @@ export const styles = css`
       to right,
       transparent,
       var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+  }
+  [part="base"][data-scroll-overflow]:where(
+      [data-scroll-end]:not([data-scroll-start])
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+  }
+  [part="base"][data-scroll-overflow]:where(
+      [data-scroll-start]:not([data-scroll-end])
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+  }
+  :host(:dir(rtl))
+    [part="base"][data-scroll-overflow]:where(
+      [data-scroll-end]:not([data-scroll-start])
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+  }
+  :host(:dir(rtl))
+    [part="base"][data-scroll-overflow]:where(
+      [data-scroll-start]:not([data-scroll-end])
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
       var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
       transparent
     );
@@ -71,12 +145,14 @@ export const styles = css`
     -webkit-mask-image: none;
     mask-image: none;
   }
-  /* Same overflow gate as the authored-horizontal rule above, restated at this rule's specificity
+  /* Same overflow gate as the authored-horizontal rules above, restated at this rule's specificity
      so the live-axis override re-applies the fade rather than being pinned to the 'none' it must
      otherwise declare (it has to redeclare the property: the vertical arm it competes with sets
-     it, and CSS cascades per-property). */
+     it, and CSS cascades per-property). data-scroll-start/data-scroll-end are :where()-wrapped for
+     the same reason as the authored-horizontal rules above -- keeps specificity pinned to this
+     rule's own [data-scroll-overflow]-only baseline so the forced-colors override below still wins. */
   :host([data-effective-orientation="horizontal"])
-    [part="base"][data-scroll-overflow] {
+    [part="base"][data-scroll-overflow]:where([data-scroll-start][data-scroll-end]) {
     -webkit-mask-image: linear-gradient(
       to right,
       transparent,
@@ -88,6 +164,74 @@ export const styles = css`
       to right,
       transparent,
       var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+  }
+  :host([data-effective-orientation="horizontal"])
+    [part="base"][data-scroll-overflow]:where(
+      [data-scroll-end]:not([data-scroll-start])
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+  }
+  :host([data-effective-orientation="horizontal"])
+    [part="base"][data-scroll-overflow]:where(
+      [data-scroll-start]:not([data-scroll-end])
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+  }
+  :host(:dir(rtl)[data-effective-orientation="horizontal"])
+    [part="base"][data-scroll-overflow]:where(
+      [data-scroll-end]:not([data-scroll-start])
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque)
+    );
+  }
+  :host(:dir(rtl)[data-effective-orientation="horizontal"])
+    [part="base"][data-scroll-overflow]:where(
+      [data-scroll-start]:not([data-scroll-end])
+    ) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      var(--lr-mask-opaque),
       var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
       transparent
     );
@@ -201,7 +345,11 @@ export const styles = css`
   }
   @media (forced-colors: active) {
     [part="base"],
+    [part="base"][data-scroll-overflow],
+    :host(:dir(rtl)) [part="base"][data-scroll-overflow],
     :host([data-effective-orientation="horizontal"])
+      [part="base"][data-scroll-overflow],
+    :host(:dir(rtl)[data-effective-orientation="horizontal"])
       [part="base"][data-scroll-overflow] {
       -webkit-mask-image: none;
       mask-image: none;

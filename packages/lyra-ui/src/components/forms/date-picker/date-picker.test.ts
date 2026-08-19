@@ -1408,6 +1408,223 @@ it("renders two months as contained rows at a 320px allocation in LTR and RTL", 
   }
 });
 
+async function settle(): Promise<void> {
+  await new Promise((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(resolve))
+  );
+}
+
+it('scrolls, rather than shrinks, a single month\'s day grid past the WCAG hit-area floor at a 320px allocation with size="xl", in LTR and RTL', async () => {
+  for (const direction of ["ltr", "rtl"] as const) {
+    const wrapper = (await fixture(html`
+      <div
+        dir=${direction}
+        style="inline-size: 320px; max-inline-size: 100%; overflow: auto"
+      >
+        <lr-date-picker
+          value="2026-07-15"
+          size="xl"
+          style="inline-size: 100%; max-inline-size: 100%"
+        ></lr-date-picker>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector("lr-date-picker") as LyraDatePicker;
+    await el.updateComplete;
+    await settle();
+
+    // The picker itself never leaks past its given allocation -- an ancestor no narrower than
+    // this must not need to grow or clip to contain it.
+    expect(
+      wrapper.scrollWidth,
+      `${direction} wrapper must not overflow its 320px allocation`
+    ).to.be.at.most(wrapper.clientWidth + 1);
+
+    const scrollRegion = el.shadowRoot!.querySelector(
+      ".calendar-scroll"
+    ) as HTMLElement;
+    // Compares a boolean, never the DOM node itself, as chai's actual -- a failing
+    // node/NodeList assertion hangs the whole file (see AGENTS.md's testing conventions).
+    expect(
+      Boolean(scrollRegion),
+      `${direction} calendar scroll region exists`
+    ).to.be.true;
+    expect(
+      scrollRegion.scrollWidth,
+      `${direction} the oversized xl grid genuinely overflows its own region`
+    ).to.be.greaterThan(scrollRegion.clientWidth);
+
+    // Every day cell keeps its full token-derived size -- 3rem (48px) for size="xl" -- rather
+    // than being shrunk by a container-query step to fit the narrow allocation, which would
+    // otherwise trade this reachability bug for a WCAG 2.5.8 hit-area regression.
+    const firstRowDays = Array.from(
+      el.shadowRoot!.querySelectorAll('[part="week"]')[0]!.querySelectorAll(
+        '[part~="day"]'
+      )
+    ) as HTMLButtonElement[];
+    for (const cell of firstRowDays) {
+      const rect = cell.getBoundingClientRect();
+      expect(
+        Math.round(rect.width),
+        `${direction} day cell width stays at the size="xl" token size`
+      ).to.equal(48);
+      expect(
+        Math.round(rect.height),
+        `${direction} day cell height stays at the size="xl" token size`
+      ).to.equal(48);
+      expect(rect.width, `${direction} day cell meets the WCAG 2.5.8 floor`).to
+        .be.at.least(24);
+    }
+
+    // Scrolling the region to its trailing edge reaches the last (trailing) column's day cell --
+    // it is not simply lost past the edge of the allocation.
+    const lastCellInFirstRow = firstRowDays[firstRowDays.length - 1]!;
+    const maxScroll = scrollRegion.scrollWidth - scrollRegion.clientWidth;
+    scrollRegion.scrollLeft = direction === "rtl" ? -maxScroll : maxScroll;
+    scrollRegion.dispatchEvent(new Event("scroll"));
+    await settle();
+    const regionRect = scrollRegion.getBoundingClientRect();
+    const cellRect = lastCellInFirstRow.getBoundingClientRect();
+    expect(
+      cellRect.left,
+      `${direction} trailing day cell reachable (left) after scrolling`
+    ).to.be.at.least(regionRect.left - 1);
+    expect(
+      cellRect.right,
+      `${direction} trailing day cell reachable (right) after scrolling`
+    ).to.be.at.most(regionRect.right + 1);
+  }
+});
+
+it('scrolls, rather than shrinks, a single month\'s day grid past the WCAG hit-area floor at a 320px allocation with with-week-numbers, in LTR and RTL', async () => {
+  for (const direction of ["ltr", "rtl"] as const) {
+    const wrapper = (await fixture(html`
+      <div
+        dir=${direction}
+        style="inline-size: 320px; max-inline-size: 100%; overflow: auto"
+      >
+        <lr-date-picker
+          value="2026-07-15"
+          with-week-numbers
+          size="l"
+          style="inline-size: 100%; max-inline-size: 100%"
+        ></lr-date-picker>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector("lr-date-picker") as LyraDatePicker;
+    await el.updateComplete;
+    await settle();
+
+    expect(
+      wrapper.scrollWidth,
+      `${direction} wrapper must not overflow its 320px allocation`
+    ).to.be.at.most(wrapper.clientWidth + 1);
+
+    const scrollRegion = el.shadowRoot!.querySelector(
+      ".calendar-scroll"
+    ) as HTMLElement;
+    // Compares a boolean, never the DOM node itself, as chai's actual -- a failing
+    // node/NodeList assertion hangs the whole file (see AGENTS.md's testing conventions).
+    expect(
+      Boolean(scrollRegion),
+      `${direction} calendar scroll region exists`
+    ).to.be.true;
+    // The eighth (week-number) column is what tips a size="l" month over a 320px allocation --
+    // size="l" alone (without with-week-numbers) fits comfortably, so this genuinely exercises
+    // the week-number-column overflow path rather than the size="xl" one above.
+    expect(
+      scrollRegion.scrollWidth,
+      `${direction} the week-numbers column genuinely overflows the region`
+    ).to.be.greaterThan(scrollRegion.clientWidth);
+
+    // The size="l" token is 2.5rem (40px) -- unaffected by the extra week-number column
+    // needing to scroll.
+    const firstRowDays = Array.from(
+      el.shadowRoot!.querySelectorAll('[part="week"]')[0]!.querySelectorAll(
+        '[part~="day"]'
+      )
+    ) as HTMLButtonElement[];
+    for (const cell of firstRowDays) {
+      const rect = cell.getBoundingClientRect();
+      expect(
+        Math.round(rect.width),
+        `${direction} day cell width stays at the size="l" token size`
+      ).to.equal(40);
+      expect(rect.width, `${direction} day cell meets the WCAG 2.5.8 floor`).to
+        .be.at.least(24);
+    }
+
+    const lastCellInFirstRow = firstRowDays[firstRowDays.length - 1]!;
+    const maxScroll = scrollRegion.scrollWidth - scrollRegion.clientWidth;
+    scrollRegion.scrollLeft = direction === "rtl" ? -maxScroll : maxScroll;
+    scrollRegion.dispatchEvent(new Event("scroll"));
+    await settle();
+    const regionRect = scrollRegion.getBoundingClientRect();
+    const cellRect = lastCellInFirstRow.getBoundingClientRect();
+    expect(
+      cellRect.left,
+      `${direction} trailing day cell reachable (left) after scrolling`
+    ).to.be.at.least(regionRect.left - 1);
+    expect(
+      cellRect.right,
+      `${direction} trailing day cell reachable (right) after scrolling`
+    ).to.be.at.most(regionRect.right + 1);
+
+    // The week-number column stays legible alongside the grid -- it isn't clipped away by the
+    // new scroll region.
+    const weeknumber = el.shadowRoot!.querySelector(
+      '[part="weeknumber"]'
+    ) as HTMLElement;
+    expect(weeknumber.getBoundingClientRect().width).to.be.greaterThan(0);
+  }
+});
+
+it("pairs overflow-y with overflow-x on each month's horizontal scroll region, mirroring lr-stepper/lr-widget (avoids a phantom vertical scrollbar)", async () => {
+  const el = (await fixture(
+    html`<lr-date-picker value="2026-07-15"></lr-date-picker>`
+  )) as LyraDatePicker;
+  const region = el.shadowRoot!.querySelector(".calendar-scroll") as HTMLElement;
+  const computed = getComputedStyle(region);
+  expect(computed.overflowX).to.equal("auto");
+  expect(computed.overflowY).to.equal("hidden");
+});
+
+it("leaves a single month that fits its allocation completely unmasked (regression)", async () => {
+  const el = (await fixture(
+    html`<lr-date-picker value="2026-07-15"></lr-date-picker>`
+  )) as LyraDatePicker;
+  await settle();
+  const region = el.shadowRoot!.querySelector(".calendar-scroll") as HTMLElement;
+  expect(region.scrollWidth - region.clientWidth).to.be.at.most(1);
+  const computed = getComputedStyle(region);
+  const maskImage =
+    computed.getPropertyValue("mask-image") ||
+    computed.getPropertyValue("-webkit-mask-image");
+  expect(maskImage).to.equal("none");
+});
+
+it("shows a mask-image edge fade on a month's scroll region once it overflows, matching lr-stepper/lr-widget", async () => {
+  const wrapper = (await fixture(html`
+    <div style="inline-size: 320px; max-inline-size: 100%; overflow: auto">
+      <lr-date-picker
+        value="2026-07-15"
+        size="xl"
+        style="inline-size: 100%; max-inline-size: 100%"
+      ></lr-date-picker>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector("lr-date-picker") as LyraDatePicker;
+  await el.updateComplete;
+  await settle();
+  const region = el.shadowRoot!.querySelector(".calendar-scroll") as HTMLElement;
+  expect(region.scrollWidth).to.be.greaterThan(region.clientWidth);
+  const computed = getComputedStyle(region);
+  const maskImage =
+    computed.getPropertyValue("mask-image") ||
+    computed.getPropertyValue("-webkit-mask-image");
+  expect(maskImage).to.not.equal("none");
+  expect(maskImage).to.contain("gradient");
+});
+
 it("lets the component-scoped disabled opacity override the shared fallback", async () => {
   const el = (await fixture(html`
     <lr-date-picker

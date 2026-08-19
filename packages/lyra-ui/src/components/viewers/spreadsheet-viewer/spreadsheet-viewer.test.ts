@@ -427,7 +427,6 @@ describe('lr-spreadsheet-viewer', () => {
       let leaked = 0;
       for (const name of [
         'lr-load-more',
-        'lr-visible-range-changed',
         'lr-virtual-scroll',
       ]) {
         el.addEventListener(name as never, () => {

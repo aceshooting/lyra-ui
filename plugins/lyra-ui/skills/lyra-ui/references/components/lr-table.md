@@ -220,7 +220,13 @@ cell: (row) => unknown }` —
 - `groupLabel?: (key: string | number, rows: readonly T[]) => unknown` (attribute: false) — custom group
   header content; without it, the group key is rendered as text
 - `expandedContent?: (row: T) => unknown` (attribute: false) — enables a leading expand toggle and
-  renders a full-width detail row beneath expanded records
+  renders a full-width detail row beneath expanded records. The returned content renders inside
+  the component's shadow root, behind the `expanded-cell` part — page CSS cannot reach it, and
+  `::part(expanded-cell)` only reaches the wrapping `<td>` itself, not the descendants this
+  callback returns (the same `::part()` limitation a column's `cell(row)` anchors run into, see
+  `--lr-table-cell-link-color` below). Style such content by returning already-styled elements —
+  inline `style`, or elements that reference this table's own `--lr-*` design tokens, which
+  inherit across the shadow boundary like any custom property
 - `canExpand?: (row: T) => boolean` (attribute: false) — optional per-row gate for expansion
 - `expandedRowKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — consumer-controlled
   expanded state bounded to 10,000 keys; malformed and whitespace-only string keys are omitted while valid

@@ -57,7 +57,8 @@ export interface LyraDocumentViewerEventMap {
  * @customElement lr-document-viewer
  * @event lr-close - Fired when the viewer's shell dialog dismisses the viewer. The detail is the
  *   dialog close reason. A registered renderer's own descendant dialog keeps its independent
- *   `lr-dialog-close` path and does not close this viewer.
+ *   `lr-close` path (guarded by `event.target !== event.currentTarget`) and does not close this
+ *   viewer.
  * @event lr-download - Fired when the viewer's safe download action is
  *   activated. The browser download itself is handled by the native link.
  * @event lr-anchor-result - Fired once per applied `anchor`. An incapable resolved renderer
@@ -423,7 +424,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
         label=${this.localize('documentViewerLabel')}
         aria-label=${hostAriaLabel(this) ?? nothing}
         closable
-        @lr-dialog-close=${this.onDialogClose}
+        @lr-close=${this.onDialogClose}
       >
         <div part="body" aria-busy=${this.renderState.kind === 'loading' ? 'true' : 'false'}
           >${this.open ? this.renderBody() : nothing}</div

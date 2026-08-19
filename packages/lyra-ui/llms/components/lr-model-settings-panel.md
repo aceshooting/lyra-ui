@@ -72,15 +72,15 @@ selector label), `temperature-row`, `temperature-label`, `temperature-value`
 internally (both imported unconditionally as side effects, not optional).
 
 ```html
-<lr-model-settings-panel
-  provider="OpenAI"
-  .catalog=${['gpt-4o', 'gpt-4o-mini', 'gpt-4.1']}
-  model="gpt-4o"
-  temperature="0.7"
-  @lr-change=${(e) => console.log(e.detail)}
-></lr-model-settings-panel>
+<lr-model-settings-panel provider="OpenAI" model="gpt-4o" temperature="0.7"></lr-model-settings-panel>
 
-<lr-model-settings-panel layout="compact" .catalog=${catalog}></lr-model-settings-panel>
+<lr-model-settings-panel layout="compact"></lr-model-settings-panel>
+<script type="module">
+  const [panel, compactPanel] = document.querySelectorAll("lr-model-settings-panel");
+  panel.catalog = ["gpt-4o", "gpt-4o-mini", "gpt-4.1"];
+  panel.addEventListener("lr-change", (e) => console.log(e.detail));
+  compactPanel.catalog = catalog;
+</script>
 ```
 
 The internal `lr-slider` renders with its own value readout suppressed (`.showValue=${false}`);

@@ -1200,7 +1200,7 @@ describe("virtual mode", () => {
     (el as unknown as { pendingUserIntent: boolean }).pendingUserIntent = true;
 
     nested.dispatchEvent(
-      new CustomEvent("lr-visible-range-changed", {
+      new CustomEvent("lr-visible-range-change", {
         detail: { start: 0, end: 1 },
         bubbles: true,
         composed: true,
@@ -1329,7 +1329,7 @@ describe("virtual mode", () => {
     // Simulates the range event a later, unrelated append produces while not at the bottom --
     // never actually user-caused.
     list.dispatchEvent(
-      new CustomEvent("lr-visible-range-changed", {
+      new CustomEvent("lr-visible-range-change", {
         detail: { start: 10, end: 18 },
       })
     );
@@ -1361,7 +1361,7 @@ describe("virtual mode", () => {
     let fired = false;
     el.addEventListener("lr-follow-change", () => (fired = true));
     list.dispatchEvent(
-      new CustomEvent("lr-visible-range-changed", {
+      new CustomEvent("lr-visible-range-change", {
         detail: { start: 10, end: 18 },
       })
     );
@@ -1387,7 +1387,7 @@ describe("virtual mode", () => {
       { start: 8, end: 5 },
     ]) {
       list.dispatchEvent(
-        new CustomEvent("lr-visible-range-changed", { detail })
+        new CustomEvent("lr-visible-range-change", { detail })
       );
     }
     expect(fired, "a malformed detail must not flip follow").to.be.false;

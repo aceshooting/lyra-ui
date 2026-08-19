@@ -71,6 +71,10 @@ export interface MaplibreModule {
 }
 
 const MAP_METHODS = [
+  // `LyraMapInstance.getCanvas()` (map.class.ts) is required, not optional -- a peer missing it
+  // must fail validation here rather than passing and only throwing later at a consumer's own
+  // `el.map.getCanvas()` call site.
+  'getCanvas',
   'getCenter',
   'getZoom',
   'setCenter',

@@ -45,9 +45,6 @@ export type EntityCardAppearance = LyraFrame;
 export interface LyraEntityCardEventMap {
   /** Canonical name for the "user picked this entity" gesture. */
   'lr-entity-select': CustomEvent<{ entityId: string }>;
-  /** Deprecated alias of `lr-entity-select`, kept firing unchanged for back-compat; slated for
-   *  removal in v11. */
-  'lr-entity-activate': CustomEvent<{ entityId: string }>;
 }
 
 /** Derives themeable `--lr-badge-*` overrides from a data-driven type color -- the same "type
@@ -79,10 +76,7 @@ function typeBadgeStyle(color: string | undefined): Record<string, string> {
  * @customElement lr-entity-card
  * @slot - Extra body content below the property rows (e.g. a `lr-neighbor-list`).
  * @slot actions - Extra header actions alongside the built-in focus button.
- * @event lr-entity-select - The built-in focus button was activated. `detail: { entityId }`. Fires
- *   before `lr-entity-activate`, from the same click.
- * @event lr-entity-activate - Deprecated alias of `lr-entity-select`, kept firing unchanged for
- *   back-compat; slated for removal in v11. Same `detail: { entityId }`.
+ * @event lr-entity-select - The built-in focus button was activated. `detail: { entityId }`.
  * @csspart base - The outer bordered container.
  * @csspart header - The header row wrapping the type badge, title, and actions.
  * @csspart type-badge - The resolved entity-type badge.
@@ -156,11 +150,7 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
 
   private onFocusClick = (): void => {
     if (this.entity && isNonBlankIdentity(this.entity.id)) {
-      // Canonical name first, then the deprecated alias -- same detail object for both, so the
-      // two events can never drift from each other.
-      const detail = { entityId: this.entity.id };
-      this.emit('lr-entity-select', detail);
-      this.emit('lr-entity-activate', detail);
+      this.emit('lr-entity-select', { entityId: this.entity.id });
     }
   };
 

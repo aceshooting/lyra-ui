@@ -2368,13 +2368,16 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
 
   private onComboMouseDown = (e: MouseEvent): void => {
     if (this.liveDisabled) return;
+    // The free-text input owns the browser's native caret placement and Shift-selection defaults.
+    // A mousedown whose real target is the input itself (not just something inside it -- there is
+    // nothing inside it) must therefore remain uncancelled; preventing it here would strip basic
+    // text editing from the combobox's own input. Its own `focus` handler (`onInputFocus`) already
+    // opens the listbox, so nothing else needs to run on this path. Mirrors
+    // `internal/catalog-picker.ts`'s `handleComboMouseDown`.
+    if (e.composedPath()[0] === this.inputEl) return;
     if ((e.target as HTMLElement).closest('button')) return;
     e.preventDefault();
-    (
-      this.renderRoot.querySelector(
-        '[part="combobox-input"]'
-      ) as HTMLInputElement | null
-    )?.focus();
+    this.inputEl?.focus();
     this.show();
   };
 

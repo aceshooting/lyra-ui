@@ -68,12 +68,19 @@ export const ACKNOWLEDGED_INTERNAL_HELPER_MODULES = Object.freeze([
   // Structurally these two look like the pptx-loader.ts case above: a real adapter-shaped "Api"
   // type surface (PdfJsApi/PdfDocumentApi/PdfPageApi/... and EpubBook/EpubRendition/...) imported
   // type-only by their viewer class and never re-exported by anything that already has a package
-  // route, so the types are equally unreachable. Left internal here on purpose rather than fixed:
-  // unlike pptx-loader.ts, no llms/ text promises either of these is "exported from the granular
-  // loader module", so curating one now would be undocumented new public API -- adding a route
-  // with no JSDoc/test/story/llms entry to back it, which is exactly the over-widening this
-  // mechanism exists to prevent. A human should decide deliberately, together with the doc change
-  // that would justify it.
+  // route, so the types are equally unreachable.
+  //
+  // DECIDED 2026-08-19: internal, deliberately -- this is the settled answer, not a deferral.
+  // The distinction from pptx-loader.ts is the whole point. pptx was curated because
+  // `llms/viewers.md` already PROMISED those types were "exported from the granular PPTX loader
+  // module", so the export fixed a broken promise a consumer could act on. Nothing promises these
+  // two, and no consumer has asked: this repo's intake shows consumers do file when a granular
+  // type is genuinely unreachable (LyraNodeTypeStyle, the filter-bar parts, pptx itself), so
+  // silence here is evidence, not oversight.
+  // Curating them speculatively would add a permanent public route with no JSDoc, test, story or
+  // llms entry behind it -- the exact over-widening this list exists to prevent, and irreversible
+  // in a way the opposite mistake is not: internal -> public is a minor, public -> internal is a
+  // major. If a consumer ever needs them, export them THEN, together with the docs that justify it.
   'src/components/viewers/pdf-viewer/pdf-loader.ts',
   'src/components/viewers/ebook-viewer/ebook-loader.ts',
 ]);

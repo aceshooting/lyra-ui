@@ -1410,7 +1410,7 @@ describe("lr-button", () => {
           'a[part~="base"]'
         ) as HTMLAnchorElement;
         expect(anchor.getAttribute("href")).to.equal("https://example.com");
-        expect(anchor.hasAttribute("aria-disabled")).to.be.false;
+        expect(anchor.getAttribute("aria-disabled")).to.equal("false");
       });
 
       it("dims the disabled anchor and shows not-allowed, exactly like the native button path", async () => {

@@ -163,11 +163,11 @@ entry) or a third-party PDF/office-doc viewer, but neither is a dependency of th
 
 ```html
 <lr-document-preview
+  id="text-preview"
   filename="board-notes.txt"
   mime-type="text/plain"
   src="/files/board-notes.txt"
   max-height="24rem"
-  @lr-render-error=${(e) => console.error(e.detail.error)}
 ></lr-document-preview>
 
 <!-- A host driving its own server-side conversion -->
@@ -177,6 +177,11 @@ entry) or a third-party PDF/office-doc viewer, but neither is a dependency of th
 <lr-document-preview filename="deck.pptx" mime-type="application/vnd.ms-powerpoint" src="/files/deck.pptx">
   <lr-code-block slot="unsupported" language="text">Open in PowerPoint to preview.</lr-code-block>
 </lr-document-preview>
+<script type="module">
+  document
+    .getElementById("text-preview")
+    .addEventListener("lr-render-error", (e) => console.error(e.detail.error));
+</script>
 ```
 
 Accessibility: after the initial silent baseline, entering `"converting"` without numeric
@@ -1095,7 +1100,9 @@ current page and
 `zoom: number = 1` is clamped to `0.25`–`4`. `maxHeight: string = ''` (attribute `max-height`) is a
 CSS length that, once set, overrides `--lr-pdf-viewer-height` — the block size of the virtualized
 page list — declaratively, writing it inline on `[part="base"]`; invalid CSS `max-height` values,
-declaration breaks, and `url()` are ignored. `anchorKinds: readonly LyraAnchorKind[] = ['page',
+declaration breaks, and `url()` are ignored. `workerSrc: string = ''` (attribute `worker-src`) is the
+URL of the PDF.js web worker chunk — see **Configuring the PDF.js worker** below.
+`anchorKinds: readonly LyraAnchorKind[] = ['page',
 'text-quote', 'region']` (this viewer's supported `LyraAnchor.kind` values for the shared
 anchor-target contract). The other inherited anchor-target properties are `highlights:
 LyraHighlight[] = []` (property only; reassign after mutation), `activeHighlightId: string | null =
@@ -1183,6 +1190,39 @@ a lazy `application/pdf` renderer with `<lr-document-viewer>` so the PDF library
 a PDF is opened. An absent `pdfjs-dist` fails closed and renders
 `[part="error"]` with the localized `pdfViewerMissingLibrary` message — there is no partial PDF
 rendering without it.
+
+**Configuring the PDF.js worker.** PDF.js renders in a web worker and rejects every document with
+`No "GlobalWorkerOptions.workerSrc" specified.` until it has been told where that worker lives. The
+worker is a separate file inside the peer (`pdfjs-dist/build/pdf.worker.min.mjs`) that only the
+application's own bundler can turn into a real URL — a bare package specifier does not resolve in a
+browser without an import map, and resolving it against this library's own module URL would point
+into `@aceshooting/lyra-ui`'s files, where no worker exists. So a bundled application supplies it,
+either way round:
+
+```ts
+// 1. Per element, through the public property/attribute.
+import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?worker&url'; // Vite; see your bundler
+const viewer = document.querySelector('lr-pdf-viewer');
+viewer.workerSrc = workerUrl;
+// or, declaratively: <lr-pdf-viewer worker-src="/assets/pdf.worker.min.mjs"></lr-pdf-viewer>
+
+// 2. Once for the whole application, on PDF.js's own singleton, before any viewer loads a document.
+import { GlobalWorkerOptions } from 'pdfjs-dist';
+GlobalWorkerOptions.workerSrc = workerUrl;
+```
+
+`workerSrc` accepts a document-relative URL (resolved against the document base) as well as an
+absolute one; only `http:`, `https:`, `blob:` and `file:` URLs are accepted, and anything else — a
+`javascript:` or `data:` URL in particular — is ignored rather than handed to `new Worker()`.
+
+`GlobalWorkerOptions` is PDF.js's process-wide singleton and the PDF.js module itself is loaded once
+per page, so `workerSrc` is applied only while that singleton is still unset. Two consequences worth
+knowing before reaching for the per-element form: a worker the application configured itself is never
+overwritten, and when several viewers carry different `workerSrc` values only the first one to load
+PDF.js takes effect for the whole page. Assigning `workerSrc` after PDF.js has already loaded is not
+silently dropped — it is re-applied on the next load — but it still cannot displace an
+already-configured worker. Option 2 above is the right choice for an application that wants one
+explicit worker everywhere.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the PDF.
@@ -1623,9 +1663,12 @@ each tone's highlighted-cell background. `--lr-notebook-viewer-highlight-active-
 `text/plain`).
 
 ```html
-<lr-notebook-viewer .notebook=${result} max-height="30rem"
-  @lr-load=${(e) => console.log(e.detail.cellCount, 'cells')}
-></lr-notebook-viewer>
+<lr-notebook-viewer max-height="30rem"></lr-notebook-viewer>
+<script type="module">
+  const viewer = document.querySelector("lr-notebook-viewer");
+  viewer.notebook = result;
+  viewer.addEventListener("lr-load", (e) => console.log(e.detail.cellCount, "cells"));
+</script>
 ```
 
 A notebook major version outside 4.0–4.5, an invalid shape, or more than 2,000 cells renders a

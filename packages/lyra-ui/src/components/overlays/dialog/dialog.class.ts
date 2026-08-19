@@ -25,7 +25,7 @@ import { LYRA_DEFAULT_close } from '../../../internal/default-strings.generated.
 const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6, [role="heading"]';
 
 /**
- * Reason a dialog was dismissed, forwarded as the `lr-dialog-close` event
+ * Reason a dialog was dismissed, forwarded as the `lr-close` event
  * detail. `'escape'` and `'backdrop'` are emitted by the dialog's own built-in
  * dismiss triggers; `'close-button'` by the built-in header close button
  * (rendered when `closable` is set); `'unmount'` is emitted when the dialog is
@@ -68,7 +68,6 @@ export interface LyraDialogEventMap {
   'lr-after-hide': CustomEvent<null>;
   'lr-initial-focus': CustomEvent<null>;
   'lr-request-close': CustomEvent<LyraDialogRequestCloseDetail>;
-  'lr-dialog-close': CustomEvent<DialogCloseReason>;
   'lr-close': CustomEvent<DialogCloseReason>;
 }
 /**
@@ -83,7 +82,7 @@ export interface LyraDialogEventMap {
  *
  * Lifecycle: `show()` emits `lr-show` (cancelable) and then, once the enter animation has
  * finished, `lr-after-show`. `hide()`/`close()` emit `lr-hide` (cancelable), then
- * `lr-dialog-close` (cancelable, carrying the dismissal reason), then — once the exit animation
+ * `lr-close` (cancelable, carrying the dismissal reason), then — once the exit animation
  * has finished — `lr-after-hide`. Assigning `open` runs the same lifecycle, so the property, the
  * reflected attribute, and the two method calls can never disagree. Markup that renders open
  * from the start emits nothing, matching `<lr-menu>`.
@@ -135,7 +134,7 @@ export interface LyraDialogEventMap {
  * @event lr-show - The dialog is about to open. Cancelable — `preventDefault()` keeps it closed.
  * @event lr-after-show - The dialog is open and its enter animation has finished.
  * @event lr-hide - The dialog is about to close, for every dismissal path. Cancelable —
- *   `preventDefault()` keeps it open and stops `lr-dialog-close` from firing at all. Detail is
+ *   `preventDefault()` keeps it open and stops `lr-close` from firing at all. Detail is
  *   `{ source: Element }`, the affordance or host that requested the transition. The single
  *   exception is an open dialog being removed from the document: the close has already happened
  *   and cannot be undone, so that one is announced non-cancelable.
@@ -145,20 +144,15 @@ export interface LyraDialogEventMap {
  *   dialogs defer it until rendered, and reconnecting the same open dialog does not repeat it.
  * @event lr-request-close - A built-in affordance requested dismissal. Cancelable; detail is
  *   `{ source: 'close-button' | 'keyboard' | 'overlay' }`.
- * @event lr-dialog-close - `detail: DialogCloseReason`. Cancelable — a listener calling
+ * @event lr-close - `detail: DialogCloseReason`. Cancelable — a listener calling
  *   `preventDefault()` stops the dialog from closing, for every dismissal path (Escape, backdrop,
  *   the built-in close button, `hide()`, `open = false`, or a consumer's own `close()` call).
  *   Fires after `lr-hide` and carries the one thing `lr-hide` does not: which affordance asked
- *   for the close. Also fired (with reason `'unmount'`, non-cancelable there since the element is
- *   already being removed) when the dialog is removed from the DOM while still open.
- * @event lr-close - `detail: DialogCloseReason`. Cancelable — identical detail and veto semantics
- *   to `lr-dialog-close`, fired alongside it on every dismissal path: the plain `lr-close`
- *   spelling used by `<lr-tool-select-dialog>`, `<lr-tool-result-dialog>`, and
- *   `<lr-tool-approval-dialog>`, whose own docs already describe their close-reason detail as
- *   mirroring this shape. A listener calling `preventDefault()` on either event vetoes the close;
- *   both always fire, so a listener on one name never misses a transition the other name already
- *   vetoed. Also fired (with reason `'unmount'`, non-cancelable there like `lr-dialog-close`) when
- *   the dialog is removed from the DOM while still open.
+ *   for the close. The plain `lr-close` spelling matches `<lr-tool-select-dialog>`,
+ *   `<lr-tool-result-dialog>`, and `<lr-tool-approval-dialog>`, whose own docs already describe
+ *   their close-reason detail as mirroring this shape. Also fired (with reason `'unmount'`,
+ *   non-cancelable there since the element is already being removed) when the dialog is removed
+ *   from the DOM while still open.
  * @csspart base - Shoelace wrapper alias.
  * @csspart backdrop - The full-viewport scrim behind the panel; also carries `overlay`.
  * @csspart overlay - Shoelace alias on the backdrop.
@@ -422,7 +416,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
       // reaches the assignment below. Without this, removing an open dialog
       // any way other than its own close() (a consumer's own DOM cleanup, a
       // parent re-render that drops it, etc.) never fires
-      // `lr-dialog-close`, so e.g. confirm()'s returned promise hangs forever.
+      // `lr-close`, so e.g. confirm()'s returned promise hangs forever.
       queueMicrotask(() => {
         if (!this.isConnected && this.open) {
           // Dialog removal cannot be vetoed because the element is already gone. A mapped drawer,
@@ -438,7 +432,6 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
             return;
           }
           this.applyOpenState(false);
-          this.emit('lr-dialog-close', 'unmount');
           this.emit('lr-close', 'unmount');
           this.emit('lr-after-hide');
         }
@@ -546,13 +539,13 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
 
   /**
    * Close the dialog and return focus to whatever had it before the dialog
-   * opened. `reason` is forwarded as the `lr-dialog-close` detail --
+   * opened. `reason` is forwarded as the `lr-close` detail --
    * built-in triggers pass `'escape'`/`'backdrop'`/`'close-button'`; a
    * consumer's own close affordance (e.g. a footer Cancel button) should
    * call this directly with its own reason string, so every dismissal path
    * funnels through the same event instead of the consumer having to also
    * toggle `open` itself. `lr-hide` is emitted first and vetoing it stops
-   * `lr-dialog-close` from being emitted at all.
+   * `lr-close` from being emitted at all.
    */
   close(reason: DialogCloseReason = 'api'): Promise<void> {
     return this.closeFrom(reason, this);
@@ -570,17 +563,8 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
       this.syncOpenAttribute();
       return Promise.resolve();
     }
-    // `lr-dialog-close` is the original veto point; `lr-close` is the additive, identically-shaped
-    // alias every sibling dialog already uses. Both always fire -- a listener on either name can
-    // veto, and neither name's listeners may miss a transition just because the other name already
-    // vetoed it.
-    const dialogClose = this.emit('lr-dialog-close', reason, { cancelable: true });
     const close = this.emit('lr-close', reason, { cancelable: true });
-    if (
-      dialogClose.defaultPrevented ||
-      close.defaultPrevented ||
-      this.openRequestWasSuperseded(false)
-    ) {
+    if (close.defaultPrevented || this.openRequestWasSuperseded(false)) {
       this.finishOpenRequest();
       this.syncOpenAttribute();
       return Promise.resolve();

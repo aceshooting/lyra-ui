@@ -193,14 +193,14 @@ short one, and falls back to exactly `24rem` in an auto-height container.
 style the pinned band with `lr-thread-list::part(group-sticky)`.
 
 ```html
-<lr-thread-list
-  searchable
-  sticky-groups
-  .threads=${threads}
-  active-conversation-id=${activeThreadId}
-  .rowActions=${['pin', 'archive', 'delete']}
-  @lr-select=${(e) => openThread(e.detail.conversationId)}
-></lr-thread-list>
+<lr-thread-list searchable sticky-groups></lr-thread-list>
+<script type="module">
+  const list = document.querySelector("lr-thread-list");
+  list.threads = threads;
+  list.activeConversationId = activeThreadId;
+  list.rowActions = ["pin", "archive", "delete"];
+  list.addEventListener("lr-select", (e) => openThread(e.detail.conversationId));
+</script>
 ```
 
 Composed with `lr-multi-split` (or `lr-app-rail` + `lr-responsive-panel`): thread-list in the start

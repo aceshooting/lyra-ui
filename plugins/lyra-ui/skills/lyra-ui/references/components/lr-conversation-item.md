@@ -126,13 +126,16 @@ Plus shared tokens — `--lr-space-xs/-s/-m`, `--lr-radius`,
   conversation-id="sess_123"
   label="Q3 roadmap planning"
   excerpt="Let's revisit the timeline for the launch…"
-  .timestamp=${session.updatedAt}
-  ?active=${session.id === currentSessionId}
-  @lr-select=${(e) => openSession(e.detail.conversationId)}
-  @lr-rename=${(e) => renameSession(e.detail.conversationId, e.detail.label)}
 >
   <button slot="actions" aria-label="Delete conversation">✕</button>
 </lr-conversation-item>
+<script type="module">
+  const item = document.querySelector("lr-conversation-item");
+  item.timestamp = session.updatedAt;
+  item.active = session.id === currentSessionId;
+  item.addEventListener("lr-select", (e) => openSession(e.detail.conversationId));
+  item.addEventListener("lr-rename", (e) => renameSession(e.detail.conversationId, e.detail.label));
+</script>
 ```
 
 `role="button"` lives on `[part="select-button"]`, so the row has

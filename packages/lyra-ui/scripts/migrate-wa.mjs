@@ -68,6 +68,34 @@ const LIGHT_DOM_STATUSES = new Set(['not-applicable', 'surface-only', 'warning-r
 const REGISTRATION_STATUSES = new Set(['all', 'granular', 'unavailable']);
 const CONDITIONAL_BEHAVIOR_REVIEW_TAGS = new Set(['wa-random-content']);
 
+/**
+ * Tags whose migrated Lyra target intentionally diverges from upstream at the *runtime default*
+ * level in a way no static surface/member diff can see: `<lr-animation>`/`<lr-animated-image>`
+ * default `respect-reduced-motion` to `true` and therefore freeze/snap their animation whenever
+ * the OS/browser reports `prefers-reduced-motion: reduce`, while the mirrored upstream component
+ * does not add that behavior. The divergence applies to every migrated instance unconditionally
+ * (it does not depend on the markup's attributes the way `wa-random-content`'s multi-flag review
+ * does), so this is a flat tag set rather than a contextual scanner, and it is intentionally kept
+ * independent of `CONDITIONAL_BEHAVIOR_REVIEW_TAGS`/the inventory's `parity.behaviorReviewFlags`
+ * gate -- see `reducedMotionReviewMessage()`.
+ */
+const REDUCED_MOTION_REVIEW_TAGS = new Set([
+  'wa-animation',
+  'sl-animation',
+  'wa-animated-image',
+  'sl-animated-image',
+]);
+
+function reducedMotionReviewMessage(upstreamTag) {
+  return (
+    `${upstreamTag} does not freeze or snap its animation under prefers-reduced-motion: reduce. ` +
+    'The migrated Lyra target defaults respect-reduced-motion to true and does exactly that ' +
+    'automatically. Review whether the migrated element should keep animating for users who asked ' +
+    'for less motion, or set respect-reduced-motion="false" to preserve upstream playback under ' +
+    'that preference.'
+  );
+}
+
 function invariant(condition, message) {
   if (!condition) throw new Error(`Invalid component inventory migration contract: ${message}`);
 }
@@ -2956,6 +2984,18 @@ export function migrateText(original, contract, options = {}) {
         behaviorReview.flags,
       );
     }
+    if (!token.closing && REDUCED_MOTION_REVIEW_TAGS.has(token.tag)) {
+      warn(
+        token.nameStart,
+        mapping.upstreamTag,
+        null,
+        'BEHAVIOR_REVIEW_REQUIRED',
+        mapping.targetTag,
+        reducedMotionReviewMessage(mapping.upstreamTag),
+        null,
+        ['reduced-motion-default'],
+      );
+    }
     if (!token.closing) openingTokens.push({ token, mapping, attributes: parseTagAttributes(original, token) });
   }
 
@@ -2986,6 +3026,18 @@ export function migrateText(original, contract, options = {}) {
       target: mapping.targetTag,
       message: `Rename ${reference.tag} to ${mapping.targetTag}.`,
     });
+    if (REDUCED_MOTION_REVIEW_TAGS.has(reference.tag)) {
+      warn(
+        reference.start,
+        mapping.upstreamTag,
+        null,
+        'BEHAVIOR_REVIEW_REQUIRED',
+        mapping.targetTag,
+        reducedMotionReviewMessage(mapping.upstreamTag),
+        null,
+        ['reduced-motion-default'],
+      );
+    }
   }
 
   for (const { token, mapping, attributes } of openingTokens) {

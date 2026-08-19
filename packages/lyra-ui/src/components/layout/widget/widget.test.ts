@@ -2438,3 +2438,140 @@ it("fades the edges of the header action and view-toggle rows only while they ov
   expect(getComputedStyle(fittingActions).maskImage).to.equal("none");
   expect(getComputedStyle(fittingToggles).maskImage).to.equal("none");
 });
+
+it("flips the actions-row edge fade on once a slotted action's own content grows, without any host update or [part=\"actions\"] resize/scroll", async () => {
+  // The gap this guards: ScrollOverflowController's plain ResizeObserver only watches
+  // [part="actions"]'s own border box. A slotted action's content (a consumer re-labeling their
+  // own button, a web font finishing its swap, an icon loading) can grow scrollWidth without the
+  // row's own border box changing at all. `scrollbar-width: none` removes the classic scrollbar's
+  // own reserved block-axis space, so the fits -> overflows transition itself cannot change
+  // clientHeight and spuriously re-trigger the existing plain ResizeObserver for an unrelated
+  // reason. Leaving `scrollLeft` untouched at its default `0` avoids Chromium re-firing a genuine
+  // native `scroll` event whenever an overflowing track's `scrollWidth` changes while scrolled
+  // away from position `0` -- itself a real, useful side effect of this fix's new scroll
+  // listener, but not the one this test targets. Growing the slotted button via an explicit
+  // flex-basis (bypassing any widget property, so no Lit re-render/hostUpdated() run happens
+  // either) gives a deterministic box growth and isolates the ResizeObserver path from the
+  // synchronous hostUpdated() measurement.
+  const settle = async (el: LyraWidget): Promise<void> => {
+    for (let i = 0; i < 4; i += 1) {
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+      await el.updateComplete;
+    }
+  };
+  const el = (await fixture(
+    html`<lr-widget label="Usage">
+      <button slot="actions">Go</button>
+      Panel body.
+    </lr-widget>`
+  )) as LyraWidget;
+  await settle(el);
+  const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+  actions.style.scrollbarWidth = "none";
+  await settle(el);
+  expect(
+    actions.scrollWidth - actions.clientWidth,
+    "sanity check: the row must fit before the content grows"
+  ).to.be.at.most(1);
+  expect(actions.hasAttribute("data-scroll-overflow")).to.be.false;
+
+  // Pin the row's own border box to its current (naturally-fitting) size -- a real fixed-width
+  // panel, so the row genuinely cannot grow its own box in response to the content change below.
+  actions.style.inlineSize = `${actions.getBoundingClientRect().width}px`;
+  const clientWidthBefore = actions.clientWidth;
+  const clientHeightBefore = actions.clientHeight;
+
+  const button = el.querySelector('button[slot="actions"]') as HTMLElement;
+  button.style.flex = "0 0 400px";
+  await settle(el);
+
+  expect(
+    actions.clientWidth,
+    "sanity check: the row's own inline border box must not have changed"
+  ).to.equal(clientWidthBefore);
+  expect(
+    actions.clientHeight,
+    "sanity check: the row's own block border box must not have changed either"
+  ).to.equal(clientHeightBefore);
+  expect(actions.scrollLeft, "sanity check: never programmatically scrolled").to.equal(0);
+  expect(actions.scrollWidth).to.be.greaterThan(actions.clientWidth);
+  expect(actions.hasAttribute("data-scroll-overflow")).to.be.true;
+  expect(getComputedStyle(actions).maskImage).to.contain("linear-gradient");
+});
+
+it("fades only the reachable logical edge of the actions row, RTL-aware, instead of dimming an edge already fully in view", async () => {
+  const settle = async (el: LyraWidget): Promise<void> => {
+    for (let i = 0; i < 4; i += 1) {
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+      await el.updateComplete;
+    }
+  };
+  const longAction =
+    "AnExtremelyLongUnbrokenHeaderActionLabelThatMustRemainScrollable".repeat(4);
+  for (const direction of ["ltr", "rtl"] as const) {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+        <lr-widget style="inline-size: 100%;" label="Usage">
+          <button slot="actions" style="white-space: nowrap;">${longAction}</button>
+          Panel body.
+        </lr-widget>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-widget") as LyraWidget;
+    await settle(el);
+    const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+    expect(actions.scrollWidth, `${direction} sanity: must overflow`).to.be.greaterThan(
+      actions.clientWidth
+    );
+    expect(actions.hasAttribute("data-scroll-start"), `${direction} initial start`).to.be.false;
+    expect(actions.hasAttribute("data-scroll-end"), `${direction} initial end`).to.be.true;
+
+    const maximum = actions.scrollWidth - actions.clientWidth;
+    actions.scrollLeft = direction === "rtl" ? -maximum : maximum;
+    actions.dispatchEvent(new Event("scroll"));
+    expect(actions.hasAttribute("data-scroll-start"), `${direction} final start`).to.be.true;
+    expect(actions.hasAttribute("data-scroll-end"), `${direction} final end`).to.be.false;
+  }
+});
+
+it("actually renders no mask under forced colors, in both LTR and RTL, while only one logical edge of the actions row is reachable", async () => {
+  // Stylesheet-text substring checks cannot catch a specificity regression: the one-sided mask
+  // rules use more attribute selectors (higher specificity) than the forced-colors override's
+  // plain [part="actions"] selector, so without the :where()-wrapping that keeps their
+  // specificity pinned to the [data-scroll-overflow]-only baseline, the gradient mask would keep
+  // winning the cascade even under forced-colors. Assert the real computed style.
+  const { setForcedColors } = await import("../../../../test/wtr-media.js");
+  const settle = async (el: LyraWidget): Promise<void> => {
+    for (let i = 0; i < 4; i += 1) {
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+      await el.updateComplete;
+    }
+  };
+  const longAction =
+    "AnExtremelyLongUnbrokenHeaderActionLabelThatMustRemainScrollable".repeat(4);
+  try {
+    await setForcedColors("active");
+    for (const direction of ["ltr", "rtl"] as const) {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%;">
+          <lr-widget style="inline-size: 100%;" label="Usage">
+            <button slot="actions" style="white-space: nowrap;">${longAction}</button>
+            Panel body.
+          </lr-widget>
+        </div>
+      `);
+      const el = wrapper.querySelector("lr-widget") as LyraWidget;
+      await settle(el);
+      const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+      expect(actions.hasAttribute("data-scroll-overflow"), `${direction} sanity: overflowing`).to
+        .be.true;
+      expect(actions.hasAttribute("data-scroll-end"), `${direction} sanity: one-sided state`).to
+        .be.true;
+      expect(getComputedStyle(actions).maskImage, `${direction} forced-colors mask`).to.equal(
+        "none"
+      );
+    }
+  } finally {
+    await setForcedColors("none");
+  }
+});

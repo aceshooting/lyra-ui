@@ -9,6 +9,14 @@ export const styles = css`
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
+  /* The middle track is the only scroll owner: minmax(0, 1fr) lets it shrink to zero, and the
+     composed lr-chat-viewport scrolls the transcript inside it. The two auto tracks are
+     content-sized on purpose -- header chrome and the composer dock should never be the thing that
+     scrolls. The trade that comes with it: content far larger than the workspace allocation (an
+     unusually tall header-actions toolbar, a tall replacement composer) first squeezes the
+     conversation track to zero and is then clipped here, with no scrollbar. Cap and scroll those
+     regions from the consumer side when that is the intended shape, through the public header and
+     composer parts -- see the overflow note in agent-workspace.class.ts's class doc. */
   [part='base'] {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;

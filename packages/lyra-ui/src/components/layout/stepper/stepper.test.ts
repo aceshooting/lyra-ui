@@ -9,6 +9,7 @@ import "./stepper.js";
 import type { LyraStepper } from "./stepper.js";
 import { styles } from "./stepper.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { setForcedColors } from "../../../../test/wtr-media.js";
 
 const steps = () => [
   { stepId: "basics", label: "Basics", state: "completed" as const },
@@ -1389,6 +1390,134 @@ describe("horizontal step row overflow", () => {
       computed.getPropertyValue("mask-image") ||
       computed.getPropertyValue("-webkit-mask-image");
     expect(maskImage).to.equal("none");
+  });
+
+  it("flips the edge fade on once a step's own content grows, without any host update or [part=\"base\"] resize/scroll", async () => {
+    // The gap this guards: ScrollOverflowController's plain ResizeObserver only watches
+    // [part="base"]'s own border box. A step's content (a long localized label swapped in, a web
+    // font finishing its swap, an icon loading) can grow scrollWidth without base's own box
+    // changing at all -- [part="base"] is a block-level flex container with no width of its own
+    // (see stepper.styles.ts), so `max-inline-size` genuinely pins its own border box regardless
+    // of content, unlike a shrink-to-fit `inline-flex` box that would just grow along with it.
+    // `scrollbar-width: none` additionally removes the classic scrollbar's own reserved
+    // block-axis space, so the fits -> overflows transition itself cannot change base's
+    // clientHeight and spuriously re-trigger the existing plain ResizeObserver for an unrelated
+    // reason. Leaving `scrollLeft` untouched at its default `0` avoids Chromium re-firing a
+    // genuine native `scroll` event whenever an overflowing track's `scrollWidth` changes while
+    // scrolled away from position `0` -- itself a real, useful side effect of this fix's new
+    // scroll listener, but not the one this test targets. Growing the step via an explicit
+    // flex-basis (rather than appending text, which [part="step"]'s `flex: 0 0 auto` already
+    // resists but a nested label span might not) gives a deterministic box growth, matching
+    // `<lr-timeline-item style="flex: 0 0 200px">` in timeline.test.ts. Setting it directly on
+    // the rendered step (bypassing the `steps` property, so no Lit re-render/hostUpdated() run
+    // happens either) isolates the ResizeObserver path from the synchronous hostUpdated()
+    // measurement.
+    const el = (await fixture(
+      html`<lr-stepper
+        style="display: block; max-inline-size: 280px"
+        .steps=${steps()}
+      ></lr-stepper>`
+    )) as LyraStepper;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.style.scrollbarWidth = "none";
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve))
+    );
+    expect(
+      base.scrollWidth - base.clientWidth,
+      "sanity check: the row must fit before the content grows"
+    ).to.be.at.most(1);
+    expect(base.hasAttribute("data-scroll-overflow")).to.be.false;
+
+    const clientWidthBefore = base.clientWidth;
+    const clientHeightBefore = base.clientHeight;
+
+    const lastStep = stepButtons(el).at(-1)!;
+    lastStep.style.flex = "0 0 400px";
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve))
+    );
+
+    expect(
+      base.clientWidth,
+      "sanity check: base's own inline border box must not have changed"
+    ).to.equal(clientWidthBefore);
+    expect(
+      base.clientHeight,
+      "sanity check: base's own block border box must not have changed either"
+    ).to.equal(clientHeightBefore);
+    expect(base.scrollLeft, "sanity check: never programmatically scrolled").to.equal(0);
+    expect(base.scrollWidth).to.be.greaterThan(base.clientWidth);
+    expect(base.hasAttribute("data-scroll-overflow")).to.be.true;
+    const computed = getComputedStyle(base);
+    const maskImage =
+      computed.getPropertyValue("mask-image") ||
+      computed.getPropertyValue("-webkit-mask-image");
+    expect(maskImage).to.contain("gradient");
+  });
+
+  it("fades only the reachable logical edge, RTL-aware, instead of dimming an edge already fully in view", async () => {
+    for (const direction of ["ltr", "rtl"] as const) {
+      const el = (await fixture(
+        html`<lr-stepper
+          dir=${direction}
+          style="display: block; max-inline-size: 90px"
+          .steps=${steps()}
+        ></lr-stepper>`
+      )) as LyraStepper;
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      await new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve))
+      );
+      expect(base.scrollWidth, `${direction} sanity: must overflow`).to.be.greaterThan(
+        base.clientWidth
+      );
+      expect(base.hasAttribute("data-scroll-start"), `${direction} initial start`).to.be
+        .false;
+      expect(base.hasAttribute("data-scroll-end"), `${direction} initial end`).to.be.true;
+
+      const maximum = base.scrollWidth - base.clientWidth;
+      base.scrollLeft = direction === "rtl" ? -maximum : maximum;
+      base.dispatchEvent(new Event("scroll"));
+      expect(base.hasAttribute("data-scroll-start"), `${direction} final start`).to.be
+        .true;
+      expect(base.hasAttribute("data-scroll-end"), `${direction} final end`).to.be.false;
+    }
+  });
+
+  it("actually renders no mask under forced colors, in both LTR and RTL, while only one logical edge is reachable", async () => {
+    // Stylesheet-text substring checks (the test above) cannot catch a specificity regression:
+    // the one-sided mask rules use more attribute selectors (higher specificity) than the
+    // forced-colors override's plain [data-scroll-overflow] selector, so without the
+    // :where()-wrapping that keeps their specificity pinned to that baseline, the gradient mask
+    // would keep winning the cascade even under forced-colors. Assert the real computed style.
+    try {
+      await setForcedColors("active");
+      for (const direction of ["ltr", "rtl"] as const) {
+        const el = (await fixture(
+          html`<lr-stepper
+            dir=${direction}
+            style="display: block; max-inline-size: 90px"
+            .steps=${steps()}
+          ></lr-stepper>`
+        )) as LyraStepper;
+        const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+        await new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve))
+        );
+        expect(base.hasAttribute("data-scroll-overflow"), `${direction} sanity: overflowing`)
+          .to.be.true;
+        expect(base.hasAttribute("data-scroll-end"), `${direction} sanity: one-sided state`)
+          .to.be.true;
+        const computed = getComputedStyle(base);
+        const maskImage =
+          computed.getPropertyValue("mask-image") ||
+          computed.getPropertyValue("-webkit-mask-image");
+        expect(maskImage, `${direction} forced-colors mask`).to.equal("none");
+      }
+    } finally {
+      await setForcedColors("none");
+    }
   });
 });
 

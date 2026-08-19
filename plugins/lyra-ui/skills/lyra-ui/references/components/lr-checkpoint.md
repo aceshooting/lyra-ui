@@ -56,6 +56,10 @@ assigned to `animation-duration` alone. The spinner stops outright under
 `prefers-reduced-motion: reduce`.
 
 ```html
-<lr-checkpoint checkpoint-id="ck_18" label="Before refactor" .timestamp=${t}
-  @lr-restore=${(e) => restoreTo(e.detail.checkpointId)}></lr-checkpoint>
+<lr-checkpoint checkpoint-id="ck_18" label="Before refactor"></lr-checkpoint>
+<script type="module">
+  const checkpoint = document.querySelector("lr-checkpoint");
+  checkpoint.timestamp = t;
+  checkpoint.addEventListener("lr-restore", (e) => restoreTo(e.detail.checkpointId));
+</script>
 ```

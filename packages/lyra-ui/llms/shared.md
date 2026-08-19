@@ -1271,7 +1271,10 @@ setLyraLocale("fr"); // page-level selection; see the precedence order below
 ```
 
 ```html
-<lr-toast .strings=${{ close: 'Fermer' }}></lr-toast>
+<lr-toast></lr-toast>
+<script type="module">
+  document.querySelector("lr-toast").strings = { close: "Fermer" };
+</script>
 ```
 
 **Which locale a component ends up using.** Four sources, first answer wins:
@@ -1663,7 +1666,7 @@ control) is a single tab stop using a roving `tabindex`; arrow keys move within 
 `Escape` dismisses the topmost dismissible overlay and returns focus to whatever opened it.
 `ArrowLeft`/`ArrowRight` mean previous/next and swap under `dir="rtl"`.
 
-**What that contract is verified by, precisely.** Every one of the 283 components carries at least
+**What that contract is verified by, precisely.** Every one of the 284 public tags carries at least
 one axe-core assertion in its own directory's tests, in a test that mounts its own tag; contrast
 (4.5:1 text, 3:1 control borders, in both the light and dark palettes), a 40px minimum target size,
 pressed-state coverage for every hoverable part, and `::part()` reachability are separate blocking

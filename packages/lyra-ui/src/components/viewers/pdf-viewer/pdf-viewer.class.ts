@@ -209,7 +209,19 @@ function boundedPdfTextLayerChunk(
   const styles: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
   if (source.styles && typeof source.styles === 'object') {
     const sourceStyles = source.styles as Record<string, unknown>;
-    for (const fontName of fontNames) styles[fontName] = sourceStyles[fontName];
+    // A font introduced by an earlier chunk is routinely referenced by later chunks that no longer
+    // carry its style, so this must copy only styles the chunk actually has: PDF.js merges every
+    // chunk into one document-wide cache with `Object.assign`, where an own property holding
+    // `undefined` overwrites the good earlier entry and makes the next lookup of that font throw,
+    // aborting the rest of the page's text layer. The check is own-property presence rather than
+    // truthiness (a legitimately falsy style value must still be copied) and rather than `in`
+    // (a font is named by the document, so an inherited `constructor`/`toString` must not be
+    // reachable through it).
+    for (const fontName of fontNames) {
+      if (Object.prototype.hasOwnProperty.call(sourceStyles, fontName)) {
+        styles[fontName] = sourceStyles[fontName];
+      }
+    }
   }
   return {
     value: { items, styles, lang: source.lang },
@@ -482,8 +494,11 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * @event lr-render-error - Fired when fetching, parsing, or rendering fails, including synchronous
  *   or rejected text-layer rendering. Text-layer failures are contained without an unhandled
  *   promise rejection.
- * @event lr-page-change - Fired when the current page changes.
- * @event lr-zoom-change - Fired when the zoom multiplier changes.
+ * @event lr-page-change - Fired when the current page changes, but only once the document is
+ *   ready -- a page set while the document is still loading is reflected in the viewer snapshot
+ *   rather than announced, so a late subscriber reads it instead of missing it.
+ * @event lr-zoom-change - Fired when the zoom multiplier changes. Not fired for the initial value,
+ *   only for a transition away from it.
  * @event lr-load - Fired once the document reaches `ready`. `detail: { pageCount }`.
  * @event lr-highlight-activate - A highlight was activated. `detail: { highlightId }`.
  * @event lr-text-select - A text selection ended inside a page's text layer. `detail: { text,
@@ -574,6 +589,24 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
    *  consumer to set the differently-named CSS custom property inline. Invalid values are
    *  ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
+  /** URL of the `pdfjs-dist` web worker chunk (`pdfjs-dist/build/pdf.worker.min.mjs`) as emitted by
+   *  the consuming application's own bundler. PDF.js rejects every `getDocument()` call with
+   *  `No "GlobalWorkerOptions.workerSrc" specified.` until a worker is configured, and a bare package
+   *  specifier cannot be resolved from inside this library at runtime (there is no import map for it
+   *  in a bundled app, and joining it to Lyra's own module URL points into Lyra's dist tree, where no
+   *  worker exists), so a bundled application supplies the URL here. Document-relative values resolve
+   *  against the document base; only `http:`, `https:`, `blob:` and `file:` URLs are accepted and
+   *  anything else is ignored.
+   *
+   *  `GlobalWorkerOptions` is PDF.js's process-wide singleton, so this is applied only while that
+   *  singleton is still unset: a worker the application configured itself is never overwritten, and
+   *  when two viewers carry different values only the first one to load PDF.js takes effect for the
+   *  whole page. Assigning it after PDF.js has already loaded is not silently dropped -- it is
+   *  re-applied on the next load -- but it still cannot displace a worker that is already configured.
+   *  The equivalent escape hatch, and the right choice for an application that wants one explicit
+   *  worker for every viewer, is to import `pdfjs-dist` and set `GlobalWorkerOptions.workerSrc`
+   *  directly during startup. */
+  @property({ attribute: 'worker-src' }) workerSrc = '';
 
   /** Anchor kinds this viewer resolves. `page` and page-addressed `region` anchors require an
    * integer within the loaded document's range; unlike the public `page` property, anchors are
@@ -593,7 +626,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
    *  `activeItemId` in that case so `<lr-virtual-list>` doesn't `scrollActiveIntoView()` back to a
    *  page boundary on every scroll-driven page crossing, fighting the user's own scroll. */
   @state() private scrollDrivenPage = false;
-  private loadLibrary: () => Promise<PdfJsApi | null> = loadPdfJs;
+  private loadLibrary: (workerSrc?: string | null) => Promise<PdfJsApi | null> = loadPdfJs;
   private generation = 0;
   private readonly pageCanvases = new Map<number, HTMLCanvasElement>();
   private readonly pageRenderTasks = new Map<number, { cancel(): void }>();
@@ -848,7 +881,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const data = await readResponseArrayBuffer(response);
       if (!this.isConnected || generation !== this.generation) return;
-      const pdfjsLib = await this.loadLibrary();
+      const pdfjsLib = await this.loadLibrary(this.workerSrc || null);
       if (!this.isConnected || generation !== this.generation) return;
       if (!pdfjsLib) {
         const error = new LyraUserFacingError(this.localize('pdfViewerMissingLibrary'));
@@ -914,7 +947,6 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       const finish = (mounted: boolean): void => {
         if (settled) return;
         settled = true;
-        list.removeEventListener('lr-visible-range-changed', onRange as EventListener);
         list.removeEventListener('lr-visible-range-change', onRange as EventListener);
         if (timeoutId !== undefined) view.clearTimeout(timeoutId);
         this.pendingPageMountWaitCancels.delete(cancel);
@@ -925,7 +957,6 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       };
       cancel = () => finish(false);
       this.pendingPageMountWaitCancels.add(cancel);
-      list.addEventListener('lr-visible-range-changed', onRange as EventListener);
       list.addEventListener('lr-visible-range-change', onRange as EventListener);
       timeoutId = view.setTimeout(() => finish(false), 500);
     });
@@ -2269,7 +2300,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   ): Promise<void> {
     const container = this.textLayerContainers.get(pageNumber);
     if (!container || !page.streamTextContent || this.loadState.kind !== 'ready') return;
-    const pdfjsLib = await this.loadLibrary();
+    const pdfjsLib = await this.loadLibrary(this.workerSrc || null);
     if (
       !pdfjsLib ||
       !pdfjsLib.TextLayer ||
@@ -2390,7 +2421,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   private renderBody(): TemplateResult {
     switch (this.loadState.kind) {
       case 'ready': {
-        return html`${this.renderToolbar()}<lr-virtual-list part="pages" exportparts="page:page, page-canvas:page-canvas, page-error:page-error, text-layer:text-layer, text-span:text-span, search-match:search-match, search-match-active:search-match-active" .source=${this.indexedPages(this.loadState.pageCount)} .renderItem=${this.renderPageItem} .activeItemId=${this.scrollDrivenPage ? '' : this.page} @lr-visible-range-changed=${this.onVisibleRangeChanged} @lr-visible-range-change=${this.onVisibleRangeChanged}></lr-virtual-list>`;
+        return html`${this.renderToolbar()}<lr-virtual-list part="pages" exportparts="page:page, page-canvas:page-canvas, page-error:page-error, text-layer:text-layer, text-span:text-span, search-match:search-match, search-match-active:search-match-active" .source=${this.indexedPages(this.loadState.pageCount)} .renderItem=${this.renderPageItem} .activeItemId=${this.scrollDrivenPage ? '' : this.page} @lr-visible-range-change=${this.onVisibleRangeChanged}></lr-virtual-list>`;
       }
       case 'loading': return html`<div part="spinner">
         <lr-skeleton shape="rect" .announce=${false}></lr-skeleton>

@@ -168,20 +168,22 @@ form: `--lr-space-l/-xs/-s`, `--lr-color-border`, `--lr-radius`, `--lr-color-sur
 dependencies of this package imported directly, not optional peers.
 
 ```html
-<lr-tool-param-form
-  .schema=${{
-    type: 'object',
+<lr-tool-param-form></lr-tool-param-form>
+<script type="module">
+  const form = document.querySelector("lr-tool-param-form");
+  form.schema = {
+    type: "object",
     properties: {
-      title: { type: 'string', title: 'Title' },
-      attendees: { type: 'string', enum: ['team', 'everyone'], default: 'team' },
-      allDay: { type: 'boolean', title: 'All day' },
+      title: { type: "string", title: "Title" },
+      attendees: { type: "string", enum: ["team", "everyone"], default: "team" },
+      allDay: { type: "boolean", title: "All day" },
     },
-    required: ['title'],
-  }}
-  .value=${draftArgs}
-  @lr-input=${(e) => (draftArgs = e.detail.value)}
-  @lr-validity-change=${(e) => (formIsValid = e.detail.valid)}
-></lr-tool-param-form>
+    required: ["title"],
+  };
+  form.value = draftArgs;
+  form.addEventListener("lr-input", (e) => (draftArgs = e.detail.value));
+  form.addEventListener("lr-validity-change", (e) => (formIsValid = e.detail.valid));
+</script>
 ```
 
 This component owns no Submit/Cancel/Approve chrome — a consumer composes it inside their own dialog

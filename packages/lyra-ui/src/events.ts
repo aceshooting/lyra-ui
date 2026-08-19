@@ -954,13 +954,6 @@ export type LyraDenyEvent =
   | LyraToolApprovalDialogEventMap['lr-deny'];
 
 /**
- * `lr-dialog-close` — dispatched by 2 components: `<lr-dialog>`, `<lr-drawer>`.
- *
- * Detail type: `LyraDialogEventMap['lr-dialog-close']`.
- */
-export type LyraDialogCloseEvent = LyraDialogEventMap['lr-dialog-close'];
-
-/**
  * `lr-disconnect` — dispatched by `<lr-realtime-session>`.
  *
  * Detail type: `LyraRealtimeSessionEventMap['lr-disconnect']`.
@@ -1068,20 +1061,16 @@ export type LyraEdgeActivateEvent = LyraFlowCanvasEventMap['lr-edge-activate'];
 export type LyraEditEvent = LyraMessageActionsEventMap['lr-edit'];
 
 /**
- * `lr-entity-activate` — dispatched by 7 components: `<lr-community-card>`, `<lr-entity-card>`,
- * `<lr-entity-chip>`, `<lr-entity-dossier>`, `<lr-neighbor-list>`, `<lr-path-strip>`,
- * `<lr-provenance-panel>`.
+ * `lr-entity-activate` — dispatched by 4 components: `<lr-community-card>`, `<lr-entity-dossier>`,
+ * `<lr-path-strip>`, `<lr-provenance-panel>`.
  *
- * A union of 7 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 4 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.
  * `LyraCommunityCardEventMap['lr-entity-activate']`.
  */
 export type LyraEntityActivateEvent =
   | LyraCommunityCardEventMap['lr-entity-activate']
-  | LyraEntityCardEventMap['lr-entity-activate']
-  | LyraEntityChipEventMap['lr-entity-activate']
   | LyraEntityDossierEventMap['lr-entity-activate']
-  | LyraNeighborListEventMap['lr-entity-activate']
   | LyraPathStripEventMap['lr-entity-activate']
   | LyraProvenancePanelEventMap['lr-entity-activate'];
 
@@ -2665,13 +2654,6 @@ export type LyraRunRetryEvent =
   | LyraSubagentPanelEventMap['lr-run-retry'];
 
 /**
- * `lr-run-select` — dispatched by `<lr-rag-eval-dashboard>`.
- *
- * Detail type: `LyraRagEvalDashboardEventMap['lr-run-select']`.
- */
-export type LyraRunSelectEvent = LyraRagEvalDashboardEventMap['lr-run-select'];
-
-/**
  * `lr-save` — dispatched by `<lr-prompt-studio>`.
  *
  * Detail type: `LyraPromptStudioEventMap['lr-save']`.
@@ -3390,13 +3372,6 @@ export type LyraVisibilityChangeEvent = LyraGraphLegendEventMap['lr-visibility-c
 export type LyraVisibleRangeChangeEvent = LyraVirtualListEventMap['lr-visible-range-change'];
 
 /**
- * `lr-visible-range-changed` — dispatched by `<lr-virtual-list>`.
- *
- * Detail type: `LyraVirtualListEventMap['lr-visible-range-changed']`.
- */
-export type LyraVisibleRangeChangedEvent = LyraVirtualListEventMap['lr-visible-range-changed'];
-
-/**
  * `lr-voice-change` — dispatched by `<lr-prompt-input>`.
  *
  * Detail type: `LyraPromptInputEventMap['lr-voice-change']`.
@@ -3550,7 +3525,6 @@ export interface LyraGlobalEventMap {
   'lr-date-select': LyraDateSelectEvent;
   'lr-datum-activate': LyraDatumActivateEvent;
   'lr-deny': LyraDenyEvent;
-  'lr-dialog-close': LyraDialogCloseEvent;
   'lr-disconnect': LyraDisconnectEvent;
   'lr-dismiss': LyraDismissEvent;
   'lr-download': LyraDownloadEvent;
@@ -3737,7 +3711,6 @@ export interface LyraGlobalEventMap {
   'lr-run-activate': LyraRunActivateEvent;
   'lr-run-change': LyraRunChangeEvent;
   'lr-run-retry': LyraRunRetryEvent;
-  'lr-run-select': LyraRunSelectEvent;
   'lr-save': LyraSaveEvent;
   'lr-schema-select': LyraSchemaSelectEvent;
   'lr-scroll': LyraScrollEvent;
@@ -3811,7 +3784,6 @@ export interface LyraGlobalEventMap {
   'lr-virtual-scroll': LyraVirtualScrollEvent;
   'lr-visibility-change': LyraVisibilityChangeEvent;
   'lr-visible-range-change': LyraVisibleRangeChangeEvent;
-  'lr-visible-range-changed': LyraVisibleRangeChangedEvent;
   'lr-voice-change': LyraVoiceChangeEvent;
   'lr-vote': LyraVoteEvent;
   'lr-widget-action': LyraWidgetActionEvent;

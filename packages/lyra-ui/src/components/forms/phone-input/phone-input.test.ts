@@ -650,6 +650,30 @@ it('loads a libphonenumber-compatible module only when explicitly requested', as
   });
 });
 
+it('unwraps a { default: {...} } module namespace for the libphonenumber-js peer, matching real CJS/ESM interop', async () => {
+  // Some bundler/CJS-interop configurations resolve a default-shaped peer as `{ default: {...} }`
+  // rather than flat named exports on the module namespace -- the same shape map-loader.ts and
+  // spreadsheet-loader.ts already normalize for their own optional peers.
+  const namedApi = {
+    getCountries: () => ['LU'],
+    getCountryCallingCode: () => '352',
+    parsePhoneNumberFromString: () => undefined,
+  };
+  const loaded = await loadLibphonenumberAdapter(() => Promise.resolve({ default: namedApi }));
+  expect(loaded.countries).to.deep.equal([{ code: 'LU', callingCode: '352' }]);
+});
+
+it('rejects a malformed libphonenumber-js peer with a clear Error instead of throwing deep inside .getCountries()', async () => {
+  let rejected: unknown;
+  try {
+    await loadLibphonenumberAdapter(() => Promise.resolve({ getCountries: () => ['LU'] }));
+  } catch (error) {
+    rejected = error;
+  }
+  expect(rejected instanceof TypeError, 'rejected with a TypeError').to.be.true;
+  expect((rejected as TypeError).message).to.contain('libphonenumber-js');
+});
+
 it('adapts the real libphonenumber-js package, not just a hand-written fake shape', async () => {
   const loaded = await loadLibphonenumberAdapter(() => import('libphonenumber-js/min'));
 
@@ -1235,6 +1259,7 @@ it('forwards readonly/autofocus to the telephone input and locks every user muta
   expect(input.readOnly).to.be.true;
   expect(input.autofocus).to.be.true;
   expect(select.disabled, 'the country selector has no native readonly mode').to.be.true;
+  expect(select.getAttribute('aria-readonly')).to.equal('true');
   expect(el.validity.valid, 'readonly bars constraint validation').to.be.true;
   expect(new FormData(form).get('phone')).to.equal('+352621123456');
 
@@ -1248,6 +1273,14 @@ it('forwards readonly/autofocus to the telephone input and locks every user muta
   expect(el.country).to.equal(originalCountry);
   el.focus();
   expect(el.shadowRoot!.activeElement === input, 'readonly remains focusable/copyable').to.be.true;
+});
+
+it('renders aria-readonly="false" (not omitted) on the country select by default', async () => {
+  const el = (await fixture(html`
+    <lr-phone-input default-country="LU" .adapter=${adapter}></lr-phone-input>
+  `)) as LyraPhoneInput;
+  const select = el.shadowRoot!.querySelector('[part="country-select"]') as HTMLSelectElement;
+  expect(select.getAttribute('aria-readonly')).to.equal('false');
 });
 
 it('encodes a non-color forced-colors affordance for country hover and press', () => {

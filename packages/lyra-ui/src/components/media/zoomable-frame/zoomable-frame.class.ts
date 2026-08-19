@@ -1,5 +1,5 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, query } from 'lit/decorators.js';
+import { property } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
@@ -235,8 +235,11 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
    * name is preserved as an empty iframe title instead of being replaced through truthiness. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
-  /** The internal iframe. Readonly by convention; replaced whenever navigation policy changes. */
-  @query('iframe') iframe?: HTMLIFrameElement;
+  /** The internal iframe; replaced whenever navigation policy changes. An explicit `get` (rather
+   *  than `@query`) so the generated manifest marks it readonly, not merely by convention. */
+  get iframe(): HTMLIFrameElement | undefined {
+    return this.renderRoot?.querySelector<HTMLIFrameElement>('iframe') ?? undefined;
+  }
 
   private cachedZoomLevelsSource: unknown = Symbol('uncached zoom levels');
   private cachedZoomLevels: readonly number[] = DEFAULT_ZOOM_LEVEL_VALUES;

@@ -123,15 +123,18 @@ stale-value row), `option-preview` (a pointer-only per-row preview icon, `tabind
 trigger), `expand-icon`, `empty`, `hint`, `error`.
 
 ```html
-<lr-voice-picker provider="elevenlabs" .catalog=${voices} allow-custom
-  @lr-change=${(e) => setVoice(e.detail.value)}
-  @lr-preview-request=${(e) => {
+<lr-voice-picker provider="elevenlabs" allow-custom></lr-voice-picker>
+<script type="module">
+  const picker = document.querySelector("lr-voice-picker");
+  picker.catalog = voices;
+  picker.addEventListener("lr-change", (e) => setVoice(e.detail.value));
+  picker.addEventListener("lr-preview-request", (e) => {
     if (!e.detail.previewUrl) {
       e.preventDefault();
       playSample(e.detail.voiceId);
     }
-  }}
-></lr-voice-picker>
+  });
+</script>
 ```
 
 **Known gotchas:**

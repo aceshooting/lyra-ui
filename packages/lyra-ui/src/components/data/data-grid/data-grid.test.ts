@@ -1049,6 +1049,38 @@ it("sorts from the header and emits the public change event", async () => {
   ]);
 });
 
+it('renders aria-sort="none" (not omitted) on an unsorted sortable header, then tracks ascending/descending, and omits it entirely on a non-sortable column', async () => {
+  const mixedColumns: DataGridColumn<Person>[] = [
+    { field: "name", label: "Name" },
+    { field: "team", label: "Team", sortable: false },
+  ];
+  const element = await dataGrid(html`
+    <lr-data-grid
+      label="People"
+      .columns=${mixedColumns}
+      .data=${rows}
+    ></lr-data-grid>
+  `);
+  const headerCells = element.shadowRoot!.querySelectorAll('[part~="header-cell"]');
+  const nameHeader = headerCells[0] as HTMLElement;
+  const teamHeader = headerCells[1] as HTMLElement;
+
+  expect(nameHeader.getAttribute("aria-sort")).to.equal("none");
+  expect(teamHeader.hasAttribute("aria-sort"), "a non-sortable column carries no aria-sort at all").to.be.false;
+
+  let sorted = oneEvent(element, "lr-sort-change");
+  nameHeader.click();
+  await sorted;
+  await element.updateComplete;
+  expect(nameHeader.getAttribute("aria-sort")).to.equal("ascending");
+
+  sorted = oneEvent(element, "lr-sort-change");
+  nameHeader.click();
+  await sorted;
+  await element.updateComplete;
+  expect(nameHeader.getAttribute("aria-sort")).to.equal("descending");
+});
+
 it("sorts from the focused header with Enter and honors localized string overrides", async () => {
   const element = await dataGrid(html`
     <lr-data-grid

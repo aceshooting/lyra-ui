@@ -81,6 +81,12 @@ describe('restoring state', () => {
     expect((button.querySelector('svg')) != null).to.equal(true);
   });
 
+  it('renders aria-disabled="false" (not omitted) on the restore button when not restoring', async () => {
+    const el = (await fixture(html`<lr-checkpoint></lr-checkpoint>`)) as LyraCheckpoint;
+    const button = el.shadowRoot!.querySelector('[part="restore-button"]') as HTMLButtonElement;
+    expect(button.getAttribute('aria-disabled')).to.equal('false');
+  });
+
   it('ignores a click while restoring', async () => {
     const el = (await fixture(html`<lr-checkpoint restoring></lr-checkpoint>`)) as LyraCheckpoint;
     const button = el.shadowRoot!.querySelector('[part="restore-button"]') as HTMLButtonElement;

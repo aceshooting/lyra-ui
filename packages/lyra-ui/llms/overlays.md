@@ -28,7 +28,7 @@ boolean, and all three drive the same code path: `el.show()` is indistinguishabl
 `el.open = true`, and `el.hide()` from `el.open = false`. The property, the reflected attribute and
 the two methods can therefore never disagree, and each method is a no-op when the overlay is already
 in the requested state. `lr-dialog` and `lr-drawer` keep `close(reason)` alongside — `hide()` plus
-the reason string that `lr-dialog-close` carries.
+the reason string that `lr-close` carries.
 
 **Four events, and where the veto sits.**
 
@@ -52,14 +52,12 @@ with matching timing _and_ matching cancelability — which also means Lyra 7.x 
 relying on the opposite polarity and has to be re-read.
 
 `lr-dialog` and `lr-drawer` also expose cancelable `lr-initial-focus` and `lr-request-close` veto
-points, documented in their sections. Their cancelable `lr-dialog-close` fires **after** `lr-hide`
-and before `lr-after-hide`; it carries the close reason. Vetoing `lr-hide` stops it from firing at
-all. **New in 10.0.0:** a cancelable `lr-close` with the identical `DialogCloseReason` detail fires
-alongside `lr-dialog-close` on every dismissal path, so one listener covers `lr-dialog`/`lr-drawer`
-and the `lr-tool-select-dialog`/`lr-tool-result-dialog`/`lr-tool-approval-dialog` trio, which already
-spelled it `lr-close` while explicitly mirroring this detail shape. `preventDefault()` on **either**
-name vetoes the close. Both are retained; `lr-dialog-close` is not deprecated. `lr-drawer` inherits
-`lr-close` unchanged.
+points, documented in their sections. Their cancelable `lr-close` fires **after** `lr-hide` and
+before `lr-after-hide`; it carries the close reason as `detail: DialogCloseReason`. Vetoing
+`lr-hide` stops it from firing at all, and `preventDefault()` on `lr-close` itself also vetoes the
+close. The same name is already used by the `lr-tool-select-dialog`/`lr-tool-result-dialog`/
+`lr-tool-approval-dialog` trio, which mirrors this identical detail shape, so one listener covers
+all of them. `lr-drawer` inherits `lr-close` unchanged.
 
 **The top layer.** An open `lr-dialog` or modal `lr-drawer` is promoted into the browser **top layer**
 (through `popover="manual"`) rather than stacked with `z-index`. It therefore escapes every ancestor
@@ -475,7 +473,7 @@ A modal panel anchored to one logical edge of the viewport. `LyraDrawer` extends
 inherits the entire dialog contract unchanged: focus trapping, Escape and opt-in backdrop dismissal,
 document scroll locking, browser **top-layer** promotion, overlay stacking, accessible naming, the
 `show()`/`hide()`/`close()` methods and the whole
-`lr-show`/`lr-after-show`/`lr-hide`/`lr-after-hide`/`lr-dialog-close` lifecycle. `contained` switches
+`lr-show`/`lr-after-show`/`lr-hide`/`lr-after-hide`/`lr-close` lifecycle. `contained` switches
 to an absolute, nonmodal panel inside the nearest containing block; only that mode, `placement`, and
 the slide animation are its own.
 
@@ -506,10 +504,8 @@ the slide animation are its own.
 promise settles after the matching `lr-after-*` event.
 
 **Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide`, and
-`lr-initial-focus` (cancelable), `lr-request-close` (cancelable, detail source),
-`lr-dialog-close` (`detail: DialogCloseReason`, cancelable), and `lr-close` (`detail:
-DialogCloseReason`, cancelable — the plain spelling fired alongside `lr-dialog-close` on every
-dismissal path, with identical detail and veto semantics) — all inherited unchanged from
+`lr-initial-focus` (cancelable), `lr-request-close` (cancelable, detail source), and `lr-close`
+(`detail: DialogCloseReason`, cancelable) — all inherited unchanged from
 `lr-dialog`; see that section for details and veto rules. `lr-after-show` /
 `lr-after-hide` fire once the slide animation has finished, so they are deferred by roughly one
 animation compared with the state flip.
@@ -636,19 +632,17 @@ chrome remains visible. The fallback order appears below.
 - `lr-request-close` — cancelable request from a built-in affordance; detail source is
   `'close-button' | 'keyboard' | 'overlay'`. Veto stops the close lifecycle. Direct `close()` and
   `hide()` calls do not emit this request event.
-- `lr-dialog-close` — cancelable, with `detail: DialogCloseReason`; emitted after `lr-hide`
-- `lr-close` — cancelable, with `detail: DialogCloseReason`; identical detail and veto semantics to
-  `lr-dialog-close`, fired alongside it on every dismissal path — the plain spelling already used by
-  `<lr-tool-select-dialog>`, `<lr-tool-result-dialog>`, and `<lr-tool-approval-dialog>`. A listener
-  calling `preventDefault()` on either event vetoes the close; both always fire, so a listener on
-  one name never misses a transition the other name already vetoed. Also fired (with reason
-  `'unmount'`, non-cancelable there like `lr-dialog-close`) when the dialog is removed from the DOM
-  while still open.
+- `lr-close` — cancelable, with `detail: DialogCloseReason`; emitted after `lr-hide`. The same name
+  is already used by `<lr-tool-select-dialog>`, `<lr-tool-result-dialog>`, and
+  `<lr-tool-approval-dialog>`, whose own docs describe an identical detail shape, so one listener
+  covers all of them. A listener calling `preventDefault()` vetoes the close. Also fired (with
+  reason `'unmount'`, non-cancelable there) when the dialog is removed from the DOM while still
+  open.
 
 The two `lr-after-*` events are never cancelable.
 
 The open sequence is `lr-show` → `lr-initial-focus` (when focus would move) → `lr-after-show`; the
-direct close sequence is `lr-hide` → `lr-dialog-close` and `lr-close` (together) → `lr-after-hide`.
+direct close sequence is `lr-hide` → `lr-close` → `lr-after-hide`.
 A built-in dismissal prepends `lr-request-close`. **Both state pre-events fire _before_ the state changes**, so reading
 `el.open` inside an `lr-show`/`lr-hide` handler returns the _old_ value — this is the polarity
 `wa-show`/`wa-hide` already had, and the opposite of what Lyra 7.x's own `lr-show`/`lr-hide` did on
@@ -665,7 +659,7 @@ and easing. Under `prefers-reduced-motion: reduce`, registry timing flattens to 
 frame and lifecycle remain intact. Passing `null` skips native interpolation but still emits the
 matching after-event before the method promise resolves. Because dialogs now animate on close too,
 `lr-after-hide` is normally deferred by roughly one animation. A removal while open emits
-`lr-hide`, `lr-dialog-close` and `lr-close` (both reason `'unmount'`) and `lr-after-hide` in that
+`lr-hide`, `lr-close` (reason `'unmount'`) and `lr-after-hide` in that
 order, none of them cancelable, since the element is already gone.
 
 **Stacking and the top layer:** an open dialog is promoted into the browser **top layer** (via
@@ -755,7 +749,7 @@ Otherwise shared tokens include `--lr-space-l/-m/-s`, `--lr-color-surface/-borde
   dlg.addEventListener("lr-after-show", () =>
     console.log("enter animation done")
   );
-  dlg.addEventListener("lr-dialog-close", (e) =>
+  dlg.addEventListener("lr-close", (e) =>
     console.log("closed:", e.detail)
   );
   dlg.addEventListener("lr-after-hide", () =>
@@ -863,7 +857,7 @@ their `data-lr-confirm-action` attribute.
 **Known gotchas:**
 
 - Every dismissal path (confirm button, cancel button, Escape, backdrop click) funnels through
-  `<lr-dialog>`'s own `close()`/`lr-dialog-close` event, so there is exactly one place that
+  `<lr-dialog>`'s own `close()`/`lr-close` event, so there is exactly one place that
   resolves the promise and tears the dialog down — a consumer never needs to (and shouldn't) call
   `.remove()` itself. Because the close event is cancelable, `confirm()` waits through the full
   dispatch and remains pending/mounted when a listener calls `preventDefault()`.

@@ -3171,7 +3171,6 @@ export type LyraDialogReactProps = LyraReactElementProps<
   | 'lr-after-hide'
   | 'lr-after-show'
   | 'lr-close'
-  | 'lr-dialog-close'
   | 'lr-hide'
   | 'lr-initial-focus'
   | 'lr-request-close'
@@ -3546,7 +3545,6 @@ export type LyraDrawerReactProps = LyraReactElementProps<
   | 'lr-after-hide'
   | 'lr-after-show'
   | 'lr-close'
-  | 'lr-dialog-close'
   | 'lr-hide'
   | 'lr-initial-focus'
   | 'lr-request-close'
@@ -3855,7 +3853,6 @@ export type LyraEntityCardReactProps = LyraReactElementProps<
   | 'types',
   {},
   LyraEntityCardEventMap,
-  | 'lr-entity-activate'
   | 'lr-entity-select',
   | '--lr-entity-card-compact-gap'
   | '--lr-entity-card-compact-padding',
@@ -3875,7 +3872,6 @@ export type LyraEntityChipReactProps = LyraReactElementProps<
   | 'typeLabel',
   {},
   LyraEntityChipEventMap,
-  | 'lr-entity-activate'
   | 'lr-entity-open'
   | 'lr-entity-select',
   | '--lr-entity-chip-bg'
@@ -6404,7 +6400,6 @@ export type LyraNeighborListReactProps = LyraReactElementProps<
   | 'virtualizeAt',
   {},
   LyraNeighborListEventMap,
-  | 'lr-entity-activate'
   | 'lr-entity-select'
   | 'lr-node-expand',
 never,
@@ -6868,6 +6863,7 @@ export type LyraPdfViewerReactProps = LyraReactElementProps<
   | 'page'
   | 'src'
   | 'strings'
+  | 'workerSrc'
   | 'zoom',
   {},
   LyraPdfViewerEventMap,
@@ -6887,6 +6883,7 @@ export type LyraPdfViewerReactProps = LyraReactElementProps<
   {
     'active-highlight-id'?: LyraPdfViewer['activeHighlightId'];
     'max-height'?: LyraPdfViewer['maxHeight'];
+    'worker-src'?: LyraPdfViewer['workerSrc'];
   }
 >;
 
@@ -7558,7 +7555,6 @@ export type LyraPushToTalkReactProps = LyraReactElementProps<
 export type LyraQrCodeReactProps = LyraReactElementProps<
   LyraQrCode,
   | 'background'
-  | 'canvas'
   | 'errorCorrection'
   | 'fill'
   | 'image'
@@ -7864,7 +7860,6 @@ export type LyraRagEvalDashboardReactProps = LyraReactElementProps<
   LyraRagEvalDashboardEventMap,
   | 'lr-metric-change'
   | 'lr-run-change'
-  | 'lr-run-select'
   | 'lr-slice-change',
 never,
   {
@@ -10515,8 +10510,7 @@ export type LyraVirtualListReactProps = LyraReactElementProps<
   LyraVirtualListEventMap,
   | 'lr-load-more'
   | 'lr-virtual-scroll'
-  | 'lr-visible-range-change'
-  | 'lr-visible-range-changed',
+  | 'lr-visible-range-change',
   | '--lr-virtual-list-height'
   | '--lr-virtual-list-hover-outline-color'
   | '--lr-virtual-list-hover-outline-offset'
@@ -10638,6 +10632,7 @@ export type LyraWidgetReactProps = LyraReactElementProps<
   | 'lr-fullscreen-request'
   | 'lr-view-change'
   | 'lr-view-request',
+  | '--lr-scroll-fade-size'
   | '--lr-widget-backdrop-inset'
   | '--lr-widget-fullscreen-inset'
   | '--lr-widget-overlay-color'
@@ -10745,7 +10740,6 @@ export type LyraZoomableFrameReactProps = LyraReactElementProps<
   LyraZoomableFrame,
   | 'accessibleLabel'
   | 'allowfullscreen'
-  | 'iframe'
   | 'loading'
   | 'locale'
   | 'referrerpolicy'

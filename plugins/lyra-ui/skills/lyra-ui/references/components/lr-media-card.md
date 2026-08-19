@@ -102,12 +102,23 @@ sizing), `--lr-focus-ring-*`, `--lr-transition-fast`.
 **Optional peer deps:** none.
 
 ```html
-<lr-media-card kind="image" src="https://example.com/photo.jpg" alt="Screenshot" filename="photo.jpg"
-  @lr-media-open=${(e) => openLightbox(e.detail.src)}
+<lr-media-card
+  id="image-card"
+  kind="image"
+  src="https://example.com/photo.jpg"
+  alt="Screenshot"
+  filename="photo.jpg"
 ></lr-media-card>
-<lr-media-card kind="file" src="https://example.com/report.pdf" filename="report.pdf"
-  @lr-before-media-download=${(e) => shouldUseNativeDownload || e.preventDefault()}
-></lr-media-card>
+<lr-media-card id="file-card" kind="file" src="https://example.com/report.pdf" filename="report.pdf">
+</lr-media-card>
+<script type="module">
+  document
+    .getElementById("image-card")
+    .addEventListener("lr-media-open", (e) => openLightbox(e.detail.src));
+  document
+    .getElementById("file-card")
+    .addEventListener("lr-before-media-download", (e) => shouldUseNativeDownload || e.preventDefault());
+</script>
 ```
 
 **Safe-URL checking.** `src` is validated by internal sink-specific helpers before it's

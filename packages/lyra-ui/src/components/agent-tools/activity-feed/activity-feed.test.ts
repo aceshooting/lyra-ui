@@ -490,26 +490,6 @@ describe('follow contract (virtualized)', () => {
     expect(el.shadowRoot!.querySelector('lr-virtual-list')!.getAttribute('aria-label')).to.equal('Steps');
   });
 
-  it('does not leak the internal lr-virtual-list lr-visible-range-changed event past the host under its own name', async () => {
-    const el = (await fixture(
-      html`<lr-activity-feed expanded virtualize-at="0" .entries=${makeEntries(5)}></lr-activity-feed>`,
-    )) as LyraActivityFeed;
-    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement;
-    let count = 0;
-    el.addEventListener('lr-visible-range-changed', () => count++);
-
-    list.dispatchEvent(
-      new CustomEvent('lr-visible-range-changed', {
-        detail: { start: 0, end: 1 },
-        bubbles: true,
-        composed: true,
-      }),
-    );
-    await el.updateComplete;
-
-    expect(count).to.equal(0);
-  });
-
   it('does not leak the internal lr-virtual-list lr-visible-range-change event past the host under its own name', async () => {
     const el = (await fixture(
       html`<lr-activity-feed expanded virtualize-at="0" .entries=${makeEntries(5)}></lr-activity-feed>`,
@@ -530,7 +510,7 @@ describe('follow contract (virtualized)', () => {
     expect(count).to.equal(0);
   });
 
-  it('updates follow from the canonical range-change event without leaking it or firing lr-follow-change twice when both event names fire for the same gesture', async () => {
+  it('updates follow from the range-change event without leaking it or firing lr-follow-change twice', async () => {
     const el = (await fixture(
       html`<lr-activity-feed mode="live" expanded virtualize-at="0" .entries=${makeEntries(5)}></lr-activity-feed>`,
     )) as LyraActivityFeed;
@@ -545,13 +525,8 @@ describe('follow contract (virtualized)', () => {
     el.addEventListener('lr-visible-range-change', () => leaked++);
     el.addEventListener('lr-follow-change', () => followChangeCount++);
     const detail = { start: 0, end: 1 };
-    // Both names fire from the same underlying gesture -- mirror that here rather than
-    // dispatching the canonical name in isolation.
     list.dispatchEvent(
       new CustomEvent('lr-visible-range-change', { detail, bubbles: true, composed: true }),
-    );
-    list.dispatchEvent(
-      new CustomEvent('lr-visible-range-changed', { detail, bubbles: true, composed: true }),
     );
     await el.updateComplete;
 

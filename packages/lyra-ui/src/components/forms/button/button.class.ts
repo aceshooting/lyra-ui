@@ -939,7 +939,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
         aria-expanded=${this.triggerExpanded ?? nothing}
         aria-controls=${this.triggerControls || nothing}
         aria-describedby=${this.triggerDescribedBy || nothing}
-        aria-disabled=${disabled ? 'true' : nothing}
+        aria-disabled=${disabled ? 'true' : 'false'}
         aria-busy=${this.loading ? 'true' : 'false'}
         tabindex=${disabled ? '-1' : nothing}
         @focus=${this.onFocus}

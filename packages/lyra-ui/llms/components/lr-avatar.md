@@ -96,14 +96,14 @@ variant's quiet tint.
 <lr-avatar label="Assistant"><svg slot="icon" viewBox="0 0 24 24"><!-- role glyph --></svg></lr-avatar>
 
 <!-- Far down a long list: defer the request, fall back to a glyph, and report a broken URL. -->
-<lr-avatar
-  image="/users/7/photo.jpg"
-  label="Ada Lovelace"
-  loading="lazy"
-  @lr-error=${(e) => reportBrokenAvatar(e.detail.image)}
->
+<lr-avatar id="lazy-avatar" image="/users/7/photo.jpg" label="Ada Lovelace" loading="lazy">
   <svg slot="icon" viewBox="0 0 24 24"><!-- fallback glyph --></svg>
 </lr-avatar>
+<script type="module">
+  document
+    .getElementById("lazy-avatar")
+    .addEventListener("lr-error", (e) => reportBrokenAvatar(e.detail.image));
+</script>
 ```
 
 **Known gotchas:**

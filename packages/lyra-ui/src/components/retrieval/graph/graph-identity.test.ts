@@ -130,7 +130,7 @@ it('omits blank and later duplicate entity rows before rendering or events', asy
   );
   expect(buttons).to.have.length(1);
   expect(buttons[0]!.textContent).to.include('First');
-  const activation = oneEvent(list, 'lr-entity-activate');
+  const activation = oneEvent(list, 'lr-entity-select');
   buttons[0]!.click();
   expect((await activation).detail).to.deep.equal({ entityId: 'node-a' });
 });

@@ -869,6 +869,22 @@ it('localizes auto-loaded headings through private provenance without exposing l
   ]);
 });
 
+it('localizes the fallback heading for a built-in group id with no registered label, via .strings', async () => {
+  // '42' is not one of emojibase's own ids (0-9, all mapped in BUILT_IN_GROUP_LABEL_KEYS) -- the
+  // loader can only supply a bare numeric placeholder for it (see emoji-data-loader.test.ts), so the
+  // localized "Group {group}" phrasing has to come from the picker's own groupLabel() at render time.
+  const el = await connectEmojiPicker(() =>
+    Promise.resolve([{ key: '42', label: '42', emojis: [{ emoji: '🛸', name: 'flying saucer' }] }]),
+  );
+  await waitUntil(() => el.groups.length === 1, 'auto-loaded groups never arrived');
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="group-label"]')!.textContent!.trim()).to.equal('Group 42');
+
+  el.strings = { emojiPickerGroupUnknown: 'Groupe {group}' };
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="group-label"]')!.textContent!.trim()).to.equal('Groupe 42');
+});
+
 it('keeps a consumer-supplied label verbatim even for a built-in numeric key', async () => {
   const el = await connectEmojiPicker();
   el.groups = [{ key: '0', label: 'My own zero group', emojis: groups[0].emojis }];

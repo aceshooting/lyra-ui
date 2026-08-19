@@ -116,6 +116,30 @@ former brand and active-mix values when unset.
 
 - every `appearance` renders on the _same_ `[part="base"]` element — there's no separate element per
   variant, so a `::part(base)` override applies uniformly regardless of `appearance`.
+- **a card clips, it does not scroll — and it never picks a scroll owner for you.** `[part='base']`
+  stretches to the host's allocated block-size and clips its overflow, which is what keeps a
+  full-bleed `media`/`image` child inside the rounded border. In an auto-sized row the card simply
+  grows and nothing is clipped; give it a _definite_ allocation (a fixed grid row, an explicit
+  `block-size`) and body content taller than that allocation is clipped silently, with no
+  scrollbar. Neither upstream card exposes an overflow, block-size, or scroll hook and neither does
+  this one: the public `body` part already carries the whole decision, and a `::part()` rule from
+  your tree wins over the shadow stylesheet regardless of specificity. A fixed-height tile that
+  must hold more content says so itself:
+
+  ```css
+  .tile-grid {
+    display: grid;
+    grid-template-rows: 12rem;
+  }
+  .tile-grid lr-card::part(body) {
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+  ```
+
+  `overflow` other than `visible` also zeroes the body's automatic minimum size, so that one
+  declaration is enough — the body shrinks into the tile and scrolls, and `max-block-size` /
+  `scrollbar-gutter` stay available on the same rule. The linked (`href`) card behaves identically.
 - slot-presence (`header`/`media`/`image`/`footer`/`actions`/`header-actions`/`footer-actions`) is
   tracked in JS, not via CSS `:empty` (a
   `[part]` wrapper always contains a literal `<slot>` child, so `:empty` never matches) — the same

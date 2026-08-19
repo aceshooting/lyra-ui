@@ -162,6 +162,123 @@ it('leaves a horizontal strip that fits completely unmasked', async () => {
   expect(getComputedStyle(base).maskImage).to.equal('none');
 });
 
+it("flips the edge fade on once a slotted item's own content grows, without any host update or [part=\"base\"] resize/scroll", async () => {
+  // The gap this guards: ScrollOverflowController's plain ResizeObserver only watches
+  // [part="base"]'s own border box. A slotted <lr-timeline-item>'s content (a longer title, a web
+  // font finishing its swap, an icon loading) can grow scrollWidth without base's own box
+  // changing at all -- [part="base"] is a block-level flex container with no width of its own
+  // (see timeline.styles.ts), so `max-inline-size` genuinely pins its own border box regardless
+  // of content, unlike a shrink-to-fit box that would just grow along with it. `scrollbar-width:
+  // none` additionally removes the classic scrollbar's own reserved block-axis space, so the fits
+  // -> overflows transition itself cannot change base's clientHeight and spuriously re-trigger
+  // the existing plain ResizeObserver for an unrelated reason. Leaving `scrollLeft` untouched at
+  // its default `0` avoids Chromium re-firing a genuine native `scroll` event whenever an
+  // overflowing strip's `scrollWidth` changes while scrolled away from position `0` -- itself a
+  // real, useful side effect of this fix's new scroll listener, but not the one this test
+  // targets. Growing the item via an explicit flex-basis (mirroring the fixture already used
+  // above) gives a deterministic box growth, and setting it directly on the rendered item
+  // (bypassing any host property, so no Lit re-render/hostUpdated() run happens either) isolates
+  // the ResizeObserver path from the synchronous hostUpdated() measurement.
+  const el = (await fixture(
+    html`<lr-timeline orientation="horizontal" style="display: block; max-inline-size: 280px">
+      <lr-timeline-item>A</lr-timeline-item>
+      <lr-timeline-item>B</lr-timeline-item>
+    </lr-timeline>`,
+  )) as LyraTimeline;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  base.style.scrollbarWidth = 'none';
+  await nextFrames();
+  expect(
+    base.scrollWidth - base.clientWidth,
+    'sanity check: the strip must fit before the content grows',
+  ).to.be.at.most(1);
+  expect(base.hasAttribute('data-scroll-overflow')).to.be.false;
+
+  const clientWidthBefore = base.clientWidth;
+  const clientHeightBefore = base.clientHeight;
+
+  const lastItem = el.querySelectorAll('lr-timeline-item')[1] as HTMLElement;
+  lastItem.style.flex = '0 0 400px';
+  await nextFrames();
+
+  expect(
+    base.clientWidth,
+    "sanity check: base's own inline border box must not have changed",
+  ).to.equal(clientWidthBefore);
+  expect(
+    base.clientHeight,
+    "sanity check: base's own block border box must not have changed either",
+  ).to.equal(clientHeightBefore);
+  expect(base.scrollLeft, 'sanity check: never programmatically scrolled').to.equal(0);
+  expect(base.scrollWidth).to.be.greaterThan(base.clientWidth);
+  expect(base.hasAttribute('data-scroll-overflow')).to.be.true;
+  expect(getComputedStyle(base).maskImage).to.contain('linear-gradient');
+});
+
+it('fades only the reachable logical edge, RTL-aware, instead of dimming an edge already fully in view', async () => {
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const el = (await fixture(
+      html`<lr-timeline
+        dir=${direction}
+        orientation="horizontal"
+        style="display: block; max-inline-size: 90px"
+      >
+        <lr-timeline-item style="flex: 0 0 200px">Deployed build 4821</lr-timeline-item>
+        <lr-timeline-item style="flex: 0 0 200px">Rolled back to 4820</lr-timeline-item>
+        <lr-timeline-item style="flex: 0 0 200px">Opened INC-3311</lr-timeline-item>
+      </lr-timeline>`,
+    )) as LyraTimeline;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    await nextFrames();
+    expect(base.scrollWidth, `${direction} sanity: must overflow`).to.be.greaterThan(
+      base.clientWidth,
+    );
+    expect(base.hasAttribute('data-scroll-start'), `${direction} initial start`).to.be.false;
+    expect(base.hasAttribute('data-scroll-end'), `${direction} initial end`).to.be.true;
+
+    const maximum = base.scrollWidth - base.clientWidth;
+    base.scrollLeft = direction === 'rtl' ? -maximum : maximum;
+    base.dispatchEvent(new Event('scroll'));
+    expect(base.hasAttribute('data-scroll-start'), `${direction} final start`).to.be.true;
+    expect(base.hasAttribute('data-scroll-end'), `${direction} final end`).to.be.false;
+  }
+});
+
+it('actually renders no mask under forced colors, in both LTR and RTL, while only one logical edge is reachable', async () => {
+  // Stylesheet-text substring checks cannot catch a specificity regression: the one-sided mask
+  // rules use more attribute selectors (higher specificity) than the forced-colors override's
+  // plain [data-scroll-overflow] selector, so without the :where()-wrapping that keeps their
+  // specificity pinned to the baseline, the gradient mask would keep winning the cascade even
+  // under forced-colors. Assert the real computed style, not the source text.
+  try {
+    await setForcedColors('active');
+    for (const direction of ['ltr', 'rtl'] as const) {
+      const el = (await fixture(
+        html`<lr-timeline
+          dir=${direction}
+          orientation="horizontal"
+          style="display: block; max-inline-size: 90px"
+        >
+          <lr-timeline-item style="flex: 0 0 200px">Start</lr-timeline-item>
+          <lr-timeline-item style="flex: 0 0 200px">Middle</lr-timeline-item>
+          <lr-timeline-item style="flex: 0 0 200px">End</lr-timeline-item>
+        </lr-timeline>`,
+      )) as LyraTimeline;
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      await nextFrames();
+      expect(base.hasAttribute('data-scroll-overflow'), `${direction} sanity: overflowing`).to.be
+        .true;
+      expect(base.hasAttribute('data-scroll-end'), `${direction} sanity: one-sided state`).to.be
+        .true;
+      expect(getComputedStyle(base).maskImage, `${direction} forced-colors mask`).to.equal(
+        'none',
+      );
+    }
+  } finally {
+    await setForcedColors('none');
+  }
+});
+
 it('keeps the edge fade opaque when a consumer themes the shadow color translucent', async () => {
   // The regression this guards: the mask's opaque stops used to be var(--lr-color-shadow), a
   // documented consumer theming input. A mask reads alpha only, so a translucent shadow theme

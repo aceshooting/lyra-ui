@@ -528,37 +528,7 @@ describe("lr-pdf-viewer", () => {
     }
   });
 
-  it("updates the current page from the virtual list visible range", async () => {
-    const el = (await fixture(
-      html`<lr-pdf-viewer></lr-pdf-viewer>`
-    )) as LyraPdfViewer;
-    installFakeLoader(el, fakeDocument(5));
-    const restore = stubFetch();
-    try {
-      el.src = "https://example.test/report.pdf";
-      await waitFor(el, "lr-virtual-list");
-      let leaked = 0;
-      el.addEventListener("lr-visible-range-changed", () => leaked++);
-      const pageChange = oneEvent(el, "lr-page-change");
-      el.shadowRoot!.querySelector("lr-virtual-list")!.dispatchEvent(
-        new CustomEvent("lr-visible-range-changed", {
-          detail: { start: 2, end: 3 },
-          bubbles: true,
-          composed: true,
-        })
-      );
-      expect((await pageChange).detail).to.deep.equal({
-        page: 3,
-        pageCount: 5,
-      });
-      expect(el.page).to.equal(3);
-      expect(leaked).to.equal(0);
-    } finally {
-      restore();
-    }
-  });
-
-  it("updates the current page from the virtual list visible range using the canonical lr-visible-range-change name, without leaking it or double-firing lr-page-change when both event names fire for the same gesture", async () => {
+  it("updates the current page from the virtual list visible range, without leaking the internal event or double-firing lr-page-change", async () => {
     const el = (await fixture(
       html`<lr-pdf-viewer></lr-pdf-viewer>`
     )) as LyraPdfViewer;
@@ -571,20 +541,9 @@ describe("lr-pdf-viewer", () => {
       let pageChangeCount = 0;
       el.addEventListener("lr-visible-range-change", () => leaked++);
       el.addEventListener("lr-page-change", () => pageChangeCount++);
-      const detail = { start: 2, end: 3 };
-      const list = el.shadowRoot!.querySelector("lr-virtual-list")!;
-      // Both names fire from the same underlying gesture -- mirror that here rather than
-      // dispatching the canonical name in isolation.
-      list.dispatchEvent(
+      el.shadowRoot!.querySelector("lr-virtual-list")!.dispatchEvent(
         new CustomEvent("lr-visible-range-change", {
-          detail,
-          bubbles: true,
-          composed: true,
-        })
-      );
-      list.dispatchEvent(
-        new CustomEvent("lr-visible-range-changed", {
-          detail,
+          detail: { start: 2, end: 3 },
           bubbles: true,
           composed: true,
         })
@@ -2646,7 +2605,7 @@ describe("goToPage", () => {
     }
   });
 
-  it("waitForPageMount settles from the canonical lr-visible-range-change event, not just the deprecated lr-visible-range-changed alias", async () => {
+  it("waitForPageMount settles from the lr-visible-range-change event", async () => {
     const el = (await fixture(
       html`<lr-pdf-viewer
         style="--lr-pdf-viewer-height: 100px;"
@@ -2670,8 +2629,7 @@ describe("goToPage", () => {
       };
       expect(internals.pageCanvases.has(20)).to.equal(false);
       const pending = internals.waitForPageMount(20);
-      // Simulate page 20's canvas mounting, then notify only through the canonical event name --
-      // the deprecated `lr-visible-range-changed` alias never fires in this test.
+      // Simulate page 20's canvas mounting, then notify through the event name.
       internals.pageCanvases.set(20, document.createElement("canvas"));
       list.dispatchEvent(
         new CustomEvent("lr-visible-range-change", {
@@ -2781,7 +2739,7 @@ describe("goToPage", () => {
       const originalScrollTo = base.scrollTo.bind(base);
       // Setting `page` also flips `activeItemId`, which the list would otherwise answer with its own
       // real (asynchronous, physics-driven) scrollActiveIntoView() -- neutralize that so nothing else
-      // ever brings page 20 into view or re-fires lr-visible-range-changed during this test, leaving
+      // ever brings page 20 into view or re-fires lr-visible-range-change during this test, leaving
       // waitForPageMount()'s internal 500ms timeout as the only way this can resolve.
       base.scrollTo = (() => {}) as typeof base.scrollTo;
       try {
@@ -3763,6 +3721,81 @@ describe("search", () => {
     }
   });
 
+  // PDF.js merges every chunk's `styles` into one document-wide style cache with `Object.assign`, so
+  // an own property whose value is `undefined` overwrites -- and destroys -- a good style an earlier
+  // chunk already contributed. A font is introduced once and then referenced by later chunks that no
+  // longer carry it, which is exactly this shape. `hasOwnProperty` rather than a `=== undefined`
+  // comparison is the whole point: the latter cannot tell "absent" from "present but undefined".
+  it('never copies a font absent from a later chunk as an own undefined style property', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    const enqueued: Record<string, unknown>[] = [];
+    class RecordingTextLayer {
+      constructor(private options: { textContentSource: ReadableStream<unknown> }) {}
+      async render(): Promise<void> {
+        const reader = this.options.textContentSource.getReader();
+        for (;;) {
+          const result = await reader.read();
+          if (result.done) break;
+          const value = result.value as { styles?: Record<string, unknown> };
+          enqueued.push(value.styles ?? {});
+        }
+      }
+      cancel(): void {}
+    }
+    const page = {
+      ...fakePage(1),
+      streamTextContent: () => new ReadableStream({
+        start(controller) {
+          controller.enqueue({
+            items: [{ str: 'alpha', hasEOL: false, fontName: 'f1' }],
+            styles: { f1: { fontFamily: 'sans-serif', ascent: 1 }, f2: null },
+            lang: 'en',
+          });
+          // `f1` was introduced by the chunk above and is absent here; `f2` is present but falsy, so
+          // a truthiness guard would wrongly drop it.
+          controller.enqueue({
+            items: [
+              { str: 'beta', hasEOL: false, fontName: 'f1' },
+              { str: 'gamma', hasEOL: false, fontName: 'f2' },
+            ],
+            styles: { f2: null },
+            lang: 'en',
+          });
+          controller.close();
+        },
+      }),
+    };
+    const doc = { numPages: 1, getPage: () => Promise.resolve(page) };
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () =>
+      Promise.resolve({
+        getDocument: () => ({ promise: Promise.resolve(doc) }),
+        GlobalWorkerOptions: { workerSrc: '' },
+        TextLayer: RecordingTextLayer,
+      });
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/style-cache.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await waitUntil(() => enqueued.length >= 2);
+      const [firstStyles, secondStyles] = enqueued as [Record<string, unknown>, Record<string, unknown>];
+      expect(
+        Object.prototype.hasOwnProperty.call(firstStyles, 'f1'),
+        'introducing chunk keeps its own font style',
+      ).to.be.true;
+      expect(
+        Object.prototype.hasOwnProperty.call(secondStyles, 'f1'),
+        'later chunk must not republish an absent font as undefined',
+      ).to.be.false;
+      expect(
+        Object.prototype.hasOwnProperty.call(secondStyles, 'f2'),
+        'a present-but-falsy font style must still be copied',
+      ).to.be.true;
+      expect(secondStyles['f2']).to.equal(null);
+    } finally {
+      restore();
+    }
+  });
+
   it('fails closed instead of materializing the unbounded getTextContent fallback', async () => {
     const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
     const doc = fakeDocument(1);
@@ -4379,6 +4412,86 @@ describe("maxHeight", () => {
   });
 });
 
+// PDF.js refuses to open any document without `GlobalWorkerOptions.workerSrc`, and a bare
+// `pdfjs-dist/build/...` specifier cannot be resolved from inside this library at runtime, so a
+// bundled application had no supported way to supply the worker chunk its own bundler emitted.
+describe("workerSrc", () => {
+  /** Replaces the peer loader with one that records the worker URL the component hands it. */
+  function recordingLoader(el: LyraPdfViewer): Array<string | null | undefined> {
+    const seen: Array<string | null | undefined> = [];
+    (
+      el as unknown as {
+        loadLibrary: (workerSrc?: string | null) => Promise<unknown>;
+      }
+    ).loadLibrary = (workerSrc) => {
+      seen.push(workerSrc);
+      return Promise.resolve({
+        getDocument: () => ({ promise: Promise.resolve(fakeDocument(1)) }),
+        GlobalWorkerOptions: { workerSrc: "" },
+        TextLayer: FakeTextLayer,
+      });
+    };
+    return seen;
+  }
+
+  it("defaults to unset and asks the loader for no particular worker", async () => {
+    const el = (await fixture(
+      html`<lr-pdf-viewer></lr-pdf-viewer>`
+    )) as LyraPdfViewer;
+    expect(el.workerSrc).to.equal("");
+    const seen = recordingLoader(el);
+    const restore = stubFetch();
+    try {
+      el.src = "https://example.test/report.pdf";
+      await waitFor(el, '[part="toolbar"]');
+      expect(seen.length).to.be.greaterThan(0);
+      expect(seen[0] ?? null).to.equal(null);
+    } finally {
+      restore();
+    }
+  });
+
+  it("hands the configured worker-src to the peer loader", async () => {
+    const el = (await fixture(
+      html`<lr-pdf-viewer
+        worker-src="/assets/pdf.worker-abc123.mjs"
+      ></lr-pdf-viewer>`
+    )) as LyraPdfViewer;
+    expect(el.workerSrc).to.equal("/assets/pdf.worker-abc123.mjs");
+    const seen = recordingLoader(el);
+    const restore = stubFetch();
+    try {
+      el.src = "https://example.test/report.pdf";
+      await waitFor(el, '[part="toolbar"]');
+      expect(seen[0]).to.equal("/assets/pdf.worker-abc123.mjs");
+    } finally {
+      restore();
+    }
+  });
+
+  it("hands a later workerSrc assignment to the loader on the next load", async () => {
+    const el = (await fixture(
+      html`<lr-pdf-viewer></lr-pdf-viewer>`
+    )) as LyraPdfViewer;
+    const seen = recordingLoader(el);
+    const restore = stubFetch();
+    try {
+      el.src = "https://example.test/report.pdf";
+      await waitFor(el, '[part="toolbar"]');
+      // The text layer of the first document asks the loader for a library of its own, so drain
+      // those calls before recording what the *next* load is told.
+      await aTimeout(20);
+      seen.length = 0;
+      el.workerSrc = "https://cdn.example.test/pdf.worker.min.mjs";
+      el.src = "https://example.test/second.pdf";
+      await waitUntil(() => seen.length > 0);
+      expect(seen[0]).to.equal("https://cdn.example.test/pdf.worker.min.mjs");
+    } finally {
+      restore();
+    }
+  });
+});
+
 // Page content is committed inside `<lr-virtual-list>`'s own shadow root, one boundary below this
 // viewer's render root, so every rule for it has to travel through `::part()`. These assertions read
 // the *rendered* result of each such rule rather than the stylesheet text -- a selector that stops at
@@ -4558,6 +4671,51 @@ describe("virtualized page part styling", () => {
         computed.getPropertyValue("user-select") ||
           computed.getPropertyValue("-webkit-user-select")
       ).to.equal("text");
+    } finally {
+      restore();
+    }
+  });
+
+  // `part="text-span"` is stamped onto PDF.js's generated runs only after `render()` resolves, so
+  // every run is un-parted -- and therefore unreachable by the `::part(text-span)` transparency rule
+  // -- for the whole time the text layer is being built, and permanently for any run left behind by a
+  // render that aborts partway. Without a transparency declaration on the container those runs paint
+  // opaque text over the canvas glyphs already underneath them. The container inherits down to
+  // whatever PDF.js creates, parted or not.
+  it("keeps an unparted text-layer run transparent while the layer is still rendering", async () => {
+    const el = (await fixture(
+      html`<lr-pdf-viewer></lr-pdf-viewer>`
+    )) as LyraPdfViewer;
+    class UnpartedRunTextLayer {
+      static colorDuringRender = "";
+      constructor(private options: { container: HTMLElement }) {}
+      async render(): Promise<void> {
+        const span = this.options.container.ownerDocument.createElement("span");
+        span.textContent = "run left behind by an aborted render";
+        this.options.container.append(span);
+        expect(span.hasAttribute("part"), "run is unparted mid-render").to.be
+          .false;
+        UnpartedRunTextLayer.colorDuringRender = getComputedStyle(span).color;
+      }
+      cancel(): void {}
+    }
+    UnpartedRunTextLayer.colorDuringRender = "";
+    (
+      el as unknown as { loadLibrary: () => Promise<unknown> }
+    ).loadLibrary = () =>
+      Promise.resolve({
+        getDocument: () => ({ promise: Promise.resolve(fakeDocument(1)) }),
+        GlobalWorkerOptions: { workerSrc: "" },
+        TextLayer: UnpartedRunTextLayer,
+      });
+    const restore = stubFetch();
+    try {
+      el.src = "https://example.test/report.pdf";
+      await waitFor(el, '[part="toolbar"]');
+      await waitUntil(() => UnpartedRunTextLayer.colorDuringRender !== "");
+      expect(UnpartedRunTextLayer.colorDuringRender).to.equal(
+        "rgba(0, 0, 0, 0)"
+      );
     } finally {
       restore();
     }

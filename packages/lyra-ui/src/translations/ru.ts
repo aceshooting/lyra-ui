@@ -828,6 +828,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGroupObjects: 'Предметы',
   emojiPickerGroupSymbols: 'Символы',
   emojiPickerGroupFlags: 'Флаги',
+  emojiPickerGroupUnknown: 'Группа {group}',
   pushToTalkRequesting: 'Запрос доступа к микрофону…',
   pushToTalkDenied: 'Доступ к микрофону запрещён',
   pushToTalkError: 'Не удалось выполнить запись',

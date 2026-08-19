@@ -16,6 +16,27 @@ export interface ShikiHighlighter {
  */
 export type ShikiHighlighterCore = ShikiHighlighter;
 
+/**
+ * Narrows an unknown value (the resolved output of `shiki`'s `createHighlighter()`/
+ * `createHighlighterCore()`) to the highlighter capability Lyra actually calls. Both
+ * `loadShikiHighlighter()` (`code-loader.ts`) and `loadShikiHighlighterCore()` below validate
+ * their built instance through this before caching/returning it, so a malformed or spoofed peer
+ * fails closed at load time -- resolving `null` with the documented warning -- instead of reaching
+ * `<lr-code-block>`/`<lr-markdown>`'s render path and throwing there. Exported so a call site that
+ * receives an already-resolved highlighter from elsewhere (e.g. `syncHighlight()`'s live
+ * per-language check) can also tolerate a shape-valid peer whose method throws only when actually
+ * invoked, which a load-time shape check alone cannot catch.
+ */
+export function isShikiHighlighter(candidate: unknown): candidate is ShikiHighlighter {
+  return (
+    (typeof candidate === 'object' || typeof candidate === 'function') &&
+    candidate !== null &&
+    typeof (candidate as ShikiHighlighter).getLoadedLanguages === 'function' &&
+    typeof (candidate as ShikiHighlighter).loadLanguage === 'function' &&
+    typeof (candidate as ShikiHighlighter).codeToHtml === 'function'
+  );
+}
+
 /** The peer-neutral shape of a pre-imported TextMate grammar module's default export. */
 export interface ShikiLanguageInput {
   name: string;
@@ -99,12 +120,19 @@ export function loadShikiHighlighterCore(
       import('shiki/themes/github-dark.mjs'),
     ])
       .then(
-        ([{ createHighlighterCore }, { createOnigurumaEngine }, light, dark]) =>
-          createHighlighterCore({
+        async ([{ createHighlighterCore }, { createOnigurumaEngine }, light, dark]) => {
+          const core = await createHighlighterCore({
             themes: [light.default, dark.default],
             langs: Object.values(languages) as never,
             engine: createOnigurumaEngine(import('shiki/wasm')),
-          }) as unknown as ShikiHighlighterCore
+          });
+          if (!isShikiHighlighter(core)) {
+            throw new Error(
+              'Invalid optional peer `shiki`: `createHighlighterCore()` did not produce a usable highlighter capability.',
+            );
+          }
+          return core;
+        }
       )
       .catch((err) => {
         console.warn(

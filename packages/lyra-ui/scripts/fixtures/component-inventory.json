@@ -37167,12 +37167,6 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-dialog-close",
-            "type": "CustomEvent<DialogCloseReason>",
-            "cancelable": "conditional",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-hide",
             "type": "CustomEvent<LyraDialogHideDetail>",
             "cancelable": "conditional",
@@ -41159,12 +41153,6 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-dialog-close",
-            "type": "CustomEvent<DialogCloseReason>",
-            "cancelable": "conditional",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-hide",
             "type": "CustomEvent<LyraDialogHideDetail>",
             "cancelable": "always",
@@ -44772,21 +44760,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-entity-card",
-            "kind": "event",
-            "name": "lr-entity-activate",
-            "since": "9.1.1",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-entity-select",
-              "usage": "addEventListener('lr-entity-select', ...)"
-            },
-            "removalNotBefore": "11.0.0",
-            "rationale": "Renamed for cross-family event-vocabulary consistency; both names fire from the same gesture with an identical detail during the compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -44945,25 +44919,6 @@
         ],
         "events": [
           {
-            "name": "lr-entity-activate",
-            "type": "CustomEvent<{ entityId: string }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-entity-card",
-              "kind": "event",
-              "name": "lr-entity-activate",
-              "since": "9.1.1",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-entity-select",
-                "usage": "addEventListener('lr-entity-select', ...)"
-              },
-              "removalNotBefore": "11.0.0",
-              "rationale": "Renamed for cross-family event-vocabulary consistency; both names fire from the same gesture with an identical detail during the compatibility window."
-            },
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-entity-select",
             "type": "CustomEvent<{ entityId: string }>",
             "cancelable": "never",
@@ -45065,21 +45020,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-entity-chip",
-            "kind": "event",
-            "name": "lr-entity-activate",
-            "since": "9.1.1",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-entity-select",
-              "usage": "addEventListener('lr-entity-select', ...)"
-            },
-            "removalNotBefore": "11.0.0",
-            "rationale": "Renamed for cross-family event-vocabulary consistency; both names fire from the same gesture with an identical detail during the compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -45205,25 +45146,6 @@
           }
         ],
         "events": [
-          {
-            "name": "lr-entity-activate",
-            "type": "CustomEvent<{ entityId: string }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-entity-chip",
-              "kind": "event",
-              "name": "lr-entity-activate",
-              "since": "9.1.1",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-entity-select",
-                "usage": "addEventListener('lr-entity-select', ...)"
-              },
-              "removalNotBefore": "11.0.0",
-              "rationale": "Renamed for cross-family event-vocabulary consistency; both names fire from the same gesture with an identical detail during the compatibility window."
-            },
-            "constructor": "CustomEvent"
-          },
           {
             "name": "lr-entity-open",
             "type": "CustomEvent<{ entityId: string }>",
@@ -63389,7 +63311,7 @@
           },
           {
             "name": "lr-search-change",
-            "type": "CustomEvent<{ searchQuery: string; query: string; matchCount: number; matchCountExact: boolean; }>",
+            "type": "CustomEvent<{ query: string; matchCount: number; matchCountExact: boolean; }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -75735,21 +75657,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-neighbor-list",
-            "kind": "event",
-            "name": "lr-entity-activate",
-            "since": "9.1.1",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-entity-select",
-              "usage": "addEventListener('lr-entity-select', ...)"
-            },
-            "removalNotBefore": "11.0.0",
-            "rationale": "Renamed for cross-family event-vocabulary consistency; both names fire from the same gesture with an identical detail during the compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -75883,25 +75791,6 @@
         ],
         "slots": [],
         "events": [
-          {
-            "name": "lr-entity-activate",
-            "type": "CustomEvent<{ entityId: string }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-neighbor-list",
-              "kind": "event",
-              "name": "lr-entity-activate",
-              "since": "9.1.1",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-entity-select",
-                "usage": "addEventListener('lr-entity-select', ...)"
-              },
-              "removalNotBefore": "11.0.0",
-              "rationale": "Renamed for cross-family event-vocabulary consistency; both names fire from the same gesture with an identical detail during the compatibility window."
-            },
-            "constructor": "CustomEvent"
-          },
           {
             "name": "lr-entity-select",
             "type": "CustomEvent<{ entityId: string }>",
@@ -82092,6 +81981,16 @@
             "default": ""
           },
           {
+            "name": "worker-src",
+            "property": "workerSrc",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "zoom",
             "property": "zoom",
             "type": "number",
@@ -82195,6 +82094,16 @@
           {
             "name": "src",
             "attribute": "src",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "workerSrc",
+            "attribute": "worker-src",
             "type": "string",
             "readonly": false,
             "reflects": false,
@@ -83739,7 +83648,7 @@
                 "parameters": [
                   {
                     "name": "loader",
-                    "type": "() => Promise<LibphonenumberModuleLike<CountryCode>>",
+                    "type": "() => Promise<unknown>",
                     "optional": false,
                     "hasDefault": false
                   }
@@ -90783,7 +90692,7 @@
             "name": "canvas",
             "attribute": null,
             "type": "HTMLCanvasElement",
-            "readonly": false,
+            "readonly": true,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
@@ -94719,21 +94628,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-rag-eval-dashboard",
-            "kind": "event",
-            "name": "lr-run-select",
-            "since": "9.1.1",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-run-change",
-              "usage": "addEventListener('lr-run-change', ...)"
-            },
-            "removalNotBefore": "11.0.0",
-            "rationale": "Renamed for cross-family event-vocabulary consistency; both names fire from the same gesture with an identical detail during the compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -94910,25 +94805,6 @@
             "name": "lr-run-change",
             "type": "CustomEvent<{ run: LyraRagEvaluationRun }>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-run-select",
-            "type": "CustomEvent<{ run: LyraRagEvaluationRun }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-rag-eval-dashboard",
-              "kind": "event",
-              "name": "lr-run-select",
-              "since": "9.1.1",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-run-change",
-                "usage": "addEventListener('lr-run-change', ...)"
-              },
-              "removalNotBefore": "11.0.0",
-              "rationale": "Renamed for cross-family event-vocabulary consistency; both names fire from the same gesture with an identical detail during the compatibility window."
-            },
             "constructor": "CustomEvent"
           },
           {
@@ -127747,21 +127623,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-virtual-list",
-            "kind": "event",
-            "name": "lr-visible-range-changed",
-            "since": "9.1.1",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-visible-range-change",
-              "usage": "addEventListener('lr-visible-range-change', ...)"
-            },
-            "removalNotBefore": "11.0.0",
-            "rationale": "Renamed for cross-family event-vocabulary consistency; both names fire from the same gesture with an identical detail during the compatibility window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -128033,25 +127895,6 @@
             "name": "lr-visible-range-change",
             "type": "CustomEvent<LyraVirtualListRange>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-visible-range-changed",
-            "type": "CustomEvent<LyraVirtualListRange>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-virtual-list",
-              "kind": "event",
-              "name": "lr-visible-range-changed",
-              "since": "9.1.1",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-visible-range-change",
-                "usage": "addEventListener('lr-visible-range-change', ...)"
-              },
-              "removalNotBefore": "11.0.0",
-              "rationale": "Renamed for cross-family event-vocabulary consistency; both names fire from the same gesture with an identical detail during the compatibility window."
-            },
             "constructor": "CustomEvent"
           }
         ],
@@ -129822,6 +129665,12 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-scroll-fade-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "2rem"
+          },
+          {
             "name": "--lr-widget-backdrop-inset",
             "deprecated": null,
             "hasDefault": true,
@@ -131048,7 +130897,7 @@
             "name": "iframe",
             "attribute": null,
             "type": "HTMLIFrameElement | undefined",
-            "readonly": false,
+            "readonly": true,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false

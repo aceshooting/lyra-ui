@@ -196,7 +196,7 @@ import type {
   LyraRailResizeEvent,
   LyraMultiSplitCollapseChangeEvent,
   LyraTabShowEvent,
-  LyraVisibleRangeChangedEvent,
+  LyraVisibleRangeChangeEvent,
 } from '../src/events.js';
 
 const publicTypes: [
@@ -451,7 +451,7 @@ attachmentTrigger.addEventListener('lr-files', (event) => {
 // exported, but before its event map existed the union was unreachable
 // through a typed listener -- `event.detail` was a bare `Event`.
 declare const dialog: LyraDialog;
-dialog.addEventListener('lr-dialog-close', (event) => {
+dialog.addEventListener('lr-close', (event) => {
   const reason: DialogCloseReason = event.detail;
   void reason;
 });
@@ -598,7 +598,7 @@ form.addEventListener('lr-validity-change', (event) => {
 });
 
 declare const list: LyraVirtualList;
-list.addEventListener('lr-visible-range-changed', (event) => {
+list.addEventListener('lr-visible-range-change', (event) => {
   const start: number = event.detail.start;
   const end: number = event.detail.end;
   void start;
@@ -647,7 +647,7 @@ const globalEventSurfaceTypes: [
   LyraRailResizeEvent,
   LyraMultiSplitCollapseChangeEvent,
   LyraTabShowEvent,
-  LyraVisibleRangeChangedEvent,
+  LyraVisibleRangeChangeEvent,
 ] | undefined = undefined;
 void globalEventSurfaceTypes;
 
@@ -655,7 +655,7 @@ void globalEventSurfaceTypes;
 // uses `WindowEventMap` -- three separate interfaces, all of which extend the one this library
 // augments (`GlobalEventHandlersEventMap`). Assert all three, because augmenting only
 // `HTMLElementEventMap` would silently leave the `document`/`window` cases untyped.
-document.addEventListener('lr-visible-range-changed', (event) => {
+document.addEventListener('lr-visible-range-change', (event) => {
   const start: number = event.detail.start;
   const end: number = event.detail.end;
   void start;
@@ -714,7 +714,7 @@ void preciseFrameColumn;
 // A detail property that does not exist must not typecheck. Before the global map existed this
 // line compiled fine, because `event` was a bare `Event` and `event.detail` was an error for a
 // different reason entirely -- so this is the assertion that proves the map is doing real work.
-document.addEventListener('lr-visible-range-changed', (event) => {
+document.addEventListener('lr-visible-range-change', (event) => {
   // @ts-expect-error - the detail is `{ start, end }`; there is no `firstIndex`.
   const missing = event.detail.firstIndex;
   void missing;

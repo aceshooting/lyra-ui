@@ -50,10 +50,27 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
   }
+  /* Nested flexbox has to be told at EVERY level that it may shrink: a flex/grid item's
+     automatic minimum size only zeroes out (letting a non-visible-overflow descendant like
+     .calendar-scroll actually absorb the overflow) once every ancestor between here and that
+     descendant already has a definite width to shrink into -- an unbroken chain of explicit
+     min-inline-size: 0 down to [part="month"] below, mirroring [part~="date-picker"]'s own
+     min/max-inline-size pairing above. Leaving any single link on its content-based auto default
+     reintroduces the overflow this whole chain exists to prevent. */
+  .content {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
   [part="months"] {
     display: flex;
     flex-wrap: wrap;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     gap: var(--lr-date-picker-month-gap, var(--_lr-date-picker-month-gap));
+  }
+  [part="month"] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part="header"] {
     display: flex;
@@ -158,6 +175,49 @@ export const styles = css`
   }
   :host(:dir(rtl)) [part="next"] {
     transform: rotate(180deg);
+  }
+  /* One month's weekday header + day grid, as a single synchronized horizontal scroll region.
+     A single month is a fixed 7-(or, with-week-numbers, 8-)column x --lr-cell-size grid -- at
+     size="xl" (48px cells) or with the extra with-week-numbers column, that fixed width can
+     exceed a narrow (e.g. 320px) allocation. Shrinking the cells with a @container step was
+     rejected: dense calendar geometry still owes a >=24px WCAG 2.5.8 tap target (see the sizing
+     ladder comment on :host above, whose floor is exactly 24px), so a further per-allocation
+     shrink could push size="2xs" cells under that floor. Scrolling instead, unconditionally,
+     keeps every cell at its authored token size regardless of allocation -- the same fixed-size
+     track choice already used for lr-widget's/lr-stepper's/lr-tab-group's own horizontally
+     overflowing rows via the shared ScrollOverflowController (see date-picker.class.ts's
+     constructor). Both rows live in one scroll container (rather than each independently) so they
+     scroll in lockstep and the weekday labels stay aligned over their matching day column. */
+  .calendar-scroll {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-x: auto;
+    /* Paired explicitly with overflow-x, not left implicit -- pinning one axis to a non-'visible'
+       value forces the other axis's used value to 'auto' too if unset, which can paint a phantom
+       empty vertical scrollbar on a classic (non-overlay) scrollbar platform even when nothing
+       needs vertical scrolling (the same bug already found and fixed once on lr-tab-group and
+       lr-stepper). */
+    overflow-y: hidden;
+  }
+  /* Edge fade, gated on the region actually overflowing -- ScrollOverflowController toggles
+     data-scroll-overflow from a real scrollWidth/clientWidth measurement, matching
+     lr-stepper's/lr-widget's identical treatment. Painting it unconditionally would fade the
+     first/last day column of every month that already fits its allocation. */
+  .calendar-scroll[data-scroll-overflow] {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
+      transparent
+    );
   }
   [part="weekdays"] {
     display: grid;
@@ -324,6 +384,10 @@ export const styles = css`
     );
   }
   @media (forced-colors: active) {
+    .calendar-scroll[data-scroll-overflow] {
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
     :where(
         [part="previous"],
         [part="next"],

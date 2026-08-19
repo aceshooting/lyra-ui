@@ -3218,7 +3218,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
               part="header-cell"
               role="columnheader"
               aria-colindex=${position + 1 + selectionOffset}
-              aria-sort=${sorting.state ? direction : nothing}
+              aria-sort=${sortable ? (sorting.state ? direction : 'none') : nothing}
               tabindex=${this.focusedRow < 0 && this.focusedColumn === position
                 ? '0'
                 : '-1'}

@@ -46,30 +46,9 @@ it('emits controlled metric, slice, and run selection events', async () => {
   (el.shadowRoot!.querySelector('[data-slice="legal"]') as HTMLButtonElement).click();
   expect((await slicePending).detail).to.deep.equal({ slice: 'legal' });
 
-  const runPending = oneEvent(el, 'lr-run-select');
+  const runPending = oneEvent(el, 'lr-run-change');
   (el.shadowRoot!.querySelector('[part="run"]') as HTMLButtonElement).click();
   expect((await runPending).detail).to.deep.equal({ run: runs[0] });
-});
-
-it('emits the canonical lr-run-change alongside the legacy lr-run-select alias, both exactly once with identical detail', async () => {
-  const el = (await fixture(
-    html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="mrr"></lr-rag-eval-dashboard>`,
-  )) as LyraRagEvalDashboard;
-
-  let canonicalCount = 0;
-  let legacyCount = 0;
-  const canonicalPending = oneEvent(el, 'lr-run-change');
-  const legacyPending = oneEvent(el, 'lr-run-select');
-  el.addEventListener('lr-run-change', () => canonicalCount++);
-  el.addEventListener('lr-run-select', () => legacyCount++);
-
-  (el.shadowRoot!.querySelector('[part="run"]') as HTMLButtonElement).click();
-  const [canonical, legacy] = await Promise.all([canonicalPending, legacyPending]);
-
-  expect(canonical.detail).to.deep.equal({ run: runs[0] });
-  expect(legacy.detail).to.deep.equal(canonical.detail);
-  expect(canonicalCount, 'canonical name fires exactly once').to.equal(1);
-  expect(legacyCount, 'legacy alias fires exactly once').to.equal(1);
 });
 
 it('has a localized empty state and one populated overall owner', async () => {
@@ -198,7 +177,7 @@ it('omits blank and later duplicate metric and run ids before fallback, filters,
   el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="metric"]')!.click();
   expect((await metricSelected).detail).to.deep.equal({ metricId: firstMetric.id });
 
-  const runSelected = oneEvent(el, 'lr-run-select');
+  const runSelected = oneEvent(el, 'lr-run-change');
   el.shadowRoot!.querySelector<HTMLButtonElement>('[part="run"]')!.click();
   expect((await runSelected).detail).to.deep.equal({ run: firstRun });
 });

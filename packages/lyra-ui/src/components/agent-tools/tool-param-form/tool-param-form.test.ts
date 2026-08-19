@@ -132,6 +132,16 @@ it('marks a required field without applying HTML nonempty semantics to the inner
   expect(input.getAttribute('aria-required')).to.equal('true');
 });
 
+it('renders aria-required="false" (not omitted) on a non-required native input and a non-required lr-select', async () => {
+  const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
+  const daysInput = field(el, 'days').querySelector('input') as HTMLInputElement;
+  expect(daysInput.getAttribute('aria-required')).to.equal('false');
+  const notifySelect = field(el, 'notify').querySelector('lr-select') as HTMLElement;
+  expect(notifySelect.getAttribute('aria-required')).to.equal('false');
+  const unitsSelect = field(el, 'units').querySelector('lr-select') as HTMLElement;
+  expect(unitsSelect.getAttribute('aria-required')).to.equal('false');
+});
+
 it('marks a required nested lr-select through its composed control contract', async () => {
   const schema: FlatToolParamSchema = {
     type: 'object',
@@ -142,6 +152,19 @@ it('marks a required nested lr-select through its composed control contract', as
   const select = field(el, 'mode').querySelector('lr-select') as HTMLElement & { required: boolean };
   expect(select.required).to.be.false;
   expect(select.getAttribute('aria-required')).to.equal('true');
+});
+
+it('renders aria-invalid="false" (not omitted) on a native input until touched with an error, then "true"', async () => {
+  const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
+  const cityInput = field(el, 'city').querySelector('input') as HTMLInputElement;
+  expect(cityInput.getAttribute('aria-invalid')).to.equal('false');
+
+  field(el, 'city').dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(cityInput.getAttribute('aria-invalid')).to.equal('true');
+
+  const daysInput = field(el, 'days').querySelector('input') as HTMLInputElement;
+  expect(daysInput.getAttribute('aria-invalid')).to.equal('false');
 });
 
 it('falls back to schema default for a field missing from value, without mutating the value property', async () => {

@@ -188,6 +188,9 @@ export interface LyraWidgetEventMap {
  * @cssprop [--lr-widget-backdrop-inset=0] - The `inset` applied to
  *   `[part="backdrop"]`, so the scrim can be pulled back independently of the panel. Also set
  *   inline from the `backdrop-inset` attribute.
+ * @cssprop [--lr-scroll-fade-size=2rem] - Width of the fade at each horizontal scroll edge of the
+ *   `actions`/`view-toggles` header rows. The fade is applied only while a row actually overflows,
+ *   so a row that fits is never dimmed.
  *
  * `fullscreen-inset` overrides the safe-area panel inset while the viewport-filling backdrop stays
  * at zero by default. `compact` tightens header/body padding — same convention as `lr-empty`.
@@ -210,15 +213,20 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  constructor() {
-    super();
-    // Two independent observers: either header row can overflow on its own, and each one gates its
-    // own edge fade -- the same measurement-gated affordance lr-segmented/lr-stepper/lr-tab-group
-    // already use for their scrolling control rows. Without it a narrow widget clips the row with
-    // no visual hint that more actions or view toggles exist off-screen.
-    observeScrollOverflow(this, () => this.renderRoot.querySelector('[part="actions"]'));
-    observeScrollOverflow(this, () => this.renderRoot.querySelector('[part="view-toggles"]'));
-  }
+  // Two independent observers: either header row can overflow on its own, and each one gates its
+  // own edge fade -- the same measurement-gated affordance lr-segmented/lr-stepper/lr-tab-group
+  // already use for their scrolling control rows. Without it a narrow widget clips the row with
+  // no visual hint that more actions or view toggles exist off-screen. Stored (rather than a bare
+  // statement-expression call) so `updated()` can register each row's own content on the
+  // controller's own `ResizeObserver` via `observeExtra()` -- a slotted action's label growing (or
+  // a view toggle's label growing) can grow scrollWidth without the row's own border box changing
+  // at all.
+  private actionsScrollOverflow = observeScrollOverflow(this, () =>
+    this.renderRoot.querySelector('[part="actions"]')
+  );
+  private viewTogglesScrollOverflow = observeScrollOverflow(this, () =>
+    this.renderRoot.querySelector('[part="view-toggles"]')
+  );
 
   @property() label = '';
   /** Overrides the fullscreen dialog's accessible name, taking precedence over both `label` and a
@@ -356,6 +364,21 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   // preserving focus that is still on one of the visible header controls.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    // Each row's own content can alter scroll reachability without that row's own border box
+    // changing at all -- the primary observers above only watch each row container itself, so
+    // every current slotted action / rendered view-toggle rides along on its own controller's
+    // single ResizeObserver instance instead of a second one of its own. The actions row is real
+    // slotted (author) content, read via the live assigned-elements list rather than a
+    // `[part="action"]` selector, which doesn't exist -- author markup owns its own parts.
+    const actionsSlot = this.renderRoot.querySelector<HTMLSlotElement>(
+      'slot[name="actions"]'
+    );
+    this.actionsScrollOverflow.observeExtra(
+      actionsSlot ? actionsSlot.assignedElements({ flatten: true }) : []
+    );
+    this.viewTogglesScrollOverflow.observeExtra(
+      this.renderRoot.querySelectorAll('[part="view-toggle"]')
+    );
     // Persist `collapsed` whenever it changes, but never on the initial update -- willUpdate()
     // restored it on that pass, so writing it back would be redundant, and with no `storage-key`
     // set `writePersistedState(undefined, ...)` is a silent no-op regardless.

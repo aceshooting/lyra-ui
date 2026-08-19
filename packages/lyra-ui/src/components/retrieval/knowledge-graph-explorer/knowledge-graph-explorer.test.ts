@@ -250,7 +250,7 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(sinkTexts().at(-1)).to.equal('2 matches');
   });
 
-  it('emits lr-search-change with the new query, match count, and back-compat searchQuery when the user types, and stays silent for a host assignment', async () => {
+  it('emits lr-search-change with the new query and match count when the user types, and stays silent for a host assignment', async () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
@@ -279,9 +279,7 @@ describe('lr-knowledge-graph-explorer', () => {
 
     expect(details).to.deep.equal([
       {
-        // `searchQuery` is the original, still-shipped member name; `query` is the canonical
-        // `LyraSearchChangeDetail` name added alongside it -- both carry the identical value.
-        searchQuery: 'curie',
+        // `query` is the canonical `LyraSearchChangeDetail` field name.
         query: 'curie',
         // Two nodes (marie, pierre) match "curie" -- the same live filter total the search-result
         // list and the search announcement already compute.
@@ -303,7 +301,6 @@ describe('lr-knowledge-graph-explorer', () => {
       details.at(-1),
       'clearing the query reports a zero match count, still exactly'
     ).to.deep.equal({
-      searchQuery: '',
       query: '',
       matchCount: 0,
       matchCountExact: true,
@@ -546,7 +543,7 @@ describe('lr-knowledge-graph-explorer', () => {
       selections.push(event.detail.selectedNodeId);
     });
     el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(
-      new CustomEvent('lr-entity-activate', {
+      new CustomEvent('lr-entity-select', {
         detail: { entityId: 'marie' },
         bubbles: true,
         composed: true,
@@ -1421,7 +1418,7 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(popover.open).to.be.false;
   });
 
-  it("the composed entity-card's own focus button re-activates the entity (lr-entity-activate), opening the popover", async () => {
+  it("the composed entity-card's own focus button re-activates the entity (lr-entity-select), opening the popover", async () => {
     const el = await settledFixture();
     el.selectedNodeId = 'polonium';
     await el.updateComplete;
@@ -1791,33 +1788,6 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(popover.open).to.be.true;
   });
 
-  it('does not leak the composed entity-card lr-entity-activate event through the host', async () => {
-    const el = await settledFixture();
-    el.selectedNodeId = 'polonium';
-    await el.updateComplete;
-    const card = el.shadowRoot!.querySelector(
-      '[part="detail-card"]'
-    ) as LyraEntityCard;
-    await card.updateComplete;
-    const focusButton = card.shadowRoot!.querySelector(
-      '[part="focus-button"]'
-    ) as HTMLElement & { updateComplete: Promise<unknown> };
-    await focusButton.updateComplete;
-    let leaked = false;
-    el.addEventListener('lr-entity-activate', () => (leaked = true));
-    focusButton.click();
-    await waitUntil(
-      () =>
-        (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover)
-          .open,
-      undefined,
-      {
-        timeout: NODE_COUNT_TIMEOUT,
-      }
-    );
-    expect(leaked).to.be.false;
-  });
-
   it('does not leak the composed entity-card lr-entity-select event through the host', async () => {
     const el = await settledFixture();
     el.selectedNodeId = 'polonium';
@@ -1845,13 +1815,10 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(leaked).to.be.false;
   });
 
-  it('activates only once when entity-card fires both lr-entity-select and lr-entity-activate from one click', async () => {
-    // entity-card emits lr-entity-select then lr-entity-activate from the same click, sharing one
-    // detail object -- the host binds both names to the same handler, so this proves the second
-    // event to arrive is a no-op rather than a second activation (which would double-invalidate
-    // the in-flight activation generation and could reopen/refocus the popover redundantly). Not
-    // a RED-phase test by itself (today only lr-entity-activate is bound, so it already passes);
-    // it exists to guard the dedup once lr-entity-select is also bound.
+  it('activates exactly once per click', async () => {
+    // Guards against a regression that double-invalidates the in-flight activation generation
+    // (which could reopen/refocus the popover redundantly) -- e.g. a stray duplicate binding on
+    // `lr-entity-select`.
     const el = await settledFixture();
     el.selectedNodeId = 'polonium';
     await el.updateComplete;

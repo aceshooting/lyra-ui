@@ -1,5 +1,5 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, query, state } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import {
   resolveBoundedCanvasAllocation,
@@ -296,8 +296,11 @@ export class LyraQrCode extends LyraElement {
   }
 
   /** The stable canvas used for QR paint. The same node remains reachable across empty, loading,
-   * ready, error, reconnect, and redraw transitions. */
-  @query('canvas') canvas!: HTMLCanvasElement;
+   * ready, error, reconnect, and redraw transitions. Readonly: an explicit `get` (rather than
+   * `@query`) so the generated manifest marks it non-assignable. */
+  get canvas(): HTMLCanvasElement {
+    return this.renderRoot?.querySelector('canvas')!;
+  }
 
   @state() private loadState: QrCodeState = { kind: 'empty' };
   private errorAnnouncementSink?: AnnouncementSink;

@@ -265,7 +265,7 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
                   part="restore-button"
                   type="button"
                   aria-label=${this.localize('checkpointRestoreWithContext', undefined, { label })}
-                  aria-disabled=${this.restoring ? 'true' : nothing}
+                  aria-disabled=${this.restoring ? 'true' : 'false'}
                   @click=${this.onRestoreClick}
                 >
                   ${this.restoring

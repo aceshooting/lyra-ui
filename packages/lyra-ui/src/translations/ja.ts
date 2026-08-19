@@ -806,6 +806,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGroupObjects: 'もの',
   emojiPickerGroupSymbols: '記号',
   emojiPickerGroupFlags: '旗',
+  emojiPickerGroupUnknown: 'グループ {group}',
   pushToTalkRequesting: 'マイクへのアクセスを要求中…',
   pushToTalkDenied: 'マイクへのアクセスが拒否されました',
   pushToTalkError: '録音に失敗しました',

@@ -32,13 +32,17 @@ invention (no `wa-*`/`sl-*` counterpart).
   anchors to its block-end edge and does not cover the full height. Has no visual effect while the effective
   presentation resolves to `'inline'`.
 - `label: string = ''` — accessible name for the overlay presentation's `role="dialog"`, used
-  verbatim when set. When empty, falls back to the `header` slot's content: a heading element
-  (`h1`–`h6` or `[role="heading"]`) among the slotted header content wins if present, otherwise the
-  header slot's combined text content is used (mirrors `lr-dialog`'s `detectHeading()` fallback,
-  via `aria-label` rather than `aria-labelledby` since the header content is light DOM while
-  `[part="panel"]` is in shadow DOM). A panel opened with neither `label` nor header content uses
-  the localized `responsivePanel` fallback (`"Panel"` in the default locale), so its dialog is
-  never unnamed. Unused in the inline presentation, which has no dialog semantics to name.
+  verbatim when set — but a plain `aria-label` attribute on the host wins outright over `label`
+  when both are present, the standard ARIA convention for a consumer that wants full control over
+  the announced name (matching `lr-dialog`'s `accessibleLabel` pattern). When both the host
+  `aria-label` and `label` are empty, this falls back to the `header` slot's content: a heading
+  element (`h1`–`h6` or `[role="heading"]`) among the slotted header content wins if present,
+  otherwise the header slot's combined text content is used (mirrors `lr-dialog`'s
+  `detectHeading()` fallback, via `aria-label` rather than `aria-labelledby` since the header
+  content is light DOM while `[part="panel"]` is in shadow DOM). A panel opened with none of a host
+  `aria-label`, `label`, or header content uses the localized `responsivePanel` fallback (`"Panel"`
+  in the default locale), so its dialog is never unnamed. Unused in the inline presentation, which
+  has no dialog semantics to name.
 - `overlayBreakpoint: string = '768px'` (attribute `overlay-breakpoint`) — CSS length compared with
   the component's allocated inline size in `mode="auto"`; at or below it, the effective presentation
   is `'overlay'`.

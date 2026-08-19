@@ -47,10 +47,20 @@ export const styles = css`
       minmax(0, calc(100% - var(--_lr-split-panel-start-position)));
   }
 
+  /* overflow: auto, not hidden -- this is a scroll owner, not a clip box. The pane's own track
+     size is already pinned independently of its content: both grid axes size from an explicit
+     minmax(0, percentage-derived-length) (never an intrinsic/content-based track function), and
+     the explicit min-inline-size/min-block-size: 0 below overrides CSS Grid's content-based
+     "automatic minimum size" (that fallback only applies when a grid item's min-size computes to
+     the initial auto keyword, which is never true here). So content taller or wider than the pane
+     cannot fight the divider or grow the track either way; the only question overflow answers is
+     whether excess content is reachable. auto gives it an internal scrollbar instead of silently
+     disappearing -- see split-panel.test.ts's block-overflow tests, which assert the sibling pane
+     and divider position are provably unmoved by scrolling. */
   [part~='panel'] {
     min-inline-size: 0;
     min-block-size: 0;
-    overflow: hidden;
+    overflow: auto;
     overflow-wrap: anywhere;
   }
 

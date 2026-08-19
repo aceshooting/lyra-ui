@@ -71,17 +71,18 @@ sizes a legend chip on both axes. Otherwise the component consumes shared tokens
 **Optional peer deps:** none.
 
 ```html
-<lr-context-meter
-  label="128K context window"
-  total="128000"
-  .segments=${[
-    { label: 'System prompt', value: 2200, tone: 'neutral' },
-    { label: 'Conversation history', value: 61000, tone: 'brand' },
-    { label: 'Retrieved context', value: 30800, tone: 'warning' },
-  ]}
-></lr-context-meter>
+<lr-context-meter label="128K context window" total="128000"></lr-context-meter>
 
-<lr-context-meter shape="ring" total="128000" .segments=${segments}></lr-context-meter>
+<lr-context-meter shape="ring" total="128000"></lr-context-meter>
+<script type="module">
+  const [meter, ringMeter] = document.querySelectorAll("lr-context-meter");
+  meter.segments = [
+    { label: "System prompt", value: 2200, tone: "neutral" },
+    { label: "Conversation history", value: 61000, tone: "brand" },
+    { label: "Retrieved context", value: 30800, tone: "warning" },
+  ];
+  ringMeter.segments = segments;
+</script>
 ```
 
 An internal visually-hidden semantic node carries `role="meter"` plus `aria-valuenow`,

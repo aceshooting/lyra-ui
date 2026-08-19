@@ -222,23 +222,6 @@ describe('lr-archive-viewer', () => {
       restore();
     }
   });
-  it('does not expose the internal virtual-list range event', async () => {
-    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
-    const restore = stubFetch(await buildZip({ 'README.txt': 'hello world' }));
-    try {
-      el.src = 'https://example.test/archive.zip';
-      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
-      let leaked = 0;
-      el.addEventListener('lr-visible-range-changed', () => leaked++);
-      el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(new CustomEvent(
-        'lr-visible-range-changed',
-        { detail: { start: 0, end: 1 }, bubbles: true, composed: true },
-      ));
-      expect(leaked).to.equal(0);
-    } finally {
-      restore();
-    }
-  });
   it('does not expose the internal virtual-list range event under the canonical lr-visible-range-change name, and batches to a single requestUpdate per gesture', async () => {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
     const restore = stubFetch(await buildZip({ 'README.txt': 'hello world' }));
@@ -255,10 +238,10 @@ describe('lr-archive-viewer', () => {
       }) as typeof el.requestUpdate;
       const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
       const detail = { start: 0, end: 1 };
-      // Both names fire from the same underlying gesture -- mirror that here rather than
-      // dispatching the canonical name in isolation.
+      // Two rapid real dispatches (a fast scroll can retrigger this within the same microtask
+      // window) must still coalesce to one requestUpdate(), not one call per dispatch.
       list.dispatchEvent(new CustomEvent('lr-visible-range-change', { detail, bubbles: true, composed: true }));
-      list.dispatchEvent(new CustomEvent('lr-visible-range-changed', { detail, bubbles: true, composed: true }));
+      list.dispatchEvent(new CustomEvent('lr-visible-range-change', { detail, bubbles: true, composed: true }));
       await new Promise<void>((resolve) => queueMicrotask(() => queueMicrotask(() => resolve())));
       expect(leaked).to.equal(0);
       expect(requestUpdateCalls).to.equal(1);

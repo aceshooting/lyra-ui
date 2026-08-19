@@ -61,7 +61,7 @@ it("closes through the inherited cancelable close contract", async () => {
   const button = el.shadowRoot!.querySelector(
     '[part~="close-button"]'
   ) as HTMLButtonElement;
-  const eventPromise = oneEvent(el, "lr-dialog-close");
+  const eventPromise = oneEvent(el, "lr-close");
   button.click();
   const event = await eventPromise;
 
@@ -80,7 +80,7 @@ it("keeps lr-hide cancelable when an open drawer is externally removed", async (
     hideCancelable = event.cancelable;
     event.preventDefault();
   });
-  el.addEventListener("lr-dialog-close", () => closeCount++);
+  el.addEventListener("lr-close", () => closeCount++);
 
   el.remove();
   await Promise.resolve();

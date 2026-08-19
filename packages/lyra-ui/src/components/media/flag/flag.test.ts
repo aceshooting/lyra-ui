@@ -620,6 +620,43 @@ it('turns a current native image failure into the localized contained error stat
   expect(getComputedStyle(flag).lineHeight).to.not.equal('0px');
 });
 
+it('grows a circle-shaped flag to contain its error text on both axes instead of clipping it to the fixed circle size', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="inline-size:200px;max-inline-size:100%;">
+      before
+      <lr-flag src="/broken-circle.svg" shape="circle"></lr-flag>
+      after
+    </div>
+  `);
+  const flag = wrapper.querySelector('lr-flag') as LyraFlag;
+  flag.shadowRoot!.querySelector('img')!.dispatchEvent(new Event('error'));
+  await flag.updateComplete;
+
+  const error = flag.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+  expect(error.textContent).to.equal('Flag unavailable');
+
+  const flagRect = flag.getBoundingClientRect();
+  const errorRect = error.getBoundingClientRect();
+  // The circle sizing rule must not win over the error-state auto sizing: the host's own
+  // rendered box has to actually contain its error text on BOTH axes, not just horizontally.
+  expect(flagRect.top, 'error text top stays within the host box').to.be.at.most(errorRect.top + 0.5);
+  expect(flagRect.bottom, 'error text bottom stays within the host box').to.be.at.least(errorRect.bottom - 0.5);
+  expect(flagRect.left, 'error text left stays within the host box').to.be.at.most(errorRect.left + 0.5);
+  expect(flagRect.right, 'error text right stays within the host box').to.be.at.least(errorRect.right - 0.5);
+});
+
+it('keeps the non-error circle shape a fixed square, unaffected by the error-state sizing fix', async () => {
+  const el = await fixture<LyraFlag>(html`<lr-flag src=${TEST_FLAG_SRC} shape="circle"></lr-flag>`);
+  await el.updateComplete;
+  const style = getComputedStyle(el);
+  expect(el.hasAttribute('data-error')).to.be.false;
+  // The circle sizing rule pins both axes to the same 1em value directly (not via
+  // aspect-ratio), so a fixed, equal block/inline size is the byte-identical behavior to
+  // preserve -- unaffected by scoping that rule to the non-error state.
+  expect(style.blockSize).to.equal(style.inlineSize);
+  expect(style.blockSize).to.not.equal('auto');
+});
+
 it('contains long localized error copy at narrow LTR/RTL widths for both shapes', async () => {
   const message = 'Unavailable '.repeat(80);
   for (const direction of ['ltr', 'rtl'] as const) {
