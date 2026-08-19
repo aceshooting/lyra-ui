@@ -6236,6 +6236,77 @@ it("focuses the input and opens the listbox on a mousedown inside the trigger ro
   expect(inputEvent.defaultPrevented).to.be.false;
 });
 
+// The input-exempt branch of `onComboMouseDown` is the only thing standing between a free-text
+// combobox and a text field the mouse cannot edit, and the synthesized pair above reaches neither
+// half of what follows. Dispatching straight at the input makes `composedPath()[0] === input`
+// trivially true, so it never proves the browser's own hit test resolves there; and no pointer
+// command available here can hold a modifier, so shift-extension has to be synthesized instead.
+it("places the caret where a real pointer press lands inside the free-text input", async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  await el.updateComplete;
+  const input = await typeQuery(el, "Ban");
+  input.focus();
+  await el.updateComplete;
+  el.setSelectionRange(0, 0);
+
+  const presses: MouseEvent[] = [];
+  el.addEventListener("mousedown", (event) => presses.push(event as MouseEvent), {
+    once: true,
+  });
+
+  const rect = input.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: "click",
+      position: [
+        Math.round(rect.right - 4),
+        Math.round(rect.top + rect.height / 2),
+      ],
+    });
+    // Pointer-driven state settles at its own pace per engine -- poll for the caret rather than
+    // reading it once on whichever tick the command happens to resolve on.
+    await waitUntil(
+      () => presses.length > 0 && (el.selectionStart ?? 0) > 0,
+      "the pointer press never moved the caret off position 0"
+    );
+  } finally {
+    await resetMouse();
+  }
+
+  expect(
+    presses[0]?.defaultPrevented,
+    "cancelling the input's own mousedown is exactly what strips caret placement"
+  ).to.be.false;
+  expect(el.selectionStart).to.equal(el.selectionEnd);
+});
+
+it("leaves a shift-click on the free-text input uncancelled so its selection can be extended", async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  await el.updateComplete;
+  const input = await typeQuery(el, "Banana");
+  input.focus();
+  await el.updateComplete;
+  el.setSelectionRange(1, 3);
+
+  const shiftPress = new MouseEvent("mousedown", {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    shiftKey: true,
+  });
+  input.dispatchEvent(shiftPress);
+  await el.updateComplete;
+
+  expect(
+    shiftPress.defaultPrevented,
+    "the browser extends a selection only while the shift-click's own mousedown stays uncancelled"
+  ).to.be.false;
+  expect(el.selectionStart, "the handler must leave the anchor alone").to.equal(
+    1
+  );
+  expect(el.selectionEnd).to.equal(3);
+});
+
 it("is a no-op the second time the same tag remove button fires before a re-render drops it", async () => {
   const el = (await fixture(html`
     <lr-combobox multiple>

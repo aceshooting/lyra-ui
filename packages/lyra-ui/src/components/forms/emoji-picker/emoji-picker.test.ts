@@ -1978,6 +1978,23 @@ describe('optional-peer load failure', () => {
     expect((emptyText(el) ?? '').length > 0).to.equal(true);
   });
 
+  it('keeps a peer that legitimately resolved zero groups on the ordinary empty state', async () => {
+    // The loader's `[]`-vs-`null` contract has to survive into the render: `[]` is a well-formed
+    // peer that simply has no data (ordinary empty state), while `null` is a broken or spoofed one
+    // (error state). Treating an empty-but-valid result as a failure here would resurrect exactly
+    // the conflation `emoji-data-loader.ts` fails closed to avoid, only one layer up.
+    const loaded = Promise.resolve<EmojiPickerGroup[]>([]);
+    const el = await connectEmojiPicker(() => loaded);
+    // The component's own `.then()` was registered on this promise first, so awaiting it here
+    // resolves after the load has been consumed -- no timer, no polling for an absence.
+    await loaded;
+    await el.updateComplete;
+    expect(errorEl(el) === null, 'an empty-but-valid peer must not render the failure surface').to
+      .equal(true);
+    expect((emptyText(el) ?? '').length > 0).to.equal(true);
+    expect(el.groups.length).to.equal(0);
+  });
+
   it('keeps a genuine zero-match search on the ordinary empty state', async () => {
     const el = await connectEmojiPicker(() => Promise.resolve(groups));
     await waitUntil(() => el.groups.length > 0, 'groups never loaded');

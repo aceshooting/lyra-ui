@@ -36,7 +36,10 @@ export interface MapLibreMarkerCapability {
 }
 
 export interface MapLibreMapCapability {
-  getCanvas?(): HTMLCanvasElement;
+  /** Required, unlike setMaxBounds below: the loader validates getCanvas is callable and rejects a
+   *  peer without it, so holding this type already implies the method is present. Call sites still
+   *  guard with `?.()` against a peer that satisfies the shape check and then lies at runtime. */
+  getCanvas(): HTMLCanvasElement;
   getCenter(): { lng: number; lat: number };
   getZoom(): number;
   setCenter(center: [number, number]): unknown;

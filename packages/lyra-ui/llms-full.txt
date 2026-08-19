@@ -31206,6 +31206,7 @@ These named interfaces and helper signatures are available to typed integrations
 - **`components-conversation-code-block-code-loader-contracts`** — Supporting data types and helpers for this component family.
   `loadShikiHighlighter(): unknown`
   `loadShikiLanguage(/* public names: hl, lang */): unknown`
+  `shikiHasLoadedLanguage(/* public names: hl, lang */): unknown`
 
 - **`components-conversation-code-block-shiki-types-contracts`** — Supporting data types and helpers for this component family.
   `loadShikiHighlighterCore(/* public names: languages */): unknown`
