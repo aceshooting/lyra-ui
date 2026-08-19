@@ -178,11 +178,14 @@ export const styles = css`
     color: var(--lr-color-text);
     border-radius: var(--lr-radius);
   }
+  /* text-overflow only fires on inline overflow, so a label left at white-space: normal wraps
+     instead of overflowing and the ellipsis is unreachable -- with overflow-wrap: anywhere the wrap
+     also lands mid-word. Matches lr-select's [part='tag-label'], which has always had this. */
   [part="tag-label"] {
     min-inline-size: 0;
     overflow: hidden;
-    overflow-wrap: anywhere;
     text-overflow: ellipsis;
+    white-space: nowrap;
   }
   /* Same compact-chip-remove pattern as lr-chip's [part='remove-button']: the hit target meets the
      --lr-icon-button-size floor while the visible glyph stays a compact 1rem close icon (font-size:

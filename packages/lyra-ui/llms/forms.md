@@ -541,7 +541,7 @@ synchronous and fires no `input`/`change`/`lr-change` event.
 
 **Additional API surface:**
 
-- `part="tag-label"` — The wrapping/ellipsis-safe selected-tag label.
+- `part="tag-label"` — The selected-tag label. Kept on one line and truncated with an ellipsis at `--tag-max-size` (default `var(--lr-size-5rem)`), rather than wrapped. Note that `lr-select`'s tag of the same name defaults to `var(--lr-size-12rem)`, so the same `--tag-max-size` value yields a wider tag there.
 
 ---
 

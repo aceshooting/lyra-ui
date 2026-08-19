@@ -6931,3 +6931,34 @@ it("contains the internal lr-option-change notification instead of leaking it pa
     "the contained notification still refreshes the rendered rows"
   ).to.deep.equal(["Fruit"]);
 });
+
+it("truncates a selected tag's label with an ellipsis instead of wrapping it mid-word", async () => {
+  const el = (await fixture(html`
+    <lr-combobox multiple>
+      <lr-option value="received">Received</lr-option>
+      <lr-option value="short">Ok</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  el.value = ["received"];
+  await el.updateComplete;
+
+  const label = el.shadowRoot!.querySelector('[part="tag-label"]') as HTMLElement;
+  expect(label, "the selected value renders a tag label").to.not.equal(null);
+
+  // Asserting the rendered result, not the declaration: text-overflow only fires on inline
+  // overflow, so a label left at white-space: normal wraps and scrollWidth never exceeds
+  // clientWidth -- which is exactly how the ellipsis was unreachable while being declared.
+  expect(
+    getComputedStyle(label).whiteSpace,
+    "the label keeps one line so text-overflow: ellipsis can fire"
+  ).to.equal("nowrap");
+
+  const singleLine = Math.round(label.getBoundingClientRect().height);
+  el.value = ["short"];
+  await el.updateComplete;
+  const shortLabel = el.shadowRoot!.querySelector('[part="tag-label"]') as HTMLElement;
+  expect(
+    Math.round(shortLabel.getBoundingClientRect().height),
+    "a label that fits and one that overflows are both a single line tall"
+  ).to.equal(singleLine);
+});

@@ -176,11 +176,13 @@ export const styles = css`
   [part="token"] > span:first-child {
     min-inline-size: 0;
   }
+  /* Same reachability rule as lr-combobox's [part='tag-label']: the ellipsis needs a
+     non-wrapping line to fire, and overflow-wrap: anywhere would break the token mid-word. */
   [part="token"] > span:first-child,
   [part="token-label"] {
     overflow: hidden;
-    overflow-wrap: anywhere;
     text-overflow: ellipsis;
+    white-space: nowrap;
   }
   /* The hit target takes the shared --lr-icon-button-size floor, as lr-swatch-picker's
      [part='swatch'] does, while closeIcon() stays at 1em and is only flex-centered inside it, so

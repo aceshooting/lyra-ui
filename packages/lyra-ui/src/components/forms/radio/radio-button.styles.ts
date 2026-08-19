@@ -40,12 +40,15 @@ export const buttonChromeStyles = css`
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
+  /* Adornments truncate rather than wrap, so the ellipsis needs a non-wrapping line to fire.
+     [part='label'] above deliberately keeps its wrap -- only these capped slots ellipsize. */
   [part~="start"],
   [part~="end"] {
     min-inline-size: 0;
     max-inline-size: 40%;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
   }
   /* A slot is itself an element child, so :empty can never identify an unassigned wrapper. The
      shared renderer tracks assigned content and reflects real emptiness through hidden. */
