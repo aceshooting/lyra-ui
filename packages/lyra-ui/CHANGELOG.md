@@ -1,5 +1,574 @@
 # Changelog
 
+## 10.0.0
+
+### Major Changes
+
+- c640e0a: **10.0.0.** This release removes the members deprecated during 9.x, which is the whole of its
+  breaking surface. Everything else in 10.0.0 is additive — no component's default rendering changes,
+  and no existing property, event, slot, part or CSS custom property was renamed or repointed.
+  
+  Removed, each with a like-for-like replacement that has shipped since 9.x:
+  
+  - `confirm()`: the `tone` option on `ConfirmOptions` → `variant`. (An earlier draft of this note
+    attributed the rename to `<lr-confirm-bar>`; that component's `tone` → `variant` landed in 9.x
+    and left no alias, so nothing changes there in 10.0.0. The member removed here is the one on the
+    `confirm()` helper in `overlays/dialog/confirm.ts`.)
+  - `<lr-swatch-picker>`: `options` → `items`, `label` → `accessibleLabel` (or the host `aria-label`),
+    and the `SwatchOption` type → `SwatchPickerItem`.
+  
+  Deliberately **kept**, so migrating consumers are not caught out:
+  
+  - `<lr-icon>`'s `autoWidth` / `auto-width` stays, deprecation notice and all. Web Awesome's own
+    pinned manifest still publishes `auto-width` on `wa-icon`, and a mirrored tag owes its whole
+    upstream surface — dropping it classifies `wa-icon` as an `unsupported` mapping, which is a
+    release blocker. Prefer `canvas="auto"`; the alias goes when upstream's does.
+  - The same holds for **seven more** deprecated aliases whose records say `removalNotBefore: 10.0.0`
+    and which are therefore, on paper, removable now: the `base` part on `<lr-accordion-item>`,
+    `<lr-file-input>`, `<lr-qr-code>`, `<lr-sparkline>` and `<lr-video-playlist>`, and the `label`
+    part on `<lr-file-input>` and `<lr-known-date>`. Every one is published by the pinned upstream
+    manifest, and removing them was measured against the real comparison pipeline: each produces an
+    `unsupported` mapping. `<lr-qr-code>`'s `base` is the sharpest case — `sl-qr-code` publishes it as
+    its ONLY part and does not deprecate it at all.
+  
+    That `10.0.0` is not a plan anyone made. Policy requires a removal to clear one whole subsequent
+    major, so `10.0.0` is simply the earliest legal value for a deprecation dating to 8.x. The records
+    now say so, because read literally they promised a removal that will never happen while upstream
+    ships the same names.
+  
+  - `lr-geojson-view` stays. It is a permanent compatibility class for the pre-v9 tag, not a
+    deprecation.
+  - `base` / `wrapper` on `<lr-switch>` and `<lr-checkbox>` stay pointing at the control owner. They
+    are Web Awesome / Shoelace compatibility names, and the library's parity contract is that a
+    mirrored name keeps its meaning; `row` (new in this release) names the row wrapper instead.
+- 082b885: **10.0.0.** A set of public-contract corrections that need a major boundary, plus a larger set of
+  additive fixes. Breaking items first; each one states what to change if you relied on the old
+  behavior.
+  
+  ### Breaking
+  
+  **`<lr-calendar>` derives the week start from the locale.** `firstDayOfWeek` defaulted to a
+  hardcoded `1` (Monday) and never consulted the locale — while the very same component already
+  threaded `effectiveLocale` through its weekday *label* formatting. Measured, same `en-US` page:
+  `<lr-calendar>` rendered `Mon Tue Wed…` while `<lr-date-picker>` rendered `Sun Mon Tue…`. The
+  default is now `'auto'`, resolved through the same `resolveFirstDayOfWeek()` contract
+  `<lr-date-picker>`/`<lr-date-input>` already use. The type is now exactly
+  `'auto' | 'sun' | … | 'sat'`: the bare `0`–`6` integer form is gone rather than kept as a second
+  spelling, so there is one way to express a week start instead of two that had to be sanitized and
+  wrapped against each other. Replace `first-day-of-week="1"` with `first-day-of-week="mon"` to keep
+  the old rendering. There is no `wa-calendar`, so no upstream parity is affected.
+  
+  **`<lr-progress-ring>` gains `show-value`, defaulting to `false`.** A determinate ring rendered its
+  percentage unconditionally, with no way to suppress it short of slotting replacement content — while
+  its sibling `<lr-progress-bar>` has had opt-in `show-value` all along, and the reference has always
+  claimed the two share "the same value contract". They now actually do. Add `show-value` to keep the
+  percentage. `aria-valuetext` still carries it either way, so the accessible value is unchanged.
+  
+  **`<lr-media-card>`'s `alt` becomes optional, so a decorative image is expressible.** It was
+  `alt: string = ''`, and the render read `this.alt || this.filename || <localized generic>` — so an
+  explicit `alt=""` was indistinguishable from an absent one and came out as `alt="Image attachment"`.
+  There was no way to mark the image decorative, which is the one thing `alt=""` means in HTML. The
+  type is now `alt?: string` and the render uses `??`, matching `<lr-image-viewer>` and
+  `<lr-document-preview>`, which already documented that contract. Omitting `alt` is unchanged; only
+  the value read back from an unset property differs (`''` becomes `undefined`), so a consumer
+  comparing `el.alt === ''` should read `el.alt ?? ''`. The nested `<video controls>` label
+  deliberately does NOT follow: an empty `alt` there would leave an interactive player with no
+  accessible name, and "decorative" is not a state a media control can be in.
+  
+  **`<lr-attachment-chip>`'s `lr-preview-request` is no longer cancelable.** It was advertised as a
+  veto point, but the chip never read `defaultPrevented` and owns no preview default action to
+  cancel — its own docs say it "never registers or owns a viewer/overlay" — so `preventDefault()` was
+  a no-op. The flag is removed rather than left as a promise the component cannot keep.
+  
+  ### Event vocabulary: one name per event
+  
+  Several events had two spellings. 10.0.0 keeps the canonical name and **removes the old one
+  outright** rather than shipping a deprecated alias into a library that has no released consumers
+  yet — a dual-emit alias is a permanent tax paid to protect users who do not exist.
+  
+  Rename the listener; the detail object is unchanged in every case.
+  
+  | Removed | Use instead | On |
+  |---|---|---|
+  | `lr-entity-activate` | `lr-entity-select` | `<lr-entity-card>`, `<lr-entity-chip>`, `<lr-neighbor-list>` |
+  | `lr-visible-range-changed` | `lr-visible-range-change` | `<lr-virtual-list>` |
+  | `lr-run-select` | `lr-run-change` | `<lr-rag-eval-dashboard>` |
+  | `lr-dialog-close` | `lr-close` | `<lr-dialog>`, `<lr-drawer>` |
+  
+  `lr-visible-range-changed` was the only past-tense `-changed` spelling among 58 `-change`-family
+  events, so a convention-driven listener silently missed it — on a component embedded in ten viewers.
+  
+  Two deliberate non-removals. `<lr-community-card>` and `<lr-path-strip>` keep `lr-entity-activate`:
+  it is their only name and never was an alias. `<lr-accordion>` keeps `lr-expand`/`lr-collapse`,
+  which mirror `wa-accordion`'s real event names — removing them would have broken upstream parity
+  rather than tidied it. `lr-citation-badge` was also left alone: `lr-citation-select` is an
+  established *container*-level event with a richer `{ citation }` detail that containers translate
+  its `{ sourceId, index }` into, so unifying there would have delivered two shapes under one name.
+  
+  ### Interaction, focus and visibility corrections
+  
+  A sweep with a CSS-specificity analyzer found rules that were supposed to win losing to another rule
+  in the same shadow stylesheet, so their declarations never applied. The code read correctly and the
+  tests were green; only a rendered probe showed the difference.
+  
+  - **The keyboard highlight is visible on the selected row again** in `<lr-select>`, `<lr-combobox>`,
+    `<lr-model-select>` and `<lr-voice-picker>`. Each had `[aria-selected="true"]` written after the
+    active-descendant rule at equal specificity, so arrow-keying onto the already-selected option
+    produced no visible highlight at all.
+  - **`appearance="filled"` has a focus indicator again** on `<lr-combobox>` and `<lr-date-input>`.
+    Both had none: the appearance rule out-ranked `:focus-within`, and the only `outline` in the focus
+    rule was `solid transparent`. Both now express appearance as private custom properties, so no
+    `[part]` rule can out-rank another and the failure mode is structurally impossible.
+  - **Pointer feedback restored** where a state rule or a resting rule was swallowing it:
+    `<lr-code-block>`'s line-gutter button (neither hover nor press, ever), `<lr-pagination>`'s page
+    input, `<lr-table>`'s sticky sortable header, `<lr-time-range>`'s active preset,
+    `<lr-agent-trace>`'s active handoff, `<lr-compare-panel>`'s cast vote, `<lr-flow-canvas>`'s
+    selected edge, `<lr-conversation-item>`'s open session, `<lr-option>`, `<lr-entity-chip>` and
+    `<lr-approval-queue>`.
+  - **Focus rings restored** on `<lr-calendar>`'s today cell, `<lr-sequence-strip>`'s selected cell,
+    `<lr-embedding-explorer>`'s selected point, and `<lr-dashboard-grid>`/`<lr-flow-canvas>` cells in a
+    collision or drop state.
+  - **`hidden` works again** where the component's own stylesheet was defeating the UA default:
+    `<lr-flag>` painted a full-size broken image beside its skeleton while loading, `<lr-video>` kept
+    the controls play button both painted and focusable behind a poster, and nine components let a
+    consumer's `hidden` slotted child stay visible.
+  - **Disabled controls look disabled**: `<lr-entity-chip>` and `<lr-approval-queue>` rendered their
+    disabled buttons pixel-identical to enabled ones, with a pointer cursor and full hover feedback.
+  - **`<lr-random-content>` actually hides** the candidates it is not showing; its rotation was
+    previously observable only to assistive technology.
+  - **`<lr-video>` keeps captions** for a `<track>` with no `kind` attribute, whose HTML missing-value
+    default is `subtitles`.
+  
+  ### Additive
+  
+  - **`lr-search-change` detail is consistent again.** `<lr-terminal>` and `<lr-av-player>` now emit
+    the canonical `LyraSearchChangeDetail` including `matchCountExact`, which 18 of 21 emitters already
+    did. This matters most on `<lr-terminal>`, which truncates at 10,000 matches and previously had no
+    way to signal that its count was a lower bound. `<lr-knowledge-graph-explorer>`'s detail is now exactly
+    `{ query, matchCount, matchCountExact }` — `searchQuery` is replaced by the canonical `query`
+    rather than carried beside it; it deliberately has no `activeIndex`, being a live node filter
+    rather than a cursor-based search. (The `searchQuery` *property* is unaffected.)
+  - **`<lr-token-input>` can veto all three mutations.** `lr-add` and `lr-token-edit` are now
+    cancelable, matching `lr-remove`, which already was. A vetoed add keeps the typed draft so the user
+    can correct it; a vetoed edit leaves the inline editor open with the edited text intact.
+  - **`<lr-dialog>`'s close event is `lr-close`** (`DialogCloseReason` detail, cancelable);
+    `<lr-drawer>` inherits it. See the removal table above.
+  - **`<lr-accordion>` also emits a cancelable `lr-toggle-request`** (`{ collapsed, item }`) alongside
+    its upstream-mirroring `lr-expand`/`lr-collapse`, matching the convention
+    `<lr-code-block>`/`<lr-chat-message>` use. `preventDefault()` on either vetoes the transition.
+  - **`<lr-popover>` gains `disabled`.** Both `<lr-tooltip>` and its own subclass `<lr-dropdown>` had
+    it; the base did not. `<lr-dropdown>` now inherits it, with byte-identical behavior.
+  - **`<lr-table>` emits `lr-selection-change`** when a `selectionMode` flip to `'single'` coerces a
+    multi-row selection down to one key — previously a silent mutation a host mirroring the event could
+    not see.
+  - **`<lr-command-palette>` re-emits `focus`/`blur`** from its search input; native ones neither bubble
+    nor cross the shadow boundary.
+  - **`PptxViewerAdapter` and friends are importable.** `pptx-loader.js` had no `package.json#exports`
+    entry despite the reference documenting the import, so it failed with
+    `ERR_PACKAGE_PATH_NOT_EXPORTED`. A new check now requires every helper module to be classified
+    public or internal, closing the same class that stranded `archive-viewer-register.js` in 9.0.0.
+  - **`PlaceSync`** is re-exported from `dropdown.class.js`, and ~13 constituent types are re-exported
+    from the composite components whose public properties use them.
+  - **`<lr-knowledge-graph-explorer>` no longer announces on mount.** A preset `search-query` fired its
+    live region before any user action.
+
+### Minor Changes
+
+- 357ee35: `<lr-chart>`: declarative reference lines and shaded bands via a new `annotations` property.
+  
+  Marking a threshold, an event year, a regime change or a highlighted period previously meant
+  importing `chartjs-plugin-annotation` yourself and wiring it through the raw `config` passthrough —
+  the point where a declarative component dropped the user into raw Chart.js, for one of the most
+  common things anyone needs on a time series.
+  
+  - `annotations: readonly LyraChartAnnotation[]`, where `LyraChartAnnotation` is
+    `{ axis?: 'x' | 'y'; value?: number; from?: number; to?: number; label?: string; tone?: 'neutral'
+    | 'brand' | 'success' | 'warning' | 'danger' }`. A finite `value` renders a reference line on that
+    axis; a finite `from`/`to` pair renders a band bounded on that axis and spanning the other. `axis`
+    defaults to `'y'`.
+  - Entries specifying neither a finite value nor a finite range are dropped rather than handed to
+    Chart.js, where they render nothing at best; a reversed range is normalized rather than rejected.
+  - Tones resolve through the same `getComputedStyle`-then-`resolveCanvasColor` path every other chart
+    color takes, since canvas silently ignores an unparseable `strokeStyle`/`fillStyle`.
+  - Labelled entries are included in the generated accessible description, mirroring `lr-heatmap`. The
+    label is consumer-supplied text and so is not localized; an unlabelled line has no nameable
+    meaning to announce beyond a coordinate.
+  - The optional `chartjs-plugin-annotation` peer loads on first actual demand, so a page with no
+    annotated charts never downloads it. Without it installed the chart still renders and a single
+    console warning explains the no-op — the same fail-closed contract `data-labels` uses.
+  
+  On the filed concern about Chart.js's page-wide singleton registry: this plugin is registered
+  globally, like `chartjs-plugin-zoom` and unlike `chartjs-plugin-datalabels`. The distinction is that
+  datalabels draws on every dataset the moment it is globally registered, whereas annotation draws
+  nothing at all unless a chart supplies annotation options — so the registration is unobservable to a
+  chart that sets none, covered by an explicit test. It also *has* to be global: registration is what
+  installs the plugin's own element types and defaults, and an inline `config.plugins` entry skips
+  that, leaving the plugin to throw on missing `borderWidth`/`borderCapStyle` the moment it draws.
+- 8e3f602: `<lr-chart>`: add a logarithmic value axis via a new `scaleType` property.
+  
+  The core loader registered `LinearScale`, `CategoryScale` and `RadialLinearScale` but never
+  Chart.js's `LogarithmicScale`, so a logarithmic axis was unreachable — there was no property for it,
+  and the raw `config` passthrough could not supply one either, because Chart.js rejects an
+  unregistered scale type at construction. Any dataset spanning several orders of magnitude (prices,
+  growth, population, latency percentiles, file sizes) could not be charted honestly, since a linear
+  axis collapses everything below the maximum into the baseline.
+  
+  - `scaleType: 'linear' | 'logarithmic' = 'linear'` (attribute `scale-type`, type
+    `LyraChartScaleType`, exported from the root barrel) targets the **value** axis; the categorical
+    axis is never affected. Inherited by `lr-line-chart`, `lr-scatter-chart` and `lr-bar-chart`, and
+    applied to the secondary `y2` axis when one is present.
+  - `beginAtZero` is not forwarded on a logarithmic axis, since `log(0)` is `-Infinity` and Chart.js
+    would otherwise be handed a bound it cannot place.
+  - `LogarithmicScale` is registered with the core rather than behind the feature loader: unlike the
+    zoom and datalabels plugins it is not a separate package, so it already ships inside the
+    `chart.js` module namespace the loader imports and costs no extra download weight.
+  
+  Default is unchanged and covered by an explicit unset test.
+- 744da58: Four consumer-filed defects, plus one the sweep for the same defect class turned up.
+  
+  **`<lr-checkbox-group>`: `value` is settable.** It was a getter with no setter. Reading was fine,
+  but `.value=${...}` — the binding every other form control here accepts — compiles to a plain
+  property assignment that `readonly` cannot catch at the binding site, so it threw
+  "Cannot set property value ... which has only a getter" from inside lit-html during a *later*
+  render, blaming framework internals rather than the offending line. Assigning now mirrors the array
+  onto the owned checkboxes; it is controlled input, so it emits no `lr-change`, and an assignment
+  made before the children exist is applied once they arrive.
+  
+  **`<lr-time-input>`: `valueAsNumber` and `valueAsDate` are settable.** Nobody filed this — sweeping
+  the library for the same "public getter a consumer would naturally bind, with no setter" shape found
+  it. `<lr-input>`, `<lr-date-picker>`, `<lr-slider>` and `<lr-known-date>` all ship both, and the
+  native `<input type="time">` this mirrors accepts both; `<lr-time-input>` was the lone outlier.
+  Out-of-range or non-finite figures clear the field rather than wrapping into a different time.
+  
+  **`<lr-map>`: `lr-map-click` resolves `feature` against `dataLayers`, not only the choropleth.**
+  Clicking a shape painted through `dataLayers` reported `feature: undefined`, indistinguishable from
+  clicking empty ocean — which broke the pattern the two properties invite: choropleth for features
+  that have a value, a data layer for features that exist but have none. The detail gains `origin`
+  (`'choropleth' | 'data-layer'`) and `sourceId` (the authored `dataLayers[].sourceId`) so a hit is
+  attributable.
+  
+  **`<lr-map>`: an untileable numeric feature property is now named up front.** MapLibre GL tiles
+  GeoJSON through a worker, where an oversized integer throws "Given varint doesn't fit into 10
+  bytes" — uncatchable by the app, invisible except as an opaque message, and with the rest of the
+  layer still painting. Sources are pre-scanned and any property beyond `Number.MAX_SAFE_INTEGER`
+  draws a dev-mode warning naming the feature and property.
+  
+  **`<lr-heatmap>`: the matrix row-label gutter is configurable, and labels truncate.** It was a
+  hardcoded 60px with no measurement, so a longer row label was clipped mid-word by whatever was
+  painted beside it on the canvas — which reads as a rendering fault. `rowLabelWidth` now pins a
+  width or takes `'auto'` to measure the widest label and size to fit (floored at 60, capped at 40%
+  of the host so one label cannot squeeze out the cells it describes), `colLabelHeight` does the same
+  for the column band, and a label too wide for the resolved gutter is truncated with an ellipsis
+  instead of clipped. The default stays 60: auto-sizing every chart would silently reflow layouts
+  whose labels already fit, which is a bigger change than the clipping it fixes.
+- d92bfb2: Two dev-mode defects that shipped in 9.x, plus the per-point chart color cost behind them.
+  
+  **The unknown-attribute diagnostic no longer reports a component's own API as a mistake.**
+  Components can now declare a `knownUnobservedAttributes` static for attributes they own without
+  observing, and four do. Without it the diagnostic fired on correct markup and on state components
+  set on themselves:
+  
+  - `<lr-page disable-sticky="header">` is documented public API read only by
+    `:host([disable-sticky~="..."])` rules, so it has no reactive property — authoring it correctly
+    drew a warning saying it was wrong.
+  - `<lr-animated-image>` (`playing`), `<lr-menu-item>` (`submenu-open`) and `<lr-app-rail>`
+    (`mode`, `dragging`) reflect read-only state onto their own host. Each reported its own output
+    as an unknown attribute, in every consumer app, the moment that state turned on.
+  
+  **Per-point chart colors are resolved once per distinct color, not once per point.**
+  `resolveCanvasColor` inserts a probe element and forces a synchronous style recalculation on every
+  call, which `<lr-chart>` paid for each entry of a series' `color`, `segmentColors` and
+  `pointColors` arrays — 2,000 probe insertions for a 2,000-point series, before drawing anything.
+  The new `resolveCanvasColors` memoizes by color string across the batch, and authored ramps are
+  typically a handful of distinct colors repeated across many points. The cache lives for one call,
+  so a later draw still picks up live `--lr-*` theme changes.
+  
+  **`<lr-tooltip>` no longer schedules a wasted second render on close.** Its `anchorPositioned`
+  reset moved from `updated()` to `willUpdate()`, where it belongs — nothing visible changes, since
+  that render already hides the popup via `open`.
+- 19d15f6: Five consumer-reported gaps, several of them follow-ups to the charts/timeline work in this release.
+  
+  **`<lr-chart>`: the formatter now receives the `export` and `spoken` surfaces.** `LyraChartFormatSurface`
+  has always declared both and `<lr-lite-chart>` has always emitted them, but `lr-chart` only ever
+  passed `visual` and `table` — so one formatter written against the documented contract behaved
+  differently depending on which chart rendered it, silently, in exactly the places unit formatting
+  matters most. CSV cells now route through `export` and the live announcement through `spoken`. With
+  no formatter installed, CSV cells stay the raw machine-readable number (no locale grouping a
+  spreadsheet would misparse) and announcements keep their locale format.
+  
+  **`<lr-map>`: choropleth interpolation is selectable.** The fill expression was hard-coded to
+  `['interpolate', ['linear'], …]`, so a heavy-tailed quantity — price, population, income — put every
+  value below the maximum into the first colour band. `LyraMapChoroplethLayer.interpolation`
+  (`'linear' | 'logarithmic'`, default `'linear'`) emits maplibre's own
+  `['interpolate', ['exponential', 0.25], …]`, exposing an existing capability rather than adding one.
+  **`stops` stay in the data's own units**, so the legend keeps reading in real values instead of log
+  units.
+  
+  **`<lr-heatmap>`: a dev-mode warning when `legendStops` and `colorSteps` disagree.** Both are
+  deliberate and independent — that independence is what lets a `cellColor` consumer describe a ramp
+  the grid no longer uses — but nothing checked they described the same thing, and a legend that
+  confidently labels colours the cells never use is worse than no legend. Warning rather than deriving
+  one from the other: deriving would silently change what an existing `colorSteps`-only consumer sees
+  and would break that escape hatch. Caption-only stops (the `less ▢▢▢▢ more` shape) claim no colour
+  and never warn.
+  
+  **`<lr-timeline>`: `collision="stack"` for dense `scale="time"` chronologies.** Coincident items
+  overlapped, which is the common case rather than the exception at realistic density. `'stack'` steps
+  each colliding item one lane along the cross axis (`--lr-timeline-collision-offset`); an isolated
+  item returns to lane 0 rather than inheriting a preceding run's depth. No `'cluster'` mode: collapsing
+  items into one expandable marker needs a selection model and click events this deliberately passive
+  component does not have.
+  
+  **`<lr-sequence-strip>`: activation and a controlled selection.** The strip read as pickable but had
+  no click handling and no event to hook. `lr-item-activate` (`detail: { index, id, item }`) fires on
+  click and on Enter/Space at the roving-tabindex focus, and `selectedIndex` marks the current item
+  with `aria-current` and `data-selected`. Controlled on purpose: activation does not move the
+  selection itself, so the strip cannot drift from a playback index it does not own. The selection is
+  drawn as a ring, not a tint — a cell's background is data (its category colour).
+  
+  All five are additive; unset, every component renders as before.
+- b3b9d30: `<lr-flag>`: accept ISO 3166-1 alpha-3 country codes, and render a neutral fallback for codes that
+  cannot resolve.
+  
+  Two related consumer reports.
+  
+  **Alpha-3.** `country` took alpha-2 only, while public statistical sources — World Bank, UN, IMF and
+  most open-data portals — key country records on alpha-3, so every consumer plotting country-level
+  data shipped and maintained its own ~249-row conversion table purely to satisfy this component.
+  `country` now accepts either: length alone disambiguates the two code spaces, so no format hint or
+  new API is needed. The 249 officially-assigned mappings are packed as a ~1.2 KB fixed-width string
+  and expanded into a lookup lazily on the first alpha-3 use, so an alpha-2-only app never pays for
+  them. Withdrawn and user-assigned codes deliberately do **not** map to a successor state — a
+  dissolved federation has no current flag, so it takes the unresolved path below.
+  
+  **Unresolved ≠ error.** An unresolvable code rendered localized error text into `[part="error"]` and
+  reflected `data-error`. That is right for a genuine mistake, but historical and longitudinal
+  datasets legitimately contain states with no current ISO code, and in a table or card grid those
+  rows want a neutral placeholder occupying the same footprint, not wording that reads to a user as a
+  bug. Styling `[part="error"]` could not fix it, because the localized string is contained text
+  rather than substitutable content.
+  
+  - A new `fallback` slot renders in place of the flag for an unresolvable code, and a `fallback`
+    property takes a placeholder image URL (rendered as `[part="fallback-image"]`) when no slot
+    content is supplied.
+  - The host now reflects `data-unresolved` separately from `data-error`, so the two cases can be
+    styled apart.
+  
+  Both additive: a resolvable code renders exactly as before, covered by an explicit inert-by-default
+  test.
+- 990f4d6: `<lr-heatmap>`: support signed data via new `domain` and `midpoint` properties, and stop dropping
+  the negative half of a signed dataset.
+  
+  Two related reports. The ramp always spanned the data's own `min`…`max`, so two heatmaps of
+  comparable data could not share a scale — each silently normalized to its own extremes — and a
+  diverging palette could not be centred: with data running -4.93 to +28.8, the neutral colour landed
+  at 15% of the range rather than on zero, painting "no change" onto a substantial decrease.
+  Separately, the cell-fill guard was `value < 0 || !Number.isFinite(value)`, so *every* negative
+  rendered as no-data, not just the documented `-1` sentinel — indistinguishable from a genuinely
+  missing cell, and silent (32.7% of cells in the reporter's dataset).
+  
+  - `domain?: [number, number]` pins the ramp's input domain, so comparable charts can share a scale.
+    A reversed pair is normalized; a degenerate or non-finite one falls back to the derived range.
+  - `midpoint?: number` anchors a diverging ramp's neutral colour, scaling the two halves
+    independently (`lo`→0, `midpoint`→0.5, `hi`→1). A midpoint outside the domain degrades to plain
+    normalization rather than distorting the ramp.
+  - Setting either one opts into **signed data**, where only a non-finite value is no-data. That
+    gating is deliberate: `-1` is the long-documented sentinel and a matrix of counts has no
+    meaningful negative, so declaring a domain or midpoint is what disambiguates the two. With
+    neither set, behavior is byte-identical to before — covered by an explicit unset-regression test.
+  - A structurally absent matrix cell now reads as `NaN` in signed mode (non-finite is no-data in
+    both modes), so it stays a hole while a real `-1` beside it renders on the ramp. The default
+    mode still resolves an absent cell to `-1`, keeping `valueAt()` and the `lr-cell-click` payload
+    unchanged.
+  - The accessible cell labels track the painted contract, so a rendered negative is announced with
+    its value instead of "no data".
+  - `scale="sqrt"` continues to reject negatives — a square root of a negative has no meaning — now
+    explicitly rather than as a side effect of the shared guard.
+- 17b540a: `<lr-lite-chart>`: add a base-10 `scale="logarithmic"` value axis.
+  
+  The dependency-free SVG chart does not extend `LyraChart`, so it did not inherit the `scaleType`
+  support added for the Chart.js-backed charts, leaving no way to plot data spanning several orders of
+  magnitude honestly — a linear axis collapses everything below the maximum into the baseline.
+  
+  - `scale` now accepts `'logarithmic'` alongside `'linear'` and `'sqrt'`, defaulting to `'linear'`.
+  - Unlike `'sqrt'` (which compresses bars only, by long-standing design), the logarithmic axis
+    applies to **bars, line points and gridlines alike** — a log axis whose gridlines stayed linear
+    would misrepresent the plot. All three now resolve through one `valueFraction()` dispatcher so the
+    scale can never apply to some marks and not others.
+  - Its lower bound is the smallest *positive* datum, not the linear `lo`. `beginAtZero` defaults to
+    true, so `lo` is normally `0`, which has no logarithm; deriving the floor from the data is what
+    makes a 1…1000 series span three even decades instead of collapsing onto one. Measured: decade
+    gaps of 80.7/80.6/80.7px versus linear's 2.2/21.8/217.8px on the same data.
+  - Zero and negative values pin to the axis floor rather than reaching the SVG as `-Infinity`, which
+    would blank the series — this renderer has no Chart.js-style "drop the point" fallback. A
+    degenerate domain falls back to the linear fraction.
+  
+  `'linear'` and `'sqrt'` render exactly as before, covered by an explicit unchanged-default test.
+- 1b0aa52: `<lr-map>`: render a continuous choropleth legend, via a new `legendGradient` property and a
+  `legend` slot.
+  
+  `choropleth` builds an interpolated fill expression from `stops` — a continuous ramp — but `legend`
+  accepted only `{ color, label, pattern }` rows rendered as discrete swatches, and the component
+  exposed no slots. The standard key for a choropleth (a gradient bar with endpoint ticks) could not
+  be rendered inside the component that produces the gradient, so a consumer had to draw a second,
+  unaligned legend outside the map and keep its stops manually in sync with the layer's.
+  
+  - `legendGradient: readonly (readonly [number, string])[]` takes the same `[value, color]` shape as
+    `choropleth.stops`, so the usual assignment is `map.legendGradient = myChoropleth.stops` and the
+    key cannot drift from the layer it describes. Stops are sorted ascending, bounded to 64, and
+    filtered to finite values with a CSS-parsable color; fewer than two usable stops render no bar,
+    since a one-stop "gradient" is a flat block that describes nothing. Each stop sits at its true
+    proportion of the value range rather than being evenly spaced.
+  - `legendGradientLoLabel` / `legendGradientHiLabel` override the endpoint captions, which otherwise
+    default to the lowest/highest stop value in the component's own locale-aware formatting.
+  - New `legend-gradient`, `legend-lo` and `legend-hi` parts, named to mirror `lr-heatmap`'s gradient
+    legend as the request asked, so one styling vocabulary covers both. The bar is `aria-hidden` and
+    `inert`; the captions carry the meaning. It mirrors under RTL like the heatmap's does.
+  - A new `legend` slot renders custom legend content inside the panel's own layout, so it stays
+    positioned with the map. Supplying it opens the panel even when both legend inputs are empty.
+  
+  All additive: with none of them set the component renders exactly as before, covered by an explicit
+  unset test.
+- 1625356: Ship an optional `reservations.css` stylesheet that prevents layout shift from lazy-upgrading
+  elements, and document the library's scope boundaries.
+  
+  An undefined custom element is an inline box with no intrinsic size, so every `lr-*` in the initial
+  viewport contributes a reflow as its definition loads; components that additionally defer on an
+  optional peer (`lr-chart`, `lr-map`, `lr-flag`, `lr-flow-canvas`, `lr-knowledge-graph-explorer`)
+  can cost a second shift when the peer resolves. Each is individually well-behaved — the aggregate on
+  a first paint is what costs a Cumulative Layout Shift score. Until now every consumer derived its own
+  `:not(:defined)` sizing rules per component by measurement, and those rules rotted silently whenever
+  a component's default dimensions changed.
+  
+  ```css
+  @import "@aceshooting/lyra-ui/reservations.css";
+  ```
+  
+  - Reserves each component's intrinsic footprint before upgrade, styling **only** `:not(:defined)`
+    elements inside an `@layer lr-reservations`, so it is inert the moment a definition upgrades and
+    can never fight a component's own layout. No colors, no `:root` rules.
+  - Every reservation is expressed with the **same custom property and fallback token the component's
+    own stylesheet uses** (`--lr-chart-height`/`--lr-size-280px`, `--lr-flag-aspect-ratio`,
+    `--lr-form-control-height`, …). That is what makes it worth shipping rather than documenting
+    measured pixels: the reservations track the components, and theming a component re-themes its
+    reservation with it.
+  - Reservations target each component's *final* default size rather than its skeleton's, so a
+    skeleton-to-content swap stays stable too.
+  
+  `llms/shared.md` gains a matching CLS section with the hand-rolled equivalent for consumers who
+  prefer their own rules, plus a new **Scope: what this library does not provide** section stating the
+  boundaries explicitly — client-side routing (there is no router and no route outlet; the navigation
+  components expose active state as ordinary properties to be driven by the application's own router),
+  data fetching/state management, and form-submission orchestration.
+- 870ed4f: `<lr-switch>` and `<lr-checkbox>`: expose the row wrapper as a new `row` CSS part.
+  
+  Both controls render the track/box owner and the rich label as *siblings* inside a wrapper element
+  that carried no `part` at all, while `base` names the owner box rather than the row. A consumer
+  laying out a column of switches therefore had no selector for "the row": `inline-size: 100%` on any
+  part inside it resolved against a shrink-to-fit parent, and because the owner box centers its track
+  and its width tracks the label's, a longer label shifted the track's x-position from row to row —
+  visibly ragged.
+  
+  `row` names the real wrapper, so `::part(row)` can stretch or align it. `base`/`switch`/`wrapper`
+  and `base`/`checkbox` keep their existing nodes and meaning — they are documented Web Awesome /
+  Shoelace compatibility names, so repointing them would have broken shipped consumers. This is
+  purely additive; an unstyled control renders identically.
+- 8cb3545: Four more consumer-filed defects, two per component.
+  
+  **`<lr-table>`: cell links are themeable.** A column's `cell(row)` renders its TemplateResult inside
+  the component's shadow root, so an anchor it returns is unreachable from page CSS — and `::part()`
+  cannot select past the first compound selector to reach it either. It computed to the UA default
+  link blue, the one colour on the page belonging to no design system. Cells now take
+  `--lr-table-cell-color`, and a cell anchor takes `--lr-table-cell-link-color` (brand by default)
+  plus `--lr-table-cell-link-hover-color`. `:where()` keeps specificity at zero so an inline style on
+  the returned anchor still wins, and `revert` hands the UA default back.
+  
+  **`<lr-table>`: `scroll-mode="page"` makes an uncapped table's sticky header work.** `[part="base"]`
+  was unconditionally `overflow: auto`, which makes it the sticky containing block for the header
+  whether or not anything can scroll in it — so with no `--lr-table-max-height` the header scrolled
+  away with the page, and an uncapped page-scrolling table and a pinned header were mutually
+  exclusive. That is a real CSS constraint rather than an oversight: a scroll container clips *both*
+  axes. The fix is therefore an explicit opt-in, not a changed default, since dropping the overflow
+  unconditionally would cost every uncapped wide table its horizontal scrolling.
+  
+  **`<lr-map>`: a guarded `maxBounds`.** Calling `map.setMaxBounds()` through the `.map` escape hatch
+  can wedge maplibre-gl at a sub-1 fractional zoom in a wide container: `getZoom()` returns `null`
+  permanently, every frame throws from inside the peer's matrix math, and the canvas never paints
+  again — a blank map, with nothing thrown at the call site. The property applies the same call, reads
+  the camera back, and reverts if it did not survive, so the worst case is an unconstrained map plus a
+  dev-mode warning.
+  
+  **`<lr-map>`: property-only choropleth updates no longer re-tile the whole source.** `setData()`
+  re-tiles unconditionally, which is invisible on a static map and expensive on an animated one. When
+  an update changes only feature properties, the component now emits maplibre-gl's incremental
+  `updateData()`. The fast path requires the same feature count, an addressable `id` per feature, and
+  geometry that is the *same object* as last time — a deep compare would cost about what the re-tile
+  costs, and a false positive would paint stale geometry. Anything else falls back to `setData()`.
+- 10b7d14: `<lr-timeline>`: position items along a real time axis with the new `scale="time"` mode.
+  
+  The timeline was an evenly-spaced sequence in which `timestamp` was rendered as text but never used
+  for placement, so a chronology spanning a long period lost the main thing a timeline conveys — two
+  events weeks apart and the next decades later all looked equidistant, and the shape of the history
+  was invisible.
+  
+  - `scale: 'flow' | 'time' = 'flow'` (type `LyraTimelineScale`, exported from the root barrel).
+    `'flow'` is today's layout, unchanged and still the default. `'time'` positions each item at its
+    true proportion of the range.
+  - `rangeStart` / `rangeEnd` pin the axis instead of deriving it from the earliest and latest items;
+    a reversed or non-finite pair falls back to the derived range.
+  - `--lr-timeline-time-extent` (default `var(--lr-size-20rem)`) sets the distance to distribute
+    along — `block-size` when vertical, `inline-size` when horizontal. Items are absolutely
+    positioned, and a percentage against an auto-sized track would resolve to zero.
+  - An item with no parseable `timestamp` — including one supplied only through the `timestamp` slot,
+    which carries no machine-readable instant — keeps document order and is spread evenly, so a
+    partially-timestamped list degrades instead of stacking every unknown at the origin.
+  - Positions are written to each child as a private `--_lr-timeline-item-offset` custom property and
+    removed again when switching back to `'flow'`, so the component still never alters its children's
+    content or structure.
+  
+  Scope note: this covers the request's preferred option. Items sharing an instant overlap rather than
+  being fanned into lanes — the denser case (parallel lanes by category, a brushable/zoomable range,
+  per-event click events, collision handling) would change this component's deliberately passive,
+  zero-event contract, so it belongs in a sibling component with its own design, not here.
+
+### Patch Changes
+
+- c174d2d: Fix three defects found while auditing test coverage:
+  
+  - `<lr-chat-message>`: with `actions-position="outside"`, the slotted actions row is a sibling of
+    the bubble rather than a flex item nested inside the footer, so the footer's role-conditional
+    auto-margin alignment became a no-op (a box that already fills its container has no spare space
+    for `auto` margins to distribute). A user turn's actions stayed pinned to the inline-start edge
+    instead of aligning to the inline-end edge next to its own right-aligned bubble. Now aligned via
+    `justify-content` on the actions row itself.
+  - `<lr-file-input>`: the dropzone collapsed to its own intrinsic content height instead of filling
+    a host given a definite block size (e.g. absolutely positioned with `inset: 0` over a sized
+    panel) — none of `[part="form-control"]`, `.dropzone`, or `[part~="base"]` propagated the host's
+    height down the chain.
+  - `<lr-chart>`: a chart whose row count exceeded the 1,000-record rendering budget but whose series
+    count did not got its shared `labels` array correctly sampled down, but each series' own
+    `data`/`color`/`pointRadius`/`pointColors`/`segmentColors` arrays stayed at full source length —
+    a length mismatch handed straight to Chart.js. Row sampling now applies to every series
+    regardless of whether the series dimension itself also needed sampling.
+- bf447ca: `<lr-tooltip>`: close a pointer-held tooltip when a re-render replaces its trigger.
+  
+  A list that re-renders — a chat transcript, a log view, anything virtualized — replaces the `for`
+  target with a fresh node rather than moving the existing one. The outgoing element is detached
+  before it can fire the `mouseleave` that normally closes a resting tooltip, and the incoming element
+  is not necessarily under the pointer. `adoptTrigger()` correctly rebound its listeners to the new
+  node but let the tooltip inherit the outgoing node's open state, so the tooltip hung open over a
+  trigger nobody was pointing at. Reported live as several resting tooltips visible at once with the
+  pointer over none of them, via `<lr-copy-button>`'s default `tooltip="full"`.
+  
+  A trigger swap now re-derives the open state from the incoming element: the tooltip stays open only
+  while that element is genuinely held — the pointer resting over it (`:hover`) or focus inside it —
+  and closes otherwise. Focus-, click- and `manual`-opened tooltips are untouched, and re-rendering a
+  row the pointer still rests on leaves its tooltip alone. Verified on Chromium, Firefox and WebKit.
+  
+  The same report's secondary note about a tooltip being clipped inside a scroll container is existing
+  behavior with existing API: pass `hoist` (`<lr-copy-button>` already forwards it to its tooltip) to
+  render the popup in the top layer and escape the clipping ancestor.
+
 ## 9.1.1
 
 ### Patch Changes
