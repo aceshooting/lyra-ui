@@ -3004,3 +3004,122 @@ describe("date-picker coverage gaps", () => {
     ).to.equal("Next year");
   });
 });
+
+// A dashboard-wide time filter (Today / Last 7 days / Last 30 days / This month / All time) is one
+// of the commonest analytics controls, and the pieces were split across two components: the date
+// components had the calendar and no preset affordance, while lr-time-range had exactly the preset
+// vocabulary but no date logic. This reuses that vocabulary here rather than inventing a second one.
+describe('range presets', () => {
+  const PRESETS = [
+    { label: 'Last 7 days', start: '2026-08-13', end: '2026-08-19' },
+    { label: 'Last 30 days', start: '2026-07-21', end: '2026-08-19' },
+  ];
+
+  async function pickerWith(mode: string): Promise<LyraDatePicker> {
+    const el = (await fixture(
+      html`<lr-date-picker mode=${mode}></lr-date-picker>`,
+    )) as LyraDatePicker;
+    el.presets = PRESETS;
+    await el.updateComplete;
+    return el;
+  }
+
+  const buttons = (el: LyraDatePicker): HTMLButtonElement[] =>
+    Array.from(el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="preset-button"]'));
+
+  it('renders nothing at all while presets are unset', async () => {
+    const el = (await fixture(
+      html`<lr-date-picker mode="range"></lr-date-picker>`,
+    )) as LyraDatePicker;
+    await el.updateComplete;
+
+    expect(buttons(el).length, 'opt-in only').to.equal(0);
+    expect(
+      el.shadowRoot!.querySelector('[part~="presets"]') === null,
+      'no empty row either',
+    ).to.be.true;
+  });
+
+  it('renders one labelled button per preset in range mode', async () => {
+    const el = await pickerWith('range');
+    const labels = buttons(el).map((button) => button.textContent?.trim());
+
+    expect(labels).to.deep.equal(['Last 7 days', 'Last 30 days']);
+    expect(buttons(el)[0]!.getAttribute('aria-pressed')).to.equal('false');
+  });
+
+  it('ignores presets outside range mode, where a two-date range has no meaning', async () => {
+    const el = await pickerWith('single');
+    expect(buttons(el).length, 'a single-date picker cannot apply a range').to.equal(0);
+  });
+
+  it('commits the range and emits input then change, exactly like a two-click selection', async () => {
+    const el = await pickerWith('range');
+    const seen: string[] = [];
+    el.addEventListener('input', () => seen.push('input'));
+    el.addEventListener('change', () => seen.push('change'));
+
+    buttons(el)[0]!.click();
+    await el.updateComplete;
+
+    expect(el.value).to.equal('2026-08-13/2026-08-19');
+    expect(seen, 'the documented pair, in order').to.deep.equal(['input', 'change']);
+  });
+
+  it('marks the active preset with aria-pressed and data-active', async () => {
+    const el = await pickerWith('range');
+    buttons(el)[1]!.click();
+    await el.updateComplete;
+
+    expect(buttons(el)[1]!.getAttribute('aria-pressed')).to.equal('true');
+    expect(buttons(el)[1]!.hasAttribute('data-active')).to.be.true;
+    expect(buttons(el)[0]!.getAttribute('aria-pressed'), 'only one at a time').to.equal('false');
+  });
+
+  it('normalizes a reversed preset instead of committing a backwards range', async () => {
+    const el = await pickerWith('range');
+    el.presets = [{ label: 'Backwards', start: '2026-08-19', end: '2026-08-13' }];
+    await el.updateComplete;
+
+    buttons(el)[0]!.click();
+    await el.updateComplete;
+    expect(el.value).to.equal('2026-08-13/2026-08-19');
+  });
+
+  it('ignores a malformed preset rather than clearing the current value', async () => {
+    const el = await pickerWith('range');
+    buttons(el)[0]!.click();
+    await el.updateComplete;
+    const committed = el.value;
+
+    el.presets = [{ label: 'Broken', start: 'not-a-date', end: '2026-08-19' }];
+    await el.updateComplete;
+    buttons(el)[0]!.click();
+    await el.updateComplete;
+
+    expect(el.value, 'a bad config entry must not read as "the user picked nothing"').to.equal(
+      committed,
+    );
+  });
+
+  it('refuses to apply while disabled or readonly', async () => {
+    const el = await pickerWith('range');
+    el.disabled = true;
+    await el.updateComplete;
+    buttons(el)[0]!.click();
+    await el.updateComplete;
+    expect(el.value).to.equal('');
+
+    el.disabled = false;
+    el.readonly = true;
+    await el.updateComplete;
+    buttons(el)[0]!.click();
+    await el.updateComplete;
+    expect(el.value).to.equal('');
+  });
+
+  it('is accessible with a preset row', async () => {
+    const el = await pickerWith('range');
+    await expect(el).to.be.accessible();
+  });
+});

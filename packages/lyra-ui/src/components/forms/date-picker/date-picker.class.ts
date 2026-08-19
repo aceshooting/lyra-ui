@@ -116,6 +116,22 @@ export interface LyraDatePickerEventMap {
   'lr-view-change': CustomEvent<{ view: LyraDatePickerView; date: Date }>;
 }
 /**
+ * One quick-range option for `presets`.
+ *
+ * Deliberately the same shape as `<lr-time-range>`'s `TimeRangePreset` (`label`/`start`/`end`,
+ * rendered as an `aria-pressed` button row) so the library has one preset vocabulary rather than
+ * two. The only difference is the unit: ISO `YYYY-MM-DD` dates instead of numbers, because this
+ * control's domain is dates.
+ */
+export interface LyraDateRangePreset {
+  readonly label: string;
+  /** Inclusive range start, ISO `YYYY-MM-DD`. */
+  readonly start: string;
+  /** Inclusive range end, ISO `YYYY-MM-DD`. */
+  readonly end: string;
+}
+
+/**
  * `<lr-date-picker>` — an inline month-grid calendar for picking a single date
  * or a date range. Mirrors the core `<wa-date-picker>` API under `lr-`.
  *
@@ -172,6 +188,9 @@ export interface LyraDatePickerEventMap {
  * @csspart day-label - The visible day label.
  * @csspart day-weekend - A Saturday or Sunday.
  * @csspart day-placeholder - A non-day grid placeholder.
+ * @csspart presets - The quick-range button row, rendered only in range mode with `presets` set.
+ * @csspart preset-button - One quick-range button; carries `data-active` while its range is the
+ *   current value.
  * @csspart weeknumbers - The week-number column.
  * @csspart weeknumber - One week number.
  * @csspart footer - The footer region.
@@ -268,6 +287,21 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   @property({ attribute: false }) isDateDisabled?: (date: Date) => boolean;
   /** Optional JavaScript renderer for individual calendar-day content. */
   @property({ attribute: false }) dayContent?: LyraDatePickerDayContent;
+
+  /**
+   * Quick-range options rendered as a `[part="presets"]` button row above the calendar, for the
+   * dashboard time-filter shape (Today / Last 7 days / Last 30 days / This month / All time).
+   *
+   * Range mode only — a preset names two dates, so it has no meaning for a single-date picker and
+   * is ignored there rather than rendering a row that cannot do anything. Unset renders nothing at
+   * all, so an existing picker is unchanged.
+   *
+   * Applying one commits the range exactly as a two-click selection would (clamped to `min`/`max`,
+   * then `input` followed by `change`), so a consumer's existing change handling needs no special
+   * case. The active preset carries `aria-pressed="true"` and `data-active`, mirroring
+   * `<lr-time-range>`'s already-shipped preset row.
+   */
+  @property({ attribute: false }) presets: readonly LyraDateRangePreset[] = Object.freeze([]);
   @property({ type: Number, attribute: 'min-range', reflect: true })
   minRange = 0;
   @property({ type: Number, attribute: 'max-range', reflect: true })
@@ -1578,6 +1612,43 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     `;
   }
 
+  /** The quick-range row. Range mode only -- see `presets`. */
+  private renderPresets(): TemplateResult | typeof nothing {
+    if (this.effectiveMode !== 'range' || this.presets.length === 0) return nothing;
+    return html`<div part="presets">
+      ${this.presets.map((preset) => {
+        const active = this.value === `${preset.start}/${preset.end}`;
+        return html`<button
+          part="preset-button"
+          type="button"
+          ?disabled=${this.disabled || this.readonly}
+          aria-pressed=${active ? 'true' : 'false'}
+          ?data-active=${active}
+          @click=${() => this.applyPreset(preset)}
+        >
+          ${preset.label}
+        </button>`;
+      })}
+    </div>`;
+  }
+
+  /**
+   * Commits a preset through the same `commit()` path a two-click range selection uses, so the
+   * event pair, the ISO serialization and the min/max clamping are identical -- a consumer's
+   * change handler cannot tell the two apart, which is the point.
+   */
+  private applyPreset(preset: LyraDateRangePreset): void {
+    if (this.disabled || this.readonly) return;
+    const from = parseISO(preset.start);
+    const to = parseISO(preset.end);
+    // A malformed preset is ignored rather than clearing the current value: a bad entry in a
+    // config-driven preset list must not look like the user picked "nothing".
+    if (!from || !to) return;
+    const [start, end] = from.getTime() <= to.getTime() ? [from, to] : [to, from];
+    this.setFocusedDate(start);
+    this.commit(start, end, true);
+  }
+
   override render(): TemplateResult {
     const selection = this.selection;
     const min = parseISO(this.min);
@@ -1626,6 +1697,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     }
     return html`<div part="base date-picker">
       <div class="content">
+        ${this.renderPresets()}
         ${this.effectiveView === 'days'
           ? html`<div part="months">${monthEls}</div>`
           : this.renderView(today)}

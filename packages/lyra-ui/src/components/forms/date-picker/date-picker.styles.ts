@@ -362,6 +362,47 @@ export const styles = css`
       var(--lr-opacity-disabled)
     );
   }
+  [part~="presets"] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lr-space-2xs);
+    margin-block-end: var(--lr-space-xs);
+  }
+  [part~="preset-button"] {
+    font: inherit;
+    font-size: var(--lr-font-size-xs);
+    min-block-size: var(--lr-icon-button-size);
+    padding: var(--lr-size-0-15rem) var(--lr-size-0-5rem);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+    cursor: pointer;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  [part~="preset-button"]:hover:not(:disabled) {
+    background: var(--lr-date-picker-preset-hover-bg, var(--lr-color-brand-quiet));
+  }
+  [part~="preset-button"]:active:not(:disabled) {
+    background: var(
+      --lr-date-picker-preset-active-bg,
+      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
+  }
+  [part~="preset-button"][data-active] {
+    background: var(--lr-date-picker-preset-selected-bg, var(--lr-color-brand));
+    border-color: var(--lr-date-picker-preset-selected-bg, var(--lr-color-brand));
+    color: var(--lr-color-brand-contrast, var(--lr-color-surface));
+  }
+  [part~="preset-button"]:focus-visible {
+    outline: var(--lr-focus-ring);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part~="preset-button"]:disabled {
+    cursor: not-allowed;
+    opacity: var(--lr-opacity-disabled);
+  }
   @media (forced-colors: active) {
     .calendar-scroll[data-scroll-overflow] {
       -webkit-mask-image: none;
@@ -400,6 +441,11 @@ export const styles = css`
     [part~="view-item-disabled"] {
       color: GrayText;
       forced-color-adjust: none;
+    }
+    [part~="preset-button"][data-active] {
+      forced-color-adjust: none;
+      background: Highlight;
+      color: HighlightText;
     }
   }
 `;

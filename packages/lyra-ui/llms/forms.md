@@ -927,9 +927,22 @@ Arabic/Persian display round-trips to the same ISO value.
 Inline month-grid calendar, not form-associated (used standalone or embedded inside
 `lr-date-input`'s popover).
 
-**Properties (27):**
+**Properties (28):**
 
 - `dayContent` (JS only): `LyraDatePickerDayContent | undefined`
+- `presets: LyraDateRangePreset[] = []` (JS only, new in 10.1.0) —
+  `LyraDateRangePreset { label: string; start: string; end: string }`, where `start`/`end` are ISO
+  `YYYY-MM-DD`. Renders a `[part="presets"]` quick-range button row above the calendar, for the
+  dashboard time-filter shape (Today / Last 7 days / Last 30 days / This month / All time).
+  **Range mode only** — a preset names two dates, so it is ignored for a single-date picker rather
+  than rendering a row that cannot do anything; unset renders nothing at all. Applying one commits
+  through the same path a two-click selection uses, so the ISO serialization, the `min`/`max`
+  clamping and the `input`-then-`change` pair are identical and a consumer's change handler cannot
+  tell them apart. A reversed preset normalizes; a malformed one is ignored rather than clearing the
+  current value, so a bad entry in a config-driven list never reads as "the user picked nothing".
+  The active button carries `aria-pressed="true"` and `data-active`. Deliberately the same
+  `label`/`start`/`end` shape as `<lr-time-range>`'s `TimeRangePreset`, so the library has one
+  preset vocabulary rather than two — the only difference is the unit (ISO dates, not numbers)
 - `disabled: boolean = false` (reflected)
 - `disabledDates: string | string[] | Date[] = ''` (attribute `disabled-dates`)
 - `disabledDaysOfWeek: string = ''` (attribute `disabled-days-of-week`)
@@ -981,11 +994,13 @@ values. `lr-focus-day` carries `{ date: Date }`, and `lr-view-change` carries `{
 
 **Custom states:** `disabled`, `range`, and `readonly`.
 
-**CSS parts (35):** `date-picker` / permanent compatibility name `base` (tokens on the same
+**CSS parts (37):** `date-picker` / permanent compatibility name `base` (tokens on the same
 visible shell; both names remain supported), `day`, `day-disabled`, `day-label`, `day-outside`,
 `day-placeholder`, `day-range-end`, `day-range-inner`, `day-range-preview`, `day-range-start`,
 `day-selected`, `day-today`, `day-weekend`, `footer`, `grid`, `header`, `month`, `month-label`,
 `months`, `nav`, `next`, `previous`, `title`, `view-cell`, `view-grid`, `view-item`,
+`presets` (the quick-range row), `preset-button` (one quick-range button; carries `data-active`
+while its range is the current value),
 `view-item-disabled`, `view-item-selected`, `view-item-today`, `view-row`, `weekday`, `weekdays`,
 `weeknumber`, and `weeknumbers`. Lyra additionally retains the existing `week` part.
 

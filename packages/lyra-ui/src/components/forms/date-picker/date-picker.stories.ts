@@ -253,3 +253,24 @@ export const ScopedStateTheme: Story = {
     </div>
   `,
 };
+
+/**
+ * A dashboard-wide time filter is one of the commonest analytics controls. `presets` renders a
+ * quick-range row above the calendar in range mode, reusing `<lr-time-range>`'s already-shipped
+ * `label`/`start`/`end` preset shape so the library has one preset vocabulary rather than two —
+ * the only difference is the unit (ISO dates instead of numbers). Applying one commits exactly as a
+ * two-click selection would, so existing change handling needs no special case.
+ */
+export const RangePresets: Story = {
+  render: () => html`
+    <lr-date-picker
+      mode="range"
+      value="2026-08-13/2026-08-19"
+      .presets=${[
+        { label: 'Last 7 days', start: '2026-08-13', end: '2026-08-19' },
+        { label: 'Last 30 days', start: '2026-07-21', end: '2026-08-19' },
+        { label: 'This month', start: '2026-08-01', end: '2026-08-31' },
+      ]}
+    ></lr-date-picker>
+  `,
+};
