@@ -673,7 +673,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * Unset keeps the built-in 20px, for the same reason `rowLabelWidth` does: auto-sizing every
    * existing heatmap would silently reflow charts whose labels already fit.
    */
-  @property({ converter: labelExtentConverter, attribute: 'col-label-height', reflect: true })
+  // Deliberately NOT reflected, unlike `rowLabelWidth`. Reflection is observable (it writes the
+  // attribute back to the DOM and can match a consumer's `[col-label-height]` selector), and this
+  // property did not reflect before, so adding it would be a breaking change for a feature that
+  // does not need it.
+  @property({ converter: labelExtentConverter, attribute: 'col-label-height' })
   colLabelHeight?: number | 'auto';
 
   /**
