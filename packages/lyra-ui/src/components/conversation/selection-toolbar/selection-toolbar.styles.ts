@@ -8,7 +8,7 @@ export const styles = css`
 
   [part='toolbar'] {
     position: fixed;
-    z-index: var(--lr-overlay-stack-index, 1000);
+    z-index: var(--lr-overlay-stack-index, var(--lr-layer-popover));
     inset-inline-start: var(--_lr-selection-toolbar-inline-start);
     inset-block-start: var(--_lr-selection-toolbar-block-start);
     display: flex;
@@ -85,9 +85,4 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    [part='toolbar'] {
-      transition: none;
-    }
-  }
 `;

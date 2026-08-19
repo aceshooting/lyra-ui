@@ -91,7 +91,6 @@ export const styles = css`
     align-items: start;
     gap: var(--lr-size-1px);
     box-sizing: border-box;
-    min-inline-size: 0;
     inline-size: 100%;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
