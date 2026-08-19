@@ -13,6 +13,16 @@ jobs:
   full-engine:
     name: ${{ matrix.browser }} / shard ${{ matrix.shard }}/8
     runs-on: ubuntu-latest
+    # The official Playwright image ships every OS-level browser dependency AND the matching
+    # browser binaries, so this job runs no apt transaction and downloads no browser. Both were
+    # chronic stalls: a degraded Ubuntu mirror repeatedly wedged `playwright install-deps` for
+    # 10-20 minutes with no error and no give-up, because apt sets no default Acquire::Retries
+    # and its per-request timeout only fires on a fully idle socket -- a mirror trickling bytes
+    # resets it forever. Raising timeouts (three times, in this file and ci.yml) treated the
+    # symptom; removing apt from the job removes the failure mode.
+    # The tag MUST match the `playwright` devDependency -- release-integrity asserts it.
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -40,20 +50,6 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Same cache key scheme ci.yml's platform-contracts job already populates for these exact
-      # browsers -- GitHub Actions cache is repo-scoped, not workflow-scoped, so this reuses
-      # entries ci.yml wrote instead of downloading the ~100MB+ browser binary from scratch here.
-      - name: Restore Playwright browser cache
-        id: playwright-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ matrix.browser }}-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      # install-deps (apt) isn't covered by the cache above -- every job runs on a fresh VM --
-      # so it always runs; only the ~100MB+ browser binary download is skippable on a cache hit.
-      - run: pnpm --filter @aceshooting/lyra-ui exec playwright install-deps ${{ matrix.browser }}
-      - if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: pnpm --filter @aceshooting/lyra-ui exec playwright install ${{ matrix.browser }}
       # package-entrypoints.test.ts imports dist package targets, so every
       # shard needs the same build-first contract as the primary CI suite.
       - run: pnpm build

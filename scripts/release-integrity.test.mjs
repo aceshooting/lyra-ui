@@ -1344,3 +1344,28 @@ test('interactive graph-legend story exposes visible feedback without a duplicat
   assert.match(story, /<p data-visibility-feedback>/u);
   assert.doesNotMatch(story, /data-visibility-feedback[^>]*aria-live/u);
 });
+
+test('every Playwright container image tracks the pinned playwright dependency', () => {
+  const pkg = JSON.parse(readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+  const pinned = (pkg.devDependencies?.playwright ?? pkg.dependencies?.playwright ?? '').replace(
+    /[^0-9.]/g,
+    ''
+  );
+  assert.match(pinned, /^\d+\.\d+\.\d+$/, 'root package.json must pin a concrete playwright version');
+
+  // The browser jobs no longer run `playwright install`; they inherit the binaries baked into the
+  // image. A version skew there is silent and total -- Playwright would look for a browser build
+  // the image does not carry -- so the tag is gated rather than trusted.
+  for (const file of ['.github/workflows/ci.yml', '.github/workflows/full-engine.yml']) {
+    const src = readFileSync(path.join(repoRoot, file), 'utf8');
+    const tags = [...src.matchAll(/mcr\.microsoft\.com\/playwright:v([0-9.]+)-/g)].map((m) => m[1]);
+    assert.ok(tags.length > 0, `${file} must run its browser jobs in the pinned Playwright image`);
+    for (const tag of tags) {
+      assert.equal(tag, pinned, `${file} pins a Playwright image that package.json no longer matches`);
+    }
+  }
+
+  // Drives the browser cache key for the two VM-only legs.
+  const cacheVersion = readFileSync(path.join(repoRoot, '.github/playwright-version.txt'), 'utf8').trim();
+  assert.equal(cacheVersion, pinned, '.github/playwright-version.txt must match the pinned playwright version');
+});
