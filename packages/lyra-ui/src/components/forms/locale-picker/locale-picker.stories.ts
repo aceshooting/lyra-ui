@@ -2,6 +2,10 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { LyraLocalePicker } from './locale-picker.js';
 import './locale-picker.js';
+// lr-locale-picker composes lr-flag, whose country/language resolution is inert until the optional
+// peer entry is registered. Without this the docs page rendered flag-less rows and (since 10.1.0)
+// logged the missing-resolver warning -- flag.stories.ts already imports it for the same reason.
+import '../../media/flag/flag-peer.js';
 
 const meta: Meta = {
   title: 'Locale Picker',

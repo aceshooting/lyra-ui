@@ -3992,6 +3992,27 @@
       }
     },
     {
+      "name": "--lr-date-picker-preset-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** — Pressed background of a quick-range button; defaults to a mix of the hover background with the shared active mix partner."
+      }
+    },
+    {
+      "name": "--lr-date-picker-preset-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-color-brand-quiet)`) — Hover background of a quick-range button."
+      }
+    },
+    {
+      "name": "--lr-date-picker-preset-selected-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-color-brand)`) — Background and border of the quick-range button whose range is currently selected."
+      }
+    },
+    {
       "name": "--lr-date-picker-radius",
       "description": {
         "kind": "markdown",
