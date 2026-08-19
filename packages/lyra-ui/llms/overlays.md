@@ -88,6 +88,27 @@ close. The same name is already used by the `lr-tool-select-dialog`/`lr-tool-res
 `lr-tool-approval-dialog` trio, which mirrors this identical detail shape, so one listener covers
 all of them. `lr-drawer` inherits `lr-close` unchanged.
 
+> **`lr-close` is not a dialog-scoped name — filter by target.** Nine components in this library
+> emit `lr-close`, several of them commonly nested *inside* a dialog: `<lr-callout>` (an inline
+> notice above a form), `<lr-tab>`/`<lr-tab-group>`, `<lr-command-palette>`,
+> `<lr-document-viewer>`, `<lr-responsive-panel>`, and the three tool dialogs. Library events bubble
+> and are composed, so a listener bound directly on `<lr-dialog>` **also receives a descendant's
+> close** — a closable callout inside a dialog would otherwise dismiss the whole dialog. The details
+> differ too (`<lr-callout>` and `<lr-tab>` carry none, where the dialog carries a
+> `DialogCloseReason`), so a handler reading `event.detail.reason` throws on a foreign one. It is
+> latent rather than broken-on-arrival, because a callout or tab only emits once it is given a close
+> affordance — which is what makes it a bad failure mode: it shows up later and presents as the
+> dialog dismissing itself. Guard on the target, the way `<lr-document-viewer>` already does
+> internally:
+>
+> ```js
+> dialog.addEventListener('lr-close', (event) => {
+>   if (event.target !== event.currentTarget) return; // a descendant's close, not this dialog's
+>   // ...
+> });
+> ```
+
+
 **The top layer.** An open `lr-dialog` or modal `lr-drawer` is promoted into the browser **top layer**
 (through `popover="manual"`) rather than stacked with `z-index`. It therefore escapes every ancestor
 stacking context and every ancestor `overflow` clip: a `transform`ed parent, an `isolation: isolate`
@@ -666,7 +687,8 @@ chrome remains visible. The fallback order appears below.
   `<lr-tool-approval-dialog>`, whose own docs describe an identical detail shape, so one listener
   covers all of them. A listener calling `preventDefault()` vetoes the close. Also fired (with
   reason `'unmount'`, non-cancelable there) when the dialog is removed from the DOM while still
-  open.
+  open. **But the name is not dialog-scoped** — see the target-filtering note above; nine
+  components emit `lr-close`, and several are routinely nested inside a dialog.
 
 The two `lr-after-*` events are never cancelable.
 

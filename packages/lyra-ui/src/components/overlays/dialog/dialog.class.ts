@@ -153,6 +153,26 @@ export interface LyraDialogEventMap {
  *   their close-reason detail as mirroring this shape. Also fired (with reason `'unmount'`,
  *   non-cancelable there since the element is already being removed) when the dialog is removed
  *   from the DOM while still open.
+ *
+ *   **The name is not dialog-scoped, so filter by target.** `lr-close` is emitted by nine
+ *   components in this library, several of which are commonly nested *inside* a dialog:
+ *   `<lr-callout>` (an inline notice above a form), `<lr-tab>`/`<lr-tab-group>`,
+ *   `<lr-command-palette>`, `<lr-document-viewer>`, `<lr-responsive-panel>`, and the three
+ *   tool dialogs. Library events bubble and are composed, so a listener bound directly on
+ *   `<lr-dialog>` also receives a descendant's close — and a closable callout inside a dialog would
+ *   otherwise dismiss the whole dialog. Their details differ too (`<lr-callout>` and `<lr-tab>`
+ *   carry none, where this event carries a `DialogCloseReason`), so a handler reading
+ *   `event.detail.reason` would throw on a foreign one. This is latent rather than
+ *   broken-on-arrival, because a callout or tab only emits once given a close affordance — which
+ *   is what makes it a bad failure mode: it appears later and presents as the dialog dismissing
+ *   itself. Guard on the target, the way `<lr-document-viewer>` already does internally:
+ *
+ *   ```js
+ *   dialog.addEventListener('lr-close', (event) => {
+ *     if (event.target !== event.currentTarget) return; // a descendant's close, not this dialog's
+ *     // ...
+ *   });
+ *   ```
  * @csspart base - Shoelace wrapper alias.
  * @csspart backdrop - The full-viewport scrim behind the panel; also carries `overlay`.
  * @csspart overlay - Shoelace alias on the backdrop.

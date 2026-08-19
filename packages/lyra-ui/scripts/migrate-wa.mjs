@@ -2744,6 +2744,110 @@ function migrateLocalText(original, contract, options) {
   };
 }
 
+/**
+ * Finds `wa-*`/`sl-*` references in the four places `migrateText()` deliberately does not rewrite,
+ * so they can at least be reported. See the call site for why each one is dangerous when silent.
+ *
+ * Scoped narrowly on purpose: every pattern here targets a context the tag rewriter provably skips
+ * (CSS-in-JS template bodies, `::slotted()`, a selector string reached through a receiver, and
+ * custom-property names), so a reference is never both rewritten and warned about.
+ */
+export function scanUnrewrittenUpstreamReferences(text) {
+  const found = [];
+  const seen = new Set();
+  const push = (offset, upstreamTag, member, code, target, message) => {
+    const key = `${offset}:${code}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    found.push({ offset, upstreamTag, member, code, target, message });
+  };
+  const TAG = /(?<![\w-])(?<tag>(?:wa|sl)-[a-z][a-z0-9-]*)(?![\w-])/g;
+
+  // 1. Tag selectors inside a `css` tagged template. Lit is this library's own idiom, so
+  //    `static styles = css\`\`` is exactly where a migrating consumer's tag selectors live --
+  //    "standalone CSS is in scope but CSS-in-JS is not" inverts the likelihood.
+  for (const block of text.matchAll(/\bcss`/g)) {
+    const bodyStart = block.index + block[0].length;
+    const bodyEnd = text.indexOf('`', bodyStart);
+    if (bodyEnd === -1) continue;
+    const body = text.slice(bodyStart, bodyEnd);
+    for (const match of body.matchAll(TAG)) {
+      const tag = match.groups.tag;
+      push(
+        bodyStart + match.index,
+        tag,
+        'css-template',
+        'CSS_IN_JS_SELECTOR_REVIEW',
+        tag,
+        `\`${tag}\` appears in a css\`\` template and was NOT rewritten. A rule keyed on a tag that no longer exists matches nothing, silently. Rename the selector by hand.`,
+      );
+    }
+  }
+
+  // 2. ::slotted(wa-*) anywhere, including standalone CSS.
+  for (const match of text.matchAll(/::slotted\(\s*([^)]*)\)/g)) {
+    for (const inner of match[1].matchAll(TAG)) {
+      const tag = inner.groups.tag;
+      push(
+        match.index + match[0].indexOf(inner.groups.tag),
+        tag,
+        '::slotted',
+        'SLOTTED_SELECTOR_REVIEW',
+        tag,
+        `\`::slotted(${tag})\` was NOT rewritten and will match nothing after the migration. Rename it by hand.`,
+      );
+    }
+  }
+
+  // 3. Selector strings reached through a `this`-rooted receiver. The rewriter anchors on a bare or
+  //    `document.`-prefixed call, so `this.querySelectorAll('wa-option')` and
+  //    `this.shadowRoot?.querySelector('wa-card')` -- the two commonest forms inside a component --
+  //    slipped through and would start returning null.
+  //
+  //    Deliberately restricted to `this`, `this.shadowRoot` and `this.renderRoot` rather than any
+  //    receiver. The rewriter refuses a SHADOWED `document`/`querySelector` binding on purpose (a
+  //    local named `document` is provably not a DOM query), and warning there would be a false
+  //    positive on correct code. `this` is the one receiver that can never be a local binding, so
+  //    a query through it is always a real DOM query.
+  const CALL = /\bthis(?:\s*\??\.\s*(?:shadowRoot|renderRoot))?\s*\??\.\s*(?:querySelector|querySelectorAll|closest|matches)\s*(?:<[^>\n]+>)?\(\s*(['"`])(?<selector>[^'"`]*)\1/g;
+  for (const match of text.matchAll(CALL)) {
+    const selectorOffset = match.index + match[0].lastIndexOf(match.groups.selector);
+    for (const inner of match.groups.selector.matchAll(TAG)) {
+      const tag = inner.groups.tag;
+      push(
+        selectorOffset + inner.index,
+        tag,
+        'selector-string',
+        'SELECTOR_STRING_REVIEW',
+        tag,
+        `\`${tag}\` appears in a DOM selector string that was NOT rewritten. The query will return null after the migration rather than throwing. Rename it by hand.`,
+      );
+    }
+  }
+
+  // 4. Upstream custom properties. Never auto-rewritten -- see the call site.
+  //    A name the file also DECLARES is the consumer's own property that merely happens to share
+  //    the prefix, not an upstream token they are consuming; warning on it would be a false
+  //    positive. Same "reads but never declares" discriminator check-manifest-coverage.mjs uses.
+  const declaredHere = new Set(
+    [...text.matchAll(/(--(?:wa|sl)-[a-z0-9-]+)\s*:/g)].map((match) => match[1]),
+  );
+  for (const match of text.matchAll(/--(?<ecosystem>wa|sl)-[a-z0-9-]+/g)) {
+    const token = match[0];
+    if (declaredHere.has(token)) continue;
+    push(
+      match.index,
+      `${match.groups.ecosystem}-tokens`,
+      'custom-property',
+      'UPSTREAM_TOKEN_REVIEW',
+      token,
+      `\`${token}\` is an upstream design token with no automatic Lyra equivalent, and was left as-is. A var() naming a token that no longer exists falls back to its second argument, or to nothing -- silently. Map it by hand against llms/tokens.md; note the spacing scales are offset by one step, so renaming by name alone tightens every gap.`,
+    );
+  }
+
+  return found;
+}
+
 export function migrateText(original, contract, options = {}) {
   if (options.origin) return migrateLocalText(original, contract, options);
   const file = options.file ?? '<memory>';
@@ -3392,6 +3496,39 @@ export function migrateText(original, contract, options = {}) {
       target,
       message: `Rewrite the ${upstreamTag} registration entry to its inventory module.`,
     });
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Reference classes this codemod does NOT rewrite. Each one fails SILENTLY at runtime after a
+  // migration: a CSS rule keyed on a tag that no longer exists simply matches nothing, ::slotted()
+  // likewise, querySelector returns null, and a var() naming a removed token falls back to whatever
+  // literal is in its second argument -- or to nothing. None of it throws, none of it fails a build,
+  // and a typechecker cannot see inside a template literal. Leaving them unwarned meant `--check`
+  // reported a clean migration over visibly broken styling, which is the actual defect: the tool is
+  // documented as a CI gate, so silence there is certification.
+  //
+  // These are warnings, never rewrites. For tokens that is a deliberate refusal rather than
+  // laziness: the two spacing scales are offset by one step (Web Awesome `m` is 1rem, Lyra `m` is
+  // 0.75rem), so a blind --wa-X -> --lr-X rename silently tightens every gap, while mapping by
+  // value has no target for 1.5rem or 2.5rem. Naming each occurrence is worth more than a guess.
+  //
+  // Filtered against the rewrite ranges this pass actually produced, so a reference the inventory
+  // DOES map (a `--wa-old-color` with a declared `--lr-*` target, say) is never both rewritten and
+  // warned about. Deriving that from the edits rather than from a second copy of the inventory
+  // keeps it correct for free as the inventory grows.
+  const rewrittenRanges = edits.map((edit) => [edit.start, edit.end]);
+  const wasRewritten = (offset) =>
+    rewrittenRanges.some(([start, end]) => offset >= start && offset < end);
+  for (const scan of scanUnrewrittenUpstreamReferences(original)) {
+    if (wasRewritten(scan.offset)) continue;
+    warn(
+      scan.offset,
+      scan.upstreamTag,
+      scan.member,
+      scan.code,
+      scan.target,
+      scan.message,
+    );
   }
 
   const content = finalizeEdits(original, edits);

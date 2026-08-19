@@ -2543,3 +2543,61 @@ test('runs when invoked through a symlinked path, as a pnpm bin shim does', () =
     fs.rmSync(scratch, { recursive: true, force: true });
   }
 });
+
+// Four reference classes were neither rewritten nor warned about, so `--check` -- documented as a
+// CI gate -- certified a migration that had visibly broken the component's styling. Each one fails
+// silently at runtime: a CSS rule keyed on a removed tag matches nothing, ::slotted() likewise,
+// querySelector returns null, and a var() naming a removed token falls back to its second argument.
+test('warns about upstream references it cannot rewrite', () => {
+  const source = [
+    "import { LitElement, html, css } from 'lit';",
+    "import '@awesome.me/webawesome/dist/components/card/card.js';",
+    'export class A extends LitElement {',
+    '  static styles = css`',
+    '    wa-card { padding: 1px; }',
+    '    ::slotted(wa-option) { display: none; }',
+    '    :host { gap: var(--wa-space-m); }',
+    '  `;',
+    "  a() { return this.querySelectorAll('wa-option'); }",
+    "  b() { return this.shadowRoot?.querySelector('wa-card'); }",
+    '  render() { return html`<wa-card></wa-card>`; }',
+    '}',
+  ].join('\n');
+
+  const result = migrateText(source, contract, {});
+  const codes = new Set(result.warnings.map((warning) => warning.warningCode));
+
+  assert.ok(codes.has('CSS_IN_JS_SELECTOR_REVIEW'), 'a css`` tag selector must be reported');
+  assert.ok(codes.has('SLOTTED_SELECTOR_REVIEW'), '::slotted() must be reported');
+  assert.ok(
+    codes.has('SELECTOR_STRING_REVIEW'),
+    'a selector string reached through this./shadowRoot?. must be reported',
+  );
+  assert.ok(codes.has('UPSTREAM_TOKEN_REVIEW'), 'an upstream --wa-* token must be reported');
+
+  // The tokens are deliberately NOT rewritten: the two spacing scales are offset by one step, so a
+  // rename by name alone silently tightens every gap.
+  assert.match(result.content, /--wa-space-m/, 'tokens stay verbatim, reported rather than guessed');
+  assert.match(result.content, /wa-card \{ padding/, 'css`` selectors stay verbatim too');
+});
+
+test('stays quiet on a file with nothing left to migrate', () => {
+  const clean = [
+    "import { LitElement, html, css } from 'lit';",
+    'export class A extends LitElement {',
+    '  static styles = css`lr-card { padding: 1px; }`;',
+    "  a() { return this.querySelectorAll('lr-option'); }",
+    '}',
+  ].join('\n');
+
+  const result = migrateText(clean, contract, {});
+  const noise = result.warnings.filter((warning) =>
+    [
+      'CSS_IN_JS_SELECTOR_REVIEW',
+      'SLOTTED_SELECTOR_REVIEW',
+      'SELECTOR_STRING_REVIEW',
+      'UPSTREAM_TOKEN_REVIEW',
+    ].includes(warning.warningCode),
+  );
+  assert.deepEqual(noise, [], 'an already-migrated file must not be warned at');
+});
