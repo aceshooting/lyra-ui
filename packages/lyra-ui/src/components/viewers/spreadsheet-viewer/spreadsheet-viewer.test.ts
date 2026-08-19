@@ -453,6 +453,34 @@ describe('lr-spreadsheet-viewer', () => {
     }
   });
 
+  it('does not leak the internal virtual-list events through the viewer host under the canonical lr-visible-range-change name', async () => {
+    const el = (await fixture(
+      html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`
+    )) as LyraSpreadsheetViewer;
+    const restore = fetchBuffer(
+      buffer({ Sheet1: [['Name'], ['Ada']], Sheet2: [['Name'], ['Grace']] })
+    );
+    try {
+      el.src = 'https://example.test/book.xlsx';
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('lr-tab-group') !== null
+      );
+      let leaked = 0;
+      el.addEventListener('lr-visible-range-change' as never, () => {
+        leaked++;
+      });
+      el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(
+        new CustomEvent('lr-visible-range-change', {
+          bubbles: true,
+          composed: true,
+        })
+      );
+      expect(leaked).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
   it('is accessible', async () => {
     const el = await fixture(
       html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`

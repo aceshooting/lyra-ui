@@ -1818,6 +1818,66 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(leaked).to.be.false;
   });
 
+  it('does not leak the composed entity-card lr-entity-select event through the host', async () => {
+    const el = await settledFixture();
+    el.selectedNodeId = 'polonium';
+    await el.updateComplete;
+    const card = el.shadowRoot!.querySelector(
+      '[part="detail-card"]'
+    ) as LyraEntityCard;
+    await card.updateComplete;
+    const focusButton = card.shadowRoot!.querySelector(
+      '[part="focus-button"]'
+    ) as HTMLElement & { updateComplete: Promise<unknown> };
+    await focusButton.updateComplete;
+    let leaked = false;
+    el.addEventListener('lr-entity-select', () => (leaked = true));
+    focusButton.click();
+    await waitUntil(
+      () =>
+        (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover)
+          .open,
+      undefined,
+      {
+        timeout: NODE_COUNT_TIMEOUT,
+      }
+    );
+    expect(leaked).to.be.false;
+  });
+
+  it('activates only once when entity-card fires both lr-entity-select and lr-entity-activate from one click', async () => {
+    // entity-card emits lr-entity-select then lr-entity-activate from the same click, sharing one
+    // detail object -- the host binds both names to the same handler, so this proves the second
+    // event to arrive is a no-op rather than a second activation (which would double-invalidate
+    // the in-flight activation generation and could reopen/refocus the popover redundantly). Not
+    // a RED-phase test by itself (today only lr-entity-activate is bound, so it already passes);
+    // it exists to guard the dedup once lr-entity-select is also bound.
+    const el = await settledFixture();
+    el.selectedNodeId = 'polonium';
+    await el.updateComplete;
+    const card = el.shadowRoot!.querySelector(
+      '[part="detail-card"]'
+    ) as LyraEntityCard;
+    await card.updateComplete;
+    const focusButton = card.shadowRoot!.querySelector(
+      '[part="focus-button"]'
+    ) as HTMLElement & { updateComplete: Promise<unknown> };
+    await focusButton.updateComplete;
+    const priv = el as unknown as { activationGeneration: number };
+    const generationBefore = priv.activationGeneration;
+    focusButton.click();
+    await waitUntil(
+      () =>
+        (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover)
+          .open,
+      undefined,
+      {
+        timeout: NODE_COUNT_TIMEOUT,
+      }
+    );
+    expect(priv.activationGeneration).to.equal(generationBefore + 1);
+  });
+
   it('does not leak the composed lr-graph-legend lr-visibility-change event through the host', async () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer

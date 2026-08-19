@@ -471,14 +471,14 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/activity-feed/activity-feed.test.ts",
-              "line": 700,
+              "line": 750,
               "test": "is accessible in the ${label} path",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/activity-feed/activity-feed.test.ts",
-              "line": 747,
+              "line": 797,
               "test": "is accessible expanded, with entries, icons, variants, and timestamps",
               "target": "el",
               "state": "populated"
@@ -504,7 +504,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/activity-feed/activity-feed.test.ts",
-              "line": 570,
+              "line": 620,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -2389,14 +2389,14 @@
           "evidence": [
             {
               "file": "src/components/viewers/archive-viewer/archive-viewer.test.ts",
-              "line": 339,
+              "line": 366,
               "test": "applies localized empty strings and is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/archive-viewer/archive-viewer.test.ts",
-              "line": 1034,
+              "line": 1061,
               "test": "is accessible with entries listed",
               "target": "el",
               "state": "populated"
@@ -11941,7 +11941,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/csv-viewer/csv-viewer.test.ts",
-              "line": 1201,
+              "line": 1227,
               "test": "is accessible with a highlighted cell rendered",
               "target": "el",
               "state": "populated"
@@ -15178,7 +15178,7 @@
           "evidence": [
             {
               "file": "src/components/layout/drilldown-panel/drilldown-panel.test.ts",
-              "line": 1026,
+              "line": 1055,
               "test": "renders correctly under dir=\"rtl\"",
               "target": "el",
               "state": "populated"
@@ -15198,7 +15198,7 @@
           "evidence": [
             {
               "file": "src/components/layout/drilldown-panel/drilldown-panel.test.ts",
-              "line": 954,
+              "line": 983,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -15215,7 +15215,7 @@
           "evidence": [
             {
               "file": "src/components/layout/drilldown-panel/drilldown-panel.test.ts",
-              "line": 937,
+              "line": 966,
               "kind": "320px allocation test signal"
             }
           ]
@@ -24567,7 +24567,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts",
-              "line": 502,
+              "line": 508,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -29422,7 +29422,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/notebook-viewer/notebook-viewer.test.ts",
-              "line": 1412,
+              "line": 1424,
               "test": "is accessible with a rendered notebook",
               "target": "el",
               "state": "populated"
@@ -29442,7 +29442,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/notebook-viewer/notebook-viewer.test.ts",
-              "line": 1550,
+              "line": 1562,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -29459,7 +29459,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/notebook-viewer/notebook-viewer.test.ts",
-              "line": 1436,
+              "line": 1448,
               "kind": "320px allocation test signal"
             }
           ]
@@ -30354,14 +30354,14 @@
           "evidence": [
             {
               "file": "src/components/viewers/page-rail/page-rail.test.ts",
-              "line": 1022,
+              "line": 1034,
               "test": "is accessible in mediated mode with highlights present",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/page-rail/page-rail.test.ts",
-              "line": 1501,
+              "line": 1513,
               "test": "is accessible in the current-page state with the prop themed",
               "target": "el",
               "state": "populated"
@@ -30375,7 +30375,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/page-rail/page-rail.test.ts",
-              "line": 402,
+              "line": 414,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -30398,7 +30398,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/page-rail/page-rail.test.ts",
-              "line": 1093,
+              "line": 1105,
               "kind": "320px allocation test signal"
             }
           ]
@@ -31075,28 +31075,28 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
-              "line": 604,
+              "line": 644,
               "test": "is accessible in empty and loaded states",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
-              "line": 2557,
+              "line": 2597,
               "test": "is accessible with highlights present",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
-              "line": 3475,
+              "line": 3555,
               "test": "is accessible with an active search match painted",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
-              "line": 4743,
+              "line": 4823,
               "test": "is accessible with pages, text runs, and search matches rendered",
               "target": "el",
               "state": "populated"
@@ -31110,7 +31110,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
-              "line": 1106,
+              "line": 1146,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -31121,7 +31121,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
-              "line": 4383,
+              "line": 4463,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -31138,7 +31138,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
-              "line": 4386,
+              "line": 4466,
               "kind": "320px allocation test signal"
             }
           ]
@@ -40505,7 +40505,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.test.ts",
-              "line": 1843,
+              "line": 1871,
               "test": "is accessible with a highlighted cell rendered",
               "target": "el",
               "state": "populated"
@@ -40519,7 +40519,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.test.ts",
-              "line": 1197,
+              "line": 1225,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -40594,7 +40594,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.test.ts",
-              "line": 608,
+              "line": 636,
               "kind": "optional-peer failure-path test signal"
             }
           ],

@@ -1031,6 +1031,18 @@ describe('event boundaries', () => {
     expect(leaked).to.equal(0);
   });
 
+  it('does not expose the internal virtual-list range event under the canonical lr-visible-range-change name', async () => {
+    const el = (await fixture(html`<lr-notebook-viewer .notebook=${NOTEBOOK}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+    let leaked = 0;
+    el.addEventListener('lr-visible-range-change', () => leaked++);
+    el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(new CustomEvent(
+      'lr-visible-range-change',
+      { detail: { start: 0, end: 1 }, bubbles: true, composed: true },
+    ));
+    expect(leaked).to.equal(0);
+  });
+
   it('does not expose the internal virtual-list scroll event', async () => {
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${NOTEBOOK}></lr-notebook-viewer>`)) as LyraNotebookViewer;
     await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);

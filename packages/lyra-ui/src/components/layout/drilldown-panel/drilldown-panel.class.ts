@@ -650,6 +650,12 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
   private announcementSink?: AnnouncementSink;
   private announcementsArmed = false;
   private announcedLimits = new Map<string, string>();
+  /** The most recently translated `lr-entity-select`/`lr-entity-activate` detail object, by
+   *  reference. `lr-entity-card` emits both events from one gesture, unsnapshotted and sharing
+   *  one `detail` object -- `onEntityActivate` is bound to both names on every entity card, so
+   *  this lets it recognize "already translated this gesture" and emit exactly one
+   *  `lr-drilldown-entity-activate`, regardless of which of the two events reaches it first. */
+  private translatedEntityGestureDetail?: { entityId: string };
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -922,12 +928,17 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     );
   }
 
+  /** Bound to both the canonical `lr-entity-select` and the deprecated `lr-entity-activate` on
+   *  every nested `lr-entity-card` -- both fire from one gesture, so the detail-identity check
+   *  below translates it into exactly one `lr-drilldown-entity-activate`, never two. */
   private onEntityActivate(
     nodeId: string,
     entityId: string,
-    event: Event
+    event: CustomEvent<{ entityId: string }>
   ): void {
     event.stopPropagation();
+    if (event.detail === this.translatedEntityGestureDetail) return;
+    this.translatedEntityGestureDetail = event.detail;
     this.emit(
       'lr-drilldown-entity-activate',
       Object.freeze({ nodeId, entityId })
@@ -1022,7 +1033,9 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
           .types=${this.effectiveTypes}
           .communityLabel=${this.communityLabel}
           .showFocusButton=${this.showFocusButton}
-          @lr-entity-activate=${(event: Event) =>
+          @lr-entity-select=${(event: CustomEvent<{ entityId: string }>) =>
+            this.onEntityActivate(nodeId, entity.entityId, event)}
+          @lr-entity-activate=${(event: CustomEvent<{ entityId: string }>) =>
             this.onEntityActivate(nodeId, entity.entityId, event)}
         ></lr-entity-card>
       `

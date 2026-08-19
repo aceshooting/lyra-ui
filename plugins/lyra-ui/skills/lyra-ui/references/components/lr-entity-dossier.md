@@ -53,7 +53,9 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
   `aria-label` names the dossier as a whole and is not cloned onto the strip
 
 **Events:** declares none of its own. Every composed child's event bubbles through unmodified
-(`composed: true`): `lr-entity-activate` (`detail: { entityId, occurrenceIndex? }`), `lr-node-expand` (`detail: { nodeId }`),
+(`composed: true`): `lr-entity-select` (`detail: { entityId }`, canonical as of 10.0.0),
+`lr-entity-activate` (`detail: { entityId, occurrenceIndex? }` — its deprecated alias, fired from the
+same gesture, and still the only name carrying `occurrenceIndex`), `lr-node-expand` (`detail: { nodeId }`),
 `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-expand` (`detail: { chunkId, expanded }`),
 `lr-toggle` (`detail: { section, expanded }`), and `lr-tab-show`
 (`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'

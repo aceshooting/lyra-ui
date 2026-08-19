@@ -1094,17 +1094,19 @@ export type LyraEntityActivateEvent =
 export type LyraEntityOpenEvent = LyraEntityChipEventMap['lr-entity-open'];
 
 /**
- * `lr-entity-select` — dispatched by 3 components: `<lr-entity-card>`, `<lr-entity-chip>`,
- * `<lr-neighbor-list>`.
+ * `lr-entity-select` — dispatched by 5 components: `<lr-entity-card>`, `<lr-entity-chip>`,
+ * `<lr-entity-dossier>`, `<lr-neighbor-list>`, `<lr-provenance-panel>`.
  *
- * A union of 3 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 5 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.
  * `LyraEntityCardEventMap['lr-entity-select']`.
  */
 export type LyraEntitySelectEvent =
   | LyraEntityCardEventMap['lr-entity-select']
   | LyraEntityChipEventMap['lr-entity-select']
-  | LyraNeighborListEventMap['lr-entity-select'];
+  | LyraEntityDossierEventMap['lr-entity-select']
+  | LyraNeighborListEventMap['lr-entity-select']
+  | LyraProvenancePanelEventMap['lr-entity-select'];
 
 /**
  * `lr-error` — dispatched by 20 components: `<lr-animated-image>`, `<lr-artifact-panel>`,

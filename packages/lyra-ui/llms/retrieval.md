@@ -969,8 +969,12 @@ chip` row, one `lr-path-strip` per relationship, `lr-community-card`, `lr-chunk-
 **Events:** `lr-toggle` (`detail: { section, expanded }`, a section header was toggled —
 `section` is `'entities' | 'relationships' | 'communities' | 'chunks'`). Because the panel is a
 conduit, every affordance it renders also reaches a listener on the panel itself, and all are
-part of its typed event map: `lr-entity-activate` (`detail: { entityId, occurrenceIndex? }`, from an entity chip, community
-card member, or path-strip node), `lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
+part of its typed event map: `lr-entity-select` (`detail: { entityId }`, the canonical name as of
+10.0.0, from an entity chip or community card member), `lr-entity-activate`
+(`detail: { entityId, occurrenceIndex? }`, from an entity chip, community
+card member, or path-strip node — the deprecated alias of `lr-entity-select` where both fire from
+one gesture, but still the only name a path-strip node emits, and the only one carrying
+`occurrenceIndex`), `lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
 Space), `lr-drill` (`detail: { communityId }`, a community card's title, drill button, or overflow chip), and
 `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, a relationship path-strip
 edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) and `lr-expand`
@@ -1365,7 +1369,9 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
   `aria-label` names the dossier as a whole and is not cloned onto the strip
 
 **Events:** declares none of its own. Every composed child's event bubbles through unmodified
-(`composed: true`): `lr-entity-activate` (`detail: { entityId, occurrenceIndex? }`), `lr-node-expand` (`detail: { nodeId }`),
+(`composed: true`): `lr-entity-select` (`detail: { entityId }`, canonical as of 10.0.0),
+`lr-entity-activate` (`detail: { entityId, occurrenceIndex? }` — its deprecated alias, fired from the
+same gesture, and still the only name carrying `occurrenceIndex`), `lr-node-expand` (`detail: { nodeId }`),
 `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-expand` (`detail: { chunkId, expanded }`),
 `lr-toggle` (`detail: { section, expanded }`), and `lr-tab-show`
 (`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'

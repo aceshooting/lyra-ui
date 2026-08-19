@@ -1332,6 +1332,32 @@ describe('lr-dataset-viewer', () => {
     }
   });
 
+  it('does not leak the internal virtual-list events through the viewer host under the canonical lr-visible-range-change name', async () => {
+    const el = (await fixture(
+      html`<lr-dataset-viewer></lr-dataset-viewer>`
+    )) as LyraDatasetViewer;
+    const restore = fetchText(GRID_DATASET);
+    try {
+      el.src = 'https://example.test/data.tsv';
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('lr-virtual-list') !== null
+      );
+      let leaked = 0;
+      el.addEventListener('lr-visible-range-change' as never, () => {
+        leaked++;
+      });
+      el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(
+        new CustomEvent('lr-visible-range-change', {
+          bubbles: true,
+          composed: true,
+        })
+      );
+      expect(leaked).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
   describe('back-compat', () => {
     it('::part(table) still matches, and no cell-highlight renders unset', async () => {
       const el = (await fixture(

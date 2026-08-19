@@ -117,6 +117,18 @@ describe('lr-page-rail', () => {
     expect(leaked).to.equal(0);
   });
 
+  it('does not expose the internal virtual-list range event under the canonical lr-visible-range-change name', async () => {
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="2"></lr-page-rail>`);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    let leaked = 0;
+    el.addEventListener('lr-visible-range-change', () => leaked++);
+    list.dispatchEvent(new CustomEvent(
+      'lr-visible-range-change',
+      { detail: { start: 0, end: 1 }, bubbles: true, composed: true },
+    ));
+    expect(leaked).to.equal(0);
+  });
+
   it('does not expose the internal virtual-list scroll event', async () => {
     const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="2"></lr-page-rail>`);
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;

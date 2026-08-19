@@ -645,6 +645,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
             row-index-offset=${this.hasHeaderRow ? '1' : '0'}
             @lr-load-more=${this.stopInternalEvent}
             @lr-visible-range-changed=${this.stopInternalEvent}
+            @lr-visible-range-change=${this.stopInternalEvent}
             @lr-virtual-scroll=${this.stopInternalEvent}
           ></lr-virtual-list>
         </div>`;

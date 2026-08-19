@@ -460,6 +460,35 @@ it("contains raw repeated child events and emits a correlated frozen drilldown e
   expect(Object.isFrozen(event.detail)).to.equal(true);
 });
 
+it("translates the entity-card gesture exactly once, with no raw lr-entity-select escaping, even though the card fires both lr-entity-select and lr-entity-activate from one click", async () => {
+  const el = (await fixture(
+    html`<lr-drilldown-panel></lr-drilldown-panel>`
+  )) as LyraDrilldownPanel;
+  el.path = [
+    {
+      nodeId: "entity-node",
+      label: "Entities",
+      entities: [{ entityId: "entity-first", label: "First entity" }],
+    },
+  ];
+  await el.updateComplete;
+  const card = el.shadowRoot!.querySelector<LyraEntityCard>(
+    "lr-entity-card"
+  )!;
+  await card.updateComplete;
+  let rawSelects = 0;
+  let translations = 0;
+  el.addEventListener("lr-entity-select", () => {
+    rawSelects += 1;
+  });
+  el.addEventListener("lr-drilldown-entity-activate", () => {
+    translations += 1;
+  });
+  card.shadowRoot!.querySelector<HTMLElement>("lr-button")!.click();
+  expect(rawSelects).to.equal(0);
+  expect(translations).to.equal(1);
+});
+
 it("translates every owned evidence/document event with authoritative node and item identities", async () => {
   const renderError = new Error("preview failed");
   const el = (await fixture(

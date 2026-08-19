@@ -8,7 +8,7 @@ and no existing property, event, slot, part or CSS custom property was renamed o
 
 Removed, each with a like-for-like replacement that has shipped since 9.x:
 
-- `<lr-confirm>`: `tone` → `variant`. It was documented as a one-major back-compat alias, and
+- `<lr-confirm-bar>`: `tone` → `variant`. It was documented as a one-major back-compat alias, and
   `variant` already won when both were set.
 - `<lr-swatch-picker>`: `options` → `items`, `label` → `accessibleLabel` (or the host `aria-label`),
   and the `SwatchOption` type → `SwatchPickerItem`.

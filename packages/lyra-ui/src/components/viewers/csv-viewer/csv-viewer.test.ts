@@ -1037,6 +1037,32 @@ describe('lr-csv-viewer', () => {
     }
   });
 
+  it('does not leak the internal virtual-list events through the viewer host under the canonical lr-visible-range-change name', async () => {
+    const el = (await fixture(
+      html`<lr-csv-viewer></lr-csv-viewer>`
+    )) as LyraCsvViewer;
+    const restore = fetchText(GRID_CSV);
+    try {
+      el.src = 'https://example.test/people.csv';
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('lr-virtual-list') !== null
+      );
+      let leaked = 0;
+      el.addEventListener('lr-visible-range-change' as never, () => {
+        leaked++;
+      });
+      el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(
+        new CustomEvent('lr-visible-range-change', {
+          bubbles: true,
+          composed: true,
+        })
+      );
+      expect(leaked).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
   describe('cell-highlight styling', () => {
     const injected: HTMLStyleElement[] = [];
     function injectStyle(cssText: string): void {

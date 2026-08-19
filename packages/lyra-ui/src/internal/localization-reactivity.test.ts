@@ -70,10 +70,16 @@ function probeText(probe: LocalizationRenderProbe): string {
   return probe.shadowRoot?.textContent?.trim() ?? "";
 }
 
+// Bounded to 32 characters because that is the per-subtag ceiling in
+// `localization-runtime.ts`'s LEGACY_LOCALE_PATTERN, and these tags are a single dash-free subtag.
+// `Math.random().toString(36).slice(2)` is variable-length, so the unbounded join produced a 33-35
+// character tag roughly 2.4% of the time -- rejected as non-storable with "The locale must be
+// BCP-47 or a bounded alphanumeric custom tag", which read as a flaky suite rather than a helper
+// generating an out-of-contract value. The date+random prefix keeps uniqueness after truncation.
 function uniqueLocale(label: string): string {
   return `${label}${Date.now().toString(36)}${Math.random()
     .toString(36)
-    .slice(2)}`;
+    .slice(2)}`.slice(0, 32);
 }
 
 function renderedLabel(el: LyraSparkline): string | null {

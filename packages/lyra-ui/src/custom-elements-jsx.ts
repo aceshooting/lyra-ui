@@ -3909,6 +3909,7 @@ export type LyraEntityDossierReactProps = LyraReactElementProps<
   | 'lr-drill'
   | 'lr-entity-activate'
   | 'lr-entity-open'
+  | 'lr-entity-select'
   | 'lr-expand'
   | 'lr-node-expand'
   | 'lr-relation-activate'
@@ -7509,6 +7510,7 @@ export type LyraProvenancePanelReactProps = LyraReactElementProps<
   | 'lr-drill'
   | 'lr-entity-activate'
   | 'lr-entity-open'
+  | 'lr-entity-select'
   | 'lr-expand'
   | 'lr-relation-activate'
   | 'lr-toggle',

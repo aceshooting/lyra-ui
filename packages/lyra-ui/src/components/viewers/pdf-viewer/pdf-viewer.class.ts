@@ -915,6 +915,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         if (settled) return;
         settled = true;
         list.removeEventListener('lr-visible-range-changed', onRange as EventListener);
+        list.removeEventListener('lr-visible-range-change', onRange as EventListener);
         if (timeoutId !== undefined) view.clearTimeout(timeoutId);
         this.pendingPageMountWaitCancels.delete(cancel);
         resolve(mounted);
@@ -925,6 +926,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       cancel = () => finish(false);
       this.pendingPageMountWaitCancels.add(cancel);
       list.addEventListener('lr-visible-range-changed', onRange as EventListener);
+      list.addEventListener('lr-visible-range-change', onRange as EventListener);
       timeoutId = view.setTimeout(() => finish(false), 500);
     });
   }
@@ -2388,7 +2390,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   private renderBody(): TemplateResult {
     switch (this.loadState.kind) {
       case 'ready': {
-        return html`${this.renderToolbar()}<lr-virtual-list part="pages" exportparts="page:page, page-canvas:page-canvas, page-error:page-error, text-layer:text-layer, text-span:text-span, search-match:search-match, search-match-active:search-match-active" .source=${this.indexedPages(this.loadState.pageCount)} .renderItem=${this.renderPageItem} .activeItemId=${this.scrollDrivenPage ? '' : this.page} @lr-visible-range-changed=${this.onVisibleRangeChanged}></lr-virtual-list>`;
+        return html`${this.renderToolbar()}<lr-virtual-list part="pages" exportparts="page:page, page-canvas:page-canvas, page-error:page-error, text-layer:text-layer, text-span:text-span, search-match:search-match, search-match-active:search-match-active" .source=${this.indexedPages(this.loadState.pageCount)} .renderItem=${this.renderPageItem} .activeItemId=${this.scrollDrivenPage ? '' : this.page} @lr-visible-range-changed=${this.onVisibleRangeChanged} @lr-visible-range-change=${this.onVisibleRangeChanged}></lr-virtual-list>`;
       }
       case 'loading': return html`<div part="spinner">
         <lr-skeleton shape="rect" .announce=${false}></lr-skeleton>

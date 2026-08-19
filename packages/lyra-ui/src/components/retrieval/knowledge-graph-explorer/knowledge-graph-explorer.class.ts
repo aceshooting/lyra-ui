@@ -328,6 +328,12 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   private pendingNodeId?: string;
   /** Invalidates focus work when a newer activation, direct selection, close, or disconnect wins. */
   private activationGeneration = 0;
+  /** The most recently handled `lr-entity-select`/`lr-entity-activate` detail object, by
+   *  reference. `lr-entity-card`/`lr-entity-chip`/`lr-neighbor-list` each emit both events from
+   *  one gesture, unsnapshotted and sharing one `detail` object -- `onEntityActivate` is bound to
+   *  both names, so this lets the handler recognize "already handled this gesture" and activate
+   *  exactly once, regardless of which of the two events reaches it first. */
+  private handledEntityGestureDetail?: { entityId: string };
   private internalSelectionAssignment?: { value: string | null };
   /** The exact rendered `[part="node"]` element resolved for the currently-open popover
    *  (`renderer="svg"`, direct-click path only) -- re-read on every `lr-viewport-change` so the
@@ -828,10 +834,15 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     });
   };
 
+  /** Bound to both the canonical `lr-entity-select` and the deprecated `lr-entity-activate` on
+   *  the composed `lr-entity-card`/`lr-neighbor-list` -- both fire from one gesture, so the
+   *  detail-identity check below activates exactly once per gesture rather than twice. */
   private onEntityActivate = (
     event: CustomEvent<{ entityId: string }>
   ): void => {
     event.stopPropagation();
+    if (event.detail === this.handledEntityGestureDetail) return;
+    this.handledEntityGestureDetail = event.detail;
     void this.activateEntity(event.detail.entityId);
   };
 
@@ -996,6 +1007,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
         part="base"
         role=${groupRole ?? nothing}
         aria-label=${groupLabel ?? nothing}
+        @lr-entity-select=${this.onEntityActivate}
         @lr-entity-activate=${this.onEntityActivate}
       >
         <div part="toolbar">

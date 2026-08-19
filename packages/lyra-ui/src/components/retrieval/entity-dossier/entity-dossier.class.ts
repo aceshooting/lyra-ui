@@ -62,10 +62,15 @@ export interface LyraEntityDossierConfidence {
 }
 
 export interface LyraEntityDossierEventMap
-  extends Omit<LyraNeighborListEventMap, 'lr-entity-activate'>,
+  extends Omit<LyraNeighborListEventMap, 'lr-entity-activate' | 'lr-entity-select'>,
     LyraChunkInspectorEventMap,
-    Omit<LyraProvenancePanelEventMap, 'lr-entity-activate'>,
+    Omit<LyraProvenancePanelEventMap, 'lr-entity-activate' | 'lr-entity-select'>,
     Omit<LyraTabGroupEventMap, 'lr-tab-show'> {
+  /** Canonical name for the "user picked this entity" gesture, surfaced unchanged from the
+   *  embedded entity card or neighbor list. No composed child emits this with an
+   *  `occurrenceIndex` (only the deprecated `lr-entity-activate` alias does, via the provenance
+   *  panel's relationship path strip), so unlike that alias this stays the plain shape. */
+  'lr-entity-select': CustomEvent<{ entityId: string }>;
   'lr-entity-activate': CustomEvent<{
     entityId: string;
     occurrenceIndex?: number;
@@ -79,8 +84,8 @@ export interface LyraEntityDossierEventMap
  * Supporting chunks (`lr-chunk-inspector`), and Provenance (`lr-provenance-panel`). Pure layout —
  * it never fetches, ranks, or mutates graph/document state, and never re-renders what any of those
  * five composed components already render themselves; every one of their own events (`
- * lr-entity-activate`, `lr-node-expand`, `lr-chunk-open`, `lr-expand`, `lr-toggle`, `lr-tab-show`,
- * plus the provenance panel's own conduit set — `lr-entity-open`, `lr-drill`,
+ * lr-entity-select`, `lr-entity-activate`, `lr-node-expand`, `lr-chunk-open`, `lr-expand`,
+ * `lr-toggle`, `lr-tab-show`, plus the provenance panel's own conduit set — `lr-entity-open`, `lr-drill`,
  * `lr-relation-activate`) bubbles through unmodified (`composed: true` crosses this component's own
  * shadow boundary with no re-dispatch needed).
  *
@@ -106,6 +111,8 @@ export interface LyraEntityDossierEventMap
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-entity-dossier
+ * @event lr-entity-select - Surfaced unchanged from the embedded entity card or neighbor list.
+ *   `detail: { entityId }`. Fires before `lr-entity-activate`, from the same gesture.
  * @event lr-entity-activate - Surfaced unchanged from the embedded entity card or neighbor list.
  *   `detail: { entityId, occurrenceIndex? }`.
  * @event lr-node-expand - Surfaced unchanged from the embedded neighbor list.

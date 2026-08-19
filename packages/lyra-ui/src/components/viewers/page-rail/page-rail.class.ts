@@ -703,6 +703,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
           .renderItem=${this.renderPageItem}
           .activeItemId=${this.safePage}
           @lr-visible-range-changed=${this.stopVirtualListEvent}
+          @lr-visible-range-change=${this.stopVirtualListEvent}
           @lr-virtual-scroll=${this.stopVirtualListEvent}
           @lr-load-more=${this.stopVirtualListEvent}
         ></lr-virtual-list>

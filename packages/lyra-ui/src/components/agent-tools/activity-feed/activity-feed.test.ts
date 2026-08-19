@@ -510,6 +510,56 @@ describe('follow contract (virtualized)', () => {
     expect(count).to.equal(0);
   });
 
+  it('does not leak the internal lr-virtual-list lr-visible-range-change event past the host under its own name', async () => {
+    const el = (await fixture(
+      html`<lr-activity-feed expanded virtualize-at="0" .entries=${makeEntries(5)}></lr-activity-feed>`,
+    )) as LyraActivityFeed;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement;
+    let count = 0;
+    el.addEventListener('lr-visible-range-change', () => count++);
+
+    list.dispatchEvent(
+      new CustomEvent('lr-visible-range-change', {
+        detail: { start: 0, end: 1 },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await el.updateComplete;
+
+    expect(count).to.equal(0);
+  });
+
+  it('updates follow from the canonical range-change event without leaking it or firing lr-follow-change twice when both event names fire for the same gesture', async () => {
+    const el = (await fixture(
+      html`<lr-activity-feed mode="live" expanded virtualize-at="0" .entries=${makeEntries(5)}></lr-activity-feed>`,
+    )) as LyraActivityFeed;
+    // Let the initial tail-anchoring settle first -- while `anchoringVirtualTail` is still true
+    // (from the mount-time auto-scroll-to-bottom), the handler returns before touching `follow`
+    // at all, which would make this test pass for the wrong reason.
+    await twoFrames();
+    expect(el.follow).to.be.true;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement;
+    let leaked = 0;
+    let followChangeCount = 0;
+    el.addEventListener('lr-visible-range-change', () => leaked++);
+    el.addEventListener('lr-follow-change', () => followChangeCount++);
+    const detail = { start: 0, end: 1 };
+    // Both names fire from the same underlying gesture -- mirror that here rather than
+    // dispatching the canonical name in isolation.
+    list.dispatchEvent(
+      new CustomEvent('lr-visible-range-change', { detail, bubbles: true, composed: true }),
+    );
+    list.dispatchEvent(
+      new CustomEvent('lr-visible-range-changed', { detail, bubbles: true, composed: true }),
+    );
+    await el.updateComplete;
+
+    expect(leaked).to.equal(0);
+    expect(followChangeCount).to.equal(1);
+    expect(el.follow).to.be.false;
+  });
+
   it('stays below virtualizeAt using a plain keyed list', async () => {
     const el = (await fixture(
       html`<lr-activity-feed expanded virtualize-at="4" .entries=${makeEntries(4)}></lr-activity-feed>`,

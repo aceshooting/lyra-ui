@@ -45562,6 +45562,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-entity-select",
+            "type": "CustomEvent<{ entityId: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-expand",
             "type": "CustomEvent<{ chunkId: string; expanded: boolean }>",
             "cancelable": "never",
@@ -90061,6 +90067,12 @@
           },
           {
             "name": "lr-entity-open",
+            "type": "CustomEvent<{ entityId: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-entity-select",
             "type": "CustomEvent<{ entityId: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"

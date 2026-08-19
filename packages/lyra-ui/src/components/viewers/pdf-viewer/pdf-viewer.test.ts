@@ -558,6 +558,46 @@ describe("lr-pdf-viewer", () => {
     }
   });
 
+  it("updates the current page from the virtual list visible range using the canonical lr-visible-range-change name, without leaking it or double-firing lr-page-change when both event names fire for the same gesture", async () => {
+    const el = (await fixture(
+      html`<lr-pdf-viewer></lr-pdf-viewer>`
+    )) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(5));
+    const restore = stubFetch();
+    try {
+      el.src = "https://example.test/report.pdf";
+      await waitFor(el, "lr-virtual-list");
+      let leaked = 0;
+      let pageChangeCount = 0;
+      el.addEventListener("lr-visible-range-change", () => leaked++);
+      el.addEventListener("lr-page-change", () => pageChangeCount++);
+      const detail = { start: 2, end: 3 };
+      const list = el.shadowRoot!.querySelector("lr-virtual-list")!;
+      // Both names fire from the same underlying gesture -- mirror that here rather than
+      // dispatching the canonical name in isolation.
+      list.dispatchEvent(
+        new CustomEvent("lr-visible-range-change", {
+          detail,
+          bubbles: true,
+          composed: true,
+        })
+      );
+      list.dispatchEvent(
+        new CustomEvent("lr-visible-range-changed", {
+          detail,
+          bubbles: true,
+          composed: true,
+        })
+      );
+      await el.updateComplete;
+      expect(leaked).to.equal(0);
+      expect(pageChangeCount).to.equal(1);
+      expect(el.page).to.equal(3);
+    } finally {
+      restore();
+    }
+  });
+
   it("uses name in shadow but leaves a non-empty host aria-label on the host", async () => {
     const named = (await fixture(
       html`<lr-pdf-viewer name="Report.pdf"></lr-pdf-viewer>`
@@ -2603,6 +2643,46 @@ describe("goToPage", () => {
       el.remove();
       iframe.remove();
       restoreFetch();
+    }
+  });
+
+  it("waitForPageMount settles from the canonical lr-visible-range-change event, not just the deprecated lr-visible-range-changed alias", async () => {
+    const el = (await fixture(
+      html`<lr-pdf-viewer
+        style="--lr-pdf-viewer-height: 100px;"
+      ></lr-pdf-viewer>`
+    )) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(30));
+    const restore = stubFetch();
+    try {
+      el.src = "https://example.test/report.pdf";
+      await waitFor(el, "lr-virtual-list");
+      const list = el.shadowRoot!.querySelector(
+        "lr-virtual-list"
+      ) as HTMLElement & { overscan: number };
+      // A small height + zero overscan keeps the render window narrow -- page 20 is well outside
+      // it, so `waitForPageMount` cannot resolve synchronously and must wait on the event.
+      list.overscan = 0;
+      await nextFrame();
+      const internals = el as unknown as {
+        pageCanvases: Map<number, HTMLCanvasElement>;
+        waitForPageMount(page: number): Promise<boolean>;
+      };
+      expect(internals.pageCanvases.has(20)).to.equal(false);
+      const pending = internals.waitForPageMount(20);
+      // Simulate page 20's canvas mounting, then notify only through the canonical event name --
+      // the deprecated `lr-visible-range-changed` alias never fires in this test.
+      internals.pageCanvases.set(20, document.createElement("canvas"));
+      list.dispatchEvent(
+        new CustomEvent("lr-visible-range-change", {
+          detail: { start: 19, end: 19 },
+          bubbles: true,
+          composed: true,
+        })
+      );
+      expect(await pending).to.equal(true);
+    } finally {
+      restore();
     }
   });
 
