@@ -225,7 +225,11 @@ async function inspectDoc(context, doc) {
   }
 }
 
-const browser = await chromium.launch({ headless: true });
+// Same reasoning as web-test-runner.config.js's chromiumLaunchOptions: /dev/shm is small
+// (64MB on the runners, and by default in a container), this sweep drives several pages at
+// once across every docs entry, and exhausting it kills the renderer with no CDP error --
+// which reads as a stray action timeout on whichever story happened to be mid-scroll.
+const browser = await chromium.launch({ headless: true, args: ['--disable-dev-shm-usage'] });
 // One context for every doc: each doc still gets its own tab (its own navigation queue and session
 // storage), but they share the HTTP cache, so 282 loads don't re-fetch the same Storybook chunks.
 const context = await browser.newContext();

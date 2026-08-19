@@ -168,6 +168,11 @@ jobs:
     # socket. The tag MUST match the `playwright` devDependency; release-integrity asserts it.
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
+      # Docker defaults /dev/shm to 64MB. Chromium keeps its tile/compositor buffers
+      # there, and this repo has already been bitten once by exhausting it (see the
+      # --disable-dev-shm-usage note in web-test-runner.config.js): the renderer dies with
+      # no CDP error, so it surfaces as an unrelated-looking timeout rather than an OOM.
+      options: --shm-size=2g
     env:
       # The image runs as root but GitHub mounts HOME=/github/home, owned by the image's pwuser.
       # Firefox refuses to launch when $HOME is not owned by the current user ("Running Nightly
@@ -205,6 +210,11 @@ jobs:
     # socket. The tag MUST match the `playwright` devDependency; release-integrity asserts it.
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
+      # Docker defaults /dev/shm to 64MB. Chromium keeps its tile/compositor buffers
+      # there, and this repo has already been bitten once by exhausting it (see the
+      # --disable-dev-shm-usage note in web-test-runner.config.js): the renderer dies with
+      # no CDP error, so it surfaces as an unrelated-looking timeout rather than an OOM.
+      options: --shm-size=2g
     env:
       # The image runs as root but GitHub mounts HOME=/github/home, owned by the image's pwuser.
       # Firefox refuses to launch when $HOME is not owned by the current user ("Running Nightly
@@ -241,6 +251,11 @@ jobs:
     # socket. The tag MUST match the `playwright` devDependency; release-integrity asserts it.
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
+      # Docker defaults /dev/shm to 64MB. Chromium keeps its tile/compositor buffers
+      # there, and this repo has already been bitten once by exhausting it (see the
+      # --disable-dev-shm-usage note in web-test-runner.config.js): the renderer dies with
+      # no CDP error, so it surfaces as an unrelated-looking timeout rather than an OOM.
+      options: --shm-size=2g
     env:
       # The image runs as root but GitHub mounts HOME=/github/home, owned by the image's pwuser.
       # Firefox refuses to launch when $HOME is not owned by the current user ("Running Nightly
@@ -431,6 +446,11 @@ jobs:
     # socket. The tag MUST match the `playwright` devDependency; release-integrity asserts it.
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
+      # Docker defaults /dev/shm to 64MB. Chromium keeps its tile/compositor buffers
+      # there, and this repo has already been bitten once by exhausting it (see the
+      # --disable-dev-shm-usage note in web-test-runner.config.js): the renderer dies with
+      # no CDP error, so it surfaces as an unrelated-looking timeout rather than an OOM.
+      options: --shm-size=2g
     env:
       # The image runs as root but GitHub mounts HOME=/github/home, owned by the image's pwuser.
       # Firefox refuses to launch when $HOME is not owned by the current user ("Running Nightly
@@ -488,6 +508,11 @@ jobs:
     # socket. The tag MUST match the `playwright` devDependency; release-integrity asserts it.
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
+      # Docker defaults /dev/shm to 64MB. Chromium keeps its tile/compositor buffers
+      # there, and this repo has already been bitten once by exhausting it (see the
+      # --disable-dev-shm-usage note in web-test-runner.config.js): the renderer dies with
+      # no CDP error, so it surfaces as an unrelated-looking timeout rather than an OOM.
+      options: --shm-size=2g
     env:
       # The image runs as root but GitHub mounts HOME=/github/home, owned by the image's pwuser.
       # Firefox refuses to launch when $HOME is not owned by the current user ("Running Nightly
