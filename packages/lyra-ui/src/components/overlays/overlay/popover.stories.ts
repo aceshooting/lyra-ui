@@ -145,3 +145,27 @@ export const ExternalAnchor: Story = {
     </div>
   `,
 };
+
+export const DisclosureNavigation: Story = {
+  name: 'Disclosure navigation (popup-role="none")',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A list of links is neither a `dialog` nor a `menu`. `popup-role="none"` renders no role and no generated `aria-label`, and leaves `aria-haspopup` off the trigger, so the slotted `<nav>` owns the semantics and a screen reader announces "navigation, link" rather than "menu, menu item". The `aria-expanded`/`aria-controls` wiring the WAI-ARIA disclosure-navigation pattern needs is unchanged, as are light dismiss, Escape, and focus return.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <lr-popover .open=${context.viewMode !== 'docs'} popup-role="none" placement="bottom-start">
+      <button slot="trigger">Products</button>
+      <nav aria-label="Products">
+        <ul style="margin: 0; padding-inline-start: 1.25rem;">
+          <li><a href="#overview">Overview</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#changelog">Changelog</a></li>
+        </ul>
+      </nav>
+    </lr-popover>
+  `,
+};

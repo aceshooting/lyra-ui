@@ -2131,6 +2131,87 @@ describe('overlay semantic and lifecycle regressions', () => {
     expect(el.shadowRoot!.querySelector('[part~="popup"]')?.getAttribute('role')).to.equal('menu');
   });
 
+  it('renders no popup role or generated name under popup-role="none"', async () => {
+    const el = (await fixture(
+      html`<lr-popover popup-role="none"><button slot="trigger">Products</button>
+        <nav><ul><li><a href="#a">Alpha</a></li><li><a href="#b">Beta</a></li></ul></nav>
+      </lr-popover>`,
+    )) as LyraPopover;
+    await el.updateComplete;
+    const surface = el.shadowRoot!.querySelector('[part~="popup"]')!;
+
+    expect(surface.hasAttribute('role'), 'the author owns the semantics').to.be.false;
+    expect(
+      surface.hasAttribute('aria-label'),
+      'a generated name would rename the author nav',
+    ).to.be.false;
+  });
+
+  it('keeps the disclosure wiring but drops aria-haspopup under popup-role="none"', async () => {
+    const el = (await fixture(
+      html`<lr-popover popup-role="none"><button slot="trigger">Products</button>
+        <nav><ul><li><a href="#a">Alpha</a></li></ul></nav>
+      </lr-popover>`,
+    )) as LyraPopover;
+    await el.updateComplete;
+    const trigger = el.querySelector('button') as HTMLButtonElement;
+
+    expect(trigger.hasAttribute('aria-haspopup'), 'a disclosure owns no popup').to.be.false;
+    expect(trigger.getAttribute('aria-expanded')).to.equal('false');
+    expect(trigger.getAttribute('aria-controls'), 'still points at the surface').to.be.a('string');
+
+    el.open = true;
+    await el.updateComplete;
+    expect(trigger.getAttribute('aria-expanded')).to.equal('true');
+  });
+
+  it('restores aria-haspopup when popup-role leaves none at runtime', async () => {
+    const el = (await fixture(
+      html`<lr-popover popup-role="none"><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+    )) as LyraPopover;
+    await el.updateComplete;
+    const trigger = el.querySelector('button') as HTMLButtonElement;
+    expect(trigger.hasAttribute('aria-haspopup')).to.be.false;
+
+    el.popupRole = 'dialog';
+    await el.updateComplete;
+
+    expect(trigger.getAttribute('aria-haspopup'), 'the lease releases rather than strands').to.equal(
+      'dialog',
+    );
+    expect(el.shadowRoot!.querySelector('[part~="popup"]')!.getAttribute('role')).to.equal('dialog');
+  });
+
+  it('still light-dismisses and returns focus under popup-role="none"', async () => {
+    const el = (await fixture(
+      html`<lr-popover popup-role="none" style="--show-duration: 0ms; --hide-duration: 0ms">
+        <button slot="trigger">Products</button>
+        <nav><ul><li><a href="#a">Alpha</a></li></ul></nav>
+      </lr-popover>`,
+    )) as LyraPopover;
+    const trigger = el.querySelector('button') as HTMLButtonElement;
+    trigger.focus();
+    trigger.click();
+    await waitUntil(() => el.open);
+
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+    await waitUntil(() => !el.open, 'an outside pointer still dismisses');
+    expect(document.activeElement).to.equal(trigger);
+  });
+
+  it('is accessible as a disclosure navigation', async () => {
+    const el = (await fixture(
+      html`<lr-popover popup-role="none" open style="--show-duration: 0ms; --hide-duration: 0ms">
+        <button slot="trigger">Products</button>
+        <nav aria-label="Products">
+          <ul><li><a href="#a">Alpha</a></li><li><a href="#b">Beta</a></li></ul>
+        </nav>
+      </lr-popover>`,
+    )) as LyraPopover;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+
   it('treats non-finite showAt coordinates as a no-op', async () => {
     const popover = (await fixture(html`<lr-popover><p>Details</p></lr-popover>`)) as LyraPopover;
     popover.showAt({ x: Number.NaN, y: 10 });

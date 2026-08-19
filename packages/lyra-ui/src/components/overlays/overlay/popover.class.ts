@@ -52,7 +52,19 @@ const DEFAULT_DISTANCE = 8;
 let popoverConnectionSequence = 0;
 
 /** Semantic role vocabulary for a popover surface or mapped trigger contract. */
-export type LyraPopupRole = 'dialog' | 'menu';
+/**
+ * Semantic role a popover's positioned surface takes on.
+ *
+ * `'none'` is the escape hatch for the WAI-ARIA **disclosure navigation** pattern: a list of links
+ * is not an application action menu (`'menu'` announces "menu, menu item" and expects `menuitem`
+ * children) and is not an interruptive surface (`'dialog'`). Under `'none'` the popover contributes
+ * positioning, light dismiss, and the `aria-expanded`/`aria-controls` wiring the disclosure pattern
+ * requires, while the author's own `<nav>`/`<ul>` inside owns the semantics and the accessible
+ * name. No `role` and no generated `aria-label` are emitted, and the trigger carries no
+ * `aria-haspopup` -- a disclosure button does not own a popup, and `aria-haspopup="none"` is an
+ * invalid attribute value that axe flags as a critical violation.
+ */
+export type LyraPopupRole = 'dialog' | 'menu' | 'none';
 
 export type { LyraArrowPlacement, OverlayVirtualRect };
 
@@ -200,7 +212,10 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    *  including an explicitly empty value, before this property or the localized role fallback. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   private _popupRole: LyraPopupRole = 'dialog';
-  /** Semantic role used by the popup. */
+  /** Semantic role used by the popup. `dialog` (default) for a contextual surface, `menu` for an
+   *  action menu, or `none` to render no role and no generated name so the slotted content owns
+   *  its own semantics -- see `LyraPopupRole` for why a navigation disclosure needs that.
+   *  @default 'dialog' */
   @property({ attribute: 'popup-role' })
   get popupRole(): LyraPopupRole {
     return this._popupRole;
@@ -305,9 +320,10 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   }
 
   /** Semantic role owned by the positioned surface. Dropdown overrides this because its contained
-   * menu is the real role/name owner and the outer element contributes positioning chrome only. */
+   * menu is the real role/name owner and the outer element contributes positioning chrome only.
+   * `'none'` reaches the same undefined result by author request rather than by subclass. */
   protected get popupSurfaceRole(): LyraPopupRole | undefined {
-    return this.popupRole;
+    return this.popupRole === 'none' ? undefined : this.popupRole;
   }
 
   /** Resolved popup name, also available to a mapped subclass that delegates role ownership to a
@@ -677,7 +693,9 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     const popup = renderRoot?.querySelector<HTMLElement>('[part~="popup"]') ?? null;
     const contribution = {
       attributes: {
-        'aria-haspopup': this.triggerPopupRole,
+        // A null value is skipped by the ARIA lease, so `'none'` leaves any author-written
+        // aria-haspopup on the trigger untouched instead of stamping an invalid literal 'none'.
+        'aria-haspopup': this.triggerPopupRole === 'none' ? null : this.triggerPopupRole,
         'aria-expanded': this.open ? 'true' : 'false',
       },
       controls: popup ? [popup] : [],
