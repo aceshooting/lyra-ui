@@ -229,3 +229,109 @@ describe('lr-file-icon', () => {
     expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
   });
 });
+
+describe('file type metadata registry input validation', () => {
+  // Consumer entries are untrusted: a malformed record must be dropped whole rather than
+  // half-installed, and it must never displace the built-in record it collides with.
+  const VALID = { label: 'Custom', icon: 'code', category: 'code' } as const;
+  const asEntry = (value: unknown) => value as LyraFileTypeMetadataEntry;
+
+  const invalidMimeTokens: [label: string, mimeTypes: unknown][] = [
+    ['a non-string MIME token', 42],
+    ['a MIME token carrying no slash', 'notamime'],
+    ['a MIME token over the length ceiling', `application/${'x'.repeat(300)}`],
+    ['an empty MIME token', '   '],
+  ];
+
+  for (const [label, mimeTypes] of invalidMimeTokens) {
+    it(`drops an entry with ${label}`, () => {
+      const registry = createFileTypeMetadataRegistry([
+        asEntry({ mimeTypes, metadata: VALID }),
+      ]);
+      expect(registry.resolve(String(mimeTypes)).label).to.equal('File');
+    });
+  }
+
+  const invalidMetadata: [label: string, metadata: unknown][] = [
+    ['an unknown icon', { ...VALID, icon: 'nope' }],
+    ['an unknown category', { ...VALID, category: 'nope' }],
+    ['an empty label', { ...VALID, label: '' }],
+    ['a label over the length ceiling', { ...VALID, label: 'x'.repeat(513) }],
+    ['a non-string description', { ...VALID, description: 5 }],
+    ['a description over the length ceiling', { ...VALID, description: 'x'.repeat(2049) }],
+    ['a null metadata record', null],
+  ];
+
+  for (const [label, metadata] of invalidMetadata) {
+    it(`keeps the built-in record when a consumer entry carries ${label}`, () => {
+      const registry = createFileTypeMetadataRegistry([
+        asEntry({ mimeTypes: 'application/pdf', metadata }),
+      ]);
+      expect(registry.resolve('application/pdf').label).to.equal('PDF');
+    });
+  }
+
+  it('accepts a MIME token carrying parameters by matching on the bare type', () => {
+    const registry = createFileTypeMetadataRegistry([
+      asEntry({ mimeTypes: 'text/x-custom; charset=utf-8', metadata: VALID }),
+    ]);
+    expect(registry.resolve('text/x-custom').label).to.equal('Custom');
+  });
+
+  it('installs an entry whose extensions field is not an array, without extension aliases', () => {
+    const registry = createFileTypeMetadataRegistry([
+      asEntry({ mimeTypes: 'text/x-custom', metadata: { ...VALID, extensions: 'nope' } }),
+    ]);
+    expect(registry.resolve('text/x-custom').label).to.equal('Custom');
+    expect(registry.resolve('', 'file.nope').label).to.equal('File');
+  });
+
+  it('normalizes an extension written without a leading dot', () => {
+    const registry = createFileTypeMetadataRegistry([
+      asEntry({ mimeTypes: 'text/x-custom', metadata: { ...VALID, extensions: ['xcust'] } }),
+    ]);
+    expect(registry.resolve('', 'notes.xcust').label).to.equal('Custom');
+  });
+
+  it('discards individually malformed extensions while keeping the valid ones', () => {
+    const registry = createFileTypeMetadataRegistry([
+      asEntry({
+        mimeTypes: 'text/x-custom',
+        metadata: {
+          ...VALID,
+          extensions: [42, '.', ' ', '.has space', '.has/slash', '.has?query', `.${'x'.repeat(80)}`, '.keep'],
+        },
+      }),
+    ]);
+    expect(registry.resolve('', 'notes.keep').label).to.equal('Custom');
+    expect(registry.resolve('', 'notes.has space').label).to.equal('File');
+  });
+
+  it('preserves the built-in registry when a consumer supplies a throwing iterable', () => {
+    const hostile = {
+      [Symbol.iterator]() {
+        return {
+          next() {
+            throw new Error('hostile iterable');
+          },
+        };
+      },
+    };
+    const registry = createFileTypeMetadataRegistry(
+      hostile as unknown as readonly LyraFileTypeMetadataEntry[]
+    );
+    expect(registry.resolve('application/pdf').label).to.equal('PDF');
+  });
+
+  it('releases the extension aliases a replaced MIME record previously owned', () => {
+    const registry = createFileTypeMetadataRegistry([
+      asEntry({
+        mimeTypes: 'application/pdf',
+        metadata: { label: 'Portable Doc', icon: 'pdf', category: 'document', extensions: ['.portable'] },
+      }),
+    ]);
+    expect(registry.resolve('application/pdf').label).to.equal('Portable Doc');
+    expect(registry.resolve('', 'report.pdf').label).to.equal('File');
+    expect(registry.resolve('', 'report.portable').label).to.equal('Portable Doc');
+  });
+});

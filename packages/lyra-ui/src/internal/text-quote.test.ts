@@ -1472,3 +1472,104 @@ describe('defensive edge cases for range-materialization helpers', () => {
     }
   });
 });
+
+describe('grapheme-continuation joining across item boundaries', () => {
+  // `scopeFromItems` inserts a synthetic space between two items unless the second item continues
+  // the first item's final grapheme cluster. These fixtures drive that predicate directly: a joined
+  // pair normalizes to `first + second`, a separated pair to `first + ' ' + second`, so the two
+  // outcomes can never coincide and each row proves which arm ran. Every character is written as an
+  // escape -- half of them are invisible, and a literal would be unreviewable.
+  const scopeTextForPair = (first: string, second: string): string => {
+    const root = document.createElement('div');
+    const firstSpan = document.createElement('span');
+    const secondSpan = document.createElement('span');
+    firstSpan.textContent = first;
+    secondSpan.textContent = second;
+    root.append(firstSpan, secondSpan);
+    document.body.appendChild(root);
+    try {
+      return scopeFromItems([
+        { text: first, element: firstSpan },
+        { text: second, element: secondSpan },
+      ]).text;
+    } finally {
+      root.remove();
+    }
+  };
+
+  const joined: [label: string, first: string, second: string][] = [
+    ['a leading jamo followed by another leading jamo', '\u1100', '\u1100'],
+    ['an extended leading jamo followed by a vowel jamo', '\ua960', '\u1161'],
+    ['a leading jamo followed by a precomposed LV syllable', '\u1100', '\uac00'],
+    ['a leading jamo followed by a precomposed LVT syllable', '\u1100', '\uac01'],
+    ['a vowel jamo followed by an extended vowel jamo', '\u1161', '\ud7b0'],
+    ['a vowel jamo followed by a trailing jamo', '\u1161', '\u11a8'],
+    ['a precomposed LV syllable followed by a trailing jamo', '\uac00', '\u11a8'],
+    ['a precomposed LVT syllable followed by a trailing jamo', '\uac01', '\u11a8'],
+    ['a trailing jamo followed by an extended trailing jamo', '\u11a8', '\ud7cb'],
+    ['a combining mark continuing the previous base character', 'e', '\u0301'],
+    ['a variation selector continuing the previous character', 'a', '\ufe0f'],
+    ['a zero-width joiner opening the second item', 'a', '\u200db'],
+    ['a zero-width joiner closing the first item', 'a\u200d', 'b'],
+  ];
+
+  for (const [label, first, second] of joined) {
+    it(`joins ${label} without a synthetic space`, () => {
+      expect(scopeTextForPair(first, second)).to.equal(
+        `${first}${second}`.normalize('NFC')
+      );
+    });
+  }
+
+  const separated: [label: string, first: string, second: string][] = [
+    ['two unrelated letters', 'a', 'b'],
+    ['a non-Hangul character before a leading jamo', 'a', '\u1100'],
+    ['a trailing jamo before a vowel jamo', '\u11a8', '\u1161'],
+    ['a vowel jamo before a leading jamo', '\u1161', '\u1100'],
+    ['two private-use characters above the syllable block', '\ue000', '\ue001'],
+  ];
+
+  for (const [label, first, second] of separated) {
+    it(`separates ${label} with a synthetic space`, () => {
+      expect(scopeTextForPair(first, second)).to.equal(
+        `${first} ${second}`.normalize('NFC')
+      );
+    });
+  }
+
+  it('skips a leading soft hyphen when deciding whether the second item continues a cluster', () => {
+    expect(scopeTextForPair('e', '\u00ad\u0301')).to.equal('\u00e9');
+  });
+
+  it('treats a leading whitespace character as an existing separator', () => {
+    expect(scopeTextForPair('a', ' b')).to.equal('a b');
+  });
+
+  it('reads a trailing surrogate pair as one code point when joining the next item', () => {
+    expect(scopeTextForPair('\u{1f600}', '\u200d\u{1f680}')).to.equal(
+      '\u{1f600}\u200d\u{1f680}'
+    );
+  });
+
+  it('does not join across an item whose text normalizes away entirely', () => {
+    const root = document.createElement('div');
+    const before = document.createElement('span');
+    const soft = document.createElement('span');
+    const after = document.createElement('span');
+    before.textContent = 'a';
+    soft.textContent = '\u00ad';
+    after.textContent = 'b';
+    root.append(before, soft, after);
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromItems([
+        { text: 'a', element: before },
+        { text: '\u00ad', element: soft },
+        { text: 'b', element: after },
+      ]);
+      expect(scope.text).to.equal('a b');
+    } finally {
+      root.remove();
+    }
+  });
+});

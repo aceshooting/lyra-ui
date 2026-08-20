@@ -1365,3 +1365,64 @@ it('registers a text/csv renderer that matches .csv files and renders the viewer
   expect(viewer.anchor).to.be.null;
   expect(viewer.highlights).to.deep.equal([]);
 });
+
+it('surfaces a non-OK HTTP response as a load error', async () => {
+  const original = window.fetch;
+  window.fetch = (() =>
+    Promise.resolve({
+      ok: false,
+      status: 404,
+      statusText: 'Not Found',
+      text: () => Promise.resolve(''),
+    } as Response)) as typeof window.fetch;
+  try {
+    const el = (await fixture(
+      html`<lr-csv-viewer></lr-csv-viewer>`
+    )) as LyraCsvViewer;
+    el.src = 'https://example.test/missing.csv';
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="error"]') !== null,
+      'a rejected HTTP status never rendered the error state'
+    );
+    expect(
+      el.shadowRoot!.querySelectorAll('[part="error"]').length
+    ).to.equal(1);
+  } finally {
+    window.fetch = original;
+  }
+});
+
+it('re-applies an active search when a reconnect reloads the source', async () => {
+  const original = window.fetch;
+  let body = GRID_CSV;
+  window.fetch = (() =>
+    Promise.resolve({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      text: () => Promise.resolve(body),
+    } as Response)) as typeof window.fetch;
+  try {
+    const el = (await fixture(
+      html`<lr-csv-viewer src="https://example.test/people.csv"></lr-csv-viewer>`
+    )) as LyraCsvViewer;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('lr-virtual-list') !== null
+    );
+    expect(await el.search('ada')).to.equal(2);
+    // A reconnect reloads the same `src`, which -- unlike a `src` change -- does not clear the
+    // active query, so the reloaded grid must be searched again on the consumer's behalf.
+    body = 'Name,Role\nAda,One\nAda,Two\nAda,Three';
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await waitUntil(
+      () =>
+        (el as unknown as { searchMatches: unknown[] }).searchMatches
+          .length === 3,
+      'the active search was not re-applied to the reloaded source'
+    );
+  } finally {
+    window.fetch = original;
+  }
+});

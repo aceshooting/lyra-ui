@@ -298,3 +298,44 @@ describe('parseStackTrace', () => {
     expect(groups[0]!.frames[2]).to.deep.include({ functionName: 'other', file: 'https://example.com/other.js' });
   });
 });
+
+describe('malformed frame tokens degrade to raw trace text', () => {
+  // Every row is a frame the matchers must refuse rather than half-parse: a fabricated file or
+  // coordinate here would become a navigation target in the rendered component, so the contract is
+  // that an unparseable frame keeps its original text and exposes no location at all.
+  const frameFor = (line: string) => {
+    // A trace whose every frame is unparseable resolves to no groups at all (the component
+    // then renders the raw text), so each fixture pairs the malformed frame with a valid one.
+    const groups = parseStackTrace(
+      ['Error: boom', '    at ok (/app/ok.js:1:1)', line].join('\n'),
+      DEFAULT_INTERNAL_PATTERNS
+    );
+    return groups[0]!.frames[1]!;
+  };
+
+  const malformed: [label: string, line: string][] = [
+    ['a column token that is not a digit run', '    at fn (/app/a.js:1:x)'],
+    [
+      'a column token that overflows a safe integer',
+      `    at fn (/app/a.js:1:${OVERFLOW_LOCATION})`,
+    ],
+    ['a parenthesised location not preceded by a space', '    at fn(/app/a.js:1:1)'],
+    ['a parenthesised location with no coordinates', '    at fn (native)'],
+    ['a frame whose remainder is a single character', '    at )'],
+    ['a bare frame with no colon-separated coordinates', '    at /app/a.js'],
+    ['a bare frame with an empty file token', '    at :1:1'],
+    ['a Firefox frame whose function name contains whitespace', 'my fn@/app/a.js:1:1'],
+    ['a Firefox frame with no colon-separated coordinates', 'fn@/app/a.js'],
+    ['a Firefox frame with an empty file token', 'fn@:1:1'],
+  ];
+
+  for (const [label, line] of malformed) {
+    it(`keeps ${label} as raw text with no location`, () => {
+      const frame = frameFor(line);
+      expect(frame.raw).to.equal(line);
+      expect(frame.file).to.equal(undefined);
+      expect(frame.line).to.equal(undefined);
+      expect(frame.column).to.equal(undefined);
+    });
+  }
+});
