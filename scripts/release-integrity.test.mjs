@@ -21,6 +21,7 @@ import {
   validateWorkflowSource,
   waitForSuccessfulCi,
   waitForSuccessfulFullEngine,
+  evaluateSiteFreshness,
 } from './release-integrity.mjs';
 import {
   changesetPackagePlan,
@@ -1368,4 +1369,62 @@ test('every Playwright container image tracks the pinned playwright dependency',
   // Drives the browser cache key for the two VM-only legs.
   const cacheVersion = readFileSync(path.join(repoRoot, '.github/playwright-version.txt'), 'utf8').trim();
   assert.equal(cacheVersion, pinned, '.github/playwright-version.txt must match the pinned playwright version');
+});
+
+// The published upgrade feed lagging npm was reported twice, from two different consumer projects,
+// on two consecutive releases. Both shapes are pinned here because they fail differently: a stale
+// `latest` misleads a reader who diffs from it, while a missing `releases` entry defeats even a
+// reader who ignores `latest` and scans the array. The real 11.1.0 report hit BOTH at once.
+test('treats a published upgrade feed that lags npm as an incomplete release', () => {
+  const fresh = evaluateSiteFreshness({
+    packageName: '@aceshooting/lyra-ui',
+    expectedVersion: '11.3.0',
+    npmDistTagLatest: '11.3.0',
+    changelog: { latest: '11.3.0', releases: [{ version: '11.3.0' }, { version: '11.2.0' }] },
+  });
+  assert.deepEqual(fresh, { fresh: true, problems: [] });
+
+  // The exact shape reported for 11.1.0: absent from `latest` AND from `releases`.
+  const lagging = evaluateSiteFreshness({
+    packageName: '@aceshooting/lyra-ui',
+    expectedVersion: '11.1.0',
+    npmDistTagLatest: '11.1.0',
+    changelog: { latest: '11.0.0', releases: [{ version: '11.0.0' }] },
+  });
+  assert.equal(lagging.fresh, false);
+  assert.equal(lagging.problems.length, 2);
+  assert.match(lagging.problems[0], /"latest" is 11\.0\.0, expected 11\.1\.0/);
+  assert.match(lagging.problems[1], /"releases" contains no entry for 11\.1\.0/);
+
+  // A feed whose `latest` is right but whose array is missing the entry is still not fresh --
+  // a consumer reading release notes between two versions finds nothing to read.
+  const partial = evaluateSiteFreshness({
+    packageName: '@aceshooting/lyra-ui',
+    expectedVersion: '11.3.0',
+    npmDistTagLatest: '11.3.0',
+    changelog: { latest: '11.3.0', releases: [{ version: '11.2.0' }] },
+  });
+  assert.equal(partial.fresh, false);
+  assert.equal(partial.problems.length, 1);
+
+  // npm itself not having the version yet is reported distinctly from the feed being stale, so a
+  // maintainer can tell "publish CI has not finished" from "the site was never deployed".
+  const npmBehind = evaluateSiteFreshness({
+    packageName: '@aceshooting/lyra-ui',
+    expectedVersion: '11.3.0',
+    npmDistTagLatest: '11.2.0',
+    changelog: { latest: '11.3.0', releases: [{ version: '11.3.0' }] },
+  });
+  assert.equal(npmBehind.fresh, false);
+  assert.match(npmBehind.problems[0], /npm dist-tags\.latest .* is 11\.2\.0, expected 11\.3\.0/);
+
+  // An unreachable or non-JSON feed fails closed rather than being read as fresh.
+  const unreachable = evaluateSiteFreshness({
+    packageName: '@aceshooting/lyra-ui',
+    expectedVersion: '11.3.0',
+    npmDistTagLatest: '11.3.0',
+    changelog: null,
+  });
+  assert.equal(unreachable.fresh, false);
+  assert.match(unreachable.problems[0], /could not be fetched/);
 });

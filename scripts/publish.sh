@@ -770,3 +770,45 @@ for dir in "${RELEASE_DIRS[@]}"; do
 done
 echo
 echo "Watch progress with: gh run list --workflow=publish.yml"
+
+# ---------------------------------------------------------------------------
+# A release is not finished when npm has the tarball. The documented upgrade workflow tells every
+# consumer -- and every upgrading agent -- to fetch https://www.lyra-ui.com/changelog.json and read
+# the releases between their installed version and its "latest". That feed is built by the sibling
+# lyra-ui.com repository and deployed separately, so between this point and that deploy it still
+# advertises the PREVIOUS release as current.
+#
+# Consumers reported that window twice, from two different projects, on two consecutive releases
+# (site 11.0.0 vs npm 11.1.0, then site 11.1.0 vs npm 11.2.0). It fails silently and it inverts the
+# workflow's own advice: a reader who trusts the feed concludes they are already current and never
+# reads the new release. One of those skipped releases contained a bug fix they were waiting for.
+#
+# So the release does not end quietly here any more. This waits for npm, then for the feed, and
+# says exactly what to do while it waits. It runs after the tags and GitHub Releases already exist,
+# which is deliberate: it can no longer undo anything, and its whole job is to stop the maintainer
+# walking away believing the release is complete when the half consumers actually read is stale.
+# ---------------------------------------------------------------------------
+primary_dir=""
+for dir in "${RELEASE_DIRS[@]}"; do
+  if [[ "${PKG_NAME[$dir]}" == "@aceshooting/lyra-ui" ]]; then primary_dir="$dir"; fi
+done
+
+if [[ -n "$primary_dir" ]]; then
+  echo
+  echo "==> Verifying the published upgrade feed catches up (npm + changelog.json)"
+  echo "    If this waits, deploy the sibling site now: cd ../lyra-ui.com and sync + deploy it."
+  if node scripts/release-integrity.mjs verify-site-freshness \
+    --package "${PKG_NAME[$primary_dir]}" \
+    --version "${NEW_VERSION[$primary_dir]}" \
+    --timeout-seconds 3600 \
+    --poll-seconds 30; then
+    echo "Release complete: npm and the published upgrade feed agree."
+  else
+    echo
+    echo "!! RELEASE INCOMPLETE — npm has the release but the published feed does not." >&2
+    echo "!! Consumers following the documented upgrade workflow will not see this version." >&2
+    echo "!! Deploy ../lyra-ui.com, then re-run:" >&2
+    echo "!!   node scripts/release-integrity.mjs verify-site-freshness \\" >&2
+    echo "!!     --package ${PKG_NAME[$primary_dir]} --version ${NEW_VERSION[$primary_dir]}" >&2
+  fi
+fi

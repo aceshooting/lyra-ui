@@ -549,6 +549,116 @@ function compareRebuildCli(options) {
   );
 }
 
+/**
+ * The published site's `changelog.json` is what the documented upgrade workflow tells a consumer
+ * (and an upgrading agent) to read: fetch it, and read every release between the installed version
+ * and its `latest`. It is built by the SIBLING lyra-ui.com repository from this repo's CHANGELOG.md
+ * and deployed separately, AFTER the release -- so between `npm publish` and that deploy the feed
+ * advertises the previous version as current.
+ *
+ * That window is not theoretical and it is not brief. It was reported twice, from two different
+ * consumer projects, on two consecutive releases: the site said 11.0.0 while npm had 11.1.0, then
+ * said 11.1.0 while npm had 11.2.0. The failure is silent and it inverts the workflow's own
+ * advice -- a reader who trusts the feed concludes they are already current and never reads the
+ * newest release. Both reporters only caught it by reading the installed tarball's CHANGELOG.md
+ * instead, which is precisely what the documented workflow tells them not to have to do.
+ *
+ * A stale feed is therefore treated here as an incomplete release rather than a docs nit.
+ */
+export function evaluateSiteFreshness({ packageName, expectedVersion, npmDistTagLatest, changelog }) {
+  const problems = [];
+  if (npmDistTagLatest !== expectedVersion) {
+    problems.push(
+      `npm dist-tags.latest for ${packageName} is ${npmDistTagLatest ?? '(none)'}, expected ${expectedVersion}`,
+    );
+  }
+  if (!changelog || typeof changelog !== 'object') {
+    problems.push('changelog.json could not be fetched or was not an object');
+    return { fresh: false, problems };
+  }
+  if (changelog.latest !== expectedVersion) {
+    problems.push(`changelog.json "latest" is ${changelog.latest ?? '(none)'}, expected ${expectedVersion}`);
+  }
+  const releases = Array.isArray(changelog.releases) ? changelog.releases : [];
+  if (!releases.some((entry) => entry?.version === expectedVersion)) {
+    // Reported as its own defect: the newest release was missing from the array ENTIRELY, not just
+    // from the `latest` field, so even a reader who ignored `latest` still could not find it.
+    problems.push(`changelog.json "releases" contains no entry for ${expectedVersion}`);
+  }
+  return { fresh: problems.length === 0, problems };
+}
+
+async function fetchJsonOrNull(url, timeoutMs = 20000) {
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+function npmDistTagLatest(packageName) {
+  try {
+    const raw = execFileSync('npm', ['view', packageName, 'dist-tags.latest'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    return raw.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+async function verifySiteFreshnessCli(options) {
+  const packageName = requireOption(options, 'package');
+  const expectedVersion = requireOption(options, 'version');
+  const changelogUrl = options.changelog_url ?? 'https://www.lyra-ui.com/changelog.json';
+  const timeoutSeconds = Number(options.timeout_seconds ?? 1800);
+  const pollSeconds = Number(options.poll_seconds ?? 30);
+  if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0) {
+    throw new Error('--timeout-seconds must be a positive number.');
+  }
+  if (!Number.isFinite(pollSeconds) || pollSeconds <= 0) {
+    throw new Error('--poll-seconds must be a positive number.');
+  }
+
+  const deadline = Date.now() + timeoutSeconds * 1000;
+  let last = { fresh: false, problems: ['not yet checked'] };
+  for (;;) {
+    last = evaluateSiteFreshness({
+      packageName,
+      expectedVersion,
+      npmDistTagLatest: npmDistTagLatest(packageName),
+      changelog: await fetchJsonOrNull(changelogUrl),
+    });
+    if (last.fresh) {
+      console.log(
+        `npm and ${changelogUrl} both report ${packageName}@${expectedVersion} as latest.`,
+      );
+      return;
+    }
+    if (Date.now() >= deadline) break;
+    console.log(`Waiting for the published feed to catch up (${last.problems.join('; ')})...`);
+    await new Promise((resolve) => setTimeout(resolve, pollSeconds * 1000));
+  }
+
+  throw new Error(
+    [
+      `The published upgrade feed is stale for ${packageName}@${expectedVersion}:`,
+      ...last.problems.map((problem) => `  - ${problem}`),
+      '',
+      'The documented upgrade workflow tells consumers to read changelog.json and diff from its',
+      '"latest", so until this is fixed every upgrading consumer concludes they are already current',
+      'and silently skips this release. It has already happened on two consecutive releases.',
+      '',
+      'Fix it by deploying the sibling site, which regenerates the feed from this repo\'s CHANGELOG.md:',
+      '  cd ../lyra-ui.com && <its sync + build + deploy steps> ',
+      'then re-run this check.',
+    ].join('\n'),
+  );
+}
+
 export async function runCli(argv = process.argv.slice(2)) {
   const options = parseOptions(argv);
   if (options.command === 'wait-ci') return waitCiCli(options);
@@ -558,8 +668,9 @@ export async function runCli(argv = process.argv.slice(2)) {
   if (options.command === 'validate-workflow-source') return validateWorkflowSourceCli(options);
   if (options.command === 'validate-tarball') return validateTarballCli(options);
   if (options.command === 'compare-rebuild') return compareRebuildCli(options);
+  if (options.command === 'verify-site-freshness') return verifySiteFreshnessCli(options);
   throw new Error(
-    'Usage: release-integrity.mjs wait-ci|wait-full-engine|resolve-tag|validate-git-tag|validate-workflow-source|validate-tarball|compare-rebuild [options]',
+    'Usage: release-integrity.mjs wait-ci|wait-full-engine|resolve-tag|validate-git-tag|validate-workflow-source|validate-tarball|compare-rebuild|verify-site-freshness [options]',
   );
 }
 
