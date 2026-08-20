@@ -892,12 +892,14 @@ them — typically in a workspace `.vscode/settings.json` so the whole team pick
 ```
 
 Both settings accept an array, so add these alongside any other custom-data files the workspace
-already references. WebStorm/IntelliJ users get the same tag, attribute, and custom-property
-completion automatically from the bundled `web-types.json` — JetBrains IDEs pick up a dependency's
-`web-types.json` with no extra configuration once the package is installed. The selected plain
-custom-element schemas do not define structural slot or CSS-part completion fields, so those names
-remain available as reference prose in each element's hover description rather than as completion
-items.
+already references. WebStorm/IntelliJ users get more from the bundled `web-types.json`, with no
+extra configuration once the package is installed: tag, attribute, JS property (`.prop=${…}`), DOM
+event (`@lr-event=${…}`), slot and custom-property completion. The property and event contributions
+matter most here — these are Lit components, so the idiomatic binding style is `.prop=`/`@event=`
+rather than attributes, and 865 public members are declared `attribute: false` and reachable no other
+way. The VS Code custom-data format defines no properties/events/slots concept, so in
+`vscode-html-data.json` those names remain reference prose in each tag's hover description. CSS-part
+names are prose in both files.
 
 Build tools can import the published manifest directly through its explicit package export:
 
@@ -995,6 +997,7 @@ API details.
 | `<lr-time-range>`              | — (extra)                                               | Two-handle brush/scrubber over a numeric domain                                                                                                                                                                                                                                                                               |
 | `<lr-sequence-playback>`       | — (extra)                                               | Play/pause sequence index stepper over `itemCount`, with `currentIndex` and `lr-sequence-step`                                                                                                                                                                                                                                |
 | `<lr-heatmap>`                 | — (extra)                                               | DPR-aware Canvas heatmap with matrix and calendar (`mode="calendar"`) layouts, `fit-to-width` responsive scaling                                                                                                                                                                                                              |
+| `<lr-funnel>`                  | — (extra)                                               | Dependency-free conversion funnel: each stage a bar sized as its share of the FIRST stage, labelled with both its absolute value and its share, with per-stage drop-off and an optional comparison series normalized to its own first stage; plain HTML, so the accessible representation is the chart itself                    |
 | `<lr-sequence-strip>`          | — (extra)                                               | Compact, one-thin-cell-per-item strip visualizing a sequence of categorical states with an optional secondary per-cell marker — pure CSS/flex, no chart.js/SVG/canvas; a named roving `role="list"` whose `role="listitem"` cells are individually inspectable with Arrow/Home/End navigation but deliberately non-activating |
 | `<lr-graph>`                   | — (extra)                                               | Force-directed node-link diagram with pan/zoom/drag, directed/styled relationship links, and rich accessible metadata — needs the optional peer deps `d3-force`, `d3-drag`, `d3-zoom`, `d3-selection`                                                                                                                         |
 | `<lr-tree>` + `<lr-tree-item>` | `wa-tree` / `wa-tree-item` / `sl-tree` / `sl-tree-item` | Expand/collapse hierarchy with structured icon/label/description/badge rows, optional richer accessible labels, and APG tree keyboard navigation                                                                                                                                                                              |

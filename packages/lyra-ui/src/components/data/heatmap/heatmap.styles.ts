@@ -172,6 +172,14 @@ export const styles = css`
     pointer-events: none;
     z-index: var(--lr-layer-content);
   }
+  /* Flipped to below the cell when the frozen band, or the block start of the scrollport, leaves
+     no room above it -- an unfrozen heatmap never takes this branch, because nothing clips it
+     there. The gap mirrors the negative one above, so the tooltip keeps the same distance from
+     the cell either way. */
+  [part="tooltip"].tooltip-below {
+    transform: translate(-50%, 0);
+    margin-block-start: var(--lr-size-6px);
+  }
   [part="tooltip"][hidden] {
     display: none;
   }

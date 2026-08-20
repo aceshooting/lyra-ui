@@ -492,8 +492,11 @@ number][]; colorSteps?: [number, string][]; countFont?: string[] }` turns the en
   entry, which is right for tens of pins and both unreadable and expensive for thousands.
   `radiusSteps` and `colorSteps` are `['step', …]` breaks keyed on `point_count`, in the same
   ascending `[value, output]` vocabulary as `choropleth.stops` — including the same base rule, where
-  the first entry's own output covers everything below the first threshold. No fill or line layer is
-  created for a clustered entry, because MapLibre's clustering keeps point features only. The count
+  the first entry's own output covers everything below the first threshold, and the same colour
+  resolution, where a `var(--lr-…)` reference in a `colorSteps` entry is resolved against the host
+  before it reaches MapLibre (which paints to a WebGL canvas and never sees the CSS cascade), so a
+  retheme moves the cluster breaks with everything else. No fill or line layer is created for a
+  clustered entry, because MapLibre's clustering keeps point features only. The count
   label needs glyphs: a style that declares none gets the graduated circles without the numbers
   (adding a text layer against a glyph-less style paints nothing and only emits peer errors), and
   `countFont` names the font stack when your style's glyph source lacks MapLibre's spec default.
@@ -511,10 +514,15 @@ weightRange?: [number, number]; stops?: [number, string][]; radius?: number; int
   through, which saturates the surface for any quantity above ~1; with neither, every point weighs 1.
   `stops` are `[density, color]` pairs with density in `[0, 1]`, **the same `[value, color]`
   vocabulary `choropleth.stops` and `legendGradient` already share**, so a `legendGradient` bar can
-  describe the ramp without a second copy of it. A ramp that doesn't start at density 0 gets a fully
-  transparent stop prepended, because a coloured zero tints the entire map; unset, the ramp runs
-  transparent → `--lr-color-brand` → `--lr-color-success` → `--lr-color-warning` →
-  `--lr-color-danger`, so a retheme moves the density surface with everything else. `radius`
+  describe the ramp without a second copy of it, and `var(--lr-…)` stops resolve against the host the
+  same way `color`/`strokeColor` do. A ramp that doesn't start at density 0 gets a fully transparent
+  stop prepended, because a coloured zero tints the entire map — so **a single stop is already a
+  complete ramp**, as long as it sits above density 0: `stops: [[1, '#ff0000']]` is exactly
+  transparent → red. The one authored ramp that can't be honoured is a lone stop AT density 0, which
+  describes a flat colour rather than a gradient; that one — like an unset or wholly unusable
+  `stops` — falls back to the built-in ramp, which runs transparent → `--lr-color-brand` →
+  `--lr-color-success` → `--lr-color-warning` → `--lr-color-danger`, so a retheme moves the density
+  surface with everything else. `radius`
   (default 30) and `intensity` (default 1) are MapLibre's own. `cluster` is ignored on a heatmap
   entry: a heatmap already aggregates density, and clustering its input would feed it one point per
   cluster instead of the real distribution.
@@ -2709,6 +2717,12 @@ These named interfaces and helper signatures are available to typed integrations
   file: unknown;
   reason: unknown;
 }`
+
+- **`components-media-flag-flag-peer-bulk-standard-contracts`** — Supporting data types and helpers for this component family.
+  `registerLyraFlagStandardBulkPeer(): unknown`
+
+- **`components-media-flag-flag-peer-bulk-contracts`** — Supporting data types and helpers for this component family.
+  `registerLyraFlagBulkPeer(): unknown`
 
 - **`components-media-flag-flag-peer-contracts`** — Supporting data types and helpers for this component family.
   `registerLyraFlagPeer(): unknown`

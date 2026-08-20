@@ -28,6 +28,7 @@ export const CURATED_COMPONENT_HELPER_MODULES = Object.freeze([
   'src/components/media/attachment-chip/file-size.ts',
   'src/components/media/flag/flag-peer.ts',
   'src/components/media/flag/flag-peer-bulk.ts',
+  'src/components/media/flag/flag-peer-bulk-standard.ts',
   'src/components/media/flag/language-map.ts',
   'src/components/media/map/map-loader.ts',
   'src/components/overlays/dialog/confirm.ts',

@@ -6,7 +6,7 @@
 - **Class** `LyraWidget`, also available unregistered from `@aceshooting/lyra-ui/components/layout/widget/widget.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Deprecations** none
+- **Deprecated property** `activeView` since `11.2.0`; use property `activeViewId`; removal not before `13.0.0` — `activeView` was this property's original public name; the string does not appear anywhere in CHANGELOG.md, so the rename to `activeViewId` was never announced at all. A shipped consumer's `.activeView=` binding became a dead expando and the widget fell back to its first view with no error. The alias seeds `activeViewId` rather than being read alongside it, because the component itself writes that property (a view-toggle click, and the fallback when `views` drops the active id), and a read-alongside alias would undo a later interactive change on the next update.
 - **Optional peers** none
 - **Themeable via** 16 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -49,6 +49,12 @@ TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
 - `activeViewId: string = ''` (attribute: false) — the currently active view's `viewId`; defaults to the
   first entry of `views` (or `''` when `views` is empty). Settable directly to control the active
   view externally; also updated internally when a view toggle is clicked.
+- `activeView: string = ''` (attribute: false) — **deprecated alias for `activeViewId`**, which it
+  seeds. `activeView` was this member's original public name and the rename was never announced, so
+  a shipped `.activeView=${…}` binding silently became inert and the widget fell back to its first
+  view. It seeds rather than being read alongside, because the component itself writes
+  `activeViewId` (a toggle click, and the fallback when `views` drops the active id) — so a stale
+  alias must not undo a later interactive change. Prefer `activeViewId` in new code.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the label-derived
   fullscreen dialog name. An explicitly empty value is retained; property, slotted-label, and
   localized fallbacks apply only when it is absent.

@@ -10,6 +10,10 @@ import {
   resolveRgb,
 } from "./heatmap.js";
 import { styles } from "./heatmap.styles.js";
+// Type-only (erased before the browser ever sees this file), so importing the package root here
+// costs the test bundle nothing while still proving the union is reachable from it -- see the
+// package-root re-export test at the end of the sticky-labels block.
+import type { LyraHeatmapStickyLabels as RootHeatmapStickyLabels } from "../../../lyra.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 
 type MatrixData = Extract<LyraHeatmap["data"], { kind: "matrix" }>;
@@ -7650,11 +7654,16 @@ describe('matrix frozen label bands (sticky-labels)', () => {
   it('defaults to none and renders neither a scrollport nor a frozen band (unset regression)', async () => {
     const el = await matrixWith();
     expect(el.stickyLabels).to.equal('none');
-    expect(part(el, 'grid'), 'no scroll container is introduced for an existing consumer').to.equal(
-      null,
-    );
+    expect(
+      part(el, 'grid') === null,
+      'no scroll container is introduced for an existing consumer',
+    ).to.be.true;
     expect(el.shadowRoot!.querySelectorAll('canvas').length, 'one canvas, as before').to.equal(1);
     expect(part(el, 'canvas')!.parentElement!.getAttribute('part')).to.equal('base');
+    expect(
+      part(el, 'tooltip')!.parentElement!.getAttribute('part'),
+      'the tooltip only moves into the scrollport that the frozen modes introduce',
+    ).to.equal('base');
   });
 
   it('freezes the row gutter at exactly the painted padLeft under sticky-labels="rows"', async () => {
@@ -7666,7 +7675,7 @@ describe('matrix frozen label bands (sticky-labels)', () => {
     expect(band.h, 'it spans the full grid height, so it scrolls vertically with the rows').to.equal(
       parseFloat(canvas.style.height),
     );
-    expect(part(el, 'col-labels'), 'only the requested axis is frozen').to.equal(null);
+    expect(part(el, 'col-labels') === null, 'only the requested axis is frozen').to.be.true;
     const bandStyle = getComputedStyle(part(el, 'row-labels')!);
     expect(bandStyle.position, 'a band that is not sticky is not frozen at all').to.equal('sticky');
     expect(bandStyle.left, 'frozen against the physical left, where the gutter is painted').to.equal(
@@ -7683,7 +7692,7 @@ describe('matrix frozen label bands (sticky-labels)', () => {
     expect(band.w, 'it spans the full grid width, so it scrolls horizontally with the columns').to.equal(
       parseFloat(canvas.style.width),
     );
-    expect(part(el, 'row-labels')).to.equal(null);
+    expect(part(el, 'row-labels') === null).to.be.true;
   });
 
   it('freezes both axes at once under sticky-labels="both"', async () => {
@@ -7851,7 +7860,7 @@ describe('matrix frozen label bands (sticky-labels)', () => {
     await el.updateComplete;
     await aTimeout(0);
     expect(el.stickyLabels, 'the property still reports what the consumer set').to.equal('both');
-    expect(part(el, 'grid'), 'calendar output is unchanged').to.equal(null);
+    expect(part(el, 'grid') === null, 'calendar output is unchanged').to.be.true;
     expect(el.shadowRoot!.querySelectorAll('canvas').length).to.equal(1);
   });
 
@@ -7859,11 +7868,201 @@ describe('matrix frozen label bands (sticky-labels)', () => {
     const el = await matrixWith({ 'sticky-labels': 'diagonal' });
     expect(el.stickyLabels).to.equal('none');
     expect(el.getAttribute('sticky-labels')).to.equal('none');
-    expect(part(el, 'grid')).to.equal(null);
+    expect(part(el, 'grid') === null).to.be.true;
 
     el.stickyLabels = 'sideways' as unknown as LyraHeatmap['stickyLabels'];
     await el.updateComplete;
     expect(el.stickyLabels).to.equal('none');
+  });
+
+  // The hover tooltip and the keyboard focus ring are both positioned in canvas-local
+  // coordinates, so a scrollport between the canvas and the host is exactly what can desynchronize
+  // them from what the consumer sees. 10 x 10 cells of 40px inside a 240 x 120 window overflows
+  // both axes for real.
+  async function scrollingMatrix(): Promise<LyraHeatmap> {
+    const el = (await fixture(html`<lr-heatmap
+      cell-size="40"
+      sticky-labels="both"
+      style="inline-size: 240px; --lr-heatmap-grid-max-block-size: 120px"
+    ></lr-heatmap>`)) as LyraHeatmap;
+    const labels = Array.from({ length: 10 }, (_value, index) => `n${index}`);
+    setMatrixData(el, {
+      rowLabels: labels,
+      colLabels: labels,
+      values: labels.map((_row, r) => labels.map((_col, c) => r + c)),
+    });
+    await el.updateComplete;
+    await aTimeout(0);
+    return el;
+  }
+
+  /** Viewport box of one matrix cell, derived from the geometry the canvas was really painted
+   *  with -- so the expectations below never restate the padding/cell-size arithmetic. */
+  const cellBox = (el: LyraHeatmap, row: number, col: number): DOMRect => {
+    const geometry = el.matrixGeometry!;
+    const canvas = (part(el, 'canvas') as HTMLCanvasElement).getBoundingClientRect();
+    return new DOMRect(
+      canvas.left + geometry.padLeft + col * geometry.cellSize,
+      canvas.top + geometry.padTop + row * geometry.cellSize,
+      geometry.cellSize,
+      geometry.cellSize,
+    );
+  };
+
+  const hoverCell = async (el: LyraHeatmap, row: number, col: number): Promise<void> => {
+    const canvas = part(el, 'canvas') as HTMLCanvasElement;
+    const box = cellBox(el, row, col);
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: box.left + box.width / 2,
+        clientY: box.top + box.height / 2,
+        bubbles: true,
+      }),
+    );
+    await el.updateComplete;
+    await aTimeout(0);
+  };
+
+  it('anchors the hover tooltip to the hovered cell after the scrollport has scrolled', async () => {
+    const el = await scrollingMatrix();
+    const grid = part(el, 'grid')!;
+    grid.scrollLeft = 120;
+    grid.scrollTop = 100;
+    await aTimeout(0);
+    await hoverCell(el, 3, 4);
+
+    const tooltip = part(el, 'tooltip')!;
+    expect(tooltip.hidden, 'sanity: the hover really landed on a cell').to.equal(false);
+    expect(tooltip.textContent?.trim(), 'sanity: and on the cell this test reasons about').to.equal(
+      'Row n3, Col n4: 7',
+    );
+    const tip = tooltip.getBoundingClientRect();
+    const cell = cellBox(el, 3, 4);
+    expect(
+      tip.left + tip.width / 2,
+      'the tooltip reads canvas-local coordinates, so a scrolled scrollport must carry it too',
+    ).to.be.closeTo(cell.left + cell.width / 2, 1);
+  });
+
+  it('keeps the tooltip clear of the frozen bands and inside the scrolled window', async () => {
+    const el = await scrollingMatrix();
+    const grid = part(el, 'grid')!;
+    grid.scrollLeft = 120;
+    grid.scrollTop = 100;
+    await aTimeout(0);
+    // Row 3 / column 3 is the first cell clear of both frozen bands at this offset: a tooltip
+    // drawn above it lands under the opaque column band, and one centred on it runs off the
+    // inline-start edge -- and `overflow: auto` on the scrollport clips whatever leaves it.
+    await hoverCell(el, 3, 3);
+
+    const geometry = el.matrixGeometry!;
+    const port = grid.getBoundingClientRect();
+    const tip = part(el, 'tooltip')!.getBoundingClientRect();
+    expect(
+      tip.width,
+      'sanity: the label fits the band-free window, so containment is a real claim',
+    ).to.be.lessThan(port.width - geometry.padLeft);
+    expect(
+      tip.top,
+      'a tooltip under the opaque frozen column band is as invisible as a clipped one',
+    ).to.be.at.least(port.top + geometry.padTop - 0.5);
+    expect(tip.left, 'and one under the frozen row gutter likewise').to.be.at.least(
+      port.left + geometry.padLeft - 0.5,
+    );
+    expect(tip.bottom, 'the scrollport clips anything past its block end').to.be.at.most(
+      port.bottom + 0.5,
+    );
+    expect(tip.right, 'and anything past its inline end').to.be.at.most(port.right + 0.5);
+  });
+
+  it('scrolls the keyboard-focused cell into the scrollport, and stays axe-clean there', async () => {
+    const el = await scrollingMatrix();
+    const grid = part(el, 'grid')!;
+    const canvas = part(el, 'canvas') as HTMLCanvasElement;
+    canvas.focus();
+    // The first ArrowRight only adopts the first interactive cell, so nine presses land on column
+    // 8 -- 380..420px along a window 240px wide that has never scrolled.
+    for (let index = 0; index < 9; index++) {
+      canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      await el.updateComplete;
+    }
+    for (let index = 0; index < 8; index++) {
+      canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      await el.updateComplete;
+    }
+    await aTimeout(0);
+
+    const geometry = el.matrixGeometry!;
+    const cellLeft = geometry.padLeft + 8 * geometry.cellSize;
+    const cellTop = geometry.padTop + 8 * geometry.cellSize;
+    // The painted cell box, which is what the focus ring is drawn inside: matrix cells keep a 1px
+    // separator, so a cell occupies `cellSize - 1` of its own pitch.
+    const painted = geometry.cellSize - 1;
+    expect(
+      grid.scrollLeft,
+      'the canvas calls preventDefault() on the arrows, so nothing else can reveal the cell',
+    ).to.be.greaterThan(0);
+    expect(
+      grid.scrollLeft + geometry.padLeft,
+      'the focused cell never hides under the frozen row gutter',
+    ).to.be.at.most(cellLeft);
+    expect(
+      grid.scrollLeft + grid.clientWidth,
+      'nor past the inline end of the window',
+    ).to.be.at.least(cellLeft + painted);
+    expect(
+      grid.scrollTop + geometry.padTop,
+      'nor under the frozen column band',
+    ).to.be.at.most(cellTop);
+    expect(
+      grid.scrollTop + grid.clientHeight,
+      'nor past the block end of the window',
+    ).to.be.at.least(cellTop + painted);
+    await expect(el).to.be.accessible();
+  });
+
+  // Scrolling forward only ever has to clear the *end* edges of the window; arrowing back towards
+  // the origin is what can park a cell under a frozen band, which hides it exactly as thoroughly.
+  it('reveals a focused cell that would sit under a frozen band when arrowing back', async () => {
+    const el = await scrollingMatrix();
+    const grid = part(el, 'grid')!;
+    const canvas = part(el, 'canvas') as HTMLCanvasElement;
+    const arrow = async (key: string, times: number): Promise<void> => {
+      for (let index = 0; index < times; index++) {
+        canvas.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+        await el.updateComplete;
+      }
+    };
+    canvas.focus();
+    await arrow('ArrowRight', 9);
+    await arrow('ArrowDown', 8);
+    await aTimeout(0);
+    expect(grid.scrollLeft, 'sanity: the grid really scrolled away from the origin').to.be.greaterThan(0);
+    expect(grid.scrollTop).to.be.greaterThan(0);
+
+    await arrow('ArrowLeft', 8);
+    await arrow('ArrowUp', 8);
+    await aTimeout(0);
+
+    const geometry = el.matrixGeometry!;
+    expect(
+      grid.scrollLeft + geometry.padLeft,
+      'cell 0 is exactly as wide as the frozen gutter, so a scroll that only clears the window edge leaves it covered',
+    ).to.be.at.most(geometry.padLeft);
+    expect(grid.scrollTop + geometry.padTop, 'and likewise under the frozen column band').to.be.at.most(
+      geometry.padTop,
+    );
+  });
+
+  it('re-exports its closed sticky-labels set from the package root', async () => {
+    const el = await matrixWith({ 'sticky-labels': 'cols' });
+    // A compile-level surface: tsconfig.test.json type-checks this file, so the annotation below
+    // only resolves while `lyra.ts` re-exports the union -- the same package-root reachability
+    // every other closed set in the library has (HeatmapMode, LyraPaginationFormat, ...).
+    const fromRoot: RootHeatmapStickyLabels = el.stickyLabels;
+    const everyMember: RootHeatmapStickyLabels[] = ['none', 'rows', 'cols', 'both'];
+    expect(fromRoot).to.equal('cols');
+    expect(everyMember).to.have.lengthOf(4);
   });
 
   it('hides the duplicated bands from assistive technology and stays axe-clean', async () => {

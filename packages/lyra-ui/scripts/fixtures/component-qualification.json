@@ -55,8 +55,8 @@
     "Source-signal dimensions identify evidence locations but do not turn regex presence into a behavioral pass."
   ],
   "summary": {
-    "componentCount": 284,
-    "automatedAccessibility": 282,
+    "componentCount": 285,
+    "automatedAccessibility": 283,
     "accessibilityExemptions": 2,
     "accessibilityMissing": 0,
     "visualEnrolled": 78,
@@ -18504,7 +18504,7 @@
           "evidence": [
             {
               "file": "src/components/layout/filter-bar/filter-bar.class.ts",
-              "line": 788,
+              "line": 826,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -18589,7 +18589,7 @@
           "evidence": [
             {
               "file": "src/components/media/flag/flag.test.ts",
-              "line": 763,
+              "line": 794,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -19988,6 +19988,175 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/utility/format/format.test.ts"
+        ],
+        "visual": "visual-baselines/manifest.json",
+        "ssr": "src/ssr.ts"
+      }
+    },
+    {
+      "tag": "lr-funnel",
+      "family": "data",
+      "maturity": "experimental",
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "evidenceGaps": [
+          "visual",
+          "forcedColors",
+          "assistiveTechnology"
+        ]
+      },
+      "dimensions": {
+        "accessibility": {
+          "applicability": "applicable",
+          "status": "automated",
+          "evidence": [
+            {
+              "file": "src/components/data/funnel/funnel.test.ts",
+              "line": 26,
+              "test": "renders one stage per entry with both the absolute value and the share of the FIRST stage, and stays accessible",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/funnel/funnel.test.ts",
+              "line": 128,
+              "test": "normalizes the comparison series to its OWN first stage and pairs it by index",
+              "target": "el",
+              "state": "populated"
+            }
+          ],
+          "exemption": null
+        },
+        "keyboard": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "No component-owned interactive surface was detected; applicability is re-evaluated when the source changes."
+        },
+        "rtl": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/data/funnel/funnel.test.ts",
+              "line": 212,
+              "kind": "rendered RTL test signal"
+            }
+          ]
+        },
+        "reducedMotion": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/data/funnel/funnel.test.ts",
+              "line": 240,
+              "kind": "reduced-motion test signal"
+            }
+          ]
+        },
+        "narrowAllocation": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/data/funnel/funnel.test.ts",
+              "line": 267,
+              "kind": "320px allocation test signal"
+            }
+          ]
+        },
+        "engines": {
+          "applicability": "applicable",
+          "status": "configured-automation",
+          "evidence": [
+            {
+              "file": ".github/workflows/ci.yml",
+              "kind": "Chromium full suite and Firefox/WebKit contract subset"
+            },
+            {
+              "file": ".github/workflows/full-engine.yml",
+              "kind": "weekly/manual Firefox and WebKit full-suite shards"
+            }
+          ],
+          "limitation": "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit."
+        },
+        "ssrHydration": {
+          "applicability": "applicable",
+          "status": "declared-and-gated",
+          "mode": "render-and-hydrate",
+          "reason": null,
+          "evidence": [
+            {
+              "file": "src/ssr.ts",
+              "kind": "machine-readable SSR support matrix"
+            },
+            {
+              "file": "scripts/check-ssr.mjs",
+              "kind": "server render crawl"
+            },
+            {
+              "file": "scripts/check-hydration.mjs",
+              "kind": "browser hydration identity crawl"
+            }
+          ],
+          "limitation": "The ledger classifies the declared mode and gate ownership; CI run results are reported separately."
+        },
+        "visual": {
+          "applicability": "applicable",
+          "status": "not-enrolled",
+          "stories": [],
+          "axes": [],
+          "evidence": [],
+          "reviewer": null,
+          "reviewedAt": null,
+          "limitation": "No visual-regression story is enrolled for this tag."
+        },
+        "peerFailure": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "The component declares no optional peer dependencies."
+        },
+        "security": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+        },
+        "forcedColors": {
+          "applicability": "applicable",
+          "status": "not-enrolled",
+          "stories": [],
+          "evidence": [],
+          "limitation": "No forced-colors visual capture is enrolled for this tag."
+        },
+        "assistiveTechnology": {
+          "applicability": "applicable",
+          "status": "not-verified",
+          "evidence": [],
+          "reviewer": null,
+          "reviewedAt": null,
+          "limitation": "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+        }
+      },
+      "knownLimitations": [
+        "No component-owned interactive surface was detected; applicability is re-evaluated when the source changes.",
+        "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
+        "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
+        "No visual-regression story is enrolled for this tag.",
+        "The component declares no optional peer dependencies.",
+        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "No forced-colors visual capture is enrolled for this tag.",
+        "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+      ],
+      "provenance": {
+        "inventory": "scripts/fixtures/component-inventory.json",
+        "tests": [
+          "src/components/data/funnel/funnel.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -21561,50 +21730,64 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 671,
+              "line": 675,
               "test": "renders an opt-in native button overlay with persistent per-cell semantics",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 1188,
+              "line": 1192,
               "test": "calendar mode: is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 3425,
+              "line": 3429,
               "test": "is accessible with a selected cell",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 4774,
+              "line": 4778,
               "test": "stays accessible with legendStops set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 4899,
+              "line": 4903,
               "test": "stays accessible with a caption-only legend stop",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 5238,
+              "line": 5242,
               "test": "stays accessible with both clamps applied",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 5455,
+              "line": 5459,
               "test": "stays accessible with a date-driven cellText on the accessible-cell overlay",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/heatmap/heatmap.test.ts",
+              "line": 7978,
+              "test": "scrolls the keyboard-focused cell into the scrollport, and stays axe-clean there",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/heatmap/heatmap.test.ts",
+              "line": 8068,
+              "test": "hides the duplicated bands from assistive technology and stays axe-clean",
               "target": "el",
               "state": "populated"
             }
@@ -21617,7 +21800,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 256,
+              "line": 260,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -21645,7 +21828,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 1102,
+              "line": 1106,
               "kind": "320px allocation test signal"
             }
           ]
@@ -21719,7 +21902,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 1927,
+              "line": 2052,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -25844,7 +26027,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 1043,
+              "line": 1378,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

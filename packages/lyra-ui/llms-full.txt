@@ -34,7 +34,7 @@ family and entry point.
 
 - **Foundation** — base class, form association, events, i18n, theming, TypeScript, frameworks, SSR, packaging (`llms/shared.md`)
 - **Form controls & inputs** — 29 tags in `components/forms/`
-- **Data display, dashboards & flow canvas** — 25 tags in `components/data/`
+- **Data display, dashboards & flow canvas** — 26 tags in `components/data/`
 - **Layout, navigation & structure** — 35 tags in `components/layout/`
 - **Overlays, status & feedback** — 21 tags in `components/overlays/`
 - **Utilities, formatting & observers** — 20 tags in `components/utility/`
@@ -202,6 +202,8 @@ The entry points, then:
   a pre-resolved `src`) additionally needs
   `import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';` once.
 - **Other subpaths.** `@aceshooting/lyra-ui/theme.css` (ready-made light/dark theme),
+  `@aceshooting/lyra-ui/tokens-root.css` (opt-in: the curated resolved `--lr-*` tokens at `:root`,
+  so your own components can read them),
   `@aceshooting/lyra-ui/native.css` (opt-in native-element styles inside `.lr-native`),
   `@aceshooting/lyra-ui/utilities.css` (opt-in light-DOM layout/text utilities),
   `@aceshooting/lyra-ui/theme.js` (the zero-dependency mode/accent runtime),
@@ -696,9 +698,109 @@ reaches plain application CSS, and it never reaches your own custom elements, si
 descendant of an `lr-*` shadow root — `body { color: var(--lr-color-text) }` in application CSS
 resolves to nothing, silently, not an error. Retheme through layer 1 (`--lr-theme-*`), which
 `theme.css` supplies at document scope and which inherits normally into every nested shadow root.
+To _read_ (not retheme) the resolved values from your own components, import the opt-in
+[`tokens-root.css`](#reading-the-resolved-tokens-from-your-own-components--tokens-rootcss), which
+declares a curated subset of layer 2 at `:root`.
 See [Where an override actually reaches](#where-an-override-actually-reaches) below for the full
 inheritance rules, including the one documented exception (per-component `--lr-<component>-*`
 hooks, layer 3, which do inherit through wrappers).
+
+### Reading the resolved tokens from your own components — `tokens-root.css`
+
+The paragraph above is a real problem for any application that has custom elements of its own: they
+are not descendants of an `lr-*` shadow root either, so `var(--lr-color-border)` inside **your**
+component resolves to nothing, and `var(--lr-space-m, 0.5rem)` quietly runs on its literal fallback
+forever. Both failures are invisible without reading computed styles in a browser.
+
+Import one optional stylesheet and the curated part of layer 2 exists at document scope:
+
+```css
+@import "@aceshooting/lyra-ui/theme.css"; /* the --lr-theme-* input layer */
+@import "@aceshooting/lyra-ui/tokens-root.css"; /* the resolved --lr-* layer, at :root */
+```
+
+```css
+/* Now valid in your own component's stylesheet, in plain application CSS, anywhere. */
+.app-panel {
+  padding: var(--lr-space-m);
+  border: var(--lr-border-width-thin) solid var(--lr-color-border);
+  border-radius: var(--lr-radius);
+  background: var(--lr-color-surface-raised);
+  color: var(--lr-color-text);
+  font-family: var(--lr-font);
+}
+.app-panel:focus-visible {
+  outline: var(--lr-focus-ring);
+  outline-offset: var(--lr-focus-ring-offset);
+}
+```
+
+**It is opt-in, and it is a curated subset — not all of layer 2.** `--lr-*` is internal precisely so
+it can change without a major version; publishing all of it at `:root` would freeze several hundred
+internal decisions as permanent API. What ships is what an application's own component needs to sit
+inside a Lyra UI without looking foreign:
+
+| Family                | Names                                                                                                                                                                                                                     |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ambient colour        | `--lr-color-surface`, `--lr-color-surface-raised`, `--lr-color-surface-overlay`, `--lr-color-overlay`, `--lr-color-text`, `--lr-color-text-quiet`, `--lr-color-border`, `--lr-color-border-strong`                         |
+| The semantic grid     | all 45 `--lr-color-{brand,success,warning,danger,neutral}-{fill,border,on}-{quiet,normal,loud}` slots                                                                                                                       |
+| Flat colour aliases   | `--lr-color-{brand,success,warning,danger,neutral}`, `--lr-color-{brand,success,warning,danger}-quiet`, `--lr-color-on-{brand,success,warning,danger,neutral}`                                                              |
+| Spacing               | `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-space-m`, `--lr-space-l`, `--lr-space-2xl`                                                                                                                        |
+| Geometry              | `--lr-radius-xs`, `--lr-radius`, `--lr-radius-pill`, `--lr-border-width-thin`, `--lr-border-width-medium`, `--lr-border-width-thick`                                                                                       |
+| Elevation             | `--lr-shadow-color`, `--lr-shadow-xs`, `--lr-shadow-s`, `--lr-shadow-m`, `--lr-shadow-l`, `--lr-shadow-xl`, `--lr-shadow`                                                                                                  |
+| Typography            | `--lr-font`, `--lr-font-mono`, the ten `--lr-font-size-*` steps, the four `--lr-font-weight-*` steps                                                                                                                        |
+| State and motion      | `--lr-focus-ring`, `--lr-focus-ring-color`, `--lr-focus-ring-width`, `--lr-focus-ring-offset`, `--lr-opacity-disabled`, `--lr-opacity-muted`, `--lr-duration-fast`, `--lr-duration-base`, `--lr-easing-standard`, `--lr-easing-emphasized`, `--lr-transition-fast`, `--lr-transition-base` |
+
+The grid ships whole because its contrast guarantee is **per tier** — a `fill-quiet` background is
+only guaranteed legible under the matching `on-quiet` foreground — so shipping the flat aliases
+alone would hand you a pairing with nothing behind it.
+
+**Deliberately not published**, and each for a reason that makes reading it a bug rather than a
+convenience: `--lr-ramp-*` (a step encodes a light-mode choice and has no theme hook),
+`--lr-size-*` (value-named geometry constants, frozen internals), the chart, graph and terminal
+palettes (generated ramps that move with the palette tooling), `--lr-layer-*` (stacking order is
+your decision), `--lr-color-mix-*` and `--lr-hover-brightness` (inputs to the library's own
+interaction recipe), `--lr-line-height-*`, the per-control internals (`--lr-icon-button-size`,
+`--lr-otp-input-segment-size`, `--lr-scroll-fade-size`, `--lr-popover-viewport-clamp`,
+`--lr-safe-area-*`, `--lr-mask-opaque`, `--lr-color-no-data`), and the nine variant-following slots
+(`--lr-color-fill-loud` and friends), which mean "the variant _this_ element is set to" and are
+meaningless on `:root`. If you need one of these, ask for it to be added rather than reading it out
+of a component's shadow root.
+
+**Stability promise.** Every name in the table is public API from the release that introduced it: it
+will not be renamed or removed outside a major version, and its meaning will not change. Its _value_
+may change in a minor exactly as it may inside a component — a palette retune moves your elements
+and the kit's together, which is the point. Names absent from the file stay internal and may change
+in any release.
+
+**Modes work the way the components' do.** Light on `:root` and on `.lr-light` /
+`[data-lr-theme="light"]`, dark under `prefers-color-scheme: dark` (unless an explicit light scope
+opts out) and on `.lr-dark` / `[data-lr-theme="dark"]`, plus the same `forced-colors` and
+`prefers-reduced-motion` overrides the components apply — and those two reach you on **every** one
+of those routes, including a dark OS with no explicit scope, because they repeat the compound
+`:root:not(.lr-light):not([data-lr-theme="light"])` selector the dark route uses rather than a bare
+`:root` that the dark route would out-specify. Every declaration keeps its `--lr-theme-*`
+input in front of a resolved fallback, so `theme.css` and your own overrides still win here exactly
+as they do inside a component.
+
+**One caveat, and it is the same shape as layer 2's rule everywhere else.** A `--lr-theme-*` input
+set on a mid-tree element retunes every `lr-*` component below it, because each component re-derives
+the resolved layer on its own `:host`. The document-scope copy cannot: it is substituted where it is
+declared, and what inherits past that point is the finished value. So if an application element
+carries a subtree override and expects its **own** descendants to follow, give that element a mode
+scope too — `class="lr-light"`, `class="lr-dark"`, or `data-lr-theme` — which is what the file's
+mode rules key on, and the whole subset resolves again there:
+
+```html
+<!-- Both the lr-* components and the app's own elements below follow the override. -->
+<section class="lr-light" style="--lr-theme-color-brand-fill-loud: #7c3aed">…</section>
+```
+
+Everything sits in the `lr-theme` cascade layer, like `theme.css`, so any unlayered application rule
+beats it regardless of load order, and the file declares custom properties only — notably not
+`color-scheme` — so importing it paints nothing by itself. `--lr-focus-ring` and its three parts are
+also declared at document scope by `theme.css`; both spell the same chain, so importing both is a
+no-op either way round.
 
 ### The colour ramp and the semantic grid
 
@@ -1246,7 +1348,10 @@ stay in light DOM: they do not pierce a component's shadow root.
 `utilities.css` places exact, zero-specificity `:where(.lr-*)` classes in `lr-utilities`. It never
 uses a substring class selector, so a class such as `app-lr-flex-preview` does not opt in. Both
 assets repeat `@layer lr-base, lr-theme, lr-utilities, lr-overrides`; an ordinary unlayered
-application rule therefore beats them regardless of load order.
+application rule therefore beats them regardless of load order. A third opt-in asset,
+[`tokens-root.css`](#reading-the-resolved-tokens-from-your-own-components--tokens-rootcss), is not a
+style sheet in the same sense — it declares custom properties only, and exists so your own
+components can read the resolved `--lr-*` tokens these two are written against.
 
 ### Utility class inventory
 
@@ -2757,6 +2862,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-format-bytes": unknown;
   "lr-format-date": unknown;
   "lr-format-number": unknown;
+  "lr-funnel": unknown;
   "lr-gauge": unknown;
   "lr-generation-metrics": unknown;
   "lr-geojson-view": unknown;
@@ -3142,6 +3248,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-format-bytes": unknown;
   "lr-format-date": unknown;
   "lr-format-number": unknown;
+  "lr-funnel": unknown;
   "lr-gauge": unknown;
   "lr-generation-metrics": unknown;
   "lr-geojson-view": unknown;
@@ -3428,6 +3535,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-format-bytes": unknown;
   "lr-format-date": unknown;
   "lr-format-number": unknown;
+  "lr-funnel": unknown;
   "lr-gauge": unknown;
   "lr-generation-metrics": unknown;
   "lr-geojson-view": unknown;
@@ -3754,6 +3862,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-format-bytes": unknown;
   "lr-format-date": unknown;
   "lr-format-number": unknown;
+  "lr-funnel": unknown;
   "lr-gauge": unknown;
   "lr-generation-metrics": unknown;
   "lr-geojson-view": unknown;
@@ -4960,9 +5069,21 @@ default). An inherited or direct public value remains authoritative in every tie
 Text field + calendar popover, **form-associated** via the shared `FormAssociated` mixin (`name`,
 `value`, `disabled`, `required` all inherited).
 
-**Properties (42):**
+**Properties (44):**
 
 - `appearance: 'filled'|'outlined'|'filled-outlined' = 'outlined'` (reflected)
+- `appliedPreset: LyraDateRangePreset | undefined` (read-only, new in 11.3.0) — the `presets` entry
+  whose button produced the current `value`, or `undefined` when the value was picked on the
+  calendar, typed into the field, cleared, or reset. Read it inside your own `change`/`input`
+  handler; it is updated before those events are relayed, so a handler observes the preset that
+  caused the very commit it is handling, and it is `undefined` while the popover has never been
+  opened. Mirrors the nested `lr-date-picker`'s identically-named property across this component's
+  shadow boundary, which is where the readback is actually needed: the compact
+  text-field-plus-popover shape is the one a dashboard filter uses, the nested picker instance is
+  unreachable from outside (a CSS part cannot yield it), and the fact is not recoverable from
+  `value` — re-deriving it by string-matching is the mapping table `presets` exists to delete and is
+  ambiguous anyway. A property rather than an event detail because `input`/`change` here are
+  **native** events that cannot carry one
 - `assumeInteractionOn: string[] = ['input']` (JS only)
 - `autocomplete: string = ''`
 - `dayContent?: LyraDatePickerDayContent` (JS only)
@@ -4987,6 +5108,12 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
 - `pill: boolean = false` (reflected)
 - `placement: LyraDateInputPlacement = 'bottom-start'` (reflected; all 12 side/alignment
   placements are accepted)
+- `presets: LyraDateRangePreset[] = []` (JS only, new in 11.1.0) — forwarded verbatim to the nested
+  `lr-date-picker`, whose own `presets` documents the semantics (range mode only, open bounds
+  resolving to `min`/`max`, unset renders nothing). Forwarded rather than reimplemented because the
+  picker lives in this component's shadow root, so a consumer has no route to it. The row's parts
+  are re-exported as `presets`/`preset-button`, and `appliedPreset` above reports which entry
+  produced the current value
 - `readonly: boolean = false` and `required: boolean = false` (reflected)
 - `size: LyraSize = 'm'` (reflected; `2xs`–`xl` and aliases)
 - `today: string = ''` (reflected ISO override)
@@ -10675,6 +10802,114 @@ Dependency-free SVG radial, full-circle ring, or linear meter (no charting libra
 
 ---
 
+## `lr-funnel`
+
+Dependency-free conversion funnel (no charting library): an ordered set of stages, each drawn as a
+bar whose length is that stage's share of the **first** stage, read top-to-bottom as progressive
+drop-off. It sits beside `lr-gauge` and `lr-heatmap` as an analytics primitive rather than a general
+chart type.
+
+It is deliberately not a sorted bar chart: it normalizes to the first stage rather than to the data
+maximum, draws no value axis, and reads as stage-to-stage retention rather than category comparison.
+Reach for `lr-bar-chart`/`lr-lite-chart` when you actually want a value axis and category comparison.
+
+The whole chart is plain HTML — stage names, absolute values, shares and drop-off percentages are
+real text inside an `<ol>`, so there is no sighted-only drawing needing a separate transcript. The
+list carries the accessible name; a host `aria-label` overrides `label`.
+
+**Properties:**
+
+- `stages: readonly LyraFunnelStage[] = []` (property only; every share is measured against
+  `stages[0]`)
+- `comparison: readonly LyraFunnelStage[] = []` (property only — an optional baseline/peer cohort
+  drawn behind each bar as a dashed outline, normalized to **its own** first stage so a cohort's
+  funnel *shape* stays comparable against a baseline whose absolute volumes are not)
+- `comparisonLabel: string = ''` (attribute `comparison-label`; falls back to a localized generic
+  label)
+- `label: string = ''` (accessible name for the stage list)
+- `dropoff: boolean = true` (reflected; `dropoff="false"` in markup really does turn it off —
+  the property uses the explicit `false`-parsing converter, not attribute presence)
+- `sharePrecision: number = 0` (attribute `share-precision`; fraction digits for every share and
+  drop-off percentage, clamped to `0`–`20`)
+
+```ts
+interface LyraFunnelStage {
+  readonly label: string;
+  readonly value: number;
+  readonly color?: string; // CSS color; unparseable values fall back to --lr-funnel-bar-color
+}
+```
+
+**Events:** none.
+
+**Slots:** none.
+
+**CSS parts:** `base`, `stages` (the `<ol>`), `stage`, `dropoff`, `stage-header`, `stage-label`,
+`stage-value`, `stage-share`, `comparison-value`, `track`, `bar`, `bar-overflow` (a second token on
+`bar` when the stage exceeds the first stage), `comparison-bar`, `empty`
+
+**Themeable custom properties:** `--lr-funnel-bar-color` (default `var(--lr-color-brand)`),
+`--lr-funnel-comparison-color` (default `var(--lr-color-border-strong)`), `--lr-funnel-track-color`
+(default `var(--lr-color-surface-raised)`), `--lr-funnel-bar-size` (track thickness, default
+`var(--lr-size-1-5rem)`).
+
+**Optional peer deps:** none.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/data/funnel/funnel.js';
+</script>
+
+<lr-funnel id="signup" label="Self-serve signup" share-precision="1"></lr-funnel>
+
+<script type="module">
+  const funnel = document.querySelector('#signup');
+  funnel.stages = [
+    { label: 'Visited pricing', value: 12480 },
+    { label: 'Started trial', value: 4310 },
+    { label: 'Converted to paid', value: 512 },
+  ];
+  // Normalized to ITS OWN first stage, so a 380-visitor account still compares against a
+  // 12,480-visitor peer group.
+  funnel.comparison = [
+    { label: 'Visited pricing', value: 380 },
+    { label: 'Started trial', value: 141 },
+    { label: 'Converted to paid', value: 12 },
+  ];
+  funnel.comparisonLabel = 'Acme Corp';
+</script>
+```
+
+**Known gotchas:**
+
+- **Shares are of the first stage, not of the previous one.** `stage-share` answers "how much of the
+  top of the funnel is left here?"; the separate `dropoff` row answers "what changed since the
+  previous stage?". Both are rendered because the percentage is usually the interesting number and
+  the absolute count is the credibility check.
+- **A zero or negative first stage cannot define a share.** Every `stage-share` is omitted, every bar
+  is zero-length, and only the absolute values render. Nothing is silently divided by zero and no
+  `NaN` reaches the geometry.
+- **A stage larger than its predecessor is legal** (funnel re-entry). Its share is reported
+  truthfully above 100% in text, while the bar clamps to the track and gains the `bar-overflow` part
+  token so you can style it. Drop-off for that stage reads as an increase.
+- **Drop-off is omitted, not zeroed, when the previous stage is non-positive** — a change relative to
+  zero is undefined.
+- **A comparison series of a different length pairs by index.** Extra comparison entries are ignored;
+  stages past its end simply get no comparison bar. A comparison series whose own first value is
+  zero or negative draws nothing.
+- **Non-finite `value`s are treated as `0`** rather than blanking the stage, so one bad row cannot
+  take the chart with it.
+- Values, shares and drop-off percentages all format through the component's effective locale
+  (`locale` attribute, or an inherited one) — never a hardcoded `en`.
+- Bars grow from the inline-start edge and every dimension is a logical property, so `dir="rtl"`
+  needs no extra work. The component never sets its own `dir`.
+- Layout responds to the **container** (`container-type: inline-size` on `base`), not the viewport:
+  below roughly `18rem` of allocated width the stage name moves to its own line so the value and
+  share stay together. Bar motion is a token-driven transition that stops under
+  `prefers-reduced-motion`.
+- No events, no interaction model, no zoom/pan. If you need a clickable funnel, wrap the element and
+  handle clicks yourself.
+
 ## `lr-word-cloud`
 
 Dependency-free SVG word/tag cloud. First-party invention (no Web Awesome equivalent). Lays words
@@ -10890,6 +11125,38 @@ weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
   `colLabelHeight="auto"` to have the band size itself to the rotated extent. **Not mirrored under
   `dir="rtl"`** — both grid modes deliberately retain physical LTR geometry, so leaning one axis'
   labels the other way would be incoherent
+- `stickyLabels: 'none' | 'rows' | 'cols' | 'both' = 'none'` (attribute `sticky-labels`, reflected)
+  — freezes a **matrix** label band against the grid's own scrolling. `'rows'` pins the row-label
+  gutter so it survives horizontal scrolling, `'cols'` pins the column-label band so it survives
+  vertical scrolling, `'both'` pins both. Labels and cells otherwise share one bitmap, so neither
+  band can be `position: sticky` on its own and a tall matrix scrolls its column header out of
+  view; the only workaround was a light-DOM mirror row that had to hardcode the gutter width and
+  cell size, which made it mutually exclusive with `row-label-width="auto"`. A frozen band is
+  repainted into its own layer in the same draw pass, from the same resolved `matrixGeometry` the
+  cells were painted with, so it tracks a `row-label-width`/`col-label-height` `"auto"`
+  re-resolution, a resize, and a DPR change without drifting a pixel. Freezing needs something to
+  scroll, so the frozen modes wrap the grid in a `[part="grid"]` scrollport: it is bounded inline by
+  the host's own allocation — a matrix wider than a 320px host scrolls inside the component instead
+  of overflowing it — and unbounded in block until you set `--lr-heatmap-grid-max-block-size`, which
+  a frozen column band needs in order to have vertical scrolling to stay behind. The bands are
+  `aria-hidden` duplicates of pixels the canvas already painted, so the accessible representation is
+  unchanged, and the `accessibleCells` overlay moves inside the scrollport so the cell buttons
+  scroll with the canvas they cover. The grid keeps this component's physical LTR geometry under
+  `dir="rtl"`, so the frozen gutter stays on the same physical side as the labels the canvas paints.
+  Matrix mode only, like `matrixGeometry`: the property is read in calendar mode but has no effect
+  there, since a calendar's axes are a different geometry (fixed weekday gutter, month band, and the
+  optional `columnX`/`rowY` overrides). Unset (`'none'`, the default) renders exactly what it always
+  did — one canvas, no scrollport, no extra elements — and an unsupported value normalizes to it.
+  The union is re-exported from the package root as `LyraHeatmapStickyLabels`, so a typed consumer
+  can annotate a variable or a framework prop with it. Everything positioned in canvas coordinates
+  moves into the scrollport with the cells: `[part="tooltip"]` renders inside it, so it stays on
+  the cell it describes through a scroll instead of drifting by the scroll offset, and because
+  `overflow: auto` clips whatever leaves the scrollport, the tooltip is kept inside the visible
+  window too — clamped along the inline axis and flipped to below its cell when a frozen band
+  leaves no room above it. Arrow-key navigation scrolls the focused cell into that window, clear of
+  the frozen bands, which the frozen modes need in their own right: the canvas is the roving tab
+  stop, its focus ring is painted into the bitmap rather than carried by a focusable element the
+  browser would scroll to, and it calls `preventDefault()` on the arrows
 - `maxCellSize?: number` (attribute `max-cell-size`) — ceiling, in CSS px, on the cell size
   `fitToWidth` derives from the host width, in **both** modes. Exists because `fitToWidth` divides
   the _whole_ host width across the grid, so a 5-week calendar or a 3-column matrix in a wide pane
@@ -11029,9 +11296,12 @@ color?: string; label?: string; partOfRamp?: boolean }`: a discrete legend key r
 color-scheme change; called automatically on theme changes, exposed for a consumer that needs to
 force a redraw manually. `matrixGeometry: Readonly<{ padLeft: number; padTop: number; cellSize:
 number }> | undefined` — the gutter/cell geometry the last matrix-mode draw actually painted with,
-in CSS pixels; `undefined` in calendar mode. Lets a light-DOM consumer (e.g. a sticky header mirror
-for a tall matrix) line up with the canvas without hardcoding the same numbers `row-label-width`/
-`col-label-height`'s `"auto"` resolution would otherwise keep private.
+in CSS pixels; `undefined` in calendar mode. Lets a light-DOM consumer line up with the canvas
+without hardcoding the same numbers `row-label-width`/`col-label-height`'s `"auto"` resolution would
+otherwise keep private. For the case that motivated it — a frozen header or gutter on a tall or wide
+matrix — prefer `stickyLabels`, which freezes the band inside the component and needs no mirror at
+all; the getter remains the way to align a *separate* element (a sibling chart, a custom overlay)
+with the grid.
 
 **Events:** `lr-cell-click` (fired on click, or Enter/Space on the keyboard-focused cell —
 `detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode),
@@ -11042,8 +11312,12 @@ in calendar mode)
 
 **Slots:** none.
 
-**CSS parts:** `base`, `canvas`, `cells` (opt-in per-cell overlay), `cell` (one opt-in native cell
-button), `tooltip` (hover tooltip, positioned over the hovered cell),
+**CSS parts:** `base`, `canvas`, `grid` (the scrollport wrapping the canvas while `stickyLabels`
+freezes an axis — absent entirely otherwise), `row-labels`/`col-labels` (the frozen label bands,
+rendered only for the axis `stickyLabels` names), `cells` (opt-in per-cell overlay), `cell` (one opt-in native cell
+button), `tooltip` (hover tooltip, positioned over the hovered cell — inside `[part="grid"]` while
+`stickyLabels` freezes an axis, so it scrolls with the cells, and a `[part="base"]` child
+otherwise),
 `live-region` (visually-hidden, `aria-hidden` mirror of the keyboard-focused cell; the actual
 announcement uses the shared light-DOM polite sink), `projection-limit` (localized assistive
 disclosure when bounded canonicalization truncates input), `legend`, `legend-lo`, `legend-hi` (both omitted, along with the gradient
@@ -11079,7 +11353,12 @@ dedicated token distinct from both the focus ring and the annotation ring so a h
 independently). `--lr-heatmap-tooltip-bg` (default
 `var(--lr-color-surface)`) and `--lr-heatmap-tooltip-text` (default `var(--lr-color-text)`) —
 unlike the canvas-drawn tokens above, `[part="tooltip"]` is a real DOM element and consumes these
-directly, no `getComputedStyle` bridging needed. Also consumes `--lr-color-text-quiet` (axis label
+directly, no `getComputedStyle` bridging needed. `--lr-heatmap-sticky-label-bg` (default
+`var(--lr-color-surface)` — the backdrop painted under a frozen `stickyLabels` band, resolved via
+`getComputedStyle` like the other canvas-drawn tokens; it must stay **opaque**, since it covers the
+same labels the scrolling canvas painted underneath it) and `--lr-heatmap-grid-max-block-size`
+(default `none` — the block-size ceiling of the `[part="grid"]` scrollport, consumed directly by
+that real DOM element; set it to give a frozen column band vertical scrolling to stay behind). Also consumes `--lr-color-text-quiet` (axis label
 color), `--lr-space-xs`, `--lr-radius`/`--lr-shadow` (tooltip box), and `--lr-focus-ring-width`/
 `--lr-focus-ring-offset` (the real `[part="canvas"]:focus-visible` DOM outline, stroked in the
 same color as `--lr-heatmap-focus-ring-color`).
@@ -12975,6 +13254,13 @@ These named interfaces and helper signatures are available to typed integrations
   maxZoom: unknown;
 }`
 
+- **`components-data-funnel-funnel-contracts`** — Supporting data types and helpers for this component family.
+  `LyraFunnelStage {
+  label: unknown;
+  value: unknown;
+  color: unknown;
+}`
+
 - **`components-data-graph-query-builder-graph-query-builder-contracts`** — Supporting data types and helpers for this component family.
   `GraphQueryDeleteDetail {
   queryId: unknown;
@@ -13648,6 +13934,12 @@ TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
 - `activeViewId: string = ''` (attribute: false) — the currently active view's `viewId`; defaults to the
   first entry of `views` (or `''` when `views` is empty). Settable directly to control the active
   view externally; also updated internally when a view toggle is clicked.
+- `activeView: string = ''` (attribute: false) — **deprecated alias for `activeViewId`**, which it
+  seeds. `activeView` was this member's original public name and the rename was never announced, so
+  a shipped `.activeView=${…}` binding silently became inert and the widget fell back to its first
+  view. It seeds rather than being read alongside, because the component itself writes
+  `activeViewId` (a toggle click, and the fallback when `views` drops the active id) — so a stale
+  alias must not undo a later interactive change. Prefer `activeViewId` in new code.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the label-derived
   fullscreen dialog name. An explicitly empty value is retained; property, slotted-label, and
   localized fallbacks apply only when it is absent.
@@ -15317,6 +15609,12 @@ removing the label from the accessibility tree.
   reflects `aria-current="page"` on `[part='base']` and drives the current visual treatment. The rail
   has no built-in routing, so the consumer sets this per item (e.g. by comparing `href` against the
   current location).
+- `active: boolean = false` — **deprecated alias for `current`**, read alongside it: the item is
+  current when either is true. `active` was this member's original public name, in both property and
+  attribute form; it was renamed to `current` without an alias, so shipped consumers writing
+  `.active=${…}` or `<lr-app-rail-item active>` silently lost their current-item indicator and kept a
+  permanent `aria-current="false"`. A Lit property binding on a custom element is untyped, so nothing
+  in a consumer's type check or test suite could catch it. Prefer `current` in new code.
 - `tooltip: boolean = false` (reflected) — opt-in hover/focus flyout (`[part='tooltip']`) showing
   this item's label text while the rail's `icon-only` mode (set externally by the parent
   `<lr-app-rail>` as the viewport narrows) hides it from view. No effect outside icon-only mode,
@@ -16550,7 +16848,8 @@ value therefore stays inside a 320px LTR or RTL bar, with the chip's own label e
 overflow ownership rather than widening the page.
 
 Each edit exposes one filter-bar `lr-input` carrying a detached, deeply frozen snapshot of the
-complete value object. A built-in or
+complete value object, plus the `filterId` that changed and (new in 11.3.0) `appliedPreset` — see
+"Date-range quick ranges" below. A built-in or
 custom control's own `lr-input`/`lr-change` aliases stay inside the wrapper so their incompatible
 detail shapes cannot escape as duplicate bar events; native-style `input`/`change` events from the
 composed controls continue bubbling normally.
@@ -16599,6 +16898,54 @@ same-named counterparts (with `combobox`'s `multiple` opting into a multi-value 
 to `<lr-input>` for an open-ended free-text query rather than a closed choice set. A `'text'`
 filter's value is the raw query string, verbatim, and its chip shows exactly that string — the same
 text the user typed, not a truncated or normalized form.
+
+### Date-range quick ranges
+
+A `'date-range'` definition also accepts `presets?: readonly LyraDateRangePreset[]` (new in 11.3.0),
+forwarded to its composed `<lr-date-input>` exactly like `min`/`max`, so the quick-range row
+("Today", "Last 7 days", "All time") renders inside that filter's own calendar popover. Entries are
+`LyraDateRangePreset { label, start?, end? }` with ISO `YYYY-MM-DD` bounds; an omitted bound is open
+and resolves to the filter's `min`/`max`, and an open bound with no corresponding limit renders that
+button disabled. `presets` is deliberately **not** accepted on a single `'date'` filter: a preset
+names two dates, so `lr-date-picker` ignores the list outside range mode, and a list passed there is
+dropped rather than rendering a row that cannot do anything.
+
+The `lr-input` emitted by such a commit carries `appliedPreset`, the definition entry whose button
+produced it — the bar's own frozen snapshot, so it compares identical to `filters[i].presets[j]`. It
+is `undefined` for every other filter type and for a range picked or typed by hand. A filter bar
+whose values round-trip through a query string needs it because `value` holds only the frozen ISO
+range: persisting "Last 7 days" as a preset id keeps it meaning the last 7 days after the next
+reload, and re-deriving it by string-matching `value` is both the mapping table `presets` exists to
+delete and ambiguous (Today and This month coincide on the 1st). It rides the event rather than
+`value` because it is metadata about one edit, not a filter value — `value` stays the plain,
+JSON-serializable record it has always been.
+
+```ts
+const filters: LyraFilterBarFilterDefinition[] = [
+  {
+    filterId: "period",
+    label: "Reporting period",
+    type: "date-range",
+    min: "2020-01-01",
+    max: "2030-12-31",
+    presets: [
+      { label: "Last 7 days", start: "2026-08-13", end: "2026-08-19" },
+      { label: "This month", start: "2026-08-01", end: "2026-08-31" },
+      { label: "All time" },
+    ],
+  },
+];
+
+bar.addEventListener("lr-input", (event) => {
+  const { value, filterId, appliedPreset } = event.detail;
+  persist({ ...value, periodPreset: appliedPreset?.label });
+});
+```
+
+Before this, the only way to give a filter-bar date range a quick-range row was `type: 'custom'`,
+which means hand-rendering an `lr-date-input` plus a full adapter (`clearValue`, `isEmpty`,
+`formatValue`) to set one property, and forfeits the built-in date-range chip localization described
+next.
 
 Date chips localize exactly one round-trip-valid ISO `YYYY-MM-DD` segment; date-range chips require
 exactly two slash-separated segments. Four-digit
@@ -17041,6 +17388,7 @@ These named interfaces and helper signatures are available to typed integrations
 }`
   `LyraFilterBarDateRangeDefinition {
   type: unknown;
+  presets: unknown;
   min: unknown;
   max: unknown;
   filterId: unknown;
@@ -17052,6 +17400,7 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraFilterBarInputDetail {
   value: unknown;
   filterId: unknown;
+  appliedPreset: unknown;
 }`
   `LyraFilterBarOption {
   value: unknown;
@@ -21895,6 +22244,20 @@ import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
   unneeded 249-entry fetch. Only the standard tier is bulk-fetched this way;
   `fidelity="compact"/"detailed"` on individual elements still resolves through its own lazy
   per-code loader.
+- Rendering many flags at once **and** leaving every `<lr-flag>` on the default
+  `fidelity="standard"`: import
+  `@aceshooting/lyra-ui/components/media/flag/flag-peer-bulk-standard.js` instead of
+  `flag-peer-bulk.js` (never more than one of the three peer entries — each
+  `setFlagUrlResolver()` call replaces the previous resolver). It registers
+  `@aceshooting/lyra-flags/standard`'s `createFlagUrlResolver()`, which is backed by the same
+  standard-tier-only eager map as the root's, without statically importing the detailed and
+  compact loader maps the root entry needs for its per-call `variant`. Those maps are what
+  `flag-peer-bulk.js` pays for its batching: on a real production build with a 156-country flag
+  column, routing bulk resolution through the package root emitted +65 detailed SVGs and +31
+  compact WebPs — +15.8MB of assets no route rendered — swamping the chunk-count win the bulk path
+  exists for. The tradeoff is the tier commitment: `fidelity="compact"/"detailed"` on an individual
+  element resolves to that code's standard asset instead (a silent no-op, not an error), so use
+  `flag-peer-bulk.js` when per-instance fidelity must actually be honoured.
 - 65 of `@aceshooting/lyra-flags`' 249 flags (any whose design includes a detailed coat of
   arms/seal/emblem, e.g. `es`, `pt`, `sv`) ship **three** fidelity tiers, selected via the
   `fidelity` property (`flagUrl(code, { variant: fidelity })` under the hood): `"compact"` — a tiny WebP raster for
@@ -22006,8 +22369,9 @@ dimming at `itemCount <= 1`), `--lr-focus-ring-*`.
 ## `lr-map`
 
 A `maplibre-gl` wrapper with a declarative legend, a single choropleth GeoJSON fill layer, markers,
-and additive plain-GeoJSON `dataLayers`, plus a peer-neutral `map` getter for common imperative
-operations. Its runtime value is the underlying MapLibre map.
+and additive `dataLayers` — plain GeoJSON, natively clustered points, or a heatmap density surface —
+plus a peer-neutral `map` getter for common imperative operations. Its runtime value is the
+underlying MapLibre map.
 
 **Properties:**
 
@@ -22090,7 +22454,8 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
 - `dataLayers: LyraMapGeoJsonDataLayer[] = []` (attribute: false) —
   `LyraMapGeoJsonDataLayer { sourceId: string; geojson: GeoJSON.Feature |
 GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
-'danger' | 'neutral'; color?: string; strokeColor?: string }`. `sourceId` is trimmed and must be nonempty; the first layer for a
+'danger' | 'neutral'; color?: string; strokeColor?: string; kind?: LyraMapDataLayerKind;
+heatmap?: LyraMapHeatmapOptions; cluster?: LyraMapClusterOptions }`. `sourceId` is trimmed and must be nonempty; the first layer for a
   `sourceId` wins and blank or later duplicate records are ignored. Each retained entry adds one
   GeoJSON source plus three geometry-filtered layers
   (fill, line, and circle, so a mixed `FeatureCollection` renders correctly), colored from the
@@ -22113,6 +22478,55 @@ GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
   persists across a `dataLayers` reassignment gets its GeoJSON updated in place (`setData()`), one
   that's dropped has its private source/layers removed, and a genuinely new `sourceId` gets new
   resources — nothing leaks on removal, style change, or disconnect.
+
+  `cluster` and `kind` (both new in 11.3.0) opt one entry out of that three-layer geometry split.
+  **Both are strictly additive: an entry that sets neither renders exactly what it rendered before,
+  down to the layer ids and the point layer's filter.**
+
+  `cluster?: LyraMapClusterOptions { radius?: number; maxZoom?: number; radiusSteps?: [number,
+number][]; colorSteps?: [number, string][]; countFont?: string[] }` turns the entry's source into a
+  natively clustered one — `cluster`/`clusterRadius` (default 50)/`clusterMaxZoom` (default 14) on
+  the source, plus a `${sourceId}-cluster` circle filtered on `has('point_count')`, a
+  `${sourceId}-cluster-count` label, and a `${sourceId}-circle` layer for the points that stayed
+  unclustered. `cluster: {}` opts in at every default. This is what a thousands-of-points map needs
+  and what `markers` cannot be: `markers` mints one real, individually focusable DOM element per
+  entry, which is right for tens of pins and both unreadable and expensive for thousands.
+  `radiusSteps` and `colorSteps` are `['step', …]` breaks keyed on `point_count`, in the same
+  ascending `[value, output]` vocabulary as `choropleth.stops` — including the same base rule, where
+  the first entry's own output covers everything below the first threshold, and the same colour
+  resolution, where a `var(--lr-…)` reference in a `colorSteps` entry is resolved against the host
+  before it reaches MapLibre (which paints to a WebGL canvas and never sees the CSS cascade), so a
+  retheme moves the cluster breaks with everything else. No fill or line layer is created for a
+  clustered entry, because MapLibre's clustering keeps point features only. The count
+  label needs glyphs: a style that declares none gets the graduated circles without the numbers
+  (adding a text layer against a glyph-less style paints nothing and only emits peer errors), and
+  `countFont` names the font stack when your style's glyph source lacks MapLibre's spec default.
+  Cluster options are baked into the source at creation time by MapLibre and have no setter, so
+  changing them (or `kind`) rebuilds that one entry's source and layers; every other update still
+  reconciles in place.
+
+  `kind?: 'auto' | 'heatmap'` (`LyraMapDataLayerKind`, default `'auto'` — today's geometry split)
+  renders the source as MapLibre's own first-class `heatmap` layer instead, which the geometry split
+  cannot express at all: thousands of overlapping circles read as one opaque blob rather than as
+  where the data is concentrated. `heatmap?: LyraMapHeatmapOptions { weightField?: string;
+weightRange?: [number, number]; stops?: [number, string][]; radius?: number; intensity?: number }`
+  configures it. `weightField` weights each point by a feature property, and `weightRange` maps that
+  property's own units onto the 0–1 weight MapLibre expects — without it the raw value is passed
+  through, which saturates the surface for any quantity above ~1; with neither, every point weighs 1.
+  `stops` are `[density, color]` pairs with density in `[0, 1]`, **the same `[value, color]`
+  vocabulary `choropleth.stops` and `legendGradient` already share**, so a `legendGradient` bar can
+  describe the ramp without a second copy of it, and `var(--lr-…)` stops resolve against the host the
+  same way `color`/`strokeColor` do. A ramp that doesn't start at density 0 gets a fully transparent
+  stop prepended, because a coloured zero tints the entire map — so **a single stop is already a
+  complete ramp**, as long as it sits above density 0: `stops: [[1, '#ff0000']]` is exactly
+  transparent → red. The one authored ramp that can't be honoured is a lone stop AT density 0, which
+  describes a flat colour rather than a gradient; that one — like an unset or wholly unusable
+  `stops` — falls back to the built-in ramp, which runs transparent → `--lr-color-brand` →
+  `--lr-color-success` → `--lr-color-warning` → `--lr-color-danger`, so a retheme moves the density
+  surface with everything else. `radius`
+  (default 30) and `intensity` (default 1) are MapLibre's own. `cluster` is ignored on a heatmap
+  entry: a heatmap already aggregates density, and clustering its input would feed it one point per
+  cluster instead of the real distribution.
 - `maxBounds: LyraMapBounds | null = null` (attribute: false) — box the map may not pan outside,
   `[[west, south], [east, north]]`. Prefer it over calling `map.setMaxBounds()` through the `.map`
   escape hatch: constraining the camera can wedge maplibre-gl at a sub-1 fractional zoom in a wide
@@ -22150,7 +22564,8 @@ payload beside the map.
   empty canvas name. The non-semantic `[part="base"]` wrapper is not named instead.
 
 **Authoring types:** `LyraMapLegendEntry`, `LyraMapLegendPattern`, `LyraMapLegendProjection`, `LyraMapChoroplethLayer`,
-`LyraMapGeoJsonDataLayer`, `LyraMapMarker`, `LyraMapStyleSpecification`, and `LyraMapInstance`.
+`LyraMapGeoJsonDataLayer`, `LyraMapDataLayerKind`, `LyraMapClusterOptions`, `LyraMapHeatmapOptions`,
+`LyraMapMarker`, `LyraMapStyleSpecification`, and `LyraMapInstance`.
 The former `LegendEntry`, `ChoroplethLayer`, `GeoJsonDataLayer`, and `MapMarker` names are removed
 in v9 rather than retained as aliases.
 
@@ -22169,10 +22584,15 @@ an element.
 (frozen `detail: { readonly lngLat: readonly [lng, lat], readonly feature?, readonly origin?,
 readonly sourceId? }`; the tuple and any hit GeoJSON feature are detached and recursively frozen).
 `feature` resolves against the choropleth fill layer **and** every applied `dataLayers`
-fill/line/circle layer, topmost first — so a shape painted through `dataLayers` is identifiable
-instead of being indistinguishable from empty space. `origin` is `'choropleth'` or `'data-layer'`,
-and `sourceId` carries the authored `dataLayers[].sourceId` for a data-layer hit; both are
-`undefined` whenever `feature` is
+fill/line/circle/cluster layer, topmost first — so a shape painted through `dataLayers` is
+identifiable instead of being indistinguishable from empty space. `origin` is `'choropleth'`,
+`'data-layer'` or `'cluster'`, and `sourceId` carries the authored `dataLayers[].sourceId` for a
+data-layer or cluster hit; both are `undefined` whenever `feature` is. A cluster hit is reported
+separately because it is a synthetic aggregate rather than one of your features: its useful payload
+is MapLibre's `point_count`/`point_count_abbreviated`/`cluster_id` properties, which is what a
+zoom-to-cluster handler reads. The count label is deliberately not hit-tested (it sits exactly on
+the circle already queried and would only make the label the topmost hit), and a `kind: 'heatmap'`
+layer is never queried at all — MapLibre returns no features for a rendered density surface
 
 **Slots:** `legend` — custom legend content, rendered inside the legend panel's own layout so it
 stays positioned with the map instead of floating beside it. Supplying it opens the panel even
@@ -24299,6 +24719,12 @@ These named interfaces and helper signatures are available to typed integrations
   reason: unknown;
 }`
 
+- **`components-media-flag-flag-peer-bulk-standard-contracts`** — Supporting data types and helpers for this component family.
+  `registerLyraFlagStandardBulkPeer(): unknown`
+
+- **`components-media-flag-flag-peer-bulk-contracts`** — Supporting data types and helpers for this component family.
+  `registerLyraFlagBulkPeer(): unknown`
+
 - **`components-media-flag-flag-peer-contracts`** — Supporting data types and helpers for this component family.
   `registerLyraFlagPeer(): unknown`
 
@@ -24427,12 +24853,29 @@ These named interfaces and helper signatures are available to typed integrations
   interpolation: unknown;
   stepBaseColor: unknown;
 }`
+  `LyraMapClusterOptions {
+  radius: unknown;
+  maxZoom: unknown;
+  radiusSteps: unknown;
+  colorSteps: unknown;
+  countFont: unknown;
+}`
   `LyraMapGeoJsonDataLayer {
   sourceId: unknown;
   geojson: unknown;
   tone: unknown;
   color: unknown;
   strokeColor: unknown;
+  kind: unknown;
+  heatmap: unknown;
+  cluster: unknown;
+}`
+  `LyraMapHeatmapOptions {
+  weightField: unknown;
+  weightRange: unknown;
+  stops: unknown;
+  radius: unknown;
+  intensity: unknown;
 }`
   `LyraMapInstance {
   getCanvas: unknown;

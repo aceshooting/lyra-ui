@@ -455,6 +455,7 @@ export type {
   HeatmapCalendarData,
   HeatmapMode,
   HeatmapScale,
+  LyraHeatmapStickyLabels,
   MatrixCellPos,
   CalendarCellPos,
   HeatmapAnnotation,
@@ -599,6 +600,9 @@ export type {
   LyraMapChoroplethLayer,
   LyraMapMarker,
   LyraMapGeoJsonDataLayer,
+  LyraMapDataLayerKind,
+  LyraMapClusterOptions,
+  LyraMapHeatmapOptions,
   LyraMapStyleSpecification,
   LyraMapInstance,
 } from './components/media/map/map.class.js';

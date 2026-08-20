@@ -253,6 +253,12 @@ removing the label from the accessibility tree.
   reflects `aria-current="page"` on `[part='base']` and drives the current visual treatment. The rail
   has no built-in routing, so the consumer sets this per item (e.g. by comparing `href` against the
   current location).
+- `active: boolean = false` — **deprecated alias for `current`**, read alongside it: the item is
+  current when either is true. `active` was this member's original public name, in both property and
+  attribute form; it was renamed to `current` without an alias, so shipped consumers writing
+  `.active=${…}` or `<lr-app-rail-item active>` silently lost their current-item indicator and kept a
+  permanent `aria-current="false"`. A Lit property binding on a custom element is untyped, so nothing
+  in a consumer's type check or test suite could catch it. Prefer `current` in new code.
 - `tooltip: boolean = false` (reflected) — opt-in hover/focus flyout (`[part='tooltip']`) showing
   this item's label text while the rail's `icon-only` mode (set externally by the parent
   `<lr-app-rail>` as the viewport narrows) hides it from view. No effect outside icon-only mode,

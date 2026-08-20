@@ -5933,6 +5933,28 @@
       "surface": {
         "attributes": [
           {
+            "name": "active",
+            "property": "active",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": {
+              "tag": "lr-app-rail-item",
+              "kind": "attribute",
+              "name": "active",
+              "since": "11.2.0",
+              "replacement": {
+                "kind": "attribute",
+                "name": "current",
+                "usage": "current"
+              },
+              "removalNotBefore": "13.0.0",
+              "rationale": "The attribute half of the restored `active` property alias. `active` was this member's original public name in both forms; the rename to `current` was never announced, so markup that already wrote `<lr-app-rail-item active>` stopped marking the item current with no error. Shares the property record's compatibility window because it is the same correction."
+            },
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "current",
             "property": "current",
             "type": "boolean",
@@ -6003,6 +6025,28 @@
           }
         ],
         "properties": [
+          {
+            "name": "active",
+            "attribute": "active",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": {
+              "tag": "lr-app-rail-item",
+              "kind": "property",
+              "name": "active",
+              "since": "11.2.0",
+              "replacement": {
+                "kind": "property",
+                "name": "current",
+                "usage": "current"
+              },
+              "removalNotBefore": "13.0.0",
+              "rationale": "`active` was this property's original public name and was documented as such when it shipped. It was renamed to `current` with no changelog entry, no alias and no deprecation record, so every shipped consumer's `.active=` binding silently became a dead expando -- a Lit property binding on a custom element is untyped, so nothing in a consumer's type check, test suite or build could see it. The measured downstream effect was an app rail with no current-item indicator and a permanent aria-current=\"false\". Restoring the name is a correction, not a new API, so the compatibility window runs long: this alias is what shipped consumers already wrote."
+            },
+            "hasDefault": true,
+            "default": false
+          },
           {
             "name": "current",
             "attribute": "current",
@@ -34323,6 +34367,15 @@
             "default": "outlined"
           },
           {
+            "name": "appliedPreset",
+            "attribute": null,
+            "type": "LyraDateRangePreset | undefined",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "assumeInteractionOn",
             "attribute": null,
             "type": "string[]",
@@ -52258,6 +52311,19 @@
         "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
         "deprecations": []
       },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [],
+        "transitive": [],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
       "counterparts": [],
       "surface": {
         "attributes": [
@@ -55755,6 +55821,15 @@
             "default": "linear"
           },
           {
+            "name": "sticky-labels",
+            "property": "stickyLabels",
+            "type": "LyraHeatmapStickyLabels",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "value-label",
             "property": "valueLabel",
             "type": "string | undefined",
@@ -55971,6 +56046,15 @@
             "default": null
           },
           {
+            "name": "stickyLabels",
+            "attribute": "sticky-labels",
+            "type": "LyraHeatmapStickyLabels",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "valueLabel",
             "attribute": "value-label",
             "type": "string | undefined",
@@ -56010,6 +56094,14 @@
           },
           {
             "name": "cells",
+            "deprecated": null
+          },
+          {
+            "name": "col-labels",
+            "deprecated": null
+          },
+          {
+            "name": "grid",
             "deprecated": null
           },
           {
@@ -56053,6 +56145,10 @@
             "deprecated": null
           },
           {
+            "name": "row-labels",
+            "deprecated": null
+          },
+          {
             "name": "tooltip",
             "deprecated": null
           }
@@ -56075,6 +56171,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-focus-ring-color)"
+          },
+          {
+            "name": "--lr-heatmap-grid-max-block-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "none"
           },
           {
             "name": "--lr-heatmap-label-font",
@@ -56104,6 +56206,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-success)"
+          },
+          {
+            "name": "--lr-heatmap-sticky-label-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
           },
           {
             "name": "--lr-heatmap-tooltip-bg",
@@ -68456,7 +68564,7 @@
         "events": [
           {
             "name": "lr-map-click",
-            "type": "CustomEvent<{ readonly lngLat: readonly [number, number]; readonly feature: Feature | undefined; /** Which layer `feature` was hit on, so a click is attributable when both a choropleth and * `dataLayers` are painted. `undefined` whenever `feature` is. */ readonly origin: 'choropleth' | 'data-layer' | undefined; /** The authored `dataLayers[].sourceId` the hit belongs to; `undefined` for a choropleth hit * (which has only one possible source) and when nothing was hit. */ readonly sourceId: string | undefined; }>",
+            "type": "CustomEvent<{ readonly lngLat: readonly [number, number]; readonly feature: Feature | undefined; /** Which layer `feature` was hit on, so a click is attributable when both a choropleth and * `dataLayers` are painted. `'cluster'` marks a hit on a clustered entry's aggregate circle, * whose `point_count`/`cluster_id` properties describe the group rather than one feature. * `undefined` whenever `feature` is. */ readonly origin: 'choropleth' | 'data-layer' | 'cluster' | undefined; /** The authored `dataLayers[].sourceId` the hit belongs to; `undefined` for a choropleth hit * (which has only one possible source) and when nothing was hit. */ readonly sourceId: string | undefined; }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -94302,36 +94410,7 @@
             "deprecated": null
           }
         ],
-        "staticMethods": [
-          {
-            "name": "getPropertyDescriptor",
-            "overloads": [
-              {
-                "parameters": [
-                  {
-                    "name": "name",
-                    "type": "PropertyKey",
-                    "optional": false,
-                    "hasDefault": false
-                  },
-                  {
-                    "name": "key",
-                    "type": "string | symbol",
-                    "optional": false,
-                    "hasDefault": false
-                  },
-                  {
-                    "name": "options",
-                    "type": "PropertyDeclaration",
-                    "optional": false,
-                    "hasDefault": false
-                  }
-                ],
-                "returnType": "PropertyDescriptor | undefined"
-              }
-            ]
-          }
-        ],
+        "staticMethods": [],
         "moduleExports": [],
         "form": {
           "associated": true,
@@ -130302,6 +130381,28 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "activeView",
+            "attribute": null,
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": {
+              "tag": "lr-widget",
+              "kind": "property",
+              "name": "activeView",
+              "since": "11.2.0",
+              "replacement": {
+                "kind": "property",
+                "name": "activeViewId",
+                "usage": "activeViewId"
+              },
+              "removalNotBefore": "13.0.0",
+              "rationale": "`activeView` was this property's original public name; the string does not appear anywhere in CHANGELOG.md, so the rename to `activeViewId` was never announced at all. A shipped consumer's `.activeView=` binding became a dead expando and the widget fell back to its first view with no error. The alias seeds `activeViewId` rather than being read alongside it, because the component itself writes that property (a view-toggle click, and the fallback when `views` drops the active id), and a read-alongside alias would undo a later interactive change on the next update."
+            },
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "activeViewId",

@@ -16,8 +16,9 @@
 ## `lr-map`
 
 A `maplibre-gl` wrapper with a declarative legend, a single choropleth GeoJSON fill layer, markers,
-and additive plain-GeoJSON `dataLayers`, plus a peer-neutral `map` getter for common imperative
-operations. Its runtime value is the underlying MapLibre map.
+and additive `dataLayers` — plain GeoJSON, natively clustered points, or a heatmap density surface —
+plus a peer-neutral `map` getter for common imperative operations. Its runtime value is the
+underlying MapLibre map.
 
 **Properties:**
 
@@ -100,7 +101,8 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
 - `dataLayers: LyraMapGeoJsonDataLayer[] = []` (attribute: false) —
   `LyraMapGeoJsonDataLayer { sourceId: string; geojson: GeoJSON.Feature |
 GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
-'danger' | 'neutral'; color?: string; strokeColor?: string }`. `sourceId` is trimmed and must be nonempty; the first layer for a
+'danger' | 'neutral'; color?: string; strokeColor?: string; kind?: LyraMapDataLayerKind;
+heatmap?: LyraMapHeatmapOptions; cluster?: LyraMapClusterOptions }`. `sourceId` is trimmed and must be nonempty; the first layer for a
   `sourceId` wins and blank or later duplicate records are ignored. Each retained entry adds one
   GeoJSON source plus three geometry-filtered layers
   (fill, line, and circle, so a mixed `FeatureCollection` renders correctly), colored from the
@@ -123,6 +125,55 @@ GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
   persists across a `dataLayers` reassignment gets its GeoJSON updated in place (`setData()`), one
   that's dropped has its private source/layers removed, and a genuinely new `sourceId` gets new
   resources — nothing leaks on removal, style change, or disconnect.
+
+  `cluster` and `kind` (both new in 11.3.0) opt one entry out of that three-layer geometry split.
+  **Both are strictly additive: an entry that sets neither renders exactly what it rendered before,
+  down to the layer ids and the point layer's filter.**
+
+  `cluster?: LyraMapClusterOptions { radius?: number; maxZoom?: number; radiusSteps?: [number,
+number][]; colorSteps?: [number, string][]; countFont?: string[] }` turns the entry's source into a
+  natively clustered one — `cluster`/`clusterRadius` (default 50)/`clusterMaxZoom` (default 14) on
+  the source, plus a `${sourceId}-cluster` circle filtered on `has('point_count')`, a
+  `${sourceId}-cluster-count` label, and a `${sourceId}-circle` layer for the points that stayed
+  unclustered. `cluster: {}` opts in at every default. This is what a thousands-of-points map needs
+  and what `markers` cannot be: `markers` mints one real, individually focusable DOM element per
+  entry, which is right for tens of pins and both unreadable and expensive for thousands.
+  `radiusSteps` and `colorSteps` are `['step', …]` breaks keyed on `point_count`, in the same
+  ascending `[value, output]` vocabulary as `choropleth.stops` — including the same base rule, where
+  the first entry's own output covers everything below the first threshold, and the same colour
+  resolution, where a `var(--lr-…)` reference in a `colorSteps` entry is resolved against the host
+  before it reaches MapLibre (which paints to a WebGL canvas and never sees the CSS cascade), so a
+  retheme moves the cluster breaks with everything else. No fill or line layer is created for a
+  clustered entry, because MapLibre's clustering keeps point features only. The count
+  label needs glyphs: a style that declares none gets the graduated circles without the numbers
+  (adding a text layer against a glyph-less style paints nothing and only emits peer errors), and
+  `countFont` names the font stack when your style's glyph source lacks MapLibre's spec default.
+  Cluster options are baked into the source at creation time by MapLibre and have no setter, so
+  changing them (or `kind`) rebuilds that one entry's source and layers; every other update still
+  reconciles in place.
+
+  `kind?: 'auto' | 'heatmap'` (`LyraMapDataLayerKind`, default `'auto'` — today's geometry split)
+  renders the source as MapLibre's own first-class `heatmap` layer instead, which the geometry split
+  cannot express at all: thousands of overlapping circles read as one opaque blob rather than as
+  where the data is concentrated. `heatmap?: LyraMapHeatmapOptions { weightField?: string;
+weightRange?: [number, number]; stops?: [number, string][]; radius?: number; intensity?: number }`
+  configures it. `weightField` weights each point by a feature property, and `weightRange` maps that
+  property's own units onto the 0–1 weight MapLibre expects — without it the raw value is passed
+  through, which saturates the surface for any quantity above ~1; with neither, every point weighs 1.
+  `stops` are `[density, color]` pairs with density in `[0, 1]`, **the same `[value, color]`
+  vocabulary `choropleth.stops` and `legendGradient` already share**, so a `legendGradient` bar can
+  describe the ramp without a second copy of it, and `var(--lr-…)` stops resolve against the host the
+  same way `color`/`strokeColor` do. A ramp that doesn't start at density 0 gets a fully transparent
+  stop prepended, because a coloured zero tints the entire map — so **a single stop is already a
+  complete ramp**, as long as it sits above density 0: `stops: [[1, '#ff0000']]` is exactly
+  transparent → red. The one authored ramp that can't be honoured is a lone stop AT density 0, which
+  describes a flat colour rather than a gradient; that one — like an unset or wholly unusable
+  `stops` — falls back to the built-in ramp, which runs transparent → `--lr-color-brand` →
+  `--lr-color-success` → `--lr-color-warning` → `--lr-color-danger`, so a retheme moves the density
+  surface with everything else. `radius`
+  (default 30) and `intensity` (default 1) are MapLibre's own. `cluster` is ignored on a heatmap
+  entry: a heatmap already aggregates density, and clustering its input would feed it one point per
+  cluster instead of the real distribution.
 - `maxBounds: LyraMapBounds | null = null` (attribute: false) — box the map may not pan outside,
   `[[west, south], [east, north]]`. Prefer it over calling `map.setMaxBounds()` through the `.map`
   escape hatch: constraining the camera can wedge maplibre-gl at a sub-1 fractional zoom in a wide
@@ -160,7 +211,8 @@ payload beside the map.
   empty canvas name. The non-semantic `[part="base"]` wrapper is not named instead.
 
 **Authoring types:** `LyraMapLegendEntry`, `LyraMapLegendPattern`, `LyraMapLegendProjection`, `LyraMapChoroplethLayer`,
-`LyraMapGeoJsonDataLayer`, `LyraMapMarker`, `LyraMapStyleSpecification`, and `LyraMapInstance`.
+`LyraMapGeoJsonDataLayer`, `LyraMapDataLayerKind`, `LyraMapClusterOptions`, `LyraMapHeatmapOptions`,
+`LyraMapMarker`, `LyraMapStyleSpecification`, and `LyraMapInstance`.
 The former `LegendEntry`, `ChoroplethLayer`, `GeoJsonDataLayer`, and `MapMarker` names are removed
 in v9 rather than retained as aliases.
 
@@ -179,10 +231,15 @@ an element.
 (frozen `detail: { readonly lngLat: readonly [lng, lat], readonly feature?, readonly origin?,
 readonly sourceId? }`; the tuple and any hit GeoJSON feature are detached and recursively frozen).
 `feature` resolves against the choropleth fill layer **and** every applied `dataLayers`
-fill/line/circle layer, topmost first — so a shape painted through `dataLayers` is identifiable
-instead of being indistinguishable from empty space. `origin` is `'choropleth'` or `'data-layer'`,
-and `sourceId` carries the authored `dataLayers[].sourceId` for a data-layer hit; both are
-`undefined` whenever `feature` is
+fill/line/circle/cluster layer, topmost first — so a shape painted through `dataLayers` is
+identifiable instead of being indistinguishable from empty space. `origin` is `'choropleth'`,
+`'data-layer'` or `'cluster'`, and `sourceId` carries the authored `dataLayers[].sourceId` for a
+data-layer or cluster hit; both are `undefined` whenever `feature` is. A cluster hit is reported
+separately because it is a synthetic aggregate rather than one of your features: its useful payload
+is MapLibre's `point_count`/`point_count_abbreviated`/`cluster_id` properties, which is what a
+zoom-to-cluster handler reads. The count label is deliberately not hit-tested (it sits exactly on
+the circle already queried and would only make the label the topmost hit), and a `kind: 'heatmap'`
+layer is never queried at all — MapLibre returns no features for a rendered density surface
 
 **Slots:** `legend` — custom legend content, rendered inside the legend panel's own layout so it
 stays positioned with the map instead of floating beside it. Supplying it opens the panel even

@@ -543,7 +543,7 @@ describe('flag-peer-bulk-standard.js (tier-committed bulk registration entry)', 
     const el = await fixture<LyraFlag>(html`<lr-flag country="es" fidelity="detailed"></lr-flag>`);
     const tierEntry = await loadFlagUrl(() => import('@aceshooting/lyra-flags/standard'));
     expect((await img(el)).getAttribute('src')).to.equal(await tierEntry!('es'));
-    expect(el.shadowRoot!.querySelector('[part="error"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.be.true;
   });
 });
 
@@ -1193,5 +1193,59 @@ describe('missing-resolver diagnostic', () => {
 
     expect(el.hasAttribute('data-unresolved'), 'still reflects the unresolved state').to.be.true;
     expect(warnings, 'an unmapped code must stay silent').to.deep.equal([]);
+  });
+});
+
+// A peer that is INSTALLED but too old to carry the capability is a different failure from a peer
+// that is not installed at all, and the two were reported identically: "install it with `pnpm add
+// @aceshooting/lyra-flags`" — advice a reader has already followed. That matters more from this
+// release on, because the bulk-standard entry point requires `createFlagUrlResolver` on the
+// tier-committed subpath, which older peers do not export; a consumer who upgrades lyra-ui while
+// pinning the peer lands here, and the generic message sends them to look for the wrong problem.
+describe('peer capability diagnostics', () => {
+  function captureWarnings(): { calls: unknown[][]; restore: () => void } {
+    const calls: unknown[][] = [];
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => calls.push(args);
+    return { calls, restore: () => { console.warn = originalWarn; } };
+  }
+
+  it('distinguishes an absent peer from one that loaded without the bulk capability', async () => {
+    const absent = captureWarnings();
+    try {
+      await loadBulkFlagUrl(() => Promise.reject(new Error('Cannot find module')));
+    } finally {
+      absent.restore();
+    }
+    const outdated = captureWarnings();
+    try {
+      await loadBulkFlagUrl(() => Promise.resolve({ flagUrl: () => '/x.svg' }));
+    } finally {
+      outdated.restore();
+    }
+
+    expect(absent.calls.length).to.equal(1);
+    expect(outdated.calls.length).to.equal(1);
+    const absentText = String(absent.calls[0][0]);
+    const outdatedText = String(outdated.calls[0][0]);
+    expect(absentText, 'an absent peer is still told to install it').to.contain('install');
+    expect(
+      outdatedText,
+      'an installed-but-incapable peer must not be told to install what it already has',
+    ).to.not.contain('install it with');
+    expect(outdatedText).to.contain('createFlagUrlResolver');
+    expect(outdatedText, 'and must say the package is present').to.contain('installed');
+  });
+
+  it('makes the same distinction for the per-code resolver', async () => {
+    const outdated = captureWarnings();
+    try {
+      await loadFlagUrl(() => Promise.resolve({ somethingElse: 1 }));
+    } finally {
+      outdated.restore();
+    }
+    expect(outdated.calls.length).to.equal(1);
+    expect(String(outdated.calls[0][0])).to.contain('flagUrl');
+    expect(String(outdated.calls[0][0])).to.not.contain('install it with');
   });
 });

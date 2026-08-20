@@ -724,7 +724,10 @@ in any release.
 **Modes work the way the components' do.** Light on `:root` and on `.lr-light` /
 `[data-lr-theme="light"]`, dark under `prefers-color-scheme: dark` (unless an explicit light scope
 opts out) and on `.lr-dark` / `[data-lr-theme="dark"]`, plus the same `forced-colors` and
-`prefers-reduced-motion` overrides the components apply. Every declaration keeps its `--lr-theme-*`
+`prefers-reduced-motion` overrides the components apply — and those two reach you on **every** one
+of those routes, including a dark OS with no explicit scope, because they repeat the compound
+`:root:not(.lr-light):not([data-lr-theme="light"])` selector the dark route uses rather than a bare
+`:root` that the dark route would out-specify. Every declaration keeps its `--lr-theme-*`
 input in front of a resolved fallback, so `theme.css` and your own overrides still win here exactly
 as they do inside a component.
 
@@ -2807,6 +2810,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-format-bytes": unknown;
   "lr-format-date": unknown;
   "lr-format-number": unknown;
+  "lr-funnel": unknown;
   "lr-gauge": unknown;
   "lr-generation-metrics": unknown;
   "lr-geojson-view": unknown;
@@ -3192,6 +3196,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-format-bytes": unknown;
   "lr-format-date": unknown;
   "lr-format-number": unknown;
+  "lr-funnel": unknown;
   "lr-gauge": unknown;
   "lr-generation-metrics": unknown;
   "lr-geojson-view": unknown;
@@ -3478,6 +3483,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-format-bytes": unknown;
   "lr-format-date": unknown;
   "lr-format-number": unknown;
+  "lr-funnel": unknown;
   "lr-gauge": unknown;
   "lr-generation-metrics": unknown;
   "lr-geojson-view": unknown;
@@ -3804,6 +3810,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-format-bytes": unknown;
   "lr-format-date": unknown;
   "lr-format-number": unknown;
+  "lr-funnel": unknown;
   "lr-gauge": unknown;
   "lr-generation-metrics": unknown;
   "lr-geojson-view": unknown;

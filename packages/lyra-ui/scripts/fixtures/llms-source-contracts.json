@@ -978,7 +978,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderErrorEventDetail",
       "kind": "interface",
-      "fingerprint": "ea0bee20991bc119b7b2",
+      "fingerprint": "dc97980561742e35749f",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -994,7 +994,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderEventDetail",
       "kind": "interface",
-      "fingerprint": "2c88a57cc5dd7bfddb76",
+      "fingerprint": "cd9770253097faa0ed6d",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1042,7 +1042,7 @@
       "module": "src/autoloader.ts",
       "exportName": "discover",
       "kind": "function",
-      "fingerprint": "13ef3fd89b034d4fb56e",
+      "fingerprint": "a0f6e483090ade44a90b",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1058,7 +1058,7 @@
       "module": "src/autoloader.ts",
       "exportName": "start",
       "kind": "function",
-      "fingerprint": "94d89a2519b0c4e95cb5",
+      "fingerprint": "c874d4fc96faaf34a519",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -5638,6 +5638,7 @@
         "src/all.ts",
         "src/components/data/flow-canvas/flow-canvas.class.ts",
         "src/components/data/flow-canvas/flow-canvas.ts",
+        "src/components/data/flow-canvas/flow-types.ts",
         "src/components/data/index.ts",
         "src/components/lr-flow-canvas.ts",
         "src/lyra.ts",
@@ -5661,6 +5662,7 @@
         "src/all.ts",
         "src/components/data/flow-canvas/flow-canvas.class.ts",
         "src/components/data/flow-canvas/flow-canvas.ts",
+        "src/components/data/flow-canvas/flow-types.ts",
         "src/components/data/index.ts",
         "src/components/lr-flow-canvas.ts",
         "src/lyra.ts",
@@ -5684,6 +5686,7 @@
         "src/all.ts",
         "src/components/data/flow-canvas/flow-canvas.class.ts",
         "src/components/data/flow-canvas/flow-canvas.ts",
+        "src/components/data/flow-canvas/flow-types.ts",
         "src/components/data/index.ts",
         "src/components/lr-flow-canvas.ts",
         "src/lyra.ts",
@@ -5707,6 +5710,7 @@
         "src/all.ts",
         "src/components/data/flow-canvas/flow-canvas.class.ts",
         "src/components/data/flow-canvas/flow-canvas.ts",
+        "src/components/data/flow-canvas/flow-types.ts",
         "src/components/data/index.ts",
         "src/components/lr-flow-canvas.ts",
         "src/lyra.ts",
@@ -5730,6 +5734,7 @@
         "src/all.ts",
         "src/components/data/flow-canvas/flow-canvas.class.ts",
         "src/components/data/flow-canvas/flow-canvas.ts",
+        "src/components/data/flow-canvas/flow-types.ts",
         "src/components/data/index.ts",
         "src/components/lr-flow-canvas.ts",
         "src/lyra.ts",
@@ -5753,6 +5758,7 @@
         "src/all.ts",
         "src/components/data/flow-canvas/flow-canvas.class.ts",
         "src/components/data/flow-canvas/flow-canvas.ts",
+        "src/components/data/flow-canvas/flow-types.ts",
         "src/components/data/index.ts",
         "src/components/lr-flow-canvas.ts",
         "src/lyra.ts",
@@ -5776,6 +5782,7 @@
         "src/all.ts",
         "src/components/data/flow-canvas/flow-canvas.class.ts",
         "src/components/data/flow-canvas/flow-canvas.ts",
+        "src/components/data/flow-canvas/flow-types.ts",
         "src/components/data/index.ts",
         "src/components/lr-flow-canvas.ts",
         "src/lyra.ts",
@@ -5799,6 +5806,7 @@
         "src/all.ts",
         "src/components/data/flow-canvas/flow-canvas.class.ts",
         "src/components/data/flow-canvas/flow-canvas.ts",
+        "src/components/data/flow-canvas/flow-types.ts",
         "src/components/data/index.ts",
         "src/components/lr-flow-canvas.ts",
         "src/lyra.ts",
@@ -5822,6 +5830,7 @@
         "src/all.ts",
         "src/components/data/flow-canvas/flow-canvas.class.ts",
         "src/components/data/flow-canvas/flow-canvas.ts",
+        "src/components/data/flow-canvas/flow-types.ts",
         "src/components/data/index.ts",
         "src/components/lr-flow-canvas.ts",
         "src/lyra.ts",
@@ -5834,6 +5843,29 @@
         "kind": "utility",
         "name": "components-data-flow-canvas-flow-types-contracts",
         "declaration": "FlowViewportSnapshot"
+      }
+    },
+    {
+      "module": "src/components/data/funnel/funnel.class.ts",
+      "exportName": "LyraFunnelStage",
+      "kind": "interface",
+      "fingerprint": "08ac0e75d5310d8098d4",
+      "routes": [
+        "src/all.ts",
+        "src/components/data/funnel/funnel.class.ts",
+        "src/components/data/funnel/funnel.ts",
+        "src/components/data/index.ts",
+        "src/components/lr-funnel.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/data.md",
+      "family": "data",
+      "locator": {
+        "kind": "utility",
+        "name": "components-data-funnel-funnel-contracts",
+        "declaration": "LyraFunnelStage"
       }
     },
     {
@@ -9157,6 +9189,38 @@
       }
     },
     {
+      "module": "src/components/media/flag/flag-peer-bulk-standard.ts",
+      "exportName": "registerLyraFlagStandardBulkPeer",
+      "kind": "function",
+      "fingerprint": "3523e5f67318f635004c",
+      "routes": [
+        "src/components/media/flag/flag-peer-bulk-standard.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-flag-flag-peer-bulk-standard-contracts",
+        "declaration": "registerLyraFlagStandardBulkPeer"
+      }
+    },
+    {
+      "module": "src/components/media/flag/flag-peer-bulk.ts",
+      "exportName": "registerLyraFlagBulkPeer",
+      "kind": "function",
+      "fingerprint": "97d39b347c68df1fe95f",
+      "routes": [
+        "src/components/media/flag/flag-peer-bulk.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-flag-flag-peer-bulk-contracts",
+        "declaration": "registerLyraFlagBulkPeer"
+      }
+    },
+    {
       "module": "src/components/media/flag/flag-peer.ts",
       "exportName": "registerLyraFlagPeer",
       "kind": "function",
@@ -9514,9 +9578,32 @@
     },
     {
       "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapClusterOptions",
+      "kind": "interface",
+      "fingerprint": "1e7dcbd81ef5fbfa0186",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-map-contracts",
+        "declaration": "LyraMapClusterOptions"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapGeoJsonDataLayer",
       "kind": "interface",
-      "fingerprint": "75352ff03c2a8c90c0f6",
+      "fingerprint": "8bc1a2c7f3b08de803fa",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -9533,6 +9620,29 @@
         "kind": "utility",
         "name": "components-media-map-map-contracts",
         "declaration": "LyraMapGeoJsonDataLayer"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapHeatmapOptions",
+      "kind": "interface",
+      "fingerprint": "269adfed333a84b16090",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-map-contracts",
+        "declaration": "LyraMapHeatmapOptions"
       }
     },
     {
@@ -13508,7 +13618,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "2bdb73dfdcc52c56d975",
+      "fingerprint": "df5e93e79397cf1d3a0b",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15093,7 +15203,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "32e0e8931826c78476d3",
+      "fingerprint": "5faae05849b2b85fb501",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15109,7 +15219,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "332bfba0d7b55cbbf964",
+      "fingerprint": "63810f2573c1e95675f1",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15544,7 +15654,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "ba59ee4a83b677732361",
+      "fingerprint": "14b272f726a680a53514",
       "routes": [
         "src/vue.ts"
       ],

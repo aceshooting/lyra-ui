@@ -1638,7 +1638,17 @@ weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
   Matrix mode only, like `matrixGeometry`: the property is read in calendar mode but has no effect
   there, since a calendar's axes are a different geometry (fixed weekday gutter, month band, and the
   optional `columnX`/`rowY` overrides). Unset (`'none'`, the default) renders exactly what it always
-  did — one canvas, no scrollport, no extra elements — and an unsupported value normalizes to it
+  did — one canvas, no scrollport, no extra elements — and an unsupported value normalizes to it.
+  The union is re-exported from the package root as `LyraHeatmapStickyLabels`, so a typed consumer
+  can annotate a variable or a framework prop with it. Everything positioned in canvas coordinates
+  moves into the scrollport with the cells: `[part="tooltip"]` renders inside it, so it stays on
+  the cell it describes through a scroll instead of drifting by the scroll offset, and because
+  `overflow: auto` clips whatever leaves the scrollport, the tooltip is kept inside the visible
+  window too — clamped along the inline axis and flipped to below its cell when a frozen band
+  leaves no room above it. Arrow-key navigation scrolls the focused cell into that window, clear of
+  the frozen bands, which the frozen modes need in their own right: the canvas is the roving tab
+  stop, its focus ring is painted into the bitmap rather than carried by a focusable element the
+  browser would scroll to, and it calls `preventDefault()` on the arrows
 - `maxCellSize?: number` (attribute `max-cell-size`) — ceiling, in CSS px, on the cell size
   `fitToWidth` derives from the host width, in **both** modes. Exists because `fitToWidth` divides
   the _whole_ host width across the grid, so a 5-week calendar or a 3-column matrix in a wide pane
@@ -1797,7 +1807,9 @@ in calendar mode)
 **CSS parts:** `base`, `canvas`, `grid` (the scrollport wrapping the canvas while `stickyLabels`
 freezes an axis — absent entirely otherwise), `row-labels`/`col-labels` (the frozen label bands,
 rendered only for the axis `stickyLabels` names), `cells` (opt-in per-cell overlay), `cell` (one opt-in native cell
-button), `tooltip` (hover tooltip, positioned over the hovered cell),
+button), `tooltip` (hover tooltip, positioned over the hovered cell — inside `[part="grid"]` while
+`stickyLabels` freezes an axis, so it scrolls with the cells, and a `[part="base"]` child
+otherwise),
 `live-region` (visually-hidden, `aria-hidden` mirror of the keyboard-focused cell; the actual
 announcement uses the shared light-DOM polite sink), `projection-limit` (localized assistive
 disclosure when bounded canonicalization truncates input), `legend`, `legend-lo`, `legend-hi` (both omitted, along with the gradient

@@ -461,6 +461,10 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     optionalPeers: [],
     load: () => import('../components/utility/format/format-number.class.js').then((module) => module.LyraFormatNumber),
   },
+  'lr-funnel': {
+    optionalPeers: [],
+    load: () => import('../components/data/funnel/funnel.class.js').then((module) => module.LyraFunnel),
+  },
   'lr-gauge': {
     optionalPeers: [],
     load: () => import('../components/data/gauge/gauge.class.js').then((module) => module.LyraGauge),

@@ -115,6 +115,7 @@ export const AUTOLOADER_TAGS = [
   'lr-format-bytes',
   'lr-format-date',
   'lr-format-number',
+  'lr-funnel',
   'lr-gauge',
   'lr-generation-metrics',
   'lr-geojson-view',

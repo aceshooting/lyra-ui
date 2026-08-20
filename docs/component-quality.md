@@ -9,8 +9,8 @@ component’s compatibility status. The machine-readable source is
 
 ## Current evidence
 
-- Public tags: **284**
-- Exact same-test/same-instance populated or open axe evidence: **282**
+- Public tags: **285**
+- Exact same-test/same-instance populated or open axe evidence: **283**
 - Narrow reviewed axe-state exemptions: **2**
 - Missing axe qualification: **0**
 - Visual-regression enrollment: **78** tags
@@ -163,6 +163,7 @@ complete enrolled set. Axe is not assistive-technology testing.
 | [`lr-format-bytes`](component-integration.md#lr-format-bytes) | stable | automated | N/A | not recorded | N/A | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
 | [`lr-format-date`](component-integration.md#lr-format-date) | stable | automated | N/A | not recorded | N/A | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
 | [`lr-format-number`](component-integration.md#lr-format-number) | stable | automated | N/A | not recorded | N/A | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
+| [`lr-funnel`](component-integration.md#lr-funnel) | experimental | automated | N/A | source signal | source signal | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
 | [`lr-gauge`](component-integration.md#lr-gauge) | stable | automated | N/A | source signal | source signal | not recorded | configured CI | render-and-hydrate | pending human | N/A | N/A | not enrolled | not verified |
 | [`lr-generation-metrics`](component-integration.md#lr-generation-metrics) | stable | automated | not recorded | not recorded | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified |
 | [`lr-geojson-view`](component-integration.md#lr-geojson-view) | stable | automated | not recorded | not recorded | N/A | source signal | configured CI | render-and-hydrate | not enrolled | source signal | source signal | not enrolled | not verified |

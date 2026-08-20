@@ -571,6 +571,15 @@ export interface LyraHeatmapEventMap {
  * `row-label-width`/`col-label-height` `"auto"` re-resolution instead of hardcoding it. The default
  * `'none'` renders exactly what it always did: one canvas, no scrollport.
  *
+ * Everything positioned in canvas coordinates moves into that scrollport with the cells. The hover
+ * tooltip renders inside it, so it stays on the cell it describes through a scroll instead of
+ * drifting by the scroll offset; since `overflow: auto` there clips whatever leaves the
+ * scrollport, it is also kept inside the visible window — clamped along the inline axis, and
+ * flipped to below its cell when a frozen band leaves no room above. Arrow-key navigation scrolls
+ * the focused cell into that window, clear of the frozen bands: the canvas is the roving tab stop,
+ * its focus ring is painted into the bitmap, and it calls `preventDefault()` on the arrows, so
+ * without that scroll a keyboard user has no way at all to bring the focused cell back into view.
+ *
  * Calendar `data.columnX` overrides the x-origin computed for each
  * week column — drawing, hit-testing, the focus ring, and month-label
  * positioning all consult it consistently, so a consumer can pixel-align a
@@ -620,7 +629,9 @@ export interface LyraHeatmapEventMap {
  * @csspart col-labels - The frozen column-label band, rendered while `stickyLabels` is `cols` or `both`.
  * @csspart cells - The opt-in per-cell accessibility overlay.
  * @csspart cell - An opt-in native button for one matrix or calendar cell.
- * @csspart tooltip - The hover tooltip.
+ * @csspart tooltip - The hover tooltip, positioned over the hovered cell. It renders inside
+ *   `[part="grid"]` while `stickyLabels` freezes an axis (so it scrolls with the cells) and as a
+ *   `[part="base"]` child otherwise.
  * @csspart live-region - An aria-hidden shadow mirror of the keyboard announcement; the actual
  *   announcement uses the shared light-DOM polite sink.
  * @csspart projection-limit - Localized assistive disclosure for bounded projections.
@@ -1985,6 +1996,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    // Both halves matter: the unfrozen default has nothing that can clip the tooltip, so it never
+    // pays for the measurement (or its forced layout) at all. See measureTooltip().
+    if (this.hoverCell && this.effectiveStickyLabels !== 'none')
+      this.scheduleAfterUpdate(
+        () => this.measureTooltip(),
+        'heatmap-tooltip-metrics'
+      );
     if (
       [
         'data',
@@ -3434,7 +3452,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   /**
-   * Pixel rect (canvas-local CSS px) of a cell — shared by `tooltipStyle()`
+   * Pixel rect (canvas-local CSS px) of a cell — shared by `tooltipAnchor()`
    * so the tooltip's position always agrees with the same geometry
    * `drawMatrix()`/`drawCalendar()`/`hitTest*()` use.
    */
@@ -3570,10 +3588,133 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     }
   }
 
-  /** Inline `style` for `[part="tooltip"]`, centered above the given cell. */
-  private tooltipStyle(pos: CellPos): Record<string, string> {
+  /** The `stickyLabels` scrollport, or `null` in the default unfrozen render, which has none. */
+  private get gridScrollport(): HTMLElement | null {
+    return this.shadowRoot?.querySelector<HTMLElement>('[part="grid"]') ?? null;
+  }
+
+  /** The tooltip's own rendered box in CSS px, recorded by `measureTooltip()`: `inline` is its
+   *  border box, `block` that box plus the token-sized gap it keeps from the cell. Only read while
+   *  a scrollport can clip it; zero until the first measurement, which degrades to the unclamped
+   *  placement rather than to a wrong one. */
+  private tooltipSize = { inline: 0, block: 0 };
+
+  /**
+   * Records the tooltip's rendered size, so the next paint can keep it inside the `stickyLabels`
+   * scrollport. Measured rather than derived: the box is sized by caller text, and the gap it
+   * keeps from the cell is a design token whose value belongs in the stylesheet.
+   *
+   * Repositioning can never resize it (`white-space: nowrap`, no inline-size constraint), so the
+   * re-render scheduled here always settles in one step. It runs from `scheduleAfterUpdate()`
+   * rather than straight out of `updated()` on purpose: that keeps the `requestUpdate()` outside
+   * Lit's own update cycle, and its microtask still flushes before paint, so the corrected
+   * position is the first one the user ever sees.
+   */
+  private measureTooltip(): void {
+    if (!this.gridScrollport) return;
+    const tooltip =
+      this.shadowRoot?.querySelector<HTMLElement>('[part="tooltip"]');
+    if (!tooltip || tooltip.hidden) return;
+    const view = this.ownerDocument.defaultView;
+    const gap = view
+      ? Math.abs(
+          finiteNumber(
+            Number.parseFloat(view.getComputedStyle(tooltip).marginBlockStart),
+            0
+          )
+        )
+      : 0;
+    const inline = tooltip.offsetWidth;
+    const block = tooltip.offsetHeight + gap;
+    if (
+      inline === this.tooltipSize.inline &&
+      block === this.tooltipSize.block
+    )
+      return;
+    this.tooltipSize = { inline, block };
+    this.requestUpdate();
+  }
+
+  /**
+   * Inline `style` for `[part="tooltip"]` — centered on the given cell — plus whether it had to be
+   * flipped below that cell.
+   *
+   * With no `stickyLabels` scrollport this is the original unconditional "centered above the cell"
+   * placement, in the canvas-local coordinates `cellRect()` returns. With one, the tooltip renders
+   * *inside* that scrollport, which is what keeps it pinned to the cell it describes through a
+   * scroll — and there `overflow: auto` clips whatever leaves the scrollport, while an opaque
+   * frozen band hides whatever is drawn under it. So the placement is additionally kept inside the
+   * band-free part of the visible window: still centered on the cell but clamped to that window,
+   * and flipped to below the cell when there is no room above it and there is room below. Flipping
+   * is conditional on both, deliberately: an unconditional flip at the block end would push the
+   * tooltip past the content box and grow the scrollable area under the pointer.
+   */
+  private tooltipAnchor(pos: CellPos): {
+    style: Record<string, string>;
+    below: boolean;
+  } {
     const rect = this.cellRect(pos);
-    return { left: `${rect.x + rect.w / 2}px`, top: `${rect.y}px` };
+    const center = rect.x + rect.w / 2;
+    const port = this.gridScrollport;
+    if (!port)
+      return {
+        style: { left: `${center}px`, top: `${rect.y}px` },
+        below: false,
+      };
+    const { inline, block } = this.tooltipSize;
+    const windowStart =
+      port.scrollLeft + (this.freezesRowLabels ? this.matrixPadLeft : 0);
+    const windowEnd = port.scrollLeft + port.clientWidth;
+    const windowTop =
+      port.scrollTop + (this.freezesColLabels ? this.matrixPadTop : 0);
+    const windowBottom = port.scrollTop + port.clientHeight;
+    const below =
+      rect.y - block < windowTop && rect.y + rect.h + block <= windowBottom;
+    // Math.max last, so a tooltip wider than the band-free window keeps its start edge visible
+    // instead of its end edge -- text is read from the start.
+    const clamped = Math.max(
+      windowStart + inline / 2,
+      Math.min(center, windowEnd - inline / 2)
+    );
+    return {
+      style: {
+        left: `${clamped}px`,
+        top: `${below ? rect.y + rect.h : rect.y}px`,
+      },
+      below,
+    };
+  }
+
+  /**
+   * Keeps the keyboard-focused cell inside the `stickyLabels` scrollport, clear of the frozen
+   * bands' own boxes.
+   *
+   * Without this the feature is an accessibility regression: the default (unset `accessibleCells`)
+   * roving stop is the canvas itself, its focus ring is painted into the canvas bitmap rather than
+   * carried by a focusable element the browser would scroll to, and `onMatrixKeyDown()` calls
+   * `preventDefault()` on every arrow — so the browser's own scrolling never happens either, and
+   * arrowing far enough leaves the focus indicator off-screen with no keyboard way to reveal it.
+   * A minimal scroll (never re-centering a cell that is already fully visible) keeps the scroll
+   * position stable while arrowing around inside the visible window.
+   */
+  private scrollCellIntoView(pos: CellPos): void {
+    const port = this.gridScrollport;
+    if (!port) return;
+    const rect = this.cellRect(pos);
+    const bandInline = this.freezesRowLabels ? this.matrixPadLeft : 0;
+    const bandBlock = this.freezesColLabels ? this.matrixPadTop : 0;
+    // Pull towards the end first, then towards the start: a cell taller or wider than the
+    // band-free window then lands with its start corner visible rather than under a frozen band.
+    const left = Math.min(
+      Math.max(port.scrollLeft, rect.x + rect.w - port.clientWidth),
+      rect.x - bandInline
+    );
+    const top = Math.min(
+      Math.max(port.scrollTop, rect.y + rect.h - port.clientHeight),
+      rect.y - bandBlock
+    );
+    if (left !== port.scrollLeft) port.scrollLeft = left;
+    if (top !== port.scrollTop) port.scrollTop = top;
   }
 
   /**
@@ -3634,6 +3775,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       if (!next) return;
       this.focusedCell = next;
       this.announce(next);
+      this.scrollCellIntoView(next);
       return;
     }
     const { row, col } = this.focusedCell;
@@ -3656,6 +3798,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     );
     this.focusedCell = next;
     this.announce(next);
+    this.scrollCellIntoView(next);
   }
 
   private onCalendarKeyDown(e: KeyboardEvent): void {
@@ -4007,9 +4150,36 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         : nothing}
     `;
     if (sticky === 'none') return surface;
+    // The tooltip joins the stack rather than staying a `[part="base"]` sibling: it is positioned
+    // in the canvas-local coordinates `cellRect()` returns, and `[part="base"]` does not scroll, so
+    // outside the scrollport it drifted from its own cell by exactly the scroll offset. Inside the
+    // single-area stack it shares the cell canvas's origin by construction -- the same reason
+    // `[part="cells"]` sits here -- and `tooltipAnchor()` handles the scrollport's own clipping.
     return html`<div part="grid">
-      <div class="grid-stack">${surface}</div>
+      <div class="grid-stack">${surface}${this.renderTooltip()}</div>
     </div>`;
+  }
+
+  /**
+   * The hover tooltip, rendered once: inside the `stickyLabels` scrollport's stack when an axis is
+   * frozen (see `renderGridSurface()`), and as the `[part="base"]` sibling it has always been
+   * otherwise, where the canvas's origin already *is* the base's.
+   *
+   * `dir` is carried explicitly because the scrollport pins `direction: ltr` for the physically
+   * non-mirrored grid geometry, and the tooltip is the one thing in there that is prose rather
+   * than geometry -- it keeps the host's own direction it inherited before the scrollport existed.
+   */
+  private renderTooltip(): TemplateResult {
+    const pos = this.hoverCell;
+    const anchor = pos ? this.tooltipAnchor(pos) : null;
+    return html`<div
+      part="tooltip"
+      class=${anchor?.below ? 'tooltip-below' : nothing}
+      dir=${this.effectiveDirection}
+      ?hidden=${!pos}
+      style=${styleMap(anchor?.style ?? {})}
+      >${pos ? this.resolveCellText(pos) : ''}</div
+    >`;
   }
 
   override render(): TemplateResult {
@@ -4031,14 +4201,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
               >${projectionDescription}</span
             >`
           : nothing}
-        <div
-          part="tooltip"
-          ?hidden=${!this.hoverCell}
-          style=${styleMap(
-            this.hoverCell ? this.tooltipStyle(this.hoverCell) : {}
-          )}
-          >${this.hoverCell ? this.resolveCellText(this.hoverCell) : ''}</div
-        >
+        ${this.effectiveStickyLabels === 'none' ? this.renderTooltip() : nothing}
         <div
           id="live-region"
           part="live-region"

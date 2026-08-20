@@ -95,6 +95,7 @@ import type { LyraFlowControls } from './components/data/flow-controls/flow-cont
 import type { LyraFlowMinimap } from './components/data/flow-minimap/flow-minimap.class.js';
 import type { LyraFlowNode } from './components/data/flow-node/flow-node.class.js';
 import type { LyraFlowRunStatus } from './components/data/flow-run-status/flow-run-status.class.js';
+import type { LyraFunnel } from './components/data/funnel/funnel.class.js';
 import type { LyraGauge } from './components/data/gauge/gauge.class.js';
 import type { LyraGraphQueryBuilder, LyraGraphQueryBuilderEventMap } from './components/data/graph-query-builder/graph-query-builder.class.js';
 import type { LyraHeatmap, LyraHeatmapEventMap } from './components/data/heatmap/heatmap.class.js';
@@ -728,6 +729,7 @@ export type LyraAppRailSvelteProps = LyraSvelteElementProps<
 
 export type LyraAppRailItemSvelteProps = LyraSvelteElementProps<
   LyraAppRailItem,
+  | 'active'
   | 'current'
   | 'disabled'
   | 'href'
@@ -4459,6 +4461,29 @@ never,
   }
 >;
 
+export type LyraFunnelSvelteProps = LyraSvelteElementProps<
+  LyraFunnel,
+  | 'comparison'
+  | 'comparisonLabel'
+  | 'dropoff'
+  | 'label'
+  | 'locale'
+  | 'sharePrecision'
+  | 'stages'
+  | 'strings',
+  {},
+  {},
+never,
+  | '--lr-funnel-bar-color'
+  | '--lr-funnel-bar-size'
+  | '--lr-funnel-comparison-color'
+  | '--lr-funnel-track-color',
+  {
+    'comparison-label'?: LyraFunnel['comparisonLabel'];
+    'share-precision'?: LyraFunnel['sharePrecision'];
+  }
+>;
+
 export type LyraGaugeSvelteProps = LyraSvelteElementProps<
   LyraGauge,
   | 'label'
@@ -4741,6 +4766,7 @@ export type LyraHeatmapSvelteProps = LyraSvelteElementProps<
   | 'rowLabelWidth'
   | 'scale'
   | 'selectedCell'
+  | 'stickyLabels'
   | 'strings'
   | 'valueLabel',
   {},
@@ -4750,11 +4776,13 @@ export type LyraHeatmapSvelteProps = LyraSvelteElementProps<
   | '--lr-heatmap-annotation-color'
   | '--lr-heatmap-color-steps-gradient'
   | '--lr-heatmap-focus-ring-color'
+  | '--lr-heatmap-grid-max-block-size'
   | '--lr-heatmap-label-font'
   | '--lr-heatmap-no-data-fill'
   | '--lr-heatmap-scale-hi'
   | '--lr-heatmap-scale-lo'
   | '--lr-heatmap-selected-color'
+  | '--lr-heatmap-sticky-label-bg'
   | '--lr-heatmap-tooltip-bg'
   | '--lr-heatmap-tooltip-text',
   {
@@ -4767,6 +4795,7 @@ export type LyraHeatmapSvelteProps = LyraSvelteElementProps<
     'max-cell-size'?: LyraHeatmap['maxCellSize'];
     'min-cell-size'?: LyraHeatmap['minCellSize'];
     'row-label-width'?: LyraHeatmap['rowLabelWidth'];
+    'sticky-labels'?: LyraHeatmap['stickyLabels'];
     'value-label'?: LyraHeatmap['valueLabel'];
   }
 >;
@@ -10672,6 +10701,7 @@ export type LyraVoicePickerSvelteProps = LyraSvelteElementProps<
 export type LyraWidgetSvelteProps = LyraSvelteElementProps<
   LyraWidget,
   | 'accessibleLabel'
+  | 'activeView'
   | 'activeViewId'
   | 'backdropInset'
   | 'collapsed'
@@ -10945,6 +10975,7 @@ export interface LyraSvelteElements {
   'lr-format-bytes': LyraFormatBytesSvelteProps;
   'lr-format-date': LyraFormatDateSvelteProps;
   'lr-format-number': LyraFormatNumberSvelteProps;
+  'lr-funnel': LyraFunnelSvelteProps;
   'lr-gauge': LyraGaugeSvelteProps;
   'lr-generation-metrics': LyraGenerationMetricsSvelteProps;
   'lr-geojson-view': LyraGeojsonViewSvelteProps;
@@ -11232,6 +11263,7 @@ export interface LyraElementTagNameMap {
   'lr-format-bytes': LyraFormatBytes;
   'lr-format-date': LyraFormatDate;
   'lr-format-number': LyraFormatNumber;
+  'lr-funnel': LyraFunnel;
   'lr-gauge': LyraGauge;
   'lr-generation-metrics': LyraGenerationMetrics;
   'lr-geojson-view': LyraGeojsonView;

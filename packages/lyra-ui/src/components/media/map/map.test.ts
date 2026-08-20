@@ -3817,4 +3817,108 @@ describe('dataLayers clustering and heatmap', () => {
     expect(detail!.sourceId).to.equal('pins');
     expect((detail!.feature as { properties?: { point_count?: number } }).properties!.point_count).to.equal(12);
   });
+
+  /**
+   * Records each layer's paint AS ADDED, before the paint-only half of the same apply overwrites it
+   * through `setPaintProperty`. Both halves build the cluster colour independently, so a fix applied
+   * to only one of them would still leave the observable end state correct -- this is what makes the
+   * add-time expression assertable at all.
+   */
+  function captureAddedLayerPaint(el: LyraMap): Map<string, Record<string, unknown>> {
+    const added = new Map<string, Record<string, unknown>>();
+    const map = (el as unknown as { _map: { addLayer: (layer: StubLayer) => void } })._map;
+    const addLayer = map.addLayer.bind(map);
+    map.addLayer = (layer: StubLayer) => {
+      added.set(layer.id, { ...(layer.paint ?? {}) });
+      addLayer(layer);
+    };
+    return added;
+  }
+
+  it('resolves a var() colour in cluster.colorSteps against the host, on add and on repaint', async () => {
+    const el = (await fixture(
+      html`<lr-map style="--lr-color-brand: rgb(1, 2, 3); --lr-color-danger: rgb(4, 5, 6)"></lr-map>`,
+    )) as LyraMap;
+    const { layers } = stubMaplibreMap(el);
+    const added = captureAddedLayerPaint(el);
+    el.dataLayers = entry({
+      cluster: {
+        colorSteps: [[0, 'var(--lr-color-brand)'], [25, 'var(--lr-color-danger)']],
+      },
+    });
+    await el.updateComplete;
+
+    const sourceId = dataLayerResourceId(el, 'pins');
+    const resolved = [
+      'step',
+      ['get', 'point_count'],
+      'rgb(1, 2, 3)',
+      0,
+      'rgb(1, 2, 3)',
+      25,
+      'rgb(4, 5, 6)',
+    ];
+    expect(
+      added.get(`${sourceId}-cluster`)!['circle-color'],
+      'maplibre paints to a WebGL canvas and cannot parse a raw var()',
+    ).to.deep.equal(resolved);
+    expect(
+      layers.get(`${sourceId}-cluster`)!.paint!['circle-color'],
+      'the paint-only half resolves the same way',
+    ).to.deep.equal(resolved);
+
+    el.style.setProperty('--lr-color-brand', 'rgb(7, 8, 9)');
+    (el as unknown as { refreshThemePaint: () => void }).refreshThemePaint();
+    expect(
+      (layers.get(`${sourceId}-cluster`)!.paint!['circle-color'] as unknown[])[2],
+      'a retheme moves the cluster breaks with everything else',
+    ).to.equal('rgb(7, 8, 9)');
+  });
+
+  it('honours a single-stop heatmap ramp above the auto-prepended transparent floor', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el);
+    el.dataLayers = entry({ kind: 'heatmap', heatmap: { stops: [[1, '#ff0000']] } });
+    await el.updateComplete;
+
+    const sourceId = dataLayerResourceId(el, 'pins');
+    expect(
+      layers.get(`${sourceId}-heatmap`)!.paint!['heatmap-color'],
+      'one stop plus the floor is already a valid two-stop ramp',
+    ).to.deep.equal(['interpolate', ['linear'], ['heatmap-density'], 0, 'rgba(0, 0, 0, 0)', 1, '#ff0000']);
+  });
+
+  it('resolves a var() colour in a single-stop heatmap ramp against the host', async () => {
+    const el = (await fixture(
+      html`<lr-map style="--lr-color-danger: rgb(4, 5, 6)"></lr-map>`,
+    )) as LyraMap;
+    const { layers } = stubMaplibreMap(el);
+    el.dataLayers = entry({ kind: 'heatmap', heatmap: { stops: [[0.5, 'var(--lr-color-danger)']] } });
+    await el.updateComplete;
+
+    const sourceId = dataLayerResourceId(el, 'pins');
+    expect(layers.get(`${sourceId}-heatmap`)!.paint!['heatmap-color']).to.deep.equal([
+      'interpolate',
+      ['linear'],
+      ['heatmap-density'],
+      0,
+      'rgba(0, 0, 0, 0)',
+      0.5,
+      'rgb(4, 5, 6)',
+    ]);
+  });
+
+  it('falls back to the token ramp for a lone heatmap stop at density zero', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el);
+    el.dataLayers = entry({ kind: 'heatmap', heatmap: { stops: [[0, '#ff0000']] } });
+    await el.updateComplete;
+
+    const sourceId = dataLayerResourceId(el, 'pins');
+    const ramp = layers.get(`${sourceId}-heatmap`)!.paint!['heatmap-color'] as unknown[];
+    expect(ramp.includes('#ff0000'), 'a lone floor stop describes no gradient at all').to.be.false;
+    expect(ramp[3], 'the token ramp still starts at density zero').to.equal(0);
+    expect(ramp[4]).to.equal('rgba(0, 0, 0, 0)');
+    expect(ramp.length, 'a real multi-stop ramp').to.be.greaterThan(6);
+  });
 });

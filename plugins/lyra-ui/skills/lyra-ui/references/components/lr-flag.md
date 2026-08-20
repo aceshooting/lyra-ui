@@ -219,6 +219,20 @@ import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
   unneeded 249-entry fetch. Only the standard tier is bulk-fetched this way;
   `fidelity="compact"/"detailed"` on individual elements still resolves through its own lazy
   per-code loader.
+- Rendering many flags at once **and** leaving every `<lr-flag>` on the default
+  `fidelity="standard"`: import
+  `@aceshooting/lyra-ui/components/media/flag/flag-peer-bulk-standard.js` instead of
+  `flag-peer-bulk.js` (never more than one of the three peer entries — each
+  `setFlagUrlResolver()` call replaces the previous resolver). It registers
+  `@aceshooting/lyra-flags/standard`'s `createFlagUrlResolver()`, which is backed by the same
+  standard-tier-only eager map as the root's, without statically importing the detailed and
+  compact loader maps the root entry needs for its per-call `variant`. Those maps are what
+  `flag-peer-bulk.js` pays for its batching: on a real production build with a 156-country flag
+  column, routing bulk resolution through the package root emitted +65 detailed SVGs and +31
+  compact WebPs — +15.8MB of assets no route rendered — swamping the chunk-count win the bulk path
+  exists for. The tradeoff is the tier commitment: `fidelity="compact"/"detailed"` on an individual
+  element resolves to that code's standard asset instead (a silent no-op, not an error), so use
+  `flag-peer-bulk.js` when per-instance fidelity must actually be honoured.
 - 65 of `@aceshooting/lyra-flags`' 249 flags (any whose design includes a detailed coat of
   arms/seal/emblem, e.g. `es`, `pt`, `sv`) ship **three** fidelity tiers, selected via the
   `fidelity` property (`flagUrl(code, { variant: fidelity })` under the hood): `"compact"` — a tiny WebP raster for

@@ -2,7 +2,7 @@
 
 # Component index
 
-284 custom elements, grouped by the source family they live in.
+285 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`). Each is self-contained: import
@@ -50,7 +50,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-rubric-form` · lr-rubric-form.js · `stable` since `4.0.0` — a configurable annotation rubric (LangSmith annotation-queue style): score, category, and freeform-comment keys with a submit-and-next fl...
 - `lr-locale-picker` · lr-locale-picker.js · `stable` since `6.0.0` — a closed-list locale switcher over the library's own locale registry.
 
-## Data display, dashboards & flow canvas — `components/data/` (25)
+## Data display, dashboards & flow canvas — `components/data/` (26)
 
 - `lr-sparkline` · lr-sparkline.js · `stable` since `4.0.0` — a zero-dependency inline SVG trend chart.
 - `lr-stat` · lr-stat.js · `stable` since `4.0.0` — a KPI/stat card.
@@ -58,6 +58,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-table` · lr-table.js · `stable` since `4.0.0` — a sort/select-aware data table.
 - `lr-pagination` · lr-pagination.js · `stable` since `4.0.0` — controlled, server-friendly page navigation: a numbered page list with elided gaps, optional first/last controls, an optional item-range...
 - `lr-gauge` · lr-gauge.js · `stable` since `4.0.0` — a radial, full-circle ring, or linear meter.
+- `lr-funnel` · lr-funnel.js · `experimental` since `unreleased` — a dependency-free conversion funnel: an ordered set of stages, each drawn as a bar whose length is that stage's share of the FIRST stage,...
 - `lr-word-cloud` · lr-word-cloud.js · `stable` since `4.0.0` — a zero-dependency SVG word/tag cloud.
 - `lr-heatmap` · lr-heatmap.js · `stable` since `4.0.0` — a Canvas heatmap with a DPR-aware, resize-aware redraw loop.
 - `lr-sequence-strip` · lr-sequence-strip.js · `stable` since `4.0.0` — a compact, one-thin-cell-per-item strip visualizing a sequence of categorical states, with an optional secondary per-cell marker.

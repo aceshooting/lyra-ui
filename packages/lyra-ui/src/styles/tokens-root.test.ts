@@ -1,4 +1,6 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+
+import { setForcedColors, setReducedMotion } from '../../test/wtr-media.js';
 
 import '../components/layout/card/card.js';
 
@@ -168,6 +170,167 @@ it('re-derives the resolved layer on a subtree that carries a mode scope', async
   expect(getComputedStyle(child).getPropertyValue('--lr-color-brand').trim()).to.equal('rgb(4, 5, 6)');
   expect(getComputedStyle(card).getPropertyValue('--lr-color-brand').trim()).to.equal('rgb(4, 5, 6)');
 });
+
+// --- The media overrides have to survive the OS dark route -----------------------------
+//
+// The `(prefers-color-scheme: dark)` block restates EVERY name (an alias would otherwise inherit
+// the already-substituted light colour), and it does so through the compound
+// `:root:not(.lr-light):not([data-lr-theme='light'])` route. The forced-colors and
+// prefers-reduced-motion blocks come later in the same layer, so they only win if they TIE that
+// route's specificity -- a bare `:root` arm loses to it, and the whole Windows High Contrast and
+// motion-preference surface goes dead for every visitor whose OS is dark with no explicit scope.
+//
+// The runner exposes no colour-scheme emulation seam (`test/wtr-media.ts` reaches only
+// forced-colors and reduced-motion), so the shipped rules are re-adopted with ONLY the
+// `(prefers-color-scheme: dark)` condition rewritten through CSSOM -- the same technique
+// `src/internal/tokens.test.ts` uses. Every selector, declaration and cascade position stays
+// exactly the one that ships, and each assertion reads a real computed value off `:root`.
+describe('with the OS dark route live', () => {
+  const squash = (value: string) => value.trim().replace(/\s+/g, ' ');
+
+  function eachRule(container: CSSStyleSheet | CSSGroupingRule, visit: (rule: CSSRule) => void): void {
+    for (const rule of Array.from(container.cssRules)) {
+      visit(rule);
+      if ((rule as CSSGroupingRule).cssRules !== undefined) eachRule(rule as CSSGroupingRule, visit);
+    }
+  }
+
+  const mediaOf = (rule: CSSRule) => (rule as CSSMediaRule).media as MediaList | undefined;
+
+  /** The shipped sheet with the OS-dark condition forced on, and nothing else touched. */
+  function darkRouteSheet(): CSSStyleSheet {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(sheetText);
+    eachRule(sheet, (rule) => {
+      const media = mediaOf(rule);
+      if (media?.mediaText.includes('prefers-color-scheme: dark') === true) media.mediaText = 'all';
+    });
+    return sheet;
+  }
+
+  /** Every declaration the named media block makes, keyed by custom property name. */
+  function overridesUnder(condition: string): Map<string, string> {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(sheetText);
+    const declared = new Map<string, string>();
+    eachRule(sheet, (rule) => {
+      if (mediaOf(rule)?.mediaText.includes(condition) !== true) return;
+      eachRule(rule as CSSMediaRule, (inner) => {
+        const style = (inner as CSSStyleRule).style as CSSStyleDeclaration | undefined;
+        if (style === undefined) return;
+        for (const name of Array.from(style)) declared.set(name, squash(style.getPropertyValue(name)));
+      });
+    });
+    return declared;
+  }
+
+  /** The selector list of the sole rule inside the named media block, as CSSOM normalises it. */
+  function selectorArmsUnder(condition: string): string[] {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(sheetText);
+    const arms: string[] = [];
+    eachRule(sheet, (rule) => {
+      if (mediaOf(rule)?.mediaText.includes(condition) !== true) return;
+      eachRule(rule as CSSMediaRule, (inner) => {
+        const selector = (inner as CSSStyleRule).selectorText as string | undefined;
+        if (selector !== undefined) arms.push(...selector.split(',').map((arm) => squash(arm)));
+      });
+    });
+    return arms;
+  }
+
+  let lightSurface = '';
+
+  beforeEach(() => {
+    lightSurface = squash(getComputedStyle(document.documentElement).getPropertyValue('--lr-color-surface'));
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, darkRouteSheet()];
+  });
+
+  afterEach(async () => {
+    document.adoptedStyleSheets = [];
+    await leaveMediaEmulation();
+  });
+
+  /**
+   * Enter real media emulation, reporting whether the engine honoured it. Playwright drives this
+   * through `page.emulateMedia()`; an engine that does not implement the feature either rejects the
+   * command or leaves the media query unmatched, and the assertion has to skip there rather than
+   * redden for an unrelated reason. Same guard `src/internal/tokens.test.ts` uses.
+   */
+  async function enterMedia(enable: () => Promise<void>, query: string): Promise<boolean> {
+    try {
+      await enable();
+      await waitUntil(() => matchMedia(query).matches, `${query} never matched`, { timeout: 1000 });
+      return true;
+    } catch {
+      await leaveMediaEmulation();
+      return false;
+    }
+  }
+
+  async function leaveMediaEmulation(): Promise<void> {
+    await setForcedColors('none').catch(() => undefined);
+    await setReducedMotion('no-preference').catch(() => undefined);
+  }
+
+  const enterForcedColors = () =>
+    enterMedia(() => setForcedColors('active'), '(forced-colors: active)');
+  const enterReducedMotion = () =>
+    enterMedia(() => setReducedMotion('reduce'), '(prefers-reduced-motion: reduce)');
+
+  /** Every declared override the named media block makes, against one element's computed style. */
+  function unappliedOverrides(element: Element, expected: Map<string, string>): string[] {
+    const style = getComputedStyle(element);
+    return [...expected]
+      .filter(([name, value]) => squash(style.getPropertyValue(name)) !== value)
+      .map(([name, value]) => `${name}: ${squash(style.getPropertyValue(name))} !== ${value}`);
+  }
+
+  it('moves the subset to its dark values, so the later blocks are genuinely contested', () => {
+    // Guards both assertions below from passing vacuously: if the forced condition stopped moving
+    // anything, "the override held" would be indistinguishable from "nothing ever changes".
+    expect(squash(getComputedStyle(document.documentElement).getPropertyValue('--lr-color-surface'))).to.not.equal(
+      lightSurface,
+    );
+  });
+
+  it('still applies the whole forced-colors set at :root', async function () {
+    if (!(await enterForcedColors())) this.skip();
+    const wrong = unappliedOverrides(document.documentElement, overridesUnder('forced-colors: active'));
+    expect(wrong.join('\n'), 'forced-colors overrides the OS dark route swallowed').to.equal('');
+  });
+
+  it('still applies the whole prefers-reduced-motion set at :root', async function () {
+    if (!(await enterReducedMotion())) this.skip();
+    const wrong = unappliedOverrides(document.documentElement, overridesUnder('prefers-reduced-motion: reduce'));
+    expect(wrong.join('\n'), 'reduced-motion overrides the OS dark route swallowed').to.equal('');
+  });
+
+  it('still applies the forced-colors set inside an explicit light and an explicit dark scope', async function () {
+    const scope = await fixture<HTMLElement>(html`
+      <div>
+        <div id="pinned-light" class="lr-light"></div>
+        <div id="pinned-dark" data-lr-theme="dark"></div>
+      </div>
+    `);
+    if (!(await enterForcedColors())) this.skip();
+    const expected = overridesUnder('forced-colors: active');
+    const wrong = ['#pinned-light', '#pinned-dark'].flatMap((selector) =>
+      unappliedOverrides(scope.querySelector<HTMLElement>(selector)!, expected).map(
+        (failure) => `${selector} ${failure}`,
+      ),
+    );
+    expect(wrong.join('\n'), 'forced-colors overrides missing on a pinned scope').to.equal('');
+  });
+
+  it('carries the OS dark route selector into both media blocks, so neither can be out-specified', () => {
+    const [darkRoute] = selectorArmsUnder('prefers-color-scheme: dark');
+    expect(darkRoute === undefined).to.be.false;
+    expect(selectorArmsUnder('forced-colors: active')).to.include(darkRoute);
+    expect(selectorArmsUnder('prefers-reduced-motion: reduce')).to.include(darkRoute);
+  });
+});
+
 
 // An ancestor `.lr-dark` reaches a component's shadow root through theme.css's inheriting
 // `--lr-theme-*` inputs on every engine; the `:host-context()` route components also ship exists

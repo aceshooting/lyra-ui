@@ -115,6 +115,7 @@ import '../components/data/flow-run-status/flow-run-status.js';
 import '../components/utility/format/format-bytes.js';
 import '../components/utility/format/format-date.js';
 import '../components/utility/format/format-number.js';
+import '../components/data/funnel/funnel.js';
 import '../components/data/gauge/gauge.js';
 import '../components/conversation/generation-metrics/generation-metrics.js';
 import '../components/viewers/geojson-view/geojson-view.js';

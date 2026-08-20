@@ -61,6 +61,31 @@ function resolverFromModule(module: unknown): LyraFlagUrlResolver | null {
   return null;
 }
 
+/** The peer could not be imported at all: it is genuinely absent, so say so and how to add it. */
+function warnFlagPeerMissing(): void {
+  console.warn(
+    "<lr-flag> needs the optional peer dependency '@aceshooting/lyra-flags' to render "
+      + 'flag images — install it with `pnpm add @aceshooting/lyra-flags`.',
+  );
+}
+
+/**
+ * The peer imported fine but does not carry the capability this entry point needs. That is a
+ * VERSION problem, not a missing-dependency problem, and the two used to be reported identically —
+ * "install it with `pnpm add @aceshooting/lyra-flags`", advice the reader has already followed,
+ * pointing them at the wrong thing entirely. It matters most for `createFlagUrlResolver`, which
+ * older peers do not export from the tier-committed subpaths at all, so a consumer who upgrades
+ * lyra-ui while pinning the peer lands here by the ordinary route rather than an exotic one.
+ */
+function warnFlagPeerIncapable(capability: string): void {
+  console.warn(
+    `<lr-flag> loaded '@aceshooting/lyra-flags' but it does not expose \`${capability}\`. The `
+      + 'package is installed, so this is a version mismatch rather than a missing dependency: '
+      + 'upgrade it to a release that provides that capability, and check the peer range in '
+      + "<lr-flag>'s own package metadata for the floor it expects.",
+  );
+}
+
 /**
  * Resolves the optional peer dependency `@aceshooting/lyra-flags`'s `flagUrl`
  * via the given importer. Uncached and
@@ -71,17 +96,21 @@ function resolverFromModule(module: unknown): LyraFlagUrlResolver | null {
 export async function loadFlagUrl(
   importFlags: () => Promise<unknown>,
 ): Promise<LyraFlagUrlResolver | null> {
+  let peerModule: unknown;
   try {
-    const resolver = resolverFromModule(await importFlags());
-    if (resolver) return resolver;
-    throw new TypeError('The flag peer does not expose a callable flagUrl capability.');
+    peerModule = await importFlags();
   } catch {
-    console.warn(
-      "<lr-flag> needs the optional peer dependency '@aceshooting/lyra-flags' to render " +
-        'flag images — install it with `pnpm add @aceshooting/lyra-flags`.',
-    );
+    warnFlagPeerMissing();
     return null;
   }
+  try {
+    const resolver = resolverFromModule(peerModule);
+    if (resolver) return resolver;
+  } catch {
+    // Hostile namespace/default getters fall through to the capability warning below.
+  }
+  warnFlagPeerIncapable('flagUrl');
+  return null;
 }
 
 function resolverFactoryFromModule(module: unknown): (() => LyraFlagUrlResolver) | null {
@@ -111,15 +140,22 @@ function resolverFactoryFromModule(module: unknown): (() => LyraFlagUrlResolver)
 export async function loadBulkFlagUrl(
   importFlags: () => Promise<unknown>,
 ): Promise<LyraFlagUrlResolver | null> {
+  let peerModule: unknown;
   try {
-    const factory = resolverFactoryFromModule(await importFlags());
-    if (factory) return factory();
-    throw new TypeError('The flag peer does not expose a callable createFlagUrlResolver capability.');
+    peerModule = await importFlags();
   } catch {
-    console.warn(
-      "<lr-flag> needs the optional peer dependency '@aceshooting/lyra-flags' to render " +
-        'flag images — install it with `pnpm add @aceshooting/lyra-flags`.',
-    );
+    warnFlagPeerMissing();
+    return null;
+  }
+  const factory = resolverFactoryFromModule(peerModule);
+  if (!factory) {
+    warnFlagPeerIncapable('createFlagUrlResolver');
+    return null;
+  }
+  try {
+    return factory();
+  } catch {
+    warnFlagPeerIncapable('createFlagUrlResolver');
     return null;
   }
 }

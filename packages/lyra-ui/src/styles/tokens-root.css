@@ -55,7 +55,11 @@
    MODES. Light on :root and on the .lr-light / [data-lr-theme='light'] scopes; dark under
    prefers-color-scheme (unless an explicit light scope opts out) and on the .lr-dark /
    [data-lr-theme='dark'] scopes; then the same forced-colors and prefers-reduced-motion overrides
-   the components apply. A scope switch therefore moves an application's own elements and the kit's
+   the components apply. Those last two blocks list EVERY scope the mode rules above declare into,
+   the compound :root:not(.lr-light):not([data-lr-theme='light']) dark route included: they sit in
+   the same layer and win only by tying its specificity, so a bare :root arm would lose to it and
+   leave both the forced-colors and the reduced-motion set dead for anyone whose OS is dark with no
+   explicit scope. A scope switch therefore moves an application's own elements and the kit's
    together. Every declaration keeps its --lr-theme-* input in front of a resolved fallback, so
    theme.css and any application override still win here exactly as they do inside a component, and
    the fallback is the value that component would have reached through the ramp.
@@ -438,6 +442,7 @@
 
   @media (forced-colors: active) {
     :root,
+    :root:not(.lr-light):not([data-lr-theme='light']),
     .lr-light,
     [data-lr-theme='light'],
     .lr-dark,
@@ -467,6 +472,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     :root,
+    :root:not(.lr-light):not([data-lr-theme='light']),
     .lr-light,
     [data-lr-theme='light'],
     .lr-dark,

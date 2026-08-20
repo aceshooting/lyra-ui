@@ -150,6 +150,8 @@ The entry points, then:
   a pre-resolved `src`) additionally needs
   `import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';` once.
 - **Other subpaths.** `@aceshooting/lyra-ui/theme.css` (ready-made light/dark theme),
+  `@aceshooting/lyra-ui/tokens-root.css` (opt-in: the curated resolved `--lr-*` tokens at `:root`,
+  so your own components can read them),
   `@aceshooting/lyra-ui/native.css` (opt-in native-element styles inside `.lr-native`),
   `@aceshooting/lyra-ui/utilities.css` (opt-in light-DOM layout/text utilities),
   `@aceshooting/lyra-ui/theme.js` (the zero-dependency mode/accent runtime),
@@ -644,9 +646,109 @@ reaches plain application CSS, and it never reaches your own custom elements, si
 descendant of an `lr-*` shadow root — `body { color: var(--lr-color-text) }` in application CSS
 resolves to nothing, silently, not an error. Retheme through layer 1 (`--lr-theme-*`), which
 `theme.css` supplies at document scope and which inherits normally into every nested shadow root.
+To _read_ (not retheme) the resolved values from your own components, import the opt-in
+[`tokens-root.css`](#reading-the-resolved-tokens-from-your-own-components--tokens-rootcss), which
+declares a curated subset of layer 2 at `:root`.
 See [Where an override actually reaches](#where-an-override-actually-reaches) below for the full
 inheritance rules, including the one documented exception (per-component `--lr-<component>-*`
 hooks, layer 3, which do inherit through wrappers).
+
+### Reading the resolved tokens from your own components — `tokens-root.css`
+
+The paragraph above is a real problem for any application that has custom elements of its own: they
+are not descendants of an `lr-*` shadow root either, so `var(--lr-color-border)` inside **your**
+component resolves to nothing, and `var(--lr-space-m, 0.5rem)` quietly runs on its literal fallback
+forever. Both failures are invisible without reading computed styles in a browser.
+
+Import one optional stylesheet and the curated part of layer 2 exists at document scope:
+
+```css
+@import "@aceshooting/lyra-ui/theme.css"; /* the --lr-theme-* input layer */
+@import "@aceshooting/lyra-ui/tokens-root.css"; /* the resolved --lr-* layer, at :root */
+```
+
+```css
+/* Now valid in your own component's stylesheet, in plain application CSS, anywhere. */
+.app-panel {
+  padding: var(--lr-space-m);
+  border: var(--lr-border-width-thin) solid var(--lr-color-border);
+  border-radius: var(--lr-radius);
+  background: var(--lr-color-surface-raised);
+  color: var(--lr-color-text);
+  font-family: var(--lr-font);
+}
+.app-panel:focus-visible {
+  outline: var(--lr-focus-ring);
+  outline-offset: var(--lr-focus-ring-offset);
+}
+```
+
+**It is opt-in, and it is a curated subset — not all of layer 2.** `--lr-*` is internal precisely so
+it can change without a major version; publishing all of it at `:root` would freeze several hundred
+internal decisions as permanent API. What ships is what an application's own component needs to sit
+inside a Lyra UI without looking foreign:
+
+| Family                | Names                                                                                                                                                                                                                     |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ambient colour        | `--lr-color-surface`, `--lr-color-surface-raised`, `--lr-color-surface-overlay`, `--lr-color-overlay`, `--lr-color-text`, `--lr-color-text-quiet`, `--lr-color-border`, `--lr-color-border-strong`                         |
+| The semantic grid     | all 45 `--lr-color-{brand,success,warning,danger,neutral}-{fill,border,on}-{quiet,normal,loud}` slots                                                                                                                       |
+| Flat colour aliases   | `--lr-color-{brand,success,warning,danger,neutral}`, `--lr-color-{brand,success,warning,danger}-quiet`, `--lr-color-on-{brand,success,warning,danger,neutral}`                                                              |
+| Spacing               | `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-space-m`, `--lr-space-l`, `--lr-space-2xl`                                                                                                                        |
+| Geometry              | `--lr-radius-xs`, `--lr-radius`, `--lr-radius-pill`, `--lr-border-width-thin`, `--lr-border-width-medium`, `--lr-border-width-thick`                                                                                       |
+| Elevation             | `--lr-shadow-color`, `--lr-shadow-xs`, `--lr-shadow-s`, `--lr-shadow-m`, `--lr-shadow-l`, `--lr-shadow-xl`, `--lr-shadow`                                                                                                  |
+| Typography            | `--lr-font`, `--lr-font-mono`, the ten `--lr-font-size-*` steps, the four `--lr-font-weight-*` steps                                                                                                                        |
+| State and motion      | `--lr-focus-ring`, `--lr-focus-ring-color`, `--lr-focus-ring-width`, `--lr-focus-ring-offset`, `--lr-opacity-disabled`, `--lr-opacity-muted`, `--lr-duration-fast`, `--lr-duration-base`, `--lr-easing-standard`, `--lr-easing-emphasized`, `--lr-transition-fast`, `--lr-transition-base` |
+
+The grid ships whole because its contrast guarantee is **per tier** — a `fill-quiet` background is
+only guaranteed legible under the matching `on-quiet` foreground — so shipping the flat aliases
+alone would hand you a pairing with nothing behind it.
+
+**Deliberately not published**, and each for a reason that makes reading it a bug rather than a
+convenience: `--lr-ramp-*` (a step encodes a light-mode choice and has no theme hook),
+`--lr-size-*` (value-named geometry constants, frozen internals), the chart, graph and terminal
+palettes (generated ramps that move with the palette tooling), `--lr-layer-*` (stacking order is
+your decision), `--lr-color-mix-*` and `--lr-hover-brightness` (inputs to the library's own
+interaction recipe), `--lr-line-height-*`, the per-control internals (`--lr-icon-button-size`,
+`--lr-otp-input-segment-size`, `--lr-scroll-fade-size`, `--lr-popover-viewport-clamp`,
+`--lr-safe-area-*`, `--lr-mask-opaque`, `--lr-color-no-data`), and the nine variant-following slots
+(`--lr-color-fill-loud` and friends), which mean "the variant _this_ element is set to" and are
+meaningless on `:root`. If you need one of these, ask for it to be added rather than reading it out
+of a component's shadow root.
+
+**Stability promise.** Every name in the table is public API from the release that introduced it: it
+will not be renamed or removed outside a major version, and its meaning will not change. Its _value_
+may change in a minor exactly as it may inside a component — a palette retune moves your elements
+and the kit's together, which is the point. Names absent from the file stay internal and may change
+in any release.
+
+**Modes work the way the components' do.** Light on `:root` and on `.lr-light` /
+`[data-lr-theme="light"]`, dark under `prefers-color-scheme: dark` (unless an explicit light scope
+opts out) and on `.lr-dark` / `[data-lr-theme="dark"]`, plus the same `forced-colors` and
+`prefers-reduced-motion` overrides the components apply — and those two reach you on **every** one
+of those routes, including a dark OS with no explicit scope, because they repeat the compound
+`:root:not(.lr-light):not([data-lr-theme="light"])` selector the dark route uses rather than a bare
+`:root` that the dark route would out-specify. Every declaration keeps its `--lr-theme-*`
+input in front of a resolved fallback, so `theme.css` and your own overrides still win here exactly
+as they do inside a component.
+
+**One caveat, and it is the same shape as layer 2's rule everywhere else.** A `--lr-theme-*` input
+set on a mid-tree element retunes every `lr-*` component below it, because each component re-derives
+the resolved layer on its own `:host`. The document-scope copy cannot: it is substituted where it is
+declared, and what inherits past that point is the finished value. So if an application element
+carries a subtree override and expects its **own** descendants to follow, give that element a mode
+scope too — `class="lr-light"`, `class="lr-dark"`, or `data-lr-theme` — which is what the file's
+mode rules key on, and the whole subset resolves again there:
+
+```html
+<!-- Both the lr-* components and the app's own elements below follow the override. -->
+<section class="lr-light" style="--lr-theme-color-brand-fill-loud: #7c3aed">…</section>
+```
+
+Everything sits in the `lr-theme` cascade layer, like `theme.css`, so any unlayered application rule
+beats it regardless of load order, and the file declares custom properties only — notably not
+`color-scheme` — so importing it paints nothing by itself. `--lr-focus-ring` and its three parts are
+also declared at document scope by `theme.css`; both spell the same chain, so importing both is a
+no-op either way round.
 
 ### The colour ramp and the semantic grid
 
@@ -1194,7 +1296,10 @@ stay in light DOM: they do not pierce a component's shadow root.
 `utilities.css` places exact, zero-specificity `:where(.lr-*)` classes in `lr-utilities`. It never
 uses a substring class selector, so a class such as `app-lr-flex-preview` does not opt in. Both
 assets repeat `@layer lr-base, lr-theme, lr-utilities, lr-overrides`; an ordinary unlayered
-application rule therefore beats them regardless of load order.
+application rule therefore beats them regardless of load order. A third opt-in asset,
+[`tokens-root.css`](#reading-the-resolved-tokens-from-your-own-components--tokens-rootcss), is not a
+style sheet in the same sense — it declares custom properties only, and exists so your own
+components can read the resolved `--lr-*` tokens these two are written against.
 
 ### Utility class inventory
 
@@ -2705,6 +2810,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-format-bytes": unknown;
   "lr-format-date": unknown;
   "lr-format-number": unknown;
+  "lr-funnel": unknown;
   "lr-gauge": unknown;
   "lr-generation-metrics": unknown;
   "lr-geojson-view": unknown;
@@ -3090,6 +3196,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-format-bytes": unknown;
   "lr-format-date": unknown;
   "lr-format-number": unknown;
+  "lr-funnel": unknown;
   "lr-gauge": unknown;
   "lr-generation-metrics": unknown;
   "lr-geojson-view": unknown;
@@ -3376,6 +3483,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-format-bytes": unknown;
   "lr-format-date": unknown;
   "lr-format-number": unknown;
+  "lr-funnel": unknown;
   "lr-gauge": unknown;
   "lr-generation-metrics": unknown;
   "lr-geojson-view": unknown;
@@ -3702,6 +3810,7 @@ These named interfaces and helper signatures are available to typed integrations
   "lr-format-bytes": unknown;
   "lr-format-date": unknown;
   "lr-format-number": unknown;
+  "lr-funnel": unknown;
   "lr-gauge": unknown;
   "lr-generation-metrics": unknown;
   "lr-geojson-view": unknown;

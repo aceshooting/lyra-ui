@@ -56,7 +56,7 @@ const view: LyraWidgetView = { viewId: 'chart', label: 'Chart' };
 const legacyView: LyraWidgetView = { id: 'chart', label: 'Chart' };
 declare const widget: LyraWidget;
 widget.activeViewId = 'chart';
-// @ts-expect-error activeView was replaced by the domain-specific activeViewId.
+// The original `activeView` name remains accepted as a deprecated alias that seeds `activeViewId`.
 widget.activeView = 'chart';
 
 const step: LyraStepItem = { stepId: 'account', label: 'Account', state: 'current' };

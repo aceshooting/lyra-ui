@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -98,6 +98,38 @@ weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
   `colLabelHeight="auto"` to have the band size itself to the rotated extent. **Not mirrored under
   `dir="rtl"`** — both grid modes deliberately retain physical LTR geometry, so leaning one axis'
   labels the other way would be incoherent
+- `stickyLabels: 'none' | 'rows' | 'cols' | 'both' = 'none'` (attribute `sticky-labels`, reflected)
+  — freezes a **matrix** label band against the grid's own scrolling. `'rows'` pins the row-label
+  gutter so it survives horizontal scrolling, `'cols'` pins the column-label band so it survives
+  vertical scrolling, `'both'` pins both. Labels and cells otherwise share one bitmap, so neither
+  band can be `position: sticky` on its own and a tall matrix scrolls its column header out of
+  view; the only workaround was a light-DOM mirror row that had to hardcode the gutter width and
+  cell size, which made it mutually exclusive with `row-label-width="auto"`. A frozen band is
+  repainted into its own layer in the same draw pass, from the same resolved `matrixGeometry` the
+  cells were painted with, so it tracks a `row-label-width`/`col-label-height` `"auto"`
+  re-resolution, a resize, and a DPR change without drifting a pixel. Freezing needs something to
+  scroll, so the frozen modes wrap the grid in a `[part="grid"]` scrollport: it is bounded inline by
+  the host's own allocation — a matrix wider than a 320px host scrolls inside the component instead
+  of overflowing it — and unbounded in block until you set `--lr-heatmap-grid-max-block-size`, which
+  a frozen column band needs in order to have vertical scrolling to stay behind. The bands are
+  `aria-hidden` duplicates of pixels the canvas already painted, so the accessible representation is
+  unchanged, and the `accessibleCells` overlay moves inside the scrollport so the cell buttons
+  scroll with the canvas they cover. The grid keeps this component's physical LTR geometry under
+  `dir="rtl"`, so the frozen gutter stays on the same physical side as the labels the canvas paints.
+  Matrix mode only, like `matrixGeometry`: the property is read in calendar mode but has no effect
+  there, since a calendar's axes are a different geometry (fixed weekday gutter, month band, and the
+  optional `columnX`/`rowY` overrides). Unset (`'none'`, the default) renders exactly what it always
+  did — one canvas, no scrollport, no extra elements — and an unsupported value normalizes to it.
+  The union is re-exported from the package root as `LyraHeatmapStickyLabels`, so a typed consumer
+  can annotate a variable or a framework prop with it. Everything positioned in canvas coordinates
+  moves into the scrollport with the cells: `[part="tooltip"]` renders inside it, so it stays on
+  the cell it describes through a scroll instead of drifting by the scroll offset, and because
+  `overflow: auto` clips whatever leaves the scrollport, the tooltip is kept inside the visible
+  window too — clamped along the inline axis and flipped to below its cell when a frozen band
+  leaves no room above it. Arrow-key navigation scrolls the focused cell into that window, clear of
+  the frozen bands, which the frozen modes need in their own right: the canvas is the roving tab
+  stop, its focus ring is painted into the bitmap rather than carried by a focusable element the
+  browser would scroll to, and it calls `preventDefault()` on the arrows
 - `maxCellSize?: number` (attribute `max-cell-size`) — ceiling, in CSS px, on the cell size
   `fitToWidth` derives from the host width, in **both** modes. Exists because `fitToWidth` divides
   the _whole_ host width across the grid, so a 5-week calendar or a 3-column matrix in a wide pane
@@ -237,9 +269,12 @@ color?: string; label?: string; partOfRamp?: boolean }`: a discrete legend key r
 color-scheme change; called automatically on theme changes, exposed for a consumer that needs to
 force a redraw manually. `matrixGeometry: Readonly<{ padLeft: number; padTop: number; cellSize:
 number }> | undefined` — the gutter/cell geometry the last matrix-mode draw actually painted with,
-in CSS pixels; `undefined` in calendar mode. Lets a light-DOM consumer (e.g. a sticky header mirror
-for a tall matrix) line up with the canvas without hardcoding the same numbers `row-label-width`/
-`col-label-height`'s `"auto"` resolution would otherwise keep private.
+in CSS pixels; `undefined` in calendar mode. Lets a light-DOM consumer line up with the canvas
+without hardcoding the same numbers `row-label-width`/`col-label-height`'s `"auto"` resolution would
+otherwise keep private. For the case that motivated it — a frozen header or gutter on a tall or wide
+matrix — prefer `stickyLabels`, which freezes the band inside the component and needs no mirror at
+all; the getter remains the way to align a *separate* element (a sibling chart, a custom overlay)
+with the grid.
 
 **Events:** `lr-cell-click` (fired on click, or Enter/Space on the keyboard-focused cell —
 `detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode),
@@ -250,8 +285,12 @@ in calendar mode)
 
 **Slots:** none.
 
-**CSS parts:** `base`, `canvas`, `cells` (opt-in per-cell overlay), `cell` (one opt-in native cell
-button), `tooltip` (hover tooltip, positioned over the hovered cell),
+**CSS parts:** `base`, `canvas`, `grid` (the scrollport wrapping the canvas while `stickyLabels`
+freezes an axis — absent entirely otherwise), `row-labels`/`col-labels` (the frozen label bands,
+rendered only for the axis `stickyLabels` names), `cells` (opt-in per-cell overlay), `cell` (one opt-in native cell
+button), `tooltip` (hover tooltip, positioned over the hovered cell — inside `[part="grid"]` while
+`stickyLabels` freezes an axis, so it scrolls with the cells, and a `[part="base"]` child
+otherwise),
 `live-region` (visually-hidden, `aria-hidden` mirror of the keyboard-focused cell; the actual
 announcement uses the shared light-DOM polite sink), `projection-limit` (localized assistive
 disclosure when bounded canonicalization truncates input), `legend`, `legend-lo`, `legend-hi` (both omitted, along with the gradient
@@ -287,7 +326,12 @@ dedicated token distinct from both the focus ring and the annotation ring so a h
 independently). `--lr-heatmap-tooltip-bg` (default
 `var(--lr-color-surface)`) and `--lr-heatmap-tooltip-text` (default `var(--lr-color-text)`) —
 unlike the canvas-drawn tokens above, `[part="tooltip"]` is a real DOM element and consumes these
-directly, no `getComputedStyle` bridging needed. Also consumes `--lr-color-text-quiet` (axis label
+directly, no `getComputedStyle` bridging needed. `--lr-heatmap-sticky-label-bg` (default
+`var(--lr-color-surface)` — the backdrop painted under a frozen `stickyLabels` band, resolved via
+`getComputedStyle` like the other canvas-drawn tokens; it must stay **opaque**, since it covers the
+same labels the scrolling canvas painted underneath it) and `--lr-heatmap-grid-max-block-size`
+(default `none` — the block-size ceiling of the `[part="grid"]` scrollport, consumed directly by
+that real DOM element; set it to give a frozen column band vertical scrolling to stay behind). Also consumes `--lr-color-text-quiet` (axis label
 color), `--lr-space-xs`, `--lr-radius`/`--lr-shadow` (tooltip box), and `--lr-focus-ring-width`/
 `--lr-focus-ring-offset` (the real `[part="canvas"]:focus-visible` DOM outline, stroked in the
 same color as `--lr-heatmap-focus-ring-color`).

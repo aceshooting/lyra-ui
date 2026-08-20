@@ -5315,6 +5315,34 @@
       }
     },
     {
+      "name": "--lr-funnel-bar-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-funnel>`** (default: `var(--lr-color-brand)`) — Fill of every stage bar that has no own color."
+      }
+    },
+    {
+      "name": "--lr-funnel-bar-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-funnel>`** (default: `var(--lr-size-1-5rem)`) — Thickness of a stage's track."
+      }
+    },
+    {
+      "name": "--lr-funnel-comparison-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-funnel>`** (default: `var(--lr-color-border-strong)`) — Outline of the comparison bars."
+      }
+    },
+    {
+      "name": "--lr-funnel-track-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-funnel>`** (default: `var(--lr-color-surface-raised)`) — Background of the bar track."
+      }
+    },
+    {
       "name": "--lr-gauge-fill",
       "description": {
         "kind": "markdown",
@@ -5567,6 +5595,13 @@
       }
     },
     {
+      "name": "--lr-heatmap-grid-max-block-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-heatmap>`** (default: `none`) — Block-size ceiling of the `stickyLabels` scrollport. A frozen column band only stays behind once the grid actually scrolls vertically."
+      }
+    },
+    {
       "name": "--lr-heatmap-label-font",
       "description": {
         "kind": "markdown",
@@ -5599,6 +5634,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-heatmap>`** (default: `var(--lr-color-success)`) — Border color for the selected cell."
+      }
+    },
+    {
+      "name": "--lr-heatmap-sticky-label-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-heatmap>`** (default: `var(--lr-color-surface)`) — Backdrop painted under a frozen `stickyLabels` band. Must be opaque: it covers the same labels the scrolling canvas painted underneath it."
       }
     },
     {

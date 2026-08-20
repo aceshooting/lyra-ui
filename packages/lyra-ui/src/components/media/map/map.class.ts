@@ -304,7 +304,11 @@ export interface LyraMapClusterOptions {
    * is also the base, so counts below the first threshold use it.
    */
   readonly radiusSteps?: readonly (readonly [number, number])[];
-  /** `[pointCount, color]` breaks for the cluster circle. Same vocabulary as `choropleth.stops`. */
+  /**
+   * `[pointCount, color]` breaks for the cluster circle. Same vocabulary as `choropleth.stops`,
+   * including color resolution: a `var(--lr-…)` reference is resolved against the host before it
+   * reaches MapLibre, which paints to a WebGL canvas and never sees the CSS cascade.
+   */
   readonly colorSteps?: readonly (readonly [number, string])[];
   /**
    * Font stack for the cluster count label, which must exist in the style's own glyph source.
@@ -326,8 +330,14 @@ export interface LyraMapHeatmapOptions {
   readonly weightRange?: readonly [number, number];
   /**
    * `[density, color]` ramp stops, density in `[0, 1]` — the same `[value, color]` vocabulary
-   * `choropleth.stops` and `legendGradient` already share. A ramp that does not start at density 0
-   * gets a fully transparent stop prepended, because a colored zero tints the entire map.
+   * `choropleth.stops` and `legendGradient` already share, `var(--lr-…)` references included. A ramp
+   * that does not start at density 0 gets a fully transparent stop prepended, because a colored zero
+   * tints the entire map.
+   *
+   * One stop is therefore enough, as long as it sits above density 0: `[[1, hot]]` is spelled
+   * exactly the way it reads, transparent to hot. The only ramp that cannot be honored is a lone
+   * stop AT density 0, which is a flat color rather than a gradient; that one falls back to the
+   * default ramp.
    */
   readonly stops?: readonly (readonly [number, string])[];
   /** Kernel radius in pixels. Defaults to 30, MapLibre's own default. */
@@ -547,6 +557,19 @@ const DEFAULT_HEATMAP_INTENSITY = 1;
  * value is handed to the peer's own color parser, not to CSS.
  */
 const HEATMAP_TRANSPARENT = 'rgba(0, 0, 0, 0)';
+
+/**
+ * Prepends the transparent density-0 stop to a heatmap ramp that starts above zero.
+ *
+ * A ramp whose lowest stop is above zero paints that color across every zero-density pixel, which
+ * is the whole map -- so the floor is prepended rather than assumed. An empty ramp is returned
+ * untouched; it has no lowest stop to compare and no gradient to protect.
+ */
+function withTransparentFloor(
+  stops: readonly (readonly [number, string])[],
+): readonly (readonly [number, string])[] {
+  return stops.length && stops[0]![0] > 0 ? [[0, HEATMAP_TRANSPARENT] as const, ...stops] : stops;
+}
 
 /** Cap on the cluster count label's font stack; a stack is a fallback chain, not a list. */
 const MAX_CLUSTER_COUNT_FONTS = 8;
@@ -1951,6 +1974,31 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   /**
+   * `['step', ['get', 'point_count'], …]` over the authored cluster color breaks, or the layer's
+   * own flat color when none were supplied.
+   *
+   * Every break resolves through `resolvedLayerColor()` for the same reason `layer.color` does: the
+   * breaks speak the `choropleth.stops` vocabulary, so a consumer writes `var(--lr-color-brand)` in
+   * one and reasonably expects it in the other -- and MapLibre paints to a WebGL canvas that never
+   * sees the CSS cascade, so an unresolved `var()` is not a wrong color but no paint at all.
+   *
+   * Shared by both halves of the apply/paint split so the two can never resolve differently.
+   */
+  private clusterColorExpression(
+    layer: LyraMapGeoJsonDataLayer,
+    cluster: NormalizedClusterOptions,
+  ): unknown[] | string {
+    const tone = layer.tone;
+    if (!cluster.colorSteps.length) return resolvedLayerColor(this, layer.color, tone);
+    return stepExpression(
+      ['get', 'point_count'],
+      cluster.colorSteps.map(
+        ([count, stepColor]) => [count, resolvedLayerColor(this, stepColor, tone)] as const,
+      ),
+    );
+  }
+
+  /**
    * The three layers native MapLibre clustering needs: an aggregate circle over the clustered
    * points, its count label, and the points that stayed unclustered.
    *
@@ -1964,14 +2012,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   ): void {
     if (!this._map) return;
     const tone = layer.tone;
-    const color = resolvedLayerColor(this, layer.color, tone);
     const stroke = resolvedLayerColor(this, layer.strokeColor ?? layer.color, tone);
     const clusterId = `${sourceId}-cluster`;
     const countId = `${sourceId}-cluster-count`;
     const circleId = `${sourceId}-circle`;
-    const clusterColor = cluster.colorSteps.length
-      ? stepExpression(['get', 'point_count'], cluster.colorSteps)
-      : color;
+    const clusterColor = this.clusterColorExpression(layer, cluster);
     const clusterRadius = stepExpression(['get', 'point_count'], cluster.radiusSteps);
     const countColor = resolvedLayerColor(this, `var(${ON_TONE_TOKEN[tone ?? 'accent']})`, tone);
     if (!this._map.getLayer(clusterId)) {
@@ -2026,14 +2071,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   ): void {
     if (!this._map) return;
     const tone = layer.tone;
-    const color = resolvedLayerColor(this, layer.color, tone);
     const stroke = resolvedLayerColor(this, layer.strokeColor ?? layer.color, tone);
     const clusterId = `${sourceId}-cluster`;
-    this._map.setPaintProperty(
-      clusterId,
-      'circle-color',
-      cluster.colorSteps.length ? stepExpression(['get', 'point_count'], cluster.colorSteps) : color,
-    );
+    this._map.setPaintProperty(clusterId, 'circle-color', this.clusterColorExpression(layer, cluster));
     this._map.setPaintProperty(
       clusterId,
       'circle-radius',
@@ -2107,22 +2147,27 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * `['interpolate', ['linear'], ['heatmap-density'], …]` over the authored ramp, or the shared
    * token ramp when none is usable. Colors resolve through the host first, since MapLibre paints to
    * a WebGL canvas and never sees a `var()`.
+   *
+   * One authored stop is enough, as long as it sits above density 0: the transparent floor this
+   * prepends anyway makes it a real two-stop ramp, and `[[1, hot]]` is the most natural way to spell
+   * "transparent to hot". The token ramp takes over only when the result still cannot interpolate --
+   * a lone stop AT density 0, which describes a flat colour rather than a gradient.
    */
   private heatmapColorExpression(layer: LyraMapGeoJsonDataLayer): unknown[] {
     const tone = layer.tone;
     const authored = normalizedSteps(layer.heatmap?.stops, isColorOutput, (threshold) =>
       finiteRange(threshold, 0, 0, 1),
     ).map(([density, color]) => [density, resolvedLayerColor(this, color, tone)] as const);
-    const stops =
-      authored.length >= 2
-        ? authored
-        : HEATMAP_RAMP_TOKENS.map(
-            ([density, token]) =>
-              [density, resolvedLayerColor(this, `var(${token})`, tone)] as const,
+    const authoredRamp = withTransparentFloor(authored);
+    const ramp =
+      authoredRamp.length >= 2
+        ? authoredRamp
+        : withTransparentFloor(
+            HEATMAP_RAMP_TOKENS.map(
+              ([density, token]) =>
+                [density, resolvedLayerColor(this, `var(${token})`, tone)] as const,
+            ),
           );
-    // A ramp whose lowest stop is above zero paints that color across every zero-density pixel,
-    // which is the whole map -- so the transparent floor is prepended rather than assumed.
-    const ramp = stops[0]![0] > 0 ? [[0, HEATMAP_TRANSPARENT] as const, ...stops] : stops;
     const expression: unknown[] = ['interpolate', ['linear'], ['heatmap-density']];
     for (const [density, color] of ramp) expression.push(density, color);
     return expression;
