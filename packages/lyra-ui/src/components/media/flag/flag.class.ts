@@ -237,6 +237,14 @@ function loadFlagUrlResolver(): Promise<LyraFlagUrlResolver | null> {
  * Or import `flag-peer-bulk.js` instead of `flag-peer.js` (never both) to get this automatically,
  * registering a resolver backed by one shared `flagUrls()` call — worthwhile only when the page
  * renders most/all flags; a page with a handful pays an unneeded 249-entry fetch.
+ * When that page ALSO leaves every `<lr-flag>` on the default `fidelity="standard"`, import
+ * `flag-peer-bulk-standard.js` instead: it registers the same bulk resolver through the peer
+ * package's tier-committed `@aceshooting/lyra-flags/standard` entry, so the detailed and compact
+ * tiers' lazy-chunk graphs never become reachable (measured at +15.8MB of emitted assets on a real
+ * production build with a 156-country flag column). It is committed to one tier, so
+ * `fidelity="compact"/"detailed"` on an individual element resolves to that code's standard asset
+ * — a silent no-op, not an error; use `flag-peer-bulk.js` when per-instance fidelity must be
+ * honoured.
  *
  * **Sizing:** the host has no intrinsic `width` — it sizes from `font-size` (`block-size: 1em`,
  * `inline-size` derived from `--lr-flag-aspect-ratio` via CSS `aspect-ratio`), so `<lr-flag>` scales

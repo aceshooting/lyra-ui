@@ -2,8 +2,9 @@
 //   - vscode-html-data.json  (VS Code's `html.customData` format -- tag names and attributes;
 //                              slot/CSS-part tables remain tag-description prose)
 //   - vscode-css-data.json   (VS Code's `css.customData` format -- every `--lr-*` custom property)
-//   - web-types.json         (JetBrains' web-types format -- tags, attributes and CSS properties;
-//                              slot/CSS-part tables remain tag-description prose)
+//   - web-types.json         (JetBrains' web-types format -- tags, attributes, JS properties, DOM
+//                              events, slots and CSS properties; CSS-part tables remain
+//                              tag-description prose)
 // TypeScript consumers already get tag/attribute completion via the generated
 // `HTMLElementTagNameMap` (produced by `tsc` alongside `dist/*.d.ts`). Plain HTML, Vue templates,
 // and Angular templates never go through that type graph, so editors need these small JSON data
@@ -33,6 +34,7 @@ import {
   webTypesValue,
 } from './editor-type-values.mjs';
 import { cssPropertyDescription } from './editor-css-descriptions.mjs';
+import { deprecationDescription, webTypesElementContributions } from './editor-web-types.mjs';
 import { mergeDesignTokenEditorProperties } from './design-token-editor.mjs';
 import { expandManifestInheritance } from './manifest-compact.mjs';
 
@@ -56,14 +58,6 @@ const TYPE_ALIAS_REGISTRY = readTypeAliases(join(packageDir, 'src'));
 
 function literalValues(typeText) {
   return htmlDataValues(typeText, TYPE_ALIAS_REGISTRY);
-}
-
-function deprecationDescription(deprecation) {
-  if (!deprecation) return undefined;
-  const replacement = deprecation.replacement?.usage ?? deprecation.replacement?.name;
-  return `Deprecated since \`${deprecation.since}\`. Use ${deprecation.replacement?.kind ?? 'API'} ` +
-    `\`${replacement}\`. Removal is not permitted before \`${deprecation.removalNotBefore}\`. ` +
-    deprecation.rationale;
 }
 
 function attributeDescriptionText(attribute) {
@@ -244,13 +238,19 @@ const cssData = {
 writeFileSync(cssDataPath, `${JSON.stringify(cssData, null, 2)}\n`);
 
 // --- web-types.json (JetBrains WebStorm/IntelliJ) -----------------------------------------------
-// Nice-to-have companion to the two files above -- same source data, WebStorm/IntelliJ's format
-// instead of VS Code's. See https://github.com/JetBrains/web-types (schema at
-// https://json.schemastore.org/web-types) -- there is no per-tag `css.customData`-style scoping
-// here either (same reasoning as the css.customData section above), and no formal `slots` field on
-// a plain `html-element` (unlike Vue/React components, web-types has no first-class slot concept
-// for plain custom elements), so slots stay folded into `tagDescription`'s markdown alongside CSS
-// parts, same as the VS Code file.
+// Companion to the two files above -- same source data, WebStorm/IntelliJ's format instead of VS
+// Code's, and a strictly larger projection than either. See https://github.com/JetBrains/web-types
+// (schema at https://json.schemastore.org/web-types): there is no per-tag `css.customData`-style
+// scoping here (same reasoning as the css.customData section above), but an `html-element` DOES
+// carry the JS namespace and further HTML contribution kinds, so `js/properties`, `js/events` and
+// `slots` are emitted structurally by `editor-web-types.mjs` instead of being folded into prose.
+// That matters because these are Lit components: `.property=${…}` and `@lr-event=${…}` are the
+// idiomatic bindings, and 865 public fields are declared `attribute: false`, so an attributes-only
+// file described the minority spelling and left a component's primary API (`lr-chart.datasets`,
+// `lr-heatmap.legendStops`, …) reachable through no contribution at all. Slots and CSS parts stay
+// in `tagDescription`'s markdown as well -- prose the documentation popup renders for the tag
+// itself, which the structural `slots` list complements rather than replaces (`html.customData`
+// has nowhere to put any of this, so the VS Code file keeps prose only).
 const webTypes = {
   $schema: 'https://json.schemastore.org/web-types',
   name: pkg.name,
@@ -270,6 +270,7 @@ const webTypes = {
             ...(value ? { value } : {}),
           };
         }),
+        ...webTypesElementContributions(declaration),
       })),
     },
     css: {
@@ -280,6 +281,11 @@ const webTypes = {
 
 writeFileSync(webTypesPath, `${JSON.stringify(webTypes, null, 2)}\n`);
 
+const webTypesElements = webTypes.contributions.html.elements;
+const countTags = (predicate) => webTypesElements.filter(predicate).length;
 console.log(
-  `Wrote ${customElements.length} tags to vscode-html-data.json, ${cssData.properties.length} custom properties to vscode-css-data.json, and both to web-types.json`,
+  `Wrote ${customElements.length} tags to vscode-html-data.json, ${cssData.properties.length} custom properties to vscode-css-data.json, and both to web-types.json ` +
+    `(${countTags((element) => element.js?.properties?.length)} tags with JS properties, ` +
+    `${countTags((element) => element.js?.events?.length)} with events, ` +
+    `${countTags((element) => element.slots?.length)} with slots)`,
 );

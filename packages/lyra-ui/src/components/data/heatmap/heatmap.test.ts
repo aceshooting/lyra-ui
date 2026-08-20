@@ -7613,3 +7613,204 @@ describe('matrix column-label band', () => {
     expect(canvasHeight(malformed)).to.equal(20 + 2 * 20);
   });
 });
+
+// Labels were painted into the same bitmap as the cells, so neither axis could be frozen: a tall
+// matrix scrolled its column header out of view and the only workaround was a light-DOM mirror row
+// that had to hardcode the gutter width and cell size (mutually exclusive with row-label-width
+// ="auto"). `sticky-labels` paints the bands into their own layers instead.
+describe('matrix frozen label bands (sticky-labels)', () => {
+  const LONG = 'Bosnia and Herzegovina';
+  const LONGER = 'The United Kingdom of Great Britain and Northern Ireland';
+
+  async function matrixWith(
+    attrs: Record<string, string> = {},
+    rowLabels: readonly string[] = ['a', 'b'],
+  ): Promise<LyraHeatmap> {
+    const el = (await fixture(html`<lr-heatmap cell-size="20"></lr-heatmap>`)) as LyraHeatmap;
+    for (const [name, value] of Object.entries(attrs)) el.setAttribute(name, value);
+    setMatrixData(el, {
+      rowLabels: [...rowLabels],
+      colLabels: ['x', 'y'],
+      values: rowLabels.map((_label, r) => [r, r + 1]),
+    });
+    await el.updateComplete;
+    await aTimeout(0);
+    return el;
+  }
+
+  const part = (el: LyraHeatmap, name: string): HTMLElement | null =>
+    el.shadowRoot!.querySelector<HTMLElement>(`[part="${name}"]`);
+
+  const bandBox = (el: LyraHeatmap, name: string): { w: number; h: number } => {
+    const band = part(el, name) as HTMLCanvasElement | null;
+    if (!band) throw new Error(`missing frozen band: ${name}`);
+    return { w: parseFloat(band.style.width), h: parseFloat(band.style.height) };
+  };
+
+  it('defaults to none and renders neither a scrollport nor a frozen band (unset regression)', async () => {
+    const el = await matrixWith();
+    expect(el.stickyLabels).to.equal('none');
+    expect(part(el, 'grid'), 'no scroll container is introduced for an existing consumer').to.equal(
+      null,
+    );
+    expect(el.shadowRoot!.querySelectorAll('canvas').length, 'one canvas, as before').to.equal(1);
+    expect(part(el, 'canvas')!.parentElement!.getAttribute('part')).to.equal('base');
+  });
+
+  it('freezes the row gutter at exactly the painted padLeft under sticky-labels="rows"', async () => {
+    const el = await matrixWith({ 'sticky-labels': 'rows', 'row-label-width': '140' });
+    const canvas = part(el, 'canvas') as HTMLCanvasElement;
+    const band = bandBox(el, 'row-labels');
+    expect(el.matrixGeometry!.padLeft).to.equal(140);
+    expect(band.w, 'the frozen gutter is exactly the painted gutter').to.equal(140);
+    expect(band.h, 'it spans the full grid height, so it scrolls vertically with the rows').to.equal(
+      parseFloat(canvas.style.height),
+    );
+    expect(part(el, 'col-labels'), 'only the requested axis is frozen').to.equal(null);
+    expect(getComputedStyle(band as unknown as Element).position).to.equal('sticky');
+  });
+
+  it('freezes the column band at exactly the painted padTop under sticky-labels="cols"', async () => {
+    const el = await matrixWith({ 'sticky-labels': 'cols', 'col-label-height': '48' });
+    const canvas = part(el, 'canvas') as HTMLCanvasElement;
+    const band = bandBox(el, 'col-labels');
+    expect(el.matrixGeometry!.padTop).to.equal(48);
+    expect(band.h).to.equal(48);
+    expect(band.w, 'it spans the full grid width, so it scrolls horizontally with the columns').to.equal(
+      parseFloat(canvas.style.width),
+    );
+    expect(part(el, 'row-labels')).to.equal(null);
+  });
+
+  it('freezes both axes at once under sticky-labels="both"', async () => {
+    const el = await matrixWith({ 'sticky-labels': 'both' });
+    expect(part(el, 'grid'), 'the bands need a scrollport to stick to').to.not.equal(null);
+    expect(bandBox(el, 'row-labels').w).to.equal(el.matrixGeometry!.padLeft);
+    expect(bandBox(el, 'col-labels').h).to.equal(el.matrixGeometry!.padTop);
+  });
+
+  it('follows a row-label-width="auto" re-resolution instead of a hardcoded gutter', async () => {
+    const el = await matrixWith({ 'sticky-labels': 'rows', 'row-label-width': 'auto' }, [LONG]);
+    const first = el.matrixGeometry!.padLeft;
+    expect(first, 'the measured gutter grew past the built-in 60').to.be.greaterThan(60);
+    expect(bandBox(el, 'row-labels').w).to.equal(first);
+
+    setMatrixData(el, { rowLabels: [LONGER], values: [[1, 2]] });
+    await el.updateComplete;
+    await aTimeout(0);
+    const second = el.matrixGeometry!.padLeft;
+    expect(second, 'a longer label re-resolves the gutter').to.be.greaterThan(first);
+    expect(
+      bandBox(el, 'row-labels').w,
+      'the frozen band tracks the re-resolution, so auto and a frozen axis are not exclusive',
+    ).to.equal(second);
+  });
+
+  it('keeps each band pixel-aligned with the cell canvas', async () => {
+    const el = await matrixWith({ 'sticky-labels': 'both' });
+    const canvas = (part(el, 'canvas') as HTMLCanvasElement).getBoundingClientRect();
+    const row = part(el, 'row-labels')!.getBoundingClientRect();
+    const col = part(el, 'col-labels')!.getBoundingClientRect();
+    expect(row.left, 'row band shares the canvas origin').to.be.closeTo(canvas.left, 0.5);
+    expect(row.top).to.be.closeTo(canvas.top, 0.5);
+    expect(col.left).to.be.closeTo(canvas.left, 0.5);
+    expect(col.top, 'column band shares the canvas origin').to.be.closeTo(canvas.top, 0.5);
+  });
+
+  it('repaints the bands when a redraw changes the geometry', async () => {
+    const el = await matrixWith({ 'sticky-labels': 'both' });
+    expect(bandBox(el, 'col-labels').w).to.equal(el.matrixGeometry!.padLeft + 2 * 20);
+    el.setAttribute('cell-size', '40');
+    await el.updateComplete;
+    await aTimeout(0);
+    expect(el.matrixGeometry!.cellSize).to.equal(40);
+    expect(bandBox(el, 'col-labels').w).to.equal(el.matrixGeometry!.padLeft + 2 * 40);
+    expect(bandBox(el, 'row-labels').h).to.equal(el.matrixGeometry!.padTop + 2 * 40);
+  });
+
+  it('paints an opaque band so the scrolled-away canvas labels cannot show through', async () => {
+    const el = await matrixWith({ 'sticky-labels': 'both' });
+    const band = part(el, 'col-labels') as HTMLCanvasElement;
+    const ctx = band.getContext('2d')!;
+    const alpha = ctx.getImageData(1, 1, 1, 1).data[3];
+    expect(alpha, 'a translucent band would let two label rows overlap while scrolling').to.equal(
+      255,
+    );
+  });
+
+  it('stays on the physical inline-start edge under dir="rtl"', async () => {
+    const wrapper = (await fixture(
+      html`<div dir="rtl"><lr-heatmap cell-size="20" sticky-labels="rows"></lr-heatmap></div>`,
+    )) as HTMLElement;
+    const el = wrapper.querySelector('lr-heatmap') as LyraHeatmap;
+    setMatrixData(el, { rowLabels: ['a', 'b'], colLabels: ['x', 'y'], values: [[1, 2], [3, 4]] });
+    await el.updateComplete;
+    await aTimeout(0);
+    const canvas = (part(el, 'canvas') as HTMLCanvasElement).getBoundingClientRect();
+    const band = part(el, 'row-labels')!.getBoundingClientRect();
+    expect(
+      band.left,
+      'the grid keeps physical LTR geometry, so the frozen gutter stays where the labels are painted',
+    ).to.be.closeTo(canvas.left, 0.5);
+  });
+
+  it('scrolls inside the component at a 320px allocation instead of overflowing it', async () => {
+    const el = (await fixture(
+      html`<lr-heatmap cell-size="40" sticky-labels="both" style="inline-size: 320px"></lr-heatmap>`,
+    )) as LyraHeatmap;
+    const colLabels = Array.from({ length: 12 }, (_value, index) => `c${index}`);
+    setMatrixData(el, {
+      rowLabels: ['a'],
+      colLabels,
+      values: [colLabels.map((_label, index) => index)],
+    });
+    await el.updateComplete;
+    await aTimeout(0);
+    const grid = part(el, 'grid')!;
+    expect(grid.clientWidth, 'the scrollport is bounded by the host allocation').to.be.at.most(320);
+    expect(grid.scrollWidth, 'the wide matrix scrolls inside it').to.be.greaterThan(
+      grid.clientWidth,
+    );
+  });
+
+  it('keeps the accessible-cells overlay inside the scrollport so cells scroll with the canvas', async () => {
+    const el = await matrixWith({ 'sticky-labels': 'both', 'accessible-cells': '' });
+    const cells = part(el, 'cells');
+    expect(cells, 'the semantic grid still renders').to.not.equal(null);
+    expect(part(el, 'grid')!.contains(cells!)).to.equal(true);
+  });
+
+  it('is ignored in calendar mode, which has its own axes', async () => {
+    const el = (await fixture(
+      html`<lr-heatmap sticky-labels="both"></lr-heatmap>`,
+    )) as LyraHeatmap;
+    setCalendarData(el, { days: [{ date: '2024-01-01', value: 1 }] });
+    await el.updateComplete;
+    await aTimeout(0);
+    expect(el.stickyLabels, 'the property still reports what the consumer set').to.equal('both');
+    expect(part(el, 'grid'), 'calendar output is unchanged').to.equal(null);
+    expect(el.shadowRoot!.querySelectorAll('canvas').length).to.equal(1);
+  });
+
+  it('normalizes an unsupported sticky-labels value to none', async () => {
+    const el = await matrixWith({ 'sticky-labels': 'diagonal' });
+    expect(el.stickyLabels).to.equal('none');
+    expect(el.getAttribute('sticky-labels')).to.equal('none');
+    expect(part(el, 'grid')).to.equal(null);
+
+    el.stickyLabels = 'sideways' as unknown as LyraHeatmap['stickyLabels'];
+    await el.updateComplete;
+    expect(el.stickyLabels).to.equal('none');
+  });
+
+  it('hides the duplicated bands from assistive technology and stays axe-clean', async () => {
+    const el = await matrixWith({ 'sticky-labels': 'both' });
+    expect(part(el, 'row-labels')!.getAttribute('aria-hidden')).to.equal('true');
+    expect(part(el, 'col-labels')!.getAttribute('aria-hidden')).to.equal('true');
+    expect(
+      part(el, 'canvas')!.getAttribute('role'),
+      'the cell canvas keeps its own accessible representation',
+    ).to.equal('application');
+    await expect(el).to.be.accessible();
+  });
+});

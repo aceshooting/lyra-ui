@@ -4650,3 +4650,160 @@ describe('range presets forwarding', () => {
     expect(exported, 'preset-button must be reachable from outside').to.contain('preset-button');
   });
 });
+
+// 11.1.0 forwarded `presets` to lr-date-input and added the read-only `appliedPreset` to
+// lr-date-picker, but never joined the two halves -- so the compact text-field-plus-popover shape a
+// dashboard filter actually uses had no readback path at all. The nested picker lives in this
+// shadow root (a CSS part cannot yield the instance), `input`/`change` are deliberately NATIVE
+// events that carry no detail, and re-deriving the preset by matching `value` against the list is
+// both the mapping table `presets` exists to delete and ambiguous (Today and This month coincide on
+// the 1st).
+describe('applied preset readback', () => {
+  const PRESETS = [
+    { label: 'Last 7 days', start: '2026-08-13', end: '2026-08-19' },
+    { label: 'This month', start: '2026-08-01', end: '2026-08-31' },
+  ];
+
+  const picker = (el: LyraDateInput): LyraDatePicker =>
+    el.shadowRoot!.querySelector<LyraDatePicker>('[part~="date-picker"]')!;
+
+  async function openedInput(): Promise<LyraDateInput> {
+    const el = (await fixture(
+      html`<lr-date-input mode="range"></lr-date-input>`,
+    )) as LyraDateInput;
+    el.presets = PRESETS;
+    el.open = true;
+    await el.updateComplete;
+    await picker(el).updateComplete;
+    return el;
+  }
+
+  const presetButtons = (el: LyraDateInput): HTMLButtonElement[] =>
+    Array.from(
+      picker(el).shadowRoot!.querySelectorAll<HTMLButtonElement>(
+        '[part~="preset-button"]',
+      ),
+    );
+
+  it('reports which preset produced the value, inside the change handler', async () => {
+    const el = await openedInput();
+    let seen: string | undefined = 'unset';
+    el.addEventListener('change', () => {
+      seen = el.appliedPreset?.label;
+    });
+
+    presetButtons(el)[0]!.click();
+    await el.updateComplete;
+
+    expect(seen, 'readable from the handler the commit itself dispatched').to.equal(
+      'Last 7 days',
+    );
+    expect(el.appliedPreset?.label, 'and still readable afterwards').to.equal(
+      'Last 7 days',
+    );
+  });
+
+  it('mirrors the caller-supplied preset itself, not a copy of it', async () => {
+    const el = await openedInput();
+
+    presetButtons(el)[1]!.click();
+    await el.updateComplete;
+
+    expect(el.appliedPreset).to.equal(PRESETS[1]);
+  });
+
+  it('reports the preset inside the input handler that precedes the change', async () => {
+    const el = await openedInput();
+    let seen: string | undefined = 'unset';
+    el.addEventListener('input', () => {
+      seen = el.appliedPreset?.label;
+    });
+
+    presetButtons(el)[0]!.click();
+    await el.updateComplete;
+
+    expect(seen).to.equal('Last 7 days');
+  });
+
+  it('reports no preset before the popover has ever been opened', async () => {
+    const el = (await fixture(
+      html`<lr-date-input
+        mode="range"
+        value="2026-08-13/2026-08-19"
+      ></lr-date-input>`,
+    )) as LyraDateInput;
+    el.presets = PRESETS;
+    await el.updateComplete;
+
+    expect(
+      el.appliedPreset,
+      'a value equal to a preset pair was still not produced by its button',
+    ).to.equal(undefined);
+  });
+
+  it('clears the applied preset when a day is picked by hand', async () => {
+    const el = await openedInput();
+    presetButtons(el)[0]!.click();
+    await el.updateComplete;
+    el.open = true;
+    await el.updateComplete;
+    await picker(el).updateComplete;
+
+    picker(el)
+      .shadowRoot!.querySelector<HTMLElement>('[part~="day"]:not(:disabled)')!
+      .click();
+    await el.updateComplete;
+
+    expect(
+      el.appliedPreset,
+      'a hand-picked range did not come from a preset',
+    ).to.equal(undefined);
+  });
+
+  it('clears the applied preset when a new range is typed by hand', async () => {
+    const el = await openedInput();
+    presetButtons(el)[0]!.click();
+    await el.updateComplete;
+
+    const input = el.input!;
+    input.value = '2026-09-01/2026-09-30';
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    await el.updateComplete;
+
+    expect(el.value, 'the typed range committed').to.equal(
+      '2026-09-01/2026-09-30',
+    );
+    expect(el.appliedPreset).to.equal(undefined);
+  });
+
+  it('clears the applied preset when clear() empties the field', async () => {
+    const el = await openedInput();
+    presetButtons(el)[0]!.click();
+    await el.updateComplete;
+
+    el.clear();
+    await el.updateComplete;
+
+    expect(el.appliedPreset, 'nothing is selected, so no preset is applied').to.equal(
+      undefined,
+    );
+  });
+
+  it('clears the applied preset when the owning form resets', async () => {
+    const form = await fixture<HTMLFormElement>(
+      html`<form><lr-date-input mode="range" name="period"></lr-date-input></form>`,
+    );
+    const el = form.querySelector<LyraDateInput>('lr-date-input')!;
+    el.presets = PRESETS;
+    el.open = true;
+    await el.updateComplete;
+    await picker(el).updateComplete;
+    presetButtons(el)[0]!.click();
+    await el.updateComplete;
+
+    form.reset();
+    await el.updateComplete;
+
+    expect(el.appliedPreset).to.equal(undefined);
+  });
+});

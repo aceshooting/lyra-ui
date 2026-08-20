@@ -516,6 +516,37 @@ describe('loadBulkFlagUrl (uncached, dependency-injectable)', () => {
   });
 });
 
+describe('flag-peer-bulk-standard.js (tier-committed bulk registration entry)', () => {
+  afterEach(() => setFlagUrlResolver(registerLyraFlagPeer()));
+
+  it('registers a bulk resolver that agrees with the ./standard tier entry', async () => {
+    const { registerLyraFlagStandardBulkPeer } = await import('./flag-peer-bulk-standard.js');
+    const resolve = await registerLyraFlagStandardBulkPeer();
+    expect(resolve).to.be.a('function');
+    const tierEntry = await loadFlagUrl(() => import('@aceshooting/lyra-flags/standard'));
+    expect(await resolve!('fr')).to.equal(await tierEntry!('fr'));
+    expect(await resolve!('zz-not-a-real-code')).to.equal(undefined);
+  });
+
+  it('resolves an emblem code to the standard asset even when fidelity asks for another tier', async () => {
+    const { registerLyraFlagStandardBulkPeer } = await import('./flag-peer-bulk-standard.js');
+    const resolve = await registerLyraFlagStandardBulkPeer();
+    const tierEntry = await loadFlagUrl(() => import('@aceshooting/lyra-flags/standard'));
+    const standardUrl = await tierEntry!('es');
+    expect(await resolve!('es', { variant: 'detailed' })).to.equal(standardUrl);
+    expect(await resolve!('es', { variant: 'compact' })).to.equal(standardUrl);
+  });
+
+  it('renders a mounted flag through the registered resolver, without the peer-failure error', async () => {
+    const { registerLyraFlagStandardBulkPeer } = await import('./flag-peer-bulk-standard.js');
+    setFlagUrlResolver(registerLyraFlagStandardBulkPeer());
+    const el = await fixture<LyraFlag>(html`<lr-flag country="es" fidelity="detailed"></lr-flag>`);
+    const tierEntry = await loadFlagUrl(() => import('@aceshooting/lyra-flags/standard'));
+    expect((await img(el)).getAttribute('src')).to.equal(await tierEntry!('es'));
+    expect(el.shadowRoot!.querySelector('[part="error"]')).to.equal(null);
+  });
+});
+
 describe('live resolver registration', () => {
   afterEach(() => setFlagUrlResolver(registerLyraFlagPeer()));
 

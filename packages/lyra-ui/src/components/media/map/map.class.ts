@@ -270,9 +270,76 @@ export type LyraMapChoroplethInterpolation = 'linear' | 'logarithmic' | 'step';
  */
 const CHOROPLETH_LOG_INTERPOLATION_BASE = 0.25;
 
+/**
+ * What a `dataLayers` entry renders.
+ *
+ * `'auto'` (the default, and the only previous behavior) splits the source by geometry into the
+ * fill/line/circle layers below. `'heatmap'` replaces that split with MapLibre's own first-class
+ * `heatmap` layer — a density surface, which the geometry split cannot express at all: thousands of
+ * overlapping circles read as one opaque blob, not as where the data is concentrated.
+ */
+export type LyraMapDataLayerKind = 'auto' | 'heatmap';
+
+/**
+ * Native MapLibre marker clustering for one `dataLayers` entry.
+ *
+ * Clustering is a *source* option plus layers, not new rendering machinery: setting this adds
+ * `cluster`/`clusterRadius`/`clusterMaxZoom` to the entry's GeoJSON source and swaps its geometry
+ * split for a `${sourceId}-cluster` circle, a `${sourceId}-cluster-count` label, and a
+ * `${sourceId}-circle` layer for the points that stayed unclustered. It is the answer to a
+ * thousands-of-pins map, which `markers` cannot be: `markers` mints one real DOM element per entry,
+ * which is correct for tens of pins and unreadable (and expensive) for thousands.
+ *
+ * A clustered source carries points only — MapLibre drops non-point geometry when clustering — so no
+ * fill/line layer is created for a clustered entry.
+ */
+export interface LyraMapClusterOptions {
+  /** Cluster radius in pixels at each zoom level. Defaults to 50, MapLibre's own default. */
+  readonly radius?: number;
+  /** Zoom past which points stop being clustered. Defaults to 14. */
+  readonly maxZoom?: number;
+  /**
+   * `[pointCount, radiusPx]` breaks for the cluster circle, in the same ascending `[value, output]`
+   * shape as `choropleth.stops` and with the same `['step', …]` semantics: the first entry's output
+   * is also the base, so counts below the first threshold use it.
+   */
+  readonly radiusSteps?: readonly (readonly [number, number])[];
+  /** `[pointCount, color]` breaks for the cluster circle. Same vocabulary as `choropleth.stops`. */
+  readonly colorSteps?: readonly (readonly [number, string])[];
+  /**
+   * Font stack for the cluster count label, which must exist in the style's own glyph source.
+   * Defaults to MapLibre's spec default; supply the names your style actually ships when that
+   * default is absent. The count label is skipped entirely when the style declares no `glyphs`,
+   * since a text layer without one paints nothing and only emits peer errors.
+   */
+  readonly countFont?: readonly string[];
+}
+
+/** Paint configuration for a `kind: 'heatmap'` data layer. */
+export interface LyraMapHeatmapOptions {
+  /** Feature property weighting each point. Omitted, every point weighs 1 (MapLibre's default). */
+  readonly weightField?: string;
+  /**
+   * `[min, max]` of `weightField` in the data's own units, mapped onto MapLibre's 0–1 weight. Without
+   * it the raw property value is used, which saturates the surface for any quantity above ~1.
+   */
+  readonly weightRange?: readonly [number, number];
+  /**
+   * `[density, color]` ramp stops, density in `[0, 1]` — the same `[value, color]` vocabulary
+   * `choropleth.stops` and `legendGradient` already share. A ramp that does not start at density 0
+   * gets a fully transparent stop prepended, because a colored zero tints the entire map.
+   */
+  readonly stops?: readonly (readonly [number, string])[];
+  /** Kernel radius in pixels. Defaults to 30, MapLibre's own default. */
+  readonly radius?: number;
+  /** Global intensity multiplier. Defaults to 1, MapLibre's own default. */
+  readonly intensity?: number;
+}
+
 /** One GeoJSON source rendered as three layers (`${sourceId}-fill` for polygons, `${sourceId}-line`
- *  for lines/outlines, `${sourceId}-circle` for points). Colors resolve from `--lr-*` tokens at
- *  apply time, defaulting to `accent`. */
+ *  for lines/outlines, `${sourceId}-circle` for points), or — under `cluster`/`kind` — as the
+ *  cluster or heatmap layers those describe. Colors resolve from `--lr-*` tokens at apply time,
+ *  defaulting to `accent`. */
 export interface LyraMapGeoJsonDataLayer {
   /** Trimmed nonempty business identity. A collection retains the first occurrence and ignores
    * blank or later duplicate `sourceId` records. */
@@ -299,6 +366,23 @@ export interface LyraMapGeoJsonDataLayer {
    * to `color`, then to `tone`. See `color` for why these are separable.
    */
   readonly strokeColor?: string;
+
+  /** What this entry renders. Defaults to `'auto'` — today's geometry split, unchanged. */
+  readonly kind?: LyraMapDataLayerKind;
+
+  /**
+   * Paint configuration for `kind: 'heatmap'`. Ignored under any other kind, so it can be carried
+   * beside an `'auto'` entry without effect.
+   */
+  readonly heatmap?: LyraMapHeatmapOptions;
+
+  /**
+   * Enables native MapLibre clustering for this entry. `cluster: {}` accepts every default.
+   *
+   * Ignored when `kind` is `'heatmap'`: a heatmap already aggregates density, and clustering its
+   * input would feed it one weighted point per cluster instead of the real distribution.
+   */
+  readonly cluster?: LyraMapClusterOptions;
 }
 
 /** Each entry becomes one real, individually-focusable DOM marker element (with its own aria

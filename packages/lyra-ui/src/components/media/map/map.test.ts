@@ -3430,3 +3430,371 @@ it('routes a throwing setMaxBounds into the same revert-and-warn path as a non-f
   expect(Number.isFinite(el.map!.getZoom()), 'the camera must survive').to.be.true;
   expect(el.map!.getZoom()).to.be.closeTo(zoomBefore, 0.001);
 });
+
+// ---------------------------------------------------------------------------
+// Marker clustering and the heatmap layer kind. Both are strictly additive: an entry that sets
+// neither `cluster` nor `kind` must still emit exactly today's unclustered fill/line/circle split,
+// which the first test below pins.
+// ---------------------------------------------------------------------------
+describe('dataLayers clustering and heatmap', () => {
+  interface StubLayer {
+    id: string;
+    type: string;
+    source: string;
+    filter?: unknown;
+    paint?: Record<string, unknown>;
+    layout?: Record<string, unknown>;
+  }
+
+  /**
+   * Stands in for the maplibre instance, exactly as the choropleth interpolation suite above does:
+   * applyDataLayers() only needs the handful of methods it calls, and this keeps the assertions on
+   * the emitted source options and layer specs rather than on a real GL context (so these run on
+   * every engine, WebGL2 or not). `setPaintProperty` deliberately throws for an unknown layer --
+   * the real peer fires an error event there, which is exactly the regression a theme repaint that
+   * assumes fill/line/circle would cause for a heatmap or cluster entry.
+   */
+  function stubMaplibreMap(el: LyraMap, options: { glyphs?: string } = {}) {
+    const sources = new Map<string, Record<string, unknown>>();
+    const layers = new Map<string, StubLayer>();
+    const map = {
+      getSource: (id: string) =>
+        sources.has(id)
+          ? {
+              setData: (data: unknown) => {
+                sources.get(id)!['data'] = data;
+              },
+            }
+          : undefined,
+      addSource: (id: string, source: Record<string, unknown>) => {
+        if (sources.has(id)) throw new Error('duplicate source id');
+        sources.set(id, { ...source });
+      },
+      removeSource: (id: string) => {
+        sources.delete(id);
+      },
+      getLayer: (id: string) => layers.get(id),
+      addLayer: (layer: StubLayer) => {
+        layers.set(layer.id, { ...layer });
+      },
+      removeLayer: (id: string) => {
+        layers.delete(id);
+      },
+      setPaintProperty: (layerId: string, name: string, value: unknown) => {
+        const layer = layers.get(layerId);
+        if (!layer) throw new Error(`setPaintProperty on missing layer ${layerId}`);
+        layer.paint = { ...(layer.paint ?? {}), [name]: value };
+      },
+      getStyle: () => ({ layers: [], ...(options.glyphs ? { glyphs: options.glyphs } : {}) }),
+    };
+    (el as unknown as { _map: unknown })._map = map;
+    (el as unknown as { _styleLoaded: boolean })._styleLoaded = true;
+    return { sources, layers };
+  }
+
+  const POINTS = {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        id: 1,
+        geometry: { type: 'Point', coordinates: [0, 0] },
+        properties: { magnitude: 3 },
+      },
+      {
+        type: 'Feature',
+        id: 2,
+        geometry: { type: 'Point', coordinates: [0.01, 0.01] },
+        properties: { magnitude: 9 },
+      },
+    ],
+  };
+
+  const entry = (extra: Record<string, unknown>) =>
+    [{ sourceId: 'pins', geojson: POINTS, ...extra }] as unknown as LyraMap['dataLayers'];
+
+  const suffixes = (layers: Map<string, StubLayer>, sourceId: string): string[] =>
+    [...layers.keys()].filter((id) => id.startsWith(sourceId)).map((id) => id.slice(sourceId.length)).sort();
+
+  it('leaves a data layer unclustered and geometry-split when cluster and kind are unset', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { sources, layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
+    el.dataLayers = entry({});
+    await el.updateComplete;
+
+    const sourceId = dataLayerResourceId(el, 'pins');
+    expect(sources.get(sourceId)!['cluster'], 'no clustering unless asked for').to.equal(undefined);
+    expect(suffixes(layers, sourceId), 'exactly the pre-existing three layers').to.deep.equal([
+      '-circle',
+      '-fill',
+      '-line',
+    ]);
+    expect(layers.get(`${sourceId}-circle`)!.filter, 'the plain point filter').to.deep.equal([
+      '==',
+      ['geometry-type'],
+      'Point',
+    ]);
+  });
+
+  it('clusters the source and emits cluster, count and unclustered-point layers', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { sources, layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
+    el.dataLayers = entry({ cluster: {} });
+    await el.updateComplete;
+
+    const sourceId = dataLayerResourceId(el, 'pins');
+    const source = sources.get(sourceId)!;
+    expect(source['cluster'], 'clustering is a source option').to.equal(true);
+    expect(source['clusterRadius']).to.equal(50);
+    expect(source['clusterMaxZoom']).to.equal(14);
+    expect(suffixes(layers, sourceId)).to.deep.equal(['-circle', '-cluster', '-cluster-count']);
+    expect(layers.get(`${sourceId}-cluster`)!.filter).to.deep.equal(['has', 'point_count']);
+    expect(layers.get(`${sourceId}-circle`)!.filter, 'unclustered points only').to.deep.equal([
+      'all',
+      ['==', ['geometry-type'], 'Point'],
+      ['!', ['has', 'point_count']],
+    ]);
+    expect(layers.get(`${sourceId}-cluster-count`)!.layout!['text-field']).to.deep.equal([
+      'get',
+      'point_count_abbreviated',
+    ]);
+  });
+
+  it('emits step expressions for cluster radius and colour keyed on point_count', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { sources, layers } = stubMaplibreMap(el);
+    el.dataLayers = entry({
+      cluster: {
+        radius: 80,
+        maxZoom: 9,
+        radiusSteps: [[0, 10], [25, 20]],
+        colorSteps: [[0, '#111111'], [25, '#222222']],
+      },
+    });
+    await el.updateComplete;
+
+    const sourceId = dataLayerResourceId(el, 'pins');
+    expect(sources.get(sourceId)!['clusterRadius']).to.equal(80);
+    expect(sources.get(sourceId)!['clusterMaxZoom']).to.equal(9);
+    const paint = layers.get(`${sourceId}-cluster`)!.paint!;
+    expect(paint['circle-radius']).to.deep.equal([
+      'step',
+      ['get', 'point_count'],
+      10,
+      0,
+      10,
+      25,
+      20,
+    ]);
+    expect(paint['circle-color']).to.deep.equal([
+      'step',
+      ['get', 'point_count'],
+      '#111111',
+      0,
+      '#111111',
+      25,
+      '#222222',
+    ]);
+  });
+
+  it('omits the cluster count layer when the style provides no glyphs', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el);
+    el.dataLayers = entry({ cluster: {} });
+    await el.updateComplete;
+
+    const sourceId = dataLayerResourceId(el, 'pins');
+    expect(suffixes(layers, sourceId), 'no text layer without a glyph source').to.deep.equal([
+      '-circle',
+      '-cluster',
+    ]);
+  });
+
+  it('emits a single heatmap layer, with weight, ramp and radius, when kind is heatmap', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { sources, layers } = stubMaplibreMap(el);
+    el.dataLayers = entry({
+      kind: 'heatmap',
+      heatmap: {
+        weightField: 'magnitude',
+        weightRange: [0, 10],
+        radius: 40,
+        intensity: 2,
+        stops: [[0, 'rgba(0, 0, 0, 0)'], [1, '#ff0000']],
+      },
+    });
+    await el.updateComplete;
+
+    const sourceId = dataLayerResourceId(el, 'pins');
+    expect(sources.get(sourceId)!['cluster'], 'a density surface is never clustered').to.equal(undefined);
+    expect(suffixes(layers, sourceId)).to.deep.equal(['-heatmap']);
+    const heatmap = layers.get(`${sourceId}-heatmap`)!;
+    expect(heatmap.type).to.equal('heatmap');
+    expect(heatmap.paint!['heatmap-weight']).to.deep.equal([
+      'interpolate',
+      ['linear'],
+      ['get', 'magnitude'],
+      0,
+      0,
+      10,
+      1,
+    ]);
+    expect(heatmap.paint!['heatmap-radius']).to.equal(40);
+    expect(heatmap.paint!['heatmap-intensity']).to.equal(2);
+    expect(heatmap.paint!['heatmap-color']).to.deep.equal([
+      'interpolate',
+      ['linear'],
+      ['heatmap-density'],
+      0,
+      'rgba(0, 0, 0, 0)',
+      1,
+      '#ff0000',
+    ]);
+  });
+
+  it('defaults an unconfigured heatmap to a fully transparent density floor and the peer weight', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el);
+    el.dataLayers = entry({ kind: 'heatmap' });
+    await el.updateComplete;
+
+    const sourceId = dataLayerResourceId(el, 'pins');
+    const paint = layers.get(`${sourceId}-heatmap`)!.paint!;
+    const ramp = paint['heatmap-color'] as unknown[];
+    expect(ramp[3], 'the ramp starts at density zero').to.equal(0);
+    expect(ramp[4], 'and paints nothing there').to.equal('rgba(0, 0, 0, 0)');
+    expect(ramp.length, 'a real multi-stop ramp').to.be.greaterThan(6);
+    expect(paint['heatmap-weight'], 'no weight field means the peer default of 1').to.equal(undefined);
+  });
+
+  it('ignores cluster on a heatmap entry rather than aggregating the density input', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { sources, layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
+    el.dataLayers = entry({ kind: 'heatmap', cluster: {} });
+    await el.updateComplete;
+
+    const sourceId = dataLayerResourceId(el, 'pins');
+    expect(sources.get(sourceId)!['cluster']).to.equal(undefined);
+    expect(suffixes(layers, sourceId)).to.deep.equal(['-heatmap']);
+  });
+
+  it('recreates the source when clustering is switched on, since MapLibre cannot re-cluster in place', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { sources, layers } = stubMaplibreMap(el);
+    el.dataLayers = entry({});
+    await el.updateComplete;
+    const firstId = dataLayerResourceId(el, 'pins');
+
+    el.dataLayers = entry({ cluster: { radius: 30 } });
+    await el.updateComplete;
+    const secondId = dataLayerResourceId(el, 'pins');
+
+    expect(secondId === firstId, 'a fresh private id, not a reused one').to.be.false;
+    expect(sources.has(firstId), 'the unclustered source is torn down').to.be.false;
+    expect(suffixes(layers, firstId), 'nothing leaks from the previous shape').to.deep.equal([]);
+    expect(sources.get(secondId)!['cluster']).to.equal(true);
+    expect(sources.get(secondId)!['clusterRadius']).to.equal(30);
+  });
+
+  it('repaints heatmap and cluster layers on a theme change without touching layers they never created', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el);
+    el.dataLayers = [
+      { sourceId: 'pins', geojson: POINTS, cluster: {} },
+      { sourceId: 'density', geojson: POINTS, kind: 'heatmap' },
+    ] as unknown as LyraMap['dataLayers'];
+    await el.updateComplete;
+
+    // The stub throws on a paint write to a layer that was never added, which is what the peer's
+    // own error event reports; a repaint that assumed fill/line/circle would hit it here.
+    (el as unknown as { refreshThemePaint: () => void }).refreshThemePaint();
+
+    const clusterId = dataLayerResourceId(el, 'pins');
+    const densityId = dataLayerResourceId(el, 'density');
+    expect(layers.get(`${clusterId}-cluster`)!.paint!['circle-color'] !== undefined).to.be.true;
+    expect(layers.get(`${densityId}-heatmap`)!.paint!['heatmap-color'] !== undefined).to.be.true;
+  });
+
+  it('re-applies clustered and heatmap data layers after a mapStyle change', async function () {
+    if (!hasWebGL2) this.skip();
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    el.mapStyle = RASTER_STYLE;
+    el.dataLayers = [
+      { sourceId: 'pins', geojson: POINTS, cluster: {} },
+      { sourceId: 'density', geojson: POINTS, kind: 'heatmap' },
+    ] as unknown as LyraMap['dataLayers'];
+    await el.updateComplete;
+    await waitUntilMapLoaded(el);
+    await waitUntil(
+      () => el.map!.getLayer(`${dataLayerResourceId(el, 'pins')}-cluster`) != null,
+      'cluster layer never added',
+      { timeout: 2000 },
+    );
+
+    const NEXT_STYLE = {
+      ...RASTER_STYLE,
+      layers: [{ id: 'demo', type: 'raster', source: 'demo', paint: { 'raster-opacity': 0.9 } }],
+    };
+    el.mapStyle = NEXT_STYLE as typeof RASTER_STYLE;
+    await el.updateComplete;
+
+    await waitUntil(
+      () => {
+        const clusterId = dataLayerResourceId(el, 'pins');
+        const densityId = dataLayerResourceId(el, 'density');
+        return (
+          Boolean(clusterId) &&
+          Boolean(densityId) &&
+          el.map!.getLayer(`${clusterId}-cluster`) != null &&
+          el.map!.getLayer(`${densityId}-heatmap`) != null
+        );
+      },
+      'clustered/heatmap layers never re-applied after the style swap',
+      { timeout: 3000 },
+    );
+    expect(el.map!.getSource(dataLayerResourceId(el, 'pins')) != null).to.be.true;
+  });
+
+  it('hit-tests the cluster circle but never the heatmap layer MapLibre cannot query', async function () {
+    if (!hasWebGL2) this.skip();
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    el.mapStyle = RASTER_STYLE;
+    el.dataLayers = [
+      { sourceId: 'pins', geojson: POINTS, cluster: {} },
+      { sourceId: 'density', geojson: POINTS, kind: 'heatmap' },
+    ] as unknown as LyraMap['dataLayers'];
+    await el.updateComplete;
+    await waitUntilMapLoaded(el);
+    await waitUntil(
+      () => el.map!.getLayer(`${dataLayerResourceId(el, 'pins')}-cluster`) != null,
+      'cluster layer never added',
+      { timeout: 2000 },
+    );
+    const clusterId = dataLayerResourceId(el, 'pins');
+    const densityId = dataLayerResourceId(el, 'density');
+
+    let queried: string[] = [];
+    const hit = {
+      type: 'Feature',
+      properties: { point_count: 12, point_count_abbreviated: '12' },
+      geometry: { type: 'Point', coordinates: [0, 0] },
+      layer: { id: `${clusterId}-cluster` },
+    };
+    el.map!.queryRenderedFeatures = ((_point: unknown, options?: { layers?: string[] }) => {
+      queried = options?.layers ?? [];
+      return [hit];
+    }) as typeof el.map.queryRenderedFeatures;
+
+    let detail: { origin?: string; sourceId?: string; feature?: unknown } | undefined;
+    el.addEventListener('lr-map-click', (e) => (detail = (e as CustomEvent).detail));
+    el.map!.fire('click', { lngLat: { lng: 0, lat: 0 }, point: { x: 5, y: 5 } });
+
+    expect(queried, 'the cluster circle is clickable').to.include(`${clusterId}-cluster`);
+    expect(queried, 'a heatmap returns no features, so it is never queried').to.not.include(
+      `${densityId}-heatmap`,
+    );
+    expect(detail!.origin, 'a cluster hit is attributable').to.equal('cluster');
+    expect(detail!.sourceId).to.equal('pins');
+    expect((detail!.feature as { properties?: { point_count?: number } }).properties!.point_count).to.equal(12);
+  });
+});

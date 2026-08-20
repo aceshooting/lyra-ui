@@ -631,7 +631,11 @@ async function verifySiteFreshnessCli(options) {
   const packageName = requireOption(options, 'package');
   const expectedVersion = requireOption(options, 'version');
   const changelogUrl = options.changelog_url ?? 'https://www.lyra-ui.com/changelog.json';
-  const catalogUrl = options.catalog_url ?? 'https://www.lyra-ui.com/api/v1/components?limit=1';
+  // The per-tag lookup, not a list route: `/api/v1/components` alone is a 404, and a 404 here
+  // reads as "catalog unreachable" -- which this check treats as skippable, so a wrong URL would
+  // silently disable it forever. That is the same shape of silently-inert safeguard this whole
+  // gate exists to prevent, so the skip is announced below rather than passed over.
+  const catalogUrl = options.catalog_url ?? 'https://www.lyra-ui.com/api/v1/components/lr-button';
   const timeoutSeconds = Number(options.timeout_seconds ?? 1800);
   const pollSeconds = Number(options.poll_seconds ?? 30);
   if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0) {
@@ -645,6 +649,12 @@ async function verifySiteFreshnessCli(options) {
   let last = { fresh: false, problems: ['not yet checked'] };
   for (;;) {
     const catalog = catalogUrl ? await fetchJsonOrNull(catalogUrl) : null;
+    if (catalogUrl && catalog?.catalog_version === undefined) {
+      console.log(
+        `Note: component catalog_version could not be read from ${catalogUrl}; skipping that half `
+        + 'of the check (npm and changelog.json are still enforced).',
+      );
+    }
     last = evaluateSiteFreshness({
       packageName,
       expectedVersion,

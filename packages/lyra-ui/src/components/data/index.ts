@@ -9,6 +9,7 @@ export * from './flow-controls/flow-controls.js';
 export * from './flow-minimap/flow-minimap.js';
 export * from './flow-node/flow-node.js';
 export * from './flow-run-status/flow-run-status.js';
+export * from './funnel/funnel.js';
 export * from './gauge/gauge.js';
 export * from './graph-query-builder/graph-query-builder.js';
 export * from './heatmap/heatmap.js';

@@ -1,16 +1,49 @@
 {
   "families": [
-    { "key": "conversation", "label": "Conversation & Chat" },
-    { "key": "agent-tools", "label": "Agent Tools & Observability" },
-    { "key": "retrieval", "label": "Retrieval & Knowledge Graphs" },
-    { "key": "forms", "label": "Forms & Inputs" },
-    { "key": "data", "label": "Data Display" },
-    { "key": "charts", "label": "Charts" },
-    { "key": "layout", "label": "Layout & Navigation" },
-    { "key": "overlays", "label": "Overlays & Feedback" },
-    { "key": "viewers", "label": "Document & File Viewers" },
-    { "key": "media", "label": "Media & Files" },
-    { "key": "utility", "label": "Utility" }
+    {
+      "key": "conversation",
+      "label": "Conversation & Chat"
+    },
+    {
+      "key": "agent-tools",
+      "label": "Agent Tools & Observability"
+    },
+    {
+      "key": "retrieval",
+      "label": "Retrieval & Knowledge Graphs"
+    },
+    {
+      "key": "forms",
+      "label": "Forms & Inputs"
+    },
+    {
+      "key": "data",
+      "label": "Data Display"
+    },
+    {
+      "key": "charts",
+      "label": "Charts"
+    },
+    {
+      "key": "layout",
+      "label": "Layout & Navigation"
+    },
+    {
+      "key": "overlays",
+      "label": "Overlays & Feedback"
+    },
+    {
+      "key": "viewers",
+      "label": "Document & File Viewers"
+    },
+    {
+      "key": "media",
+      "label": "Media & Files"
+    },
+    {
+      "key": "utility",
+      "label": "Utility"
+    }
   ],
   "directories": {
     "agent-workspace": "conversation",
@@ -44,7 +77,6 @@
     "usage-badge": "conversation",
     "voice-picker": "conversation",
     "widget-renderer": "conversation",
-
     "activity-feed": "agent-tools",
     "agent-run": "agent-tools",
     "agent-eval-dashboard": "agent-tools",
@@ -79,7 +111,6 @@
     "tool-select-dialog": "agent-tools",
     "tool-timeline": "agent-tools",
     "trace-tree": "agent-tools",
-
     "chunk-inspector": "retrieval",
     "citation-badge": "retrieval",
     "claim-evidence": "retrieval",
@@ -110,7 +141,6 @@
     "source-card": "retrieval",
     "source-list": "retrieval",
     "source-picker": "retrieval",
-
     "button": "forms",
     "checkbox": "forms",
     "checkbox-group": "forms",
@@ -133,7 +163,6 @@
     "textarea": "forms",
     "time-range": "forms",
     "token-input": "forms",
-
     "calendar": "data",
     "context-meter": "data",
     "data-grid": "data",
@@ -157,9 +186,7 @@
     "timeline": "data",
     "tree": "data",
     "word-cloud": "data",
-
     "chart": "charts",
-
     "app-rail": "layout",
     "breadcrumb": "layout",
     "button-group": "layout",
@@ -184,7 +211,6 @@
     "tab-group": "layout",
     "virtual-list": "layout",
     "widget": "layout",
-
     "alert": "overlays",
     "badge": "overlays",
     "callout": "overlays",
@@ -200,7 +226,6 @@
     "skeleton": "overlays",
     "spinner": "overlays",
     "toast": "overlays",
-
     "archive-viewer": "viewers",
     "calendar-viewer": "viewers",
     "contact-viewer": "viewers",
@@ -223,7 +248,6 @@
     "spreadsheet-viewer": "viewers",
     "svg-viewer": "viewers",
     "xml-viewer": "viewers",
-
     "animated-image": "media",
     "animation": "media",
     "attachment-chip": "media",
@@ -245,7 +269,6 @@
     "video": "media",
     "video-playlist": "media",
     "zoomable-frame": "media",
-
     "copy-button": "utility",
     "diff-view": "utility",
     "divider": "utility",
@@ -263,6 +286,7 @@
     "random-content": "utility",
     "resize-observer": "utility",
     "tour": "utility",
-    "visually-hidden": "utility"
+    "visually-hidden": "utility",
+    "funnel": "data"
   }
 }

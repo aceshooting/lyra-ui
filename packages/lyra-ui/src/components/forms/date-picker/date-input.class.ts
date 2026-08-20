@@ -491,6 +491,33 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
    * text-field-plus-popover shape is the one a dashboard time filter actually uses.
    */
   @property({ attribute: false }) presets: readonly LyraDateRangePreset[] = Object.freeze([]);
+
+  private _appliedPreset?: LyraDateRangePreset;
+
+  /**
+   * The preset whose button produced the current `value`, or `undefined` when the value was picked
+   * on the calendar, typed into the field, cleared, or reset. Read it inside your own
+   * `change`/`input` handler.
+   *
+   * Mirrors the nested `<lr-date-picker>`'s own `appliedPreset` across this shadow boundary,
+   * because the readback is what the compact popover shape needs most: a dashboard filter has to
+   * persist WHICH preset is active rather than the pair it froze to -- "Last 7 days" must still
+   * mean the last 7 days after tomorrow's reload. That fact is not recoverable from `value`:
+   * re-deriving it by string-matching is the mapping table `presets` exists to delete, and it is
+   * ambiguous anyway (Today and This month coincide on the 1st of a month, and a hand-picked range
+   * can equal a preset's pair by construction). The picker instance itself is unreachable from
+   * outside -- a CSS part cannot yield it -- so a consumer cannot read it there.
+   *
+   * A property rather than an event detail, for the same reason it is one on the picker:
+   * `input`/`change` here are NATIVE events, deliberately indistinguishable from a manual
+   * selection so existing handlers need no special case, and a native Event cannot carry a detail
+   * without changing its type. The mirror is updated before those events are relayed, so a handler
+   * reading it observes the preset that caused the very commit it is handling; it is `undefined`
+   * while the popover has never been opened, since no preset button has run.
+   */
+  get appliedPreset(): LyraDateRangePreset | undefined {
+    return this._appliedPreset;
+  }
   @property({ type: Boolean, attribute: 'with-outside-days', reflect: true })
   withOutsideDays = false;
   @property({ type: Boolean, attribute: 'with-week-numbers', reflect: true })
@@ -1300,6 +1327,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     // required-and-now-empty field must surface its invalid state right
     // away instead of silently looking valid until some later blur.
     this.touched = true;
+    // Nothing is selected any more, so no preset describes the value -- set before the events
+    // below, which a consumer reads `appliedPreset` from.
+    this._appliedPreset = undefined;
     this.value = '';
     this.emit('lr-clear');
     this.inputRelayedSinceCommit = false;
@@ -1564,6 +1594,13 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.enterCommittedText = null;
     const trimmed = raw.trim();
     if (!trimmed) {
+      // A hand-authored value did not come from a preset button -- the same reason the picker drops
+      // its own copy on a calendar click. Only a commit that actually *changes* the value clears
+      // it: unparseable text reverts to the last committed value below, and the parse path also
+      // runs for text that merely re-derives the current value (a blur after an already-committed
+      // edit, `setRangeText()` writing back what was already there), neither of which is a new
+      // selection to attribute to the user.
+      if (this.value !== '') this._appliedPreset = undefined;
       // The mixin's value setter recomputes validity (updateValidity()),
       // which clears any stale badInput state along the way.
       this.value = '';
@@ -1574,6 +1611,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
         ? this.parseRangeText(trimmed)
         : this.parseSingleText(trimmed);
     if (parsed) {
+      if (parsed !== this.value) this._appliedPreset = undefined;
       this.value = parsed;
       return true;
     }
@@ -1856,6 +1894,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   override formResetCallback(): void {
     super.formResetCallback();
     this.touched = false;
+    // A reset restores `defaultValue`, which is author-supplied markup rather than anything the
+    // user chose from the quick-range row.
+    this._appliedPreset = undefined;
   }
 
   formDisabledCallback(disabled: boolean): void {
@@ -1906,6 +1947,10 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     if (this.liveDisabled) return;
     const picker = e.target as LyraDatePicker;
     this.value = picker.value;
+    // Mirrored BEFORE the relay below, so a consumer reading `appliedPreset` inside the handler
+    // this very event runs sees the preset that caused it -- the picker sets its own copy before
+    // committing, and clears it on a hand-pick, so both halves of the contract carry across.
+    this._appliedPreset = picker.appliedPreset;
     this.inputRelayedSinceCommit = false;
     relayNativeEvent(this, e);
   };
@@ -1915,6 +1960,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     if (this.liveDisabled) return;
     const picker = e.target as LyraDatePicker;
     this.value = picker.value;
+    this._appliedPreset = picker.appliedPreset;
     relayNativeEvent(this, e);
     // The picker only fires `change` once a selection is finalized (a single
     // pick, or the second click of a range), so this is always the right

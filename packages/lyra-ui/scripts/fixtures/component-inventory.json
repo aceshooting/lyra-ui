@@ -52215,6 +52215,57 @@
       }
     },
     {
+      "tag": "lr-funnel",
+      "family": "data",
+      "classModule": "src/components/data/funnel/funnel.class.ts",
+      "registrationModule": "src/components/data/funnel/funnel.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [],
+        "properties": [],
+        "slots": [
+          {
+            "name": "",
+            "deprecated": null
+          }
+        ],
+        "events": [],
+        "parts": [
+          {
+            "name": "base",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [],
+        "cssStates": [],
+        "methods": [],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": false,
+          "properties": [],
+          "methods": []
+        },
+        "native": {
+          "forwardedEvents": [],
+          "delegatedMethods": []
+        }
+      }
+    },
+    {
       "tag": "lr-gauge",
       "family": "data",
       "classModule": "src/components/data/gauge/gauge.class.ts",

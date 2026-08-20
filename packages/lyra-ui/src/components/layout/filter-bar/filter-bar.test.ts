@@ -2138,3 +2138,140 @@ it("renders an option's optional icon into lr-option's leading start slot for se
   expect(options[0]!.querySelector('[slot="start"]')!.getAttribute("aria-hidden")).to.equal("true");
   expect(options[0]!.textContent?.trim()).to.contain("Open");
 });
+
+// The bar is the dashboard filter shape lr-date-picker's quick-range row was built for, yet its
+// 'date-range' definition had no way to pass `presets` to the lr-date-input it composes -- the
+// documented escape hatch (type: 'custom') means hand-rendering that control plus a full adapter
+// just to set one property, and forfeits the built-in date-range chip localization.
+describe("date-range presets", () => {
+  const PRESETS = [
+    { label: "Last 7 days", start: "2026-08-13", end: "2026-08-19" },
+    { label: "This month", start: "2026-08-01", end: "2026-08-31" },
+  ];
+
+  const withPresets = (presets: unknown = PRESETS): LyraFilterBarFilterDefinition[] =>
+    [
+      {
+        filterId: "period",
+        label: "Active period",
+        type: "date-range",
+        presets,
+      },
+    ] as unknown as LyraFilterBarFilterDefinition[];
+
+  async function bar(
+    filters: LyraFilterBarFilterDefinition[]
+  ): Promise<LyraFilterBar> {
+    const el = (await fixture(
+      html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
+    )) as LyraFilterBar;
+    await el.updateComplete;
+    return el;
+  }
+
+  const dateInput = (el: LyraFilterBar, id = "period") =>
+    control(el, id) as HTMLElement & {
+      open: boolean;
+      value: string;
+      presets: readonly { label: string }[];
+      updateComplete: Promise<unknown>;
+    };
+
+  /** Clicks a quick-range button through both shadow boundaries (bar -> date input -> picker). */
+  async function clickPreset(el: LyraFilterBar, index: number): Promise<void> {
+    const input = dateInput(el);
+    input.open = true;
+    await input.updateComplete;
+    const picker = input.shadowRoot!.querySelector('[part~="date-picker"]') as
+      | (HTMLElement & { updateComplete: Promise<unknown> })
+      | null;
+    await picker!.updateComplete;
+    const buttons = picker!.shadowRoot!.querySelectorAll<HTMLButtonElement>(
+      '[part~="preset-button"]'
+    );
+    buttons[index]!.click();
+  }
+
+  it("forwards a date-range filter's presets to the composed date input", async () => {
+    const el = await bar(withPresets());
+
+    expect(dateInput(el).presets.length).to.equal(2);
+    expect(dateInput(el).presets[0]!.label).to.equal("Last 7 days");
+  });
+
+  it("ignores presets on a single 'date' filter, which has no range to name", async () => {
+    const el = await bar([
+      {
+        filterId: "created",
+        label: "Created",
+        type: "date",
+        presets: PRESETS,
+      },
+    ] as unknown as LyraFilterBarFilterDefinition[]);
+
+    expect(dateInput(el, "created").presets.length).to.equal(0);
+  });
+
+  it("surfaces the applied preset on lr-input alongside filterId", async () => {
+    const el = await bar(withPresets());
+    const promise = oneEvent(el, "lr-input");
+
+    await clickPreset(el, 0);
+
+    const ev = (await promise) as CustomEvent<LyraFilterBarInputDetail>;
+    expect(ev.detail.filterId).to.equal("period");
+    expect(ev.detail.value.period).to.equal("2026-08-13/2026-08-19");
+    expect(ev.detail.appliedPreset?.label).to.equal("Last 7 days");
+  });
+
+  it("reports the preset the definition owns, so a querystring can round-trip it", async () => {
+    const el = await bar(withPresets());
+    const promise = oneEvent(el, "lr-input");
+
+    await clickPreset(el, 1);
+
+    const ev = (await promise) as CustomEvent<LyraFilterBarInputDetail>;
+    const definition = el.filters[0] as { presets: readonly unknown[] };
+    expect(ev.detail.appliedPreset).to.equal(definition.presets[1]);
+  });
+
+  it("omits the applied preset for a hand-committed date change", async () => {
+    const el = await bar(withPresets());
+    const input = dateInput(el);
+    const promise = oneEvent(el, "lr-input");
+
+    input.value = "2026-01-01/2026-01-31";
+    input.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
+
+    const ev = (await promise) as CustomEvent<LyraFilterBarInputDetail>;
+    expect(ev.detail.value.period).to.equal("2026-01-01/2026-01-31");
+    expect(ev.detail.appliedPreset).to.equal(undefined);
+  });
+
+  it("leaves a date-range filter that declares no presets exactly as it was", async () => {
+    const el = await bar([
+      { filterId: "period", label: "Active period", type: "date-range" },
+    ] as LyraFilterBarFilterDefinition[]);
+    const input = dateInput(el);
+    input.open = true;
+    await input.updateComplete;
+    const picker = input.shadowRoot!.querySelector('[part~="date-picker"]') as
+      HTMLElement & { updateComplete: Promise<unknown> };
+    await picker.updateComplete;
+
+    expect(input.presets.length, "no quick-range list reaches the control").to.equal(0);
+    expect(
+      picker.shadowRoot!.querySelectorAll('[part~="preset-button"]').length,
+      "and no quick-range row renders"
+    ).to.equal(0);
+
+    const promise = oneEvent(el, "lr-input");
+    input.value = "2026-01-01/2026-01-31";
+    input.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
+    const ev = (await promise) as CustomEvent<LyraFilterBarInputDetail>;
+
+    expect(Object.keys(ev.detail.value)).to.deep.equal(["period"]);
+    expect(ev.detail.filterId).to.equal("period");
+    expect(ev.detail.appliedPreset).to.equal(undefined);
+  });
+});
