@@ -1621,7 +1621,7 @@ weekday * (cellSize + CAL_GAP)`), consulted consistently by drawing, hit-testing
   than 2 entries) keeps today's 2-endpoint interpolation exactly. Invalid colors use the canvas
   fallback color and prevent the custom legend gradient from being assigned.
 - `legendStops?: readonly HeatmapLegendStop[]` (attribute: false) — clone-owned, bounded, frozen `HeatmapLegendStop { value: number;
-color?: string; label?: string }`: a discrete legend key rendered **instead of** the
+color?: string; label?: string; partOfRamp?: boolean }`: a discrete legend key rendered **instead of** the
   `--lr-heatmap-scale-lo`/`-hi` gradient bar and its `[part="legend-lo"]`/`[part="legend-hi"]`
   endpoint labels — one `[part="legend-stop"]` per entry, in array order, each a
   `[part="legend-swatch"]` filled with that entry's `color` plus a `[part="legend-stop-label"]`.
@@ -1638,14 +1638,26 @@ color?: string; label?: string }`: a discrete legend key rendered **instead of**
   are never consulted by the color ramp, the bucket math, the tooltip, or the generated accessible
   name, so adding them changes nothing a cell renders. Labeled `annotations` still render their
   `[part="legend-annotation"]` entries after the stops. Unset (the default) or an empty array
-  reproduces the exact gradient legend, unchanged.
+  reproduces the exact gradient legend, unchanged. A dev-mode-only warning fires when a stop's
+  `color` doesn't match the corresponding `colorSteps` entry — set `partOfRamp: false` on a stop
+  that is a real, distinctly-colored swatch deliberately outside the sequential ramp (e.g. a fixed
+  "no data" color next to an N-step ramp) to exclude just that stop from the comparison; defaults to
+  `true`. A caption-only stop (no `color`) is already excluded regardless of this flag.
 
 **Getters/methods:** `refreshTheme()` — redraws canvas content after an upstream design-token or
 color-scheme change; called automatically on theme changes, exposed for a consumer that needs to
-force a redraw manually.
+force a redraw manually. `matrixGeometry: Readonly<{ padLeft: number; padTop: number; cellSize:
+number }> | undefined` — the gutter/cell geometry the last matrix-mode draw actually painted with,
+in CSS pixels; `undefined` in calendar mode. Lets a light-DOM consumer (e.g. a sticky header mirror
+for a tall matrix) line up with the canvas without hardcoding the same numbers `row-label-width`/
+`col-label-height`'s `"auto"` resolution would otherwise keep private.
 
 **Events:** `lr-cell-click` (fired on click, or Enter/Space on the keyboard-focused cell —
-`detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode)
+`detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode),
+`lr-matrix-geometry-change` (fired after a matrix-mode draw whose resolved `matrixGeometry` differs
+from the previous draw — e.g. after `row-label-width="auto"`/`col-label-height="auto"` resolves
+against new content or a resize; `detail` is the same object `matrixGeometry` returns; never fired
+in calendar mode)
 
 **Slots:** none.
 
@@ -3656,6 +3668,7 @@ These named interfaces and helper signatures are available to typed integrations
   value: unknown;
   color: unknown;
   label: unknown;
+  partOfRamp: unknown;
 }`
   `HeatmapMatrixData {
   kind: unknown;

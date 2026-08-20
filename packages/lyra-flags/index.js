@@ -74,4 +74,32 @@ export async function flagUrls() {
   return (await import('./flags/eager.js')).FLAG_URLS;
 }
 
+/**
+ * Builds a `flagUrl`-shaped resolver backed by one shared `flagUrls()` call instead of a fresh
+ * per-code lazy `import()` each time -- for a page that renders most or all flags at once (a
+ * country table, a full locale picker), where independently resolving each `<lr-flag>` instance
+ * costs one loader-chunk fetch per flag. `flagUrls()` runs exactly once, at the moment this factory
+ * is called, and every returned resolver call shares that one promise via closure.
+ *
+ * Only the standard tier is bulk-fetchable this way (`flagUrls()` -- and the `flags/eager.js` it
+ * wraps -- only ever built an eager map for the standard tier: the ~65-code detailed originals
+ * alone are ~9.7MB, not something to fetch eagerly by default). `variant: 'compact'`/`'detailed'`
+ * still resolve individually through their own lazy per-code loader, exactly like `flagUrl()`
+ * does -- this only changes the batching for the default (`'standard'`) case.
+ * @returns {(code: string, options?: { variant?: 'compact' | 'standard' | 'detailed' }) => Promise<string | undefined>}
+ *   A `flagUrl`-shaped resolver, suitable for `<lr-flag>`'s `setFlagUrlResolver()`.
+ */
+export function createFlagUrlResolver() {
+  const urlsPromise = flagUrls();
+  return async function resolveFlagUrl(code, options) {
+    if (options?.variant === 'detailed' && FLAG_LOADERS_DETAILED[code]) {
+      return FLAG_LOADERS_DETAILED[code]();
+    }
+    if (options?.variant === 'compact' && FLAG_LOADERS_COMPACT[code]) {
+      return FLAG_LOADERS_COMPACT[code]();
+    }
+    return (await urlsPromise)[code];
+  };
+}
+
 export { FLAG_LOADERS, FLAG_LOADERS_DETAILED, FLAG_LOADERS_COMPACT };

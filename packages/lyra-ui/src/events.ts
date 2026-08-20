@@ -1780,6 +1780,13 @@ export type LyraMapClickEvent = LyraMapEventMap['lr-map-click'];
 export type LyraMapLoadEvent = LyraMapEventMap['lr-map-load'];
 
 /**
+ * `lr-matrix-geometry-change` — dispatched by `<lr-heatmap>`.
+ *
+ * Detail type: `LyraHeatmapEventMap['lr-matrix-geometry-change']`.
+ */
+export type LyraMatrixGeometryChangeEvent = LyraHeatmapEventMap['lr-matrix-geometry-change'];
+
+/**
  * `lr-maximize-change` — dispatched by `<lr-tool-result-dialog>`.
  *
  * Detail type: `LyraToolResultDialogEventMap['lr-maximize-change']`.
@@ -3609,6 +3616,7 @@ export interface LyraGlobalEventMap {
   'lr-location-change': LyraLocationChangeEvent;
   'lr-map-click': LyraMapClickEvent;
   'lr-map-load': LyraMapLoadEvent;
+  'lr-matrix-geometry-change': LyraMatrixGeometryChangeEvent;
   'lr-maximize-change': LyraMaximizeChangeEvent;
   'lr-mcp-log': LyraMcpLogEvent;
   'lr-mcp-open-link': LyraMcpOpenLinkEvent;

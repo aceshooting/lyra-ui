@@ -8,19 +8,11 @@
  * stale entry therefore fails closed instead of silently becoming permanent configuration.
  */
 export const DEFAULT_STRING_SLICE_EXCLUSIONS = Object.freeze({
-  // The elapsed/token-count keys are chosen by two local dynamic lookups, which makes the
-  // conservative fallback inspect transitive helpers. The generic values below are incidental
-  // literals in that a11y/visibility helper graph, not keys either lookup can produce.
+  // 'popover' is picked up incidentally through this file's own transitive graph (independent of
+  // LyraElement/form-control-labels.js -- this component is not form-associated). The
+  // elapsed/token-count keys below it are this component's real, dynamically-looked-up keys.
   'src/components/conversation/generation-metrics/generation-metrics.class.ts': Object.freeze([
-    'collapse',
-    'details',
-    'map',
-    'navigation',
-    'open',
     'popover',
-    'progress',
-    'search',
-    'select',
   ]),
 
   // A local dynamic segment-key map makes the conservative fallback inspect transitive helpers.
@@ -71,14 +63,17 @@ export const DEFAULT_STRING_SLICE_EXCLUSIONS = Object.freeze({
   ]),
 
   // Kbd forwards a closed set of kbd* map values through a localize callback. The generic values
-  // below are incidental literals in its a11y helper graph, not keys the callback can receive.
+  // below are incidental literals in its own remaining a11y helper graph, not keys the callback
+  // can receive. 'progress' dropped: no longer reachable since LyraElement stopped statically
+  // importing form-control-labels.js (this component is not form-associated); 'popover' is a
+  // genuinely resolvable key here (via the same closed dynamic map), not an incidental literal,
+  // so it needs no exclusion.
   'src/components/overlays/kbd/kbd.class.ts': Object.freeze([
     'collapse',
     'details',
     'map',
     'navigation',
     'open',
-    'progress',
     'search',
     'select',
   ]),

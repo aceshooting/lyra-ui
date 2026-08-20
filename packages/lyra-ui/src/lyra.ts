@@ -459,6 +459,7 @@ export type {
   HeatmapLegendStop,
   HeatmapSelectedCell,
   LyraHeatmapCellClickDetail,
+  LyraHeatmapMatrixGeometryChangeDetail,
 } from './components/data/heatmap/heatmap.class.js';
 export {
   linearAlpha,

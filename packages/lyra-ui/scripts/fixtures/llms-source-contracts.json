@@ -6127,7 +6127,7 @@
       "module": "src/components/data/heatmap/heatmap.class.ts",
       "exportName": "HeatmapLegendStop",
       "kind": "interface",
-      "fingerprint": "bc160dd6ec14c32c3a7e",
+      "fingerprint": "ac42cfb3b05c2f445cf2",
       "routes": [
         "src/all.ts",
         "src/components/data/heatmap/heatmap.class.ts",
@@ -9189,6 +9189,25 @@
         "kind": "utility",
         "name": "components-media-flag-flag-contracts",
         "declaration": "loadFlagUrl"
+      }
+    },
+    {
+      "module": "src/components/media/flag/flag.class.ts",
+      "exportName": "loadBulkFlagUrl",
+      "kind": "function",
+      "fingerprint": "7eb18179b3be87c67edc",
+      "routes": [
+        "src/components/lr-flag.ts",
+        "src/components/media/flag/flag.class.ts",
+        "src/components/media/flag/flag.ts",
+        "src/components/media/index.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-flag-flag-contracts",
+        "declaration": "loadBulkFlagUrl"
       }
     },
     {
@@ -13489,7 +13508,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "27a8f68c53672fd94b6d",
+      "fingerprint": "2bdb73dfdcc52c56d975",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15090,7 +15109,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "f21a9b37130ad4e4c50a",
+      "fingerprint": "332bfba0d7b55cbbf964",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15525,7 +15544,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "55c9f721e1009eb9326f",
+      "fingerprint": "ba59ee4a83b677732361",
       "routes": [
         "src/vue.ts"
       ],

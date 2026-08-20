@@ -482,7 +482,7 @@ export function attachInternalsSafely(): void {}
   await writeFile(
     path.join(internal, 'kbd-incidental.ts'),
     `export const incidental = [
-  'collapse', 'details', 'map', 'navigation', 'open', 'progress', 'search', 'select',
+  'collapse', 'details', 'map', 'navigation', 'open', 'search', 'select',
 ];
 `,
   );
@@ -601,7 +601,7 @@ export class LyraKbd extends LyraElement {
   }
   assert.match(slices.get('kbd'), /LYRA_DEFAULT_kbdEnterWord\b/);
   for (const key of [
-    'collapse', 'details', 'map', 'navigation', 'open', 'progress', 'search', 'select',
+    'collapse', 'details', 'map', 'navigation', 'open', 'search', 'select',
   ]) {
     assert.doesNotMatch(slices.get('kbd'), new RegExp(`LYRA_DEFAULT_${key}\\b`));
   }

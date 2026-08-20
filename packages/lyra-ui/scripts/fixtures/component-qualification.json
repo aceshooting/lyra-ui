@@ -589,7 +589,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/activity-feed/activity-feed.class.ts",
-              "line": 361,
+              "line": 360,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -7429,7 +7429,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-viewport/chat-viewport.class.ts",
-              "line": 799,
+              "line": 798,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -10214,7 +10214,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/commit-card/commit-card.class.ts",
-              "line": 278,
+              "line": 277,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -18589,7 +18589,7 @@
           "evidence": [
             {
               "file": "src/components/media/flag/flag.test.ts",
-              "line": 690,
+              "line": 763,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -21179,7 +21179,7 @@
           "evidence": [
             {
               "file": "src/components/data/graph-query-builder/graph-query-builder.class.ts",
-              "line": 917,
+              "line": 919,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -21719,7 +21719,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 1885,
+              "line": 1927,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -25659,7 +25659,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 848,
+              "line": 850,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39288,7 +39288,7 @@
           "evidence": [
             {
               "file": "src/components/forms/slider/slider.class.ts",
-              "line": 739,
+              "line": 741,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -49320,7 +49320,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/voice-picker/voice-picker.class.ts",
-              "line": 843,
+              "line": 845,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

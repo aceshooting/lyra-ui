@@ -12,7 +12,7 @@ import '../../overlays/skeleton/skeleton.class.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_flagLoadError, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_flagLoadError, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -75,6 +75,46 @@ export async function loadFlagUrl(
     const resolver = resolverFromModule(await importFlags());
     if (resolver) return resolver;
     throw new TypeError('The flag peer does not expose a callable flagUrl capability.');
+  } catch {
+    console.warn(
+      "<lr-flag> needs the optional peer dependency '@aceshooting/lyra-flags' to render " +
+        'flag images — install it with `pnpm add @aceshooting/lyra-flags`.',
+    );
+    return null;
+  }
+}
+
+function resolverFactoryFromModule(module: unknown): (() => LyraFlagUrlResolver) | null {
+  try {
+    if ((typeof module === 'object' && module !== null) || typeof module === 'function') {
+      const named = (module as { createFlagUrlResolver?: unknown }).createFlagUrlResolver;
+      if (typeof named === 'function') return named as () => LyraFlagUrlResolver;
+      const fallback = (module as { default?: unknown }).default ?? module;
+      if (typeof fallback === 'object' && fallback !== null) {
+        const defaultNamed = (fallback as { createFlagUrlResolver?: unknown }).createFlagUrlResolver;
+        if (typeof defaultNamed === 'function') return defaultNamed as () => LyraFlagUrlResolver;
+      }
+    }
+  } catch {
+    // Hostile namespace/default getters fail closed through the shared warning below.
+  }
+  return null;
+}
+
+/**
+ * Resolves `@aceshooting/lyra-flags`'s `createFlagUrlResolver` via the given importer and calls
+ * it once, the bulk-resolution twin of `loadFlagUrl()` above. Backs `flag-peer-bulk.js` — the
+ * opt-in alternative to `flag-peer.js` for a page that renders most/all flags at once, where one
+ * shared `flagUrls()` fetch beats resolving every `<lr-flag>` instance independently. Same
+ * dependency-injectable, uncached shape as `loadFlagUrl()`, for the same testability reason.
+ */
+export async function loadBulkFlagUrl(
+  importFlags: () => Promise<unknown>,
+): Promise<LyraFlagUrlResolver | null> {
+  try {
+    const factory = resolverFactoryFromModule(await importFlags());
+    if (factory) return factory();
+    throw new TypeError('The flag peer does not expose a callable createFlagUrlResolver capability.');
   } catch {
     console.warn(
       "<lr-flag> needs the optional peer dependency '@aceshooting/lyra-flags' to render " +
@@ -178,11 +218,31 @@ function loadFlagUrlResolver(): Promise<LyraFlagUrlResolver | null> {
  * `flagUrl(code)`, which lazily fetches one requested flag at runtime. A
  * bundler may still emit the complete reachable lazy-chunk graph; use a
  * literal asset subpath import when the deployment artifact must be pruned.
+ * If every `<lr-flag>` in your app is pinned to the same `fidelity` (no
+ * per-instance switching), register `@aceshooting/lyra-flags/standard`/`/compact`/`/detailed` with
+ * `setFlagUrlResolver()` instead of importing `flag-peer.js` (which always registers the full
+ * three-tier resolver) — the tier-specific entry excludes the other two tiers' generated loader
+ * maps from the reachable graph; see that package's README for the exact shape.
  * If you already
  * have a flag's URL at build time (e.g. from your own literal
  * `import frUrl from '@aceshooting/lyra-flags/flags/fr.svg?url'`), pass it as
  * `src` instead to skip the peer-package round trip (and its loading-skeleton
  * flash) entirely.
+ *
+ * **Rendering many flags at once** (a country table, a picker listing every locale): resolve every
+ * code up front with `@aceshooting/lyra-flags`'s `flagUrls()` (one call, returns `{code: url}` for
+ * all 249 flags) and pass results through `src`, instead of letting each `<lr-flag>` instance
+ * independently call `flagUrl()` — this skips one peer-resolution round trip per instance. Image
+ * fetches themselves are unaffected either way (each flag is a distinct asset; there is no sprite).
+ * Or import `flag-peer-bulk.js` instead of `flag-peer.js` (never both) to get this automatically,
+ * registering a resolver backed by one shared `flagUrls()` call — worthwhile only when the page
+ * renders most/all flags; a page with a handful pays an unneeded 249-entry fetch.
+ *
+ * **Sizing:** the host has no intrinsic `width` — it sizes from `font-size` (`block-size: 1em`,
+ * `inline-size` derived from `--lr-flag-aspect-ratio` via CSS `aspect-ratio`), so `<lr-flag>` scales
+ * naturally with surrounding text (e.g. `style="font-size: 2rem"`). Do not set `width`/`inline-size`
+ * directly: making both axes definite defeats `aspect-ratio` (which only participates when at most
+ * one axis is definite per the CSS sizing spec), squashing the image instead of scaling it.
  *
  * The ~65 flags whose design includes a detailed coat of arms/seal/emblem (e.g. `es`, `pt`) ship
  * three fidelity tiers; choose one with `fidelity`: `"compact"` (a tiny WebP raster for icon-scale
@@ -226,7 +286,6 @@ export class LyraFlag extends LyraElement {
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
     popover: LYRA_DEFAULT_popover,
-    progress: LYRA_DEFAULT_progress,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
   };

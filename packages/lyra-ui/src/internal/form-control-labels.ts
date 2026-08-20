@@ -1,6 +1,7 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { deepActiveElementIn } from './active-element.js';
 import { collectFocusableElements } from './overlay-manager.js';
+import { registerFormControlLabelSupport, type LyraElement } from './lyra-element.js';
 
 /**
  * How an external `<label>` activation reaches a control.
@@ -996,3 +997,13 @@ export class ExternalLabelController implements ReactiveController {
     });
   };
 }
+
+// Registers this module's two symbols with `LyraElement` as a side effect of importing this file,
+// instead of `LyraElement` statically importing them -- see `registerFormControlLabelSupport()`'s
+// own doc for why. Importing this file at all is now what opts a component's constructor/
+// `attachInternals()` into form-control-label support; the `FormAssociated` mixin and every
+// hand-rolled form-associated component import it for exactly that reason.
+registerFormControlLabelSupport(
+  captureFormInternals,
+  (host: LyraElement<any>) => new ExternalLabelController(host),
+);

@@ -2,7 +2,7 @@ import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import './flag.js';
 import './flag-peer.js';
-import { loadFlagUrl, setFlagUrlResolver } from './flag.js';
+import { loadFlagUrl, loadBulkFlagUrl, setFlagUrlResolver } from './flag.js';
 import { registerLyraFlagPeer } from './flag-peer.js';
 import type { LyraFlag } from './flag.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -437,6 +437,79 @@ describe('loadFlagUrl (uncached, dependency-injectable)', () => {
     console.warn = () => {};
     try {
       expect(await loadFlagUrl(() => Promise.resolve(hostile))).to.equal(null);
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+});
+
+describe('loadBulkFlagUrl (uncached, dependency-injectable)', () => {
+  it('resolves the real createFlagUrlResolver-backed function when the peer package loads', async () => {
+    const resolve = await loadBulkFlagUrl(() => import('@aceshooting/lyra-flags'));
+    expect(resolve).to.be.a('function');
+  });
+
+  it('the resolved function behaves like a normal flagUrl resolver', async () => {
+    const resolve = await loadBulkFlagUrl(() => import('@aceshooting/lyra-flags'));
+    const direct = await loadFlagUrl(() => import('@aceshooting/lyra-flags'));
+    expect(await resolve?.('fr')).to.equal(await direct?.('fr'));
+    expect(await resolve?.('zz-not-a-real-code')).to.equal(undefined);
+  });
+
+  it('resolves null when the peer package fails to load, e.g. because it is not installed', async () => {
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    let resolve: Awaited<ReturnType<typeof loadBulkFlagUrl>> | undefined;
+    try {
+      resolve = await loadBulkFlagUrl(() => Promise.reject(new Error('boom')));
+    } finally {
+      console.warn = originalWarn;
+    }
+    expect(resolve).to.equal(null);
+  });
+
+  it('warns (rather than throwing) when the peer package fails to load', async () => {
+    const originalWarn = console.warn;
+    const calls: unknown[][] = [];
+    console.warn = (...args: unknown[]) => calls.push(args);
+    try {
+      await loadBulkFlagUrl(() => Promise.reject(new Error('boom')));
+    } finally {
+      console.warn = originalWarn;
+    }
+    expect(calls.length).to.equal(1);
+    expect(calls[0][0]).to.contain('@aceshooting/lyra-flags');
+  });
+
+  it('accepts a validated default-shaped peer and rejects malformed capabilities', async () => {
+    const fallback = () => async () => TEST_FLAG_SRC;
+    const resolve = await loadBulkFlagUrl(() =>
+      Promise.resolve({ default: { createFlagUrlResolver: fallback } }),
+    );
+    expect(await resolve?.('anything')).to.equal(TEST_FLAG_SRC);
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    try {
+      expect(
+        await loadBulkFlagUrl(() => Promise.resolve({ createFlagUrlResolver: 'not callable' })),
+      ).to.equal(null);
+      expect(await loadBulkFlagUrl(() => Promise.resolve({}))).to.equal(null);
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+
+  it('fails closed when a peer namespace capability getter throws', async () => {
+    const hostile = {};
+    Object.defineProperty(hostile, 'createFlagUrlResolver', {
+      get(): never {
+        throw new Error('hostile getter');
+      },
+    });
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    try {
+      expect(await loadBulkFlagUrl(() => Promise.resolve(hostile))).to.equal(null);
     } finally {
       console.warn = originalWarn;
     }

@@ -7251,6 +7251,48 @@ describe("legendStops / colorSteps mismatch diagnostic", () => {
       "colorSteps alone already drives the built-in gradient key"
     ).to.be.false;
   });
+
+  it("stays silent for a colored stop explicitly marked outside the ramp", async () => {
+    const warnings = await captureWarnings(async () => {
+      const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+      el.colorSteps = ["#0000ff", "#ffffff", "#ff0000"];
+      // A real, distinctly-colored "no data" swatch that intentionally is not part of the
+      // sequential ramp -- e.g. a calendar heatmap's fixed neutral zero color.
+      el.legendStops = [
+        { value: -1, color: "#9ca3af", partOfRamp: false },
+        { value: 0, color: "#0000ff" },
+        { value: 1, color: "#ffffff" },
+        { value: 2, color: "#ff0000" },
+      ];
+      setMatrixData(el, { rowLabels: ["r"], colLabels: ["c"], values: [[1]] });
+      await el.updateComplete;
+      await aTimeout(0);
+    });
+    expect(
+      warnings.some((message) => message.includes("legendStops")),
+      "an opted-out stop must not count toward the length/order comparison"
+    ).to.be.false;
+  });
+
+  it("still warns on a genuine mismatch alongside a partOfRamp: false stop", async () => {
+    const warnings = await captureWarnings(async () => {
+      const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+      el.colorSteps = ["#0000ff", "#ffffff", "#ff0000"];
+      el.legendStops = [
+        { value: -1, color: "#9ca3af", partOfRamp: false },
+        // Genuinely wrong ramp colours below -- partOfRamp: false must not mask this.
+        { value: 0, color: "#00ff00" },
+        { value: 1, color: "#123456" },
+      ];
+      setMatrixData(el, { rowLabels: ["r"], colLabels: ["c"], values: [[1]] });
+      await el.updateComplete;
+      await aTimeout(0);
+    });
+    expect(
+      warnings.some((message) => message.includes("legendStops")),
+      "partOfRamp: false opts out only its own stop, not the mismatch check as a whole"
+    ).to.be.true;
+  });
 });
 
 // The row-label gutter was a hardcoded 60px with no measurement and no truncation, so a label
@@ -7321,6 +7363,90 @@ describe("matrix row-label gutter", () => {
   it("still reports the full label through cellText, truncated or not", async () => {
     const el = await matrixWith();
     expect(el.data.kind === "matrix" && el.data.rowLabels[0]).to.equal(LONG);
+  });
+});
+
+describe("matrixGeometry / lr-matrix-geometry-change", () => {
+  it("is defined with the built-in defaults for a default (matrix-mode) element", async () => {
+    // Matrix is the default mode (data defaults to kind: 'matrix'), so a plain <lr-heatmap> with
+    // no data draws immediately -- there is no reachable "before any draw" state via public API.
+    const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+    expect(el.matrixGeometry).to.deep.equal({ padLeft: 60, padTop: 20, cellSize: 22 });
+  });
+
+  it("is undefined in calendar mode", async () => {
+    const calendar = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+    setCalendarData(calendar, {
+      days: [{ date: "2024-01-01", value: 1 }],
+    });
+    await calendar.updateComplete;
+    await aTimeout(0);
+    expect(calendar.matrixGeometry).to.equal(undefined);
+  });
+
+  it("matches the canvas geometry actually painted, for an explicit gutter", async () => {
+    const el = (await fixture(
+      html`<lr-heatmap cell-size="20" row-label-width="140"></lr-heatmap>`
+    )) as LyraHeatmap;
+    setMatrixData(el, { rowLabels: ["a"], colLabels: ["x", "y"], values: [[1, 2]] });
+    await el.updateComplete;
+    await aTimeout(0);
+    expect(el.matrixGeometry).to.deep.equal({ padLeft: 140, padTop: 20, cellSize: 20 });
+  });
+
+  it("padLeft matches the auto-resolved gutter under row-label-width=\"auto\"", async () => {
+    const LONG = "Bosnia and Herzegovina";
+    const el = (await fixture(
+      html`<lr-heatmap cell-size="20" row-label-width="auto"></lr-heatmap>`
+    )) as LyraHeatmap;
+    setMatrixData(el, { rowLabels: [LONG], colLabels: ["x"], values: [[1]] });
+    await el.updateComplete;
+    await aTimeout(0);
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
+    const canvasWidth = parseInt(canvas.style.width, 10);
+    expect(el.matrixGeometry?.padLeft).to.be.greaterThan(60);
+    expect(el.matrixGeometry?.padLeft).to.equal(canvasWidth - el.matrixGeometry!.cellSize);
+  });
+
+  it("does not refire on a redraw with unchanged geometry", async () => {
+    const el = (await fixture(
+      html`<lr-heatmap cell-size="20" row-label-width="140"></lr-heatmap>`
+    )) as LyraHeatmap;
+    setMatrixData(el, { rowLabels: ["a"], colLabels: ["x"], values: [[1]] });
+    await el.updateComplete;
+    await aTimeout(0);
+    let count = 0;
+    el.addEventListener("lr-matrix-geometry-change", () => count++);
+    // Same rowLabels/colLabels count, same cell-size, same pinned gutter -- only the cell value
+    // changes, so the resolved geometry is identical.
+    setMatrixData(el, { values: [[2]] });
+    await el.updateComplete;
+    await aTimeout(0);
+    expect(count, "a color-only redraw must not refire the geometry event").to.equal(0);
+  });
+
+  it("fires lr-matrix-geometry-change exactly once when a draw changes the resolved geometry", async () => {
+    // rowLabelWidth/colLabelHeight are not in updated()'s redraw-triggering property list (they
+    // only take effect on a redraw driven by something else, e.g. `data`), so `cellSize` -- which
+    // IS in that list -- is what reliably exercises a real post-render geometry change here.
+    const el = (await fixture(
+      html`<lr-heatmap cell-size="20" row-label-width="140"></lr-heatmap>`
+    )) as LyraHeatmap;
+    setMatrixData(el, { rowLabels: ["a"], colLabels: ["x"], values: [[1]] });
+    await el.updateComplete;
+    await aTimeout(0);
+    let count = 0;
+    let detail: { padLeft: number; padTop: number; cellSize: number } | undefined;
+    el.addEventListener("lr-matrix-geometry-change", (e) => {
+      count++;
+      detail = (e as CustomEvent).detail;
+    });
+    el.setAttribute("cell-size", "30");
+    await el.updateComplete;
+    await aTimeout(0);
+    expect(count, "a cellSize change changes the painted geometry").to.equal(1);
+    expect(detail).to.deep.equal({ padLeft: 140, padTop: 20, cellSize: 30 });
+    expect(detail).to.deep.equal(el.matrixGeometry);
   });
 });
 

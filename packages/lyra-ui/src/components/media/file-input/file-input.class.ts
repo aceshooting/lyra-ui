@@ -2,6 +2,8 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+// Side-effect only: registers this component's form-control-label support (external-label bridge + form-internals capture) with LyraElement, since the base class no longer imports it unconditionally. See registerFormControlLabelSupport()'s own doc in internal/lyra-element.ts.
+import '../../../internal/form-control-labels.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { finiteRange } from '../../../internal/numbers.js';

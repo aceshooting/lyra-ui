@@ -639,6 +639,15 @@ Three layers, and **which one you set decides how far the override reaches**:
 3. **`--lr-<component>-*`** — per-component properties, for one element at a time. Listed in each
    component's own section.
 
+**Layer 2 (`--lr-*`) is declared only on each `lr-*` element's own shadow `:host`.** It never
+reaches plain application CSS, and it never reaches your own custom elements, since neither is a
+descendant of an `lr-*` shadow root — `body { color: var(--lr-color-text) }` in application CSS
+resolves to nothing, silently, not an error. Retheme through layer 1 (`--lr-theme-*`), which
+`theme.css` supplies at document scope and which inherits normally into every nested shadow root.
+See [Where an override actually reaches](#where-an-override-actually-reaches) below for the full
+inheritance rules, including the one documented exception (per-component `--lr-<component>-*`
+hooks, layer 3, which do inherit through wrappers).
+
 ### The colour ramp and the semantic grid
 
 Colour has two layers beneath the `--lr-*` tokens you normally read.
@@ -1665,6 +1674,16 @@ control) is a single tab stop using a roving `tabindex`; arrow keys move within 
 `aria-hidden` and `inert` items; `Home`/`End` jump to the ends; `Enter` and `Space` both activate;
 `Escape` dismisses the topmost dismissible overlay and returns focus to whatever opened it.
 `ArrowLeft`/`ArrowRight` mean previous/next and swap under `dir="rtl"`.
+
+**`accessibleLabel` binds to one of two different attributes depending on the component, and the
+two are not interchangeable.** Most components (e.g. `lr-card`, `lr-stat`) expose it as a direct
+alias of the native `aria-label` attribute — `accessible-label="…"` does nothing on those; write
+`aria-label="…"` instead. A minority (e.g. `lr-callout`, `lr-table`) separately compute an internal
+accessible name and expose `accessibleLabel` through the bespoke `accessible-label` attribute
+instead, specifically so the host's own native `aria-label` can still independently override that
+computed name. Check the component's own reference section (or its class JSDoc) for which
+convention it uses before writing markup — an `accessible-label` attribute on an `aria-label`-only
+component is a silent no-op, not an error.
 
 **What that contract is verified by, precisely.** Every one of the 284 public tags carries at least
 one axe-core assertion in its own directory's tests, in a test that mounts its own tag; contrast

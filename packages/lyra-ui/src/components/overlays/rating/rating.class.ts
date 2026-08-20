@@ -35,6 +35,9 @@ import { styles } from './rating.styles.js';
 import { dispatchNativeEvent } from '../../../internal/native-event-relay.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
+// This import also registers form-control-label support with LyraElement as a side effect (see
+// registerFormControlLabelSupport()'s doc in internal/lyra-element.ts) -- do not remove it even if
+// EXTERNAL_LABEL_HOST_SEMANTICS/ExternalLabelHostSemanticOperation stop being referenced directly.
 import {
   EXTERNAL_LABEL_HOST_SEMANTICS,
   type ExternalLabelHostSemanticOperation,

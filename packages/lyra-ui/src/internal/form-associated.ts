@@ -11,6 +11,10 @@ import { syncValidityStates } from './custom-states.js';
 import { installInvalidEventAlias } from './invalid-event-alias.js';
 import { omittedEmptyStringConverter } from './converters.js';
 import { attachInternalsSafely, createFallbackInternals } from './element-internals.js';
+// Side-effect only: registers external-label bridge + form-internals capture with LyraElement, so
+// every mixin-based form-associated component gets it without LyraElement itself paying for the
+// module unconditionally. See registerFormControlLabelSupport()'s own doc in lyra-element.ts.
+import './form-control-labels.js';
 // Re-exported so every existing importer of these two keeps resolving from here.
 export { attachInternalsSafely, createFallbackInternals };
 

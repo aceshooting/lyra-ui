@@ -49488,6 +49488,24 @@
         "moduleExports": [
           {
             "module": "src/components/media/flag/flag.class.ts",
+            "name": "loadBulkFlagUrl",
+            "kind": "function",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "importFlags",
+                    "type": "() => Promise<unknown>",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "Promise<LyraFlagUrlResolver | null>"
+              }
+            ]
+          },
+          {
+            "module": "src/components/media/flag/flag.class.ts",
             "name": "loadFlagUrl",
             "kind": "function",
             "overloads": [
@@ -55616,6 +55634,15 @@
             "default": ""
           },
           {
+            "name": "matrixGeometry",
+            "attribute": null,
+            "type": "Readonly<LyraHeatmapMatrixGeometryChangeDetail> | undefined",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "maxCellSize",
             "attribute": "max-cell-size",
             "type": "number | undefined",
@@ -55686,6 +55713,12 @@
           {
             "name": "lr-cell-click",
             "type": "CustomEvent<LyraHeatmapCellClickDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-matrix-geometry-change",
+            "type": "CustomEvent<LyraHeatmapMatrixGeometryChangeDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }

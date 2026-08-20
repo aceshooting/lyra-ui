@@ -34,7 +34,17 @@ import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { flagUrl, flagUrls, FLAG_LOADERS, FLAG_LOADERS_DETAILED, FLAG_LOADERS_COMPACT } from '../index.js';
+import {
+  flagUrl,
+  flagUrls,
+  createFlagUrlResolver,
+  FLAG_LOADERS,
+  FLAG_LOADERS_DETAILED,
+  FLAG_LOADERS_COMPACT,
+} from '../index.js';
+import { flagUrl as flagUrlStandard, FLAG_LOADERS as FLAG_LOADERS_STANDARD_ENTRY } from '../standard.js';
+import { flagUrl as flagUrlCompact, FLAG_LOADERS_COMPACT as FLAG_LOADERS_COMPACT_ENTRY } from '../compact.js';
+import { flagUrl as flagUrlDetailed, FLAG_LOADERS_DETAILED as FLAG_LOADERS_DETAILED_ENTRY } from '../detailed.js';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const pkgDir = path.join(scriptDir, '..');
@@ -281,8 +291,107 @@ for (const code of svgCodes) {
   );
 }
 
+// --- Per-tier entry points (`./standard`, `./compact`, `./detailed`). Each exists so a consumer
+// --- committed to one fidelity tier everywhere can avoid statically importing the other two
+// --- tiers' generated loader maps — see standard.js/compact.js/detailed.js's own JSDoc. ---
+
+const pkg = JSON.parse(readFileSync(path.join(pkgDir, 'package.json'), 'utf8'));
+for (const subpath of ['./standard', './compact', './detailed']) {
+  assert.ok(
+    pkg.exports?.[subpath]?.default && pkg.exports[subpath]?.types,
+    `package.json#exports is missing a "${subpath}" subpath entry with "default"/"types".`,
+  );
+  const entryFile = subpath.slice(2) + '.js';
+  assert.ok(pkg.files.includes(entryFile), `package.json#files is missing "${entryFile}".`);
+  assert.ok(pkg.files.includes(subpath.slice(2) + '.d.ts'), `package.json#files is missing "${subpath.slice(2)}.d.ts".`);
+}
+
+assert.equal(Object.keys(FLAG_LOADERS_STANDARD_ENTRY).length, svgCodes.length);
+assert.equal(Object.keys(FLAG_LOADERS_COMPACT_ENTRY).length, compactCodes.length);
+assert.equal(Object.keys(FLAG_LOADERS_DETAILED_ENTRY).length, detailedCodes.length);
+
+for (const code of svgCodes) {
+  // eslint-disable-next-line no-await-in-loop -- plain assertion script, sequential is fine here
+  const [omnibus, tierCommitted] = await Promise.all([flagUrl(code), flagUrlStandard(code)]);
+  assert.equal(tierCommitted, omnibus, `standard.js flagUrl('${code}') must match index.js's default-tier resolution`);
+}
+assert.equal(await flagUrlStandard('zz-not-a-real-code'), undefined);
+
+for (const code of compactCodes) {
+  // eslint-disable-next-line no-await-in-loop
+  const [omnibus, tierCommitted] = await Promise.all([
+    flagUrl(code, { variant: 'compact' }),
+    flagUrlCompact(code),
+  ]);
+  assert.equal(tierCommitted, omnibus, `compact.js flagUrl('${code}') must match index.js's compact-variant resolution`);
+}
+if (nonCompactCode) {
+  assert.equal(
+    await flagUrlCompact(nonCompactCode),
+    await flagUrlStandard(nonCompactCode),
+    `compact.js must fall back to the standard tier for '${nonCompactCode}', which has no compact raster`,
+  );
+}
+assert.equal(await flagUrlCompact('zz-not-a-real-code'), undefined);
+
+for (const code of detailedCodes) {
+  // eslint-disable-next-line no-await-in-loop
+  const [omnibus, tierCommitted] = await Promise.all([
+    flagUrl(code, { variant: 'detailed' }),
+    flagUrlDetailed(code),
+  ]);
+  assert.equal(tierCommitted, omnibus, `detailed.js flagUrl('${code}') must match index.js's detailed-variant resolution`);
+}
+if (nonDetailedCode) {
+  assert.equal(
+    await flagUrlDetailed(nonDetailedCode),
+    await flagUrlStandard(nonDetailedCode),
+    `detailed.js must fall back to the standard tier for '${nonDetailedCode}', which has no detailed original`,
+  );
+}
+assert.equal(await flagUrlDetailed('zz-not-a-real-code'), undefined);
+
+// Proves the package.json#exports wiring end-to-end, not just the relative-import shape above —
+// Node resolves a package's own name against its own "exports" map without needing a node_modules
+// symlink, as long as "name"/"exports" are both present (they are).
+const { flagUrl: selfReferencedFlagUrl } = await import('@aceshooting/lyra-flags/standard');
+assert.equal(await selfReferencedFlagUrl('fr'), await flagUrlStandard('fr'));
+
+const readmeText = readFileSync(path.join(pkgDir, 'README.md'), 'utf8');
+assert.match(readmeText, /@aceshooting\/lyra-flags\/standard/);
+assert.match(readmeText, /@aceshooting\/lyra-flags\/compact/);
+assert.match(readmeText, /@aceshooting\/lyra-flags\/detailed/);
+
+// --- createFlagUrlResolver(): shared-eager-map bulk resolver ---
+
+{
+  const bulkResolve = createFlagUrlResolver();
+  for (const code of svgCodes) {
+    // eslint-disable-next-line no-await-in-loop -- plain assertion script, sequential is fine here
+    const bulk = await bulkResolve(code);
+    assert.equal(bulk, await flagUrl(code), `createFlagUrlResolver()'s default resolution for '${code}' must match flagUrl()`);
+  }
+  for (const code of detailedCodes) {
+    // eslint-disable-next-line no-await-in-loop
+    const bulk = await bulkResolve(code, { variant: 'detailed' });
+    assert.equal(bulk, await flagUrl(code, { variant: 'detailed' }), `createFlagUrlResolver() must honour variant: 'detailed' for '${code}'`);
+  }
+  for (const code of compactCodes) {
+    // eslint-disable-next-line no-await-in-loop
+    const bulk = await bulkResolve(code, { variant: 'compact' });
+    assert.equal(bulk, await flagUrl(code, { variant: 'compact' }), `createFlagUrlResolver() must honour variant: 'compact' for '${code}'`);
+  }
+  assert.equal(await bulkResolve('zz-not-a-real-code'), undefined);
+
+  // Concurrent calls against the one shared urlsPromise must all resolve correctly (no race in
+  // awaiting the same in-flight promise from multiple resolver invocations at once).
+  const [fr, us, de] = await Promise.all([bulkResolve('fr'), bulkResolve('us'), bulkResolve('de')]);
+  assert.deepEqual([fr, us, de], [await flagUrl('fr'), await flagUrl('us'), await flagUrl('de')]);
+}
+
 console.log(
   `OK — ${svgCodes.length} flags verified (${detailedCodes.length} with detailed + ${compactCodes.length} with ` +
     `compact variants, all standard flags <= ${STANDARD_BUDGET_BYTES / 1000} KB); flagUrl()/FLAG_LOADERS agree ` +
-    "with flagUrls()'s eager map.",
+    "with flagUrls()'s eager map. Per-tier entry points (./standard, ./compact, ./detailed) agree with the " +
+    'omnibus flagUrl() and are wired through package.json#exports.',
 );

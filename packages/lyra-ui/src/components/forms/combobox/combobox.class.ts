@@ -5,6 +5,8 @@ import {
   LyraElement,
   type LyraEventDetailSnapshot,
 } from '../../../internal/lyra-element.js';
+// Side-effect only: registers this component's form-control-label support (external-label bridge + form-internals capture) with LyraElement, since the base class no longer imports it unconditionally. See registerFormControlLabelSupport()'s own doc in internal/lyra-element.ts.
+import '../../../internal/form-control-labels.js';
 import { place } from '../../../internal/positioner.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { chevronIcon, closeIcon } from '../../../internal/icons.js';

@@ -1,6 +1,8 @@
 import { html, nothing, type PropertyValues, type ReactiveController, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+// Side-effect only: registers this component's form-control-label support (external-label bridge + form-internals capture) with LyraElement, since the base class no longer imports it unconditionally. See registerFormControlLabelSupport()'s own doc in internal/lyra-element.ts.
+import '../../../internal/form-control-labels.js';
 import {
   AnchoredValidityController,
   resolveValidityAnchor,

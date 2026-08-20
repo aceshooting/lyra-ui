@@ -44,6 +44,23 @@ import { flagUrls } from '@aceshooting/lyra-flags';
 const urls = await flagUrls(); // -> { ad: '...', ae: '...', ..., zw: '...' } — all 249 at once
 ```
 
+For `<lr-flag>` specifically, `createFlagUrlResolver()` wraps `flagUrls()` into a ready-to-register
+`flagUrl`-shaped resolver, so a page rendering many flags at once (a country table, a full locale
+picker) doesn't have to pre-resolve and thread `src` by hand:
+
+```js
+import { createFlagUrlResolver } from '@aceshooting/lyra-flags';
+import { setFlagUrlResolver } from '@aceshooting/lyra-ui/components/media/flag/flag.js';
+
+setFlagUrlResolver(createFlagUrlResolver()); // one shared flagUrls() fetch backs every <lr-flag>
+```
+
+`@aceshooting/lyra-ui/components/media/flag/flag-peer-bulk.js` does exactly this in one import, as
+an opt-in alternative to the default `flag-peer.js` (never import both — the second
+`setFlagUrlResolver()` call just replaces the first). Only the standard tier is bulk-fetched this
+way; `fidelity="compact"/"detailed"` on individual elements still resolves through its own lazy
+per-code loader.
+
 ## Fidelity tiers: compact / standard / detailed
 
 A minority of flags (65 of 249) embed a detailed coat of arms, seal, or emblem in their source
@@ -73,6 +90,28 @@ await flagUrl('es', { variant: 'detailed' }); // -> pristine original (~415 KB)
 Every tier has a separate loader per flag **and** per tier. At runtime a compact request fetches
 only its compact asset; a bundler can nevertheless emit all statically reachable tier chunks. Use
 literal subpath asset imports when the deployment artifact must be pruned to a small allowlist.
+
+### Per-tier entry points, for a consumer committed to one tier everywhere
+
+The default `flagUrl()` above imports all three tiers' generated loader maps unconditionally, so it
+can honour a per-call `variant` — a bundler may therefore include all three tiers' reachable chunks
+even when an app only ever requests one. If every `<lr-flag>` in your app is pinned to the same
+`fidelity` (no per-instance switching), import that tier's own entry point instead to exclude the
+other two tiers from the reachable graph entirely:
+
+```js
+import { flagUrl } from '@aceshooting/lyra-flags/standard'; // only flags/generated.js
+import { flagUrl } from '@aceshooting/lyra-flags/compact';  // + flags/generated-compact.js
+import { flagUrl } from '@aceshooting/lyra-flags/detailed'; // + flags/generated-detailed.js
+```
+
+Each has the same `flagUrl(code): Promise<string | undefined>` shape as the default export, minus
+the `options.variant` parameter (there is nothing else to select once committed to one tier); the
+`compact`/`detailed` entries still fall back to the standard vector for a code with no distinct
+tier asset, exactly like `flagUrl(code, { variant })` does. Register one with `<lr-flag>`'s
+`setFlagUrlResolver()` from `@aceshooting/lyra-ui/components/media/flag/flag.js` instead of
+importing `flag-peer.js` (which always registers the full three-tier resolver) when your app has
+made this commitment.
 
 Maintainers, after adding/replacing source art: `pnpm run optimize` (re-derives the standard tier
 from the pristine `flags/detailed/` originals) → `pnpm run build-compact` (renders the compact WebP

@@ -3,17 +3,49 @@ import {
   type CSSResultGroup,
   type PropertyDeclaration,
   type PropertyValues,
+  type ReactiveController,
 } from 'lit';
 import { property } from 'lit/decorators.js';
-import {
-  captureFormInternals,
-  ExternalLabelController,
-} from './form-control-labels.js';
 import { tokens } from './tokens.styles.js';
 import { palette } from './tokens/palette.styles.js';
 import { resolveIntlLocale } from './intl-cache.js';
 import { warnUnknownAttributes } from './dev-mode-attribute-warning.js';
 
+// `LyraElement<any>`, not the generic-defaulted `LyraElement`: the hook is invoked from inside the
+// class's own constructor/attachInternals(), where `this` is `LyraElement<Events>` for whatever
+// `Events` map the concrete subclass declares -- not assignable to a fixed `LyraElement<LyraEventMap>`
+// parameter type (contravariance on `emit()`'s event-name parameter). The hook implementations are
+// structural only (HTMLElement + ReactiveControllerHost members) and never touch `Events`.
+type FormInternalsHook = (host: LyraElement<any>, internals: ElementInternals) => void;
+type ExternalLabelFactory = (host: LyraElement<any>) => ReactiveController;
+
+let formInternalsHook: FormInternalsHook | undefined;
+let externalLabelFactory: ExternalLabelFactory | undefined;
+
+/**
+ * Registers the external-label bridge and form-internals capture that a form-associated component
+ * needs, without `LyraElement` itself statically importing `form-control-labels.js` -- a module a
+ * purely presentational component (e.g. `lr-flag`, `lr-popover`) can never reach but, before this
+ * hook existed, paid for anyway (every component extends `LyraElement`, and the base class's own
+ * constructor/`attachInternals()` referenced both symbols unconditionally).
+ *
+ * Called exactly once, as a side effect of importing `form-control-labels.js` -- directly from the
+ * `FormAssociated` mixin (covering every mixin-based control), or via one explicit
+ * `import './form-control-labels.js';` line in each hand-rolled form-associated component that
+ * does not use the mixin. A component that never imports it (because it is not form-associated)
+ * simply never registers the hook, which is the same no-op outcome `formAssociated` being unset
+ * already produced.
+ *
+ * @internal Called only by `form-control-labels.js`'s own module-load side effect -- never call
+ * this directly.
+ */
+export function registerFormControlLabelSupport(
+  hook: FormInternalsHook,
+  factory: ExternalLabelFactory,
+): void {
+  formInternalsHook = hook;
+  externalLabelFactory = factory;
+}
 
 /**
  * Structural view of the `protected static knownUnobservedAttributes` a component may declare for
@@ -1055,9 +1087,12 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     // The external-label bridge is a property of being form-associated, not of any one component,
     // so it is installed here rather than repeated in every form-associated control that would
     // otherwise have to remember it (and would each be a silent a11y gap when they did not). It
-    // costs one controller on a form-associated element and nothing at all on every other.
+    // costs one controller on a form-associated element and nothing at all on every other -- and,
+    // via `externalLabelFactory`, nothing in the *bundle* of a component that never imports
+    // `form-control-labels.js` either. See `registerFormControlLabelSupport()`'s own doc.
     if ((this.constructor as { formAssociated?: boolean }).formAssociated) {
-      this.addController(new ExternalLabelController(this));
+      const controller = externalLabelFactory?.(this);
+      if (controller) this.addController(controller);
     }
   }
 
@@ -1074,7 +1109,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
    */
   override attachInternals(): ElementInternals {
     const internals = super.attachInternals();
-    captureFormInternals(this, internals);
+    formInternalsHook?.(this, internals);
     return internals;
   }
 

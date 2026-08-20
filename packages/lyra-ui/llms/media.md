@@ -94,6 +94,12 @@ wording that reads to a user as a bug. Style the two states apart with those att
 rectangular corner radius), `--lr-flag-aspect-ratio` (default `4 / 3`), and
 `--lr-flag-object-fit` (default `cover`); also consumes `--lr-color-border` for the inset ring.
 
+**Sizing.** The host has no intrinsic `width` — it sizes from `font-size` (`block-size: 1em`,
+`inline-size` derived from `--lr-flag-aspect-ratio` via CSS `aspect-ratio`), so it scales naturally
+with surrounding text (`<lr-flag style="font-size: 2rem">`). Setting `width`/`inline-size` directly
+instead makes both axes definite, which defeats `aspect-ratio` (only applies when at most one axis
+is definite) and squashes the image rather than scaling it.
+
 **Optional peer deps:** `@aceshooting/lyra-flags` — required for the component to actually render an
 image when `country` or `language` is used. Import
 `@aceshooting/lyra-ui/components/media/flag/flag-peer.js` once to opt into
@@ -217,9 +223,26 @@ import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
 - `country`/`language` resolve through `@aceshooting/lyra-flags`'s `flagUrl(code)`, which lazily
   fetches one requested flag at runtime. A bundler may still emit the complete reachable lazy-chunk
   graph because every supported code has a literal loader import; use a literal asset subpath
-  import when the deployment artifact must be pruned. If you already have a flag's URL at build
+  import when the deployment artifact must be pruned. If every `<lr-flag>` in the app is pinned to
+  one `fidelity` (no per-instance switching), register
+  `@aceshooting/lyra-flags/standard`/`/compact`/`/detailed` via `setFlagUrlResolver()` instead of
+  importing `flag-peer.js` (which always registers the full three-tier resolver) — the tier-specific
+  entry excludes the other two tiers' generated loader maps from the reachable graph; see that
+  package's README. If you already have a flag's URL at build
   time, `src` skips the peer-package round trip; native image loading still uses the same bounded
   loading/error transaction.
+- Rendering many flags at once (a country table, a picker listing every locale): resolve every code
+  up front with `@aceshooting/lyra-flags`'s `flagUrls()` (one call, returns `{code: url}` for all
+  249 flags) and pass results through `src`, instead of letting each `<lr-flag>` instance
+  independently call `flagUrl()` — skips one peer-resolution round trip per instance. Image fetches
+  themselves are unaffected either way (each flag is a distinct asset; there is no sprite).
+  Alternatively, import `@aceshooting/lyra-ui/components/media/flag/flag-peer-bulk.js` instead of
+  the default `flag-peer.js` (never both) to get this automatically: it registers a resolver backed
+  by one shared `flagUrls()` call, so every `<lr-flag>` on the page benefits without threading `src`
+  by hand. Only worth it when the page renders most/all flags — a page with a handful pays an
+  unneeded 249-entry fetch. Only the standard tier is bulk-fetched this way;
+  `fidelity="compact"/"detailed"` on individual elements still resolves through its own lazy
+  per-code loader.
 - 65 of `@aceshooting/lyra-flags`' 249 flags (any whose design includes a detailed coat of
   arms/seal/emblem, e.g. `es`, `pt`, `sv`) ship **three** fidelity tiers, selected via the
   `fidelity` property (`flagUrl(code, { variant: fidelity })` under the hood): `"compact"` — a tiny WebP raster for
@@ -2629,6 +2652,7 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-media-flag-flag-contracts`** — Supporting data types and helpers for this component family.
   `loadFlagUrl(/* public names: importFlags */): unknown`
+  `loadBulkFlagUrl(/* public names: importFlags */): unknown`
   `setFlagUrlResolver(/* public names: value */): unknown`
 
 - **`components-media-flag-language-map-contracts`** — Supporting data types and helpers for this component family.

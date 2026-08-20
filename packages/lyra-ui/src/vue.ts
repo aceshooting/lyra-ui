@@ -4738,7 +4738,8 @@ export type LyraHeatmapVueProps = LyraVueCustomElement<
   | 'valueLabel',
   {},
   LyraHeatmapEventMap,
-  | 'lr-cell-click',
+  | 'lr-cell-click'
+  | 'lr-matrix-geometry-change',
   | '--lr-heatmap-annotation-color'
   | '--lr-heatmap-color-steps-gradient'
   | '--lr-heatmap-focus-ring-color'

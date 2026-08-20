@@ -691,6 +691,15 @@ Three layers, and **which one you set decides how far the override reaches**:
 3. **`--lr-<component>-*`** — per-component properties, for one element at a time. Listed in each
    component's own section.
 
+**Layer 2 (`--lr-*`) is declared only on each `lr-*` element's own shadow `:host`.** It never
+reaches plain application CSS, and it never reaches your own custom elements, since neither is a
+descendant of an `lr-*` shadow root — `body { color: var(--lr-color-text) }` in application CSS
+resolves to nothing, silently, not an error. Retheme through layer 1 (`--lr-theme-*`), which
+`theme.css` supplies at document scope and which inherits normally into every nested shadow root.
+See [Where an override actually reaches](#where-an-override-actually-reaches) below for the full
+inheritance rules, including the one documented exception (per-component `--lr-<component>-*`
+hooks, layer 3, which do inherit through wrappers).
+
 ### The colour ramp and the semantic grid
 
 Colour has two layers beneath the `--lr-*` tokens you normally read.
@@ -1717,6 +1726,16 @@ control) is a single tab stop using a roving `tabindex`; arrow keys move within 
 `aria-hidden` and `inert` items; `Home`/`End` jump to the ends; `Enter` and `Space` both activate;
 `Escape` dismisses the topmost dismissible overlay and returns focus to whatever opened it.
 `ArrowLeft`/`ArrowRight` mean previous/next and swap under `dir="rtl"`.
+
+**`accessibleLabel` binds to one of two different attributes depending on the component, and the
+two are not interchangeable.** Most components (e.g. `lr-card`, `lr-stat`) expose it as a direct
+alias of the native `aria-label` attribute — `accessible-label="…"` does nothing on those; write
+`aria-label="…"` instead. A minority (e.g. `lr-callout`, `lr-table`) separately compute an internal
+accessible name and expose `accessibleLabel` through the bespoke `accessible-label` attribute
+instead, specifically so the host's own native `aria-label` can still independently override that
+computed name. Check the component's own reference section (or its class JSDoc) for which
+convention it uses before writing markup — an `accessible-label` attribute on an `aria-label`-only
+component is a silent no-op, not an error.
 
 **What that contract is verified by, precisely.** Every one of the 284 public tags carries at least
 one axe-core assertion in its own directory's tests, in a test that mounts its own tag; contrast
@@ -10983,7 +11002,7 @@ weekday * (cellSize + CAL_GAP)`), consulted consistently by drawing, hit-testing
   than 2 entries) keeps today's 2-endpoint interpolation exactly. Invalid colors use the canvas
   fallback color and prevent the custom legend gradient from being assigned.
 - `legendStops?: readonly HeatmapLegendStop[]` (attribute: false) — clone-owned, bounded, frozen `HeatmapLegendStop { value: number;
-color?: string; label?: string }`: a discrete legend key rendered **instead of** the
+color?: string; label?: string; partOfRamp?: boolean }`: a discrete legend key rendered **instead of** the
   `--lr-heatmap-scale-lo`/`-hi` gradient bar and its `[part="legend-lo"]`/`[part="legend-hi"]`
   endpoint labels — one `[part="legend-stop"]` per entry, in array order, each a
   `[part="legend-swatch"]` filled with that entry's `color` plus a `[part="legend-stop-label"]`.
@@ -11000,14 +11019,26 @@ color?: string; label?: string }`: a discrete legend key rendered **instead of**
   are never consulted by the color ramp, the bucket math, the tooltip, or the generated accessible
   name, so adding them changes nothing a cell renders. Labeled `annotations` still render their
   `[part="legend-annotation"]` entries after the stops. Unset (the default) or an empty array
-  reproduces the exact gradient legend, unchanged.
+  reproduces the exact gradient legend, unchanged. A dev-mode-only warning fires when a stop's
+  `color` doesn't match the corresponding `colorSteps` entry — set `partOfRamp: false` on a stop
+  that is a real, distinctly-colored swatch deliberately outside the sequential ramp (e.g. a fixed
+  "no data" color next to an N-step ramp) to exclude just that stop from the comparison; defaults to
+  `true`. A caption-only stop (no `color`) is already excluded regardless of this flag.
 
 **Getters/methods:** `refreshTheme()` — redraws canvas content after an upstream design-token or
 color-scheme change; called automatically on theme changes, exposed for a consumer that needs to
-force a redraw manually.
+force a redraw manually. `matrixGeometry: Readonly<{ padLeft: number; padTop: number; cellSize:
+number }> | undefined` — the gutter/cell geometry the last matrix-mode draw actually painted with,
+in CSS pixels; `undefined` in calendar mode. Lets a light-DOM consumer (e.g. a sticky header mirror
+for a tall matrix) line up with the canvas without hardcoding the same numbers `row-label-width`/
+`col-label-height`'s `"auto"` resolution would otherwise keep private.
 
 **Events:** `lr-cell-click` (fired on click, or Enter/Space on the keyboard-focused cell —
-`detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode)
+`detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode),
+`lr-matrix-geometry-change` (fired after a matrix-mode draw whose resolved `matrixGeometry` differs
+from the previous draw — e.g. after `row-label-width="auto"`/`col-label-height="auto"` resolves
+against new content or a resize; `detail` is the same object `matrixGeometry` returns; never fired
+in calendar mode)
 
 **Slots:** none.
 
@@ -13018,6 +13049,7 @@ These named interfaces and helper signatures are available to typed integrations
   value: unknown;
   color: unknown;
   label: unknown;
+  partOfRamp: unknown;
 }`
   `HeatmapMatrixData {
   kind: unknown;
@@ -21714,6 +21746,12 @@ wording that reads to a user as a bug. Style the two states apart with those att
 rectangular corner radius), `--lr-flag-aspect-ratio` (default `4 / 3`), and
 `--lr-flag-object-fit` (default `cover`); also consumes `--lr-color-border` for the inset ring.
 
+**Sizing.** The host has no intrinsic `width` — it sizes from `font-size` (`block-size: 1em`,
+`inline-size` derived from `--lr-flag-aspect-ratio` via CSS `aspect-ratio`), so it scales naturally
+with surrounding text (`<lr-flag style="font-size: 2rem">`). Setting `width`/`inline-size` directly
+instead makes both axes definite, which defeats `aspect-ratio` (only applies when at most one axis
+is definite) and squashes the image rather than scaling it.
+
 **Optional peer deps:** `@aceshooting/lyra-flags` — required for the component to actually render an
 image when `country` or `language` is used. Import
 `@aceshooting/lyra-ui/components/media/flag/flag-peer.js` once to opt into
@@ -21837,9 +21875,26 @@ import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
 - `country`/`language` resolve through `@aceshooting/lyra-flags`'s `flagUrl(code)`, which lazily
   fetches one requested flag at runtime. A bundler may still emit the complete reachable lazy-chunk
   graph because every supported code has a literal loader import; use a literal asset subpath
-  import when the deployment artifact must be pruned. If you already have a flag's URL at build
+  import when the deployment artifact must be pruned. If every `<lr-flag>` in the app is pinned to
+  one `fidelity` (no per-instance switching), register
+  `@aceshooting/lyra-flags/standard`/`/compact`/`/detailed` via `setFlagUrlResolver()` instead of
+  importing `flag-peer.js` (which always registers the full three-tier resolver) — the tier-specific
+  entry excludes the other two tiers' generated loader maps from the reachable graph; see that
+  package's README. If you already have a flag's URL at build
   time, `src` skips the peer-package round trip; native image loading still uses the same bounded
   loading/error transaction.
+- Rendering many flags at once (a country table, a picker listing every locale): resolve every code
+  up front with `@aceshooting/lyra-flags`'s `flagUrls()` (one call, returns `{code: url}` for all
+  249 flags) and pass results through `src`, instead of letting each `<lr-flag>` instance
+  independently call `flagUrl()` — skips one peer-resolution round trip per instance. Image fetches
+  themselves are unaffected either way (each flag is a distinct asset; there is no sprite).
+  Alternatively, import `@aceshooting/lyra-ui/components/media/flag/flag-peer-bulk.js` instead of
+  the default `flag-peer.js` (never both) to get this automatically: it registers a resolver backed
+  by one shared `flagUrls()` call, so every `<lr-flag>` on the page benefits without threading `src`
+  by hand. Only worth it when the page renders most/all flags — a page with a handful pays an
+  unneeded 249-entry fetch. Only the standard tier is bulk-fetched this way;
+  `fidelity="compact"/"detailed"` on individual elements still resolves through its own lazy
+  per-code loader.
 - 65 of `@aceshooting/lyra-flags`' 249 flags (any whose design includes a detailed coat of
   arms/seal/emblem, e.g. `es`, `pt`, `sv`) ship **three** fidelity tiers, selected via the
   `fidelity` property (`flagUrl(code, { variant: fidelity })` under the hood): `"compact"` — a tiny WebP raster for
@@ -24249,6 +24304,7 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-media-flag-flag-contracts`** — Supporting data types and helpers for this component family.
   `loadFlagUrl(/* public names: importFlags */): unknown`
+  `loadBulkFlagUrl(/* public names: importFlags */): unknown`
   `setFlagUrlResolver(/* public names: value */): unknown`
 
 - **`components-media-flag-language-map-contracts`** — Supporting data types and helpers for this component family.

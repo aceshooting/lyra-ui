@@ -650,6 +650,14 @@ previews and design-tool validation; it is not a replacement for the production 
 </body>
 ```
 
+**The resolved `--lr-color-*`/`--lr-space-*`/`--lr-radius`/`--lr-shadow-*`/`--lr-font-*` output
+layer is declared only on each `lr-*` element's own shadow `:host`** — it is not readable from
+plain application CSS or your own custom elements outside any `lr-*` shadow root (a rule like
+`body { color: var(--lr-color-text) }` silently resolves to nothing, not an error). Set the
+`--lr-theme-*` **input** layer shown below to retheme; see
+[Where an override actually reaches](./llms/shared.md#where-an-override-actually-reaches) for
+exactly how far each layer inherits.
+
 Applications can override any `--lr-theme-*` input directly:
 
 ```css

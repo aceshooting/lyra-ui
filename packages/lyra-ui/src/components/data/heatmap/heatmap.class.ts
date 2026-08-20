@@ -214,6 +214,14 @@ export interface HeatmapLegendStop {
   color?: string;
   /** Optional label override; defaults to the component's own numeric formatting of `value`. */
   label?: string;
+  /**
+   * Set to `false` to exclude this stop from `warnOnLegendRampMismatch()`'s `colorSteps` agreement
+   * check, for a real, distinctly-colored swatch that is intentionally not part of the sequential
+   * ramp -- e.g. a calendar heatmap's fixed neutral "no data" color shown alongside an N-step
+   * ramp. Defaults to `true`. A caption-only stop (no `color`) is already excluded regardless of
+   * this flag, since it describes no color to compare.
+   */
+  partOfRamp?: boolean;
 }
 
 /** A single cell to mark as persistently selected -- `row`/`col` in matrix mode, `date` in
@@ -456,8 +464,11 @@ export type LyraHeatmapCellClickDetail =
   | { date: string; value: number }
   | { row: number; col: number; value: number };
 
+export type LyraHeatmapMatrixGeometryChangeDetail = { padLeft: number; padTop: number; cellSize: number };
+
 export interface LyraHeatmapEventMap {
   'lr-cell-click': CustomEvent<LyraHeatmapCellClickDetail>;
+  'lr-matrix-geometry-change': CustomEvent<LyraHeatmapMatrixGeometryChangeDetail>;
 }
 /**
  * `<lr-heatmap>` — a Canvas heatmap with a DPR-aware, resize-aware redraw
@@ -568,6 +579,10 @@ export interface LyraHeatmapEventMap {
  * tooltip and the keyboard live-region announcement. Use the callback for application-specific
  * wording that is not represented by the locale catalog.
  * `cellColor` overrides a cell's ramp-computed color entirely for an exact value.
+ * @event lr-matrix-geometry-change - Fired after a matrix-mode draw pass whose resolved
+ * `matrixGeometry` (`padLeft`/`padTop`/`cellSize`) differs from the previous draw -- e.g. after
+ * `row-label-width="auto"`/`col-label-height="auto"` resolves against new label content or a
+ * resize. `detail` is the same object `matrixGeometry` returns. Never fired in calendar mode.
  * @csspart base - The heatmap wrapper.
  * @csspart canvas - The heatmap canvas.
  * @csspart cells - The opt-in per-cell accessibility overlay.
@@ -721,6 +736,32 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const resolved = finiteNumber(this.rowLabelWidth, PAD_LEFT);
     return resolved >= 0 ? resolved : PAD_LEFT;
   }
+
+  /**
+   * The gutter/cell geometry the last matrix-mode draw actually painted with --
+   * `{ padLeft, padTop, cellSize }`, all in CSS pixels -- so a light-DOM consumer (e.g. a sticky
+   * header mirror) can line up with the canvas without hardcoding the same numbers `row-label-width`
+   * or `col-label-height`'s `"auto"` resolution would otherwise keep private. `undefined` in
+   * calendar mode, and before the first matrix draw. Reuses the exact getters/method `drawMatrix()`
+   * itself calls, so this can never disagree with what was actually painted. See also the
+   * `lr-matrix-geometry-change` event, fired whenever this value changes.
+   */
+  get matrixGeometry(): Readonly<LyraHeatmapMatrixGeometryChangeDetail> | undefined {
+    if (this.effectiveMode !== 'matrix' || !this.hasDrawnMatrix) return undefined;
+    return {
+      padLeft: this.matrixPadLeft,
+      padTop: this.matrixPadTop,
+      cellSize: this.matrixCellSize(this.matrixColLabels.length),
+    };
+  }
+
+  /** Set on the first successful `drawMatrix()` pass; gates `matrixGeometry` returning a real
+   *  value only once there has actually been a draw to describe. */
+  private hasDrawnMatrix = false;
+
+  /** Last geometry `lr-matrix-geometry-change` fired, so a same-valued redraw (a color-only
+   *  update, an unrelated data change) does not refire the event. */
+  private lastEmittedMatrixGeometry?: Readonly<LyraHeatmapMatrixGeometryChangeDetail>;
 
   private get matrixPadTop(): number {
     if (this.colLabelHeight === 'auto') return this.resolvedColLabelHeight;
@@ -1210,13 +1251,14 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * Warning rather than deriving one from the other: deriving would silently change what an
    * existing `colorSteps`-only consumer sees, and would also break the deliberate `cellColor`
    * escape hatch. This keeps every current behavior and only makes the disagreement audible.
-   * Compares only the stops that carry a color -- a caption-only stop describes no color at all.
+   * Compares only the stops that carry a color -- a caption-only stop describes no color at all --
+   * and, among those, only the ones that did not opt out via `partOfRamp: false`.
    */
   private warnOnLegendRampMismatch(): void {
     const rampColors = this.cachedColorSteps.map((color) => sanitizeCssColor(color) ?? color);
     if (rampColors.length === 0) return;
     const legendColors = this.cachedLegendStops
-      .filter((stop) => Boolean(stop.color))
+      .filter((stop) => Boolean(stop.color) && stop.partOfRamp !== false)
       .map((stop) => sanitizeCssColor(stop.color ?? '') ?? stop.color ?? '');
     if (legendColors.length === 0) return;
     const sameLength = legendColors.length === rampColors.length;
@@ -2857,6 +2899,18 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const padLeft = this.matrixPadLeft;
     const padTop = this.matrixPadTop;
     const cellSize = this.matrixCellSize(cols);
+    this.hasDrawnMatrix = true;
+    const geometry = { padLeft, padTop, cellSize };
+    const previous = this.lastEmittedMatrixGeometry;
+    if (
+      !previous ||
+      previous.padLeft !== padLeft ||
+      previous.padTop !== padTop ||
+      previous.cellSize !== cellSize
+    ) {
+      this.lastEmittedMatrixGeometry = geometry;
+      this.emit('lr-matrix-geometry-change', geometry);
+    }
     const w = padLeft + cols * cellSize;
     const h = padTop + rows * cellSize;
     const dpr = this.ownerDocument.defaultView?.devicePixelRatio || 1;

@@ -21,6 +21,17 @@ export declare function flagUrl(
 export declare function flagUrls(): Promise<Record<string, string>>;
 
 /**
+ * Builds a `flagUrl`-shaped resolver backed by one shared `flagUrls()` call, for a page that
+ * renders most/all flags at once instead of a per-code lazy resolution per `<lr-flag>` instance.
+ * Only the standard tier is bulk-fetched this way; `variant: 'compact'`/`'detailed'` still resolve
+ * individually through their own lazy per-code loader.
+ */
+export declare function createFlagUrlResolver(): (
+  code: string,
+  options?: { variant?: 'compact' | 'standard' | 'detailed' },
+) => Promise<string | undefined>;
+
+/**
  * Lazy map of ISO 3166-1 alpha-2 (or territory) code -> flag SVG URL loader that `flagUrl()`
  * looks up. Exported directly for consumers that want the per-code laziness without going
  * through `flagUrl()` (e.g. to check `code in FLAG_LOADERS` for presence without fetching

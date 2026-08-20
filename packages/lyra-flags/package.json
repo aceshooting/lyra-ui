@@ -43,6 +43,12 @@
     "flags",
     "index.js",
     "index.d.ts",
+    "standard.js",
+    "standard.d.ts",
+    "compact.js",
+    "compact.d.ts",
+    "detailed.js",
+    "detailed.d.ts",
     "THIRD_PARTY_NOTICES.md",
     "CHANGELOG.md"
   ],
@@ -52,6 +58,18 @@
     ".": {
       "types": "./index.d.ts",
       "default": "./index.js"
+    },
+    "./standard": {
+      "types": "./standard.d.ts",
+      "default": "./standard.js"
+    },
+    "./compact": {
+      "types": "./compact.d.ts",
+      "default": "./compact.js"
+    },
+    "./detailed": {
+      "types": "./detailed.d.ts",
+      "default": "./detailed.js"
     },
     "./flags/*": "./flags/*"
   },
