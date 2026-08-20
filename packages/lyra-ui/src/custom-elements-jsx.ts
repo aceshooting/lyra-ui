@@ -2024,6 +2024,7 @@ export type LyraChipReactProps = LyraReactElementProps<
 
 export type LyraChipGroupReactProps = LyraReactElementProps<
   LyraChipGroup,
+  | 'accessibleLabel'
   | 'locale'
   | 'maxVisible'
   | 'strings',
@@ -2033,6 +2034,7 @@ export type LyraChipGroupReactProps = LyraReactElementProps<
   | '--lr-chip-group-overflow-expanded-border-style'
   | '--lr-chip-group-overflow-expanded-color',
   {
+    'aria-label'?: LyraChipGroup['accessibleLabel'];
     'max-visible'?: LyraChipGroup['maxVisible'];
   }
 >;

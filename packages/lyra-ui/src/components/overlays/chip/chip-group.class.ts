@@ -61,6 +61,7 @@ interface TrackedChipFocus {
  * @event lr-overflow-toggle - The overflow indicator was activated,
  * revealing or re-collapsing the excess children. `detail: { expanded }`.
  * @csspart base - The flex-wrap container (holds both the slot and the overflow indicator).
+ *   Carries `role="group"` and the accessible name when one is supplied -- see `accessibleLabel`.
  * @csspart overflow-indicator - The "+N" / "Show less" toggle button. Only rendered while `max-visible` is actively causing an overflow.
  * @cssprop [--lr-chip-group-overflow-expanded-color=var(--lr-color-text)] - Text color of
  *   `[part="overflow-indicator"]` while expanded (`aria-expanded="true"`).
@@ -101,6 +102,22 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     this._maxVisible = next == null ? undefined : finiteCount(next);
     this.requestUpdate('maxVisible', old);
   }
+
+  /**
+   * Accessible name for the group, forwarded to `[part="base"]`.
+   *
+   * A chip group IS a group, and every peer grouping primitive here already says so --
+   * `<lr-radio-group>` renders `role="radiogroup"`, `<lr-segmented>` the same, each forwarding a
+   * host `aria-label` inward. This component rendered a roleless container and read no name, and
+   * because a host `aria-label` does not cross a shadow boundary, a consumer labelling the host
+   * named nothing at all. Supplying a name here (as the `aria-label` attribute or this property)
+   * is what makes the group real to assistive technology.
+   *
+   * The `role="group"` is applied only WITH a name, deliberately: an unnamed group role adds
+   * verbosity without adding information, and applying it unconditionally would change the
+   * accessibility tree of every decorative chip row already shipped.
+   */
+  @property({ attribute: 'aria-label' }) accessibleLabel = '';
 
   // Tracks the default slot's assigned-element count, the same
   // connectedCallback/willUpdate + slotchange convention `<lr-multi-split>`'s
@@ -454,12 +471,20 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   };
 
   override render(): TemplateResult {
+    const hasAccessibleLabel = this.hasAttribute('aria-label') || Boolean(this.accessibleLabel);
     const overflowing = this.hasOverflow;
     const hiddenCount = overflowing ? this.eligibleChildren().length - (this.maxVisible as number) : 0;
     const formattedHiddenCount = getNumberFormat(this.effectiveLocale).format(hiddenCount);
 
     return html`
-      <div part="base" tabindex="-1" @focusin=${this.onFocusIn} @focusout=${this.onFocusOut}>
+      <div
+        part="base"
+        tabindex="-1"
+        role=${hasAccessibleLabel ? 'group' : nothing}
+        aria-label=${hasAccessibleLabel ? this.accessibleLabel : nothing}
+        @focusin=${this.onFocusIn}
+        @focusout=${this.onFocusOut}
+      >
         <slot @slotchange=${this.onSlotChange}></slot>
         ${overflowing
           ? html`<button

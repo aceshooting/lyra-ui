@@ -18643,6 +18643,13 @@ no `.items` array prop).
 
 **Properties:**
 
+- `accessibleLabel: string = ''` (attribute `aria-label`) — accessible name for the group,
+  forwarded to `[part='base']`, which carries `role='group'` whenever a name is supplied. Supply
+  one for any chip row that means something as a set (a filter row, a tag list); without it the
+  container stays roleless, because an unnamed group role adds verbosity without information.
+  A host `aria-label` does **not** reach a shadow root on its own — this property is what makes it
+  reach `[part='base']`, the element that owns the role. Mirrors how `lr-radio-group` and
+  `lr-segmented` name their own `radiogroup`.
 - `maxVisible?: number` (attribute `max-visible`) — maximum number of assigned children shown before
   the rest collapse behind a "+N" indicator; flattened slot-forwarded children count the same as
   direct children. Author-hidden or inert children do not consume capacity or inflate the hidden

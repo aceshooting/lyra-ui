@@ -2026,6 +2026,7 @@ export type LyraChipSvelteProps = LyraSvelteElementProps<
 
 export type LyraChipGroupSvelteProps = LyraSvelteElementProps<
   LyraChipGroup,
+  | 'accessibleLabel'
   | 'locale'
   | 'maxVisible'
   | 'strings',
@@ -2035,6 +2036,7 @@ export type LyraChipGroupSvelteProps = LyraSvelteElementProps<
   | '--lr-chip-group-overflow-expanded-border-style'
   | '--lr-chip-group-overflow-expanded-color',
   {
+    'aria-label'?: LyraChipGroup['accessibleLabel'];
     'max-visible'?: LyraChipGroup['maxVisible'];
   }
 >;

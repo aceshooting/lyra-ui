@@ -1265,6 +1265,13 @@ describe("pressed feedback on the keyboard-highlighted row", () => {
 
   /** See the first pressed-feedback poll for why this is not the 1s default. */
   const POINTER_STATE_TIMEOUT = 15_000;
+  /** Mocha's own per-test budget has to EXCEED the poll budget above, or the poll can never run to
+   *  completion: mocha kills the test first and reports a generic "Timeout of 6000ms exceeded"
+   *  instead of the poll's own meaningful failure. Both of these tests polled for 15s inside a 6s
+   *  test, so under any real load they failed for a reason that said nothing about the component.
+   *  Observed reproducibly when the suite runs at high concurrency, and never in isolation --
+   *  which is exactly the signature of a budget mismatch rather than a component defect. */
+  const POINTER_TEST_TIMEOUT = POINTER_STATE_TIMEOUT + 5_000;
 
   async function nextFrames(): Promise<void> {
     await new Promise((resolve) =>
@@ -1306,6 +1313,7 @@ describe("pressed feedback on the keyboard-highlighted row", () => {
   }
 
   it("darkens the highlighted row while it is held under the pointer", async function () {
+    this.timeout(POINTER_TEST_TIMEOUT);
     if (window.matchMedia("(hover: none), (pointer: coarse)").matches)
       this.skip();
     const el = await openThemed();
@@ -1347,6 +1355,7 @@ describe("pressed feedback on the keyboard-highlighted row", () => {
   });
 
   it("restores the highlighted row's resting fill once the pointer is released", async function () {
+    this.timeout(POINTER_TEST_TIMEOUT);
     if (window.matchMedia("(hover: none), (pointer: coarse)").matches)
       this.skip();
     const el = await openThemed();

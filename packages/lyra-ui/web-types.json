@@ -3970,7 +3970,7 @@
             },
             {
               "name": "description",
-              "description": "Accessible chart description.\n\nType: `string | null`  \nDefault: `null`"
+              "description": "Accessible chart description, which REPLACES the generated summary rather than adding to it.\n\nLeft unset, the component builds an sr-only per-series summary from the actual data. Setting\nthis discards that summary entirely and substitutes your text -- a full override, which is the\nright tool when you can describe the chart better than a generic walk of the series can.\n\nIt is the wrong tool for adding a caveat (\"excludes returns\", \"sampled hourly\") on top of the\ndata summary: you would trade the whole summary for the caveat, and a consumer reasonably read\nthe old one-line doc as additive and did exactly that. For a caveat, prefer visible text beside\nthe chart -- a note only screen-reader users hear is worse for everyone than one everybody\nsees -- or fold the data into your own `description` text if you are overriding anyway.\n\nType: `string | null`  \nDefault: `null`"
             },
             {
               "name": "grid",
@@ -4214,7 +4214,7 @@
               },
               {
                 "name": "description",
-                "description": "Accessible chart description.\n\nAttribute: `description`",
+                "description": "Accessible chart description, which REPLACES the generated summary rather than adding to it.\n\nLeft unset, the component builds an sr-only per-series summary from the actual data. Setting\nthis discards that summary entirely and substitutes your text -- a full override, which is the\nright tool when you can describe the chart better than a generic walk of the series can.\n\nIt is the wrong tool for adding a caveat (\"excludes returns\", \"sampled hourly\") on top of the\ndata summary: you would trade the whole summary for the caveat, and a consumer reasonably read\nthe old one-line doc as additive and did exactly that. For a caveat, prefer visible text beside\nthe chart -- a note only screen-reader users hear is worse for everyone than one everybody\nsees -- or fold the data into your own `description` text if you are overriding anyway.\n\nAttribute: `description`",
                 "type": "string | null",
                 "default": "null"
               },
@@ -5049,7 +5049,7 @@
             },
             {
               "name": "description",
-              "description": "Accessible chart description.\n\nType: `string | null`  \nDefault: `null`"
+              "description": "Accessible chart description, which REPLACES the generated summary rather than adding to it.\n\nLeft unset, the component builds an sr-only per-series summary from the actual data. Setting\nthis discards that summary entirely and substitutes your text -- a full override, which is the\nright tool when you can describe the chart better than a generic walk of the series can.\n\nIt is the wrong tool for adding a caveat (\"excludes returns\", \"sampled hourly\") on top of the\ndata summary: you would trade the whole summary for the caveat, and a consumer reasonably read\nthe old one-line doc as additive and did exactly that. For a caveat, prefer visible text beside\nthe chart -- a note only screen-reader users hear is worse for everyone than one everybody\nsees -- or fold the data into your own `description` text if you are overriding anyway.\n\nType: `string | null`  \nDefault: `null`"
             },
             {
               "name": "grid",
@@ -5293,7 +5293,7 @@
               },
               {
                 "name": "description",
-                "description": "Accessible chart description.\n\nAttribute: `description`",
+                "description": "Accessible chart description, which REPLACES the generated summary rather than adding to it.\n\nLeft unset, the component builds an sr-only per-series summary from the actual data. Setting\nthis discards that summary entirely and substitutes your text -- a full override, which is the\nright tool when you can describe the chart better than a generic walk of the series can.\n\nIt is the wrong tool for adding a caveat (\"excludes returns\", \"sampled hourly\") on top of the\ndata summary: you would trade the whole summary for the caveat, and a consumer reasonably read\nthe old one-line doc as additive and did exactly that. For a caveat, prefer visible text beside\nthe chart -- a note only screen-reader users hear is worse for everyone than one everybody\nsees -- or fold the data into your own `description` text if you are overriding anyway.\n\nAttribute: `description`",
                 "type": "string | null",
                 "default": "null"
               },
@@ -7062,7 +7062,7 @@
             },
             {
               "name": "description",
-              "description": "Accessible chart description.\n\nType: `string | null`  \nDefault: `null`"
+              "description": "Accessible chart description, which REPLACES the generated summary rather than adding to it.\n\nLeft unset, the component builds an sr-only per-series summary from the actual data. Setting\nthis discards that summary entirely and substitutes your text -- a full override, which is the\nright tool when you can describe the chart better than a generic walk of the series can.\n\nIt is the wrong tool for adding a caveat (\"excludes returns\", \"sampled hourly\") on top of the\ndata summary: you would trade the whole summary for the caveat, and a consumer reasonably read\nthe old one-line doc as additive and did exactly that. For a caveat, prefer visible text beside\nthe chart -- a note only screen-reader users hear is worse for everyone than one everybody\nsees -- or fold the data into your own `description` text if you are overriding anyway.\n\nType: `string | null`  \nDefault: `null`"
             },
             {
               "name": "grid",
@@ -7313,7 +7313,7 @@
               },
               {
                 "name": "description",
-                "description": "Accessible chart description.\n\nAttribute: `description`",
+                "description": "Accessible chart description, which REPLACES the generated summary rather than adding to it.\n\nLeft unset, the component builds an sr-only per-series summary from the actual data. Setting\nthis discards that summary entirely and substitutes your text -- a full override, which is the\nright tool when you can describe the chart better than a generic walk of the series can.\n\nIt is the wrong tool for adding a caveat (\"excludes returns\", \"sampled hourly\") on top of the\ndata summary: you would trade the whole summary for the caveat, and a consumer reasonably read\nthe old one-line doc as additive and did exactly that. For a caveat, prefer visible text beside\nthe chart -- a note only screen-reader users hear is worse for everyone than one everybody\nsees -- or fold the data into your own `description` text if you are overriding anyway.\n\nAttribute: `description`",
                 "type": "string | null",
                 "default": "null"
               },
@@ -9198,8 +9198,17 @@
         },
         {
           "name": "lr-chip-group",
-          "description": "`<lr-chip-group>` — a flex-wrap container for a set of `<lr-chip>`\nchildren (plain light-DOM composition — direct children are the chips,\nthe same shape `<lr-multi-split>`'s panels / `<lr-source-list>`'s cards\ntake — no `.items` array prop).\n\n`max-visible` is entirely optional. When unset, every child is always\nshown and this component does nothing beyond flex-wrap layout. When set\nand the group has more chip children than that, the excess children are\nhidden (via their own `hidden` property — CSS alone can't parameterize\n`:nth-child` on a runtime prop, so this reaches into the light DOM the\nsame way `<lr-multi-split>` sets each panel's inline `flex`/`order`) and a\n\"+N\" overflow-indicator pill takes their place. Clicking it is a toggle:\nit reveals the rest (and relabels itself \"Show less\"); clicking again\nre-collapses back to `max-visible`. `lr-overflow-toggle` fires only from\nthat click — i.e. only when `max-visible` is actually causing an overflow\nstate — never as a side effect of `max-visible`/children changing on\ntheir own.\n\nAuthor-owned `hidden` changes remain live while collapse management is active. The latest author\nstate is restored when a child leaves or the group disconnects, and reconnecting reapplies the\ncurrent collapsed state.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | `<lr-chip>` elements (or any content, though the chip pairing is the intended usage). |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The flex-wrap container (holds both the slot and the overflow indicator). |\n| `overflow-indicator` | The \"+N\" / \"Show less\" toggle button. Only rendered while `max-visible` is actively causing an overflow. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-chip-group-overflow-expanded-border-style` (default: `solid`) — Border style of `[part=\"overflow-indicator\"]` while expanded. The resting indicator intentionally stays dashed, so this can retune the expanded state without losing that structural affordance.\n- `--lr-chip-group-overflow-expanded-color` (default: `var(--lr-color-text)`) — Text color of `[part=\"overflow-indicator\"]` while expanded (`aria-expanded=\"true\"`). `::part(overflow-indicator)[aria-expanded='true']` is invalid CSS, so this is the only way to retint the expanded state without re-pointing the shared `--lr-color-text` token.",
+          "description": "`<lr-chip-group>` — a flex-wrap container for a set of `<lr-chip>`\nchildren (plain light-DOM composition — direct children are the chips,\nthe same shape `<lr-multi-split>`'s panels / `<lr-source-list>`'s cards\ntake — no `.items` array prop).\n\n`max-visible` is entirely optional. When unset, every child is always\nshown and this component does nothing beyond flex-wrap layout. When set\nand the group has more chip children than that, the excess children are\nhidden (via their own `hidden` property — CSS alone can't parameterize\n`:nth-child` on a runtime prop, so this reaches into the light DOM the\nsame way `<lr-multi-split>` sets each panel's inline `flex`/`order`) and a\n\"+N\" overflow-indicator pill takes their place. Clicking it is a toggle:\nit reveals the rest (and relabels itself \"Show less\"); clicking again\nre-collapses back to `max-visible`. `lr-overflow-toggle` fires only from\nthat click — i.e. only when `max-visible` is actually causing an overflow\nstate — never as a side effect of `max-visible`/children changing on\ntheir own.\n\nAuthor-owned `hidden` changes remain live while collapse management is active. The latest author\nstate is restored when a child leaves or the group disconnects, and reconnecting reapplies the\ncurrent collapsed state.\n\n---\n\n**Component metadata**\n\n- Status: `stable`\n- Since: `4.0.0`\n- Rationale: This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.\n- Graduation: Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | `<lr-chip>` elements (or any content, though the chip pairing is the intended usage). |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The flex-wrap container (holds both the slot and the overflow indicator). Carries `role=\"group\"` and the accessible name when one is supplied -- see `accessibleLabel`. |\n| `overflow-indicator` | The \"+N\" / \"Show less\" toggle button. Only rendered while `max-visible` is actively causing an overflow. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-chip-group-overflow-expanded-border-style` (default: `solid`) — Border style of `[part=\"overflow-indicator\"]` while expanded. The resting indicator intentionally stays dashed, so this can retune the expanded state without losing that structural affordance.\n- `--lr-chip-group-overflow-expanded-color` (default: `var(--lr-color-text)`) — Text color of `[part=\"overflow-indicator\"]` while expanded (`aria-expanded=\"true\"`). `::part(overflow-indicator)[aria-expanded='true']` is invalid CSS, so this is the only way to retint the expanded state without re-pointing the shared `--lr-color-text` token.",
           "attributes": [
+            {
+              "name": "aria-label",
+              "description": "Accessible name for the group, forwarded to `[part=\"base\"]`.\n\nA chip group IS a group, and every peer grouping primitive here already says so --\n`<lr-radio-group>` renders `role=\"radiogroup\"`, `<lr-segmented>` the same, each forwarding a\nhost `aria-label` inward. This component rendered a roleless container and read no name, and\nbecause a host `aria-label` does not cross a shadow boundary, a consumer labelling the host\nnamed nothing at all. Supplying a name here (as the `aria-label` attribute or this property)\nis what makes the group real to assistive technology.\n\nThe `role=\"group\"` is applied only WITH a name, deliberately: an unnamed group role adds\nverbosity without adding information, and applying it unconditionally would change the\naccessibility tree of every decorative chip row already shipped.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
             {
               "name": "locale",
               "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
@@ -9222,6 +9231,12 @@
           ],
           "js": {
             "properties": [
+              {
+                "name": "accessibleLabel",
+                "description": "Accessible name for the group, forwarded to `[part=\"base\"]`.\n\nA chip group IS a group, and every peer grouping primitive here already says so --\n`<lr-radio-group>` renders `role=\"radiogroup\"`, `<lr-segmented>` the same, each forwarding a\nhost `aria-label` inward. This component rendered a roleless container and read no name, and\nbecause a host `aria-label` does not cross a shadow boundary, a consumer labelling the host\nnamed nothing at all. Supplying a name here (as the `aria-label` attribute or this property)\nis what makes the group real to assistive technology.\n\nThe `role=\"group\"` is applied only WITH a name, deliberately: an unnamed group role adds\nverbosity without adding information, and applying it unconditionally would change the\naccessibility tree of every decorative chip row already shipped.\n\nAttribute: `aria-label`",
+                "type": "string",
+                "default": "''"
+              },
               {
                 "name": "locale",
                 "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nAttribute: `locale`  \nReflected to its attribute.",
@@ -17710,7 +17725,7 @@
             },
             {
               "name": "description",
-              "description": "Accessible chart description.\n\nType: `string | null`  \nDefault: `null`"
+              "description": "Accessible chart description, which REPLACES the generated summary rather than adding to it.\n\nLeft unset, the component builds an sr-only per-series summary from the actual data. Setting\nthis discards that summary entirely and substitutes your text -- a full override, which is the\nright tool when you can describe the chart better than a generic walk of the series can.\n\nIt is the wrong tool for adding a caveat (\"excludes returns\", \"sampled hourly\") on top of the\ndata summary: you would trade the whole summary for the caveat, and a consumer reasonably read\nthe old one-line doc as additive and did exactly that. For a caveat, prefer visible text beside\nthe chart -- a note only screen-reader users hear is worse for everyone than one everybody\nsees -- or fold the data into your own `description` text if you are overriding anyway.\n\nType: `string | null`  \nDefault: `null`"
             },
             {
               "name": "grid",
@@ -17954,7 +17969,7 @@
               },
               {
                 "name": "description",
-                "description": "Accessible chart description.\n\nAttribute: `description`",
+                "description": "Accessible chart description, which REPLACES the generated summary rather than adding to it.\n\nLeft unset, the component builds an sr-only per-series summary from the actual data. Setting\nthis discards that summary entirely and substitutes your text -- a full override, which is the\nright tool when you can describe the chart better than a generic walk of the series can.\n\nIt is the wrong tool for adding a caveat (\"excludes returns\", \"sampled hourly\") on top of the\ndata summary: you would trade the whole summary for the caveat, and a consumer reasonably read\nthe old one-line doc as additive and did exactly that. For a caveat, prefer visible text beside\nthe chart -- a note only screen-reader users hear is worse for everyone than one everybody\nsees -- or fold the data into your own `description` text if you are overriding anyway.\n\nAttribute: `description`",
                 "type": "string | null",
                 "default": "null"
               },
@@ -24974,7 +24989,7 @@
             },
             {
               "name": "description",
-              "description": "Accessible chart description.\n\nType: `string | null`  \nDefault: `null`"
+              "description": "Accessible chart description, which REPLACES the generated summary rather than adding to it.\n\nLeft unset, the component builds an sr-only per-series summary from the actual data. Setting\nthis discards that summary entirely and substitutes your text -- a full override, which is the\nright tool when you can describe the chart better than a generic walk of the series can.\n\nIt is the wrong tool for adding a caveat (\"excludes returns\", \"sampled hourly\") on top of the\ndata summary: you would trade the whole summary for the caveat, and a consumer reasonably read\nthe old one-line doc as additive and did exactly that. For a caveat, prefer visible text beside\nthe chart -- a note only screen-reader users hear is worse for everyone than one everybody\nsees -- or fold the data into your own `description` text if you are overriding anyway.\n\nType: `string | null`  \nDefault: `null`"
             },
             {
               "name": "grid",
@@ -25240,7 +25255,7 @@
               },
               {
                 "name": "description",
-                "description": "Accessible chart description.\n\nAttribute: `description`",
+                "description": "Accessible chart description, which REPLACES the generated summary rather than adding to it.\n\nLeft unset, the component builds an sr-only per-series summary from the actual data. Setting\nthis discards that summary entirely and substitutes your text -- a full override, which is the\nright tool when you can describe the chart better than a generic walk of the series can.\n\nIt is the wrong tool for adding a caveat (\"excludes returns\", \"sampled hourly\") on top of the\ndata summary: you would trade the whole summary for the caveat, and a consumer reasonably read\nthe old one-line doc as additive and did exactly that. For a caveat, prefer visible text beside\nthe chart -- a note only screen-reader users hear is worse for everyone than one everybody\nsees -- or fold the data into your own `description` text if you are overriding anyway.\n\nAttribute: `description`",
                 "type": "string | null",
                 "default": "null"
               },
@@ -28930,7 +28945,7 @@
             },
             {
               "name": "description",
-              "description": "Accessible chart description.\n\nType: `string | null`  \nDefault: `null`"
+              "description": "Accessible chart description, which REPLACES the generated summary rather than adding to it.\n\nLeft unset, the component builds an sr-only per-series summary from the actual data. Setting\nthis discards that summary entirely and substitutes your text -- a full override, which is the\nright tool when you can describe the chart better than a generic walk of the series can.\n\nIt is the wrong tool for adding a caveat (\"excludes returns\", \"sampled hourly\") on top of the\ndata summary: you would trade the whole summary for the caveat, and a consumer reasonably read\nthe old one-line doc as additive and did exactly that. For a caveat, prefer visible text beside\nthe chart -- a note only screen-reader users hear is worse for everyone than one everybody\nsees -- or fold the data into your own `description` text if you are overriding anyway.\n\nType: `string | null`  \nDefault: `null`"
             },
             {
               "name": "grid",
@@ -29174,7 +29189,7 @@
               },
               {
                 "name": "description",
-                "description": "Accessible chart description.\n\nAttribute: `description`",
+                "description": "Accessible chart description, which REPLACES the generated summary rather than adding to it.\n\nLeft unset, the component builds an sr-only per-series summary from the actual data. Setting\nthis discards that summary entirely and substitutes your text -- a full override, which is the\nright tool when you can describe the chart better than a generic walk of the series can.\n\nIt is the wrong tool for adding a caveat (\"excludes returns\", \"sampled hourly\") on top of the\ndata summary: you would trade the whole summary for the caveat, and a consumer reasonably read\nthe old one-line doc as additive and did exactly that. For a caveat, prefer visible text beside\nthe chart -- a note only screen-reader users hear is worse for everyone than one everybody\nsees -- or fold the data into your own `description` text if you are overriding anyway.\n\nAttribute: `description`",
                 "type": "string | null",
                 "default": "null"
               },
@@ -37439,7 +37454,7 @@
             },
             {
               "name": "description",
-              "description": "Accessible chart description.\n\nType: `string | null`  \nDefault: `null`"
+              "description": "Accessible chart description, which REPLACES the generated summary rather than adding to it.\n\nLeft unset, the component builds an sr-only per-series summary from the actual data. Setting\nthis discards that summary entirely and substitutes your text -- a full override, which is the\nright tool when you can describe the chart better than a generic walk of the series can.\n\nIt is the wrong tool for adding a caveat (\"excludes returns\", \"sampled hourly\") on top of the\ndata summary: you would trade the whole summary for the caveat, and a consumer reasonably read\nthe old one-line doc as additive and did exactly that. For a caveat, prefer visible text beside\nthe chart -- a note only screen-reader users hear is worse for everyone than one everybody\nsees -- or fold the data into your own `description` text if you are overriding anyway.\n\nType: `string | null`  \nDefault: `null`"
             },
             {
               "name": "grid",
@@ -37683,7 +37698,7 @@
               },
               {
                 "name": "description",
-                "description": "Accessible chart description.\n\nAttribute: `description`",
+                "description": "Accessible chart description, which REPLACES the generated summary rather than adding to it.\n\nLeft unset, the component builds an sr-only per-series summary from the actual data. Setting\nthis discards that summary entirely and substitutes your text -- a full override, which is the\nright tool when you can describe the chart better than a generic walk of the series can.\n\nIt is the wrong tool for adding a caveat (\"excludes returns\", \"sampled hourly\") on top of the\ndata summary: you would trade the whole summary for the caveat, and a consumer reasonably read\nthe old one-line doc as additive and did exactly that. For a caveat, prefer visible text beside\nthe chart -- a note only screen-reader users hear is worse for everyone than one everybody\nsees -- or fold the data into your own `description` text if you are overriding anyway.\n\nAttribute: `description`",
                 "type": "string | null",
                 "default": "null"
               },
@@ -37914,7 +37929,7 @@
             },
             {
               "name": "description",
-              "description": "Accessible chart description.\n\nType: `string | null`  \nDefault: `null`"
+              "description": "Accessible chart description, which REPLACES the generated summary rather than adding to it.\n\nLeft unset, the component builds an sr-only per-series summary from the actual data. Setting\nthis discards that summary entirely and substitutes your text -- a full override, which is the\nright tool when you can describe the chart better than a generic walk of the series can.\n\nIt is the wrong tool for adding a caveat (\"excludes returns\", \"sampled hourly\") on top of the\ndata summary: you would trade the whole summary for the caveat, and a consumer reasonably read\nthe old one-line doc as additive and did exactly that. For a caveat, prefer visible text beside\nthe chart -- a note only screen-reader users hear is worse for everyone than one everybody\nsees -- or fold the data into your own `description` text if you are overriding anyway.\n\nType: `string | null`  \nDefault: `null`"
             },
             {
               "name": "grid",
@@ -38158,7 +38173,7 @@
               },
               {
                 "name": "description",
-                "description": "Accessible chart description.\n\nAttribute: `description`",
+                "description": "Accessible chart description, which REPLACES the generated summary rather than adding to it.\n\nLeft unset, the component builds an sr-only per-series summary from the actual data. Setting\nthis discards that summary entirely and substitutes your text -- a full override, which is the\nright tool when you can describe the chart better than a generic walk of the series can.\n\nIt is the wrong tool for adding a caveat (\"excludes returns\", \"sampled hourly\") on top of the\ndata summary: you would trade the whole summary for the caveat, and a consumer reasonably read\nthe old one-line doc as additive and did exactly that. For a caveat, prefer visible text beside\nthe chart -- a note only screen-reader users hear is worse for everyone than one everybody\nsees -- or fold the data into your own `description` text if you are overriding anyway.\n\nAttribute: `description`",
                 "type": "string | null",
                 "default": "null"
               },
@@ -40993,7 +41008,7 @@
             },
             {
               "name": "description",
-              "description": "Accessible chart description.\n\nType: `string | null`  \nDefault: `null`"
+              "description": "Accessible chart description, which REPLACES the generated summary rather than adding to it.\n\nLeft unset, the component builds an sr-only per-series summary from the actual data. Setting\nthis discards that summary entirely and substitutes your text -- a full override, which is the\nright tool when you can describe the chart better than a generic walk of the series can.\n\nIt is the wrong tool for adding a caveat (\"excludes returns\", \"sampled hourly\") on top of the\ndata summary: you would trade the whole summary for the caveat, and a consumer reasonably read\nthe old one-line doc as additive and did exactly that. For a caveat, prefer visible text beside\nthe chart -- a note only screen-reader users hear is worse for everyone than one everybody\nsees -- or fold the data into your own `description` text if you are overriding anyway.\n\nType: `string | null`  \nDefault: `null`"
             },
             {
               "name": "grid",
@@ -41237,7 +41252,7 @@
               },
               {
                 "name": "description",
-                "description": "Accessible chart description.\n\nAttribute: `description`",
+                "description": "Accessible chart description, which REPLACES the generated summary rather than adding to it.\n\nLeft unset, the component builds an sr-only per-series summary from the actual data. Setting\nthis discards that summary entirely and substitutes your text -- a full override, which is the\nright tool when you can describe the chart better than a generic walk of the series can.\n\nIt is the wrong tool for adding a caveat (\"excludes returns\", \"sampled hourly\") on top of the\ndata summary: you would trade the whole summary for the caveat, and a consumer reasonably read\nthe old one-line doc as additive and did exactly that. For a caveat, prefer visible text beside\nthe chart -- a note only screen-reader users hear is worse for everyone than one everybody\nsees -- or fold the data into your own `description` text if you are overriding anyway.\n\nAttribute: `description`",
                 "type": "string | null",
                 "default": "null"
               },
@@ -44845,7 +44860,7 @@
             },
             {
               "name": "description",
-              "description": "Accessible chart description.\n\nType: `string | null`  \nDefault: `null`"
+              "description": "Accessible chart description, which REPLACES the generated summary rather than adding to it.\n\nLeft unset, the component builds an sr-only per-series summary from the actual data. Setting\nthis discards that summary entirely and substitutes your text -- a full override, which is the\nright tool when you can describe the chart better than a generic walk of the series can.\n\nIt is the wrong tool for adding a caveat (\"excludes returns\", \"sampled hourly\") on top of the\ndata summary: you would trade the whole summary for the caveat, and a consumer reasonably read\nthe old one-line doc as additive and did exactly that. For a caveat, prefer visible text beside\nthe chart -- a note only screen-reader users hear is worse for everyone than one everybody\nsees -- or fold the data into your own `description` text if you are overriding anyway.\n\nType: `string | null`  \nDefault: `null`"
             },
             {
               "name": "grid",
@@ -45089,7 +45104,7 @@
               },
               {
                 "name": "description",
-                "description": "Accessible chart description.\n\nAttribute: `description`",
+                "description": "Accessible chart description, which REPLACES the generated summary rather than adding to it.\n\nLeft unset, the component builds an sr-only per-series summary from the actual data. Setting\nthis discards that summary entirely and substitutes your text -- a full override, which is the\nright tool when you can describe the chart better than a generic walk of the series can.\n\nIt is the wrong tool for adding a caveat (\"excludes returns\", \"sampled hourly\") on top of the\ndata summary: you would trade the whole summary for the caveat, and a consumer reasonably read\nthe old one-line doc as additive and did exactly that. For a caveat, prefer visible text beside\nthe chart -- a note only screen-reader users hear is worse for everyone than one everybody\nsees -- or fold the data into your own `description` text if you are overriding anyway.\n\nAttribute: `description`",
                 "type": "string | null",
                 "default": "null"
               },

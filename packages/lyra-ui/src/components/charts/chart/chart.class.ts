@@ -701,7 +701,19 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * indexes are ignored when state is applied or emitted.
    */
   @property({ attribute: false }) hiddenDatasets?: readonly number[];
-  /** Accessible chart description. */
+  /**
+   * Accessible chart description, which REPLACES the generated summary rather than adding to it.
+   *
+   * Left unset, the component builds an sr-only per-series summary from the actual data. Setting
+   * this discards that summary entirely and substitutes your text -- a full override, which is the
+   * right tool when you can describe the chart better than a generic walk of the series can.
+   *
+   * It is the wrong tool for adding a caveat ("excludes returns", "sampled hourly") on top of the
+   * data summary: you would trade the whole summary for the caveat, and a consumer reasonably read
+   * the old one-line doc as additive and did exactly that. For a caveat, prefer visible text beside
+   * the chart -- a note only screen-reader users hear is worse for everyone than one everybody
+   * sees -- or fold the data into your own `description` text if you are overriding anyway.
+   */
   @property() description: string | null = null;
   /** Controls which cartesian grid axes are drawn. */
   @property({ converter: { fromAttribute: (value) => normalizeChartGrid(value) } })

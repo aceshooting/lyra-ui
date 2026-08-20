@@ -672,3 +672,49 @@ it('is accessible in an overflowing, collapsed state', async () => {
   `)) as LyraChipGroup;
   await expect(el).to.be.accessible();
 });
+
+// A chip group is a group, and every peer grouping primitive in this library already says so:
+// lr-radio-group renders role="radiogroup" and forwards a host aria-label to it, lr-segmented does
+// the same. lr-chip-group rendered a roleless <div> and read no accessible name at all — and a host
+// `aria-label` does not reach a shadow root, so a consumer labelling the host named nothing.
+//
+// A consumer hit this on a real multi-select filter row and had to hand-write
+// `role="group" aria-label="…"` onto the host to get a named group. That workaround is the evidence:
+// the capability was wanted, reachable only by reaching around the component.
+//
+// The role is applied only WITH a name, deliberately. An unnamed group role adds verbosity without
+// adding information, and applying it unconditionally would change the accessibility tree for every
+// decorative chip row already shipped.
+describe('group semantics', () => {
+  it('exposes a named group when the host carries aria-label', async () => {
+    const el = (await fixture(
+      html`<lr-chip-group aria-label="Categories"><lr-chip>a</lr-chip></lr-chip-group>`
+    )) as LyraChipGroup;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part~="base"]')!;
+    expect(base.getAttribute('role')).to.equal('group');
+    expect(base.getAttribute('aria-label')).to.equal('Categories');
+  });
+
+  it('stays roleless when no accessible name is supplied (unset regression)', async () => {
+    const el = (await fixture(
+      html`<lr-chip-group><lr-chip>a</lr-chip></lr-chip-group>`
+    )) as LyraChipGroup;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part~="base"]')!;
+    expect(base.getAttribute('role') === null, 'an unnamed group role adds no information').to.be
+      .true;
+    expect(base.getAttribute('aria-label') === null).to.be.true;
+  });
+
+  it('accepts the name as a property as well as an attribute', async () => {
+    const el = (await fixture(
+      html`<lr-chip-group><lr-chip>a</lr-chip></lr-chip-group>`
+    )) as LyraChipGroup;
+    el.accessibleLabel = 'Tags';
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part~="base"]')!;
+    expect(base.getAttribute('role')).to.equal('group');
+    expect(base.getAttribute('aria-label')).to.equal('Tags');
+  });
+});

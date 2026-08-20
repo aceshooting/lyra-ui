@@ -2019,6 +2019,7 @@ export type LyraChipVueProps = LyraVueCustomElement<
 
 export type LyraChipGroupVueProps = LyraVueCustomElement<
   LyraChipGroup,
+  | 'accessibleLabel'
   | 'locale'
   | 'maxVisible'
   | 'strings',
@@ -2028,6 +2029,7 @@ export type LyraChipGroupVueProps = LyraVueCustomElement<
   | '--lr-chip-group-overflow-expanded-border-style'
   | '--lr-chip-group-overflow-expanded-color',
   {
+    'aria-label'?: LyraChipGroup['accessibleLabel'];
     'max-visible'?: LyraChipGroup['maxVisible'];
   }
 >;

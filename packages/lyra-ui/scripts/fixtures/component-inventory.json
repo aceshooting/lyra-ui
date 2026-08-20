@@ -21742,6 +21742,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "aria-label",
+            "property": "accessibleLabel",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -21762,6 +21772,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "accessibleLabel",
+            "attribute": "aria-label",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
           {
             "name": "locale",
             "attribute": "locale",
