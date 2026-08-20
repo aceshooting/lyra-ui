@@ -9,7 +9,7 @@
       "name": "lyra-ui",
       "source": "./plugins/lyra-ui",
       "description": "Teach ChatGPT, Codex, and Claude the @aceshooting/lyra-ui component API and interface-composition workflow, including design-token theming, localization, framework/TypeScript integration, and migration paths from Web Awesome and Shoelace.",
-      "version": "11.0.0"
+      "version": "11.1.0"
     }
   ]
 }

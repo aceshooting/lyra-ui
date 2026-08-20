@@ -1,5 +1,88 @@
 # Changelog
 
+## 11.1.0
+
+### Minor Changes
+
+- 555154e: Four follow-ups to 11.0.0, all reported against the shipped release:
+  
+  - **`<lr-date-input>` forwards `presets`** to its nested picker, and exports the `presets` /
+    `preset-button` parts. 11.0.0 landed the feature on the inline calendar only, while the compact
+    text-field-plus-popover shape is the one a dashboard time filter actually uses — and there was no
+    consumer-side escape hatch, since a CSS part cannot set a JS property.
+  - **`<lr-date-picker>` gains a read-only `appliedPreset`**, reporting which preset produced the
+    current value (`undefined` for a hand-picked range). 11.0.0 presented commit-path
+    indistinguishability as a feature; it is, for serialization and clamping, but it destroyed the one
+    fact a dashboard filter needs, because "Last 7 days" must stay *relative* across a reload.
+    Re-deriving it by matching `value` is both the mapping table `presets` exists to delete and
+    ambiguous — Today and This month coincide on the 1st.
+  - **`LyraDateRangePreset.start`/`.end` are now optional**, meaning an open bound that resolves to
+    `min`/`max`. The changelog and doc comment advertised an "All time" preset that the type could not
+    express and `applyPreset` silently ignored, so that button rendered and did nothing. Where the
+    matching `min`/`max` is unset the button now renders **disabled** rather than looking live.
+  - **`<lr-lite-chart>` gains `showDataTable` and `dataTableToggle`** with the same semantics and the
+    same `data-table-toggle` part as `<lr-chart>`. It extends `LyraElement` directly and inherited
+    nothing from the 11.0.0 addition, which left the component that exists to avoid the Chart.js peers
+    as the only one still needing a hand-rolled `<details>` — or Chart.js, for a button.
+
+### Patch Changes
+
+- 555154e: Corrected 14 documentation annotations that named **10.1.0**, a version that was never published.
+  Those members shipped in 11.0.0: the docs were written while the release was expected to be a
+  minor, the public-API semver gate then required a major, and nothing restamped the annotations.
+  
+  This was worse than a typo. A consumer on 10.0.1 reading "new in 10.1.0" either installs a version
+  that does not exist, or assumes their 10.0.1 install already has the feature and debugs an
+  attribute that silently does nothing — Lit accepts an unknown attribute without error, so there is
+  no failure signal at all.
+  
+  Also corrects the generated per-component "Optional peers" header, which attributed peers reached
+  only through an erased `import type`. `lr-lite-chart` was listed under all four Chart.js peers
+  despite existing precisely to avoid them, inverting the choice the component offers; the same fix
+  drops several other over-attributions (the d3 peers were credited to 12 tags and genuinely belong
+  to 2). Side-effect registration edges still count, so transitive peers are unaffected.
+- 555154e: **Fixes a silent focus-ring regression introduced in 11.0.0.** `--lr-focus-ring` was added as a
+  composite outline shorthand explicitly to replace the Web Awesome `outline: var(--wa-focus-ring)`
+  idiom — but it was declared only inside each component's `:host`, and that idiom is written by a
+  consumer against their *own* element. At document scope the token resolved to the empty string,
+  which makes the whole `outline` declaration invalid at computed-value time; because `outline` does
+  not inherit, the ring did not fall back, it **disappeared**. No console warning, no test signal —
+  a WCAG 2.4.7 failure that looked correct in review. The library evidenced the gap itself:
+  `styles/native.css` hand-expanded the ring rather than using the composite.
+  
+  `theme.css` now declares `--lr-focus-ring` and its three parts at document scope, on `:root` and on
+  both mode selectors — not `:root` alone, because `.lr-dark` / `[data-lr-theme='dark']` may sit on
+  any ancestor, and resolving the colour once at `:root` would freeze the light value for a subtree
+  that later switches. Components are unaffected: their own `:host` declarations still win, which is
+  now asserted.
+  
+  `styles/native.css` deliberately keeps its fallback-chained expansion so it continues to work for
+  consumers who load it without `theme.css`.
+  
+  Reported twice independently, with a live `getComputedStyle` repro showing `outlineStyle: "none"`.
+- 2821af9: Three defects reported against 11.0.0:
+  
+  - **`<lr-pdf-viewer>` text layer, reopened.** 10.0.0 fixed only half of it. The chunk bounding
+    guarded against copying an `undefined` style over a good one, but it also *rebuilt* the style map
+    from the fonts of the items retained in that chunk — so a style PDF.js announces ahead of the
+    items that use it was dropped and never re-sent. Both failures end the same way: a later lookup
+    reads `undefined.vertical` and aborts the rest of the page. Measured by the reporter on a 9-page
+    document as 4 affected pages and 101 of 271 spans orphaned. Now every own entry the chunk carries
+    is copied and only `undefined` is skipped, so falsy-but-defined styles (`null`, `0`, `''`) still
+    survive and an inherited `constructor`/`toString` stays unreachable.
+  
+  - **`<lr-table>` no longer dies on a column missing its `cell` renderer.** `cell` is typed and
+    documented required, but columns arrive through a lit `.columns=${...}` binding, which `tsc` does
+    not type-check — so required-ness was unenforced where it is written *and* unguarded at runtime.
+    A single malformed column threw out of lit's `repeat`, taking the whole table down with a stack
+    naming neither the column nor the table. It now degrades to an empty cell and reports once per
+    column, naming the key, the tag and the missing member.
+  
+  - **The shared scratch canvas is created with `willReadFrequently`.** `<lr-heatmap>`'s colour
+    resolution does a 1×1 `getImageData()` readback for any colour the canvas normalizes into a form
+    its string parsers reject (`color-mix()`, `oklch()`, `lab()`), which Chrome warns about on every
+    page carrying a heatmap. A `color-mix()` ramp takes that readback per cell.
+
 ## 11.0.0
 
 ### Major Changes
