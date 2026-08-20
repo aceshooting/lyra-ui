@@ -17,6 +17,18 @@ For a ready-made light/dark base, import `@aceshooting/lyra-ui/theme.css` once a
 Per-component `--lr-<component>-*` custom properties (listed in each component's own section)
 override a single element without touching the shared layer.
 
+**Consumer-scope exception: the focus ring.** `--lr-focus-ring` and its three parts
+(`-width`/`-color`/`-offset`) are the one layer-2 group `theme.css` also declares at document
+scope, on `:root` and on both mode selectors. They exist to serve a CONSUMER-authored idiom —
+the Web Awesome `outline: var(--wa-focus-ring)` that migrating projects already have — and that
+rule is written against the consumer's own element, where a `:host`-only token resolves to
+nothing. An empty `var()` makes the whole `outline` declaration invalid at computed-value time,
+and because `outline` does not inherit, the ring did not degrade: it DISAPPEARED, silently, with
+no console warning. So `outline: var(--lr-focus-ring); outline-offset:
+var(--lr-focus-ring-offset);` now works wherever you write it, provided `theme.css` is imported.
+Every component still re-derives all four on its own `:host`, so component rendering is
+unchanged.
+
 > **Why layer 1 is not merely *preferred* but *required*: an ancestor `--lr-*` override does
 > not survive a nested component boundary.** Every component re-derives the whole `--lr-*` layer
 > from `--lr-theme-*` on its **own** `:host` (that is what `LyraElement`'s shared token

@@ -291,3 +291,32 @@ assert.match(
 );
 
 console.log('LLM peer classification tests passed.');
+
+// `lr-lite-chart` exists precisely to avoid the Chart.js peers -- its own prose says so -- yet the
+// peers table listed it under all four, and the generated per-component header inherited that. The
+// attribution walker follows a tag's real module graph, which is right, but its regex could not
+// tell `import type { ... } from './chart.class.js'` from a value import. TypeScript erases the
+// former entirely, so lite-chart never reaches chart.js at runtime. The effect inverted the very
+// choice the component exists to offer: a bundle-conscious reader greps that header.
+const liteChart = [...artifacts].find(
+  ([file]) => file.endsWith('/llms/components/lr-lite-chart.md'),
+)?.[1];
+assert.ok(liteChart, 'build({ write: false }) must produce lr-lite-chart docs');
+
+assert.match(
+  liteChart,
+  /- \*\*Optional peers\*\* none/,
+  'lr-lite-chart reaches chart.js only through an erased `import type`, so it has no runtime peers',
+);
+for (const peer of ['chart.js', 'chartjs-plugin-zoom', 'chartjs-plugin-datalabels', 'chartjs-plugin-annotation']) {
+  assert.ok(
+    !new RegExp(`\\| \`${peer.replace('.', '\\.')}\` \\|[^\\n]*lr-lite-chart`).test(peers),
+    `the peers table must not attribute ${peer} to lr-lite-chart`,
+  );
+}
+
+// The control: lr-chart imports the loaders for real, so it must still be attributed.
+assert.ok(
+  /\| `chart\.js` \|[^\n]*`lr-chart`/.test(peers),
+  'lr-chart genuinely imports chart.js and must stay attributed',
+);

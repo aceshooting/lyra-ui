@@ -176,7 +176,7 @@ property).
   ignored without evaluating script or exposing prototype-pollution keys to the merge.
 - `showDataTable: boolean = false` (attribute `show-data-table`) — makes the always-available
   accessible data table visible rather than screen-reader-only
-- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 10.1.0) — renders a
+- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
   localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
   reader can reveal the numbers on demand. `showDataTable` alone is all-or-nothing, which left
   consumers wrapping a duplicated table in their own `<details>`. With the toggle on,
@@ -498,6 +498,21 @@ passthrough). Not a subclass of `LyraChart`.
 - `tableTotals: boolean = false` (attribute `table-totals`) — adds a localized total column to the
   multi-series accessible table when `type="bar"` and `stacked` are both active. Ignored for
   grouped bars, line charts, and the single-series `data-list`.
+- `showDataTable: boolean = false` (attribute `show-data-table`, new in 11.1.0) — makes the
+  generated accessible table visible rather than screen-reader-only. Same meaning as `lr-chart`'s
+  property of the same name.
+- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.1.0) — renders a
+  localized disclosure button (`part="data-table-toggle"`, with `aria-expanded` and
+  `aria-controls`) above the table, so a *sighted* reader can reveal the numbers on demand;
+  `showDataTable` then becomes the disclosure's **initial** state rather than its whole behavior.
+  The table stays in the DOM in both states, so assistive technology never loses it. This matters
+  more here than on `lr-chart`: this component exists to avoid the Chart.js peers, so without it an
+  app that chose it for exactly that reason had to either hand-roll a `<details>` around a
+  duplicated table or adopt `lr-chart` and pull in Chart.js for a button — the cheap component
+  stuck with the expensive workaround. Unset, nothing renders and behavior is unchanged.
+  Themeable via `--lr-lite-chart-data-table-toggle-hover-bg` (default
+  `var(--lr-color-brand-quiet)`) and `--lr-lite-chart-data-table-toggle-active-bg` (default: that
+  hover colour mixed by `--lr-color-mix-active`).
 - `layout: 'fit' | 'scroll' = 'fit'` (reflected) — `'fit'` (default) is the original squeeze-the-
   whole-plot-to-host-width behavior, unchanged. `'scroll'` gives bars a fixed `barWidth` instead: plot
   content width becomes `categoryCount * barWidth` (can exceed the host's measured width), and
@@ -604,7 +619,8 @@ data alternative.
 mark), `line`, `legend`, `legend-item`, `legend-swatch`, `legend-text` (extra per-item text after
 the series label, rendered only when `legendText` is set), `live-region` (the current mark
 announcement for keyboard users), `data-list` (a visually hidden sampled list of plotted data
-points — single-series only), `data-table` (the generated/slotted alternative container), `table`
+points — single-series only), `data-table` (the generated/slotted alternative container),
+`data-table-toggle` (the `dataTableToggle` disclosure button — new in 11.1.0), `table`
 (the generated semantic category×series table rendered when there is more than one dataset), and
 `data-truncation` (the
 visible/announced sampling notice).
@@ -883,7 +899,7 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 - `formatter?: LyraChartFormatter`, `valueFormatter?: LyraChartValueFormatter` — numeric axis,
   tooltip, table, summary, and export formatting; the context-object formatter takes precedence
 - `showDataTable: boolean = false` (attribute `show-data-table`) — reveals the accessible data table
-- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 10.1.0) — renders a
+- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
   localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
   reader can reveal the numbers on demand. `showDataTable` alone is all-or-nothing, which left
   consumers wrapping a duplicated table in their own `<details>`. With the toggle on,

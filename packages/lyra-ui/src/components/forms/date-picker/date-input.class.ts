@@ -52,6 +52,7 @@ import {
   type LyraDatePickerDisabledDates,
   type LyraDatePickerFirstDayOfWeek,
   type LyraDatePickerPageBy,
+  type LyraDateRangePreset,
 } from './date-picker.class.js';
 import './date-picker.class.js';
 import { spellcheckFromAttributeConverter as spellcheckConverter } from '../../../internal/converters.js';
@@ -311,6 +312,8 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @csspart expand-icon - The calendar icon.
  * @csspart popup - The positioned calendar popup.
  * @csspart date-picker - The nested date picker.
+ * @csspart presets - The nested picker's quick-range row, forwarded from `<lr-date-picker>`.
+ * @csspart preset-button - One quick-range button, forwarded from `<lr-date-picker>`.
  * @csspart hint - The hint message.
  * @csspart error - The validation message.
  * @cssprop [--lr-date-input-padding-block=var(--lr-space-xs)] - Block padding of the input row, scaled by `size`.
@@ -478,6 +481,16 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     reflect: true,
   })
   weekdayFormat: WeekdayFormat = 'short';
+
+  /**
+   * Quick-range options forwarded verbatim to the nested `<lr-date-picker>`; see that component's
+   * own `presets` doc for the semantics. Range mode only, and unset renders nothing.
+   *
+   * Forwarded rather than reimplemented: the picker lives in this component's shadow root, so a
+   * consumer has no route to it -- a CSS part cannot set a JS property -- and this compact
+   * text-field-plus-popover shape is the one a dashboard time filter actually uses.
+   */
+  @property({ attribute: false }) presets: readonly LyraDateRangePreset[] = Object.freeze([]);
   @property({ type: Boolean, attribute: 'with-outside-days', reflect: true })
   withOutsideDays = false;
   @property({ type: Boolean, attribute: 'with-week-numbers', reflect: true })
@@ -2063,6 +2076,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                 .withWeekNumbers=${this.withWeekNumbers}
                 .firstDayOfWeek=${this.firstDayOfWeek}
                 .weekdayFormat=${normalizeWeekdayFormat(this.weekdayFormat)}
+                .presets=${this.presets}
+                exportparts="presets, preset-button"
                 @input=${this.onPickerInput}
                 @change=${this.onPickerChange}
                 @lr-focus-day=${(event: Event) => event.stopPropagation()}

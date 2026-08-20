@@ -25195,6 +25195,20 @@
               "test": "is accessible",
               "target": "el",
               "state": "populated"
+            },
+            {
+              "file": "src/components/charts/chart/lite-chart.test.ts",
+              "line": 3612,
+              "test": "is accessible collapsed and expanded",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/charts/chart/lite-chart.test.ts",
+              "line": 3612,
+              "test": "is accessible collapsed and expanded",
+              "target": "el",
+              "state": "populated"
             }
           ],
           "exemption": null

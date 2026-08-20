@@ -3547,3 +3547,73 @@ it('preserves an explicitly empty host aria-label on the semantic SVG instead of
   await omitted.updateComplete;
   expect(omitted.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal('Legacy chart label');
 });
+
+// 11.0.0 gave lr-chart and lr-box-plot the dataTableToggle disclosure but not lr-lite-chart, which
+// extends LyraElement directly and inherits nothing. That left the CHEAP component with the
+// expensive workaround: lite-chart exists precisely to avoid the Chart.js peers, so an app that
+// chose it for that reason had to either hand-roll a <details> around a duplicated table -- the
+// exact thing 11.0.0 set out to remove -- or adopt lr-chart and pull in Chart.js for a button.
+describe('data-table disclosure', () => {
+  async function liteChartWith(markup: unknown): Promise<LyraLiteChart> {
+    const el = (await fixture(markup as never)) as LyraLiteChart;
+    el.labels = ['Q1', 'Q2'];
+    el.datasets = [
+      { label: 'Revenue', data: [1, 2] },
+      { label: 'Cost', data: [3, 4] },
+    ];
+    await el.updateComplete;
+    return el;
+  }
+
+  const toggle = (el: LyraLiteChart): HTMLButtonElement | null =>
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="data-table-toggle"]');
+  const wrapper = (el: LyraLiteChart): HTMLElement =>
+    el.shadowRoot!.querySelector<HTMLElement>('[part~="data-table"]')!;
+
+  it('renders no toggle while the property is unset', async () => {
+    const el = await liteChartWith(html`<lr-lite-chart></lr-lite-chart>`);
+    expect(toggle(el) === null, 'opt-in only').to.be.true;
+    expect(wrapper(el).hasAttribute('data-visually-hidden')).to.be.true;
+  });
+
+  it('makes the table visible with show-data-table, matching lr-chart', async () => {
+    const el = await liteChartWith(html`<lr-lite-chart show-data-table></lr-lite-chart>`);
+    expect(wrapper(el).hasAttribute('data-visually-hidden')).to.be.false;
+  });
+
+  it('renders a wired disclosure button when opted in', async () => {
+    const el = await liteChartWith(html`<lr-lite-chart data-table-toggle></lr-lite-chart>`);
+    const button = toggle(el)!;
+
+    expect(button, 'the disclosure renders').to.exist;
+    expect(button.textContent?.trim(), 'localized, not hard-coded').to.not.equal('');
+    expect(button.getAttribute('aria-expanded')).to.equal('false');
+    expect(button.getAttribute('aria-controls')).to.equal(wrapper(el).id);
+  });
+
+  it('reveals the table on activation and keeps it in the DOM throughout', async () => {
+    const el = await liteChartWith(html`<lr-lite-chart data-table-toggle></lr-lite-chart>`);
+    expect(el.shadowRoot!.querySelector('table'), 'present while collapsed').to.exist;
+
+    toggle(el)!.click();
+    await el.updateComplete;
+    expect(toggle(el)!.getAttribute('aria-expanded')).to.equal('true');
+    expect(wrapper(el).hasAttribute('data-visually-hidden')).to.be.false;
+    expect(el.shadowRoot!.querySelector('table'), 'never left the DOM').to.exist;
+  });
+
+  it('starts expanded when show-data-table is set alongside the toggle', async () => {
+    const el = await liteChartWith(
+      html`<lr-lite-chart show-data-table data-table-toggle></lr-lite-chart>`,
+    );
+    expect(toggle(el)!.getAttribute('aria-expanded')).to.equal('true');
+  });
+
+  it('is accessible collapsed and expanded', async () => {
+    const el = await liteChartWith(html`<lr-lite-chart data-table-toggle></lr-lite-chart>`);
+    await expect(el).to.be.accessible();
+    toggle(el)!.click();
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});

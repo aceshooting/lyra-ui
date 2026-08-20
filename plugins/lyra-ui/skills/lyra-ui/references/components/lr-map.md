@@ -72,7 +72,7 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
   the documented way to weight a ramp toward the low end). **`stops` stay in the data's own units
   under either mode**, so the legend keeps reading in real values instead of log units — no
   pre-transforming to log10 and hand-relabelling the legend back.
-  `'step'` (new in 10.1.0) emits maplibre's `['step', …]` instead of `['interpolate', …]`, giving
+  `'step'` (new in 11.0.0) emits maplibre's `['step', …]` instead of `['interpolate', …]`, giving
   **discrete bands rather than a continuous ramp**. Use it whenever the legend advertises a fixed
   set of ranges with one swatch each: a ramp would put colours on the map that appear nowhere in the
   legend, and would render two regions in the same advertised band as visibly different colours
@@ -105,7 +105,7 @@ GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
   GeoJSON source plus three geometry-filtered layers
   (fill, line, and circle, so a mixed `FeatureCollection` renders correctly), colored from the
   matching `--lr-color-*` token (`tone` defaults to `'accent'` → `--lr-color-brand`).
-  `color` and `strokeColor` (both new in 10.1.0) override that per surface — `color` paints the
+  `color` and `strokeColor` (both new in 11.0.0) override that per surface — `color` paints the
   polygon fill, `strokeColor` the line and circle layers, falling back to `color` and then to `tone`.
   They are separable because a fill and its outline want opposite things on a
   choropleth-plus-overlay map, and the difference is measurable rather than aesthetic: the fill

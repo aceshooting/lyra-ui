@@ -6358,6 +6358,20 @@
       }
     },
     {
+      "name": "--lr-lite-chart-data-table-toggle-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-lite-chart>`** — Pressed background of the `dataTableToggle` disclosure button; defaults to a mix of the hover background with the shared active mix partner."
+      }
+    },
+    {
+      "name": "--lr-lite-chart-data-table-toggle-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-lite-chart>`** (default: `var(--lr-color-brand-quiet)`) — Hover background of the `dataTableToggle` disclosure button."
+      }
+    },
+    {
       "name": "--lr-lite-chart-selected-outline-color",
       "description": {
         "kind": "markdown",

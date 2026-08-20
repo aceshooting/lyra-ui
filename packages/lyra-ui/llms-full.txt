@@ -4041,7 +4041,7 @@ An `lr-option` row remains bounded by its owning listbox: the default label elli
 `start`/`end` (or `prefix`/`suffix`) adornment is capped at 40% of the row. Unbroken metadata
 therefore cannot widen a 320px LTR or RTL picker.
 
-**Adornments in the popup (fixed in 10.1.0).** Before 10.1.0 this paragraph described behavior the
+**Adornments in the popup (fixed in 11.0.0).** Before 11.0.0 this paragraph described behavior the
 code did not have: `lr-combobox` builds its popup from normalized row *data* rather than from the
 light-DOM nodes, so a slotted `start`/`end`/`prefix`/`suffix` adornment had nowhere to land and
 simply never rendered — the documented slots and their documented parts were both dead inside the
@@ -4128,7 +4128,7 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
 - `maxOptionsVisible: number = 3` (attribute `max-options-visible` — caps how many selected **tags**
   show before collapsing to `+N`; nothing to do with the suggestion list, see the three-caps note
   below)
-- `visibleOptions?: number` (attribute `visible-options`, new in 10.1.0) — bounds the popup to about
+- `visibleOptions?: number` (attribute `visible-options`, new in 11.0.0) — bounds the popup to about
   this many suggestion rows, leaving the rest reachable by scrolling. Purely presentational: every
   row is still rendered. Measured from where row N actually starts rather than computed from a
   token, because a row's height varies with `sub` lines, adornments and group labels. Unset imposes
@@ -4205,7 +4205,7 @@ alias. Set the boolean `autocorrect` IDL, or use `autocorrect="on"` / `autocorre
 `ComboboxSourceRow = { readonly value: string; readonly label: string; readonly sub?: string; readonly icon?: unknown; readonly start?: unknown;
 readonly end?: unknown; readonly badge?: string |
 number; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: string; disabled?:
-boolean }` — the row shape used by the async `source` path. `start` and `end` (new in 10.1.0) are
+boolean }` — the row shape used by the async `source` path. `start` and `end` (new in 11.0.0) are
 the async counterparts of `<lr-option>`'s `start`/`end` adornment slots and render as the
 `option-start` / `option-end` parts, inert and aria-hidden exactly like `icon`. `icon` renders as a decorative leading
 visual whose rendered subtree stays visible but is inert and hidden from assistive technology;
@@ -4842,9 +4842,13 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
 **Properties (28):**
 
 - `dayContent` (JS only): `LyraDatePickerDayContent | undefined`
-- `presets: LyraDateRangePreset[] = []` (JS only, new in 10.1.0) —
-  `LyraDateRangePreset { label: string; start: string; end: string }`, where `start`/`end` are ISO
-  `YYYY-MM-DD`. Renders a `[part="presets"]` quick-range button row above the calendar, for the
+- `presets: LyraDateRangePreset[] = []` (JS only, new in 11.0.0) —
+  `LyraDateRangePreset { label: string; start?: string; end?: string }`, where `start`/`end` are ISO
+  `YYYY-MM-DD`. **Either bound may be omitted (new in 11.1.0)** to mean an OPEN bound, resolving to
+  the picker's `min` / `max` respectively — that is how an "All time" preset is expressed. When the
+  corresponding `min`/`max` is unset there is nothing to resolve to (a `value` of
+  `YYYY-MM-DD/YYYY-MM-DD` has no unbounded spelling), so that preset's button renders **disabled**
+  rather than looking live and doing nothing when pressed. Renders a `[part="presets"]` quick-range button row above the calendar, for the
   dashboard time-filter shape (Today / Last 7 days / Last 30 days / This month / All time).
   **Range mode only** — a preset names two dates, so it is ignored for a single-date picker rather
   than rendering a row that cannot do anything; unset renders nothing at all. Applying one commits
@@ -4855,6 +4859,16 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
   The active button carries `aria-pressed="true"` and `data-active`. Deliberately the same
   `label`/`start`/`end` shape as `<lr-time-range>`'s `TimeRangePreset`, so the library has one
   preset vocabulary rather than two — the only difference is the unit (ISO dates, not numbers)
+- `appliedPreset: LyraDateRangePreset | undefined` (read-only, new in 11.1.0) — the preset whose
+  button produced the current `value`, or `undefined` when the range was picked by hand. Read it
+  inside your own `change`/`input` handler. It exists because a dashboard filter has to persist
+  *which* preset is active rather than the pair it froze to: "Last 7 days" must still mean the last
+  7 days after tomorrow's reload. That fact is not recoverable from `value` — re-deriving it by
+  string-matching is the mapping table `presets` exists to delete, and it is ambiguous anyway
+  (Today and This month coincide on the 1st of a month, and a hand-picked range can equal a
+  preset's pair by construction). A property rather than an event detail because `input`/`change`
+  here are **native** events, deliberately indistinguishable from a manual selection so existing
+  handlers need no special case, and a native `Event` cannot carry a detail without changing type
 - `disabled: boolean = false` (reflected)
 - `disabledDates: string | string[] | Date[] = ''` (attribute `disabled-dates`)
 - `disabledDaysOfWeek: string = ''` (attribute `disabled-days-of-week`)
@@ -5022,7 +5036,9 @@ capped at 40% and ellipsize unbroken content. Clear and calendar actions retain 
 **Custom states:** `blank`, `disabled`, `open`, and `range`; the shared form-associated mixin also
 exposes its validity states.
 
-**CSS parts (19):** `clear-button`, `date-input`, `date-picker`, `end`, `expand-button`,
+**CSS parts (21):** `clear-button`, `date-input`, `date-picker`, `presets` and `preset-button`
+(forwarded from the nested `lr-date-picker` via `exportparts`, so the quick-range row is styleable
+from outside — new in 11.1.0), `end`, `expand-button`,
 `expand-icon`, `form-control`, `form-control-input`, `form-control-label`, `hint`, `input`,
 `input-wrapper`, `popup`, `range-separator`, `segment`, `segment-literal`, `start`, permanent
 compatibility name `base` (a nested wrapper inside `date-input`), and permanent compatibility name
@@ -5155,7 +5171,7 @@ and `dateTimeFormat(locale, options)`.
 - `--lr-date-picker-nav-active-bg` — Pressed navigation background; defaults to the hover color
   mixed by `--lr-color-mix-active`.
 - `--lr-date-picker-preset-hover-bg`, `--lr-date-picker-preset-active-bg`, and
-  `--lr-date-picker-preset-selected-bg` (new in 10.1.0) — hover, pressed, and
+  `--lr-date-picker-preset-selected-bg` (new in 11.0.0) — hover, pressed, and
   currently-selected paint for a `presets` quick-range button. Defaults are
   `var(--lr-color-brand-quiet)`, that hover colour mixed by `--lr-color-mix-active`, and
   `var(--lr-color-brand)` respectively.
@@ -10836,7 +10852,7 @@ weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
   A malformed value is ignored rather than collapsing the gutter. Calendar mode is unaffected; it
   has its own fixed weekday gutter
 - `colLabelHeight?: number | 'auto'` (attribute `col-label-height`, not reflected, `'auto'` new in
-  10.1.0) — height, in CSS px, of the matrix column-label band, or `'auto'` to measure the labels
+  11.0.0) — height, in CSS px, of the matrix column-label band, or `'auto'` to measure the labels
   and size the band to fit them. Under a non-zero `colLabelRotation` the measurement projects each
   label's width through the rotation, which is what makes a rotated axis usable without hand-tuning
   a magic number. Never below the built-in `20`, and bounded above by a sanity ceiling so a
@@ -10845,7 +10861,7 @@ weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
   be bounded relative to them, whereas the canvas simply grows taller for this band and the cells
   keep their size. Unset keeps the built-in `20`, so no existing chart reflows. A malformed value is
   ignored
-- `colLabelRotation?: number` (attribute `col-label-rotation`, new in 10.1.0) — rotation, in
+- `colLabelRotation?: number` (attribute `col-label-rotation`, new in 11.0.0) — rotation, in
   degrees, applied to matrix column labels. Unset or `0` paints them horizontally exactly as before.
   In a dense matrix the per-column width is far narrower than a typical label, so horizontal labels
   collide with their neighbours; `45` or `90` is the standard remedy. Each label rotates about an
@@ -18551,7 +18567,7 @@ A click-triggered, light-dismiss floating surface positioned with the shared Flo
 - `accessibleLabel: string = ''` (attribute **`aria-label`**) — names the popup. An authored host
   attribute wins by presence, including `aria-label=""`; only when it is absent does the property
   or localized "Popover" ("Menu" when `popupRole` is `menu`) fallback apply
-- `popupRole: 'dialog'|'menu'|'none' = 'dialog'` (attribute `popup-role`). `none` (new in 10.1.0)
+- `popupRole: 'dialog'|'menu'|'none' = 'dialog'` (attribute `popup-role`). `none` (new in 11.0.0)
   renders **no** `role` and no generated `aria-label` on the popup surface, and leaves
   `aria-haspopup` off the trigger, so slotted content owns its own semantics and accessible name.
   It exists for the WAI-ARIA **disclosure navigation** pattern: a flyout of links is not an
@@ -21991,7 +22007,7 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
   the documented way to weight a ramp toward the low end). **`stops` stay in the data's own units
   under either mode**, so the legend keeps reading in real values instead of log units — no
   pre-transforming to log10 and hand-relabelling the legend back.
-  `'step'` (new in 10.1.0) emits maplibre's `['step', …]` instead of `['interpolate', …]`, giving
+  `'step'` (new in 11.0.0) emits maplibre's `['step', …]` instead of `['interpolate', …]`, giving
   **discrete bands rather than a continuous ramp**. Use it whenever the legend advertises a fixed
   set of ranges with one swatch each: a ramp would put colours on the map that appear nowhere in the
   legend, and would render two regions in the same advertised band as visibly different colours
@@ -22024,7 +22040,7 @@ GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
   GeoJSON source plus three geometry-filtered layers
   (fill, line, and circle, so a mixed `FeatureCollection` renders correctly), colored from the
   matching `--lr-color-*` token (`tone` defaults to `'accent'` → `--lr-color-brand`).
-  `color` and `strokeColor` (both new in 10.1.0) override that per surface — `color` paints the
+  `color` and `strokeColor` (both new in 11.0.0) override that per surface — `color` paints the
   polygon fill, `strokeColor` the line and circle layers, falling back to `color` and then to `tone`.
   They are separable because a fill and its outline want opposite things on a
   choropleth-plus-overlay map, and the difference is measurable rather than aesthetic: the fill
@@ -24638,7 +24654,7 @@ property).
   ignored without evaluating script or exposing prototype-pollution keys to the merge.
 - `showDataTable: boolean = false` (attribute `show-data-table`) — makes the always-available
   accessible data table visible rather than screen-reader-only
-- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 10.1.0) — renders a
+- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
   localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
   reader can reveal the numbers on demand. `showDataTable` alone is all-or-nothing, which left
   consumers wrapping a duplicated table in their own `<details>`. With the toggle on,
@@ -24960,6 +24976,21 @@ passthrough). Not a subclass of `LyraChart`.
 - `tableTotals: boolean = false` (attribute `table-totals`) — adds a localized total column to the
   multi-series accessible table when `type="bar"` and `stacked` are both active. Ignored for
   grouped bars, line charts, and the single-series `data-list`.
+- `showDataTable: boolean = false` (attribute `show-data-table`, new in 11.1.0) — makes the
+  generated accessible table visible rather than screen-reader-only. Same meaning as `lr-chart`'s
+  property of the same name.
+- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.1.0) — renders a
+  localized disclosure button (`part="data-table-toggle"`, with `aria-expanded` and
+  `aria-controls`) above the table, so a *sighted* reader can reveal the numbers on demand;
+  `showDataTable` then becomes the disclosure's **initial** state rather than its whole behavior.
+  The table stays in the DOM in both states, so assistive technology never loses it. This matters
+  more here than on `lr-chart`: this component exists to avoid the Chart.js peers, so without it an
+  app that chose it for exactly that reason had to either hand-roll a `<details>` around a
+  duplicated table or adopt `lr-chart` and pull in Chart.js for a button — the cheap component
+  stuck with the expensive workaround. Unset, nothing renders and behavior is unchanged.
+  Themeable via `--lr-lite-chart-data-table-toggle-hover-bg` (default
+  `var(--lr-color-brand-quiet)`) and `--lr-lite-chart-data-table-toggle-active-bg` (default: that
+  hover colour mixed by `--lr-color-mix-active`).
 - `layout: 'fit' | 'scroll' = 'fit'` (reflected) — `'fit'` (default) is the original squeeze-the-
   whole-plot-to-host-width behavior, unchanged. `'scroll'` gives bars a fixed `barWidth` instead: plot
   content width becomes `categoryCount * barWidth` (can exceed the host's measured width), and
@@ -25066,7 +25097,8 @@ data alternative.
 mark), `line`, `legend`, `legend-item`, `legend-swatch`, `legend-text` (extra per-item text after
 the series label, rendered only when `legendText` is set), `live-region` (the current mark
 announcement for keyboard users), `data-list` (a visually hidden sampled list of plotted data
-points — single-series only), `data-table` (the generated/slotted alternative container), `table`
+points — single-series only), `data-table` (the generated/slotted alternative container),
+`data-table-toggle` (the `dataTableToggle` disclosure button — new in 11.1.0), `table`
 (the generated semantic category×series table rendered when there is more than one dataset), and
 `data-truncation` (the
 visible/announced sampling notice).
@@ -25345,7 +25377,7 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 - `formatter?: LyraChartFormatter`, `valueFormatter?: LyraChartValueFormatter` — numeric axis,
   tooltip, table, summary, and export formatting; the context-object formatter takes precedence
 - `showDataTable: boolean = false` (attribute `show-data-table`) — reveals the accessible data table
-- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 10.1.0) — renders a
+- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
   localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
   reader can reveal the numbers on demand. `showDataTable` alone is all-or-nothing, which left
   consumers wrapping a duplicated table in their own `<details>`. With the toggle on,

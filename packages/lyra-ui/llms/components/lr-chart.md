@@ -162,7 +162,7 @@ property).
   ignored without evaluating script or exposing prototype-pollution keys to the merge.
 - `showDataTable: boolean = false` (attribute `show-data-table`) — makes the always-available
   accessible data table visible rather than screen-reader-only
-- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 10.1.0) — renders a
+- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
   localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
   reader can reveal the numbers on demand. `showDataTable` alone is all-or-nothing, which left
   consumers wrapping a duplicated table in their own `<details>`. With the toggle on,

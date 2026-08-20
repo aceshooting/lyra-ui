@@ -2968,6 +2968,7 @@ export type LyraDateInputSvelteProps = LyraSvelteElementProps<
   | 'pill'
   | 'placeholder'
   | 'placement'
+  | 'presets'
   | 'readonly'
   | 'required'
   | 'selectionDirection'
@@ -5647,6 +5648,7 @@ export type LyraLiteChartSvelteProps = LyraSvelteElementProps<
   | 'barX'
   | 'beginAtZero'
   | 'datasets'
+  | 'dataTableToggle'
   | 'description'
   | 'formatter'
   | 'height'
@@ -5663,6 +5665,7 @@ export type LyraLiteChartSvelteProps = LyraSvelteElementProps<
   | 'roundedBars'
   | 'scale'
   | 'selectedIndices'
+  | 'showDataTable'
   | 'skipZero'
   | 'stacked'
   | 'strings'
@@ -5692,6 +5695,8 @@ export type LyraLiteChartSvelteProps = LyraSvelteElementProps<
   | '--lr-chart-legend-side-max'
   | '--lr-chart-pattern-step'
   | '--lr-chart-tick-color'
+  | '--lr-lite-chart-data-table-toggle-active-bg'
+  | '--lr-lite-chart-data-table-toggle-hover-bg'
   | '--lr-lite-chart-selected-outline-color'
   | '--lr-lite-chart-selected-outline-width',
   {
@@ -5699,10 +5704,12 @@ export type LyraLiteChartSvelteProps = LyraSvelteElementProps<
     'bar-gap-ratio'?: LyraLiteChart['barGapRatio'];
     'bar-width'?: LyraLiteChart['barWidth'];
     'begin-at-zero'?: LyraLiteChart['beginAtZero'];
+    'data-table-toggle'?: LyraLiteChart['dataTableToggle'];
     'legend-position'?: LyraLiteChart['legendPosition'];
     'max-labels'?: LyraLiteChart['maxLabels'];
     'min-bar-height'?: LyraLiteChart['minBarHeight'];
     'rounded-bars'?: LyraLiteChart['roundedBars'];
+    'show-data-table'?: LyraLiteChart['showDataTable'];
     'skip-zero'?: LyraLiteChart['skipZero'];
     'table-totals'?: LyraLiteChart['tableTotals'];
     'value-axis-gutter'?: LyraLiteChart['valueAxisGutter'];

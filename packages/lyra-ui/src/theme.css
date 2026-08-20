@@ -468,4 +468,36 @@
     --lr-theme-terminal-bg-bright-white: #696969;
     /* terminal ramp: end */
   }
+
+  /* Consumer-scope focus ring.
+     
+     These four are LAYER-2 (--lr-*) names, which this file otherwise does not declare: every
+     component re-derives them from the --lr-theme-* inputs on its own :host, so a document-scope
+     declaration is normally both redundant and shadowed. They are the deliberate exception,
+     because --lr-focus-ring exists specifically to serve a CONSUMER-authored idiom -- the Web
+     Awesome `outline: var(--wa-focus-ring)` that migrating projects already have -- and that rule
+     is written against the consumer's own element, where a :host-only token resolves to nothing.
+     An empty var() makes the whole `outline` declaration invalid at computed-value time, and since
+     `outline` does not inherit, the ring did not degrade: it disappeared, with no console warning
+     and no test signal. That is a WCAG 2.4.7 failure, and it is the exact silent-failure class the
+     composite was introduced to prevent.
+
+     Declared on the mode selectors rather than :root alone, because .lr-dark /
+     [data-lr-theme='dark'] may sit on any ancestor: resolving the colour once at :root would
+     freeze the light value for a subtree that later switches to dark. Each mode host re-derives
+     from its own --lr-theme-color-focus.
+
+     Components are unaffected -- their own :host declarations still win over these inherited
+     values, which production-theme.test.ts asserts. */
+  :root,
+  .lr-light,
+  [data-lr-theme='light'],
+  .lr-dark,
+  [data-lr-theme='dark'] {
+    --lr-focus-ring-width: var(--lr-theme-focus-ring-width, 2px);
+    --lr-focus-ring-color: var(--lr-theme-color-focus, Highlight);
+    --lr-focus-ring-offset: var(--lr-theme-focus-ring-offset, 2px);
+    --lr-focus-ring: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+  }
+
 }

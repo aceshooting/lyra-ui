@@ -129,7 +129,7 @@ An `lr-option` row remains bounded by its owning listbox: the default label elli
 `start`/`end` (or `prefix`/`suffix`) adornment is capped at 40% of the row. Unbroken metadata
 therefore cannot widen a 320px LTR or RTL picker.
 
-**Adornments in the popup (fixed in 10.1.0).** Before 10.1.0 this paragraph described behavior the
+**Adornments in the popup (fixed in 11.0.0).** Before 11.0.0 this paragraph described behavior the
 code did not have: `lr-combobox` builds its popup from normalized row *data* rather than from the
 light-DOM nodes, so a slotted `start`/`end`/`prefix`/`suffix` adornment had nowhere to land and
 simply never rendered — the documented slots and their documented parts were both dead inside the
@@ -216,7 +216,7 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
 - `maxOptionsVisible: number = 3` (attribute `max-options-visible` — caps how many selected **tags**
   show before collapsing to `+N`; nothing to do with the suggestion list, see the three-caps note
   below)
-- `visibleOptions?: number` (attribute `visible-options`, new in 10.1.0) — bounds the popup to about
+- `visibleOptions?: number` (attribute `visible-options`, new in 11.0.0) — bounds the popup to about
   this many suggestion rows, leaving the rest reachable by scrolling. Purely presentational: every
   row is still rendered. Measured from where row N actually starts rather than computed from a
   token, because a row's height varies with `sub` lines, adornments and group labels. Unset imposes
@@ -293,7 +293,7 @@ alias. Set the boolean `autocorrect` IDL, or use `autocorrect="on"` / `autocorre
 `ComboboxSourceRow = { readonly value: string; readonly label: string; readonly sub?: string; readonly icon?: unknown; readonly start?: unknown;
 readonly end?: unknown; readonly badge?: string |
 number; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: string; disabled?:
-boolean }` — the row shape used by the async `source` path. `start` and `end` (new in 10.1.0) are
+boolean }` — the row shape used by the async `source` path. `start` and `end` (new in 11.0.0) are
 the async counterparts of `<lr-option>`'s `start`/`end` adornment slots and render as the
 `option-start` / `option-end` parts, inert and aria-hidden exactly like `icon`. `icon` renders as a decorative leading
 visual whose rendered subtree stays visible but is inert and hidden from assistive technology;
@@ -930,9 +930,13 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
 **Properties (28):**
 
 - `dayContent` (JS only): `LyraDatePickerDayContent | undefined`
-- `presets: LyraDateRangePreset[] = []` (JS only, new in 10.1.0) —
-  `LyraDateRangePreset { label: string; start: string; end: string }`, where `start`/`end` are ISO
-  `YYYY-MM-DD`. Renders a `[part="presets"]` quick-range button row above the calendar, for the
+- `presets: LyraDateRangePreset[] = []` (JS only, new in 11.0.0) —
+  `LyraDateRangePreset { label: string; start?: string; end?: string }`, where `start`/`end` are ISO
+  `YYYY-MM-DD`. **Either bound may be omitted (new in 11.1.0)** to mean an OPEN bound, resolving to
+  the picker's `min` / `max` respectively — that is how an "All time" preset is expressed. When the
+  corresponding `min`/`max` is unset there is nothing to resolve to (a `value` of
+  `YYYY-MM-DD/YYYY-MM-DD` has no unbounded spelling), so that preset's button renders **disabled**
+  rather than looking live and doing nothing when pressed. Renders a `[part="presets"]` quick-range button row above the calendar, for the
   dashboard time-filter shape (Today / Last 7 days / Last 30 days / This month / All time).
   **Range mode only** — a preset names two dates, so it is ignored for a single-date picker rather
   than rendering a row that cannot do anything; unset renders nothing at all. Applying one commits
@@ -943,6 +947,16 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
   The active button carries `aria-pressed="true"` and `data-active`. Deliberately the same
   `label`/`start`/`end` shape as `<lr-time-range>`'s `TimeRangePreset`, so the library has one
   preset vocabulary rather than two — the only difference is the unit (ISO dates, not numbers)
+- `appliedPreset: LyraDateRangePreset | undefined` (read-only, new in 11.1.0) — the preset whose
+  button produced the current `value`, or `undefined` when the range was picked by hand. Read it
+  inside your own `change`/`input` handler. It exists because a dashboard filter has to persist
+  *which* preset is active rather than the pair it froze to: "Last 7 days" must still mean the last
+  7 days after tomorrow's reload. That fact is not recoverable from `value` — re-deriving it by
+  string-matching is the mapping table `presets` exists to delete, and it is ambiguous anyway
+  (Today and This month coincide on the 1st of a month, and a hand-picked range can equal a
+  preset's pair by construction). A property rather than an event detail because `input`/`change`
+  here are **native** events, deliberately indistinguishable from a manual selection so existing
+  handlers need no special case, and a native `Event` cannot carry a detail without changing type
 - `disabled: boolean = false` (reflected)
 - `disabledDates: string | string[] | Date[] = ''` (attribute `disabled-dates`)
 - `disabledDaysOfWeek: string = ''` (attribute `disabled-days-of-week`)
@@ -1110,7 +1124,9 @@ capped at 40% and ellipsize unbroken content. Clear and calendar actions retain 
 **Custom states:** `blank`, `disabled`, `open`, and `range`; the shared form-associated mixin also
 exposes its validity states.
 
-**CSS parts (19):** `clear-button`, `date-input`, `date-picker`, `end`, `expand-button`,
+**CSS parts (21):** `clear-button`, `date-input`, `date-picker`, `presets` and `preset-button`
+(forwarded from the nested `lr-date-picker` via `exportparts`, so the quick-range row is styleable
+from outside — new in 11.1.0), `end`, `expand-button`,
 `expand-icon`, `form-control`, `form-control-input`, `form-control-label`, `hint`, `input`,
 `input-wrapper`, `popup`, `range-separator`, `segment`, `segment-literal`, `start`, permanent
 compatibility name `base` (a nested wrapper inside `date-input`), and permanent compatibility name
@@ -1243,7 +1259,7 @@ and `dateTimeFormat(locale, options)`.
 - `--lr-date-picker-nav-active-bg` — Pressed navigation background; defaults to the hover color
   mixed by `--lr-color-mix-active`.
 - `--lr-date-picker-preset-hover-bg`, `--lr-date-picker-preset-active-bg`, and
-  `--lr-date-picker-preset-selected-bg` (new in 10.1.0) — hover, pressed, and
+  `--lr-date-picker-preset-selected-bg` (new in 11.0.0) — hover, pressed, and
   currently-selected paint for a `presets` quick-range button. Defaults are
   `var(--lr-color-brand-quiet)`, that hover colour mixed by `--lr-color-mix-active`, and
   `var(--lr-color-brand)` respectively.

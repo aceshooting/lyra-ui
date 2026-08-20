@@ -339,6 +339,12 @@ export interface LyraLiteChartEventMap {
  * @csspart legend-text - Extra per-item text after the series label, rendered only when `legendText` is set.
  * @csspart live-region - The current mark announcement for keyboard users.
  * @csspart data-list - A visually hidden sampled list of plotted data points (single-series only).
+ * @csspart data-table-toggle - The disclosure button rendered by `dataTableToggle`.
+ * @cssprop [--lr-lite-chart-data-table-toggle-hover-bg=var(--lr-color-brand-quiet)] - Hover
+ *   background of the `dataTableToggle` disclosure button.
+ * @cssprop --lr-lite-chart-data-table-toggle-active-bg - Pressed background of the
+ *   `dataTableToggle` disclosure button; defaults to a mix of the hover background with the shared
+ *   active mix partner.
  * @csspart data-table - A visually hidden sampled category×series data table, rendered instead of
  *   `data-list` when there is more than one dataset so a screen-reader user hears series grouping
  *   rather than one flattened N×M sequence.
@@ -426,6 +432,43 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /** Adds a localized total column to the built-in multi-series accessible table for a stacked
    *  bar chart. Ignored for grouped bars and line charts. */
   @property({ type: Boolean, attribute: 'table-totals' }) tableTotals = false;
+
+  /**
+   * Makes the generated data table visible; it stays screen-reader available when false. Same
+   * meaning as `<lr-chart>`'s property of the same name.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'show-data-table' }) showDataTable = false;
+
+  /**
+   * Render a disclosure button above the accessible data table so a sighted reader can reveal the
+   * numbers on demand, turning `showDataTable` into the disclosure's INITIAL state rather than its
+   * whole behavior. The table stays in the DOM in both states, so assistive technology never loses
+   * it.
+   *
+   * Matters more here than on `<lr-chart>`: this component exists to avoid the Chart.js peers, so
+   * without it an app that chose it for that reason had to either hand-roll a `<details>` around a
+   * duplicated table or adopt `<lr-chart>` and pull in Chart.js for a button — the cheap component
+   * stuck with the expensive workaround.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'data-table-toggle' }) dataTableToggle = false;
+
+  /** Live disclosure state; null until toggled, so an untouched control follows `showDataTable`. */
+  @state() private dataTableExpandedOverride: boolean | null = null;
+
+  private readonly dataTableId = nextId('lite-chart-data-table');
+
+  /** Identical to `showDataTable` whenever `dataTableToggle` is off, keeping the unset path
+   *  byte-identical to before. */
+  private get dataTableVisible(): boolean {
+    if (!this.dataTableToggle) return this.showDataTable;
+    return this.dataTableExpandedOverride ?? this.showDataTable;
+  }
+
+  private toggleDataTable(): void {
+    this.dataTableExpandedOverride = !this.dataTableVisible;
+  }
   /** `'fit'` (default) squeezes the plot into the measured host width, unchanged from before this
    *  property existed. `'scroll'` gives every bar a fixed `barWidth` instead, letting the plot's
    *  content width exceed the host's — the host becomes horizontally scrollable
@@ -1929,10 +1972,25 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           ? html`<p part="description" id=${this.descriptionId} class="sr-only">${this.description}</p>`
           : nothing}
         ${dataTruncation ? html`<p part="data-truncation">${dataTruncation}</p>` : nothing}
-        <div part="data-table" ?data-visually-hidden=${!hasCustomDataTable}>
+        ${this.dataTableToggle
+          ? html`<button
+              part="data-table-toggle"
+              type="button"
+              aria-expanded=${this.dataTableVisible ? 'true' : 'false'}
+              aria-controls=${this.dataTableId}
+              @click=${() => this.toggleDataTable()}
+            >
+              ${this.localize('chartData')}
+            </button>`
+          : nothing}
+        <div
+          id=${this.dataTableId}
+          part="data-table"
+          ?data-visually-hidden=${!hasCustomDataTable && !this.dataTableVisible}
+        >
           <slot name="data-table" @slotchange=${() => this.requestUpdate()}></slot>
           ${hasCustomDataTable ? nothing : this.datasets.length > 1
-          ? html`<table part="table" class="sr-only">
+          ? html`<table part="table" class=${this.dataTableVisible ? nothing : 'sr-only'}>
               <caption>${this.localize('chartData')}</caption>
               <thead>
                 <tr>

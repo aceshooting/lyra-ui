@@ -34682,6 +34682,15 @@
             "default": "bottom-start"
           },
           {
+            "name": "presets",
+            "attribute": null,
+            "type": "readonly LyraDateRangePreset[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "readonly",
             "attribute": "readonly",
             "type": "boolean",
@@ -35071,6 +35080,14 @@
           },
           {
             "name": "popup",
+            "deprecated": null
+          },
+          {
+            "name": "preset-button",
+            "deprecated": null
+          },
+          {
+            "name": "presets",
             "deprecated": null
           },
           {
@@ -35844,6 +35861,15 @@
           }
         ],
         "properties": [
+          {
+            "name": "appliedPreset",
+            "attribute": null,
+            "type": "LyraDateRangePreset | undefined",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
           {
             "name": "dayContent",
             "attribute": null,
@@ -66199,6 +66225,16 @@
             "default": true
           },
           {
+            "name": "data-table-toggle",
+            "property": "dataTableToggle",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "description",
             "property": "description",
             "type": "string | null",
@@ -66304,6 +66340,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "linear"
+          },
+          {
+            "name": "show-data-table",
+            "property": "showDataTable",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "skip-zero",
@@ -66442,6 +66488,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "dataTableToggle",
+            "attribute": "data-table-toggle",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "description",
@@ -66598,6 +66654,16 @@
             "default": "[]"
           },
           {
+            "name": "showDataTable",
+            "attribute": "show-data-table",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "skipZero",
             "attribute": "skip-zero",
             "type": "boolean",
@@ -66741,6 +66807,10 @@
             "deprecated": null
           },
           {
+            "name": "data-table-toggle",
+            "deprecated": null
+          },
+          {
             "name": "data-truncation",
             "deprecated": null
           },
@@ -66869,6 +66939,17 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-lite-chart-data-table-toggle-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-lite-chart-data-table-toggle-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
           },
           {
             "name": "--lr-lite-chart-selected-outline-color",

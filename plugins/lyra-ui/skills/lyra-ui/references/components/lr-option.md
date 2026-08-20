@@ -24,7 +24,7 @@ An `lr-option` row remains bounded by its owning listbox: the default label elli
 `start`/`end` (or `prefix`/`suffix`) adornment is capped at 40% of the row. Unbroken metadata
 therefore cannot widen a 320px LTR or RTL picker.
 
-**Adornments in the popup (fixed in 10.1.0).** Before 10.1.0 this paragraph described behavior the
+**Adornments in the popup (fixed in 11.0.0).** Before 11.0.0 this paragraph described behavior the
 code did not have: `lr-combobox` builds its popup from normalized row *data* rather than from the
 light-DOM nodes, so a slotted `start`/`end`/`prefix`/`suffix` adornment had nowhere to land and
 simply never rendered — the documented slots and their documented parts were both dead inside the
@@ -111,7 +111,7 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
 - `maxOptionsVisible: number = 3` (attribute `max-options-visible` — caps how many selected **tags**
   show before collapsing to `+N`; nothing to do with the suggestion list, see the three-caps note
   below)
-- `visibleOptions?: number` (attribute `visible-options`, new in 10.1.0) — bounds the popup to about
+- `visibleOptions?: number` (attribute `visible-options`, new in 11.0.0) — bounds the popup to about
   this many suggestion rows, leaving the rest reachable by scrolling. Purely presentational: every
   row is still rendered. Measured from where row N actually starts rather than computed from a
   token, because a row's height varies with `sub` lines, adornments and group labels. Unset imposes
@@ -188,7 +188,7 @@ alias. Set the boolean `autocorrect` IDL, or use `autocorrect="on"` / `autocorre
 `ComboboxSourceRow = { readonly value: string; readonly label: string; readonly sub?: string; readonly icon?: unknown; readonly start?: unknown;
 readonly end?: unknown; readonly badge?: string |
 number; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: string; disabled?:
-boolean }` — the row shape used by the async `source` path. `start` and `end` (new in 10.1.0) are
+boolean }` — the row shape used by the async `source` path. `start` and `end` (new in 11.0.0) are
 the async counterparts of `<lr-option>`'s `start`/`end` adornment slots and render as the
 `option-start` / `option-end` parts, inert and aria-hidden exactly like `icon`. `icon` renders as a decorative leading
 visual whose rendered subtree stays visible but is inert and hidden from assistive technology;

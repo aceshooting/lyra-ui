@@ -7,8 +7,8 @@
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
-- **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 17 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Optional peers** none
+- **Themeable via** 18 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -62,6 +62,21 @@ passthrough). Not a subclass of `LyraChart`.
 - `tableTotals: boolean = false` (attribute `table-totals`) — adds a localized total column to the
   multi-series accessible table when `type="bar"` and `stacked` are both active. Ignored for
   grouped bars, line charts, and the single-series `data-list`.
+- `showDataTable: boolean = false` (attribute `show-data-table`, new in 11.1.0) — makes the
+  generated accessible table visible rather than screen-reader-only. Same meaning as `lr-chart`'s
+  property of the same name.
+- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.1.0) — renders a
+  localized disclosure button (`part="data-table-toggle"`, with `aria-expanded` and
+  `aria-controls`) above the table, so a *sighted* reader can reveal the numbers on demand;
+  `showDataTable` then becomes the disclosure's **initial** state rather than its whole behavior.
+  The table stays in the DOM in both states, so assistive technology never loses it. This matters
+  more here than on `lr-chart`: this component exists to avoid the Chart.js peers, so without it an
+  app that chose it for exactly that reason had to either hand-roll a `<details>` around a
+  duplicated table or adopt `lr-chart` and pull in Chart.js for a button — the cheap component
+  stuck with the expensive workaround. Unset, nothing renders and behavior is unchanged.
+  Themeable via `--lr-lite-chart-data-table-toggle-hover-bg` (default
+  `var(--lr-color-brand-quiet)`) and `--lr-lite-chart-data-table-toggle-active-bg` (default: that
+  hover colour mixed by `--lr-color-mix-active`).
 - `layout: 'fit' | 'scroll' = 'fit'` (reflected) — `'fit'` (default) is the original squeeze-the-
   whole-plot-to-host-width behavior, unchanged. `'scroll'` gives bars a fixed `barWidth` instead: plot
   content width becomes `categoryCount * barWidth` (can exceed the host's measured width), and
@@ -168,7 +183,8 @@ data alternative.
 mark), `line`, `legend`, `legend-item`, `legend-swatch`, `legend-text` (extra per-item text after
 the series label, rendered only when `legendText` is set), `live-region` (the current mark
 announcement for keyboard users), `data-list` (a visually hidden sampled list of plotted data
-points — single-series only), `data-table` (the generated/slotted alternative container), `table`
+points — single-series only), `data-table` (the generated/slotted alternative container),
+`data-table-toggle` (the `dataTableToggle` disclosure button — new in 11.1.0), `table`
 (the generated semantic category×series table rendered when there is more than one dataset), and
 `data-truncation` (the
 visible/announced sampling notice).

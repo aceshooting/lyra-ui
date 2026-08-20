@@ -3123,3 +3123,81 @@ describe('range presets', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+// Follow-up defects in the 11.0.0 presets feature, both reported from a real dashboard filter.
+describe('range preset identity and open bounds', () => {
+  async function pickerWith(
+    presets: unknown[],
+    attrs: Record<string, string> = {},
+  ): Promise<LyraDatePicker> {
+    const el = (await fixture(
+      html`<lr-date-picker mode="range"></lr-date-picker>`,
+    )) as LyraDatePicker;
+    for (const [name, value] of Object.entries(attrs)) el.setAttribute(name, value);
+    el.presets = presets as never;
+    await el.updateComplete;
+    return el;
+  }
+
+  const buttons = (el: LyraDatePicker): HTMLButtonElement[] =>
+    Array.from(el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="preset-button"]'));
+
+  // "Last 7 days" has to stay RELATIVE across a reload, so a consumer must persist which preset was
+  // applied, not the pair it froze to. Re-deriving it by string-matching the value is exactly the
+  // mapping table the feature set out to delete, and it is ambiguous besides: Today and This month
+  // coincide on the 1st, and a manual selection can equal a preset's pair by construction.
+  it('reports which preset produced the value', async () => {
+    const el = await pickerWith([
+      { label: 'Last 7 days', start: '2026-08-13', end: '2026-08-19' },
+    ]);
+    let seen: unknown = 'unset';
+    el.addEventListener('change', () => {
+      seen = (el as unknown as { appliedPreset?: { label: string } }).appliedPreset;
+    });
+
+    buttons(el)[0]!.click();
+    await el.updateComplete;
+
+    expect((seen as { label?: string })?.label).to.equal('Last 7 days');
+  });
+
+  it('reports no preset for a manual selection', async () => {
+    const el = await pickerWith([
+      { label: 'Last 7 days', start: '2026-08-13', end: '2026-08-19' },
+    ]);
+    buttons(el)[0]!.click();
+    await el.updateComplete;
+
+    const day = el.shadowRoot!.querySelector<HTMLElement>('[part~="day"]:not(:disabled)')!;
+    day.click();
+    await el.updateComplete;
+
+    expect(
+      (el as unknown as { appliedPreset?: unknown }).appliedPreset,
+      'a hand-picked range did not come from a preset',
+    ).to.equal(undefined);
+  });
+
+  // The changelog and the `presets` doc comment both advertised "All time", but both bounds were
+  // required and applyPreset bailed on an unparseable one -- so that button rendered and did nothing.
+  it('resolves an omitted start/end against min/max, making "All time" expressible', async () => {
+    const el = await pickerWith(
+      [{ label: 'All time' }],
+      { min: '2020-01-01', max: '2030-12-31' },
+    );
+
+    buttons(el)[0]!.click();
+    await el.updateComplete;
+
+    expect(el.value).to.equal('2020-01-01/2030-12-31');
+  });
+
+  it('disables an unbounded preset rather than rendering a button that does nothing', async () => {
+    const el = await pickerWith([{ label: 'All time' }]);
+
+    expect(
+      buttons(el)[0]!.disabled,
+      'with no min/max there is nothing to resolve an open bound to',
+    ).to.be.true;
+  });
+});

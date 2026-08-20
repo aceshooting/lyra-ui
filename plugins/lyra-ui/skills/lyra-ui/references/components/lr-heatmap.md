@@ -79,7 +79,7 @@ weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
   A malformed value is ignored rather than collapsing the gutter. Calendar mode is unaffected; it
   has its own fixed weekday gutter
 - `colLabelHeight?: number | 'auto'` (attribute `col-label-height`, not reflected, `'auto'` new in
-  10.1.0) — height, in CSS px, of the matrix column-label band, or `'auto'` to measure the labels
+  11.0.0) — height, in CSS px, of the matrix column-label band, or `'auto'` to measure the labels
   and size the band to fit them. Under a non-zero `colLabelRotation` the measurement projects each
   label's width through the rotation, which is what makes a rotated axis usable without hand-tuning
   a magic number. Never below the built-in `20`, and bounded above by a sanity ceiling so a
@@ -88,7 +88,7 @@ weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
   be bounded relative to them, whereas the canvas simply grows taller for this band and the cells
   keep their size. Unset keeps the built-in `20`, so no existing chart reflows. A malformed value is
   ignored
-- `colLabelRotation?: number` (attribute `col-label-rotation`, new in 10.1.0) — rotation, in
+- `colLabelRotation?: number` (attribute `col-label-rotation`, new in 11.0.0) — rotation, in
   degrees, applied to matrix column labels. Unset or `0` paints them horizontally exactly as before.
   In a dense matrix the per-column width is far narrower than a typical label, so horizontal labels
   collide with their neighbours; `45` or `90` is the standard remedy. Each label rotates about an

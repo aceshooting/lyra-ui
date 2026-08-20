@@ -4600,3 +4600,53 @@ describe('coverage-gap fixes', () => {
     el.remove();
   });
 });
+
+// 11.0.0 added `presets` to lr-date-picker but not to lr-date-input, even though the original
+// request named both. lr-date-input is the compact popover shape a dashboard time filter actually
+// uses, and there is no consumer-side escape hatch: the picker lives in this component's shadow
+// root, and a CSS part cannot set a JS property.
+describe('range presets forwarding', () => {
+  const PRESETS = [
+    { label: 'Last 7 days', start: '2026-08-13', end: '2026-08-19' },
+    { label: 'This month', start: '2026-08-01', end: '2026-08-31' },
+  ];
+
+  async function openedInput(): Promise<LyraDateInput> {
+    const el = (await fixture(
+      html`<lr-date-input mode="range"></lr-date-input>`,
+    )) as LyraDateInput;
+    el.presets = PRESETS;
+    el.open = true;
+    await el.updateComplete;
+    return el;
+  }
+
+  const picker = (el: LyraDateInput): HTMLElement =>
+    el.shadowRoot!.querySelector<HTMLElement>('[part~="date-picker"]')!;
+
+  it('forwards presets to the internal date picker', async () => {
+    const el = await openedInput();
+    const inner = picker(el) as HTMLElement & { presets?: readonly { label: string }[] };
+    await (inner as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+
+    expect(inner.presets?.length, 'the inner picker received the list').to.equal(2);
+    expect(inner.presets?.[0]?.label).to.equal('Last 7 days');
+  });
+
+  it('renders the preset row through the forwarded property', async () => {
+    const el = await openedInput();
+    const inner = picker(el);
+    await (inner as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    const buttons = inner.shadowRoot!.querySelectorAll('[part~="preset-button"]');
+
+    expect(buttons.length, 'the row renders inside the popover').to.equal(2);
+  });
+
+  it('exposes the presets and preset-button parts through exportparts', async () => {
+    const el = await openedInput();
+    const exported = picker(el).getAttribute('exportparts') ?? '';
+
+    expect(exported, 'presets must be reachable from outside').to.contain('presets');
+    expect(exported, 'preset-button must be reachable from outside').to.contain('preset-button');
+  });
+});

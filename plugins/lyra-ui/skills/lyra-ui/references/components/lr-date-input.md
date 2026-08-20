@@ -8,7 +8,7 @@
 - **Status** `experimental` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 20 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 22 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-date-picker` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -34,9 +34,13 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
 **Properties (28):**
 
 - `dayContent` (JS only): `LyraDatePickerDayContent | undefined`
-- `presets: LyraDateRangePreset[] = []` (JS only, new in 10.1.0) —
-  `LyraDateRangePreset { label: string; start: string; end: string }`, where `start`/`end` are ISO
-  `YYYY-MM-DD`. Renders a `[part="presets"]` quick-range button row above the calendar, for the
+- `presets: LyraDateRangePreset[] = []` (JS only, new in 11.0.0) —
+  `LyraDateRangePreset { label: string; start?: string; end?: string }`, where `start`/`end` are ISO
+  `YYYY-MM-DD`. **Either bound may be omitted (new in 11.1.0)** to mean an OPEN bound, resolving to
+  the picker's `min` / `max` respectively — that is how an "All time" preset is expressed. When the
+  corresponding `min`/`max` is unset there is nothing to resolve to (a `value` of
+  `YYYY-MM-DD/YYYY-MM-DD` has no unbounded spelling), so that preset's button renders **disabled**
+  rather than looking live and doing nothing when pressed. Renders a `[part="presets"]` quick-range button row above the calendar, for the
   dashboard time-filter shape (Today / Last 7 days / Last 30 days / This month / All time).
   **Range mode only** — a preset names two dates, so it is ignored for a single-date picker rather
   than rendering a row that cannot do anything; unset renders nothing at all. Applying one commits
@@ -47,6 +51,16 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
   The active button carries `aria-pressed="true"` and `data-active`. Deliberately the same
   `label`/`start`/`end` shape as `<lr-time-range>`'s `TimeRangePreset`, so the library has one
   preset vocabulary rather than two — the only difference is the unit (ISO dates, not numbers)
+- `appliedPreset: LyraDateRangePreset | undefined` (read-only, new in 11.1.0) — the preset whose
+  button produced the current `value`, or `undefined` when the range was picked by hand. Read it
+  inside your own `change`/`input` handler. It exists because a dashboard filter has to persist
+  *which* preset is active rather than the pair it froze to: "Last 7 days" must still mean the last
+  7 days after tomorrow's reload. That fact is not recoverable from `value` — re-deriving it by
+  string-matching is the mapping table `presets` exists to delete, and it is ambiguous anyway
+  (Today and This month coincide on the 1st of a month, and a hand-picked range can equal a
+  preset's pair by construction). A property rather than an event detail because `input`/`change`
+  here are **native** events, deliberately indistinguishable from a manual selection so existing
+  handlers need no special case, and a native `Event` cannot carry a detail without changing type
 - `disabled: boolean = false` (reflected)
 - `disabledDates: string | string[] | Date[] = ''` (attribute `disabled-dates`)
 - `disabledDaysOfWeek: string = ''` (attribute `disabled-days-of-week`)
@@ -214,7 +228,9 @@ capped at 40% and ellipsize unbroken content. Clear and calendar actions retain 
 **Custom states:** `blank`, `disabled`, `open`, and `range`; the shared form-associated mixin also
 exposes its validity states.
 
-**CSS parts (19):** `clear-button`, `date-input`, `date-picker`, `end`, `expand-button`,
+**CSS parts (21):** `clear-button`, `date-input`, `date-picker`, `presets` and `preset-button`
+(forwarded from the nested `lr-date-picker` via `exportparts`, so the quick-range row is styleable
+from outside — new in 11.1.0), `end`, `expand-button`,
 `expand-icon`, `form-control`, `form-control-input`, `form-control-label`, `hint`, `input`,
 `input-wrapper`, `popup`, `range-separator`, `segment`, `segment-literal`, `start`, permanent
 compatibility name `base` (a nested wrapper inside `date-input`), and permanent compatibility name
@@ -347,7 +363,7 @@ and `dateTimeFormat(locale, options)`.
 - `--lr-date-picker-nav-active-bg` — Pressed navigation background; defaults to the hover color
   mixed by `--lr-color-mix-active`.
 - `--lr-date-picker-preset-hover-bg`, `--lr-date-picker-preset-active-bg`, and
-  `--lr-date-picker-preset-selected-bg` (new in 10.1.0) — hover, pressed, and
+  `--lr-date-picker-preset-selected-bg` (new in 11.0.0) — hover, pressed, and
   currently-selected paint for a `presets` quick-range button. Defaults are
   `var(--lr-color-brand-quiet)`, that hover colour mixed by `--lr-color-mix-active`, and
   `var(--lr-color-brand)` respectively.

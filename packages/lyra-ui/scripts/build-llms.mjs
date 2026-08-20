@@ -252,6 +252,18 @@ export function buildTokens() {
     'Per-component `--lr-<component>-*` custom properties (listed in each component\'s own section)',
     'override a single element without touching the shared layer.',
     '',
+    '**Consumer-scope exception: the focus ring.** `--lr-focus-ring` and its three parts',
+    '(`-width`/`-color`/`-offset`) are the one layer-2 group `theme.css` also declares at document',
+    'scope, on `:root` and on both mode selectors. They exist to serve a CONSUMER-authored idiom —',
+    'the Web Awesome `outline: var(--wa-focus-ring)` that migrating projects already have — and that',
+    'rule is written against the consumer\'s own element, where a `:host`-only token resolves to',
+    'nothing. An empty `var()` makes the whole `outline` declaration invalid at computed-value time,',
+    'and because `outline` does not inherit, the ring did not degrade: it DISAPPEARED, silently, with',
+    'no console warning. So `outline: var(--lr-focus-ring); outline-offset:',
+    'var(--lr-focus-ring-offset);` now works wherever you write it, provided `theme.css` is imported.',
+    'Every component still re-derives all four on its own `:host`, so component rendering is',
+    'unchanged.',
+    '',
     '> **Why layer 1 is not merely *preferred* but *required*: an ancestor `--lr-*` override does',
     '> not survive a nested component boundary.** Every component re-derives the whole `--lr-*` layer',
     '> from `--lr-theme-*` on its **own** `:host` (that is what `LyraElement`\'s shared token',
@@ -312,7 +324,19 @@ function buildPeers(tagFacts) {
       const resolved = [file, file.replace(/\.js$/, '.ts')].find((c) => existsSync(c) && c.endsWith('.ts'));
       if (!resolved || seen.has(resolved)) continue;
       seen.add(resolved);
-      const text = readFileSync(resolved, 'utf8');
+      // Strip whole `import type` / `export type ... from` statements before scanning. TypeScript
+      // ERASES those entirely, so they are not runtime edges and must not attribute a peer or
+      // extend the walk. Missing this listed all four Chart.js peers against `lr-lite-chart`, whose
+      // only link to `chart.class.ts` is `import type { LyraChartDatumActivateDetail, ... }` -- and
+      // whose entire reason to exist is having no Chart.js dependency, so the header inverted the
+      // choice the component offers.
+      //
+      // Deliberately NOT stripping inline `import { type X }` specifiers: a statement with any
+      // value specifier still emits a real import, and under `verbatimModuleSyntax` even an
+      // all-inline-type one does.
+      const text = readFileSync(resolved, 'utf8')
+        .replace(/\bimport\s+type\s[\s\S]*?\bfrom\s*(['"])[^'"]*\1/g, '')
+        .replace(/\bexport\s+type\s*\{[\s\S]*?\}\s*from\s*(['"])[^'"]*\1/g, '');
       for (const match of text.matchAll(/(?:from\s*|import\s*(?:\(\s*)?)(['"])([^'"]+)\1/g)) {
         const specifier = match[2];
         for (const peer of componentPeers) {

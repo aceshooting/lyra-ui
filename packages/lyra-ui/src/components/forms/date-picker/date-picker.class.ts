@@ -125,10 +125,14 @@ export interface LyraDatePickerEventMap {
  */
 export interface LyraDateRangePreset {
   readonly label: string;
-  /** Inclusive range start, ISO `YYYY-MM-DD`. */
-  readonly start: string;
-  /** Inclusive range end, ISO `YYYY-MM-DD`. */
-  readonly end: string;
+  /**
+   * Inclusive range start, ISO `YYYY-MM-DD`. Omit (or leave empty) for an OPEN start, which
+   * resolves to the picker's `min`. An open bound with no corresponding `min`/`max` cannot be
+   * resolved, so its button renders disabled rather than doing nothing when pressed.
+   */
+  readonly start?: string;
+  /** Inclusive range end, ISO `YYYY-MM-DD`. Omit for an OPEN end, resolving to `max`. */
+  readonly end?: string;
 }
 
 /**
@@ -308,6 +312,42 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
    * `<lr-time-range>`'s already-shipped preset row.
    */
   @property({ attribute: false }) presets: readonly LyraDateRangePreset[] = Object.freeze([]);
+
+  private _appliedPreset?: LyraDateRangePreset;
+
+  /**
+   * The preset whose button produced the current `value`, or `undefined` when the range was picked
+   * by hand. Read it inside your own `change`/`input` handler.
+   *
+   * Exists because a dashboard filter has to persist WHICH preset is active, not the pair it froze
+   * to: "Last 7 days" must still mean the last 7 days after tomorrow's reload. That fact is not
+   * recoverable from `value` -- re-deriving it by string-matching is the mapping table `presets`
+   * exists to delete, and it is ambiguous anyway (Today and This month coincide on the 1st of a
+   * month, and a hand-picked range can equal a preset's pair by construction).
+   *
+   * A property rather than an event detail: `input`/`change` are NATIVE events here, deliberately
+   * indistinguishable from a manual selection so existing handlers need no special case, and a
+   * native Event cannot carry a detail without changing its type.
+   */
+  get appliedPreset(): LyraDateRangePreset | undefined {
+    return this._appliedPreset;
+  }
+
+  /**
+   * Resolves a preset's bounds, treating an omitted/empty `start` or `end` as open and falling back
+   * to `min`/`max`. Returns null when an open bound has no corresponding limit -- there is simply no
+   * date to use, and `value`'s `YYYY-MM-DD/YYYY-MM-DD` form has no unbounded spelling.
+   */
+  private resolvePresetRange(preset: LyraDateRangePreset): { from: Date; to: Date } | null {
+    const bound = (own: string | undefined, fallback: string): Date | null => {
+      const text = typeof own === 'string' && own.trim() ? own : fallback;
+      return text ? parseISO(text) : null;
+    };
+    const from = bound(preset.start, this.min);
+    const to = bound(preset.end, this.max);
+    if (!from || !to) return null;
+    return from.getTime() <= to.getTime() ? { from, to } : { from: to, to: from };
+  }
   @property({ type: Number, attribute: 'min-range', reflect: true })
   minRange = 0;
   @property({ type: Number, attribute: 'max-range', reflect: true })
@@ -736,6 +776,9 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     const max = parseISO(this.max);
     const today = this.resolvedToday();
     if (this.isDisabled(date, min, max, today)) return;
+    // A hand-picked range did not come from a preset, even when it happens to land on the same
+    // pair -- that coincidence is exactly why `appliedPreset` exists instead of value matching.
+    this._appliedPreset = undefined;
     this.setFocusedDate(date);
     if (this.effectiveMode === 'range') {
       const { from, to } = this.selection;
@@ -1623,11 +1666,14 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     if (this.effectiveMode !== 'range' || this.presets.length === 0) return nothing;
     return html`<div part="presets">
       ${this.presets.map((preset) => {
-        const active = this.value === `${preset.start}/${preset.end}`;
+        const resolved = this.resolvePresetRange(preset);
+        const active =
+          resolved !== null
+          && this.value === `${formatISO(resolved.from)}/${formatISO(resolved.to)}`;
         return html`<button
           part="preset-button"
           type="button"
-          ?disabled=${this.disabled || this.readonly}
+          ?disabled=${this.disabled || this.readonly || resolved === null}
           aria-pressed=${active ? 'true' : 'false'}
           ?data-active=${active}
           @click=${() => this.applyPreset(preset)}
@@ -1645,14 +1691,15 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
    */
   private applyPreset(preset: LyraDateRangePreset): void {
     if (this.disabled || this.readonly) return;
-    const from = parseISO(preset.start);
-    const to = parseISO(preset.end);
     // A malformed preset is ignored rather than clearing the current value: a bad entry in a
     // config-driven preset list must not look like the user picked "nothing".
-    if (!from || !to) return;
-    const [start, end] = from.getTime() <= to.getTime() ? [from, to] : [to, from];
-    this.setFocusedDate(start);
-    this.commit(start, end, true);
+    const resolved = this.resolvePresetRange(preset);
+    if (!resolved) return;
+    // Set BEFORE commit(), so a consumer reading `appliedPreset` inside the change handler that
+    // commit() synchronously dispatches sees this preset rather than the previous one.
+    this._appliedPreset = preset;
+    this.setFocusedDate(resolved.from);
+    this.commit(resolved.from, resolved.to, true);
   }
 
   override render(): TemplateResult {

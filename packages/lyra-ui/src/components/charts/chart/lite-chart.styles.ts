@@ -214,4 +214,33 @@ export const styles = css`
       grid-template-columns: minmax(0, 1fr);
     }
   }
+
+  [part='data-table-toggle'] {
+    align-self: flex-start;
+    font: inherit;
+    font-size: var(--lr-font-size-xs);
+    min-block-size: var(--lr-icon-button-size);
+    padding: var(--lr-size-0-15rem) var(--lr-size-0-5rem);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+    max-inline-size: 100%;
+    white-space: normal;
+    overflow-wrap: break-word;
+    cursor: pointer;
+  }
+  [part='data-table-toggle']:hover {
+    background: var(--lr-lite-chart-data-table-toggle-hover-bg, var(--lr-color-brand-quiet));
+  }
+  [part='data-table-toggle']:active {
+    background: var(
+      --lr-lite-chart-data-table-toggle-active-bg,
+      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
+  }
+  [part='data-table-toggle']:focus-visible {
+    outline: var(--lr-focus-ring);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
 `;
