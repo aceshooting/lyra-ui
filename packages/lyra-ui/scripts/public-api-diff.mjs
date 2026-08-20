@@ -268,6 +268,42 @@ function isTypeWidening(before, after) {
     return true;
   }
 
+  // A union can widen on two axes at once: it gains atoms AND one of its existing atoms is itself
+  // widened. The generated framework prop types do exactly this -- each is
+  // `{'attr-name'?: T; ...} | 'propName' | ...`, so adding ONE component property appends an
+  // optional key to the union's object member and appends a literal beside it, in the same edit.
+  // The verbatim-superset check above only sees the second axis, so the mutated object atom reads
+  // as a removal and the whole type reports as breaking. That single gap produced 39 `:type` plus
+  // 39 `:contract` false majors in the 10.0.1 -> 11.0.0 diff.
+  //
+  // Pair the leftovers up instead: every old atom that did not survive verbatim must be widened by
+  // some new atom that is itself unaccounted for, and each new atom may only settle one old atom.
+  // An old atom with no widened counterpart -- a genuine removal -- still fails, as does an atom
+  // that narrowed.
+  // Only when at least one side actually decomposed into multiple atoms. A non-union decomposes to
+  // a single atom that IS the input, so pairing it against the other side's single atom would
+  // re-enter this branch with the same two strings forever -- a real stack overflow, caught by the
+  // existing suite. `typeAtoms()` splits on top-level `|`, so an atom never contains one itself and
+  // the recursion below always terminates one level down.
+  const decomposedIntoUnion = oldAtoms.size > 1 || newAtoms.size > 1;
+  if (decomposedIntoUnion && oldAtoms.size <= newAtoms.size) {
+    const dropped = [...oldAtoms].filter((atom) => !newAtoms.has(atom));
+    const added = [...newAtoms].filter((atom) => !oldAtoms.has(atom));
+    if (dropped.length > 0 && dropped.length <= added.length) {
+      const unclaimed = new Set(added);
+      const everyDroppedAtomWidened = dropped.every((oldAtom) => {
+        for (const candidate of unclaimed) {
+          if (isTypeWidening(oldAtom, candidate)) {
+            unclaimed.delete(candidate);
+            return true;
+          }
+        }
+        return false;
+      });
+      if (everyDroppedAtomWidened) return true;
+    }
+  }
+
   const beforeGeneric = genericTypeParts(before);
   const afterGeneric = genericTypeParts(after);
   if (
@@ -2525,6 +2561,39 @@ function isHeritageSpecialization(before, after) {
   return specialized;
 }
 
+/**
+ * Bump for a changed `:dependencies` fingerprint — the set of declarations transitively REACHABLE
+ * from a public export.
+ *
+ * This used to return an unconditional `major`, which made the gate unusable for additive releases.
+ * Adding one property to a widely-composed base class rewrites the reachable fingerprint of every
+ * subclass and of every subpath that re-exports it: 11.0.0 was reported as 287 breaking changes on
+ * that basis, not one of which removed or altered a public member. A gate that calls every additive
+ * release breaking gets overridden rather than heeded, which is worse than one that is merely
+ * coarse.
+ *
+ * Only the edge COUNT survives into the snapshot — `reachableContractValue()` deliberately discards
+ * the expanded closure because retaining it costs hundreds of megabytes — so this compares counts:
+ *
+ * - grew   -> `minor`. The reachable set gained declarations; nothing became unreachable.
+ * - shrank -> `major`. Something became unreachable.
+ * - equal but a different digest -> `major`. Same size, different set: an edge may have been
+ *   swapped, which can hide a removal, and the retained fingerprint cannot tell the two apart.
+ * - either count missing -> `major`, so a malformed or truncated snapshot fails closed.
+ *
+ * The one unsound case is a rewiring that removes fewer edges than it adds. That is narrow rather
+ * than theoretical hand-waving: removing a public declaration emits its own `removed` entry, and
+ * changing a declaration's shape moves its `:contract` entry through `declarationContractBump()` —
+ * both independently `major`. What is left is an edge rewiring invisible to both, which is not an
+ * observable break in the public surface.
+ */
+function dependencyContractBump(before, after, baseline, current) {
+  const beforeCount = baseline?.dependencies?.[before]?.edgeCount;
+  const afterCount = current?.dependencies?.[after]?.edgeCount;
+  if (typeof beforeCount !== 'number' || typeof afterCount !== 'number') return 'major';
+  return afterCount > beforeCount ? 'minor' : 'major';
+}
+
 function changedBump(entry, before, after, baseline, current) {
   if (entry.semantic === 'declaration-contract-ref') {
     const beforeContract = baseline?.contracts?.[before];
@@ -2532,7 +2601,9 @@ function changedBump(entry, before, after, baseline, current) {
     if (!beforeContract || !afterContract) return 'major';
     return declarationContractBump(beforeContract, afterContract);
   }
-  if (entry.semantic === 'dependency-contract-ref') return 'major';
+  if (entry.semantic === 'dependency-contract-ref') {
+    return dependencyContractBump(before, after, baseline, current);
+  }
   if (entry.semantic === 'type' && isTypeWidening(before, after)) return 'minor';
   if (entry.semantic === 'heritage' && isHeritageSpecialization(before, after)) return 'minor';
   if (entry.semantic === 'optional' && before === false && after === true) return 'minor';

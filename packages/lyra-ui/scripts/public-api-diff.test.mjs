@@ -1643,3 +1643,117 @@ test('validates npm pack output and rejects unsafe published-package archives', 
     /link or special-file/,
   );
 });
+
+// A `:dependencies` entry fingerprints the set of declarations transitively REACHABLE from a public
+// export, reduced to an edge count (the full closure is deliberately not retained -- see
+// `reachableContractValue`'s comment about hundreds of megabytes). It was classified as an
+// unconditional `major`, which made the gate unusable for additive releases: adding one property to
+// a widely-composed base class rewrites the fingerprint of every subclass and every subpath that
+// re-exports it. In 11.0.0 that produced 287 "breaking" changes, none of which removed or altered a
+// single public member.
+function dependencySnapshot(version, digest, edgeCount) {
+  return {
+    packageName: '@aceshooting/lyra-ui',
+    version,
+    entries: {
+      'named-export:LyraSample:dependencies': {
+        surface: 'named-export',
+        semantic: 'dependency-contract-ref',
+        value: digest,
+        label: 'named-export:LyraSample reachable declaration contract',
+      },
+    },
+    contracts: {},
+    dependencies: { [digest]: { edgeCount } },
+  };
+}
+
+test('treats a GROWN reachable-declaration graph as minor, not breaking', () => {
+  const changes = diffPublicApi(
+    dependencySnapshot('1.0.0', 'digest-before', 10),
+    dependencySnapshot('1.0.0', 'digest-after', 12),
+  );
+
+  assert.equal(changes.length, 1);
+  assert.equal(changes[0].bump, 'minor');
+  assert.equal(minimumRequiredBump(changes), 'minor');
+});
+
+test('keeps a SHRUNK reachable-declaration graph breaking', () => {
+  const changes = diffPublicApi(
+    dependencySnapshot('1.0.0', 'digest-before', 12),
+    dependencySnapshot('1.0.0', 'digest-after', 10),
+  );
+
+  assert.equal(changes[0].bump, 'major');
+});
+
+test('keeps an equal-sized but rewired reachable graph breaking', () => {
+  // Same edge count, different digest: one edge could have been swapped for another, which can
+  // hide a removal. Nothing in the retained fingerprint can tell the two apart, so stay strict.
+  const changes = diffPublicApi(
+    dependencySnapshot('1.0.0', 'digest-before', 11),
+    dependencySnapshot('1.0.0', 'digest-after', 11),
+  );
+
+  assert.equal(changes[0].bump, 'major');
+});
+
+test('keeps a dependency change breaking when either edge count is unknown', () => {
+  const before = dependencySnapshot('1.0.0', 'digest-before', 10);
+  const after = dependencySnapshot('1.0.0', 'digest-after', 12);
+  delete after.dependencies['digest-after'];
+
+  const changes = diffPublicApi(before, after);
+  assert.equal(changes[0].bump, 'major');
+});
+
+// The generated framework prop types are a union of an object type with many string literals:
+// `{'begin-at-zero'?: ...; ...} | 'area' | 'beginAtZero' | ...`. Adding one component property
+// widens BOTH halves at once -- the object gains an optional attribute key and the union gains a
+// literal. `isTypeWidening` required every old atom to survive verbatim, so the mutated object atom
+// looked like a removal and the whole type read as breaking. That single gap accounted for the 39
+// `:type` majors and the 39 `:contract` majors in the 10.0.1 -> 11.0.0 diff.
+function typeSnapshot(value) {
+  return {
+    packageName: '@aceshooting/lyra-ui',
+    version: '1.0.0',
+    entries: {
+      'named-export:Sample:type': {
+        surface: 'named-export',
+        semantic: 'type',
+        value,
+        label: 'named-export:Sample',
+      },
+    },
+    contracts: {},
+    dependencies: {},
+  };
+}
+
+test('treats a union whose object member widened AND which gained a literal as minor', () => {
+  const changes = diffPublicApi(
+    typeSnapshot("{'a'?:string}|'x'"),
+    typeSnapshot("{'a'?:string;'b'?:number}|'x'|'y'"),
+  );
+
+  assert.equal(changes[0].bump, 'minor');
+});
+
+test('keeps a union breaking when an old member vanished with no widened counterpart', () => {
+  const changes = diffPublicApi(
+    typeSnapshot("{'a'?:string}|'x'|'gone'"),
+    typeSnapshot("{'a'?:string;'b'?:number}|'x'|'y'"),
+  );
+
+  assert.equal(changes[0].bump, 'major');
+});
+
+test('keeps a union breaking when its object member NARROWED', () => {
+  const changes = diffPublicApi(
+    typeSnapshot("{'a'?:string;'b'?:number}|'x'"),
+    typeSnapshot("{'a'?:string}|'x'|'y'"),
+  );
+
+  assert.equal(changes[0].bump, 'major');
+});
