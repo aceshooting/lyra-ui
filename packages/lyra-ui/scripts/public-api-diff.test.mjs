@@ -1757,3 +1757,105 @@ test('keeps a union breaking when its object member NARROWED', () => {
 
   assert.equal(changes[0].bump, 'major');
 });
+
+// Fingerprint granularity redesign. The edge digest embeds each endpoint's CONTRACT hash, so adding
+// a member to any reachable declaration rewrites the fingerprint while leaving the edge COUNT
+// unchanged -- which the count comparison could only call `major`. That was the whole remaining
+// false-positive class: 24 of 24 majors on an additive change. The snapshot now also retains a
+// per-declaration `reachable` map (identity -> contract id), interned exactly like the digest, so a
+// changed fingerprint can be explained declaration by declaration and each one classified on its
+// own merits through `declarationContractBump`.
+function reachableSnapshot(digest, definition, contracts) {
+  return {
+    packageName: '@aceshooting/lyra-ui',
+    version: '1.0.0',
+    entries: {
+      'named-export:LyraSample:dependencies': {
+        surface: 'named-export',
+        semantic: 'dependency-contract-ref',
+        value: digest,
+        label: 'named-export:LyraSample reachable declaration contract',
+      },
+    },
+    contracts,
+    dependencies: { [digest]: definition },
+  };
+}
+
+const memberEntry = (value) => ({ surface: 'named-export', semantic: 'type', value, label: 'm' });
+
+test('classifies a reachable declaration gaining a member as minor', () => {
+  const changes = diffPublicApi(
+    reachableSnapshot('before', { edgeCount: 7, reachable: { 'mod#Row': 'c1' } }, {
+      c1: { 'mod#Row:member:a': memberEntry('string') },
+    }),
+    reachableSnapshot('after', { edgeCount: 7, reachable: { 'mod#Row': 'c2' } }, {
+      c2: {
+        'mod#Row:member:a': memberEntry('string'),
+        'mod#Row:member:b': memberEntry('number'),
+      },
+    }),
+  );
+
+  assert.equal(changes[0].bump, 'minor');
+});
+
+test('classifies a reachable declaration LOSING a member as major', () => {
+  const changes = diffPublicApi(
+    reachableSnapshot('before', { edgeCount: 7, reachable: { 'mod#Row': 'c1' } }, {
+      c1: {
+        'mod#Row:member:a': memberEntry('string'),
+        'mod#Row:member:b': memberEntry('number'),
+      },
+    }),
+    reachableSnapshot('after', { edgeCount: 7, reachable: { 'mod#Row': 'c2' } }, {
+      c2: { 'mod#Row:member:a': memberEntry('string') },
+    }),
+  );
+
+  assert.equal(changes[0].bump, 'major');
+});
+
+test('classifies a declaration becoming UNREACHABLE as major', () => {
+  const changes = diffPublicApi(
+    reachableSnapshot('before', {
+      edgeCount: 7,
+      reachable: { 'mod#Row': 'c1', 'mod#Gone': 'c1' },
+    }, { c1: { 'mod#Row:member:a': memberEntry('string') } }),
+    reachableSnapshot('after', { edgeCount: 6, reachable: { 'mod#Row': 'c1' } }, {
+      c1: { 'mod#Row:member:a': memberEntry('string') },
+    }),
+  );
+
+  assert.equal(changes[0].bump, 'major');
+});
+
+test('classifies a newly reachable declaration as minor', () => {
+  const changes = diffPublicApi(
+    reachableSnapshot('before', { edgeCount: 6, reachable: { 'mod#Row': 'c1' } }, {
+      c1: { 'mod#Row:member:a': memberEntry('string') },
+    }),
+    reachableSnapshot('after', {
+      edgeCount: 7,
+      reachable: { 'mod#Row': 'c1', 'mod#Added': 'c1' },
+    }, { c1: { 'mod#Row:member:a': memberEntry('string') } }),
+  );
+
+  assert.equal(changes[0].bump, 'minor');
+});
+
+test('falls back to the edge count when a snapshot predates the reachable map', () => {
+  // A baseline produced by an older release has no `reachable`, so the comparison degrades to the
+  // count rule rather than failing or silently passing.
+  const changes = diffPublicApi(
+    reachableSnapshot('before', { edgeCount: 7 }, {}),
+    reachableSnapshot('after', { edgeCount: 9 }, {}),
+  );
+  assert.equal(changes[0].bump, 'minor');
+
+  const shrunk = diffPublicApi(
+    reachableSnapshot('before', { edgeCount: 9 }, {}),
+    reachableSnapshot('after', { edgeCount: 7 }, {}),
+  );
+  assert.equal(shrunk[0].bump, 'major');
+});

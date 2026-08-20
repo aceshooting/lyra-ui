@@ -1316,6 +1316,7 @@ function declarationGraph(filesValue) {
     dependencyEdgeDefinitions: new Map(),
     dependencyIdCache: new Map(),
     dependencyDefinitions: new Map(),
+    reachableDefinitions: new Map(),
     contractIdCache: new Map(),
     contractDefinitions: new Map(),
     referencedTypeCache: new Map(),
@@ -2220,6 +2221,12 @@ function reachableContractValue(graph, resolved) {
   const rootIdentity = declarationIdentity(resolved);
   const contracts = new Set();
   const visited = new Set();
+  // identity -> contract reference, for EVERY declaration the walk touches. This is what lets a
+  // changed fingerprint be explained declaration by declaration instead of only counted; see
+  // `dependencyContractBump()`. It is one entry per reachable declaration, not per edge, and the
+  // whole map is interned by `reachableContractReference()`, so routes that reach the same closure
+  // (every chart subclass, say) share a single stored copy.
+  const reachable = new Map();
   const queue = [resolved];
   for (let index = 0; index < queue.length; index += 1) {
     const current = queue[index];
@@ -2227,9 +2234,11 @@ function reachableContractValue(graph, resolved) {
     if (visited.has(identity)) continue;
     visited.add(identity);
     const ownerContract = declarationContractReference(graph, current);
+    reachable.set(identity, ownerContract);
     for (const dependency of directDependencyRecords(graph, current)) {
       const targetIdentity = declarationIdentity(dependency.resolved);
       const targetContract = declarationContractReference(graph, dependency.resolved);
+      reachable.set(targetIdentity, targetContract);
       contracts.add(dependencyEdgeReference(graph, [
         identity,
         ownerContract,
@@ -2242,7 +2251,16 @@ function reachableContractValue(graph, resolved) {
       }
     }
   }
-  return [...contracts].sort();
+  // The ROOT's own entry is deliberately excluded: `addCachedDeclarationSurface()` already emits its
+  // full surface (including its `:contract`) under the same base, immediately before this runs, so
+  // including it here would be redundant -- and, far more importantly, it would make every root's
+  // map unique and destroy the interning below. 120 roots over one shared 80-declaration chain went
+  // from one stored closure to 120 copies, blowing the serialization budget by 2.2x.
+  reachable.delete(rootIdentity);
+  return {
+    edges: [...contracts].sort(),
+    reachable: Object.fromEntries([...reachable].sort(([left], [right]) => left.localeCompare(right))),
+  };
 }
 
 function reachableContractReference(graph, resolved) {
@@ -2252,11 +2270,21 @@ function reachableContractReference(graph, resolved) {
     const serialized = JSON.stringify(contract);
     const id = createHash('sha256').update(serialized).digest('hex');
     const existing = graph.dependencyDefinitions.get(id);
-    if (existing && existing.edgeCount !== contract.length) {
+    if (existing && existing.edgeCount !== contract.edges.length) {
       throw new Error(`Dependency contract digest collision for ${rootIdentity}.`);
     }
-    graph.dependencyDefinitions.set(id, { edgeCount: contract.length });
-    graph.dependencyContractCache.set(rootIdentity, { edgeCount: contract.length, id });
+    // Interned separately from the edge digest. The edges embed the root identity, so every root
+    // gets a distinct dependency id even when the CLOSURE it reaches is identical -- which is the
+    // common case (every chart subclass reaches the same internals). Keying the closure by its own
+    // digest lets all of them share one stored copy.
+    const reachableSerialized = JSON.stringify(contract.reachable);
+    const reachableId = createHash('sha256').update(reachableSerialized).digest('hex');
+    graph.reachableDefinitions.set(reachableId, contract.reachable);
+    graph.dependencyDefinitions.set(id, {
+      edgeCount: contract.edges.length,
+      reachableId,
+    });
+    graph.dependencyContractCache.set(rootIdentity, { edgeCount: contract.edges.length, id });
     graph.dependencyIdCache.set(rootIdentity, id);
   }
   return graph.dependencyIdCache.get(rootIdentity);
@@ -2507,6 +2535,10 @@ export function normalizePublicApi({ packageJson, manifest, declarations = {} })
       [...(graph?.dependencyDefinitions ?? [])].sort(([left], [right]) =>
         left.localeCompare(right)),
     ),
+    reachableClosures: Object.fromEntries(
+      [...(graph?.reachableDefinitions ?? [])].sort(([left], [right]) =>
+        left.localeCompare(right)),
+    ),
   };
 }
 
@@ -2588,10 +2620,51 @@ function isHeritageSpecialization(before, after) {
  * observable break in the public surface.
  */
 function dependencyContractBump(before, after, baseline, current) {
-  const beforeCount = baseline?.dependencies?.[before]?.edgeCount;
-  const afterCount = current?.dependencies?.[after]?.edgeCount;
-  if (typeof beforeCount !== 'number' || typeof afterCount !== 'number') return 'major';
-  return afterCount > beforeCount ? 'minor' : 'major';
+  const beforeDefinition = baseline?.dependencies?.[before];
+  const afterDefinition = current?.dependencies?.[after];
+  if (!beforeDefinition || !afterDefinition) return 'major';
+
+  const beforeReachable = beforeDefinition.reachable
+    ?? baseline?.reachableClosures?.[beforeDefinition.reachableId];
+  const afterReachable = afterDefinition.reachable
+    ?? current?.reachableClosures?.[afterDefinition.reachableId];
+  if (!beforeReachable || !afterReachable) {
+    // A snapshot produced before the `reachable` map existed -- comparing against an older
+    // published baseline. Degrade to the count rule rather than failing or silently passing.
+    const beforeCount = beforeDefinition.edgeCount;
+    const afterCount = afterDefinition.edgeCount;
+    if (typeof beforeCount !== 'number' || typeof afterCount !== 'number') return 'major';
+    return afterCount > beforeCount ? 'minor' : 'major';
+  }
+
+  // Explain the changed fingerprint declaration by declaration, and classify each on its own
+  // merits. This is the whole point of retaining the map: an edge digest embeds both endpoints'
+  // CONTRACT hashes, so adding a member to any reachable declaration rewrites the fingerprint while
+  // leaving the edge count untouched -- indistinguishable, by count alone, from a rewiring that
+  // dropped something. Counting could only answer `major`, which made every additive release read
+  // as breaking.
+  let bump = 'none';
+  const identities = new Set([...Object.keys(beforeReachable), ...Object.keys(afterReachable)]);
+  for (const identity of identities) {
+    const beforeContract = beforeReachable[identity];
+    const afterContract = afterReachable[identity];
+    // Newly reachable: additive.
+    if (beforeContract === undefined) {
+      bump = maxBump(bump, 'minor');
+      continue;
+    }
+    // No longer reachable: a consumer's type could have depended on it.
+    if (afterContract === undefined) return 'major';
+    if (beforeContract === afterContract) continue;
+    // Same declaration, different shape -- exactly what declarationContractBump() decides, and the
+    // reason a reachable-but-unexported type narrowing is still caught here. It has no entry of its
+    // own in the diff, so this is the only place it can surface.
+    bump = maxBump(
+      bump,
+      declarationContractBump(baseline?.contracts?.[beforeContract], current?.contracts?.[afterContract]),
+    );
+  }
+  return bump;
 }
 
 function changedBump(entry, before, after, baseline, current) {
