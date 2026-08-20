@@ -1758,6 +1758,78 @@ test('keeps a union breaking when its object member NARROWED', () => {
   assert.equal(changes[0].bump, 'major');
 });
 
+// A single-member union formatted with a leading bar -- exactly how the generated framework prop
+// types write every union, including a component's OWN event-name union when it currently has
+// only one event ("| 'lr-cell-click'") -- retained a literal leading "|" in its normalized form,
+// because normalizeType's union branch only fires when splitting produces MORE than one non-empty
+// part; filtering the empty segment before the leading bar collapses a genuine one-member union
+// back down to length 1, so it falls through to the plain-string path with the bar still attached.
+// That extra "|" then reappears as a bogus empty-string atom when typeAtoms() re-splits the
+// normalized text, desyncing the atom-count comparison the moment a second member is added and
+// making the whole addition read as a removal-plus-unrelated-addition instead of a widening.
+// Real-world trigger: <lr-heatmap> gaining lr-matrix-geometry-change as its second event.
+// normalizeBalancedChildren() recursed into a generic instantiation's bracket content
+// (`Foo<Arg1, Arg2, Arg3>`) by handing the WHOLE comma-separated argument list to normalizeType()
+// as one blob. Top-level union splitting inside that blob can't see the argument boundaries, so
+// one argument's bare union (e.g. a props-name union) merges with a DIFFERENT argument's bare
+// union (e.g. a CSS custom-property union) into a single alphabetized bag of atoms, and every
+// non-union argument (an object literal, a bare type reference) gets swallowed into whichever
+// atom it happened to land next to at a comma boundary. The generated framework prop types are
+// exactly `LyraReactElementProps<Host, PropsUnion, {}, EventMap, EventsUnion, CssPropsUnion,
+// AttrAliases>` -- seven arguments, several of them bare unions -- so this fires on real
+// component declarations, not just contrived fixtures, and desyncs an otherwise-correct additive
+// diff (e.g. a component's event union gaining a member) into an unrecognizable, unmatched mess
+// that isTypeWidening can't classify as widening.
+test('normalizeType keeps each generic argument independent, not merged across commas', () => {
+  const before = normalizeType("Wrap<Host,'a'|'b',{},EventMap,'x','p'|'q',{'k'?:V}>");
+  // Argument boundaries must survive: the 'a'|'b' props union and the 'p'|'q' css union must NOT
+  // merge into one bag, and the bare 'x' event argument and the {'k'?:V} object argument must not
+  // be absorbed into either union.
+  assert.equal(before, "Wrap<Host,'a'|'b',{},EventMap,'x','p'|'q',{'k'?:V}>");
+});
+
+test('treats a real multi-argument generated framework prop type gaining one event as minor', () => {
+  // A faithful reproduction of the real generated shape that broke: LyraReactElementProps<Host,
+  // PropsUnion, {}, EventMap, EventsUnion, CssPropsUnion, AttrAliases> gaining one member in the
+  // EventsUnion argument only.
+  const changes = diffPublicApi(
+    typeSnapshot(
+      "LyraReactElementProps<LyraHeatmap,'accessibleCells'|'annotations'|'data',{},LyraHeatmapEventMap,'lr-cell-click','--lr-heatmap-scale-hi'|'--lr-heatmap-scale-lo',{'cell-size'?:LyraHeatmap['cellSize']}>",
+    ),
+    typeSnapshot(
+      "LyraReactElementProps<LyraHeatmap,'accessibleCells'|'annotations'|'data',{},LyraHeatmapEventMap,'lr-cell-click'|'lr-matrix-geometry-change','--lr-heatmap-scale-hi'|'--lr-heatmap-scale-lo',{'cell-size'?:LyraHeatmap['cellSize']}>",
+    ),
+  );
+
+  assert.equal(changes[0].bump, 'minor');
+});
+
+test('normalizeType strips a leading bar from a single-member union', () => {
+  assert.equal(normalizeType("| 'lr-cell-click'"), normalizeType("'lr-cell-click'"));
+});
+
+test('treats a leading-bar single-member union gaining a member as minor', () => {
+  const changes = diffPublicApi(
+    typeSnapshot("| 'lr-cell-click'"),
+    typeSnapshot("| 'lr-cell-click'\n  | 'lr-matrix-geometry-change'"),
+  );
+
+  assert.equal(changes[0].bump, 'minor');
+});
+
+test('treats a generic argument widening from one leading-bar event to two as minor', () => {
+  // Mirrors the real generated shape: LyraReactElementProps<Host, PropsUnion, {}, EventMap,
+  // EventsUnion, CssPropsUnion, AttrAliases> -- only the events-union argument changes.
+  const changes = diffPublicApi(
+    typeSnapshot("Wrap<Host,'a'|'b',{},EventMap,| 'lr-cell-click','--x',{'a'?:X}>"),
+    typeSnapshot(
+      "Wrap<Host,'a'|'b',{},EventMap,| 'lr-cell-click'\n  | 'lr-matrix-geometry-change','--x',{'a'?:X}>",
+    ),
+  );
+
+  assert.equal(changes[0].bump, 'minor');
+});
+
 // Fingerprint granularity redesign. The edge digest embeds each endpoint's CONTRACT hash, so adding
 // a member to any reachable declaration rewrites the fingerprint while leaving the edge COUNT
 // unchanged -- which the count comparison could only call `major`. That was the whole remaining
