@@ -18,8 +18,16 @@ export const CURATED_COMPONENT_HELPER_MODULES = Object.freeze([
   'src/components/conversation/message-actions/toolbar-actions.ts',
   'src/components/conversation/widget-renderer/resolve.ts',
   'src/components/conversation/widget-renderer/registry.ts',
+  // Curated for the same reason `pptx-loader.ts` below is: the docs already PROMISE this exact
+  // specifier. `llms/data.md` and the generated `llms/components/lr-flow-canvas.md` both show
+  // `import { ... } from '@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js'`, and an
+  // exports map blocks everything it does not list, so following the documented example was a hard
+  // build error. (The types are also re-exported by `flow-canvas.class.js`, so this adds no new
+  // surface -- only the route the docs already name.) Found by `check:doc-specifiers`.
+  'src/components/data/flow-canvas/flow-types.ts',
   'src/components/media/attachment-chip/file-size.ts',
   'src/components/media/flag/flag-peer.ts',
+  'src/components/media/flag/flag-peer-bulk.ts',
   'src/components/media/flag/language-map.ts',
   'src/components/media/map/map-loader.ts',
   'src/components/overlays/dialog/confirm.ts',
@@ -137,8 +145,14 @@ function addRoute(routes, exportPath, target, owner) {
 // module literally named `registry.ts`. This mirrors `generate-side-effects.mjs`'s
 // `deriveSideEffects()`, which walks the same file tree for its own `-register`/`-peer` suffixes
 // instead of hand-copying names forward from a previous artifact.
+// The trailing `(?:-[a-z0-9]+)*` matters as much as the suffixes themselves. `flag-peer-bulk.ts`
+// shipped in 11.2.0 as the release's headline <lr-flag> entry point, was named by its own docs and
+// `.d.ts` as the specifier to import, and reached no consumer at all: it had no package-export
+// route, and this derivation -- whose entire job is to stop exactly that -- skipped it because a
+// QUALIFIED suffix (`-peer-bulk`) is not the bare suffix (`-peer`). A qualified variant is a helper
+// module by every criterion that makes the bare form one, so it must be classified too.
 function matchesPublicHelperNamingConvention(basename) {
-  return basename === 'registry.ts' || /-(?:loader|peer|register)\.ts$/.test(basename);
+  return basename === 'registry.ts' || /-(?:loader|peer|register)(?:-[a-z0-9]+)*\.ts$/.test(basename);
 }
 
 function walkFiles(directory) {

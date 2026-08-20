@@ -3370,3 +3370,63 @@ describe('incremental GeoJSON updates', () => {
     expect(buildGeoJsonPropertyDiff(collection(1), undefined)).to.equal(null);
   });
 });
+
+// `maxBounds` regression coverage. Both halves below shipped broken in 11.2.0 and were reported
+// together because the first was the only thing hiding the second.
+//
+// 1. `maxBounds` is `attribute: false`, so a property binding is the only way to set it -- which
+//    means its one and only appearance in `changed` is the FIRST update. <lr-map> builds its peer
+//    asynchronously (a lazy `import('maplibre-gl')` plus WebGL init), so `this._map` is still
+//    undefined then. `updated()`'s `&& this._map` guard short-circuited, the property never
+//    changed again, and it was never retried: a documented property that read back as set and did
+//    nothing, permanently, with no warning.
+// 2. The guard reads the camera back AFTER `setMaxBounds()` to catch a non-finite zoom. At the
+//    conditions its own warning text names (sub-1 fractional zooms in wide containers) maplibre-gl
+//    6.x does not return a broken camera -- it THROWS, so the readback line is never reached and,
+//    with no try/catch, the exception escapes `updated()` into the consumer's render cycle.
+it('applies a declaratively-set maxBounds once the map exists, not only on a later change', async function () {
+  if (!hasWebGL2) this.skip();
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  // Set before the peer can possibly have loaded: this is the normal path for an `attribute:
+  // false` property, not an edge case.
+  el.maxBounds = [
+    [-10, -10],
+    [10, 10],
+  ];
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+
+  const applied = (el.map as unknown as { getMaxBounds?: () => unknown }).getMaxBounds?.();
+  expect(applied, 'maxBounds never reached the peer').to.not.equal(null);
+  expect(applied, 'maxBounds never reached the peer').to.not.equal(undefined);
+});
+
+it('routes a throwing setMaxBounds into the same revert-and-warn path as a non-finite camera', async function () {
+  if (!hasWebGL2) this.skip();
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+
+  const zoomBefore = el.map!.getZoom();
+  const calls: unknown[] = [];
+  (el.map as unknown as { setMaxBounds: (b: unknown) => unknown }).setMaxBounds = (bounds) => {
+    calls.push(bounds);
+    // Exactly what maplibre-gl 6.x does at a sub-1 fractional zoom in a wide container.
+    if (bounds !== null) throw new TypeError("Cannot read properties of null (reading '0')");
+    return el.map;
+  };
+
+  // Must not escape into the consumer's render cycle.
+  el.maxBounds = [
+    [-180, -85],
+    [180, 85],
+  ];
+  await el.updateComplete;
+
+  expect(calls.length, 'the throw must be followed by a revert').to.be.at.least(2);
+  expect(calls[calls.length - 1], 'the constraint must be dropped after a throw').to.equal(null);
+  expect(Number.isFinite(el.map!.getZoom()), 'the camera must survive').to.be.true;
+  expect(el.map!.getZoom()).to.be.closeTo(zoomBefore, 0.001);
+});

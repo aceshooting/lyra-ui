@@ -118,6 +118,11 @@ assert.deepEqual(
     // must never be reported -- the convention is deliberately narrow.
     writeHelperFixture('src/components/forms/alpha/alpha-preload.ts');
     writeHelperFixture('src/components/forms/alpha/alpha.class.ts');
+    // A QUALIFIED variant of a convention suffix (`-peer-bulk`, `-loader-lean`, ...) is a helper
+    // module just as much as the bare suffix is, and needs classifying just as much. Narrowing
+    // the convention to the bare suffix is what let `flag-peer-bulk.ts` ship in 11.2.0 with no
+    // package export and no warning -- the one failure mode this whole derivation exists to stop.
+    writeHelperFixture('src/components/forms/beta/beta-peer-bulk.ts');
     // Test/declaration files matching the stem must be ignored even though they end in `.ts`.
     writeHelperFixture('src/components/forms/alpha/alpha-loader.test.ts');
 
@@ -128,6 +133,7 @@ assert.deepEqual(
         skipExistenceCheck: true,
       }),
       [
+        'src/components/forms/beta/beta-peer-bulk.ts',
         'src/components/forms/beta/beta-register.ts',
         'src/components/forms/beta/registry.ts',
       ]

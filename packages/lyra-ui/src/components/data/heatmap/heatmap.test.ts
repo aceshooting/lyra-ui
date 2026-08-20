@@ -7448,6 +7448,59 @@ describe("matrixGeometry / lr-matrix-geometry-change", () => {
     expect(detail).to.deep.equal({ padLeft: 140, padTop: 20, cellSize: 30 });
     expect(detail).to.deep.equal(el.matrixGeometry);
   });
+
+  // The getter is documented as "the gutter/cell geometry the last matrix-mode draw actually
+  // painted with", and the 11.2.0 notes said it "can never disagree" because it reuses the same
+  // internal getters drawMatrix() calls. Reusing those getters is exactly what made it disagree:
+  // they read CURRENT layout, not the last paint.
+  //
+  // rowLabelWidth is the sharpest demonstration because -- as the test above records -- it is not
+  // in updated()'s redraw-triggering property list. Assigning it therefore changes what the live
+  // getters compute while provoking no redraw at all, so the divergence is not a transient window
+  // (as it is for the reported viewport-paused-redraw case) but permanent until something else
+  // happens to trigger a draw.
+  it("keeps reporting the last painted geometry when live layout moves ahead of the canvas", async () => {
+    const el = (await fixture(
+      html`<lr-heatmap cell-size="20" row-label-width="140"></lr-heatmap>`
+    )) as LyraHeatmap;
+    setMatrixData(el, { rowLabels: ["a"], colLabels: ["x"], values: [[1]] });
+    await el.updateComplete;
+    await aTimeout(0);
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
+    const paintedWidth = canvas.style.width;
+    expect(el.matrixGeometry).to.deep.equal({ padLeft: 140, padTop: 20, cellSize: 20 });
+
+    let fired = 0;
+    el.addEventListener("lr-matrix-geometry-change", () => fired++);
+    el.rowLabelWidth = 300;
+    await el.updateComplete;
+    await aTimeout(0);
+
+    expect(canvas.style.width, "no redraw should have happened").to.equal(paintedWidth);
+    expect(fired, "no draw, so no geometry event").to.equal(0);
+    expect(
+      el.matrixGeometry,
+      "the getter must report what was painted, not what live layout would paint now"
+    ).to.deep.equal({ padLeft: 140, padTop: 20, cellSize: 20 });
+  });
+
+  it("returns the very object the geometry event carried, so the two can never disagree", async () => {
+    const el = (await fixture(
+      html`<lr-heatmap cell-size="20" row-label-width="140"></lr-heatmap>`
+    )) as LyraHeatmap;
+    setMatrixData(el, { rowLabels: ["a"], colLabels: ["x"], values: [[1]] });
+    await el.updateComplete;
+    await aTimeout(0);
+    let detail: unknown;
+    el.addEventListener("lr-matrix-geometry-change", (e) => {
+      detail = (e as CustomEvent).detail;
+    });
+    el.setAttribute("cell-size", "30");
+    await el.updateComplete;
+    await aTimeout(0);
+    expect(detail).to.equal(el.matrixGeometry);
+    expect(Object.isFrozen(el.matrixGeometry), "the shared object must not be mutable").to.be.true;
+  });
 });
 
 // The row gutter got `rowLabelWidth` (number | auto) in 10.0.0; the column band had no counterpart

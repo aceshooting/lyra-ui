@@ -960,12 +960,22 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   /**
    * Applies `maxBounds`, then verifies the peer's camera survived it.
    *
-   * maplibre-gl constrains the camera when bounds are set, and that constrain pass can leave the
-   * transform in a state where `getZoom()` returns a non-number; from then on the map throws every
-   * frame from inside its own matrix math and never paints. There is no exception at the call site
-   * to catch, so the only reliable signal is to read the camera back afterwards. If it did not
-   * survive, drop the constraint and restore the camera -- an unconstrained map is a far smaller
-   * defect than a blank one -- and say so once, naming the property.
+   * maplibre-gl constrains the camera when bounds are set, and that constrain pass can fail in two
+   * different ways at the same conditions -- sub-1 fractional zooms in wide containers:
+   *
+   *  * It can leave the transform in a state where `getZoom()` returns a non-number. There is no
+   *    exception at the call site, so the only reliable signal is to read the camera back
+   *    afterwards.
+   *  * It can THROW synchronously out of `setMaxBounds()` itself (maplibre-gl 6.x raises
+   *    `TypeError: Cannot read properties of null (reading '0')` at a full-world box). That
+   *    happens *before* the readback line, so the readback guard alone never ran in the case it
+   *    was written for -- and with no `try`/`catch` the exception escaped `updated()` into the
+   *    consumer's render cycle, degenerating into repeated throws from the peer's own matrix math
+   *    on every later `resize`/`setZoom` and a canvas that never paints again.
+   *
+   * Either way the answer is the same: drop the constraint and restore the camera -- an
+   * unconstrained map is a far smaller defect than a blank one -- and say so once, naming the
+   * property. Both failures therefore share one revert path.
    */
   private applyMaxBounds(): void {
     const map = this._map;
@@ -973,15 +983,24 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const bounds = this.safeMaxBounds;
     const zoomBefore = map.getZoom();
     const centerBefore = map.getCenter();
-    map.setMaxBounds(bounds);
-    if (bounds === null) return;
-    if (Number.isFinite(map.getZoom())) return;
-    map.setMaxBounds(null);
+    try {
+      map.setMaxBounds(bounds);
+      if (bounds === null) return;
+      if (Number.isFinite(map.getZoom())) return;
+    } catch {
+      // Fall through to the shared revert below. Clearing `maxBounds` is what un-wedges the
+      // peer's transform, so it must happen even though the call that wedged it threw.
+    }
+    try {
+      map.setMaxBounds(null);
+    } catch {
+      // Nothing further to try: the revert is best-effort by construction.
+    }
     if (Number.isFinite(zoomBefore)) map.setZoom(zoomBefore);
     if (centerBefore) map.setCenter([centerBefore.lng, centerBefore.lat]);
     devWarnOnce(
       'lyra-map-max-bounds-rejected',
-      '<lr-map>: maxBounds left maplibre-gl without a usable zoom, so it was dropped and the '
+      '<lr-map>: maxBounds left maplibre-gl without a usable camera, so it was dropped and the '
         + 'camera restored. This is a peer limitation, not a bad value -- it shows up at sub-1 '
         + 'fractional zooms in wide containers. Raise the zoom, narrow the box, or leave maxBounds '
         + 'unset.'
@@ -1264,7 +1283,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this.failure = undefined;
     } catch {
       this.failInitialization('initialization-failed', candidate);
+      return;
     }
+    // `maxBounds` is `attribute: false`, so a property binding is the only way to set it -- which
+    // means its one and only appearance in `changed` is the FIRST update, long before this async
+    // construction path has produced a map. `updated()`'s `&& this._map` guard therefore
+    // short-circuits it, and since the property never changes again it is never retried. Applying
+    // it here, on the map-ready path, is what makes a declaratively-set box reach the peer at all;
+    // `updated()` still covers a later reassignment.
+    this.applyMaxBounds();
   }
 
   protected override updated(changed: PropertyValues): void {

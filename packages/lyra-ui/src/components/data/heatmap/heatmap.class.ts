@@ -742,26 +742,30 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * `{ padLeft, padTop, cellSize }`, all in CSS pixels -- so a light-DOM consumer (e.g. a sticky
    * header mirror) can line up with the canvas without hardcoding the same numbers `row-label-width`
    * or `col-label-height`'s `"auto"` resolution would otherwise keep private. `undefined` in
-   * calendar mode, and before the first matrix draw. Reuses the exact getters/method `drawMatrix()`
-   * itself calls, so this can never disagree with what was actually painted. See also the
-   * `lr-matrix-geometry-change` event, fired whenever this value changes.
+   * calendar mode, and before the first matrix draw.
+   *
+   * This returns the frozen object `drawMatrix()` stored (and `lr-matrix-geometry-change` carried)
+   * on the last draw -- not a fresh computation. That distinction is the whole contract. Computing
+   * it on read from the same internal getters `drawMatrix()` uses looks equivalent and is not:
+   * those getters read CURRENT layout, so any interval where layout has moved but no draw has
+   * happened yet makes the getter describe a canvas that does not exist. Two such intervals are
+   * routine -- full redraws pause while the host is outside the viewport (documented behaviour of
+   * this component), and `rowLabelWidth`/`colLabelHeight` are not redraw-triggering properties at
+   * all -- and both land hardest on the tall, partly-scrolled matrix this getter exists to serve.
+   * Returning the stored object also makes the getter and the event the same value by
+   * construction rather than by coincidence.
    */
   get matrixGeometry(): Readonly<LyraHeatmapMatrixGeometryChangeDetail> | undefined {
-    if (this.effectiveMode !== 'matrix' || !this.hasDrawnMatrix) return undefined;
-    return {
-      padLeft: this.matrixPadLeft,
-      padTop: this.matrixPadTop,
-      cellSize: this.matrixCellSize(this.matrixColLabels.length),
-    };
+    if (this.effectiveMode !== 'matrix') return undefined;
+    return this.lastPaintedMatrixGeometry;
   }
 
-  /** Set on the first successful `drawMatrix()` pass; gates `matrixGeometry` returning a real
-   *  value only once there has actually been a draw to describe. */
-  private hasDrawnMatrix = false;
-
-  /** Last geometry `lr-matrix-geometry-change` fired, so a same-valued redraw (a color-only
-   *  update, an unrelated data change) does not refire the event. */
-  private lastEmittedMatrixGeometry?: Readonly<LyraHeatmapMatrixGeometryChangeDetail>;
+  /** The geometry the last `drawMatrix()` pass painted with, frozen and shared with the
+   *  `lr-matrix-geometry-change` detail. `undefined` until the first draw, which is what gates
+   *  `matrixGeometry` returning a real value only once there is a draw to describe. Also backs the
+   *  event's change detection, so a same-valued redraw (a color-only update, an unrelated data
+   *  change) does not refire it. */
+  private lastPaintedMatrixGeometry?: Readonly<LyraHeatmapMatrixGeometryChangeDetail>;
 
   private get matrixPadTop(): number {
     if (this.colLabelHeight === 'auto') return this.resolvedColLabelHeight;
@@ -2899,16 +2903,18 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const padLeft = this.matrixPadLeft;
     const padTop = this.matrixPadTop;
     const cellSize = this.matrixCellSize(cols);
-    this.hasDrawnMatrix = true;
-    const geometry = { padLeft, padTop, cellSize };
-    const previous = this.lastEmittedMatrixGeometry;
+    const previous = this.lastPaintedMatrixGeometry;
+    const geometry = Object.freeze({ padLeft, padTop, cellSize });
+    // Recorded on EVERY draw, not just a changed one: this is what `matrixGeometry` returns, so it
+    // has to describe the latest paint even when that paint matched the one before it. The event
+    // is what is conditional, not the record.
+    this.lastPaintedMatrixGeometry = geometry;
     if (
       !previous ||
       previous.padLeft !== padLeft ||
       previous.padTop !== padTop ||
       previous.cellSize !== cellSize
     ) {
-      this.lastEmittedMatrixGeometry = geometry;
       this.emit('lr-matrix-geometry-change', geometry);
     }
     const w = padLeft + cols * cellSize;
