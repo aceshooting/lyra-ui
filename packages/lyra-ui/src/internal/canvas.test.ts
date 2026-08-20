@@ -93,3 +93,31 @@ it('memoizes independently per owner document', () => {
 it('fails closed without an owner document', () => {
   expect(getScratchCtx(null) === null).to.equal(true);
 });
+
+// lr-heatmap's resolveRgb() falls through to a 1x1 getImageData() readback on this shared context
+// whenever a colour is one the canvas normalizes into a form neither hexToRgb nor parseRgbString
+// accepts -- color-mix(), oklch(), lab(). Chrome then warns, on every page carrying a heatmap, that
+// "multiple readback operations using getImageData are faster with the willReadFrequently attribute
+// set to true" -- a warning the consumer can do nothing about. A ramp built from color-mix() hits
+// the readback per cell, so this is a real per-frame cost there, not only a console nuisance.
+it('creates the shared scratch context as read-frequently', () => {
+  const created: unknown[] = [];
+  const probeDocument = document.implementation.createHTMLDocument('scratch-attrs');
+  const canvas = probeDocument.createElement('canvas');
+  const originalGetContext = canvas.getContext.bind(canvas);
+  canvas.getContext = ((type: string, attributes?: unknown) => {
+    created.push(attributes);
+    return originalGetContext(type as '2d', attributes as CanvasRenderingContext2DSettings);
+  }) as typeof canvas.getContext;
+  const originalCreateElement = probeDocument.createElement.bind(probeDocument);
+  probeDocument.createElement = ((tag: string) =>
+    tag === 'canvas' ? canvas : originalCreateElement(tag)) as typeof probeDocument.createElement;
+
+  getScratchCtx(probeDocument);
+
+  expect(created.length, 'the context is created once per document').to.equal(1);
+  expect(
+    (created[0] as { willReadFrequently?: boolean } | undefined)?.willReadFrequently,
+    'the scratch canvas exists to be read back from',
+  ).to.equal(true);
+});

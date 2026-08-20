@@ -95,7 +95,13 @@ export function getScratchCtx(
   if (!scratchContexts.has(ownerDocument)) {
     scratchContexts.set(
       ownerDocument,
-      ownerDocument.createElement('canvas').getContext('2d')
+      // `willReadFrequently` because this context exists to be READ from -- lr-heatmap's
+      // resolveRgb() does a 1x1 getImageData() readback for every colour the canvas normalizes into
+      // a form its string parsers do not accept (color-mix(), oklch(), lab()). Without the hint
+      // Chrome keeps the surface GPU-backed and warns, on every page carrying a heatmap, that
+      // repeated getImageData is faster with it set -- a warning no consumer can act on. A ramp
+      // built from color-mix() takes that readback per cell, so it is a real per-frame cost there.
+      ownerDocument.createElement('canvas').getContext('2d', { willReadFrequently: true })
     );
   }
   return scratchContexts.get(ownerDocument) ?? null;

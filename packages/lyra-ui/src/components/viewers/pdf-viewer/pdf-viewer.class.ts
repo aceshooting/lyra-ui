@@ -168,7 +168,6 @@ function boundedPdfTextLayerChunk(
     readonly lang?: unknown;
   };
   const items: unknown[] = [];
-  const fontNames = new Set<string>();
   let inspected = 0;
   while (
     inspected < source.items.length
@@ -195,7 +194,6 @@ function boundedPdfTextLayerChunk(
           fontName: record['fontName'],
           hasEOL: record['hasEOL'],
         });
-        if (typeof record['fontName'] === 'string') fontNames.add(record['fontName']);
         budget.remainingItems--;
       }
       budget.remainingCodeUnits = 0;
@@ -204,23 +202,28 @@ function boundedPdfTextLayerChunk(
     items.push(item);
     budget.remainingItems--;
     if (text !== undefined) budget.remainingCodeUnits -= text.length;
-    if ('fontName' in item && typeof item.fontName === 'string') fontNames.add(item.fontName);
   }
   const styles: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
   if (source.styles && typeof source.styles === 'object') {
     const sourceStyles = source.styles as Record<string, unknown>;
-    // A font introduced by an earlier chunk is routinely referenced by later chunks that no longer
-    // carry its style, so this must copy only styles the chunk actually has: PDF.js merges every
-    // chunk into one document-wide cache with `Object.assign`, where an own property holding
-    // `undefined` overwrites the good earlier entry and makes the next lookup of that font throw,
-    // aborting the rest of the page's text layer. The check is own-property presence rather than
-    // truthiness (a legitimately falsy style value must still be copied) and rather than `in`
-    // (a font is named by the document, so an inherited `constructor`/`toString` must not be
-    // reachable through it).
-    for (const fontName of fontNames) {
-      if (Object.prototype.hasOwnProperty.call(sourceStyles, fontName)) {
-        styles[fontName] = sourceStyles[fontName];
-      }
+    // PDF.js merges every chunk into one document-wide cache with `Object.assign`, and that cache
+    // is the only place a later chunk's items can look their font up. Two opposite failures both
+    // abort the rest of the page's text layer, and this loop has to avoid BOTH:
+    //
+    //   - Copying a key whose value is `undefined` overwrites a good entry an earlier chunk
+    //     contributed, so the next lookup of that font reads `undefined.vertical` and throws.
+    //   - Copying only the fonts THIS chunk's retained items use drops any style PDF.js announces
+    //     ahead of the items that need it. It does not re-send that style on the later chunk, so
+    //     the lookup throws in exactly the same way. This was the residual half, reopened after
+    //     10.0.0 fixed only the first: measured on a real 9-page document as 4 affected pages,
+    //     4 throws, and 101 of 271 spans orphaned.
+    //
+    // So: copy every own entry the chunk actually carries, and skip only `undefined`. Falsy-but-
+    // defined values (`null`, `0`, `''`) are legitimate styles and must survive. `Object.entries`
+    // enumerates own properties only, so an inherited `constructor`/`toString` stays unreachable
+    // through a document-supplied font name.
+    for (const [fontName, style] of Object.entries(sourceStyles)) {
+      if (style !== undefined) styles[fontName] = style;
     }
   }
   return {

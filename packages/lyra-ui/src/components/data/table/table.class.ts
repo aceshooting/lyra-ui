@@ -2511,6 +2511,39 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *
    *  No `tabindex` on either: a persistent editor is a plain tab stop, exactly like the row-expand
    *  toggle rendered a few lines above, and stays outside the header/row roving model. */
+  /** Column keys already reported by `renderCellValue()`, so a 400-row table logs once, not 400
+   *  times, for the same authoring mistake. */
+  private readonly reportedMissingCellColumns = new Set<string>();
+
+  /**
+   * Renders one cell, tolerating a column that omits its required `cell` renderer.
+   *
+   * `TableColumn.cell` is typed and documented required, but columns arrive through a lit
+   * `.columns=${[...]}` property binding, and lit-html property bindings are not type-checked by
+   * `tsc` -- only by lit-analyzer, which many projects do not run. So required-ness is unenforced
+   * where it is actually written. Calling it unguarded meant a single malformed column threw out of
+   * lit's `repeat` directive and took the WHOLE table down, with a stack carrying only lyra and
+   * lit-html frames: no application frame, no column key, no table identity. One report described
+   * carrying it undiagnosed across two releases as 16 unattributed unhandled rejections, while the
+   * suite still passed because its assertions were on surrounding markup.
+   *
+   * So: degrade to an empty cell -- the rest of the table stays usable -- and report once per
+   * column, naming the key and the tag, because attribution was the harder half of that bug.
+   */
+  private renderCellValue(col: TableColumn<T>, row: T): unknown {
+    if (typeof col.cell === 'function') return col.cell(row);
+    const key = String(col.key ?? '(unkeyed)');
+    if (!this.reportedMissingCellColumns.has(key)) {
+      this.reportedMissingCellColumns.add(key);
+      console.error(
+        `<lr-table>: column ${JSON.stringify(key)} has no \`cell\` renderer, so its cells `
+          + 'render empty. `cell` is required, but a lit `.columns=${...}` binding is not '
+          + 'type-checked, so this cannot be caught by tsc alone.',
+      );
+    }
+    return nothing;
+  }
+
   private renderCellEditor(row: T, col: TableColumn<T>, rowKey: string, alwaysOn: boolean): TemplateResult {
     const type = col.editType ?? 'text';
     const isText = type === 'text';
@@ -2831,7 +2864,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                               title=${cellTitle || nothing}
                               style=${Object.keys(cellStyle).length ? styleMap(cellStyle) : nothing}
                             >
-                              ${editing ? this.renderCellEditor(row, col, encodeKey(key), alwaysOn) : col.cell(row)}
+                              ${editing ? this.renderCellEditor(row, col, encodeKey(key), alwaysOn) : this.renderCellValue(col, row)}
                             </td>`;
                           })}
                           ${hasRowTotal ? html`<td part="row-total-cell">${this.rowTotal?.(row)}</td>` : nothing}

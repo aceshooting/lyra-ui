@@ -5118,3 +5118,70 @@ it("gives toolbar buttons a hover fill that actually differs from the toolbar be
     "hover must not resolve to the toolbar background"
   ).to.not.equal(toolbarFill);
 });
+
+// Reopened after 10.0.0: the `hasOwnProperty` guard fixed one way the style map lost entries, but
+// the SAME loop lost them at the other end. It rebuilt `styles` from `fontNames` -- the fonts of the
+// items retained in THIS chunk -- so a style PDF.js legitimately emits in a chunk containing no item
+// of that font was dropped and never reached TextLayer's #styleCache. PDF.js does not re-send it on
+// the later chunk whose items do use it, so `#processItems` then read `undefined.vertical` and
+// aborted the rest of the page. Measured by the reporter on a 9-page document: 4 affected pages,
+// 4 throws, 101 of 271 spans orphaned.
+it('keeps a style for a font that no item in the same chunk uses', async () => {
+  const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+  const enqueued: Record<string, unknown>[] = [];
+  class RecordingTextLayer {
+    constructor(private options: { textContentSource: ReadableStream<unknown> }) {}
+    async render(): Promise<void> {
+      const reader = this.options.textContentSource.getReader();
+      for (;;) {
+        const result = await reader.read();
+        if (result.done) break;
+        const value = result.value as { styles?: Record<string, unknown> };
+        enqueued.push(value.styles ?? {});
+      }
+    }
+    cancel(): void {}
+  }
+  const page = {
+    ...fakePage(1),
+    streamTextContent: () => new ReadableStream({
+      start(controller) {
+        // `f-later` is announced here, but no item in this chunk uses it.
+        controller.enqueue({
+          items: [{ str: 'alpha', hasEOL: false, fontName: 'f1' }],
+          styles: { f1: { fontFamily: 'sans-serif' }, 'f-later': { fontFamily: 'serif' } },
+          lang: 'en',
+        });
+        // ...and PDF.js does not repeat it on the chunk whose items finally do use it.
+        controller.enqueue({
+          items: [{ str: 'beta', hasEOL: false, fontName: 'f-later' }],
+          styles: {},
+          lang: 'en',
+        });
+        controller.close();
+      },
+    }),
+  };
+  const doc = { numPages: 1, getPage: () => Promise.resolve(page) };
+  (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () =>
+    Promise.resolve({
+      getDocument: () => ({ promise: Promise.resolve(doc) }),
+      GlobalWorkerOptions: { workerSrc: '' },
+      TextLayer: RecordingTextLayer,
+    });
+  const restore = stubFetch();
+  try {
+    el.src = 'https://example.test/style-carryover.pdf';
+    await waitFor(el, '[part="toolbar"]');
+    await waitUntil(() => enqueued.length >= 2);
+    const [firstStyles] = enqueued as [Record<string, unknown>];
+
+    expect(
+      Object.prototype.hasOwnProperty.call(firstStyles, 'f-later'),
+      'a style announced ahead of its items must survive, or the later chunk throws on lookup',
+    ).to.be.true;
+    expect((firstStyles['f-later'] as { fontFamily?: string })?.fontFamily).to.equal('serif');
+  } finally {
+    restore();
+  }
+});

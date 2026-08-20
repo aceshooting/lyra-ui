@@ -7208,3 +7208,71 @@ describe('sticky + sortable header pointer feedback', () => {
     );
   });
 });
+
+// `TableColumn.cell` is typed and documented required, but columns are supplied through a lit
+// `.columns=${[...]}` binding, and lit-html property bindings are NOT type-checked by tsc (only by
+// lit-analyzer, which many projects do not run). So required-ness was unenforced at author time AND
+// unguarded at run time. A column missing `cell` threw `col.cell is not a function` from inside
+// lit's repeat directive -- taking the whole table down, with a stack containing only lyra and
+// lit-html frames: no application frame, no column key, no table identity. One reporter carried it
+// undiagnosed across two releases as 16 unattributed unhandled rejections while their suite passed.
+describe('a column missing its cell renderer', () => {
+  it('renders the rest of the table instead of throwing out of lit repeat', async () => {
+    const originalError = console.error;
+    console.error = () => {};
+    try {
+      const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable;
+      el.columns = [
+        { key: 'ok', label: 'OK', cell: (row: { ok: string }) => row.ok },
+        { key: 'broken', label: 'Broken' },
+      ] as never;
+      el.rows = [{ ok: 'value' }] as never;
+      await el.updateComplete;
+
+      expect(
+        el.shadowRoot!.textContent?.includes('value'),
+        'the well-formed column still renders',
+      ).to.be.true;
+    } finally {
+      console.error = originalError;
+    }
+  });
+
+  it('names the column key and the tag so the failure is attributable', async () => {
+    const originalError = console.error;
+    const messages: string[] = [];
+    console.error = (...args: unknown[]) => messages.push(args.map(String).join(' '));
+    try {
+      const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable;
+      el.columns = [{ key: 'broken', label: 'Broken' }] as never;
+      el.rows = [{ ok: 'value' }] as never;
+      await el.updateComplete;
+
+      const combined = messages.join('\n');
+      expect(combined, 'the offending column key').to.contain('broken');
+      expect(combined, 'the component that owns it').to.contain('lr-table');
+      expect(combined, 'the missing member').to.contain('cell');
+    } finally {
+      console.error = originalError;
+    }
+  });
+
+  it('reports each offending column once rather than once per row', async () => {
+    const originalError = console.error;
+    const messages: string[] = [];
+    console.error = (...args: unknown[]) => messages.push(args.map(String).join(' '));
+    try {
+      const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable;
+      el.columns = [{ key: 'broken', label: 'Broken' }] as never;
+      el.rows = [{ a: 1 }, { a: 2 }, { a: 3 }, { a: 4 }] as never;
+      await el.updateComplete;
+
+      expect(
+        messages.filter((message) => message.includes('broken')).length,
+        'four rows must not mean four identical console errors',
+      ).to.equal(1);
+    } finally {
+      console.error = originalError;
+    }
+  });
+});
