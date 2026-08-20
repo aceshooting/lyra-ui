@@ -83,7 +83,7 @@ interface ResolvedStage {
  * @cssprop [--lr-funnel-track-color=var(--lr-color-surface-raised)] - Background of the bar track.
  * @cssprop [--lr-funnel-bar-size=var(--lr-size-1-5rem)] - Thickness of a stage's track.
  * @status experimental
- * @since unreleased
+ * @since 12.0.0
  */
 export class LyraFunnel extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: START

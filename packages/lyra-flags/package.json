@@ -1,6 +1,6 @@
 {
   "name": "@aceshooting/lyra-flags",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Waving country/territory flag SVGs — optional companion asset package for <lr-flag> in lyra-ui.",
   "keywords": [
     "flag-icons",

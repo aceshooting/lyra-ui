@@ -2,7 +2,7 @@
   "$comment": "Authoritative component, public-surface, and upstream mapping inventory. Refresh with generate-component-inventory.mjs using the pinned published manifests and artifact-bound black-box evidence; do not infer upstream behavior from implementation source.",
   "schemaVersion": 1,
   "pins": {
-    "lyraVersion": "11.2.0",
+    "lyraVersion": "12.0.0",
     "webawesome": {
       "version": "3.11.0",
       "commit": "1d05f1a4468336de35d2c61282a953ef07da3bdf"
@@ -52324,7 +52324,7 @@
       "optionalPeers": [],
       "maturity": {
         "status": "experimental",
-        "since": "unreleased",
+        "since": "12.0.0",
         "deprecated": null,
         "profile": "new-component-experimental",
         "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",

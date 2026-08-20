@@ -5,7 +5,7 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-funnel.js';` (stable tag alias; registers the tag)
 - **Class** `LyraFunnel`, also available unregistered from `@aceshooting/lyra-ui/components/data/funnel/funnel.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
-- **Status** `experimental` since `unreleased` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `experimental` since `12.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 14 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below

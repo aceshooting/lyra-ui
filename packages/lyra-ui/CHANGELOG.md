@@ -1,5 +1,393 @@
 # Changelog
 
+## 12.0.0
+
+### Major Changes
+
+- bd0f05f: **Breaking:** `LyraElement` no longer declares the static `getPropertyDescriptor()`, so that member
+  is gone from every element's public surface in `custom-elements.json`.
+  
+  This is the release's only substantive breaking change, and in practice nothing consumer-callable
+  was removed: `getPropertyDescriptor()` is Lit's own finalization hook, called *by* `ReactiveElement`
+  during `finalize()` and never by application code. It appeared on all 285 tags purely because this
+  library overrode it, and the manifest projects an inherited static onto every subclass. Only code
+  that subclassed an `lr-*` element and overrode the hook itself is affected — a path Lit has already
+  deprecated and states will not be called under standard decorators.
+  
+  The major is nonetheless correct rather than pedantic. By this package's own definition of public
+  surface, a public static was removed from every element, and the reachable-declaration set of every
+  export shrank as a result. The semver gate reports that honestly, and the alternative — shipping it
+  as a minor behind a blanket exception — would have meant weakening the gate to let one change past
+  it.
+  
+  `@lit/reactive-element` 2.1.2 deprecates that hook and warns during `finalize()`, so every consumer
+  saw an unactionable dev-mode warning on every page load that mounted any `lr-*` element, not
+  silenceable without disabling Lit's dev warnings wholesale.
+  
+  The more important half was invisible. That override was what implemented the documented
+  clone-owned/bounded/frozen collection contract on 182 enrolled property names across 87 modules
+  (`colorSteps`, `legendStops`, `annotations` and their equivalents): it wrapped every reactive setter
+  and routed owned values through the snapshot helpers. It worked only because the published dist
+  ships experimental decorators, which still call the hook. Lit states plainly that standard
+  decorators will not — so a migration, or a consumer build applying them, would have silently
+  reverted every one of those properties to storing the caller's live array by reference. No clone, no
+  freeze, no error, no warning, and no test would have caught it.
+  
+  The contract now rides a decorator-agnostic seam that re-defines the already-finished prototype
+  accessor. Legacy `@property`, standard `accessor`/setter decorators, a `static properties` block and
+  hand-written getter/setter pairs all end in a prototype accessor by finalization, so this walks the
+  finished accessor rather than the hook Lit refuses to call. It installs from the finalization
+  trigger Lit itself documents, and registration strictly precedes every instance — constructing an
+  unregistered custom element throws — so no assignment can reach an unwrapped setter.
+  
+  `finalize()` was deliberately not hooked: that would add a static method to the class surface, which
+  the component inventory records per component and a pinned-manifest gate grades. The chosen seam
+  changes no static surface at all.
+  
+  **No migration is expected.** If you do not override `getPropertyDescriptor()` on an `lr-*`
+  subclass, there is nothing to do.
+
+### Minor Changes
+
+- 103922d: `<lr-chip-group>` gained `accessibleLabel` (attribute `aria-label`) and now renders
+  `role="group"` on `[part='base']` whenever a name is supplied.
+  
+  A chip group is a group, and every peer grouping primitive in this library already said so —
+  `<lr-radio-group>` renders `role="radiogroup"`, `<lr-segmented>` the same, each forwarding a host
+  `aria-label` inward to the element that owns the role. `<lr-chip-group>` rendered a roleless
+  container and read no accessible name at all. Because a host `aria-label` does not cross a shadow
+  boundary, a consumer labelling the host named nothing: the chips were announced as unrelated
+  toggle buttons with no indication of what set they belonged to.
+  
+  This surfaced from a real multi-select filter row, where the consumer had to hand-write
+  `role="group" aria-label="…"` onto the host to get a named group. That workaround is the evidence
+  the capability was wanted and was reachable only by reaching around the component.
+  
+  The role is applied only *with* a name, deliberately. An unnamed group role adds verbosity without
+  adding information, and applying it unconditionally would change the accessibility tree of every
+  decorative chip row already shipped. An explicit unset-regression test pins that.
+- bd0f05f: Completed the date-preset story across the three components that share it.
+  
+  `<lr-date-input>` now mirrors the nested picker's `appliedPreset` as a read-only getter. 11.0.0 added
+  `presets` to `<lr-date-picker>`; 11.1.0 then separately forwarded `presets` to `<lr-date-input>` and
+  added `appliedPreset` to the picker — but never joined the two halves, so the readback landed on the
+  component that does not need it and the component that does could set presets and not read the
+  result. `appliedPreset`'s own documentation describes the dashboard time filter ("'Last 7 days' must
+  still mean the last 7 days after tomorrow's reload"), and that shape is the compact
+  text-field-plus-popover input, not the inline calendar.
+  
+  There was no workaround. The nested picker lives in the input's shadow root with no documented
+  readback path: `input`/`change` are deliberately native events and carry no detail, and every
+  alternative the docs already reject applied — matching `value` back against the preset list is "the
+  mapping table `presets` exists to delete" and is ambiguous (Today and This month coincide on the
+  1st), while reaching for `[part='preset-button'][data-active]` depends on private structure and on
+  the popover having been opened at least once.
+  
+  The mirror is the input's own field rather than a shadow-root lookup, so it is correct (`undefined`)
+  when the popover has never been opened. It carries both halves of the picker's contract — set before
+  `commit()`, so a consumer reading it inside their own `change` handler sees the causing preset, and
+  cleared on a hand-pick — plus three clear paths the picker cannot see because typing, clearing and
+  resetting never reach it: a typed commit that actually changes the value (deliberately not a no-op
+  re-commit, which would otherwise silently drop the preset), `clear()`, and `formResetCallback()`.
+  
+  `<lr-filter-bar>` can now pass `presets` on its `date-range` filter and reports the resolved preset
+  on the `lr-input` detail as `appliedPreset`. The bar already composed `<lr-date-input>` and already
+  forwarded that control's `min`/`max`, but had no path at all for `presets` — so the quick-range row
+  and the component built for the same dashboard shape could not be combined. `type: 'custom'` was a
+  poor substitute: hand-rendering the control plus a full adapter to set one property, and forfeiting
+  the built-in date-range chip localization the docs themselves flag as non-trivial.
+  
+  `presets` is declared on the `date-range` definition only, not the shared base: a preset names two
+  dates and the picker ignores the list outside range mode, so putting it on `'date'` would type-check
+  a guaranteed-inert field.
+- bd0f05f: `<lr-heatmap>` gained `sticky-labels` (`'none' | 'rows' | 'cols' | 'both'`, default `'none'`), which
+  paints the matrix label bands into their own layers instead of into the scrolling bitmap.
+  
+  Matrix labels shared one canvas with the cells, so a tall grid lost its column header on scroll: a
+  160-row matrix at cell-size 32 is about 5,100px of bitmap, and a header baked into it cannot be
+  `position: sticky` on its own. The only workaround was a light-DOM mirror row, which had to follow
+  the gutter width and cell size — and before `matrixGeometry` shipped it had to hardcode them, which
+  made the workaround mutually exclusive with `row-label-width="auto"`: a consumer got the automatic
+  fit or the sticky header, never both. (Scale on why the gutter matters: against the component's own
+  10px label font, 160 country names ellipsized 37 times in the built-in 60px gutter and 3 times in a
+  120px one.)
+  
+  A closed set rather than a boolean, because a boolean cannot express one axis at all and a later
+  one-axis need would force either a second property or a breaking type change; and rather than a
+  `sticky-row-labels`/`sticky-col-labels` pair, which is two attributes and four states for one
+  concept with no single reflected value to select on in CSS. `rows`/`cols` name the axes this
+  component already names everywhere else (`rowLabels`, `row-label-width`, `colLabels`,
+  `col-label-height`), which `freeze-axis="x|y"` would have clashed with.
+  
+  Default `'none'` reproduces today's single-canvas output exactly, including in calendar mode, and an
+  unrecognized value normalizes back to `'none'` and repairs the attribute.
+- bd0f05f: New component `<lr-funnel>`: a conversion funnel — an ordered set of stages, each drawn as a bar
+  whose length is that stage's share of the FIRST stage, read top-to-bottom as progressive drop-off.
+  
+  Nothing in the catalogue expressed this. A funnel is not a sorted bar chart: it normalizes to the
+  first stage rather than the data maximum, its value axis carries no information worth drawing, and it
+  is read as stage-to-stage retention rather than category comparison. Reaching one through
+  `lr-bar-chart` meant switching off axes, grid and legend, hand-computing every percentage, and still
+  pulling the Chart.js peers for what is a handful of rectangles. `lr-span-waterfall` encodes time
+  offset, not share; `lr-flow-canvas` draws a graph, not a quantitative comparison; `lr-stepper` and
+  `lr-progress-bar` express position or completion, not per-stage magnitude.
+  
+  It lives in the `data` family beside `lr-heatmap` and `lr-gauge` as an analytics primitive, and pulls
+  no peer at all.
+  
+  Each stage carries both its absolute value and its share, because the interesting question is usually
+  the percentage but the credibility check is the count. `comparison` draws a second series behind each
+  bar, normalized to ITS OWN first stage, so a cohort's funnel *shape* can be read against a baseline
+  whose absolute volumes are not comparable — comparing one entity against a many-entity peer group is
+  the common case, and per-series normalization is what makes it legible. `dropoff` (on by default)
+  renders the consecutive-stage change.
+  
+  The chart is plain HTML — an ordered list of stages with real text and a percentage-width bar — so
+  the accessible representation *is* the chart rather than a transcript bolted onto a sighted-only
+  drawing.
+  
+  Degenerate cases are defined and tested rather than left to chance: an empty series renders a
+  localized empty state, a single stage renders one bar and no drop-off, a zero or negative first stage
+  suppresses shares instead of dividing by it, a stage larger than its predecessor (real in funnels
+  with re-entry) is not clamped, and a comparison series of a different length is matched by position.
+- bd0f05f: `<lr-map>`'s `dataLayers` gained declarative marker clustering and a heatmap layer kind. Both are
+  strictly additive — today's behaviour is the default in each.
+  
+  `cluster?: { radius?, maxZoom?, radiusSteps?, colorSteps?, countFont? }` opts an entry into
+  MapLibre's native clustering: the source gains `cluster`/`clusterRadius`/`clusterMaxZoom` and the
+  entry emits a cluster circle layer, a count symbol layer, and a circle layer for points that stayed
+  unclustered. `markers` creates one `maplibregl.Marker` per entry, which is right for tens of pins and
+  wrong for thousands — a consumer rendering up to 5,000 listings in a country-sized viewport got 5,000
+  DOM nodes and an unreadable map. `radiusSteps`/`colorSteps` are `['step', …]` breaks on `point_count`
+  in the same ascending `[value, output]` vocabulary `choropleth.stops` already uses, including the
+  same "the first stop's output is also the base" rule.
+  
+  `kind?: 'auto' | 'heatmap'` plus `heatmap?: { weightField?, weightRange?, stops?, radius?, intensity? }`
+  reaches MapLibre's first-class `heatmap` layer type. `dataLayers` emitted exactly three
+  geometry-filtered layers — fill, line and circle — so a weighted-point density surface was
+  unreachable declaratively even though the peer implements it. The colour ramp reuses the same
+  `[value, color]` stop vocabulary `choropleth.stops` and `legendGradient` share.
+  
+  Between them these were the only remaining reason for raw MapLibre in at least one consumer, which
+  carried roughly 212 lines behind the `.map` escape hatch — plus a `style.load` listener and
+  idempotent remove-then-add, because a basemap swap wipes every layer and `<lr-map>` restored only its
+  own. Both new renderings join the component's existing re-application path, so a `mapStyle` swap
+  restores them too.
+- bd0f05f: New opt-in stylesheet `@aceshooting/lyra-ui/tokens-root.css` publishes a curated subset of the
+  resolved `--lr-*` layer at document scope, so an application's own custom elements can read the
+  kit's tokens.
+  
+  `theme.css` ships the `--lr-theme-*` INPUT layer at `:root`, but the resolved OUTPUT layer
+  (`--lr-color-*`, `--lr-space-*`, `--lr-radius`, `--lr-shadow-*`, `--lr-font-*`) is declared only
+  inside each `lr-*` component's own shadow `:host`. An app's own elements are not descendants of any
+  `lr-*` host, so nothing inherits it to them. Consumers measured the consequence in Chromium rather
+  than inferring it: at document scope `--lr-color-brand`, `--lr-color-border` and `--lr-focus-ring`
+  all resolve to the empty string while `--lr-theme-focus-ring-width` resolves fine. One project found
+  550 `var(--lr-*)` references in its own components reading nothing — 358 with no fallback at all,
+  the rest silently running on a literal fallback that never tracked the theme. Neither failure is
+  detectable without reading computed styles in a browser, because an undefined custom property is not
+  an error.
+  
+  The subset is curated rather than complete, deliberately: `--lr-*` is documented as the internal
+  output layer precisely so it can change without a major, and publishing all of it would make several
+  hundred names permanent public API. 114 names are in — ambient surfaces/text/borders, the semantic
+  colour grid and its flat aliases, the spacing scale, radii, border widths, elevation, font sizes and
+  weights, the focus-ring parts, and the base motion pair — each with a stated reason in the file, as
+  is each deliberate omission.
+  
+  It is generated from the same canonical token source as everything else, so it cannot drift, and a
+  fail-closed validator in the existing `check:design-tokens` gate rejects a curated token whose value
+  reaches an internal name the file does not declare — the case that would otherwise ship an empty
+  `var()` at `:root`. Ramp references resolve to literals at generation time and stay behind their
+  `--lr-theme-*` input, so the file is self-sufficient without `theme.css`, still fully rethemable,
+  publishes no ramp names, and computes byte-identical values to what a component reaches through the
+  ramp.
+  
+  Opt-in, and layered in `lr-theme` like `theme.css`, so it changes nothing for anyone who does not
+  import it and an app's own unlayered rules still win.
+- bd0f05f: `web-types.json` now carries `js.properties`, `js.events` and `slots` alongside its attributes.
+  
+  It previously declared attributes and nothing else: 0 of 284 tags had properties, events or slots,
+  while `custom-elements.json` in the same tarball described 1,029 events, 3,102 public fields and 445
+  slots. 865 of those fields are `attribute: false` and were therefore invisible to JetBrains
+  completion entirely — and they are frequently the primary API rather than an edge case
+  (`lr-chart.datasets`, `.labels`, `.config`, `lr-heatmap.legendStops`, `.colorSteps`, `.cellColor`,
+  `lr-lite-chart.datasets`).
+  
+  That gap mattered more here than it would for a typical component library: these are Lit components,
+  so the idiomatic usage is `.prop=${…}` and `@event=${…}` in a template, not attributes. The shipped
+  metadata covered the minority binding style and omitted the majority.
+  
+  The web-types schema the file already declared supports all three directly, and the data was already
+  generated for the manifest, so this was a projection gap rather than missing information. It now
+  emits every public instance field with its type and default, every declared event with its
+  `CustomEvent<…Detail>` handler type, and every slot. Static fields and methods are deliberately
+  excluded (a `.formAssociated=` completion would be wrong, and web-types has no IDE-integrated method
+  kind).
+  
+  The sibling `vscode-html-data.json` stays attributes-only, which is correct: the VS Code custom-data
+  format defines no properties/events/slots concept.
+
+### Patch Changes
+
+- 103922d: Documented that `<lr-chart>`'s `description` **replaces** the generated accessible summary rather
+  than adding to it.
+  
+  Unset, the component builds an sr-only per-series summary from the actual data; set, it discards
+  that summary entirely and substitutes the supplied text. That is the right behaviour for a full
+  override, but the property was documented only as "Accessible chart description", which reads as
+  additive — and a consumer adding a one-line caveat to five charts would have silently traded away
+  the data summary on all five. They caught it by reading the source, and applied it only where the
+  trade was actually wanted.
+  
+  No behaviour change; the JSDoc and the family reference now state the trade and point at the better
+  tool for a caveat, which is visible text beside the chart rather than a note only screen-reader
+  users hear.
+- 2a156eb: Added the missing package-export route for
+  `@aceshooting/lyra-ui/components/media/flag/flag-peer-bulk.js`. 11.2.0 led with that module as the
+  opt-in bulk peer-registration entry point for `<lr-flag>`, and `llms/components/lr-flag.md` and
+  `flag.class.d.ts` both told readers to import it — but it was never listed in `package.json`'s
+  `exports`, and an exports map blocks everything it does not list. Following the documentation was a
+  hard build error (`"…/flag-peer-bulk.js" is not exported under the conditions […]`), so the
+  release's headline `<lr-flag>` feature was unreachable by any consumer.
+  
+  The derivation that exists to prevent exactly this — every `*-loader.ts` / `*-peer.ts` /
+  `*-register.ts` / `registry.ts` module must be explicitly classified as public or internal — missed
+  it because a *qualified* suffix (`-peer-bulk`) is not the bare suffix (`-peer`). The convention now
+  accepts qualified variants; across the whole source tree that widening catches this file and
+  nothing else.
+  
+  A second, independent instance surfaced in the same sweep and is fixed too:
+  `@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js` is shown as an import in
+  `llms/data.md` and in the generated `llms/components/lr-flow-canvas.md`, and was likewise
+  unlisted. (Those types were still reachable through `flow-canvas.class.js`, so this adds the route
+  the docs already named rather than any new surface.)
+  
+  Both were promises made in documentation, which no naming convention over the source tree can see.
+  So a new release gate, `check:doc-specifiers`, now reads the promises instead: every
+  `@aceshooting/lyra-ui/…` specifier a shipped file tells a reader to import must resolve through the
+  exports map. It understands prose instructions as well as fenced code examples — the
+  `flag-peer-bulk.js` promise was a sentence, not a code block.
+- 8084d04: Added `flag-peer-bulk.js` (and the new `flag-peer-bulk-standard.js`) to `package.json`'s
+  `sideEffects` list.
+  
+  These modules exist purely for their import-time side effect: a consumer writes a bare
+  `import '…/flag-peer-bulk.js'` and never reads an export, so a bundler honouring `sideEffects` drops
+  the module outright unless it is declared. The generator that derives these entries matched the bare
+  suffix `-peer.ts` but not the qualified `-peer-bulk.ts` — the same blind spot that left the module
+  out of the `exports` map.
+  
+  This half failed more quietly than that one. The missing export route was a hard build error; a
+  missing `sideEffects` entry compiles cleanly and then simply does nothing in a production build, so
+  `<lr-flag>` would fall back to no resolver with no diagnostic at all.
+- bd0f05f: `<lr-flag>` now distinguishes a peer that is not installed from one that is installed but does not
+  carry the capability the chosen entry point needs.
+  
+  Both cases previously produced the same warning — "install it with `pnpm add
+  @aceshooting/lyra-flags`" — which is advice a reader in the second case has already followed, and
+  which sends them looking for the wrong problem entirely.
+  
+  That case stops being exotic from this release on. `flag-peer-bulk-standard.js` requires
+  `createFlagUrlResolver()` on the tier-committed `./standard` subpath, which older peers do not
+  export at all, so a consumer who upgrades `@aceshooting/lyra-ui` while pinning
+  `@aceshooting/lyra-flags` reaches it by the ordinary route. The peer-range floor moves in the same
+  release to make that a resolution warning rather than a silent one, and this makes the runtime
+  message match: it now says the package is present, that this is a version mismatch, and where to
+  look for the floor it expects.
+- 2a156eb: `<lr-heatmap>`'s `matrixGeometry` now returns the geometry the last matrix-mode draw actually
+  painted with, instead of recomputing from current layout on every read.
+  
+  It is documented as "the gutter/cell geometry the last matrix-mode draw actually painted with", and
+  11.2.0's notes claimed it "can never disagree" with the canvas because it reuses the same internal
+  getters `drawMatrix()` calls. Reusing those getters is precisely what made it disagree: they read
+  *current* layout, not the last paint, so any interval where layout has moved but no draw has
+  happened made the getter describe a canvas that does not exist. Two such intervals are routine —
+  full redraws pause while the host is outside the viewport (documented behaviour of this component),
+  and `rowLabelWidth`/`colLabelHeight` are not redraw-triggering properties at all, so assigning one
+  moved the getter *permanently* ahead of the canvas rather than for a transient window.
+  
+  That landed squarely on the use case the property was added for: a light-DOM sticky-header mirror
+  for a tall matrix — i.e. exactly the component most likely to be scrolled out of view. A mirror
+  synced from the getter while the grid was off-screen lined up with geometry the canvas was not
+  using, which is the same misalignment the property exists to eliminate. It also silently disagreed
+  with `lr-matrix-geometry-change`, which fires only from the draw path and was always correct.
+  
+  The getter now returns the frozen object the draw stored and the event carried, so the two are
+  equal by construction. The returned object is frozen, so a consumer cannot corrupt the component's
+  own change detection by mutating it.
+- 2a156eb: Fixed two defects in `<lr-map>`'s `maxBounds`, reported together because the first was the only
+  thing hiding the second.
+  
+  `maxBounds` never reached maplibre-gl when set declaratively. It is `attribute: false`, so a
+  property binding is the only way to set it, which puts its one and only appearance in `changed` on
+  the first update — before the component's asynchronous peer import and WebGL initialization have
+  produced a map. The `updated()` guard `changed.has('maxBounds') && this._map` therefore
+  short-circuited, and because the property never changed again it was never retried: a documented
+  property that read back as set, did nothing, permanently, and warned about none of it. It is now
+  applied from the map-ready path as well, so a declaratively-set box reaches the peer; a later
+  reassignment still goes through `updated()` as before.
+  
+  The property's guard also could not run in the case it was written for. It applies the bounds and
+  then reads the camera back to detect a non-finite zoom — but at the conditions its own warning text
+  names (sub-1 fractional zooms in wide containers) maplibre-gl 6.x throws synchronously out of
+  `setMaxBounds()` instead, so the readback line was never reached. With no `try`/`catch` the
+  exception escaped `updated()` into the consumer's render cycle, degenerating into repeated throws
+  from the peer's own matrix math on every later `resize`/`setZoom` and a canvas that never painted
+  again. A throw now routes into the same drop-the-constraint-and-restore-the-camera path the
+  non-finite-camera branch already used, so the documented worst case — an unconstrained map plus one
+  dev-mode warning — is now the real worst case.
+- 2a156eb: The release process now fails when the published upgrade feed lags npm.
+  
+  The documented upgrade workflow tells consumers — and upgrading agents — to fetch
+  `https://www.lyra-ui.com/changelog.json` and read every release between their installed version and
+  its `latest`. That feed is built from this package's `CHANGELOG.md` by the sibling website and
+  deployed separately, after the release, so between `npm publish` and that deploy it advertises the
+  *previous* release as current.
+  
+  Consumers reported that window twice, from two different projects, on two consecutive releases: the
+  site said 11.0.0 while npm had 11.1.0, then 11.1.0 while npm had 11.2.0. It fails silently and it
+  inverts the workflow's own advice — a reader who trusts the feed concludes they are already current
+  and never reads the new release. One release skipped that way contained a fix the reader was
+  waiting for. Both reporters caught it only by reading the installed tarball's `CHANGELOG.md`
+  instead, which is what the workflow tells them they should not have to do.
+  
+  `release-integrity.mjs verify-site-freshness` now checks npm's dist-tag, the published feed's
+  `latest`, the presence of the new version in its `releases` array (it went missing entirely once,
+  which defeats even a reader who ignores `latest`), and the component catalog's `catalog_version` —
+  which rides the same deploy and was caught a release behind at the same time. The release script
+  waits on it, so a stale feed is now a loud, actionable release failure rather than something a
+  consumer discovers weeks later.
+  
+  No published component surface changes.
+- 8084d04: Restored two public property names that were renamed with no alias, no changelog entry and no
+  deprecation record, silently breaking shipped consumers.
+  
+  - `<lr-app-rail-item>`: `active` is back as a deprecated alias for `current`, read alongside it —
+    the item is current when either is true, in both property and attribute form.
+  - `<lr-widget>`: `activeView` is back as a deprecated alias for `activeViewId`, which it seeds.
+  
+  Both were the members' *original* public names. `active` shipped documented as public API ("add an
+  `active` property that reflects `aria-current="page"` onto the item"), and a later release's notes
+  still described it as `active` after the rename had already happened. `activeView` never appears in
+  `CHANGELOG.md` at all, so its rename was never announced in any form.
+  
+  The breakage was invisible by construction: a Lit `.prop=${…}` binding on a custom element is
+  untyped, so `.active=${…}` and `.activeView=${…}` did not error — they became dead expandos. No
+  consumer type check, test suite or build step could see it. One consumer's app rail consequently
+  had no current-item indicator and a permanent `aria-current="false"` — an accessibility regression
+  — and its widgets fell back to their first view, with everything still passing.
+  
+  This is what the house rule about mirrored members already required in general: a rename adds a
+  second name, it does not swap one out from under shipped consumers. The compatibility window runs
+  long (`removalNotBefore` two majors out) because these aliases are not new API — they are the names
+  consumers already wrote.
+  
+  `activeView` seeds rather than being read alongside, because unlike a boolean flag it is a property
+  the component itself writes (a view-toggle click, and the fallback when `views` no longer contains
+  the active id); a read-alongside alias would undo a later interactive change on the next update.
+- Updated dependencies [bd0f05f]
+  - @aceshooting/lyra-flags@2.2.0
+
 ## 11.2.0
 
 ### Minor Changes
