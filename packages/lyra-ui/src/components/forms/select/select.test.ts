@@ -275,7 +275,18 @@ it("drops a stale lr-after-show when closing interrupts the opening transition",
   await el.updateComplete;
   el.open = false;
   await el.updateComplete;
-  await aTimeout(100);
+  // Poll for the terminal event rather than waiting a fixed interval. The fixture pins a 40ms
+  // transition and this used to wait a flat 100ms, which is ample on an idle machine and not ample
+  // on a CI runner sharing a box with seven other shards -- it failed exactly there, on WebKit,
+  // with lr-after-hide simply not yet dispatched. The settle below is then a "nothing further
+  // arrived" wait for the negative half of the assertion, which no longer races the transition
+  // itself because the transition has demonstrably already finished.
+  await waitUntil(
+    () => events.includes("lr-after-hide"),
+    "lr-after-hide never fired after the interrupted transition",
+    { timeout: 5000 },
+  );
+  await aTimeout(50);
 
   expect(events).to.deep.equal(["lr-show", "lr-hide", "lr-after-hide"]);
 });
