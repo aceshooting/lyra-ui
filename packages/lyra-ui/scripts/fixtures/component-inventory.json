@@ -55358,7 +55358,7 @@
             "name": "col-label-height",
             "property": "colLabelHeight",
             "type": "number | 'auto' | undefined",
-            "reflects": true,
+            "reflects": false,
             "inferred": false,
             "deprecated": null,
             "hasDefault": false
@@ -55519,7 +55519,7 @@
             "attribute": "col-label-height",
             "type": "number | 'auto' | undefined",
             "readonly": false,
-            "reflects": true,
+            "reflects": false,
             "deprecated": null,
             "hasDefault": false
           },

@@ -10835,7 +10835,7 @@ weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
   more here". `cellText` still carries the full label to the tooltip and the keyboard announcement.
   A malformed value is ignored rather than collapsing the gutter. Calendar mode is unaffected; it
   has its own fixed weekday gutter
-- `colLabelHeight?: number | 'auto'` (attribute `col-label-height`, reflected, `'auto'` new in
+- `colLabelHeight?: number | 'auto'` (attribute `col-label-height`, not reflected, `'auto'` new in
   10.1.0) — height, in CSS px, of the matrix column-label band, or `'auto'` to measure the labels
   and size the band to fit them. Under a non-zero `colLabelRotation` the measurement projects each
   label's width through the rotation, which is what makes a rotated axis usable without hand-tuning

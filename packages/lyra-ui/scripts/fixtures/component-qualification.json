@@ -21719,7 +21719,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 1881,
+              "line": 1885,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
