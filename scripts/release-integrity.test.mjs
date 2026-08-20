@@ -1418,6 +1418,43 @@ test('treats a published upgrade feed that lags npm as an incomplete release', (
   assert.equal(npmBehind.fresh, false);
   assert.match(npmBehind.problems[0], /npm dist-tags\.latest .* is 11\.2\.0, expected 11\.3\.0/);
 
+  // The component catalog rides the same deploy and was caught a release behind npm at the same
+  // time -- the third instance of one root cause. Checked here so it is not reported a fourth time.
+  const staleCatalog = evaluateSiteFreshness({
+    packageName: '@aceshooting/lyra-ui',
+    expectedVersion: '11.3.0',
+    npmDistTagLatest: '11.3.0',
+    changelog: { latest: '11.3.0', releases: [{ version: '11.3.0' }] },
+    catalogVersion: '11.2.0+sha256.51be72f509780516',
+  });
+  assert.equal(staleCatalog.fresh, false);
+  assert.match(staleCatalog.problems[0], /catalog_version is 11\.2\.0\+sha256/);
+
+  // The build-fingerprint suffix is not part of the version comparison.
+  assert.equal(
+    evaluateSiteFreshness({
+      packageName: '@aceshooting/lyra-ui',
+      expectedVersion: '11.3.0',
+      npmDistTagLatest: '11.3.0',
+      changelog: { latest: '11.3.0', releases: [{ version: '11.3.0' }] },
+      catalogVersion: '11.3.0+sha256.51be72f509780516',
+    }).fresh,
+    true
+  );
+
+  // An unreachable catalog endpoint must not block an otherwise-valid release: it is optional
+  // infrastructure, unlike the changelog feed the upgrade workflow actually instructs readers to use.
+  assert.equal(
+    evaluateSiteFreshness({
+      packageName: '@aceshooting/lyra-ui',
+      expectedVersion: '11.3.0',
+      npmDistTagLatest: '11.3.0',
+      changelog: { latest: '11.3.0', releases: [{ version: '11.3.0' }] },
+      catalogVersion: undefined,
+    }).fresh,
+    true
+  );
+
   // An unreachable or non-JSON feed fails closed rather than being read as fresh.
   const unreachable = evaluateSiteFreshness({
     packageName: '@aceshooting/lyra-ui',

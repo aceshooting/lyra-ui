@@ -15,4 +15,35 @@ export function flagUrl(code) {
   return FLAG_LOADERS[code]?.() ?? Promise.resolve(undefined);
 }
 
+/**
+ * Resolves every shipped standard-tier flag URL at once, then hands back a `flagUrl`-shaped
+ * resolver that reads from that one shared map — the tier-committed twin of the package root's
+ * `createFlagUrlResolver()`, for a page that renders most or all flags at once (a country table,
+ * a full locale picker) where resolving each flag through its own lazy loader chunk costs one
+ * fetch per flag.
+ *
+ * Why this exists here rather than only at the package root: bulk resolution never needed the
+ * other two tiers in the first place. It is backed by `flags/eager.js`, which is standard-tier-only
+ * by construction (the ~65 detailed originals alone are ~9.7MB — never something to fetch
+ * eagerly), so the root version's three-tier import is inherited purely from sharing a module with
+ * the variant-aware `flagUrl()`. Reaching back through the root for it therefore re-acquired the
+ * whole detailed + compact lazy-chunk graph — precisely the cost this entry point exists to avoid,
+ * and measured on a real 12-route production build as +15.8MB of emitted assets no route rendered.
+ *
+ * Like this module's `flagUrl()`, the returned resolver is committed to the standard tier: it
+ * accepts (and ignores) the `options` argument a root-shaped caller passes, so wiring it into
+ * `<lr-flag>`'s `setFlagUrlResolver()` keeps working when an individual element asks for
+ * `fidelity="compact"`/`"detailed"` — it resolves to the standard asset instead of reaching for a
+ * tier this entry deliberately does not ship. Use the package root's `createFlagUrlResolver()`
+ * when per-instance fidelity must actually be honoured.
+ * @returns {(code: string, options?: unknown) => Promise<string | undefined>} A `flagUrl`-shaped
+ *   resolver, suitable for `<lr-flag>`'s `setFlagUrlResolver()`.
+ */
+export function createFlagUrlResolver() {
+  const urlsPromise = import('./flags/eager.js').then((module) => module.FLAG_URLS);
+  return async function resolveFlagUrl(code) {
+    return (await urlsPromise)[code];
+  };
+}
+
 export { FLAG_LOADERS };

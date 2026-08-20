@@ -42,7 +42,11 @@ import {
   FLAG_LOADERS_DETAILED,
   FLAG_LOADERS_COMPACT,
 } from '../index.js';
-import { flagUrl as flagUrlStandard, FLAG_LOADERS as FLAG_LOADERS_STANDARD_ENTRY } from '../standard.js';
+import {
+  flagUrl as flagUrlStandard,
+  createFlagUrlResolver as createFlagUrlResolverStandard,
+  FLAG_LOADERS as FLAG_LOADERS_STANDARD_ENTRY,
+} from '../standard.js';
 import { flagUrl as flagUrlCompact, FLAG_LOADERS_COMPACT as FLAG_LOADERS_COMPACT_ENTRY } from '../compact.js';
 import { flagUrl as flagUrlDetailed, FLAG_LOADERS_DETAILED as FLAG_LOADERS_DETAILED_ENTRY } from '../detailed.js';
 
@@ -54,6 +58,31 @@ const detailedDir = path.join(flagsDir, 'detailed');
 const detailedLoadersDir = path.join(detailedDir, 'loaders');
 const compactDir = path.join(flagsDir, 'compact');
 const compactLoadersDir = path.join(compactDir, 'loaders');
+
+/**
+ * Every `.js` file reachable from `entryFile` by a relative static `import ... from '...'` or a
+ * relative dynamic `import('...')` specifier — the package is plain, dependency-free ESM with
+ * literal specifiers only (see generate-index.mjs), so a source scan sees the same graph a
+ * bundler does.
+ */
+function collectModuleGraph(entryFile) {
+  const seen = new Set();
+  const queue = [entryFile];
+  while (queue.length > 0) {
+    const file = queue.pop();
+    if (seen.has(file)) continue;
+    seen.add(file);
+    // Comments are stripped first: the generated files document their own loader shape in prose
+    // (`() => import('./loaders/xx.js')`), and a placeholder specifier is not a real graph edge.
+    const src = readFileSync(file, 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '');
+    for (const [, specifier] of src.matchAll(/(?:from|import)\s*\(?\s*'(\.[^']+\.js)'/g)) {
+      queue.push(path.resolve(path.dirname(file), specifier));
+    }
+  }
+  return seen;
+}
 
 const readme = readFileSync(path.join(pkgDir, 'README.md'), 'utf8');
 assert.match(readme, /only fetches the\s+requested flag at runtime/i);
@@ -387,6 +416,80 @@ assert.match(readmeText, /@aceshooting\/lyra-flags\/detailed/);
   // awaiting the same in-flight promise from multiple resolver invocations at once).
   const [fr, us, de] = await Promise.all([bulkResolve('fr'), bulkResolve('us'), bulkResolve('de')]);
   assert.deepEqual([fr, us, de], [await flagUrl('fr'), await flagUrl('us'), await flagUrl('de')]);
+}
+
+// --- `./standard`'s own createFlagUrlResolver(): the bulk resolver for a tier-committed
+// --- consumer. The root's createFlagUrlResolver() is only bulk for the standard tier anyway
+// --- (flags/eager.js is standard-only by construction), but it lives in index.js next to the
+// --- variant-aware flagUrl(), so reaching it statically imports all three tiers' loader maps —
+// --- re-acquiring exactly the cost ./standard exists to avoid. ---
+
+{
+  assert.equal(typeof createFlagUrlResolverStandard, 'function');
+
+  const bulkResolveStandard = createFlagUrlResolverStandard();
+  for (const code of svgCodes) {
+    // eslint-disable-next-line no-await-in-loop -- plain assertion script, sequential is fine here
+    const bulk = await bulkResolveStandard(code);
+    assert.equal(
+      bulk,
+      await flagUrlStandard(code),
+      `standard.js createFlagUrlResolver()'s resolution for '${code}' must match standard.js flagUrl()`,
+    );
+  }
+  assert.equal(await bulkResolveStandard('zz-not-a-real-code'), undefined);
+
+  // Tier-committed, exactly like standard.js's flagUrl(): an `options.variant` argument from a
+  // caller shaped for the root resolver (e.g. <lr-flag fidelity="detailed">) is accepted and
+  // ignored rather than throwing, because this entry ships one tier by design.
+  for (const code of [...detailedCodes, ...compactCodes].slice(0, 4)) {
+    // eslint-disable-next-line no-await-in-loop
+    const variantRequested = await bulkResolveStandard(code, { variant: 'detailed' });
+    assert.equal(
+      variantRequested,
+      await flagUrlStandard(code),
+      `standard.js createFlagUrlResolver() must resolve '${code}' to the standard tier regardless of variant`,
+    );
+  }
+
+  // Concurrent calls share the single in-flight eager-map promise without racing.
+  const [fr, us, de] = await Promise.all([
+    bulkResolveStandard('fr'),
+    bulkResolveStandard('us'),
+    bulkResolveStandard('de'),
+  ]);
+  assert.deepEqual(
+    [fr, us, de],
+    [await flagUrlStandard('fr'), await flagUrlStandard('us'), await flagUrlStandard('de')],
+  );
+
+  const standardDts = readFileSync(path.join(pkgDir, 'standard.d.ts'), 'utf8');
+  assert.match(
+    standardDts,
+    /export declare function createFlagUrlResolver\(/,
+    'standard.d.ts must declare createFlagUrlResolver so a TypeScript consumer sees it.',
+  );
+
+  // The whole point: the ./standard module graph — statically AND through its dynamic
+  // import()s — must never reach the other two tiers' generated loader maps. Asserted on the
+  // real reachable file set, not just standard.js's own first-level imports, so moving the
+  // implementation into a shared module cannot smuggle the other tiers back in.
+  const reachable = collectModuleGraph(path.join(pkgDir, 'standard.js'));
+  for (const file of reachable) {
+    const base = path.basename(file);
+    assert.ok(
+      base !== 'generated-detailed.js' && base !== 'generated-compact.js',
+      `./standard's module graph must not reach ${base} — that is the cost the tier entry exists to avoid.`,
+    );
+  }
+  assert.ok(
+    [...reachable].some((file) => path.basename(file) === 'eager.js'),
+    "./standard's module graph must reach flags/eager.js — createFlagUrlResolver() is backed by it.",
+  );
+
+  // Same wiring proof as the flagUrl() self-reference above, for the new export.
+  const { createFlagUrlResolver: selfReferencedCreate } = await import('@aceshooting/lyra-flags/standard');
+  assert.equal(await selfReferencedCreate()('fr'), await flagUrlStandard('fr'));
 }
 
 console.log(

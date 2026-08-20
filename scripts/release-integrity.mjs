@@ -565,7 +565,13 @@ function compareRebuildCli(options) {
  *
  * A stale feed is therefore treated here as an incomplete release rather than a docs nit.
  */
-export function evaluateSiteFreshness({ packageName, expectedVersion, npmDistTagLatest, changelog }) {
+export function evaluateSiteFreshness({
+  packageName,
+  expectedVersion,
+  npmDistTagLatest,
+  changelog,
+  catalogVersion,
+}) {
   const problems = [];
   if (npmDistTagLatest !== expectedVersion) {
     problems.push(
@@ -584,6 +590,17 @@ export function evaluateSiteFreshness({ packageName, expectedVersion, npmDistTag
     // Reported as its own defect: the newest release was missing from the array ENTIRELY, not just
     // from the `latest` field, so even a reader who ignored `latest` still could not find it.
     problems.push(`changelog.json "releases" contains no entry for ${expectedVersion}`);
+  }
+  // The same deploy also carries the component catalog the feature-request API matches against and
+  // stamps into every response as `catalog_version`. A reporter caught it a release behind npm at
+  // the same time as the changelog -- the third instance of one root cause -- so it is checked
+  // here rather than waiting to be reported a fourth time. Skipped when not supplied, since the
+  // endpoint is optional infrastructure and an unreachable one must not block a valid release.
+  if (catalogVersion !== undefined && catalogVersion !== null) {
+    const catalogBase = String(catalogVersion).split('+')[0];
+    if (catalogBase !== expectedVersion) {
+      problems.push(`component catalog_version is ${catalogVersion}, expected ${expectedVersion}`);
+    }
   }
   return { fresh: problems.length === 0, problems };
 }
@@ -614,6 +631,7 @@ async function verifySiteFreshnessCli(options) {
   const packageName = requireOption(options, 'package');
   const expectedVersion = requireOption(options, 'version');
   const changelogUrl = options.changelog_url ?? 'https://www.lyra-ui.com/changelog.json';
+  const catalogUrl = options.catalog_url ?? 'https://www.lyra-ui.com/api/v1/components?limit=1';
   const timeoutSeconds = Number(options.timeout_seconds ?? 1800);
   const pollSeconds = Number(options.poll_seconds ?? 30);
   if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0) {
@@ -626,11 +644,13 @@ async function verifySiteFreshnessCli(options) {
   const deadline = Date.now() + timeoutSeconds * 1000;
   let last = { fresh: false, problems: ['not yet checked'] };
   for (;;) {
+    const catalog = catalogUrl ? await fetchJsonOrNull(catalogUrl) : null;
     last = evaluateSiteFreshness({
       packageName,
       expectedVersion,
       npmDistTagLatest: npmDistTagLatest(packageName),
       changelog: await fetchJsonOrNull(changelogUrl),
+      catalogVersion: catalog?.catalog_version ?? undefined,
     });
     if (last.fresh) {
       console.log(
