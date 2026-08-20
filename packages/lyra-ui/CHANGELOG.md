@@ -1,5 +1,193 @@
 # Changelog
 
+## 11.0.0
+
+### Major Changes
+
+- 5066d4b: **Version note: this major carries no known breaking change for consumers.**
+  
+  Everything in this release is additive or a bug fix — no public member was removed, renamed, or
+  had its behaviour or default altered. The major bump is taken because the public-API semver gate
+  (`check:public-api`) classifies 328 changes as breaking, and every one of them is fingerprint or
+  generated-type churn rather than a real break:
+  
+  - 248 `:dependencies` and 39 `:contract` hash changes — a symbol's transitive-dependency
+    fingerprint moves whenever a widely-composed base class gains a member, so adding one property to
+    `LyraChart` rewrites the hash of every chart subclass and every subpath that re-exports it.
+  - 39 generated React/Vue/Svelte props **type strings**, widened by the newly added props. The
+    differ compares the printed type text, which cannot distinguish an additive union widening from a
+    removal.
+  - 2 `lr-popover` `popup-role` default entries moving `null → 'dialog'`. The default did not change;
+    this release simply documents it with `@default` for the first time, so the manifest records a
+    value where it previously recorded none.
+  
+  Consumers upgrading from 10.x should not need code changes. If you use the generated framework
+  prop types, the unions gained members but lost none.
+
+### Minor Changes
+
+- 2fb4af7: `<lr-chart>` (and every chart subclassing it — bar, line, pie, doughnut, radar, polar-area,
+  scatter, bubble, histogram) and `<lr-box-plot>` gain `dataTableToggle` (`data-table-toggle`), which
+  renders a localized disclosure button above the accessible data table.
+  
+  `showDataTable` was all-or-nothing: the table was either permanently screen-reader-only or
+  permanently visible, so a sighted reader who wanted the numbers behind a chart could only get them
+  if the consumer hand-rolled a `<details>` around a duplicated copy of the table. With the toggle
+  on, `showDataTable` becomes the disclosure's initial state rather than its whole behavior. The
+  table stays in the DOM in both states, so assistive technology never loses it, and the button
+  carries `aria-expanded` plus `aria-controls`. A new `data-table-toggle` CSS part styles the
+  control. Unset, nothing renders and behavior is unchanged.
+- e084afb: `<lr-combobox>` now renders `<lr-option>`'s adornment slots, and gains `visibleOptions` for bounding
+  the suggestion popup's height.
+  
+  **Adornments (a fixed contract, not just a new feature).** `<lr-option>` documented `start`/`end`
+  slots, their `prefix`/`suffix` aliases, and four matching CSS parts — but `<lr-combobox>` builds its
+  popup from normalized row *data* rather than from the light-DOM nodes, so inside the one component
+  `<lr-option>` exists to feed, none of them rendered. A row could show a colour dot, a badge and a
+  sub-line but not a 16px image, which is the one adornment a country, currency, language or user
+  picker most often wants, and neither documented workaround was available (`::part(option)` cannot be
+  compounded past the part, and `dot-color` rejects `url()`).
+  
+  Adornments now render as new `option-start` / `option-end` parts, inert and `aria-hidden` so they
+  never join the option's accessible name. The nodes are **cloned** into the row, so the author's own
+  `<lr-option>` subtree is left exactly where they put it rather than being moved into a shadow root
+  as a side effect of opening a dropdown. Async `source` rows can supply the same `start`/`end`
+  fields alongside the existing `icon`.
+  
+  **`visibleOptions`** (`visible-options`) bounds the popup to about that many rows, leaving the rest
+  reachable by scrolling. It is measured from where row N actually starts, since a row's height varies
+  with sub-lines, adornments and group labels. Unset, the listbox keeps exactly its previous
+  max-height behavior.
+  
+  The doc comments on all three caps — `visibleOptions`, `maxRender`, and `maxOptionsVisible` — now
+  each state how they differ from the other two, which was the confusion that prompted this.
+- 3b3af14: `<lr-date-picker>` gains `presets`, a quick-range button row for the dashboard time-filter shape
+  (Today / Last 7 days / Last 30 days / This month / All time).
+  
+  The pieces for this existed but were split across two components that each held half the contract:
+  the date components had the calendar, locale and range logic but no preset affordance, while
+  `<lr-time-range>` had exactly the wanted preset API but is a two-handle numeric brush with no date
+  logic, so a caller had to map a time axis onto `[min, max]` themselves and got no calendar. Building
+  it by hand meant a ~260-line control plus its own preset/custom state machine.
+  
+  `LyraDateRangePreset` is deliberately the same `label`/`start`/`end` shape as `TimeRangePreset`, so
+  the library has one preset vocabulary rather than two — only the unit differs (ISO `YYYY-MM-DD`
+  instead of numbers). Range mode only; unset renders nothing. Applying a preset commits through the
+  same path a two-click selection uses, so ISO serialization, `min`/`max` clamping and the
+  `input`-then-`change` pair are identical. A reversed preset normalizes, and a malformed one is
+  ignored rather than clearing the value, so a bad entry in a config-driven list never reads as "the
+  user picked nothing". New `presets` and `preset-button` CSS parts.
+- c915980: Added `--lr-focus-ring`, a composite outline shorthand (`var(--lr-focus-ring-width) solid
+  var(--lr-focus-ring-color)`) alongside the three existing parts, which stay exactly as they are.
+  
+  Web Awesome exposes `--wa-focus-ring` as a ready-made outline value, so the common consumer idiom
+  is `outline: var(--wa-focus-ring)`. Migrating it meant hand-expanding every site, which is easy to
+  get subtly wrong — omitting the `solid` keyword yields an outline that renders in some engines and
+  not others — and each hand-expanded copy stops tracking any future change to how the ring is
+  composed. `--lr-focus-ring-offset` stays separate because `outline-offset` is its own property, not
+  part of the `outline` shorthand.
+  
+  `llms/tokens.md` also now documents why an ancestor `--lr-*` override does not survive a nested
+  component boundary: every component re-derives that layer from `--lr-theme-*` on its own `:host`,
+  so the override is reset at the first `lr-*` inside another `lr-*`'s shadow root and degrades
+  silently. The `--lr-theme-*` input layer is the one that inherits.
+- 3d7a6a5: `<lr-heatmap>` matrix mode gains `colLabelRotation` (`col-label-rotation`) and an `'auto'` value for
+  `colLabelHeight` (`col-label-height`), giving column labels the escape hatch the row gutter got in
+  10.0.0.
+  
+  Column labels were horizontal-only in a fixed 20px band, so in a dense matrix — where every column
+  is far narrower than a typical label — adjacent labels collided and the axis became unreadable,
+  with no rotation or angle property anywhere in the surface. Each label now rotates about an anchor
+  at its own column's centre with the label's end at that anchor, so it leans back over the columns
+  to its left and the last column's label cannot overflow the canvas. `col-label-height="auto"`
+  measures the labels and projects their width through the rotation, so the band sizes itself.
+  
+  Unset, both are inert and painting is unchanged. Values outside `[0, 90]` clamp and non-finite
+  values normalize to `0`. Rotation is deliberately not mirrored under `dir="rtl"`, matching the
+  documented rule that both grid modes retain physical LTR geometry.
+- 20728fb: `<lr-map>` gains a `'step'` choropleth interpolation and independent fill/stroke colours on
+  `dataLayers` — the two declarative gaps that stopped an application migrating off a first-party
+  MapLibre wrapper after every other property already matched.
+  
+  **`interpolation: 'step'`** emits maplibre's `['step', …]` instead of `['interpolate', …]`, giving
+  discrete bands rather than a continuous ramp. A ramp is wrong whenever the legend advertises a fixed
+  set of ranges with one swatch each: it puts colours on the map that appear nowhere in the legend and
+  renders two regions in the same advertised band as visibly different colours. `stepBaseColor` sets
+  the colour below the first threshold (which `['step', …]` requires) and defaults to the first stop's
+  own colour.
+  
+  **`dataLayers[].color` / `.strokeColor`** override `tone` for the fill and for the line/circle
+  layers respectively, falling back to `color` and then `tone`. They are separable because a fill and
+  its outline want opposite things on a choropleth-plus-overlay map: the fill competes for area and
+  must sit quiet, while the 1px outline competes with nothing and is the only thing keeping a no-data
+  region's shape readable once the fill is that faint. Deriving one from the other measured 1.41:1
+  against a light basemap, under WCAG 1.4.11's 3:1 floor for graphical objects. A `var(--lr-…)`
+  reference is resolved against the host first, since MapLibre paints to a WebGL canvas and never sees
+  the CSS cascade.
+  
+  Both are additive: an unset `interpolation` still interpolates linearly, and a `tone`-only data
+  layer paints exactly as before.
+- 4a701e7: `<lr-popover>` gains a third `popupRole` value, `none`, so the library can express the WAI-ARIA
+  disclosure-navigation pattern. Previously `popupRole` was `dialog | menu` only, which left a header
+  nav flyout with no correct option: `menu` announces "menu, menu item" and expects `menuitem`
+  children, while a navigation flyout is a list of links, and `dialog` implies an interruptive
+  surface. Consumers had to abandon the library's overlays and hand-roll a
+  `button[aria-expanded][aria-controls]` plus a plain list.
+  
+  Under `popup-role="none"` the popup surface renders no `role` and no generated `aria-label`, and
+  the trigger carries no `aria-haspopup`, so the slotted `<nav>` owns the semantics and the
+  accessible name. Everything else — `aria-expanded`/`aria-controls`, light dismiss, Escape, focus
+  return, positioning — is unchanged. Purely additive: `dialog` remains the default, and
+  `lr-dropdown` still pins its own role to `menu`.
+
+### Patch Changes
+
+- e6ed0ca: The migration codemod now warns about four classes of `wa-*`/`sl-*` reference it does not rewrite,
+  instead of leaving them silent: tag selectors inside a `` css`` `` tagged template, `::slotted()`,
+  DOM selector strings reached through `this`/`this.shadowRoot`, and `--wa-*`/`--sl-*` custom
+  properties.
+  
+  Each of these fails silently at runtime after a migration — a CSS rule keyed on a tag that no
+  longer exists matches nothing, `::slotted()` likewise, `querySelector` returns null, and a `var()`
+  naming a removed token falls back to its second argument or to nothing. Nothing throws, nothing
+  fails a build, and a typechecker cannot see inside a template literal. Because `--check` is
+  documented as a CI gate, the silence meant CI certified a migration that had visibly broken the
+  component's styling.
+  
+  Tokens are deliberately reported rather than rewritten: the two spacing scales are offset by one
+  step (Web Awesome `m` is 1rem, Lyra `m` is 0.75rem), so renaming by name alone silently tightens
+  every gap, while mapping by value has no target for 1.5rem or 2.5rem. Warnings are filtered against
+  the rewrites the same pass produced, so a reference the inventory does map is never both rewritten
+  and warned about, and a self-declared `--wa-*` property (the consumer's own, merely sharing the
+  prefix) is exempt.
+  
+  `<lr-dialog>`'s docs also now warn that `lr-close` is not a dialog-scoped name — nine components
+  emit it, several of which are routinely nested inside a dialog, and library events bubble and are
+  composed, so a listener bound on the dialog also receives a descendant's close.
+- c5baec5: `<lr-flag>` now warns once in the console when `country`/`language` is set but no flag resolver has
+  been registered, naming the offending code and the `flag-peer.js` import that fixes it. Previously
+  this failed to the visible `[part="error"]` state in complete silence, which is indistinguishable
+  from missing flag data — the resolver is deliberately absent from the core component's module
+  graph, so an unimported peer entry is the single likeliest cause and was the hardest to diagnose.
+  The warning is emitted once per resolver-registration generation, so a page of many flags does not
+  repeat it. An already-resolved `src`, a registered resolver, and a well-formed-but-unmapped code
+  (which is data, not a defect) all stay silent.
+- b573859: The `lr-locale-picker` Storybook page now registers the optional flag peer, so its rows render real
+  flags instead of silently empty frames. Found by the new `<lr-flag>` missing-resolver warning on its
+  first run — `flag.stories.ts` had always imported `flag-peer.js` for exactly this reason, and the
+  locale-picker page never did.
+- c915980: The `lyra-ui-migrate` CLI no longer silently does nothing when launched through a package manager's
+  bin shim. Its entry guard compared `process.argv[1]` to `import.meta.url` as raw paths; under pnpm
+  the package directory is a symlink into the virtual store, so the two never matched and `run()`
+  never executed. The process printed nothing — not even `--help` — rewrote nothing, wrote no report,
+  and exited 0.
+  
+  The serious half is that `--check` is documented as a CI gate that "exits nonzero while rewrites or
+  warnings remain". A silent exit 0 is indistinguishable from success, so on every pnpm project the
+  gate passed unconditionally — worse than having no gate, because it is trusted. npm and yarn were
+  unaffected, which is why it survived. The guard now compares realpaths, and a regression test
+  invokes the CLI through a symlink that mimics the pnpm layout.
+
 ## 10.0.1
 
 ### Patch Changes

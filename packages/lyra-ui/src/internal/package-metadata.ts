@@ -3,4 +3,4 @@
  * Run `pnpm package-metadata` after changing package identity or version.
  */
 export const LYRA_PACKAGE_NAME = '@aceshooting/lyra-ui' as const;
-export const LYRA_PACKAGE_VERSION = '10.0.1' as const;
+export const LYRA_PACKAGE_VERSION = '11.0.0' as const;
