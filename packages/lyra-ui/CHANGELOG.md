@@ -1,5 +1,73 @@
 # Changelog
 
+## 11.2.0
+
+### Minor Changes
+
+- a44e6e1: Added a first-class bulk-resolution path for `<lr-flag>`, for a page that renders most/all flags at
+  once (a country table, a full locale picker) instead of independently resolving each instance:
+  
+  - `@aceshooting/lyra-flags` gained `createFlagUrlResolver()`, a `flagUrl`-shaped resolver factory
+    backed by one shared `flagUrls()` fetch instead of a fresh per-code lazy resolution per call.
+  - `@aceshooting/lyra-ui` gained `flag-peer-bulk.js` (`components/media/flag/flag-peer-bulk.js`), an
+    opt-in alternative peer-registration entry point to the default `flag-peer.js` — import one or the
+    other, never both. Only worthwhile when the page renders most/all flags; `flag-peer.js` remains
+    the right default for a handful of flags. `fidelity="compact"/"detailed"` on individual elements
+    still resolves correctly either way — only the standard tier is bulk-fetched.
+- a44e6e1: Two consumer-filed `<lr-heatmap>` gaps:
+  
+  - **`matrixGeometry` readback + `lr-matrix-geometry-change` event.** Matrix mode's resolved gutter/
+    cell geometry (`padLeft`, `padTop`, `cellSize`) was entirely private, so a consumer building a
+    sticky light-DOM header mirror for a tall matrix had to hardcode numbers that `row-label-width`/
+    `col-label-height`'s `"auto"` resolution could silently change out from under them. `matrixGeometry`
+    now exposes exactly what the last matrix-mode draw painted with (reusing the same internal getters
+    `drawMatrix()` itself calls, so it can never disagree), and `lr-matrix-geometry-change` fires
+    whenever a redraw actually changes it.
+  - **`HeatmapLegendStop.partOfRamp`.** The dev-mode ramp/legend-mismatch warning had no way to
+    express a legend swatch that is intentionally outside `colorSteps` — e.g. a calendar heatmap's
+    fixed neutral "no data" color shown alongside an N-step sequential ramp. Set `partOfRamp: false`
+    on that stop to exclude it from the comparison; every other stop (and every existing consumer
+    that never sets this) keeps today's exact behavior.
+
+### Patch Changes
+
+- f5dde67: Bumped the optional `dompurify` peer dependency range floor from `^3.4.13` to `^3.4.14` (a
+  DOMPurify patch release). Every other dependency change in this release is dev-tooling only
+  (Storybook, Vite, publint, oxc-parser) and carries no published surface.
+- a44e6e1: Four documentation gaps reported against 11.1.0 by a real-world consumer audit:
+  
+  - **`<lr-flag>` sizing.** The host sizes from `font-size` (`block-size: 1em`, `inline-size` derived
+    via `aspect-ratio`), never documented anywhere. Setting `width`/`inline-size` directly makes both
+    axes definite, which defeats `aspect-ratio` and squashes the image instead of scaling it. Now
+    documented on the class JSDoc and in `llms/media.md`.
+  - **`<lr-flag>` bulk rendering.** Nothing pointed a consumer rendering many flags at once (a country
+    table, a locale picker) at `@aceshooting/lyra-flags`'s existing `flagUrls()` — one call resolving
+    every flag, instead of each `<lr-flag>` instance independently calling `flagUrl()`. Now
+    cross-linked from the class JSDoc and `llms/media.md`, alongside the new per-tier peer-resolver
+    entry points (see the paired `@aceshooting/lyra-flags` changeset).
+  - **`accessibleLabel`'s two conventions.** Most components alias it directly onto native
+    `aria-label`; a minority (e.g. `lr-callout`, `lr-table`) that separately compute an internal
+    accessible name expose it through a bespoke `accessible-label` attribute instead, so a host
+    `aria-label` can still override it. Both are individually correct, but nothing stated the split,
+    so `accessible-label="…"` on an `aria-label`-only component was a silent no-op. Now documented in
+    `llms/shared.md`'s accessibility contract section.
+  - **Shadow-scoped resolved tokens.** The quick-start theming snippet (README and `llms/shared.md`)
+    never warned that the resolved `--lr-color-*`/`--lr-space-*`/`--lr-radius`/`--lr-shadow-*`/
+    `--lr-font-*` layer is declared only on each `lr-*` element's own shadow `:host` — unreachable
+    from plain application CSS or a consumer's own custom elements. The deeper explanation already
+    existed in "Where an override actually reaches"; it's now also stated up front, at the first
+    theming snippet.
+- a44e6e1: `LyraElement` no longer statically imports `internal/form-control-labels.js` (the external-label
+  bridge + form-internals capture that only a form-associated component ever uses). Every
+  presentational component — `lr-flag`, `lr-popover`, and everything else that doesn't opt into form
+  association — no longer ships that module in its reachable bundle graph (measured previously at
+  ~6KB gzip on `lr-flag`). Form-associated components register it themselves (the `FormAssociated`
+  mixin and 19 hand-rolled form controls each now import it explicitly), so every form control's
+  label/hint/error/reset/validity behavior is unchanged.
+- Updated dependencies [a44e6e1]
+- Updated dependencies [a44e6e1]
+  - @aceshooting/lyra-flags@2.1.0
+
 ## 11.1.0
 
 ### Minor Changes
