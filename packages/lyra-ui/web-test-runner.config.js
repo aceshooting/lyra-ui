@@ -245,15 +245,16 @@ const testRunnerHtml = (testRunnerImport) => `
   <head></head>
   <body>
     <script>
-      // 'no-override-get-property-descriptor': LyraElement intentionally overrides
-      // ReactiveElement.getPropertyDescriptor() (see src/internal/lyra-element.ts); every
-      // component built on it trips this Lit dev-mode deprecation notice once per page load.
-      // Under WTR_STRICT_CONSOLE the resulting console.warn throw was observed to cascade into
-      // a multi-GB-per-minute WebKit (WPEWebProcess) memory leak and OOM-kill the browser --
-      // console.error is itself wrapped below, so an error-reporting path that logs the caught
-      // exception via console.error re-throws into the same handler, recursing without bound.
-      // Suppressing the expected, benign warning at the source avoids ever triggering it.
-      globalThis.litIssuedWarnings = new Set(['dev-mode', 'no-override-get-property-descriptor']);
+      // Seeded with 'dev-mode' only. 'no-override-get-property-descriptor' used to be seeded
+      // here too, because LyraElement overrode ReactiveElement.getPropertyDescriptor() and every
+      // component built on it tripped that Lit deprecation notice once per page load (under
+      // WTR_STRICT_CONSOLE the resulting console.warn throw was observed to cascade into a
+      // multi-GB-per-minute WebKit (WPEWebProcess) memory leak and OOM-kill the browser).
+      // LyraElement no longer overrides any deprecated property hook -- the clone-owned
+      // collection boundary installs its own accessors instead -- so the suppression is gone and
+      // this page load is the regression detector: reintroducing the override makes the warning
+      // real again, which src/internal/lyra-element.test.ts asserts against.
+      globalThis.litIssuedWarnings = new Set(['dev-mode']);
       globalThis.__LYRA_WTR_COVERAGE__ = ${collectCoverage};
       globalThis.__LYRA_WTR_STRICT_CONSOLE__ = ${strictConsole};
       ${strictConsole ? `

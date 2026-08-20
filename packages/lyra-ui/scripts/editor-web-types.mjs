@@ -3,12 +3,13 @@
 //
 // Why this file exists: these are Lit components, so the idiomatic binding is `.prop=${…}` and
 // `@lr-event=${…}` in a template, not an attribute. An attributes-only `web-types.json` therefore
-// described the minority spelling and dropped the majority -- including 865 public fields declared
-// `attribute: false`, which are frequently a component's PRIMARY API (`lr-chart.datasets`,
-// `lr-heatmap.legendStops`, `lr-lite-chart.formatter`, …) and so reachable through no contribution
-// at all. The schema this file's output declares (https://json.schemastore.org/web-types) models
-// all three directly: an `html-element` is a `base-contribution` (which carries the `js` namespace,
-// whose two IDE-integrated kinds are `properties` and `events`) merged with an
+// described the minority spelling and dropped the majority -- including the roughly 860 public
+// fields declared `attribute: false`, which are frequently a component's PRIMARY API
+// (`lr-chart.datasets`, `lr-heatmap.legendStops`, `lr-lite-chart.formatter`, …) and so reachable
+// through no contribution at all. The schema this file's output declares
+// (https://json.schemastore.org/web-types) models all three directly: an `html-element` is a
+// `base-contribution` (which carries the `js` namespace, whose two IDE-integrated kinds are
+// `properties` and `events`) merged with an
 // `html-contributions-host` (whose `patternProperties` accept further HTML kinds such as `slots`).
 //
 // The VS Code sibling `vscode-html-data.json` stays attributes-only on purpose: custom-data v1.1

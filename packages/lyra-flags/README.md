@@ -113,6 +113,26 @@ tier asset, exactly like `flagUrl(code, { variant })` does. Register one with `<
 importing `flag-peer.js` (which always registers the full three-tier resolver) when your app has
 made this commitment.
 
+`./standard` also exports `createFlagUrlResolver()`, so a tier-committed consumer can take the bulk
+path above without reaching back through the package root:
+
+```js
+import { createFlagUrlResolver } from '@aceshooting/lyra-flags/standard';
+import { setFlagUrlResolver } from '@aceshooting/lyra-ui/components/media/flag/flag.js';
+
+setFlagUrlResolver(createFlagUrlResolver()); // one shared eager map, standard tier only
+```
+
+Bulk resolution never needed the other two tiers in the first place — it is backed by the same
+standard-tier-only eager map either way — so the root version's three-tier import is inherited
+purely from sharing a module with the variant-aware `flagUrl()`. Taking the bulk path through the
+root therefore re-acquired the whole detailed + compact lazy-chunk graph; on a real production
+build with a 156-country flag column, that was +65 detailed SVGs and +31 compact WebPs (+15.8MB of
+emitted assets) that no route rendered. The returned resolver accepts and ignores an `options`
+argument, so `<lr-flag fidelity="detailed">` resolves to that code's standard asset rather than
+failing. `@aceshooting/lyra-ui/components/media/flag/flag-peer-bulk-standard.js` does this
+registration in one import, the tier-committed counterpart to `flag-peer-bulk.js`.
+
 Maintainers, after adding/replacing source art: `pnpm run optimize` (re-derives the standard tier
 from the pristine `flags/detailed/` originals) → `pnpm run build-compact` (renders the compact WebP
 rasters) → `pnpm run generate` (updates the generated loader index).

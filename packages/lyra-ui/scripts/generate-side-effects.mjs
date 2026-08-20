@@ -83,7 +83,12 @@ export function deriveSideEffects(packageDir = defaultPackageDir) {
 //                  than a custom element.
 //   *-peer.ts      flag-peer -- installs an optional-peer resolver (`setFlagUrlResolver()`) for a
 //                  component whose own class module deliberately keeps the optional peer out of
-//                  its import graph.
+//                  its import graph. A QUALIFIED variant (`flag-peer-bulk.ts`) is the same kind of
+//                  module and matters just as much: 11.2.0 shipped `flag-peer-bulk.js` as its
+//                  headline <lr-flag> entry point and the bare-suffix pattern here could not see
+//                  it, so a bundler honouring `sideEffects` dropped the module outright. That
+//                  failure is quieter than the missing export route it shipped alongside -- the
+//                  import compiles, and then simply does nothing at runtime.
 // Both categories exist purely for their import-time side effect: a consumer writes a bare
 // `import '.../flag-peer.js'` and never reads an export, so a bundler honoring `sideEffects`
 // drops the module outright unless it is declared here. Derived from the walk (not carried over
@@ -94,7 +99,11 @@ export function deriveSideEffects(packageDir = defaultPackageDir) {
   for (const file of walk(componentsRoot)) {
     const relPath = relative(componentsRoot, file).replaceAll('\\', '/');
     const topLevelAlias = !relPath.includes('/') && /^lr-[a-z0-9-]+\.ts$/.test(relPath);
-    if (!/-(?:register|peer)\.ts$/.test(file) && basename(file) !== 'index.ts' && !topLevelAlias) continue;
+    if (
+      !/-(?:register|peer)(?:-[a-z0-9]+)*\.ts$/.test(file)
+      && basename(file) !== 'index.ts'
+      && !topLevelAlias
+    ) continue;
     required.add(`./src/components/${relPath}`);
     required.add(`./dist/components/${relPath.replace(/\.ts$/, '.js')}`);
   }

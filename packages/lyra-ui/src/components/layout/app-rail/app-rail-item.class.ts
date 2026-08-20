@@ -71,6 +71,26 @@ export class LyraAppRailItem extends LyraElement {
    *  this per item (e.g. by comparing `href` against the current location). */
   @property({ type: Boolean, reflect: true }) current = false;
 
+  /**
+   * Deprecated alias for `current`, read alongside it.
+   *
+   * `active` was this property's original public name. It was renamed to `current` with no
+   * changelog entry, no alias and no deprecation record, which broke every shipped consumer
+   * silently: a Lit `.active=${...}` binding on a custom element is untyped, so it did not error --
+   * it became a dead expando, leaving the rail with no current-item indicator and a permanent
+   * `aria-current="false"`. Nothing in a consumer's type check, test suite or build could see that.
+   *
+   * Set either name; the item is current when either is true. Prefer `current`.
+   *
+   * @deprecated Use `current`.
+   */
+  @property({ type: Boolean, attribute: 'active' }) active = false;
+
+  /** True when either the canonical `current` or its deprecated `active` alias is set. */
+  private get isCurrent(): boolean {
+    return this.current || this.active;
+  }
+
   /** Opt-in hover/focus flyout showing this item's label text while `icon-only` (set externally by
    *  the parent `<lr-app-rail>` as the viewport narrows) hides it from view -- an explicit,
    *  documented property instead of an unverified cross-browser `::part()` + `::after` + `attr()`
@@ -240,7 +260,7 @@ export class LyraAppRailItem extends LyraElement {
           rel=${this.target ? 'noopener noreferrer' : nothing}
           aria-label=${label ?? nothing}
           aria-disabled="false"
-          aria-current=${this.current ? 'page' : 'false'}
+          aria-current=${this.isCurrent ? 'page' : 'false'}
           @mouseenter=${this.onFocusShow}
           @mouseleave=${this.onBlurHide}
           @focus=${this.onFocusShow}
@@ -256,7 +276,7 @@ export class LyraAppRailItem extends LyraElement {
         ?disabled=${this.disabled}
         aria-disabled=${this.disabled ? 'true' : 'false'}
         aria-label=${label ?? nothing}
-        aria-current=${this.current ? 'page' : 'false'}
+        aria-current=${this.isCurrent ? 'page' : 'false'}
         @mouseenter=${this.onFocusShow}
         @mouseleave=${this.onBlurHide}
         @focus=${this.onFocusShow}

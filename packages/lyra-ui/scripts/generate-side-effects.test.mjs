@@ -49,6 +49,19 @@ try {
     )}\n`,
   );
   writeFileSync(join(familyDir, 'index.ts'), "export * from './test-control/test-control.js';\n");
+  // A bare `-peer.ts` and a QUALIFIED `-peer-bulk.ts`. Both exist purely for their import-time
+  // side effect, so both must survive production tree shaking. The qualified form is the one that
+  // shipped broken: `flag-peer-bulk.js` was 11.2.0's headline <lr-flag> entry point and the
+  // bare-suffix regex could not see it, so a bundler honouring `sideEffects` dropped the module
+  // outright -- an import that compiled and then silently did nothing at runtime.
+  writeFileSync(
+    join(familyDir, 'test-control', 'test-control-peer.ts'),
+    "setResolver(load());\n",
+  );
+  writeFileSync(
+    join(familyDir, 'test-control', 'test-control-peer-bulk.ts'),
+    "setResolver(loadBulk());\n",
+  );
   writeFileSync(join(fixtureRoot, 'src', 'lyra.ts'), "export * from './components/forms/test-control/test-control.class.js';\n");
   writeFileSync(join(fixtureRoot, 'src', 'all.ts'), "import './components/forms/index.js';\n");
   mkdirSync(join(fixtureRoot, 'src', 'ssr'), { recursive: true });
@@ -99,6 +112,8 @@ try {
     './dist/all.js',
     './dist/autoloader-cdn.js',
     './dist/components/forms/index.js',
+    './dist/components/forms/test-control/test-control-peer-bulk.js',
+    './dist/components/forms/test-control/test-control-peer.js',
     './dist/components/forms/test-control/test-control.js',
     './dist/components/lr-test-control.js',
     './dist/hydration.js',
@@ -111,6 +126,8 @@ try {
     './src/all.ts',
     './src/autoloader-cdn.ts',
     './src/components/forms/index.ts',
+    './src/components/forms/test-control/test-control-peer-bulk.ts',
+    './src/components/forms/test-control/test-control-peer.ts',
     './src/components/forms/test-control/test-control.ts',
     './src/components/lr-test-control.ts',
     './src/hydration.ts',

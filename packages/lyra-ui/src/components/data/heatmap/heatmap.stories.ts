@@ -449,3 +449,45 @@ export const RotatedColumnLabels: Story = {
     `;
   },
 };
+
+/**
+ * Labels and cells share one bitmap, so a tall matrix scrolls its column header away and leaves the
+ * columns unidentifiable. `sticky-labels` repaints a band into its own layer instead — `"rows"`
+ * holds the row gutter through horizontal scrolling, `"cols"` holds the column band through
+ * vertical scrolling, `"both"` holds both — and the frozen band is painted from the same resolved
+ * geometry as the cells, so it follows `row-label-width="auto"` rather than hardcoding a gutter the
+ * way a hand-rolled light-DOM mirror row has to. The scrollport is `::part(grid)`; bound its height
+ * with `--lr-heatmap-grid-max-block-size` so there is something to scroll vertically.
+ */
+export const FrozenAxes: Story = {
+  render: () => {
+    const rowLabels = [
+      'Bosnia and Herzegovina',
+      'United Arab Emirates',
+      'Trinidad and Tobago',
+      'Papua New Guinea',
+      'Czech Republic',
+      'Dominican Republic',
+      'Equatorial Guinea',
+      'Solomon Islands',
+      'Marshall Islands',
+      'Saint Kitts and Nevis',
+      'Antigua and Barbuda',
+      'Sao Tome and Principe',
+    ];
+    const colLabels = Array.from({ length: 18 }, (_value, index) => `W${index + 1}`);
+    const values = rowLabels.map((_row, r) =>
+      colLabels.map((_col, c) => Math.round(Math.abs(Math.sin((r + 1) * (c + 2))) * 10)),
+    );
+    return html`
+      <lr-heatmap
+        cell-size="32"
+        value-label="incidents"
+        sticky-labels="both"
+        row-label-width="auto"
+        style="--lr-heatmap-grid-max-block-size: 260px"
+        .data=${{ kind: 'matrix', rowLabels, colLabels, values }}
+      ></lr-heatmap>
+    `;
+  },
+};

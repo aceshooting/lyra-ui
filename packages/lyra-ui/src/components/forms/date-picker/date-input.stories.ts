@@ -287,3 +287,45 @@ export const NarrowLongContent: Story = {
     </div>
   `,
 };
+
+/**
+ * `presets` renders `lr-date-picker`'s quick-range row inside this control's popover (range mode
+ * only), and `appliedPreset` reads back which entry produced the current value — the readback a
+ * dashboard filter needs, since "Last 7 days" must still mean the last 7 days after tomorrow's
+ * reload rather than the pair it froze to. Read it inside your own `change` handler; picking days
+ * on the calendar, typing a range, or clearing the field all reset it to `undefined`.
+ */
+export const RangePresets: Story = {
+  name: 'Range presets and appliedPreset',
+  render: () => {
+    const onChange = (e: Event) => {
+      const el = e.target as HTMLElement & {
+        value: string;
+        appliedPreset?: { label: string };
+      };
+      const log = el.closest('.demo')!.querySelector('.log') as HTMLElement;
+      log.textContent = `value: ${el.value || '(empty)'} · appliedPreset: ${
+        el.appliedPreset?.label ?? '(none — picked by hand)'
+      }`;
+    };
+    return html`
+      <div class="demo" style="display: flex; flex-direction: column; gap: 1rem; max-width: 26rem">
+        <lr-date-input
+          mode="range"
+          label="Reporting period"
+          with-clear
+          min="2020-01-01"
+          max="2030-12-31"
+          .presets=${[
+            { label: 'Last 7 days', start: '2026-08-13', end: '2026-08-19' },
+            { label: 'Last 30 days', start: '2026-07-21', end: '2026-08-19' },
+            { label: 'This month', start: '2026-08-01', end: '2026-08-31' },
+            { label: 'All time' },
+          ]}
+          @change=${onChange}
+        ></lr-date-input>
+        <pre class="log" style="font-size: 0.75rem; white-space: pre-wrap"></pre>
+      </div>
+    `;
+  },
+};

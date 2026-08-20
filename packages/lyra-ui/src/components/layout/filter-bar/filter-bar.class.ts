@@ -1,4 +1,5 @@
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
+import type { LyraDateRangePreset } from '../../forms/date-picker/date-picker.class.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -163,6 +164,17 @@ export interface LyraFilterBarDateDefinition extends LyraFilterBarDateDefinition
 
 export interface LyraFilterBarDateRangeDefinition extends LyraFilterBarDateDefinitionBase {
   readonly type: 'date-range';
+  /** Quick-range options ("Last 7 days", "This month", "All time") forwarded verbatim to the
+   *  composed `<lr-date-input>`'s own `presets`, exactly like `min`/`max` -- this is the dashboard
+   *  filter shape that row was built for, and `type: 'custom'` would mean hand-rendering the same
+   *  control plus a full adapter just to set one property, forfeiting the built-in date-range chip
+   *  localization on the way.
+   *
+   *  `'date-range'` only, deliberately not on the shared date base: a preset names two dates, so
+   *  `<lr-date-picker>` ignores the list outside range mode, and declaring it on `'date'` would
+   *  type-check a field that is guaranteed inert. Which preset a commit came from arrives on that
+   *  edit's own `lr-input` as `appliedPreset`. */
+  readonly presets?: readonly LyraDateRangePreset[];
 }
 
 export interface LyraFilterBarCustomDefinition extends LyraFilterBarDefinitionBase {
@@ -194,6 +206,18 @@ export interface LyraFilterBarInputDetail {
   readonly value: LyraFilterBarValue;
   /** The filter that changed, or `undefined` when every filter changed at once (a `reset()`). */
   readonly filterId?: string;
+  /** For a `'date-range'` filter committed from its quick-range row: the `presets` entry that
+   *  produced this value, resolved from the composed `<lr-date-input>`'s own `appliedPreset`.
+   *  `undefined` for every other filter type, and for a range picked or typed by hand.
+   *
+   *  A filter bar whose values round-trip through a query string has to persist WHICH preset is
+   *  active rather than the pair it froze to -- "Last 7 days" must still mean the last 7 days after
+   *  tomorrow's reload -- and that fact is not recoverable from `value`, which holds only the frozen
+   *  ISO range. It rides the event rather than `value` because it is metadata about one edit, not a
+   *  filter value: `value` stays the plain, JSON-serializable record it has always been. The entry
+   *  is the bar's own frozen snapshot of the definition, so it compares identical to
+   *  `filters[i].presets[j]`. */
+  readonly appliedPreset?: LyraDateRangePreset;
 }
 
 export interface LyraFilterBarValidityDetail {
@@ -218,6 +242,9 @@ const MAX_FILTER_COLLECTION_DEPTH = 16;
 const OMIT_FILTER_VALUE = Symbol('omit-filter-value');
 const EMPTY_FILTERS: readonly LyraFilterBarFilterDefinition[] = Object.freeze([]);
 const EMPTY_VALUE: LyraFilterBarValue = Object.freeze({});
+// One shared identity, so a date filter that declares no quick-range row never hands the composed
+// control a fresh array per render (which would dirty-check as a change every time).
+const EMPTY_DATE_PRESETS: readonly LyraDateRangePreset[] = Object.freeze([]);
 
 interface FilterSnapshotBudget {
   remaining: number;
@@ -490,7 +517,10 @@ function cloneFilterValue(value: LyraFilterBarValue | null | undefined): LyraFil
  * bubbling path. Date/date-range chip labels localize only
  * round-trip-valid ISO `YYYY-MM-DD` segments, including literal four-digit years `0000`-`0099`.
  * Impossible dates, malformed values, and a range with either invalid endpoint remain verbatim so
- * display never invents a normalized day.
+ * display never invents a normalized day. A `'date-range'` filter may also declare `presets`,
+ * forwarded to its composed `<lr-date-input>` exactly like `min`/`max`; the entry that produced a
+ * commit rides that edit's own `lr-input` as `appliedPreset`, so a bar whose values round-trip
+ * through a query string can persist which range is active rather than the pair it froze to.
  *
  * Validation is scoped to each filter definition's own `required` flag: `invalidFilterIds`/
  * `checkValidity()` are always live (plain getters over `filters`/`value`, not cached), and
@@ -512,8 +542,10 @@ function cloneFilterValue(value: LyraFilterBarValue | null | undefined): LyraFil
  *
  * @customElement lr-filter-bar
  * @event lr-input - A filter's value changed (including a chip removal or `reset()`).
- *   `detail: { value, filterId }` -- `value` is always the complete object; `filterId` is the
- *   one filter that changed, or `undefined` for a `reset()`.
+ *   `detail: { value, filterId, appliedPreset }` -- `value` is always the complete object;
+ *   `filterId` is the one filter that changed, or `undefined` for a `reset()`; `appliedPreset` is
+ *   the `'date-range'` quick-range entry that produced this commit, and `undefined` everywhere
+ *   else (another filter type, or a range picked/typed by hand).
  * @event lr-validity-change - The computed `{ valid, invalidFilterIds }` changed.
  * @event lr-reset - `reset()` ran (via the reset button or a direct call). `detail: { value }`.
  * @csspart base - The root `role="group"` wrapper.
@@ -750,6 +782,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     this.emit('lr-input', Object.freeze({
       value: this.value,
       filterId: undefined,
+      appliedPreset: undefined,
     }));
     this.emit('lr-reset', Object.freeze({ value: this.value }));
   }
@@ -766,7 +799,11 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     return Object.freeze(out);
   }
 
-  private setFilterValue(id: string, value: LyraFilterBarFieldValue): void {
+  private setFilterValue(
+    id: string,
+    value: LyraFilterBarFieldValue,
+    appliedPreset?: LyraDateRangePreset,
+  ): void {
     const definition = this._filters.find((candidate) => candidate.filterId === id);
     if (this.disabled || !definition) return;
     const next: Record<string, LyraFilterBarFieldValue> = { ...this._value };
@@ -776,6 +813,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     this.emit('lr-input', Object.freeze({
       value: this.value,
       filterId: id,
+      appliedPreset,
     }));
   }
 
@@ -799,10 +837,14 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
   }
 
   private onControlChange = (id: string, e: Event): void => {
-    this.setFilterValue(
-      id,
-      (e.target as HTMLElement & { value: LyraFilterBarFieldValue }).value
-    );
+    // `appliedPreset` exists only on `<lr-date-input>`, and only while its own quick-range row
+    // produced the commit -- it reads `undefined` on every other composed control, which is
+    // exactly what the detail should then carry.
+    const control = e.target as HTMLElement & {
+      value: LyraFilterBarFieldValue;
+      appliedPreset?: LyraDateRangePreset;
+    };
+    this.setFilterValue(id, control.value, control.appliedPreset);
   };
 
   /** Built-in controls keep their native-style `input`/`change` compatibility path, but their
@@ -1211,6 +1253,9 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
         .mode=${def.type === 'date-range' ? 'range' : 'single'}
         .min=${def.min || ''}
         .max=${def.max || ''}
+        .presets=${def.type === 'date-range'
+          ? def.presets ?? EMPTY_DATE_PRESETS
+          : EMPTY_DATE_PRESETS}
         ?required=${Boolean(def.required)}
         .errorText=${errorText}
         .value=${typeof value === 'string' ? value : ''}

@@ -7667,7 +7667,11 @@ describe('matrix frozen label bands (sticky-labels)', () => {
       parseFloat(canvas.style.height),
     );
     expect(part(el, 'col-labels'), 'only the requested axis is frozen').to.equal(null);
-    expect(getComputedStyle(band as unknown as Element).position).to.equal('sticky');
+    const bandStyle = getComputedStyle(part(el, 'row-labels')!);
+    expect(bandStyle.position, 'a band that is not sticky is not frozen at all').to.equal('sticky');
+    expect(bandStyle.left, 'frozen against the physical left, where the gutter is painted').to.equal(
+      '0px',
+    );
   });
 
   it('freezes the column band at exactly the painted padTop under sticky-labels="cols"', async () => {
@@ -7715,6 +7719,59 @@ describe('matrix frozen label bands (sticky-labels)', () => {
     expect(row.top).to.be.closeTo(canvas.top, 0.5);
     expect(col.left).to.be.closeTo(canvas.left, 0.5);
     expect(col.top, 'column band shares the canvas origin').to.be.closeTo(canvas.top, 0.5);
+  });
+
+  // Silently-inert CSS looks exactly like working CSS, and `position: sticky` inside a container
+  // that turns out not to be a scrollport is the classic case -- so scroll it for real and compare
+  // rendered boxes, rather than trusting the computed `position` the test above reads.
+  it('holds each band in place while the cells scroll out from under it', async () => {
+    const el = (await fixture(html`<lr-heatmap
+      cell-size="40"
+      sticky-labels="both"
+      style="inline-size: 240px; --lr-heatmap-grid-max-block-size: 120px"
+    ></lr-heatmap>`)) as LyraHeatmap;
+    const labels = Array.from({ length: 10 }, (_value, index) => `n${index}`);
+    setMatrixData(el, {
+      rowLabels: labels,
+      colLabels: labels,
+      values: labels.map((_row, r) => labels.map((_col, c) => r + c)),
+    });
+    await el.updateComplete;
+    await aTimeout(0);
+
+    const grid = part(el, 'grid')!;
+    const canvas = part(el, 'canvas') as HTMLCanvasElement;
+    const rowBand = part(el, 'row-labels')!;
+    const colBand = part(el, 'col-labels')!;
+    expect(grid.scrollHeight, 'the fixture must actually overflow both axes').to.be.greaterThan(
+      grid.clientHeight,
+    );
+    expect(grid.scrollWidth).to.be.greaterThan(grid.clientWidth);
+
+    grid.scrollTop = 100;
+    grid.scrollLeft = 120;
+    await aTimeout(0);
+
+    const port = grid.getBoundingClientRect();
+    const canvasBox = canvas.getBoundingClientRect();
+    expect(canvasBox.top, 'the cells really did scroll').to.be.lessThan(port.top - 50);
+    expect(canvasBox.left).to.be.lessThan(port.left - 50);
+    expect(
+      colBand.getBoundingClientRect().top,
+      'the column band stays at the top of the scrollport',
+    ).to.be.closeTo(port.top, 1);
+    expect(
+      rowBand.getBoundingClientRect().left,
+      'the row gutter stays at the inline-start edge of the scrollport',
+    ).to.be.closeTo(port.left, 1);
+    expect(
+      rowBand.getBoundingClientRect().top,
+      'but the gutter still scrolls vertically, so each label keeps its own row',
+    ).to.be.closeTo(canvasBox.top, 1);
+    expect(
+      colBand.getBoundingClientRect().left,
+      'and the band still scrolls horizontally, so each label keeps its own column',
+    ).to.be.closeTo(canvasBox.left, 1);
   });
 
   it('repaints the bands when a redraw changes the geometry', async () => {
@@ -7778,6 +7835,12 @@ describe('matrix frozen label bands (sticky-labels)', () => {
     const cells = part(el, 'cells');
     expect(cells, 'the semantic grid still renders').to.not.equal(null);
     expect(part(el, 'grid')!.contains(cells!)).to.equal(true);
+    // The overlay positions its buttons in canvas coordinates, so a wrapper that shifted its origin
+    // would put every cell button somewhere the cell it describes is not.
+    const overlay = cells!.getBoundingClientRect();
+    const canvas = part(el, 'canvas')!.getBoundingClientRect();
+    expect(overlay.left, 'the overlay keeps the canvas origin').to.be.closeTo(canvas.left, 0.5);
+    expect(overlay.top).to.be.closeTo(canvas.top, 0.5);
   });
 
   it('is ignored in calendar mode, which has its own axes', async () => {

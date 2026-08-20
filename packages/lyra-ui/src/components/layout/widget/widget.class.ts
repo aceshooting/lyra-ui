@@ -274,6 +274,23 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
    *  externally; also updated internally when a view toggle is clicked. */
   @property({ attribute: false }) activeViewId = '';
 
+  /**
+   * Deprecated alias for `activeViewId`, which seeds it.
+   *
+   * `activeView` was this property's original public name. It was renamed to `activeViewId` with
+   * no changelog entry, no alias and no deprecation record, which broke shipped consumers
+   * silently: a Lit `.activeView=${id}` binding on a custom element is untyped, so it did not
+   * error -- it became a dead expando, and the widget quietly fell back to its first view.
+   *
+   * This seeds `activeViewId` rather than being read alongside it, because unlike a boolean flag
+   * this property is one the component itself writes (a view-toggle click, and the fallback when
+   * `views` no longer contains the active id). Seeding on change keeps a single source of truth:
+   * a later interactive change is not undone by the stale alias on the next update.
+   *
+   * @deprecated Use `activeViewId`.
+   */
+  @property({ attribute: false }) activeView = '';
+
   @state() private hasActionsSlot = false;
   @state() private hasIconSlot = false;
   @state() private hasLabelSlot = false;
@@ -337,7 +354,12 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
         this.deactivateFullscreenOverlay();
       }
     }
-    if (changed.has('views') || changed.has('activeViewId')) {
+    // Seed from the deprecated alias BEFORE the normalization below, so the seeded id is what gets
+    // validated against `views` rather than being overwritten by the first-view fallback.
+    if (changed.has('activeView') && this.activeView !== '') {
+      this.activeViewId = this.activeView;
+    }
+    if (changed.has('views') || changed.has('activeViewId') || changed.has('activeView')) {
       const focused = this.renderRoot?.querySelector<HTMLElement>(
         '[part="view-toggle"]:focus'
       );

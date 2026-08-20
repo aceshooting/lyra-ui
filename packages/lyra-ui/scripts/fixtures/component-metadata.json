@@ -367,6 +367,32 @@
       "rationale": "The accordion-item part names the outer wrapper explicitly; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: Web Awesome still publishes its own deprecated `base` part on `wa-accordion-item`, and a mirrored tag owes its whole upstream surface, so this alias is removed only when upstream's is."
     },
     {
+      "tag": "lr-app-rail-item",
+      "kind": "attribute",
+      "name": "active",
+      "since": "11.2.0",
+      "replacement": {
+        "kind": "attribute",
+        "name": "current",
+        "usage": "current"
+      },
+      "removalNotBefore": "13.0.0",
+      "rationale": "The attribute half of the restored `active` property alias. `active` was this member's original public name in both forms; the rename to `current` was never announced, so markup that already wrote `<lr-app-rail-item active>` stopped marking the item current with no error. Shares the property record's compatibility window because it is the same correction."
+    },
+    {
+      "tag": "lr-app-rail-item",
+      "kind": "property",
+      "name": "active",
+      "since": "11.2.0",
+      "replacement": {
+        "kind": "property",
+        "name": "current",
+        "usage": "current"
+      },
+      "removalNotBefore": "13.0.0",
+      "rationale": "`active` was this property's original public name and was documented as such when it shipped. It was renamed to `current` with no changelog entry, no alias and no deprecation record, so every shipped consumer's `.active=` binding silently became a dead expando -- a Lit property binding on a custom element is untyped, so nothing in a consumer's type check, test suite or build could see it. The measured downstream effect was an app rail with no current-item indicator and a permanent aria-current=\"false\". Restoring the name is a correction, not a new API, so the compatibility window runs long: this alias is what shipped consumers already wrote."
+    },
+    {
       "tag": "lr-file-input",
       "kind": "part",
       "name": "base",
@@ -457,6 +483,19 @@
       },
       "removalNotBefore": "10.0.0",
       "rationale": "The video-playlist part identifies the root component explicitly; base remains on the same root node for migration compatibility. That version is a policy floor, not a plan: `wa-video-playlist` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is."
+    },
+    {
+      "tag": "lr-widget",
+      "kind": "property",
+      "name": "activeView",
+      "since": "11.2.0",
+      "replacement": {
+        "kind": "property",
+        "name": "activeViewId",
+        "usage": "activeViewId"
+      },
+      "removalNotBefore": "13.0.0",
+      "rationale": "`activeView` was this property's original public name; the string does not appear anywhere in CHANGELOG.md, so the rename to `activeViewId` was never announced at all. A shipped consumer's `.activeView=` binding became a dead expando and the widget fell back to its first view with no error. The alias seeds `activeViewId` rather than being read alongside it, because the component itself writes that property (a view-toggle click, and the fallback when `views` drops the active id), and a read-alongside alias would undo a later interactive change on the next update."
     }
   ],
   "history": {
@@ -12527,7 +12566,7 @@
     "current": {
       "version": "11.2.0",
       "sourceCommit": null,
-      "manifestSha256": "b020d414b48579d0b4ea2b417fde56832e2c31011742f2f40570e366952140db",
+      "manifestSha256": "12db34aa26aca7e0a4d88ece5a759150d1009b1984a414dc7a97e1b53a8fd75d",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",

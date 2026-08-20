@@ -5,6 +5,77 @@ const nativeStyles = new URL("../../../styles/native.css", import.meta.url)
   .href;
 const utilities = new URL("../../../styles/utilities.css", import.meta.url)
   .href;
+const tokensRoot = new URL("../../../styles/tokens-root.css", import.meta.url)
+  .href;
+
+// A stand-in for an application's OWN custom element: it has a shadow root, and it is not a
+// descendant of any lr-* shadow root, so it is exactly the case the resolved --lr-* layer never
+// reached before tokens-root.css existed. The inherited custom properties do cross into its shadow
+// root, so importing the stylesheet is the whole fix.
+const demoPanelTag = 'app-token-panel';
+
+if (typeof customElements !== 'undefined' && !customElements.get(demoPanelTag)) {
+  customElements.define(
+    demoPanelTag,
+    class extends HTMLElement {
+      connectedCallback(): void {
+        if (this.shadowRoot) return;
+        const root = this.attachShadow({ mode: 'open' });
+        root.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              padding: var(--lr-space-l);
+              border: var(--lr-border-width-thin) solid var(--lr-color-border);
+              border-radius: var(--lr-radius);
+              background: var(--lr-color-surface-raised);
+              box-shadow: var(--lr-shadow-s);
+              color: var(--lr-color-text);
+              font-family: var(--lr-font);
+              font-size: var(--lr-font-size-m);
+            }
+            p {
+              margin-block: 0 var(--lr-space-s);
+              color: var(--lr-color-text-quiet);
+              font-size: var(--lr-font-size-sm);
+            }
+            .tag {
+              display: inline-block;
+              padding: var(--lr-space-2xs) var(--lr-space-s);
+              border-radius: var(--lr-radius-pill);
+              background: var(--lr-color-success-fill-quiet);
+              color: var(--lr-color-success-on-quiet);
+              font-size: var(--lr-font-size-xs);
+              font-weight: var(--lr-font-weight-semibold);
+            }
+            button {
+              margin-block-start: var(--lr-space-m);
+              padding: var(--lr-space-xs) var(--lr-space-m);
+              border: var(--lr-border-width-thin) solid var(--lr-color-brand-border-loud);
+              border-radius: var(--lr-radius);
+              background: var(--lr-color-brand);
+              color: var(--lr-color-on-brand);
+              font: inherit;
+              cursor: pointer;
+              transition: opacity var(--lr-transition-fast);
+            }
+            button:hover {
+              opacity: var(--lr-opacity-muted);
+            }
+            button:focus-visible {
+              outline: var(--lr-focus-ring);
+              outline-offset: var(--lr-focus-ring-offset);
+            }
+          </style>
+          <slot name="heading"></slot>
+          <p>Not an lr-* element. Every value above is a curated --lr-* token read at :root.</p>
+          <span class="tag">In sync</span>
+          <button type="button">Application control</button>
+        `;
+      }
+    },
+  );
+}
 
 const meta: Meta = {
   title: "Styles/Native and utilities",
@@ -13,7 +84,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          "Two optional, independently importable light-DOM stylesheets. `native.css` normalizes only native descendants of an explicit `.lr-native` scope, while `utilities.css` provides exact, low-specificity `lr-*` layout and text classes. Both use Lyra tokens and the shared cascade-layer order.",
+          "Three optional, independently importable light-DOM stylesheets. `native.css` normalizes only native descendants of an explicit `.lr-native` scope, `utilities.css` provides exact, low-specificity `lr-*` layout and text classes, and `tokens-root.css` declares the curated resolved `--lr-*` tokens at `:root` so an application's own elements can read them. All three use Lyra tokens and the shared cascade-layer order.",
       },
     },
   },
@@ -112,5 +183,69 @@ export const LayoutAndProse: Story = {
         </form>
       </section>
     </main>
+  `,
+};
+
+export const ResolvedTokensAtRoot: Story = {
+  name: "Resolved tokens for your own components",
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "`tokens-root.css` is opt-in and declares a curated subset of the resolved `--lr-*` layer at `:root`, so an application's own custom elements can read the same surfaces, spacing, radii, elevation, typography and focus ring the kit uses. The panel on the left is a plain custom element with its own shadow root — not an `lr-*` element — and it stays in step with the `lr-card` beside it, including inside the pinned dark scope below.",
+      },
+    },
+  },
+  render: () => html`
+    <link rel="stylesheet" href=${tokensRoot} />
+    <style>
+      .tokens-demo {
+        display: grid;
+        gap: var(--lr-space-l);
+        grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+        padding: var(--lr-space-l);
+        border-radius: var(--lr-radius);
+        background: var(--lr-color-surface);
+        color: var(--lr-color-text);
+        font-family: var(--lr-font);
+      }
+
+      .tokens-demo__section {
+        display: grid;
+        gap: var(--lr-space-s);
+      }
+    </style>
+
+    <div class="tokens-demo">
+      <div class="tokens-demo__section">
+        <app-token-panel>
+          <h3 slot="heading">Application panel</h3>
+        </app-token-panel>
+      </div>
+      <div class="tokens-demo__section">
+        <lr-card>
+          <h3 slot="header">Library card</h3>
+          <p>An lr-* component, resolving the identical tokens on its own host.</p>
+          <lr-button slot="footer" variant="brand">Library control</lr-button>
+        </lr-card>
+      </div>
+    </div>
+
+    <div class="tokens-demo lr-dark" data-lr-theme="dark">
+      <div class="tokens-demo__section">
+        <app-token-panel>
+          <h3 slot="heading">Application panel, dark scope</h3>
+        </app-token-panel>
+      </div>
+      <div class="tokens-demo__section">
+        <lr-card data-lr-theme="dark">
+          <h3 slot="header">Library card, dark scope</h3>
+          <p>Both sides follow the same scope switch.</p>
+          <lr-button slot="footer" variant="brand" data-lr-theme="dark"
+            >Library control</lr-button
+          >
+        </lr-card>
+      </div>
+    </div>
   `,
 };

@@ -1029,9 +1029,21 @@ default). An inherited or direct public value remains authoritative in every tie
 Text field + calendar popover, **form-associated** via the shared `FormAssociated` mixin (`name`,
 `value`, `disabled`, `required` all inherited).
 
-**Properties (42):**
+**Properties (44):**
 
 - `appearance: 'filled'|'outlined'|'filled-outlined' = 'outlined'` (reflected)
+- `appliedPreset: LyraDateRangePreset | undefined` (read-only, new in 11.3.0) — the `presets` entry
+  whose button produced the current `value`, or `undefined` when the value was picked on the
+  calendar, typed into the field, cleared, or reset. Read it inside your own `change`/`input`
+  handler; it is updated before those events are relayed, so a handler observes the preset that
+  caused the very commit it is handling, and it is `undefined` while the popover has never been
+  opened. Mirrors the nested `lr-date-picker`'s identically-named property across this component's
+  shadow boundary, which is where the readback is actually needed: the compact
+  text-field-plus-popover shape is the one a dashboard filter uses, the nested picker instance is
+  unreachable from outside (a CSS part cannot yield it), and the fact is not recoverable from
+  `value` — re-deriving it by string-matching is the mapping table `presets` exists to delete and is
+  ambiguous anyway. A property rather than an event detail because `input`/`change` here are
+  **native** events that cannot carry one
 - `assumeInteractionOn: string[] = ['input']` (JS only)
 - `autocomplete: string = ''`
 - `dayContent?: LyraDatePickerDayContent` (JS only)
@@ -1056,6 +1068,12 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
 - `pill: boolean = false` (reflected)
 - `placement: LyraDateInputPlacement = 'bottom-start'` (reflected; all 12 side/alignment
   placements are accepted)
+- `presets: LyraDateRangePreset[] = []` (JS only, new in 11.1.0) — forwarded verbatim to the nested
+  `lr-date-picker`, whose own `presets` documents the semantics (range mode only, open bounds
+  resolving to `min`/`max`, unset renders nothing). Forwarded rather than reimplemented because the
+  picker lives in this component's shadow root, so a consumer has no route to it. The row's parts
+  are re-exported as `presets`/`preset-button`, and `appliedPreset` above reports which entry
+  produced the current value
 - `readonly: boolean = false` and `required: boolean = false` (reflected)
 - `size: LyraSize = 'm'` (reflected; `2xs`–`xl` and aliases)
 - `today: string = ''` (reflected ISO override)

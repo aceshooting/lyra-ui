@@ -245,8 +245,8 @@ writeFileSync(cssDataPath, `${JSON.stringify(cssData, null, 2)}\n`);
 // carry the JS namespace and further HTML contribution kinds, so `js/properties`, `js/events` and
 // `slots` are emitted structurally by `editor-web-types.mjs` instead of being folded into prose.
 // That matters because these are Lit components: `.property=${…}` and `@lr-event=${…}` are the
-// idiomatic bindings, and 865 public fields are declared `attribute: false`, so an attributes-only
-// file described the minority spelling and left a component's primary API (`lr-chart.datasets`,
+// idiomatic bindings, and roughly 860 public fields are declared `attribute: false`, so an
+// attributes-only file described the minority spelling and left a primary API (`lr-chart.datasets`,
 // `lr-heatmap.legendStops`, …) reachable through no contribution at all. Slots and CSS parts stay
 // in `tagDescription`'s markdown as well -- prose the documentation popup renders for the tag
 // itself, which the structural `slots` list complements rather than replaces (`html.customData`

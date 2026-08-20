@@ -1,5 +1,5 @@
 import { fixture, expect, html } from "@open-wc/testing";
-import { nothing, type PropertyValues } from "lit";
+import { LitElement, nothing, type PropertyValues } from "lit";
 import { property } from "lit/decorators.js";
 import {
   observeInheritedContext,
@@ -8,6 +8,12 @@ import {
 import { registerLyraLocale } from './localization-runtime.js';
 import { LyraElement } from "./lyra-element.js";
 import { tag } from "./prefix.js";
+import '../components/data/heatmap/heatmap.js';
+import '../components/agent-tools/task-list/task-list.js';
+import '../components/viewers/highlight-layer/highlight-layer.js';
+import type { LyraHeatmap } from '../components/data/heatmap/heatmap.class.js';
+import type { LyraTaskList } from '../components/agent-tools/task-list/task-list.class.js';
+import type { LyraHighlightLayer } from '../components/viewers/highlight-layer/highlight-layer.class.js';
 
 class Demo extends LyraElement {
   protected static override readonly immutableEventDetails = [
@@ -2012,6 +2018,310 @@ it('holds a scheduleAfterUpdate callback that comes due while disconnected and r
   ).to.deep.equal(['load', 'search']);
 
   el.remove();
+});
+
+/**
+ * The clone-owned collection boundary must not ride on `ReactiveElement.getPropertyDescriptor()`:
+ * Lit deprecated that hook and does not call it under standard decorators, so an override there
+ * would silently stop cloning/freezing the moment the compiler (here or in a consumer build)
+ * switches decorator flavors. These tests pin both halves — the hook is gone, and the ownership
+ * guarantee it used to carry still holds on real components.
+ */
+function lyraStaticChain(start: unknown): readonly { readonly name: string }[] {
+  const chain: { readonly name: string }[] = [];
+  let ctor = start as { readonly name: string } | null;
+  while (ctor && ctor !== (LitElement as unknown as { readonly name: string })) {
+    chain.push(ctor);
+    ctor = Object.getPrototypeOf(ctor) as { readonly name: string } | null;
+  }
+  return chain;
+}
+
+it('overrides no deprecated ReactiveElement property hook anywhere in a component class chain', () => {
+  const offenders: string[] = [];
+  const inspected: string[] = [];
+  for (const componentTag of ['heatmap', 'task-list', 'highlight-layer', 'demo-owned-collection'])
+    for (const ctor of lyraStaticChain(customElements.get(tag(componentTag)))) {
+      inspected.push(ctor.name);
+      for (const hook of ['getPropertyDescriptor', 'createProperty'])
+        if (Object.prototype.hasOwnProperty.call(ctor, hook))
+          offenders.push(`${ctor.name}.${hook}`);
+    }
+
+  expect(
+    inspected.filter((name) => name === 'LyraElement').length,
+    'every walked chain must reach LyraElement, or this proves nothing'
+  ).to.equal(4);
+  expect(
+    offenders,
+    'a deprecated hook override stops being called under standard decorators'
+  ).to.deep.equal([]);
+});
+
+it('emits no deprecated-hook warning while defining and finalizing components', () => {
+  const issued = [
+    ...((globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings ?? []),
+  ];
+
+  expect(
+    issued.filter((warning) => warning.includes('no-override-get-property-descriptor')),
+    'consumers must not see this warning on every dev-mode page load'
+  ).to.deep.equal([]);
+  expect(
+    issued.filter((warning) => warning.includes('no-override-create-property'))
+  ).to.deep.equal([]);
+});
+
+it('keeps lr-heatmap colorSteps and legendStops clone-owned, bounded and frozen', () => {
+  const el = document.createElement(tag('heatmap')) as LyraHeatmap;
+
+  const steps = ['red', 'blue'];
+  el.colorSteps = steps;
+  const ownedSteps = el.colorSteps!;
+  expect(ownedSteps, 'read-back must not be the caller array').to.not.equal(steps);
+  expect(Object.isFrozen(ownedSteps)).to.be.true;
+  steps.push('green');
+  steps[0] = 'black';
+  expect([...el.colorSteps!]).to.deep.equal(['red', 'blue']);
+
+  const stops = [{ value: 1, color: 'red', label: 'Low' }];
+  el.legendStops = stops;
+  const ownedStops = el.legendStops!;
+  expect(ownedStops).to.not.equal(stops);
+  expect(ownedStops[0]).to.not.equal(stops[0]);
+  expect(Object.isFrozen(ownedStops)).to.be.true;
+  expect(Object.isFrozen(ownedStops[0])).to.be.true;
+  stops[0]!.label = 'changed';
+  stops.push({ value: 2, color: 'blue', label: 'High' });
+  expect(el.legendStops!.length).to.equal(1);
+  expect(el.legendStops![0]!.label).to.equal('Low');
+
+  const annotations = [{ row: 0, col: 0, label: 'Peak' }];
+  el.annotations = annotations;
+  const ownedAnnotations = el.annotations;
+  expect(ownedAnnotations).to.not.equal(annotations);
+  expect(Object.isFrozen(ownedAnnotations)).to.be.true;
+  expect(Object.isFrozen(ownedAnnotations[0])).to.be.true;
+  annotations[0]!.label = 'changed';
+  annotations.push({ row: 1, col: 1, label: 'Later' });
+  expect(el.annotations.length).to.equal(1);
+  expect(el.annotations[0]!.label).to.equal('Peak');
+
+  el.colorSteps = Array.from({ length: 10_005 }, () => 'red');
+  expect(el.colorSteps!.length).to.equal(10_000);
+});
+
+it('keeps the lr-heatmap data record an identity passthrough', () => {
+  const el = document.createElement(tag('heatmap')) as LyraHeatmap;
+  const data = {
+    kind: 'matrix',
+    rowLabels: ['r'],
+    colLabels: ['c'],
+    values: [[1]],
+  } as const;
+
+  el.data = data;
+
+  expect(el.data, 'the enrolled identity-object exception must still pass by reference').to.equal(
+    data
+  );
+});
+
+it('keeps lr-task-list items clone-owned and frozen', () => {
+  const el = document.createElement(tag('task-list')) as LyraTaskList;
+  const items = [{ id: 'a', label: 'First', status: 'pending' as const }];
+
+  el.items = items;
+  const owned = el.items;
+  items[0]!.label = 'changed';
+  items.push({ id: 'b', label: 'Later', status: 'pending' as const });
+
+  expect(owned).to.not.equal(items);
+  expect(Object.isFrozen(owned)).to.be.true;
+  expect(Object.isFrozen(owned[0])).to.be.true;
+  expect(el.items.map((item) => item.label)).to.deep.equal(['First']);
+});
+
+it('keeps an accessor-backed enrolled collection clone-owned and frozen', () => {
+  const el = document.createElement(tag('highlight-layer')) as LyraHighlightLayer;
+  const rects = [{ x: 1, y: 2, width: 3, height: 4 }];
+  const items = [{ id: 'a', rects, label: 'First' }];
+
+  el.items = items;
+  const owned = el.items;
+  rects[0]!.x = 99;
+  items[0]!.label = 'changed';
+  items.push({ id: 'b', rects: [], label: 'Later' });
+
+  expect(owned).to.not.equal(items);
+  expect(Object.isFrozen(owned)).to.be.true;
+  expect(Object.isFrozen(owned[0])).to.be.true;
+  expect(el.items.map((item) => item.label)).to.deep.equal(['First']);
+  expect(el.items[0]!.rects[0]!.x).to.equal(1);
+});
+
+it('installs the ownership boundary on subclasses defined after the base class finalized', async () => {
+  class LateOwned extends LyraElement {
+    protected static override readonly ownedCollectionProperties = Object.freeze([
+      'rows',
+    ]);
+
+    @property({ attribute: false }) rows: readonly { readonly label: string }[] = [];
+    /** Deliberately not enrolled: the boundary must leave it alone. */
+    @property({ attribute: false }) passthrough: unknown = null;
+
+    override render() {
+      return html`<span>${this.rows.length}</span>`;
+    }
+  }
+  customElements.define(tag('demo-late-owned'), LateOwned);
+  class LateOwnedChild extends LateOwned {}
+  customElements.define(tag('demo-late-owned-child'), LateOwnedChild);
+
+  for (const componentTag of ['demo-late-owned', 'demo-late-owned-child']) {
+    const el = (await fixture(`<${tag(componentTag)}></${tag(componentTag)}>`)) as LateOwned;
+    const rows = [{ label: 'first' }];
+    const passthrough = [{ label: 'raw' }];
+
+    el.rows = rows;
+    el.passthrough = passthrough;
+    rows[0]!.label = 'changed';
+    rows.push({ label: 'later' });
+
+    expect(el.rows, componentTag).to.not.equal(rows);
+    expect(Object.isFrozen(el.rows), componentTag).to.be.true;
+    expect(el.rows.map((row) => row.label), componentTag).to.deep.equal(['first']);
+    expect(
+      el.passthrough,
+      'a property outside ownedCollectionProperties keeps caller identity'
+    ).to.equal(passthrough);
+  }
+});
+
+it('owns a collection assigned before the element was upgraded', async () => {
+  // The framework-integration path: markup (or a framework renderer) sets a property on an element
+  // whose definition has not loaded yet, so the value lands as a plain own property and Lit replays
+  // it through the accessor at upgrade time. That replay must still cross the ownership boundary.
+  const el = document.createElement(tag('demo-pre-upgrade')) as HTMLElement & {
+    rows: readonly { readonly label: string }[];
+  };
+  document.body.append(el);
+  const rows = [{ label: 'first' }];
+  el.rows = rows;
+  expect(el.rows, 'no accessor exists before upgrade').to.equal(rows);
+
+  class DemoPreUpgrade extends LyraElement {
+    protected static override readonly ownedCollectionProperties = Object.freeze([
+      'rows',
+    ]);
+
+    @property({ attribute: false }) rows: readonly { readonly label: string }[] = [];
+
+    override render() {
+      return html`<span>${this.rows.length}</span>`;
+    }
+  }
+  customElements.define(tag('demo-pre-upgrade'), DemoPreUpgrade);
+  await (el as unknown as DemoPreUpgrade).updateComplete;
+  rows[0]!.label = 'changed';
+  rows.push({ label: 'later' });
+
+  expect(el.rows).to.not.equal(rows);
+  expect(Object.isFrozen(el.rows)).to.be.true;
+  expect(el.rows.map((row) => row.label)).to.deep.equal(['first']);
+  el.remove();
+});
+
+it('installs no boundary for enrollments that never had one', async () => {
+  class DemoInertEnrollment extends LyraElement {
+    // `identityCollectionProperties` only refines an owned property; on its own it enrolls
+    // nothing. `absent` is not a reactive property at all, and `manual` opts out of Lit's
+    // accessor generation, so both keep the hand-written behavior they declare.
+    protected static override readonly ownedCollectionProperties = Object.freeze([
+      'absent',
+      'manual',
+    ]);
+    protected static override readonly identityCollectionProperties = Object.freeze([
+      'identityOnly',
+    ]);
+
+    static override properties = {
+      manual: { attribute: false, noAccessor: true },
+    };
+
+    @property({ attribute: false }) identityOnly: readonly unknown[] = [];
+    absent: readonly unknown[] = [];
+    manualWrites: number = 0;
+    private manualValue: readonly unknown[] = [];
+
+    get manual(): readonly unknown[] {
+      return this.manualValue;
+    }
+    set manual(value: readonly unknown[]) {
+      this.manualWrites += 1;
+      this.manualValue = value;
+    }
+
+    override render() {
+      return html`<span>${this.identityOnly.length}</span>`;
+    }
+  }
+  customElements.define(tag('demo-inert-enrollment'), DemoInertEnrollment);
+
+  const el = (await fixture(
+    `<${tag('demo-inert-enrollment')}></${tag('demo-inert-enrollment')}>`
+  )) as DemoInertEnrollment;
+  const identityOnly = [{ label: 'first' }];
+  const absent = [{ label: 'first' }];
+  const manual = [{ label: 'first' }];
+
+  el.identityOnly = identityOnly;
+  el.absent = absent;
+  el.manual = manual;
+
+  expect(el.identityOnly, 'an identity-only enrollment owns nothing').to.equal(identityOnly);
+  expect(el.absent, 'a name that is not a reactive property gets no accessor').to.equal(absent);
+  expect(el.manual, 'a noAccessor declaration keeps its hand-written setter').to.equal(manual);
+  expect(el.manualWrites).to.equal(1);
+});
+
+it('applies each class its own policy when a subclass is registered before its base', async () => {
+  class EarlyBase extends LyraElement {
+    protected static override readonly ownedCollectionProperties = Object.freeze([
+      'rows',
+    ]);
+
+    @property({ attribute: false }) rows: readonly { readonly label: string }[] = [];
+
+    override render() {
+      return html`<span>${this.rows.length}</span>`;
+    }
+  }
+  class EarlySub extends EarlyBase {
+    protected static override readonly identityCollectionProperties = Object.freeze([
+      'rows',
+    ]);
+  }
+  // Registration order is a consumer's choice; the derived class going first must not leave it
+  // sharing the base's (stricter, deep-cloning) boundary, nor the base sharing the subclass's.
+  customElements.define(tag('demo-early-sub'), EarlySub);
+  customElements.define(tag('demo-early-base'), EarlyBase);
+
+  const sub = (await fixture(`<${tag('demo-early-sub')}></${tag('demo-early-sub')}>`)) as EarlySub;
+  const base = (await fixture(
+    `<${tag('demo-early-base')}></${tag('demo-early-base')}>`
+  )) as EarlyBase;
+  const row = { label: 'first' };
+
+  sub.rows = [row];
+  base.rows = [row];
+
+  expect(sub.rows[0], 'the subclass enrolled rows as an identity collection').to.equal(row);
+  expect(Object.isFrozen(sub.rows)).to.be.true;
+  expect(base.rows[0], 'the base still deep-clones the same rows').to.not.equal(row);
+  expect(base.rows[0]!.label).to.equal('first');
+  expect(Object.isFrozen(base.rows)).to.be.true;
+  expect(Object.isFrozen(row), 'neither boundary may freeze the caller record').to.be.false;
 });
 
 describe('dev-mode unknown-attribute warning wiring', () => {

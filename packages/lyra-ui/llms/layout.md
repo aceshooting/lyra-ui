@@ -473,6 +473,12 @@ TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
 - `activeViewId: string = ''` (attribute: false) — the currently active view's `viewId`; defaults to the
   first entry of `views` (or `''` when `views` is empty). Settable directly to control the active
   view externally; also updated internally when a view toggle is clicked.
+- `activeView: string = ''` (attribute: false) — **deprecated alias for `activeViewId`**, which it
+  seeds. `activeView` was this member's original public name and the rename was never announced, so
+  a shipped `.activeView=${…}` binding silently became inert and the widget fell back to its first
+  view. It seeds rather than being read alongside, because the component itself writes
+  `activeViewId` (a toggle click, and the fallback when `views` drops the active id) — so a stale
+  alias must not undo a later interactive change. Prefer `activeViewId` in new code.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the label-derived
   fullscreen dialog name. An explicitly empty value is retained; property, slotted-label, and
   localized fallbacks apply only when it is absent.
@@ -2142,6 +2148,12 @@ removing the label from the accessibility tree.
   reflects `aria-current="page"` on `[part='base']` and drives the current visual treatment. The rail
   has no built-in routing, so the consumer sets this per item (e.g. by comparing `href` against the
   current location).
+- `active: boolean = false` — **deprecated alias for `current`**, read alongside it: the item is
+  current when either is true. `active` was this member's original public name, in both property and
+  attribute form; it was renamed to `current` without an alias, so shipped consumers writing
+  `.active=${…}` or `<lr-app-rail-item active>` silently lost their current-item indicator and kept a
+  permanent `aria-current="false"`. A Lit property binding on a custom element is untyped, so nothing
+  in a consumer's type check or test suite could catch it. Prefer `current` in new code.
 - `tooltip: boolean = false` (reflected) — opt-in hover/focus flyout (`[part='tooltip']`) showing
   this item's label text while the rail's `icon-only` mode (set externally by the parent
   `<lr-app-rail>` as the viewport narrows) hides it from view. No effect outside icon-only mode,
@@ -3375,7 +3387,8 @@ value therefore stays inside a 320px LTR or RTL bar, with the chip's own label e
 overflow ownership rather than widening the page.
 
 Each edit exposes one filter-bar `lr-input` carrying a detached, deeply frozen snapshot of the
-complete value object. A built-in or
+complete value object, plus the `filterId` that changed and (new in 11.3.0) `appliedPreset` — see
+"Date-range quick ranges" below. A built-in or
 custom control's own `lr-input`/`lr-change` aliases stay inside the wrapper so their incompatible
 detail shapes cannot escape as duplicate bar events; native-style `input`/`change` events from the
 composed controls continue bubbling normally.
@@ -3424,6 +3437,54 @@ same-named counterparts (with `combobox`'s `multiple` opting into a multi-value 
 to `<lr-input>` for an open-ended free-text query rather than a closed choice set. A `'text'`
 filter's value is the raw query string, verbatim, and its chip shows exactly that string — the same
 text the user typed, not a truncated or normalized form.
+
+### Date-range quick ranges
+
+A `'date-range'` definition also accepts `presets?: readonly LyraDateRangePreset[]` (new in 11.3.0),
+forwarded to its composed `<lr-date-input>` exactly like `min`/`max`, so the quick-range row
+("Today", "Last 7 days", "All time") renders inside that filter's own calendar popover. Entries are
+`LyraDateRangePreset { label, start?, end? }` with ISO `YYYY-MM-DD` bounds; an omitted bound is open
+and resolves to the filter's `min`/`max`, and an open bound with no corresponding limit renders that
+button disabled. `presets` is deliberately **not** accepted on a single `'date'` filter: a preset
+names two dates, so `lr-date-picker` ignores the list outside range mode, and a list passed there is
+dropped rather than rendering a row that cannot do anything.
+
+The `lr-input` emitted by such a commit carries `appliedPreset`, the definition entry whose button
+produced it — the bar's own frozen snapshot, so it compares identical to `filters[i].presets[j]`. It
+is `undefined` for every other filter type and for a range picked or typed by hand. A filter bar
+whose values round-trip through a query string needs it because `value` holds only the frozen ISO
+range: persisting "Last 7 days" as a preset id keeps it meaning the last 7 days after the next
+reload, and re-deriving it by string-matching `value` is both the mapping table `presets` exists to
+delete and ambiguous (Today and This month coincide on the 1st). It rides the event rather than
+`value` because it is metadata about one edit, not a filter value — `value` stays the plain,
+JSON-serializable record it has always been.
+
+```ts
+const filters: LyraFilterBarFilterDefinition[] = [
+  {
+    filterId: "period",
+    label: "Reporting period",
+    type: "date-range",
+    min: "2020-01-01",
+    max: "2030-12-31",
+    presets: [
+      { label: "Last 7 days", start: "2026-08-13", end: "2026-08-19" },
+      { label: "This month", start: "2026-08-01", end: "2026-08-31" },
+      { label: "All time" },
+    ],
+  },
+];
+
+bar.addEventListener("lr-input", (event) => {
+  const { value, filterId, appliedPreset } = event.detail;
+  persist({ ...value, periodPreset: appliedPreset?.label });
+});
+```
+
+Before this, the only way to give a filter-bar date range a quick-range row was `type: 'custom'`,
+which means hand-rendering an `lr-date-input` plus a full adapter (`clearValue`, `isEmpty`,
+`formatValue`) to set one property, and forfeits the built-in date-range chip localization described
+next.
 
 Date chips localize exactly one round-trip-valid ISO `YYYY-MM-DD` segment; date-range chips require
 exactly two slash-separated segments. Four-digit
@@ -3866,6 +3927,7 @@ These named interfaces and helper signatures are available to typed integrations
 }`
   `LyraFilterBarDateRangeDefinition {
   type: unknown;
+  presets: unknown;
   min: unknown;
   max: unknown;
   filterId: unknown;
@@ -3877,6 +3939,7 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraFilterBarInputDetail {
   value: unknown;
   filterId: unknown;
+  appliedPreset: unknown;
 }`
   `LyraFilterBarOption {
   value: unknown;

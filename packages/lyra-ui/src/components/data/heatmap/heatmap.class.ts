@@ -29,6 +29,7 @@ import {
   getNumberFormat,
 } from '../../../internal/intl-cache.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import {
   acquireAnnouncementSink,
@@ -70,7 +71,29 @@ const labelExtentConverter: ComplexAttributeConverter<number | 'auto' | undefine
   toAttribute: (value) => (value === undefined ? null : String(value)),
 };
 
+/**
+ * Which matrix label band, if any, is frozen while the grid scrolls.
+ *
+ * One closed set rather than a boolean or a pair of booleans, because freezing one axis is a real
+ * request on its own: a wide matrix needs the row gutter to survive horizontal scrolling, a tall one
+ * needs the column band to survive vertical scrolling, and the two are independent. A boolean cannot
+ * express that at all, and a `sticky-row-labels`/`sticky-col-labels` pair spends two attributes and
+ * four states on it while leaving no single reflected value to select on in CSS. The `rows`/`cols`
+ * spelling matches the vocabulary the rest of this component already uses (`rowLabels`,
+ * `row-label-width`, `colLabels`, `col-label-height`) rather than introducing axis letters.
+ */
+export type LyraHeatmapStickyLabels = 'none' | 'rows' | 'cols' | 'both';
+
+const STICKY_LABELS = literalSetConverter<LyraHeatmapStickyLabels>(
+  ['none', 'rows', 'cols', 'both'],
+  'none',
+);
+
 const FALLBACK_NO_DATA_FILL = 'rgba(128,128,128,0.25)';
+/** Last-resort frozen-band backdrop for the case where the token resolves to an empty string (no
+ *  stylesheet applied at all). It has to be opaque: the band covers label pixels the cell canvas
+ *  painted underneath it, and a translucent backdrop would show both while scrolling. */
+const FALLBACK_STICKY_LABEL_BG = '#ffffff';
 const RAMP_STEPS = 7;
 const FALLBACK_SCALE_LO = '#cde2fb';
 const FALLBACK_SCALE_HI = '#0969da';
@@ -541,6 +564,13 @@ export interface LyraHeatmapEventMap {
  * focus, its semantic matrix coordinate or calendar date remains the sole roving stop; removal
  * clamps to the nearest survivor, or to the stable heatmap base when no interactive cells remain.
  *
+ * `stickyLabels` freezes a matrix label band against the grid's own scrolling — `'rows'` pins the
+ * row-label gutter through horizontal scrolling, `'cols'` pins the column-label band through
+ * vertical scrolling, `'both'` pins both. The frozen band is repainted into its own layer from the
+ * same `matrixGeometry` the cells were painted with in the same pass, so it tracks a
+ * `row-label-width`/`col-label-height` `"auto"` re-resolution instead of hardcoding it. The default
+ * `'none'` renders exactly what it always did: one canvas, no scrollport.
+ *
  * Calendar `data.columnX` overrides the x-origin computed for each
  * week column — drawing, hit-testing, the focus ring, and month-label
  * positioning all consult it consistently, so a consumer can pixel-align a
@@ -585,6 +615,9 @@ export interface LyraHeatmapEventMap {
  * resize. `detail` is the same object `matrixGeometry` returns. Never fired in calendar mode.
  * @csspart base - The heatmap wrapper.
  * @csspart canvas - The heatmap canvas.
+ * @csspart grid - The scrollport wrapping the canvas while `stickyLabels` freezes an axis; absent otherwise.
+ * @csspart row-labels - The frozen row-label gutter, rendered while `stickyLabels` is `rows` or `both`.
+ * @csspart col-labels - The frozen column-label band, rendered while `stickyLabels` is `cols` or `both`.
  * @csspart cells - The opt-in per-cell accessibility overlay.
  * @csspart cell - An opt-in native button for one matrix or calendar cell.
  * @csspart tooltip - The hover tooltip.
@@ -608,6 +641,8 @@ export interface LyraHeatmapEventMap {
  * @cssprop [--lr-heatmap-focus-ring-color=var(--lr-focus-ring-color)] - Focus ring around a focused cell.
  * @cssprop [--lr-heatmap-annotation-color=var(--lr-color-danger)] - Border color for an annotated cell.
  * @cssprop [--lr-heatmap-selected-color=var(--lr-color-success)] - Border color for the selected cell.
+ * @cssprop [--lr-heatmap-sticky-label-bg=var(--lr-color-surface)] - Backdrop painted under a frozen `stickyLabels` band. Must be opaque: it covers the same labels the scrolling canvas painted underneath it.
+ * @cssprop [--lr-heatmap-grid-max-block-size=none] - Block-size ceiling of the `stickyLabels` scrollport. A frozen column band only stays behind once the grid actually scrolls vertically.
  * @cssprop [--lr-heatmap-color-steps-gradient=linear-gradient(to right, var(--lr-heatmap-scale-lo), var(--lr-heatmap-scale-hi))] - Gradient painted on the continuous legend bar. Set on the host by the component itself while `colorSteps` is supplied, and removed again when it is not; the fallback is the two-endpoint scale ramp.
  * @status stable
  * @since 4.0.0
@@ -712,6 +747,68 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * would be incoherent.
    */
   @property({ type: Number, attribute: 'col-label-rotation' }) colLabelRotation?: number;
+
+  private _stickyLabels: LyraHeatmapStickyLabels = 'none';
+
+  /**
+   * Freezes a matrix label band against the grid's own scrolling, instead of leaving it baked into
+   * the scrolling bitmap. `'rows'` pins the row-label gutter so it survives horizontal scrolling,
+   * `'cols'` pins the column-label band so it survives vertical scrolling, `'both'` pins both, and
+   * the default `'none'` renders exactly what this component rendered before the option existed:
+   * one canvas, no scrollport, no extra elements.
+   *
+   * Labels and cells share one bitmap, so a band cannot be `position: sticky` on its own; a tall
+   * matrix therefore scrolled its column header away and left the columns unidentifiable. Setting
+   * this repaints the requested band into its own layer, in the same draw pass and from the same
+   * resolved `matrixGeometry` the cells were painted with, so the two cannot drift under scroll, a
+   * resize, a DPR change, or a `rowLabelWidth`/`colLabelHeight` `"auto"` re-resolution. That last
+   * one is the point: a hand-rolled light-DOM mirror had to hardcode the gutter width, which made
+   * it mutually exclusive with `row-label-width="auto"`.
+   *
+   * Freezing needs something to scroll, so the frozen modes wrap the grid in a `[part="grid"]`
+   * scrollport. It is bounded inline by the host's own allocation (a matrix wider than a 320px host
+   * scrolls inside the component rather than overflowing it) and unbounded in block by default; set
+   * `--lr-heatmap-grid-max-block-size` to bound it, since a column band can only stay behind while
+   * the grid actually scrolls vertically.
+   *
+   * Matrix mode only, like `matrixGeometry` and `lr-matrix-geometry-change`: calendar mode's axes
+   * are a different geometry (a fixed weekday gutter, a month band, and the optional `columnX`/
+   * `rowY` overrides), so this property is read but has no effect there.
+   *
+   * Under `dir="rtl"` the grid keeps this component's documented physical LTR geometry, so the
+   * scrollport is direction-pinned like the canvas already is and the bands then freeze against the
+   * logical inline-start/block-start edges of that pinned box — which is to say the physical left
+   * and top, where the labels they duplicate are actually painted.
+   *
+   * See `LyraHeatmapStickyLabels` for why this is one closed set rather than a boolean or a pair.
+   */
+  @property({ converter: STICKY_LABELS, attribute: 'sticky-labels', reflect: true })
+  get stickyLabels(): LyraHeatmapStickyLabels {
+    return this._stickyLabels;
+  }
+  set stickyLabels(next: LyraHeatmapStickyLabels) {
+    const normalized = STICKY_LABELS.normalizeReflected(this, 'sticky-labels', next);
+    const old = this._stickyLabels;
+    if (old === normalized) return;
+    this._stickyLabels = normalized;
+    this.requestUpdate('stickyLabels', old);
+  }
+
+  /** `stickyLabels` restricted to the mode it applies to. One gate for render and paint alike, so
+   *  switching `data` to a calendar can never leave a frozen band or a scrollport behind. */
+  private get effectiveStickyLabels(): LyraHeatmapStickyLabels {
+    return this.effectiveMode === 'matrix' ? this._stickyLabels : 'none';
+  }
+
+  private get freezesRowLabels(): boolean {
+    const sticky = this.effectiveStickyLabels;
+    return sticky === 'rows' || sticky === 'both';
+  }
+
+  private get freezesColLabels(): boolean {
+    const sticky = this.effectiveStickyLabels;
+    return sticky === 'cols' || sticky === 'both';
+  }
 
   /** Column band resolved during the last draw, mirroring `resolvedRowLabelWidth`. */
   private resolvedColLabelHeight = PAD_TOP;
@@ -1206,7 +1303,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     return this.calendarData?.rowY;
   }
 
-  @query('canvas') private canvas?: HTMLCanvasElement;
+  // Selects the CELL canvas specifically, not merely the first canvas in the shadow root: a
+  // frozen `stickyLabels` band is a canvas too, and a bare `canvas` selector would silently start
+  // resolving to a band if the template order ever changed.
+  @query('[part="canvas"]') private canvas?: HTMLCanvasElement;
   private resizeObserver?: ResizeObserver;
   private intersectionObserver?: IntersectionObserver;
   private drawFrameRequest?: OwnedAnimationFrame;
@@ -1904,6 +2004,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         'accessibleCells',
         'accessibleTargetSizePx',
         'locale',
+        // Toggling this replaces the canvas element (the frozen modes wrap it in a scrollport), so
+        // the new, blank canvas needs a full repaint -- and the bands need their first one.
+        'stickyLabels',
       ].some((name) => changed.has(name))
     ) {
       const focusOnly =
@@ -2022,6 +2125,17 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       cs.getPropertyValue('--_lr-heatmap-label-font').trim() ||
       FALLBACK_LABEL_FONT
     );
+  }
+
+  /** Reads the customizable frozen-label-band backdrop off the host's computed style, resolved to a
+   *  concrete color: canvas silently keeps its previous `fillStyle` for anything it cannot parse,
+   *  and a `var()` chain is exactly that. */
+  private stickyLabelBg(cs: CSSStyleDeclaration): string {
+    const raw =
+      cs.getPropertyValue('--lr-heatmap-sticky-label-bg').trim() ||
+      cs.getPropertyValue('--_lr-heatmap-sticky-label-bg').trim() ||
+      FALLBACK_STICKY_LABEL_BG;
+    return formatRgb(resolveRgb(raw, FALLBACK_STICKY_LABEL_BG, this.ownerDocument));
   }
 
   /** Reads the customizable no-data cell fill off the host's computed style. */
@@ -3040,6 +3154,23 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       }
     }
 
+    this.paintMatrixRowLabels(ctx, padLeft, padTop, cellSize, cs);
+    this.paintMatrixColLabels(ctx, padLeft, padTop, cellSize, cs);
+    this.paintFrozenLabelBands(padLeft, padTop, cellSize, w, h, dpr, cs);
+    this.canvasHasContent = true;
+  }
+
+  /** Paints the row-label gutter at `x = 0 .. padLeft`. Extracted so the cell canvas and a frozen
+   *  `[part="row-labels"]` band paint from one routine and one set of geometry arguments — the
+   *  band's own canvas shares the cell canvas's origin, so "aligned" is what the same coordinates
+   *  mean, rather than something a second implementation has to keep agreeing about. */
+  private paintMatrixRowLabels(
+    ctx: CanvasRenderingContext2D,
+    padLeft: number,
+    padTop: number,
+    cellSize: number,
+    cs: CSSStyleDeclaration
+  ): void {
     ctx.fillStyle = this.labelColor(cs);
     ctx.font = this.labelFont(cs);
     const rowLabelSpace = padLeft - ROW_LABEL_INSET * 2;
@@ -3049,28 +3180,108 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       const shown = this.ellipsize(ctx, label, rowLabelSpace);
       if (shown) ctx.fillText(shown, ROW_LABEL_INSET, padTop + r * cellSize + cellSize / 2 + 3);
     });
+  }
+
+  /** The column-label band at `y = 0 .. padTop`, rotation included. The mirror of
+   *  `paintMatrixRowLabels()`, shared with a frozen `[part="col-labels"]` band the same way. */
+  private paintMatrixColLabels(
+    ctx: CanvasRenderingContext2D,
+    padLeft: number,
+    padTop: number,
+    cellSize: number,
+    cs: CSSStyleDeclaration
+  ): void {
+    ctx.fillStyle = this.labelColor(cs);
+    ctx.font = this.labelFont(cs);
     const colRotation = this.effectiveColLabelRotation;
     if (colRotation === 0) {
       this.matrixColLabels.forEach((label, c) => {
         ctx.fillText(label, padLeft + c * cellSize + 2, padTop - COL_LABEL_INSET);
       });
-    } else {
-      // Anchor the label's END at its own column's centre and lean it back over the columns to its
-      // left, so the rightmost label cannot run off the canvas. save()/restore() per label keeps the
-      // rotation from leaking into anything painted afterwards.
-      const radians = (colRotation * Math.PI) / 180;
-      const previousAlign = ctx.textAlign;
-      ctx.textAlign = 'right';
-      this.matrixColLabels.forEach((label, c) => {
-        ctx.save();
-        ctx.translate(padLeft + c * cellSize + cellSize / 2, padTop - COL_LABEL_INSET);
-        ctx.rotate(radians);
-        ctx.fillText(label, 0, 0);
-        ctx.restore();
-      });
-      ctx.textAlign = previousAlign;
+      return;
     }
-    this.canvasHasContent = true;
+    // Anchor the label's END at its own column's centre and lean it back over the columns to its
+    // left, so the rightmost label cannot run off the canvas. save()/restore() per label keeps the
+    // rotation from leaking into anything painted afterwards.
+    const radians = (colRotation * Math.PI) / 180;
+    const previousAlign = ctx.textAlign;
+    ctx.textAlign = 'right';
+    this.matrixColLabels.forEach((label, c) => {
+      ctx.save();
+      ctx.translate(padLeft + c * cellSize + cellSize / 2, padTop - COL_LABEL_INSET);
+      ctx.rotate(radians);
+      ctx.fillText(label, 0, 0);
+      ctx.restore();
+    });
+    ctx.textAlign = previousAlign;
+  }
+
+  /**
+   * Repaints whichever label bands `stickyLabels` freezes, from the geometry this very draw pass
+   * painted the cells with. Each band is a canvas sharing the cell canvas's origin (both sit in the
+   * same single-area grid), sized to the band it owns and offset on one axis only by
+   * `position: sticky`, so it slides along the axis it is not frozen on and stays put on the one it
+   * is. Nothing here recomputes geometry, which is what keeps a band aligned across a resize, a DPR
+   * change, and a `row-label-width`/`col-label-height` `"auto"` re-resolution alike.
+   *
+   * The cell canvas keeps painting its own labels underneath: leaving that pass untouched is what
+   * makes the default `'none'` byte-identical, and the band's opaque backdrop covers the duplicate
+   * once it scrolls out from under the frozen copy.
+   */
+  private paintFrozenLabelBands(
+    padLeft: number,
+    padTop: number,
+    cellSize: number,
+    width: number,
+    height: number,
+    dpr: number,
+    cs: CSSStyleDeclaration
+  ): void {
+    const sticky = this.effectiveStickyLabels;
+    if (sticky === 'none') return;
+    const backdrop = this.stickyLabelBg(cs);
+    const rowBand = this.frozenBandCanvas('row-labels');
+    if (rowBand) {
+      this.paintFrozenBand(rowBand, padLeft, height, dpr, backdrop, (bandCtx) =>
+        this.paintMatrixRowLabels(bandCtx, padLeft, padTop, cellSize, cs)
+      );
+    }
+    const colBand = this.frozenBandCanvas('col-labels');
+    if (colBand) {
+      this.paintFrozenBand(colBand, width, padTop, dpr, backdrop, (bandCtx) =>
+        this.paintMatrixColLabels(bandCtx, padLeft, padTop, cellSize, cs)
+      );
+    }
+  }
+
+  private frozenBandCanvas(part: 'row-labels' | 'col-labels'): HTMLCanvasElement | null {
+    return (
+      this.shadowRoot?.querySelector<HTMLCanvasElement>(`[part="${part}"]`) ?? null
+    );
+  }
+
+  /** Sizes one band's backing store to the same DPR the cell canvas uses, fills the opaque backdrop,
+   *  then hands the caller a context already in CSS-pixel coordinates identical to the cell
+   *  canvas's — so a label lands on the same physical pixel in both. */
+  private paintFrozenBand(
+    canvas: HTMLCanvasElement,
+    width: number,
+    height: number,
+    dpr: number,
+    backdrop: string,
+    paint: (ctx: CanvasRenderingContext2D) => void
+  ): void {
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = backdrop;
+    ctx.fillRect(0, 0, width, height);
+    paint(ctx);
   }
 
   /**
@@ -3756,6 +3967,51 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       >`;
   }
 
+  /**
+   * The cell canvas, the opt-in per-cell overlay, and — while `stickyLabels` freezes an axis — the
+   * frozen label bands, wrapped in the scrollport those bands stick to.
+   *
+   * Both branches emit the same canvas and overlay from one template, so the unfrozen default keeps
+   * rendering exactly the elements it always did (no wrapper, no scrollport, no second canvas) with
+   * no second copy of the canvas's attribute/listener surface to drift. The bands are decorative
+   * duplicates of pixels the cell canvas already painted, so they carry `aria-hidden` and no role:
+   * the accessible representation stays the canvas's own `role="application"` name, or the
+   * `[part="cells"]` grid under `accessibleCells` — which moves inside the scrollport so the cells
+   * scroll with the canvas they overlay.
+   */
+  private renderGridSurface(projectionDescription: string): TemplateResult {
+    const sticky = this.effectiveStickyLabels;
+    const surface = html`
+      <canvas
+        part="canvas"
+        tabindex=${this.accessibleCells ? '-1' : '0'}
+        aria-hidden=${this.accessibleCells ? 'true' : nothing}
+        role=${this.accessibleCells ? nothing : 'application'}
+        aria-label=${this.accessibleCells
+          ? nothing
+          : this.authorAriaLabel || this.generatedAriaLabel}
+        aria-describedby=${!this.accessibleCells && projectionDescription
+          ? 'projection-limit'
+          : nothing}
+        @pointermove=${this.onPointerMove}
+        @pointerleave=${this.onPointerLeave}
+        @click=${this.onCanvasClick}
+        @keydown=${this.onKeyDown}
+      ></canvas>
+      ${this.renderAccessibleCells()}
+      ${this.freezesRowLabels
+        ? html`<canvas part="row-labels" aria-hidden="true"></canvas>`
+        : nothing}
+      ${this.freezesColLabels
+        ? html`<canvas part="col-labels" aria-hidden="true"></canvas>`
+        : nothing}
+    `;
+    if (sticky === 'none') return surface;
+    return html`<div part="grid">
+      <div class="grid-stack">${surface}</div>
+    </div>`;
+  }
+
   override render(): TemplateResult {
     const range = this.cachedValueRange;
     const labeledAnnotations = this.cachedAnnotations.filter((a) => a.label);
@@ -3766,23 +4022,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         tabindex="-1"
         data-projection-truncated=${this.projectionTruncated ? 'true' : 'false'}
       >
-        <canvas
-          part="canvas"
-          tabindex=${this.accessibleCells ? '-1' : '0'}
-          aria-hidden=${this.accessibleCells ? 'true' : nothing}
-          role=${this.accessibleCells ? nothing : 'application'}
-          aria-label=${this.accessibleCells
-            ? nothing
-            : this.authorAriaLabel || this.generatedAriaLabel}
-          aria-describedby=${!this.accessibleCells && projectionDescription
-            ? 'projection-limit'
-            : nothing}
-          @pointermove=${this.onPointerMove}
-          @pointerleave=${this.onPointerLeave}
-          @click=${this.onCanvasClick}
-          @keydown=${this.onKeyDown}
-        ></canvas>
-        ${this.renderAccessibleCells()}
+        ${this.renderGridSurface(projectionDescription)}
         ${projectionDescription
           ? html`<span
               id="projection-limit"

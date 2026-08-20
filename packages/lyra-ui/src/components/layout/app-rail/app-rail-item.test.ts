@@ -632,3 +632,50 @@ describe("current-state cssprops", () => {
     await expect(el).to.be.accessible();
   });
 });
+
+// `active` was ADDED as public API and documented ("`lr-app-rail-item`: add an `active` property
+// that reflects `aria-current="page"` onto the item"), then renamed to `current` with no CHANGELOG
+// entry, no alias and no deprecation record. A shipped consumer's `.active=${...}` binding did not
+// error -- Lit property bindings on a custom element are untyped, so it silently became a dead
+// expando. The measured consequence downstream was an app rail with no active-nav indicator and a
+// permanent `aria-current="false"`, which is an accessibility regression that no test, no type
+// check and no build step could see. `active` is therefore restored as a deprecated alias read
+// alongside the canonical property, per the house rule that a rename adds a second name rather
+// than swapping one out from under shipped consumers.
+describe('active (deprecated alias for current)', () => {
+  it('marks the item current when only the deprecated alias is set', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail-item active>Reports</lr-app-rail-item>`
+    )) as LyraAppRailItem;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part~="base"]')!;
+    expect(base.getAttribute('aria-current')).to.equal('page');
+  });
+
+  it('still marks the item current when only the canonical property is set', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail-item current>Reports</lr-app-rail-item>`
+    )) as LyraAppRailItem;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-current')).to.equal(
+      'page'
+    );
+  });
+
+  it('renders aria-current="false" when neither is set', async () => {
+    const el = (await fixture(html`<lr-app-rail-item>Reports</lr-app-rail-item>`)) as LyraAppRailItem;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-current')).to.equal(
+      'false'
+    );
+  });
+
+  it('reacts to the deprecated alias being set as a property after mount', async () => {
+    const el = (await fixture(html`<lr-app-rail-item>Reports</lr-app-rail-item>`)) as LyraAppRailItem;
+    el.active = true;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-current')).to.equal(
+      'page'
+    );
+  });
+});

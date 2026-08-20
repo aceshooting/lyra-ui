@@ -455,6 +455,166 @@ function normalizedDataLayers(value: unknown): LyraMapGeoJsonDataLayer[] {
   return output;
 }
 
+/**
+ * Every layer suffix one `dataLayers` entry can own, across all kinds.
+ *
+ * Single source of truth on purpose: removal, private-id collision avoidance and the click
+ * hit-test all enumerate layer ids, and a new kind that taught only one of them about its suffix
+ * would leak layers on removal, or report a click on its own layer as open water.
+ */
+const DATA_LAYER_SUFFIXES = [
+  '-fill',
+  '-line',
+  '-circle',
+  '-cluster',
+  '-cluster-count',
+  '-heatmap',
+] as const;
+
+/**
+ * The subset of `DATA_LAYER_SUFFIXES` a click hit-tests.
+ *
+ * `-heatmap` is excluded because MapLibre's `queryRenderedFeatures()` returns nothing for a heatmap
+ * layer — it is a rendered density surface, not addressable features — so querying it would only
+ * add a layer id the peer has to reject. `-cluster-count` is excluded because it sits exactly on
+ * top of the `-cluster` circle already queried and carries the same properties, so including it
+ * would just make the label, rather than the cluster, the topmost hit.
+ */
+const QUERYABLE_DATA_LAYER_SUFFIXES = ['-fill', '-line', '-circle', '-cluster'] as const;
+
+/** Bound on cluster/heatmap step stops, matching `MAX_MAP_LEGEND_GRADIENT_STOPS`'s rationale. */
+const MAX_MAP_STEP_STOPS = 32;
+
+/**
+ * Keeps only finite-threshold stops carrying a usable output, sorted ascending and deduplicated —
+ * MapLibre's `['step', …]` and `['interpolate', …]` both reject a non-ascending domain outright,
+ * which would take the whole layer down rather than degrading one stop.
+ */
+function normalizedSteps<T>(
+  value: unknown,
+  isOutput: (candidate: unknown) => candidate is T,
+  clampThreshold: (threshold: number) => number = (threshold) => threshold,
+): (readonly [number, T])[] {
+  if (!Array.isArray(value)) return [];
+  const usable: [number, T][] = [];
+  const scanCount = Math.min(value.length, MAX_MAP_STEP_STOPS);
+  for (let index = 0; index < scanCount; index += 1) {
+    const stop: unknown = value[index];
+    if (!Array.isArray(stop) || stop.length < 2) continue;
+    const [rawThreshold, rawOutput] = stop as [unknown, unknown];
+    if (typeof rawThreshold !== 'number' || !Number.isFinite(rawThreshold)) continue;
+    if (!isOutput(rawOutput)) continue;
+    usable.push([clampThreshold(rawThreshold), rawOutput]);
+  }
+  usable.sort((a, b) => a[0] - b[0]);
+  return usable.filter((stop, index) => index === 0 || stop[0] > usable[index - 1]![0]);
+}
+
+const isFiniteOutput = (candidate: unknown): candidate is number =>
+  typeof candidate === 'number' && Number.isFinite(candidate);
+const isColorOutput = (candidate: unknown): candidate is string =>
+  typeof candidate === 'string' && candidate.trim().length > 0;
+
+/**
+ * `['step', input, base, threshold, output, …]` — the same shape `applyChoropleth()`'s `'step'`
+ * interpolation emits, including the base defaulting to the first stop's own output so a break at
+ * the data minimum needs no extra configuration.
+ */
+function stepExpression<T>(input: unknown, stops: readonly (readonly [number, T])[]): unknown[] {
+  const expression: unknown[] = ['step', input, stops[0]![1]];
+  for (const [threshold, output] of stops) expression.push(threshold, output);
+  return expression;
+}
+
+/** MapLibre's own `clusterRadius` default. */
+const DEFAULT_CLUSTER_RADIUS = 50;
+/** MapLibre's own `clusterMaxZoom` default. */
+const DEFAULT_CLUSTER_MAX_ZOOM = 14;
+/** `[point_count, radiusPx]` breaks giving a visibly larger circle for a denser cluster. */
+const DEFAULT_CLUSTER_RADIUS_STEPS: readonly (readonly [number, number])[] = Object.freeze([
+  [0, 14],
+  [10, 18],
+  [50, 24],
+]);
+/** MapLibre's own `heatmap-radius` default. */
+const DEFAULT_HEATMAP_RADIUS = 30;
+/** MapLibre's own `heatmap-intensity` default. */
+const DEFAULT_HEATMAP_INTENSITY = 1;
+/**
+ * The density-0 color of every heatmap ramp. Fully transparent black is required, not a design
+ * choice: MapLibre paints the ramp across the whole layer, so any visible color at density 0 tints
+ * the entire map. It is spelled as literal rgba rather than the `transparent` keyword because this
+ * value is handed to the peer's own color parser, not to CSS.
+ */
+const HEATMAP_TRANSPARENT = 'rgba(0, 0, 0, 0)';
+
+/** Cap on the cluster count label's font stack; a stack is a fallback chain, not a list. */
+const MAX_CLUSTER_COUNT_FONTS = 8;
+
+/** `LyraMapClusterOptions` with every value normalized to something MapLibre accepts. */
+interface NormalizedClusterOptions {
+  readonly radius: number;
+  readonly maxZoom: number;
+  readonly radiusSteps: readonly (readonly [number, number])[];
+  readonly colorSteps: readonly (readonly [number, string])[];
+  readonly countFont: readonly string[] | undefined;
+}
+
+/**
+ * Normalizes one entry's `cluster` option, or returns `undefined` when clustering is not requested.
+ *
+ * `cluster: {}` is meaningful — it opts in at every default — so presence of the object, not of any
+ * particular field, is what enables clustering.
+ */
+function normalizedClusterOptions(value: unknown): NormalizedClusterOptions | undefined {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const options = value as LyraMapClusterOptions;
+  const radiusSteps = normalizedSteps(options.radiusSteps, isFiniteOutput);
+  const fonts = Array.isArray(options.countFont)
+    ? options.countFont
+        .filter((font): font is string => typeof font === 'string' && font.trim().length > 0)
+        .slice(0, MAX_CLUSTER_COUNT_FONTS)
+    : [];
+  return {
+    radius: finiteRange(Number(options.radius), DEFAULT_CLUSTER_RADIUS, 1, 1_000),
+    maxZoom: finiteRange(Number(options.maxZoom), DEFAULT_CLUSTER_MAX_ZOOM, 0, 24),
+    radiusSteps: radiusSteps.length ? radiusSteps : DEFAULT_CLUSTER_RADIUS_STEPS,
+    colorSteps: normalizedSteps(options.colorSteps, isColorOutput),
+    countFont: fonts.length ? fonts : undefined,
+  };
+}
+
+/**
+ * The rendering shape one entry asks for, as a comparable string. Two entries with the same shape
+ * can reuse a source and its layers; a change means a full rebuild (see `_appliedDataLayerShapes`).
+ */
+function dataLayerShape(layer: LyraMapGeoJsonDataLayer): string {
+  if (layer.kind === 'heatmap') return 'heatmap';
+  const cluster = normalizedClusterOptions(layer.cluster);
+  if (!cluster) return 'auto';
+  return `cluster:${cluster.radius}:${cluster.maxZoom}:${cluster.countFont?.join(',') ?? ''}`;
+}
+
+/**
+ * `heatmap-weight` for the authored weight field, or `undefined` to leave MapLibre's own default of
+ * 1 per point in place.
+ *
+ * With a `weightRange` the property is mapped onto the 0–1 domain MapLibre expects; without one the
+ * raw value is passed through, which is only right for data already in that range.
+ */
+function heatmapWeightExpression(options: LyraMapHeatmapOptions | undefined): unknown[] | undefined {
+  const field = typeof options?.weightField === 'string' ? options.weightField.trim() : '';
+  if (!field) return undefined;
+  const range = options?.weightRange;
+  const min = Array.isArray(range) ? Number(range[0]) : Number.NaN;
+  const max = Array.isArray(range) ? Number(range[1]) : Number.NaN;
+  // Deliberately a finiteness test rather than a `finiteRange` clamp: a half-specified or inverted
+  // range has no defensible substitute, and mapping the property onto the wrong domain would
+  // silently saturate or flatten the whole surface. Passing the raw value through is honest.
+  if (!Number.isFinite(min) || !Number.isFinite(max) || min >= max) return ['get', field];
+  return ['interpolate', ['linear'], ['get', field], min, 0, max, 1];
+}
+
 /** Peer-neutral subset of a MapLibre style accepted by `mapStyle`. */
 export interface LyraMapStyleSpecification {
   readonly version: 8;
@@ -529,6 +689,31 @@ const TONE_TOKEN: Record<NonNullable<LyraMapGeoJsonDataLayer['tone']>, string> =
   danger: '--lr-color-danger',
   neutral: '--lr-color-text-quiet',
 };
+
+/** Foreground pairing for each `tone`, used by the cluster count label so its text keeps its
+ *  contrast against the cluster circle it sits on under any theme. `neutral` pairs with the loud
+ *  neutral fill's foreground, which is also legible over `TONE_TOKEN`'s quieter neutral. */
+const ON_TONE_TOKEN: Record<NonNullable<LyraMapGeoJsonDataLayer['tone']>, string> = {
+  accent: '--lr-color-on-brand',
+  success: '--lr-color-on-success',
+  warning: '--lr-color-on-warning',
+  danger: '--lr-color-on-danger',
+  neutral: '--lr-color-on-neutral',
+};
+
+/**
+ * Default heatmap ramp, as `[density, token]` pairs resolved at apply time.
+ *
+ * Cool-to-hot through the shared semantic tones rather than an invented palette, so a rethemed
+ * application rethemes the density surface with everything else — and so the surface speaks the
+ * same colour vocabulary as `tone` on the layer beside it.
+ */
+const HEATMAP_RAMP_TOKENS: readonly (readonly [number, string])[] = Object.freeze([
+  [0.25, '--lr-color-brand'],
+  [0.5, '--lr-color-success'],
+  [0.75, '--lr-color-warning'],
+  [1, '--lr-color-danger'],
+]);
 
 /**
  * Resolves a `LyraMapGeoJsonDataLayer.tone` to a real color via the matching
@@ -683,8 +868,10 @@ export interface LyraMapEventMap {
     readonly lngLat: readonly [number, number];
     readonly feature: Feature | undefined;
     /** Which layer `feature` was hit on, so a click is attributable when both a choropleth and
-     *  `dataLayers` are painted. `undefined` whenever `feature` is. */
-    readonly origin: 'choropleth' | 'data-layer' | undefined;
+     *  `dataLayers` are painted. `'cluster'` marks a hit on a clustered entry's aggregate circle,
+     *  whose `point_count`/`cluster_id` properties describe the group rather than one feature.
+     *  `undefined` whenever `feature` is. */
+    readonly origin: 'choropleth' | 'data-layer' | 'cluster' | undefined;
     /** The authored `dataLayers[].sourceId` the hit belongs to; `undefined` for a choropleth hit
      *  (which has only one possible source) and when nothing was hit. */
     readonly sourceId: string | undefined;
@@ -693,7 +880,8 @@ export interface LyraMapEventMap {
 /**
  * `<lr-map>` — a maplibre-gl wrapper with a declarative legend, choropleth
  * GeoJSON layer, markers, and additive `dataLayers` GeoJSON overlays
- * (arbitrary shapes rendered as a source plus fill/line/circle layers,
+ * (arbitrary shapes rendered as a source plus fill/line/circle layers, or — opting in per entry —
+ * as a natively clustered point set or a `heatmap` density surface,
  * independent of `choropleth`'s field/stops color-interpolation), plus a peer-neutral
  * `map` getter for common imperative operations. Its runtime value is the underlying MapLibre
  * map, while its declaration stays independent of the optional peer. Requires `maplibre-gl`
@@ -722,8 +910,11 @@ export interface LyraMapEventMap {
  * @customElement lr-map
  * @event lr-map-load - Fired once the underlying maplibregl.Map loads.
  * @event lr-map-click - `detail: { lngLat, feature?, origin?, sourceId? }`. `feature` resolves
- *   against the choropleth fill *and* every applied `dataLayers` fill/line/circle layer, topmost
- *   first; `origin`/`sourceId` name where it came from.
+ *   against the choropleth fill *and* every applied `dataLayers` fill/line/circle/cluster layer,
+ *   topmost first; `origin`/`sourceId` name where it came from. A hit on a clustered entry's
+ *   aggregate circle reports `origin: 'cluster'` and carries MapLibre's `point_count`/`cluster_id`
+ *   properties; a `kind: 'heatmap'` layer is never hit-tested, because MapLibre returns no features
+ *   for a density surface.
  * @csspart base - The non-semantic map wrapper. It exposes `aria-busy="true"` while the optional
  *   map library loads and contains ordinary, non-live localized loading text.
  * @csspart container - The MapLibre container. Its generated canvas is the actual focusable map
@@ -904,9 +1095,17 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * marker is instead identified by its coordinate occurrence, so colocated idless markers remain
    * separate. */
   @property({ attribute: false }) markers: readonly LyraMapMarker[] = [];
-  /** Additive GeoJSON layers rendered alongside the choropleth/markers -- each entry becomes a
+  /**
+   * Additive GeoJSON layers rendered alongside the choropleth/markers -- each entry becomes a
    * source plus fill/line/circle layers. `sourceId` values are trimmed, must be nonempty, and retain
-   * only their first occurrence. Defaults empty (zero behavior change). */
+   * only their first occurrence. Defaults empty (zero behavior change).
+   *
+   * An entry opts into either of two other renderings, both strictly additive: `cluster` turns its
+   * source into a natively clustered one (aggregate circle, count label, unclustered points), which
+   * is what thousands of points need and what `markers` -- one real DOM element per entry -- cannot
+   * be; `kind: 'heatmap'` replaces the geometry split with MapLibre's own `heatmap` layer. Neither
+   * changes an entry that sets neither.
+   */
   @property({ attribute: false }) dataLayers: readonly LyraMapGeoJsonDataLayer[] = [];
 
   /** Accessible name for MapLibre's focusable canvas. A nonempty host `aria-label` remains the
@@ -958,6 +1157,16 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   // generated ids prevent a base style from being updated or removed merely because it happens to
   // use the same id as one of this component's data layers.
   private _appliedDataLayerIds = new Map<string, string>();
+  /**
+   * The rendering shape (`'auto'`, a cluster signature, `'heatmap'`) each applied data layer was
+   * built with, keyed identically to `_appliedDataLayerIds`.
+   *
+   * MapLibre bakes `cluster`/`clusterRadius`/`clusterMaxZoom` into a GeoJSON source at `addSource()`
+   * time and exposes no setter for them, and a kind change swaps the layer set entirely. Neither
+   * can be updated in place, so a shape that no longer matches forces a full teardown and rebuild
+   * of that one entry instead of a silently stale source.
+   */
+  private _appliedDataLayerShapes = new Map<string, string>();
   /** Last GeoJSON applied per resolved source id, so an update can be diffed against it rather
    *  than replacing the whole source. Holds a reference, not a copy -- it is only ever compared. */
   private _appliedGeoJson = new Map<string, unknown>();
@@ -1229,6 +1438,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this._appliedChoroplethSourceId = undefined;
     this._appliedFillLayerId = undefined;
     this._appliedDataLayerIds.clear();
+    this._appliedDataLayerShapes.clear();
     this._appliedGeoJson.clear();
   }
 
@@ -1328,7 +1538,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         const layerIds: string[] = [];
         if (fillLayerId && candidate!.getLayer(fillLayerId)) layerIds.push(fillLayerId);
         for (const resolvedSourceId of this._appliedDataLayerIds.values()) {
-          for (const suffix of ['-fill', '-line', '-circle']) {
+          for (const suffix of QUERYABLE_DATA_LAYER_SUFFIXES) {
             const layerId = `${resolvedSourceId}${suffix}`;
             if (candidate!.getLayer(layerId)) layerIds.push(layerId);
           }
@@ -1338,7 +1548,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           : [];
         const hit = features[0] as (Feature & { layer?: { id?: string } }) | undefined;
         const hitLayerId = hit?.layer?.id;
-        let origin: 'choropleth' | 'data-layer' | undefined;
+        let origin: 'choropleth' | 'data-layer' | 'cluster' | undefined;
         let sourceId: string | undefined;
         if (hitLayerId !== undefined) {
           if (hitLayerId === fillLayerId) {
@@ -1347,7 +1557,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
             for (const [publicSourceId, resolvedSourceId] of this._appliedDataLayerIds) {
               // The trailing dash keeps a resolved id that merely prefixes another from matching.
               if (!hitLayerId.startsWith(`${resolvedSourceId}-`)) continue;
-              origin = 'data-layer';
+              // A cluster is a synthetic aggregate, not one of the consumer's own features, so it
+              // gets its own origin rather than being reported as an ordinary data-layer feature:
+              // its `point_count`/`cluster_id` properties are the useful payload, and a consumer
+              // typically zooms in on it instead of selecting it.
+              origin = hitLayerId === `${resolvedSourceId}-cluster` ? 'cluster' : 'data-layer';
               sourceId = publicSourceId;
               break;
             }
@@ -1412,6 +1626,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           try {
             this._styleLoaded = true;
             this._appliedDataLayerIds.clear(); // a style change wipes every layer/source maplibre-gl knows about
+            this._appliedDataLayerShapes.clear();
             this._appliedGeoJson.clear();
             this.applyChoropleth();
             this.applyDataLayers();
@@ -1482,16 +1697,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     for (const [publicSourceId, sourceId] of this._appliedDataLayerIds) {
       const dataLayer = dataLayersBySourceId.get(publicSourceId);
       if (!dataLayer) continue;
-      const color = resolvedLayerColor(this, dataLayer.color, dataLayer.tone);
-      const stroke = resolvedLayerColor(
-        this,
-        dataLayer.strokeColor ?? dataLayer.color,
-        dataLayer.tone,
-      );
-      this._map.setPaintProperty(`${sourceId}-fill`, 'fill-color', color);
-      this._map.setPaintProperty(`${sourceId}-fill`, 'fill-opacity', fillOpacity);
-      this._map.setPaintProperty(`${sourceId}-line`, 'line-color', stroke);
-      this._map.setPaintProperty(`${sourceId}-circle`, 'circle-color', stroke);
+      // Re-runs the entry's own kind rather than assuming fill/line/circle: a clustered or heatmap
+      // entry never created those, and MapLibre reports a paint write to a layer that does not
+      // exist as an error event on this component's own handler.
+      this.paintDataLayer(sourceId, dataLayer);
     }
   }
 
@@ -1620,57 +1829,321 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (!nextIds.has(publicSourceId)) this.removeDataLayer(publicSourceId);
     }
     for (const layer of layers) {
-      const { sourceId: publicSourceId, geojson, tone } = layer;
+      const { sourceId: publicSourceId, geojson } = layer;
+      const shape = dataLayerShape(layer);
+      const appliedShape = this._appliedDataLayerShapes.get(publicSourceId);
+      // A source's cluster options cannot be mutated after `addSource()`, and a kind change swaps
+      // the whole layer set, so a changed shape tears this entry down and rebuilds it (see
+      // `_appliedDataLayerShapes`). Every other update still reuses its source and layers.
+      if (appliedShape !== undefined && appliedShape !== shape) this.removeDataLayer(publicSourceId);
       const sourceId = this.resolveDataLayerSourceId(publicSourceId);
       warnOnUntileableProperties(geojson, publicSourceId);
+      const cluster = layer.kind === 'heatmap' ? undefined : normalizedClusterOptions(layer.cluster);
       const existingSource = this._map.getSource(sourceId) as MapLibreGeoJsonSource | undefined;
       if (existingSource) {
         this.pushGeoJson(existingSource, sourceId, geojson);
       } else {
-        this._map.addSource(sourceId, { type: 'geojson', data: geojson });
+        this._map.addSource(sourceId, {
+          type: 'geojson',
+          data: geojson,
+          ...(cluster
+            ? {
+                cluster: true,
+                clusterRadius: cluster.radius,
+                clusterMaxZoom: cluster.maxZoom,
+              }
+            : {}),
+        });
         this._appliedGeoJson.set(sourceId, geojson);
       }
-      const color = resolvedLayerColor(this, layer.color, tone);
-      const stroke = resolvedLayerColor(this, layer.strokeColor ?? layer.color, tone);
-      const fillId = `${sourceId}-fill`;
-      const lineId = `${sourceId}-line`;
-      const circleId = `${sourceId}-circle`;
-      if (!this._map.getLayer(fillId)) {
-        this._map.addLayer({
-          id: fillId,
-          type: 'fill',
-          source: sourceId,
-          filter: ['==', ['geometry-type'], 'Polygon'],
-          paint: { 'fill-color': color, 'fill-opacity': choroplethFillOpacity(this) },
-        });
-      } else {
-        this._map.setPaintProperty(fillId, 'fill-color', color);
-        this._map.setPaintProperty(fillId, 'fill-opacity', choroplethFillOpacity(this));
-      }
-      if (!this._map.getLayer(lineId)) {
-        this._map.addLayer({
-          id: lineId,
-          type: 'line',
-          source: sourceId,
-          filter: ['in', ['geometry-type'], ['literal', ['LineString', 'Polygon']]],
-          paint: { 'line-color': stroke, 'line-width': 2 },
-        });
-      } else {
-        this._map.setPaintProperty(lineId, 'line-color', stroke);
-      }
-      if (!this._map.getLayer(circleId)) {
-        this._map.addLayer({
-          id: circleId,
-          type: 'circle',
-          source: sourceId,
-          filter: ['==', ['geometry-type'], 'Point'],
-          paint: { 'circle-color': stroke, 'circle-radius': 5 },
-        });
-      } else {
-        this._map.setPaintProperty(circleId, 'circle-color', stroke);
-      }
+      this.applyDataLayerRendering(sourceId, layer);
       this._appliedDataLayerIds.set(publicSourceId, sourceId);
+      this._appliedDataLayerShapes.set(publicSourceId, shape);
     }
+  }
+
+  /**
+   * Adds (or repaints, when already present) the layers one entry's kind calls for. Kept separate
+   * from source management above so a theme change can re-run exactly the paint half of it without
+   * touching sources, data, or map geometry.
+   */
+  private applyDataLayerRendering(sourceId: string, layer: LyraMapGeoJsonDataLayer): void {
+    if (layer.kind === 'heatmap') {
+      this.applyHeatmapLayer(sourceId, layer);
+      return;
+    }
+    const cluster = normalizedClusterOptions(layer.cluster);
+    if (cluster) {
+      this.applyClusterLayers(sourceId, layer, cluster);
+      return;
+    }
+    this.applyGeometryLayers(sourceId, layer);
+  }
+
+  /**
+   * Rewrites only the token-derived paint of an already-applied entry, for the kind it was applied
+   * with. Split from the add-or-update path above because a theme repaint must never query or
+   * mutate map structure -- no `getLayer`, no `addLayer`, no source touch -- so that a retheme
+   * cannot re-tile data or resurrect a layer a later reconciliation removed.
+   */
+  private paintDataLayer(sourceId: string, layer: LyraMapGeoJsonDataLayer): void {
+    if (layer.kind === 'heatmap') {
+      this.paintHeatmapLayer(sourceId, layer);
+      return;
+    }
+    const cluster = normalizedClusterOptions(layer.cluster);
+    if (cluster) {
+      this.paintClusterLayers(sourceId, layer, cluster);
+      return;
+    }
+    this.paintGeometryLayers(sourceId, layer);
+  }
+
+  /** The pre-existing geometry split: polygons filled, lines/outlines stroked, points circled. */
+  private applyGeometryLayers(sourceId: string, layer: LyraMapGeoJsonDataLayer): void {
+    if (!this._map) return;
+    const tone = layer.tone;
+    const color = resolvedLayerColor(this, layer.color, tone);
+    const stroke = resolvedLayerColor(this, layer.strokeColor ?? layer.color, tone);
+    const fillId = `${sourceId}-fill`;
+    const lineId = `${sourceId}-line`;
+    const circleId = `${sourceId}-circle`;
+    if (!this._map.getLayer(fillId)) {
+      this._map.addLayer({
+        id: fillId,
+        type: 'fill',
+        source: sourceId,
+        filter: ['==', ['geometry-type'], 'Polygon'],
+        paint: { 'fill-color': color, 'fill-opacity': choroplethFillOpacity(this) },
+      });
+    }
+    if (!this._map.getLayer(lineId)) {
+      this._map.addLayer({
+        id: lineId,
+        type: 'line',
+        source: sourceId,
+        filter: ['in', ['geometry-type'], ['literal', ['LineString', 'Polygon']]],
+        paint: { 'line-color': stroke, 'line-width': 2 },
+      });
+    }
+    if (!this._map.getLayer(circleId)) {
+      this._map.addLayer({
+        id: circleId,
+        type: 'circle',
+        source: sourceId,
+        filter: ['==', ['geometry-type'], 'Point'],
+        paint: { 'circle-color': stroke, 'circle-radius': 5 },
+      });
+    }
+    this.paintGeometryLayers(sourceId, layer);
+  }
+
+  /** Paint-only half of `applyGeometryLayers`. See `paintDataLayer` for why the halves are split. */
+  private paintGeometryLayers(sourceId: string, layer: LyraMapGeoJsonDataLayer): void {
+    if (!this._map) return;
+    const tone = layer.tone;
+    const color = resolvedLayerColor(this, layer.color, tone);
+    const stroke = resolvedLayerColor(this, layer.strokeColor ?? layer.color, tone);
+    this._map.setPaintProperty(`${sourceId}-fill`, 'fill-color', color);
+    this._map.setPaintProperty(`${sourceId}-fill`, 'fill-opacity', choroplethFillOpacity(this));
+    this._map.setPaintProperty(`${sourceId}-line`, 'line-color', stroke);
+    this._map.setPaintProperty(`${sourceId}-circle`, 'circle-color', stroke);
+  }
+
+  /**
+   * The three layers native MapLibre clustering needs: an aggregate circle over the clustered
+   * points, its count label, and the points that stayed unclustered.
+   *
+   * No fill/line layer is created here — MapLibre's clustering keeps point features only, so those
+   * two would be permanently empty while still occupying ids the click hit-test walks.
+   */
+  private applyClusterLayers(
+    sourceId: string,
+    layer: LyraMapGeoJsonDataLayer,
+    cluster: NormalizedClusterOptions,
+  ): void {
+    if (!this._map) return;
+    const tone = layer.tone;
+    const color = resolvedLayerColor(this, layer.color, tone);
+    const stroke = resolvedLayerColor(this, layer.strokeColor ?? layer.color, tone);
+    const clusterId = `${sourceId}-cluster`;
+    const countId = `${sourceId}-cluster-count`;
+    const circleId = `${sourceId}-circle`;
+    const clusterColor = cluster.colorSteps.length
+      ? stepExpression(['get', 'point_count'], cluster.colorSteps)
+      : color;
+    const clusterRadius = stepExpression(['get', 'point_count'], cluster.radiusSteps);
+    const countColor = resolvedLayerColor(this, `var(${ON_TONE_TOKEN[tone ?? 'accent']})`, tone);
+    if (!this._map.getLayer(clusterId)) {
+      this._map.addLayer({
+        id: clusterId,
+        type: 'circle',
+        source: sourceId,
+        filter: ['has', 'point_count'],
+        paint: {
+          'circle-color': clusterColor,
+          'circle-radius': clusterRadius,
+          'circle-stroke-width': 1,
+          'circle-stroke-color': stroke,
+        },
+      });
+    }
+    // A text layer needs glyphs from the style itself. Adding one against a style that declares
+    // none paints nothing and emits peer errors on every render, so the count is simply omitted
+    // there -- the graduated circle still carries the magnitude, and the count stays available on
+    // `lr-map-click`.
+    if (this.styleProvidesGlyphs() && !this._map.getLayer(countId)) {
+      this._map.addLayer({
+        id: countId,
+        type: 'symbol',
+        source: sourceId,
+        filter: ['has', 'point_count'],
+        layout: {
+          'text-field': ['get', 'point_count_abbreviated'],
+          'text-size': 12,
+          ...(cluster.countFont ? { 'text-font': [...cluster.countFont] } : {}),
+        },
+        paint: { 'text-color': countColor },
+      });
+    }
+    if (!this._map.getLayer(circleId)) {
+      this._map.addLayer({
+        id: circleId,
+        type: 'circle',
+        source: sourceId,
+        filter: ['all', ['==', ['geometry-type'], 'Point'], ['!', ['has', 'point_count']]],
+        paint: { 'circle-color': stroke, 'circle-radius': 5 },
+      });
+    }
+    this.paintClusterLayers(sourceId, layer, cluster);
+  }
+
+  /** Paint-only half of `applyClusterLayers`. */
+  private paintClusterLayers(
+    sourceId: string,
+    layer: LyraMapGeoJsonDataLayer,
+    cluster: NormalizedClusterOptions,
+  ): void {
+    if (!this._map) return;
+    const tone = layer.tone;
+    const color = resolvedLayerColor(this, layer.color, tone);
+    const stroke = resolvedLayerColor(this, layer.strokeColor ?? layer.color, tone);
+    const clusterId = `${sourceId}-cluster`;
+    this._map.setPaintProperty(
+      clusterId,
+      'circle-color',
+      cluster.colorSteps.length ? stepExpression(['get', 'point_count'], cluster.colorSteps) : color,
+    );
+    this._map.setPaintProperty(
+      clusterId,
+      'circle-radius',
+      stepExpression(['get', 'point_count'], cluster.radiusSteps),
+    );
+    this._map.setPaintProperty(clusterId, 'circle-stroke-color', stroke);
+    // Gated on the same glyph condition that decided whether to add the layer at all, rather than
+    // on a `getLayer` probe: a repaint must not query map structure (see `refreshThemePaint`).
+    if (this.styleProvidesGlyphs()) {
+      this._map.setPaintProperty(
+        `${sourceId}-cluster-count`,
+        'text-color',
+        resolvedLayerColor(this, `var(${ON_TONE_TOKEN[tone ?? 'accent']})`, tone),
+      );
+    }
+    this._map.setPaintProperty(`${sourceId}-circle`, 'circle-color', stroke);
+  }
+
+  /** The single `heatmap` layer `kind: 'heatmap'` renders, in place of the geometry split. */
+  private applyHeatmapLayer(sourceId: string, layer: LyraMapGeoJsonDataLayer): void {
+    if (!this._map) return;
+    const heatmapId = `${sourceId}-heatmap`;
+    const options = layer.heatmap;
+    const weight = heatmapWeightExpression(options);
+    const color = this.heatmapColorExpression(layer);
+    const radius = finiteRange(Number(options?.radius), DEFAULT_HEATMAP_RADIUS, 1, 200);
+    const intensity = finiteRange(Number(options?.intensity), DEFAULT_HEATMAP_INTENSITY, 0, 100);
+    if (!this._map.getLayer(heatmapId)) {
+      this._map.addLayer({
+        id: heatmapId,
+        type: 'heatmap',
+        source: sourceId,
+        paint: {
+          ...(weight ? { 'heatmap-weight': weight } : {}),
+          'heatmap-intensity': intensity,
+          'heatmap-color': color,
+          'heatmap-radius': radius,
+        },
+      });
+      return;
+    }
+    this.paintHeatmapLayer(sourceId, layer);
+  }
+
+  /** Paint-only half of `applyHeatmapLayer`. */
+  private paintHeatmapLayer(sourceId: string, layer: LyraMapGeoJsonDataLayer): void {
+    if (!this._map) return;
+    const heatmapId = `${sourceId}-heatmap`;
+    // `?? 1` rather than a skip: an update that DROPS `weightField` has to put the layer back on
+    // MapLibre's own uniform weight, and leaving the previous expression in place would keep
+    // weighting by a property the consumer no longer asked for.
+    this._map.setPaintProperty(
+      heatmapId,
+      'heatmap-weight',
+      heatmapWeightExpression(layer.heatmap) ?? 1,
+    );
+    this._map.setPaintProperty(
+      heatmapId,
+      'heatmap-intensity',
+      finiteRange(Number(layer.heatmap?.intensity), DEFAULT_HEATMAP_INTENSITY, 0, 100),
+    );
+    this._map.setPaintProperty(heatmapId, 'heatmap-color', this.heatmapColorExpression(layer));
+    this._map.setPaintProperty(
+      heatmapId,
+      'heatmap-radius',
+      finiteRange(Number(layer.heatmap?.radius), DEFAULT_HEATMAP_RADIUS, 1, 200),
+    );
+  }
+
+  /**
+   * `['interpolate', ['linear'], ['heatmap-density'], …]` over the authored ramp, or the shared
+   * token ramp when none is usable. Colors resolve through the host first, since MapLibre paints to
+   * a WebGL canvas and never sees a `var()`.
+   */
+  private heatmapColorExpression(layer: LyraMapGeoJsonDataLayer): unknown[] {
+    const tone = layer.tone;
+    const authored = normalizedSteps(layer.heatmap?.stops, isColorOutput, (threshold) =>
+      finiteRange(threshold, 0, 0, 1),
+    ).map(([density, color]) => [density, resolvedLayerColor(this, color, tone)] as const);
+    const stops =
+      authored.length >= 2
+        ? authored
+        : HEATMAP_RAMP_TOKENS.map(
+            ([density, token]) =>
+              [density, resolvedLayerColor(this, `var(${token})`, tone)] as const,
+          );
+    // A ramp whose lowest stop is above zero paints that color across every zero-density pixel,
+    // which is the whole map -- so the transparent floor is prepended rather than assumed.
+    const ramp = stops[0]![0] > 0 ? [[0, HEATMAP_TRANSPARENT] as const, ...stops] : stops;
+    const expression: unknown[] = ['interpolate', ['linear'], ['heatmap-density']];
+    for (const [density, color] of ramp) expression.push(density, color);
+    return expression;
+  }
+
+  /**
+   * Whether the active style can render text at all. Prefers the live style (a `mapStyle` URL's
+   * glyph source is only knowable once loaded) and falls back to the declarative specification.
+   */
+  private styleProvidesGlyphs(): boolean {
+    try {
+      const live = (this._map as { getStyle?: () => unknown } | undefined)?.getStyle?.();
+      const liveGlyphs = (live as { glyphs?: unknown } | undefined)?.glyphs;
+      if (typeof liveGlyphs === 'string' && liveGlyphs.trim().length > 0) return true;
+    } catch {
+      // A peer that cannot report its style yet simply has no glyph source to offer.
+    }
+    const declared = this.mapStyle;
+    const declaredGlyphs =
+      declared && typeof declared === 'object' ? (declared as { glyphs?: unknown }).glyphs : undefined;
+    return typeof declaredGlyphs === 'string' && declaredGlyphs.trim().length > 0;
   }
 
   /** Allocates a private source/layer namespace that cannot overwrite base-style resources. */
@@ -1682,9 +2155,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       sourceId = `lr-data-layer-${this._nextDataLayerId++}`;
     } while (
       this._map?.getSource(sourceId) ||
-      this._map?.getLayer(`${sourceId}-fill`) ||
-      this._map?.getLayer(`${sourceId}-line`) ||
-      this._map?.getLayer(`${sourceId}-circle`)
+      DATA_LAYER_SUFFIXES.some((suffix) => this._map?.getLayer(`${sourceId}${suffix}`))
     );
     return sourceId;
   }
@@ -1694,11 +2165,13 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (!this._map) return;
     const sourceId = this._appliedDataLayerIds.get(publicSourceId);
     if (!sourceId) return;
-    for (const layerId of [`${sourceId}-fill`, `${sourceId}-line`, `${sourceId}-circle`]) {
+    for (const suffix of DATA_LAYER_SUFFIXES) {
+      const layerId = `${sourceId}${suffix}`;
       if (this._map.getLayer(layerId)) this._map.removeLayer(layerId);
     }
     if (this._map.getSource(sourceId)) this._map.removeSource(sourceId);
     this._appliedDataLayerIds.delete(publicSourceId);
+    this._appliedDataLayerShapes.delete(publicSourceId);
     this._appliedGeoJson.delete(sourceId);
   }
 

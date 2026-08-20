@@ -72,7 +72,15 @@ test('checked-in metadata covers the current manifest and inventory', () => {
   // the 10.0.0 event-vocabulary pass first deprecated five event aliases in favour of canonical
   // names, then removed them outright instead, since the library has no released consumers to
   // protect and a dual-emit alias is a permanent cost. A removed event needs no deprecation record.
-  assert.equal(state.metadata.deprecations.length, 8);
+  //
+  // 11 as of the lr-app-rail-item `active` and lr-widget `activeView` restorations (a property
+  // record each, plus the attribute half of `active`). Those correct renames that shipped with no
+  // alias, no changelog entry and no record here -- and they are the direct counter-example to the
+  // "no released consumers to protect" reasoning above. There were released consumers, the renames
+  // broke them, and the breakage was invisible: a Lit `.prop=` binding on a custom element is
+  // untyped, so a dead expando fails no type check, no test and no build. Weigh that against "a
+  // dual-emit alias is a permanent cost" before removing a public name again.
+  assert.equal(state.metadata.deprecations.length, 11);
 });
 
 test('new mirrors of experimental upstream media surfaces remain experimental everywhere authored', () => {

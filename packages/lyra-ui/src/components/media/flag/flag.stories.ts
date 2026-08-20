@@ -96,6 +96,74 @@ export const LocalePicker: Story = {
   },
 };
 
+/**
+ * The bulk-registration scenario: a table listing every country, where each `<lr-flag>` resolving
+ * itself would cost one loader-chunk fetch per flag. Registering a bulk resolver instead backs
+ * every element on the page with a single shared map — one import, no `src` threading by hand:
+ *
+ * ```js
+ * // one shared fetch, standard tier only — the detailed/compact tiers stay out of the graph
+ * import '@aceshooting/lyra-ui/components/media/flag/flag-peer-bulk-standard.js';
+ * ```
+ *
+ * Import exactly one peer entry: `flag-peer.js` (per-code lazy, all three fidelity tiers),
+ * `flag-peer-bulk.js` (one shared fetch, all three tiers reachable), or
+ * `flag-peer-bulk-standard.js` (one shared fetch, standard tier only). Each registration replaces
+ * the previous one, so importing two just makes whichever loaded last win. The standard-tier entry
+ * is the right default for a grid like this one — nothing here switches `fidelity` per instance,
+ * and routing bulk resolution through the package root instead pulls both other tiers' whole
+ * lazy-chunk graph into the build. Its tradeoff is exactly that commitment:
+ * `fidelity="compact"/"detailed"` on an individual element then resolves to that code's standard
+ * asset.
+ *
+ * These docs register `flag-peer.js` so the fidelity stories above stay honest, so this grid
+ * renders through that resolver — the markup is identical either way; only the registration
+ * import changes.
+ */
+export const BulkRegistration: Story = {
+  name: 'Bulk registration (many flags at once)',
+  render: () => html`
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(9rem, 1fr)); gap:0.6rem; max-width:48rem;">
+      ${[
+        ['ar', 'Argentina'],
+        ['au', 'Australia'],
+        ['br', 'Brazil'],
+        ['ca', 'Canada'],
+        ['ch', 'Switzerland'],
+        ['cn', 'China'],
+        ['de', 'Germany'],
+        ['dk', 'Denmark'],
+        ['eg', 'Egypt'],
+        ['es', 'Spain'],
+        ['fi', 'Finland'],
+        ['fr', 'France'],
+        ['gb', 'United Kingdom'],
+        ['gr', 'Greece'],
+        ['in', 'India'],
+        ['it', 'Italy'],
+        ['jp', 'Japan'],
+        ['ke', 'Kenya'],
+        ['mx', 'Mexico'],
+        ['ng', 'Nigeria'],
+        ['nl', 'Netherlands'],
+        ['no', 'Norway'],
+        ['pl', 'Poland'],
+        ['pt', 'Portugal'],
+        ['se', 'Sweden'],
+        ['us', 'United States'],
+        ['za', 'South Africa'],
+      ].map(
+        ([code, label]) => html`
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <lr-flag country=${code} label=${label} style="height: 1.1rem"></lr-flag>
+            <span>${label}</span>
+          </div>
+        `,
+      )}
+    </div>
+  `,
+};
+
 export const LanguageSelector: Story = {
   name: 'Compact flags as menu icons',
   render: () => html`

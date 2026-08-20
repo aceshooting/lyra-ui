@@ -883,27 +883,43 @@ interface CollectionPropertyPolicy {
   readonly preservesObjectIdentity: boolean;
 }
 
-const collectionPolicyByPrototype = new WeakMap<
+/**
+ * The constructors from `ctor` up to (but excluding) `LitElement` — the same set
+ * {@link trustedLyraConstructorChain} derives from an instance, read from the class itself so the
+ * ownership boundary can be resolved once per class rather than on every assignment.
+ */
+function lyraClassChain(
+  ctor: typeof LyraElement
+): readonly (typeof LyraElement)[] {
+  const constructors: (typeof LyraElement)[] = [];
+  let current: unknown = ctor;
+  while (typeof current === 'function' && current !== LitElement) {
+    constructors.push(current as typeof LyraElement);
+    current = Object.getPrototypeOf(current);
+  }
+  return constructors;
+}
+
+const collectionPolicyByConstructor = new WeakMap<
   object,
   Map<PropertyKey, CollectionPropertyPolicy>
 >();
 
 function collectionPropertyPolicy(
-  instance: object,
+  ctor: typeof LyraElement,
   name: PropertyKey
 ): CollectionPropertyPolicy {
-  const prototype = Object.getPrototypeOf(instance) as object;
-  let policies = collectionPolicyByPrototype.get(prototype);
+  let policies = collectionPolicyByConstructor.get(ctor);
   if (!policies) {
     policies = new Map();
-    collectionPolicyByPrototype.set(prototype, policies);
+    collectionPolicyByConstructor.set(ctor, policies);
   }
   const cached = policies.get(name);
   if (cached) return cached;
   let owns = false;
   let preservesItemIdentity = false;
   let preservesObjectIdentity = false;
-  for (const constructor of trustedLyraConstructorChain(instance)) {
+  for (const constructor of lyraClassChain(ctor)) {
     // Both fields are `protected static` -- hidden from external consumers of the class, but this
     // bookkeeping helper is part of LyraElement's own internal machinery, just expressed as a
     // module-level function rather than a method. The `hasOwnProperty` guard above already limits
@@ -945,6 +961,135 @@ function collectionPropertyPolicy(
   });
   policies.set(name, policy);
   return policy;
+}
+
+const COLLECTION_ENROLLMENT_FIELDS = [
+  'ownedCollectionProperties',
+  'identityCollectionProperties',
+  'identityCollectionObjectProperties',
+] as const;
+
+/**
+ * Every name any of the three enrollment lists mentions, including inherited declarations. The two
+ * identity lists are only *refinements* of an owned property, so a name they alone mention resolves
+ * to a policy that owns nothing and installs no boundary -- the same inert outcome it has always
+ * had. Collecting them anyway keeps that decision in one place (the policy) instead of splitting it
+ * across the policy and the name scan.
+ */
+function enrolledCollectionPropertyNames(
+  ctor: typeof LyraElement
+): ReadonlySet<PropertyKey> {
+  const names = new Set<PropertyKey>();
+  for (const constructor of lyraClassChain(ctor))
+    for (const field of COLLECTION_ENROLLMENT_FIELDS) {
+      if (!Object.prototype.hasOwnProperty.call(constructor, field)) continue;
+      // `protected static`, so unreachable through the public class type; see the identical note
+      // in `collectionPropertyPolicy()`. The guard above limits this to a declaring constructor.
+      const declared = constructor as unknown as Record<
+        (typeof COLLECTION_ENROLLMENT_FIELDS)[number],
+        readonly PropertyKey[]
+      >;
+      for (const name of declared[field]) names.add(name);
+    }
+  return names;
+}
+
+/** The nearest descriptor for `name` on `prototype` or anything it inherits from. */
+function inheritedPropertyDescriptor(
+  prototype: object,
+  name: PropertyKey
+): PropertyDescriptor | undefined {
+  let current: object | null = prototype;
+  while (current) {
+    const descriptor = Object.getOwnPropertyDescriptor(current, name);
+    if (descriptor) return descriptor;
+    current = Object.getPrototypeOf(current) as object | null;
+  }
+  return undefined;
+}
+
+const installedOwnershipBoundaries = new WeakSet<object>();
+
+interface OwnershipBoundarySetter {
+  readonly policy: CollectionPropertyPolicy;
+  /** The unwrapped reactive setter, so re-wrapping never stacks two boundaries. */
+  readonly originalSet: (this: LyraElement, value: unknown) => void;
+}
+
+/** Setters installed below, keyed by the boundary each one already applies. */
+const ownershipBoundarySetters = new WeakMap<object, OwnershipBoundarySetter>();
+
+function samePolicy(
+  a: CollectionPropertyPolicy,
+  b: CollectionPropertyPolicy
+): boolean {
+  return (
+    a.owns === b.owns &&
+    a.preservesItemIdentity === b.preservesItemIdentity &&
+    a.preservesObjectIdentity === b.preservesObjectIdentity
+  );
+}
+
+/**
+ * Installs the immutable-ownership boundary on `ctor`'s enrolled collection properties by wrapping
+ * the reactive accessor Lit already defined for each of them.
+ *
+ * This used to be an override of `ReactiveElement.getPropertyDescriptor()`. Lit deprecated that
+ * hook and **does not call it for standard decorators**, so the clone/freeze step would have
+ * silently disappeared -- no error, no warning, no failing test -- the day this package or a
+ * consumer's build switched decorator flavors, taking the documented "clone-owned, bounded,
+ * frozen" guarantee of `colorSteps`, `legendStops`, `annotations` and ~180 sibling properties with
+ * it. Wrapping the finished accessor instead is decorator-agnostic: legacy decorators, standard
+ * `accessor` decorators, a `static properties` block and a hand-written `@property` getter/setter
+ * pair all end in a prototype accessor by the time a class is finalized, which is what this walks.
+ * Removing the override also stops the per-page-load dev-mode deprecation warning that no consumer
+ * could act on or silence.
+ *
+ * Invoked from `observedAttributes`, which is where `ReactiveElement.finalize()` itself runs and
+ * which `customElements.define()` (and `@lit-labs/ssr`'s registry shim, deliberately) always
+ * reads. Registration is therefore the guaranteed install point, and it strictly precedes every
+ * instance: constructing an unregistered custom element throws before any assignment can reach an
+ * unwrapped setter.
+ */
+function installOwnedCollectionAccessors(ctor: typeof LyraElement): void {
+  if (installedOwnershipBoundaries.has(ctor)) return;
+  installedOwnershipBoundaries.add(ctor);
+  const prototype = ctor.prototype as object;
+  for (const name of enrolledCollectionPropertyNames(ctor)) {
+    const policy = collectionPropertyPolicy(ctor, name);
+    if (!policy.owns) continue;
+    // Only a reactive property whose accessor Lit generated ever crossed the boundary: a
+    // `noAccessor` declaration, and a name that is not a reactive property at all, never did.
+    const declaration = ctor.elementProperties.get(name);
+    if (!declaration || declaration.noAccessor) continue;
+    const descriptor = inheritedPropertyDescriptor(prototype, name);
+    const inheritedSet = descriptor?.set;
+    if (!inheritedSet) continue;
+    // A subclass may enroll an inherited property more strictly than its base did (adding an
+    // item-identity or object-identity exception). Re-wrap the base's *unwrapped* setter with this
+    // class's own policy rather than stacking a second snapshot on top of the base's boundary --
+    // and leave the base's boundary alone when the two policies already agree.
+    const installed = ownershipBoundarySetters.get(inheritedSet);
+    if (installed && samePolicy(installed.policy, policy)) continue;
+    const originalSet = installed?.originalSet ?? inheritedSet;
+    const set = function (this: LyraElement, value: unknown): void {
+      const ownerView = (this as unknown as { ownerDocument?: Document })
+        .ownerDocument?.defaultView;
+      originalSet.call(
+        this,
+        policy.preservesObjectIdentity &&
+          value !== null &&
+          typeof value === 'object' &&
+          !isArrayValue(value)
+          ? value
+          : policy.preservesItemIdentity
+          ? snapshotIdentityCollection(value, ownerView)
+          : snapshotPublicCollection(value, ownerView)
+      );
+    };
+    ownershipBoundarySetters.set(set, { policy, originalSet });
+    Object.defineProperty(prototype, name, { ...descriptor, set });
+  }
 }
 
 /**
@@ -992,39 +1137,6 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     Record<string, readonly PropertyKey[]>
   > = Object.freeze({});
 
-  static override getPropertyDescriptor(
-    name: PropertyKey,
-    key: string | symbol,
-    options: PropertyDeclaration
-  ): PropertyDescriptor | undefined {
-    const descriptor = super.getPropertyDescriptor(name, key, options);
-    if (!descriptor?.set) return descriptor;
-    const originalSet = descriptor.set;
-    return {
-      ...descriptor,
-      set(this: LyraElement, value: unknown) {
-        const policy = collectionPropertyPolicy(this, name);
-        if (!policy.owns) {
-          originalSet.call(this, value);
-          return;
-        }
-        const ownerView = (this as unknown as { ownerDocument?: Document })
-          .ownerDocument?.defaultView;
-        originalSet.call(
-          this,
-          policy.preservesObjectIdentity &&
-            value !== null &&
-            typeof value === 'object' &&
-            !isArrayValue(value)
-            ? value
-            : policy.preservesItemIdentity
-            ? snapshotIdentityCollection(value, ownerView)
-            : snapshotPublicCollection(value, ownerView)
-        );
-      },
-    };
-  }
-
   /** @internal English fallbacks owned by this class hierarchy and generated per component. */
   protected static readonly defaultStrings: Readonly<LyraLocaleStrings> =
     Object.freeze({});
@@ -1033,15 +1145,24 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
    * Components commonly forward ARIA host attributes to an internal role and derive localization
    * from `lang`/`dir`. These global attributes are not reactive Lit properties, so observe them
    * centrally to keep post-render attribute changes in sync.
+   *
+   * `super.observedAttributes` is also what finalizes the class (Lit documents this getter as the
+   * finalization trigger), so it is the first moment every reactive accessor exists — and the one
+   * `customElements.define()` guarantees. The immutable-collection boundary is therefore installed
+   * here, right after finalization and before any instance can exist. See
+   * {@link installOwnedCollectionAccessors} for why it is no longer a `getPropertyDescriptor()`
+   * override.
    */
   static override get observedAttributes(): string[] {
-    return [
+    const attributes = [
       ...new Set([
         ...super.observedAttributes,
         ...REACTIVE_HOST_ATTRIBUTES,
         ...DIRECTION_HOST_ATTRIBUTES,
       ]),
     ];
+    installOwnedCollectionAccessors(this);
+    return attributes;
   }
 
   /** Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used. */

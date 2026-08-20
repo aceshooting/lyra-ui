@@ -5887,7 +5887,34 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-app-rail-item",
+            "kind": "attribute",
+            "name": "active",
+            "since": "11.2.0",
+            "replacement": {
+              "kind": "attribute",
+              "name": "current",
+              "usage": "current"
+            },
+            "removalNotBefore": "13.0.0",
+            "rationale": "The attribute half of the restored `active` property alias. `active` was this member's original public name in both forms; the rename to `current` was never announced, so markup that already wrote `<lr-app-rail-item active>` stopped marking the item current with no error. Shares the property record's compatibility window because it is the same correction."
+          },
+          {
+            "tag": "lr-app-rail-item",
+            "kind": "property",
+            "name": "active",
+            "since": "11.2.0",
+            "replacement": {
+              "kind": "property",
+              "name": "current",
+              "usage": "current"
+            },
+            "removalNotBefore": "13.0.0",
+            "rationale": "`active` was this property's original public name and was documented as such when it shipped. It was renamed to `current` with no changelog entry, no alias and no deprecation record, so every shipped consumer's `.active=` binding silently became a dead expando -- a Lit property binding on a custom element is untyped, so nothing in a consumer's type check, test suite or build could see it. The measured downstream effect was an app rail with no current-item indicator and a permanent aria-current=\"false\". Restoring the name is a correction, not a new API, so the compatibility window runs long: this alias is what shipped consumers already wrote."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -52233,22 +52260,216 @@
       },
       "counterparts": [],
       "surface": {
-        "attributes": [],
-        "properties": [],
-        "slots": [
+        "attributes": [
           {
-            "name": "",
-            "deprecated": null
+            "name": "comparison-label",
+            "property": "comparisonLabel",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "dropoff",
+            "property": "dropoff",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
+            "name": "label",
+            "property": "label",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "share-precision",
+            "property": "sharePrecision",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
           }
         ],
+        "properties": [
+          {
+            "name": "comparison",
+            "attribute": null,
+            "type": "readonly LyraFunnelStage[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
+          {
+            "name": "comparisonLabel",
+            "attribute": "comparison-label",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "dropoff",
+            "attribute": "dropoff",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "sharePrecision",
+            "attribute": "share-precision",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "stages",
+            "attribute": null,
+            "type": "readonly LyraFunnelStage[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          }
+        ],
+        "slots": [],
         "events": [],
         "parts": [
           {
+            "name": "bar",
+            "deprecated": null
+          },
+          {
+            "name": "bar-overflow",
+            "deprecated": null
+          },
+          {
             "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "comparison-bar",
+            "deprecated": null
+          },
+          {
+            "name": "comparison-value",
+            "deprecated": null
+          },
+          {
+            "name": "dropoff",
+            "deprecated": null
+          },
+          {
+            "name": "empty",
+            "deprecated": null
+          },
+          {
+            "name": "stage",
+            "deprecated": null
+          },
+          {
+            "name": "stage-header",
+            "deprecated": null
+          },
+          {
+            "name": "stage-label",
+            "deprecated": null
+          },
+          {
+            "name": "stage-share",
+            "deprecated": null
+          },
+          {
+            "name": "stage-value",
+            "deprecated": null
+          },
+          {
+            "name": "stages",
+            "deprecated": null
+          },
+          {
+            "name": "track",
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-funnel-bar-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-funnel-bar-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-1-5rem)"
+          },
+          {
+            "name": "--lr-funnel-comparison-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border-strong)"
+          },
+          {
+            "name": "--lr-funnel-track-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-raised)"
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -129919,7 +130140,21 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-widget",
+            "kind": "property",
+            "name": "activeView",
+            "since": "11.2.0",
+            "replacement": {
+              "kind": "property",
+              "name": "activeViewId",
+              "usage": "activeViewId"
+            },
+            "removalNotBefore": "13.0.0",
+            "rationale": "`activeView` was this property's original public name; the string does not appear anywhere in CHANGELOG.md, so the rename to `activeViewId` was never announced at all. A shipped consumer's `.activeView=` binding became a dead expando and the widget fell back to its first view with no error. The alias seeds `activeViewId` rather than being read alongside it, because the component itself writes that property (a view-toggle click, and the fallback when `views` drops the active id), and a read-alongside alias would undo a later interactive change on the next update."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",

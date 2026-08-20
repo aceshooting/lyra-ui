@@ -1294,6 +1294,114 @@ Dependency-free SVG radial, full-circle ring, or linear meter (no charting libra
 
 ---
 
+## `lr-funnel`
+
+Dependency-free conversion funnel (no charting library): an ordered set of stages, each drawn as a
+bar whose length is that stage's share of the **first** stage, read top-to-bottom as progressive
+drop-off. It sits beside `lr-gauge` and `lr-heatmap` as an analytics primitive rather than a general
+chart type.
+
+It is deliberately not a sorted bar chart: it normalizes to the first stage rather than to the data
+maximum, draws no value axis, and reads as stage-to-stage retention rather than category comparison.
+Reach for `lr-bar-chart`/`lr-lite-chart` when you actually want a value axis and category comparison.
+
+The whole chart is plain HTML — stage names, absolute values, shares and drop-off percentages are
+real text inside an `<ol>`, so there is no sighted-only drawing needing a separate transcript. The
+list carries the accessible name; a host `aria-label` overrides `label`.
+
+**Properties:**
+
+- `stages: readonly LyraFunnelStage[] = []` (property only; every share is measured against
+  `stages[0]`)
+- `comparison: readonly LyraFunnelStage[] = []` (property only — an optional baseline/peer cohort
+  drawn behind each bar as a dashed outline, normalized to **its own** first stage so a cohort's
+  funnel *shape* stays comparable against a baseline whose absolute volumes are not)
+- `comparisonLabel: string = ''` (attribute `comparison-label`; falls back to a localized generic
+  label)
+- `label: string = ''` (accessible name for the stage list)
+- `dropoff: boolean = true` (reflected; `dropoff="false"` in markup really does turn it off —
+  the property uses the explicit `false`-parsing converter, not attribute presence)
+- `sharePrecision: number = 0` (attribute `share-precision`; fraction digits for every share and
+  drop-off percentage, clamped to `0`–`20`)
+
+```ts
+interface LyraFunnelStage {
+  readonly label: string;
+  readonly value: number;
+  readonly color?: string; // CSS color; unparseable values fall back to --lr-funnel-bar-color
+}
+```
+
+**Events:** none.
+
+**Slots:** none.
+
+**CSS parts:** `base`, `stages` (the `<ol>`), `stage`, `dropoff`, `stage-header`, `stage-label`,
+`stage-value`, `stage-share`, `comparison-value`, `track`, `bar`, `bar-overflow` (a second token on
+`bar` when the stage exceeds the first stage), `comparison-bar`, `empty`
+
+**Themeable custom properties:** `--lr-funnel-bar-color` (default `var(--lr-color-brand)`),
+`--lr-funnel-comparison-color` (default `var(--lr-color-border-strong)`), `--lr-funnel-track-color`
+(default `var(--lr-color-surface-raised)`), `--lr-funnel-bar-size` (track thickness, default
+`var(--lr-size-1-5rem)`).
+
+**Optional peer deps:** none.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/data/funnel/funnel.js';
+</script>
+
+<lr-funnel id="signup" label="Self-serve signup" share-precision="1"></lr-funnel>
+
+<script type="module">
+  const funnel = document.querySelector('#signup');
+  funnel.stages = [
+    { label: 'Visited pricing', value: 12480 },
+    { label: 'Started trial', value: 4310 },
+    { label: 'Converted to paid', value: 512 },
+  ];
+  // Normalized to ITS OWN first stage, so a 380-visitor account still compares against a
+  // 12,480-visitor peer group.
+  funnel.comparison = [
+    { label: 'Visited pricing', value: 380 },
+    { label: 'Started trial', value: 141 },
+    { label: 'Converted to paid', value: 12 },
+  ];
+  funnel.comparisonLabel = 'Acme Corp';
+</script>
+```
+
+**Known gotchas:**
+
+- **Shares are of the first stage, not of the previous one.** `stage-share` answers "how much of the
+  top of the funnel is left here?"; the separate `dropoff` row answers "what changed since the
+  previous stage?". Both are rendered because the percentage is usually the interesting number and
+  the absolute count is the credibility check.
+- **A zero or negative first stage cannot define a share.** Every `stage-share` is omitted, every bar
+  is zero-length, and only the absolute values render. Nothing is silently divided by zero and no
+  `NaN` reaches the geometry.
+- **A stage larger than its predecessor is legal** (funnel re-entry). Its share is reported
+  truthfully above 100% in text, while the bar clamps to the track and gains the `bar-overflow` part
+  token so you can style it. Drop-off for that stage reads as an increase.
+- **Drop-off is omitted, not zeroed, when the previous stage is non-positive** — a change relative to
+  zero is undefined.
+- **A comparison series of a different length pairs by index.** Extra comparison entries are ignored;
+  stages past its end simply get no comparison bar. A comparison series whose own first value is
+  zero or negative draws nothing.
+- **Non-finite `value`s are treated as `0`** rather than blanking the stage, so one bad row cannot
+  take the chart with it.
+- Values, shares and drop-off percentages all format through the component's effective locale
+  (`locale` attribute, or an inherited one) — never a hardcoded `en`.
+- Bars grow from the inline-start edge and every dimension is a logical property, so `dir="rtl"`
+  needs no extra work. The component never sets its own `dir`.
+- Layout responds to the **container** (`container-type: inline-size` on `base`), not the viewport:
+  below roughly `18rem` of allocated width the stage name moves to its own line so the value and
+  share stay together. Bar motion is a token-driven transition that stops under
+  `prefers-reduced-motion`.
+- No events, no interaction model, no zoom/pan. If you need a clickable funnel, wrap the element and
+  handle clicks yourself.
+
 ## `lr-word-cloud`
 
 Dependency-free SVG word/tag cloud. First-party invention (no Web Awesome equivalent). Lays words
@@ -1509,6 +1617,28 @@ weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
   `colLabelHeight="auto"` to have the band size itself to the rotated extent. **Not mirrored under
   `dir="rtl"`** — both grid modes deliberately retain physical LTR geometry, so leaning one axis'
   labels the other way would be incoherent
+- `stickyLabels: 'none' | 'rows' | 'cols' | 'both' = 'none'` (attribute `sticky-labels`, reflected)
+  — freezes a **matrix** label band against the grid's own scrolling. `'rows'` pins the row-label
+  gutter so it survives horizontal scrolling, `'cols'` pins the column-label band so it survives
+  vertical scrolling, `'both'` pins both. Labels and cells otherwise share one bitmap, so neither
+  band can be `position: sticky` on its own and a tall matrix scrolls its column header out of
+  view; the only workaround was a light-DOM mirror row that had to hardcode the gutter width and
+  cell size, which made it mutually exclusive with `row-label-width="auto"`. A frozen band is
+  repainted into its own layer in the same draw pass, from the same resolved `matrixGeometry` the
+  cells were painted with, so it tracks a `row-label-width`/`col-label-height` `"auto"`
+  re-resolution, a resize, and a DPR change without drifting a pixel. Freezing needs something to
+  scroll, so the frozen modes wrap the grid in a `[part="grid"]` scrollport: it is bounded inline by
+  the host's own allocation — a matrix wider than a 320px host scrolls inside the component instead
+  of overflowing it — and unbounded in block until you set `--lr-heatmap-grid-max-block-size`, which
+  a frozen column band needs in order to have vertical scrolling to stay behind. The bands are
+  `aria-hidden` duplicates of pixels the canvas already painted, so the accessible representation is
+  unchanged, and the `accessibleCells` overlay moves inside the scrollport so the cell buttons
+  scroll with the canvas they cover. The grid keeps this component's physical LTR geometry under
+  `dir="rtl"`, so the frozen gutter stays on the same physical side as the labels the canvas paints.
+  Matrix mode only, like `matrixGeometry`: the property is read in calendar mode but has no effect
+  there, since a calendar's axes are a different geometry (fixed weekday gutter, month band, and the
+  optional `columnX`/`rowY` overrides). Unset (`'none'`, the default) renders exactly what it always
+  did — one canvas, no scrollport, no extra elements — and an unsupported value normalizes to it
 - `maxCellSize?: number` (attribute `max-cell-size`) — ceiling, in CSS px, on the cell size
   `fitToWidth` derives from the host width, in **both** modes. Exists because `fitToWidth` divides
   the _whole_ host width across the grid, so a 5-week calendar or a 3-column matrix in a wide pane
@@ -1648,9 +1778,12 @@ color?: string; label?: string; partOfRamp?: boolean }`: a discrete legend key r
 color-scheme change; called automatically on theme changes, exposed for a consumer that needs to
 force a redraw manually. `matrixGeometry: Readonly<{ padLeft: number; padTop: number; cellSize:
 number }> | undefined` — the gutter/cell geometry the last matrix-mode draw actually painted with,
-in CSS pixels; `undefined` in calendar mode. Lets a light-DOM consumer (e.g. a sticky header mirror
-for a tall matrix) line up with the canvas without hardcoding the same numbers `row-label-width`/
-`col-label-height`'s `"auto"` resolution would otherwise keep private.
+in CSS pixels; `undefined` in calendar mode. Lets a light-DOM consumer line up with the canvas
+without hardcoding the same numbers `row-label-width`/`col-label-height`'s `"auto"` resolution would
+otherwise keep private. For the case that motivated it — a frozen header or gutter on a tall or wide
+matrix — prefer `stickyLabels`, which freezes the band inside the component and needs no mirror at
+all; the getter remains the way to align a *separate* element (a sibling chart, a custom overlay)
+with the grid.
 
 **Events:** `lr-cell-click` (fired on click, or Enter/Space on the keyboard-focused cell —
 `detail: { row, col, value }` in matrix mode, `detail: { date, value }` in calendar mode),
@@ -1661,7 +1794,9 @@ in calendar mode)
 
 **Slots:** none.
 
-**CSS parts:** `base`, `canvas`, `cells` (opt-in per-cell overlay), `cell` (one opt-in native cell
+**CSS parts:** `base`, `canvas`, `grid` (the scrollport wrapping the canvas while `stickyLabels`
+freezes an axis — absent entirely otherwise), `row-labels`/`col-labels` (the frozen label bands,
+rendered only for the axis `stickyLabels` names), `cells` (opt-in per-cell overlay), `cell` (one opt-in native cell
 button), `tooltip` (hover tooltip, positioned over the hovered cell),
 `live-region` (visually-hidden, `aria-hidden` mirror of the keyboard-focused cell; the actual
 announcement uses the shared light-DOM polite sink), `projection-limit` (localized assistive
@@ -1698,7 +1833,12 @@ dedicated token distinct from both the focus ring and the annotation ring so a h
 independently). `--lr-heatmap-tooltip-bg` (default
 `var(--lr-color-surface)`) and `--lr-heatmap-tooltip-text` (default `var(--lr-color-text)`) —
 unlike the canvas-drawn tokens above, `[part="tooltip"]` is a real DOM element and consumes these
-directly, no `getComputedStyle` bridging needed. Also consumes `--lr-color-text-quiet` (axis label
+directly, no `getComputedStyle` bridging needed. `--lr-heatmap-sticky-label-bg` (default
+`var(--lr-color-surface)` — the backdrop painted under a frozen `stickyLabels` band, resolved via
+`getComputedStyle` like the other canvas-drawn tokens; it must stay **opaque**, since it covers the
+same labels the scrolling canvas painted underneath it) and `--lr-heatmap-grid-max-block-size`
+(default `none` — the block-size ceiling of the `[part="grid"]` scrollport, consumed directly by
+that real DOM element; set it to give a frozen column band vertical scrolling to stay behind). Also consumes `--lr-color-text-quiet` (axis label
 color), `--lr-space-xs`, `--lr-radius`/`--lr-shadow` (tooltip box), and `--lr-focus-ring-width`/
 `--lr-focus-ring-offset` (the real `[part="canvas"]:focus-visible` DOM outline, stroked in the
 same color as `--lr-heatmap-focus-ring-color`).
@@ -3592,6 +3732,13 @@ These named interfaces and helper signatures are available to typed integrations
   height: unknown;
   minZoom: unknown;
   maxZoom: unknown;
+}`
+
+- **`components-data-funnel-funnel-contracts`** — Supporting data types and helpers for this component family.
+  `LyraFunnelStage {
+  label: unknown;
+  value: unknown;
+  color: unknown;
 }`
 
 - **`components-data-graph-query-builder-graph-query-builder-contracts`** — Supporting data types and helpers for this component family.

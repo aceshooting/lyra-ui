@@ -324,6 +324,122 @@ export const Markers: Story = {
   },
 };
 
+/**
+ * A deterministic scatter of points around Paris, dense enough that one DOM marker per entry --
+ * what `markers` does -- would be both unreadable and expensive. `cluster` turns the entry's
+ * GeoJSON source into a natively clustered one instead: an aggregate circle that grows with
+ * `point_count`, a count label, and the points that stayed unclustered. Zoom past `maxZoom` and the
+ * clusters resolve back into individual points.
+ *
+ * The count label needs a glyph source, which this deliberately network-silent raster style has
+ * none of, so only the graduated circles paint here; a real basemap style renders the numbers. The
+ * count is on `lr-map-click` either way, as `feature.properties.point_count` under
+ * `origin: 'cluster'`.
+ */
+export const ClusteredPoints: Story = {
+  name: 'Clustered points (thousands of pins)',
+  render: () => {
+    // A tiny LCG keeps the scatter identical on every render, so the visual baseline is stable.
+    let seed = 20260820;
+    const random = () => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed / 2147483648;
+    };
+    const dataLayers: LyraMapGeoJsonDataLayer[] = [
+      {
+        sourceId: 'listings',
+        tone: 'accent',
+        cluster: {
+          radius: 60,
+          maxZoom: 13,
+          radiusSteps: [[0, 14], [25, 20], [100, 28]],
+          colorSteps: [
+            [0, storyColor('brand')],
+            [25, storyColor('warning')],
+            [100, storyColor('danger')],
+          ],
+        },
+        geojson: {
+          type: 'FeatureCollection',
+          features: Array.from({ length: 600 }, (_unused, index) => ({
+            type: 'Feature' as const,
+            id: index,
+            properties: { listing: index },
+            geometry: {
+              type: 'Point' as const,
+              coordinates: [2.25 + random() * 0.22, 48.8 + random() * 0.12],
+            },
+          })),
+        },
+      },
+    ];
+    return html`
+      <lr-map
+        style="height: 20rem"
+        center="[2.3522, 48.8566]"
+        zoom="10"
+        .dataLayers=${dataLayers}
+        .mapStyle=${RASTER_STYLE}
+      ></lr-map>
+    `;
+  },
+};
+
+/**
+ * `kind: 'heatmap'` renders the same source as MapLibre's own density surface instead of the
+ * geometry split. `heatmap.weightField` plus `weightRange` map a feature property onto MapLibre's
+ * 0-1 weight, and `heatmap.stops` take the same `[value, color]` vocabulary as `choropleth.stops`
+ * and `legendGradient` -- so the `legendGradient` bar below describes the ramp above it without a
+ * second copy of the stops.
+ */
+export const HeatmapDensity: Story = {
+  name: 'Heatmap density surface (kind)',
+  render: () => {
+    let seed = 987654321;
+    const random = () => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed / 2147483648;
+    };
+    const stops: [number, string][] = [
+      [0, 'rgba(0, 0, 0, 0)'],
+      [0.4, storyColor('brand')],
+      [0.7, storyColor('warning')],
+      [1, storyColor('danger')],
+    ];
+    const dataLayers: LyraMapGeoJsonDataLayer[] = [
+      {
+        sourceId: 'density',
+        kind: 'heatmap',
+        heatmap: { weightField: 'intensity', weightRange: [0, 10], radius: 36, stops },
+        geojson: {
+          type: 'FeatureCollection',
+          features: Array.from({ length: 400 }, (_unused, index) => ({
+            type: 'Feature' as const,
+            id: index,
+            properties: { intensity: Math.round(random() * 10) },
+            geometry: {
+              type: 'Point' as const,
+              coordinates: [2.28 + random() * 0.16, 48.82 + random() * 0.09],
+            },
+          })),
+        },
+      },
+    ];
+    return html`
+      <lr-map
+        style="height: 20rem"
+        center="[2.3522, 48.8566]"
+        zoom="11"
+        .dataLayers=${dataLayers}
+        .legendGradient=${stops.slice(1)}
+        legend-gradient-lo-label="Sparse"
+        legend-gradient-hi-label="Dense"
+        .mapStyle=${RASTER_STYLE}
+      ></lr-map>
+    `;
+  },
+};
+
 export const Narrow320LtrRtl: Story = {
   name: 'Narrow 320px long map content (LTR and RTL)',
   parameters: {

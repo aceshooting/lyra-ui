@@ -3678,6 +3678,26 @@ describe('dataLayers clustering and heatmap', () => {
     expect(suffixes(layers, sourceId)).to.deep.equal(['-heatmap']);
   });
 
+  it('restores the uniform weight when an update drops the heatmap weight field', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el);
+    el.dataLayers = entry({ kind: 'heatmap', heatmap: { weightField: 'magnitude' } });
+    await el.updateComplete;
+    const sourceId = dataLayerResourceId(el, 'pins');
+    expect(layers.get(`${sourceId}-heatmap`)!.paint!['heatmap-weight']).to.deep.equal([
+      'get',
+      'magnitude',
+    ]);
+
+    el.dataLayers = entry({ kind: 'heatmap' });
+    await el.updateComplete;
+
+    expect(
+      layers.get(`${sourceId}-heatmap`)!.paint!['heatmap-weight'],
+      'a dropped weight field must stop weighting by it',
+    ).to.equal(1);
+  });
+
   it('recreates the source when clustering is switched on, since MapLibre cannot re-cluster in place', async () => {
     const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
     const { sources, layers } = stubMaplibreMap(el);

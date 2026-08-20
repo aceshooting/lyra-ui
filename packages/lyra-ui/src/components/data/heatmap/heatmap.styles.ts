@@ -31,6 +31,10 @@ export const styles = css`
        token so it retunes apart from the focus ring (--lr-heatmap-focus-ring-color) and annotation
        ring (--lr-heatmap-annotation-color) it is drawn between. */
     --_lr-heatmap-selected-color: var(--lr-color-success);
+    /* Backdrop painted under a frozen sticky-labels band, resolved like the ramp above. It covers
+       the same labels the scrolling cell canvas painted underneath it, so it has to be an opaque
+       surface color rather than a transparent one. */
+    --_lr-heatmap-sticky-label-bg: var(--lr-color-surface);
   }
   [part="base"] {
     position: relative;
@@ -72,6 +76,51 @@ export const styles = css`
     inset: 0;
     direction: ltr;
     pointer-events: none;
+  }
+  /* Frozen sticky-labels bands, rendered only while stickyLabels freezes an axis.
+     [part='grid'] is the scrollport the bands stick to -- position:sticky needs a scroll container
+     ancestor, and without one the whole feature is silently inert. Pinned direction:ltr for the
+     same reason the canvas and [part='cells'] above are: both grid modes keep physical LTR
+     geometry, so the logical inset-inline-start below has to resolve to the physical left in RTL
+     too, where the gutter the band covers is still painted. */
+  [part="grid"] {
+    position: relative;
+    overflow: auto;
+    direction: ltr;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    max-block-size: var(--lr-heatmap-grid-max-block-size, none);
+  }
+  /* A single-area grid, so every layer is placed at the same origin: a band's static position is
+     the cell canvas's own start corner, which is what makes the sticky offset -- and therefore the
+     band -- pixel-aligned with the cells without measuring anything. */
+  .grid-stack {
+    position: relative;
+    display: grid;
+    grid-template-areas: 'stack';
+  }
+  .grid-stack > * {
+    grid-area: stack;
+    align-self: start;
+    justify-self: start;
+  }
+  [part="row-labels"],
+  [part="col-labels"] {
+    position: sticky;
+    display: block;
+    /* The band duplicates pixels the cell canvas already painted, so it must never take the
+       pointer: hit-testing reads offsetX/offsetY against the cell canvas, and an intercepting band
+       would report coordinates in its own box instead. */
+    pointer-events: none;
+    z-index: var(--lr-layer-content);
+  }
+  /* One axis each: the frozen band holds its own axis and scrolls freely along the other, which is
+     what keeps every label beside the row or above the column it describes. */
+  [part="row-labels"] {
+    inset-inline-start: 0;
+  }
+  [part="col-labels"] {
+    inset-block-start: 0;
   }
   .cell-row {
     display: contents;

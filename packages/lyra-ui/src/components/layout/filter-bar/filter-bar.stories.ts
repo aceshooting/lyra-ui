@@ -434,3 +434,55 @@ export const OptionIcons: Story = {
     return html`<lr-filter-bar style="max-width: 48rem" .filters=${filters}></lr-filter-bar>`;
   },
 };
+
+/** A `'date-range'` filter can declare `presets`, forwarded to its composed `<lr-date-input>`
+ *  exactly like `min`/`max`, so the quick-range row and the filter bar built for the same
+ *  dashboard use case finally combine. Which entry produced a commit rides that edit's own
+ *  `lr-input` as `appliedPreset` — the log below shows it alongside `filterId`, which is what a
+ *  bar serializing into a query string persists so "Last 7 days" still means the last 7 days after
+ *  the next reload. Picking days by hand instead leaves it `undefined`. */
+export const DateRangePresets: Story = {
+  render: () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      {
+        filterId: 'period',
+        label: 'Reporting period',
+        type: 'date-range',
+        min: '2020-01-01',
+        max: '2030-12-31',
+        presets: [
+          { label: 'Last 7 days', start: '2026-08-13', end: '2026-08-19' },
+          { label: 'Last 30 days', start: '2026-07-21', end: '2026-08-19' },
+          { label: 'This month', start: '2026-08-01', end: '2026-08-31' },
+          { label: 'All time' },
+        ],
+      },
+      {
+        filterId: 'status',
+        label: 'Status',
+        type: 'select',
+        placeholder: 'Any status',
+        options: [
+          { value: 'open', label: 'Open' },
+          { value: 'closed', label: 'Closed' },
+        ],
+      },
+    ];
+    const onInput = (e: Event) => {
+      const detail = (e as CustomEvent).detail as {
+        filterId?: string;
+        appliedPreset?: { label: string };
+      };
+      const log = (e.target as HTMLElement).closest('.demo')!.querySelector('.log') as HTMLElement;
+      log.textContent = `filterId: ${detail.filterId} · appliedPreset: ${
+        detail.appliedPreset?.label ?? '(none)'
+      }`;
+    };
+    return html`
+      <div class="demo" style="max-width: 50rem; display: flex; flex-direction: column; gap: 1rem">
+        <lr-filter-bar .filters=${filters} @lr-input=${onInput}></lr-filter-bar>
+        <pre class="log" style="font-size: 0.75rem; white-space: pre-wrap"></pre>
+      </div>
+    `;
+  },
+};
