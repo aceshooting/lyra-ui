@@ -21,14 +21,31 @@ type PackageEntrypointImports = {
 const definedAmong = (registry: CustomElementRegistry, tags: readonly string[]): string[] =>
   tags.filter((tag) => registry.get(tag) !== undefined);
 
-function createEntrypointRealm(): {
+async function createEntrypointRealm(): Promise<{
   frame: HTMLIFrameElement;
   registry: CustomElementRegistry;
   importModule: RealmImport;
-} {
+}> {
   const frame = document.createElement('iframe');
   frame.hidden = true;
+  // A freshly-appended iframe exposes an initial `about:blank` document immediately, but the
+  // browser then REPLACES it when the real `about:blank` navigation completes, asynchronously.
+  // Reading `contentWindow` synchronously and importing into that first document races the
+  // replacement: when it lands, dynamic imports still in flight against the discarded realm reject
+  // with `Failed to fetch dynamically imported module`. This test's first import is the whole root
+  // barrel -- a 757-module graph over the unbundled dev server -- so it stays in flight for tens of
+  // seconds, which is a wide window for that navigation to land in. Awaiting the load event closes
+  // the race.
+  //
+  // Honest scope note: this was added while chasing a local `Failed to fetch dynamically imported
+  // module` on `dist/lyra.js`, and it did NOT fix it -- the same failure reproduces with no iframe
+  // at all, importing the root barrel straight from the main page, so the cause is elsewhere (see
+  // the timeout comment below). Kept anyway because the race is real and cheap to close.
+  const loaded = new Promise<void>((resolve) => {
+    frame.addEventListener('load', () => resolve(), { once: true });
+  });
   document.body.append(frame);
+  await loaded;
 
   const realm = frame.contentWindow;
   if (!realm) {
@@ -48,8 +65,20 @@ function createEntrypointRealm(): {
 // be undone; otherwise Mocha's retry after a late all.js failure would start with lr-empty already
 // registered and hide the original failure behind a misleading stage-one assertion.
 it('registers nothing from the root, exactly one tag from a granular entry, and the set from all.js', async function () {
-  this.timeout(120_000);
-  const { frame, registry, importModule } = createEntrypointRealm();
+  // The root barrel alone is a 757-module graph fetched one module at a time over the unbundled
+  // dev server, so this legitimately runs for a minute or more and scales with machine load; 120s
+  // was tight enough to be a coin flip on a busy box. The budget is generous on purpose: a real
+  // regression here surfaces as a fetch/registration ERROR, never as a slow pass.
+  //
+  // KNOWN ENVIRONMENT ISSUE, not a budget problem: on some machines the dev server cannot serve a
+  // several-hundred-module graph at all, and this import rejects with `Failed to fetch dynamically
+  // imported module` after ~25-70s -- well inside any timeout. Bisected: a granular entry
+  // (`components/overlays/empty/empty.js`) loads fine while BOTH large graphs (`lyra.js`,
+  // `all.js`) fail, with no iframe involved, at concurrency 1, with an FD limit of 524288. GitHub
+  // CI runs this green, so it is environmental rather than a product or test defect. If you hit it
+  // locally, trust CI and re-run there rather than editing this file.
+  this.timeout(240_000);
+  const { frame, registry, importModule } = await createEntrypointRealm();
   const packageTags = [...ROOT_BARREL_TAGS, ...ROOT_BARREL_OPTIONAL_PEER_TAGS];
 
   try {

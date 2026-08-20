@@ -1263,6 +1263,9 @@ describe("pressed feedback on the keyboard-highlighted row", () => {
     return value;
   }
 
+  /** See the first pressed-feedback poll for why this is not the 1s default. */
+  const POINTER_STATE_TIMEOUT = 15_000;
+
   async function nextFrames(): Promise<void> {
     await new Promise((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(resolve))
@@ -1326,9 +1329,16 @@ describe("pressed feedback on the keyboard-highlighted row", () => {
       // data-active row -- exactly the combination the press rule has to out-rank.
       expect(row.getAttribute("data-active")).to.equal("true");
       await sendMouse({ type: "down" });
+      // Margined timeout, not the 1s default. This waits on a real pointer-down round-tripping
+      // through CDP into the browser's own :active bookkeeping -- a genuine input-latency wait
+      // whose duration scales with machine load, not a paint that settles on its own schedule.
+      // The stylesheet declares no transition on [part="command"], so once :active engages the
+      // fill is exact immediately; the only thing being waited on is the event arriving. Under a
+      // fully-parallel 490-file run this exceeded 1s and failed two separate release attempts.
       await waitUntil(
         () => getComputedStyle(row).backgroundColor === pressed,
-        "the highlighted row kept its resting fill while held"
+        "the highlighted row kept its resting fill while held",
+        { timeout: POINTER_STATE_TIMEOUT }
       );
     } finally {
       await sendMouse({ type: "up" });
@@ -1355,7 +1365,8 @@ describe("pressed feedback on the keyboard-highlighted row", () => {
       expect(el.open).to.equal(true);
       await waitUntil(
         () => getComputedStyle(row).backgroundColor === "rgb(0, 51, 102)",
-        "the highlighted row never returned to its resting fill"
+        "the highlighted row never returned to its resting fill",
+        { timeout: POINTER_STATE_TIMEOUT }
       );
     } finally {
       await resetMouse();
