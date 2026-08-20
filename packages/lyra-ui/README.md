@@ -27,7 +27,7 @@
 **Lyra UI — the free, independent web-component alternative.** A MIT-licensed [Lit](https://lit.dev)
 library for accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
-[Web Awesome](https://webawesome.com/), with 284 custom elements, native custom-element APIs,
+[Web Awesome](https://webawesome.com/), with 285 custom elements, native custom-element APIs,
 tree-shakeable imports, its own `--lr-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
@@ -916,7 +916,7 @@ resolved `web-types.json`/`vscode-html-data.json` above instead.
 
 ## Components
 
-The catalog below lists all 284 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 285 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 
