@@ -1188,6 +1188,22 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
   );
 }
 
+/**
+ * Every `.css` subpath in the package's own exports map.
+ *
+ * attw is given this list to skip, because a stylesheet ships no types and it correctly reports a
+ * resolution failure for each one. It used to be a hand-written literal, which meant a new CSS
+ * export failed this gate until someone remembered to extend it -- `./tokens-root.css` did exactly
+ * that. Deriving it from the exports map means a new stylesheet is covered the moment it is
+ * exported, and a removed one stops being excused, with no list to keep in sync.
+ */
+async function cssEntrypoints(packageDir) {
+  const manifest = JSON.parse(await readFile(join(packageDir, 'package.json'), 'utf8'));
+  return Object.keys(manifest.exports ?? {})
+    .filter((subpath) => subpath.endsWith('.css'))
+    .sort();
+}
+
 async function main() {
   const workspace = await mkdtemp(join(tmpdir(), 'lr-packed-consumer-'));
   try {
@@ -1220,11 +1236,7 @@ async function main() {
         '--profile',
         'esm-only',
         '--exclude-entrypoints',
-        './theme.css',
-        './design-tokens.css',
-        './native.css',
-        './reservations.css',
-        './utilities.css',
+        ...(await cssEntrypoints(uiPackage)),
         '--format',
         'table',
         '--summary',

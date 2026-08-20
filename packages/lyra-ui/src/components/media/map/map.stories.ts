@@ -400,8 +400,10 @@ export const HeatmapDensity: Story = {
       seed = (seed * 1103515245 + 12345) % 2147483648;
       return seed / 2147483648;
     };
+    // No density-0 stop here on purpose: a ramp that starts above zero gets a fully transparent
+    // floor prepended by the component itself, so writing one out both duplicates that and forces a
+    // raw colour literal into a story. Starting at 0.4 also demonstrates the auto-floor behaviour.
     const stops: [number, string][] = [
-      [0, 'rgba(0, 0, 0, 0)'],
       [0.4, storyColor('brand')],
       [0.7, storyColor('warning')],
       [1, storyColor('danger')],
