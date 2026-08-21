@@ -482,16 +482,14 @@ describe('lr-video public contract', () => {
     el.addEventListener('timeupdate', (event) => received.push(event));
 
     const target = media.duration / 2;
+    const nativeTimeupdate = oneEvent(media, 'timeupdate');
+    const seeked = oneEvent(media, 'seeked');
     el.seek(target);
     expect(received.length, 'seek() dispatches its own synchronous host timeupdate').to.equal(1);
 
-    // Wait for the real native 'seeked' event -- the HTML seeking algorithm queues it alongside a
-    // native 'timeupdate' once the underlying seek actually completes -- then give that paired
-    // 'timeupdate' relay one more macrotask to land before asserting the final count.
-    await new Promise<void>((resolve) => {
-      media.addEventListener('seeked', () => resolve(), { once: true });
-    });
-    await aTimeout(50);
+    // Observe both real native events from the underlying seek. Their listeners must exist before
+    // currentTime changes: a fast local resource can complete the seek before a later subscription.
+    await Promise.all([nativeTimeupdate, seeked]);
 
     expect(received.length, 'seek() must not double-fire host timeupdate via the native relay').to.equal(1);
   });
