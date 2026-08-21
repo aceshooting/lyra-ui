@@ -133,6 +133,65 @@ test('budgets the platform matrix for degraded fresh-runner OS dependency setup'
   );
 });
 
+test('requires the exhaustive packed ATTW matrix in the stable release gate', () => {
+  const workflow = readFileSync(
+    path.join(repoRoot, '.github/workflows/ci.yml'),
+    'utf8'
+  );
+  const rootPackage = JSON.parse(
+    readFileSync(path.join(repoRoot, 'package.json'), 'utf8')
+  );
+  const contractStart = workflow.indexOf('\n  packed_consumer_contract:');
+  const attwStart = workflow.indexOf('\n  packed_consumer_attw:');
+  const publicApiStart = workflow.indexOf('\n  packed_consumer_public_api:');
+  const aggregateStart = workflow.indexOf('\n  packed-consumer:');
+  const docsStart = workflow.indexOf('\n  docs_build:');
+  assert.ok(
+    contractStart > 0 &&
+      attwStart > contractStart &&
+      publicApiStart > attwStart &&
+      aggregateStart > publicApiStart &&
+      docsStart > aggregateStart,
+    'CI must retain separate packed contract, ATTW, public-API, and aggregate jobs'
+  );
+
+  const contractJob = workflow.slice(contractStart, attwStart);
+  const attwJob = workflow.slice(attwStart, publicApiStart);
+  const aggregateJob = workflow.slice(aggregateStart, docsStart);
+  assert.match(contractJob, /pnpm check:packed-consumer:contracts/u);
+  assert.doesNotMatch(contractJob, /pnpm check:packed-consumer(?:\s|$)/u);
+  assert.match(attwJob, /name: packed-consumer \/ attw \/ shard \$\{\{ matrix\.shard_index \}\}\/4/u);
+  assert.match(attwJob, /shard_index: \[1, 2, 3, 4\]/u);
+  assert.match(
+    attwJob,
+    /pnpm check:packed-attw --shard-index \$\{\{ matrix\.shard_index \}\} --shard-total 4/u
+  );
+  for (const dependency of [
+    'packed_consumer_contract',
+    'packed_consumer_attw',
+    'packed_consumer_public_api',
+  ]) {
+    assert.match(aggregateJob, new RegExp(`- ${dependency}\\b`, 'u'));
+  }
+  assert.match(aggregateJob, /ATTW_RESULT: \$\{\{ needs\.packed_consumer_attw\.result \}\}/u);
+  assert.match(aggregateJob, /if \[\[ "\$ATTW_RESULT" != "success" \]\]/u);
+
+  assert.match(
+    rootPackage.scripts['check:packed-consumer:contracts'],
+    /check-packed-consumer\.mjs --skip-attw/u
+  );
+  assert.doesNotMatch(rootPackage.scripts['check:packed-consumer'], /skip-attw/u);
+  assert.match(
+    rootPackage.scripts['check:packed-consumer'],
+    /node scripts\/check-packed-consumer\.mjs/u
+  );
+  assert.match(
+    workflow,
+    /Run packed consumer at the supported Node floor[\s\S]*?pnpm build && pnpm check:packed-consumer:contracts/u,
+    'Node 20 must retain every packed contract while avoiding a duplicate monolithic ATTW sweep'
+  );
+});
+
 test('normalizes the manually dispatched browser matrix through a closed allowlist', () => {
   assert.deepEqual(
     [

@@ -4,6 +4,7 @@ import { join, relative } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { parsePackedConsumerArguments } from './packed-attw.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const uiPackage = join(root, 'packages', 'lyra-ui');
@@ -1404,23 +1405,8 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
   );
 }
 
-/**
- * Every `.css` subpath in the package's own exports map.
- *
- * attw is given this list to skip, because a stylesheet ships no types and it correctly reports a
- * resolution failure for each one. It used to be a hand-written literal, which meant a new CSS
- * export failed this gate until someone remembered to extend it -- `./tokens-root.css` did exactly
- * that. Deriving it from the exports map means a new stylesheet is covered the moment it is
- * exported, and a removed one stops being excused, with no list to keep in sync.
- */
-async function cssEntrypoints(packageDir) {
-  const manifest = JSON.parse(await readFile(join(packageDir, 'package.json'), 'utf8'));
-  return Object.keys(manifest.exports ?? {})
-    .filter((subpath) => subpath.endsWith('.css'))
-    .sort();
-}
-
 async function main() {
+  const { runAttw } = parsePackedConsumerArguments(process.argv.slice(2));
   const workspace = await mkdtemp(join(tmpdir(), 'lr-packed-consumer-'));
   try {
     const tarballDir = join(workspace, 'packages');
@@ -1444,23 +1430,16 @@ async function main() {
       root,
       'publint package check',
     );
-    await run(
-      pnpm,
-      [
-        'exec',
-        'attw',
-        '--profile',
-        'esm-only',
-        '--exclude-entrypoints',
-        ...(await cssEntrypoints(uiPackage)),
-        '--format',
-        'table',
-        '--summary',
-        uiTarball,
-      ],
-      root,
-      'Are The Types Wrong package check',
-    );
+    if (runAttw) {
+      await run(
+        process.execPath,
+        [join(root, 'scripts', 'check-packed-attw.mjs'), '--tarball', uiTarball],
+        root,
+        'Are The Types Wrong package check',
+      );
+    } else {
+      console.log('Skipping only ATTW; packed install, runtime, declaration, and bundle contracts remain enabled.');
+    }
 
     await writeFixture(coreFixture, uiTarball, flagsTarball, false);
     await writeFixture(optionalFixture, uiTarball, flagsTarball, true);
