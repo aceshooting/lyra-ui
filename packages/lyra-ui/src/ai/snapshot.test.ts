@@ -47,3 +47,37 @@ it('enforces shared node, byte, string, and depth budgets', () => {
   expect(snapshotProviderValue([1], shared).ok).to.equal(true);
   expect(snapshotProviderValue([2], shared).ok).to.equal(false);
 });
+
+it('fails closed when hostile objects cannot be inspected', () => {
+  let prototypeReads = 0;
+  const prototypeTrap = new Proxy({}, {
+    getPrototypeOf: () => {
+      prototypeReads += 1;
+      if (prototypeReads > 1) throw new Error('blocked');
+      return Object.prototype;
+    },
+  });
+  const ownKeysTrap = new Proxy({}, {
+    ownKeys: () => {
+      throw new Error('blocked');
+    },
+  });
+
+  expect(snapshotProviderValue(prototypeTrap)).to.deep.include({ ok: false, failure: 'invalid' });
+  expect(snapshotProviderValue(ownKeysTrap)).to.deep.include({ ok: false, failure: 'invalid' });
+});
+
+it('rejects collection metadata and budgets before copying partial data', () => {
+  const augmented = [1] as number[] & { note?: string };
+  augmented.note = 'provider metadata';
+
+  expect(snapshotProviderValue(augmented)).to.deep.include({ ok: false, failure: 'invalid' });
+  expect(snapshotProviderValue(
+    { first: 1, second: 2 },
+    createProviderSnapshotBudget({ maxNodes: 2 }),
+  )).to.deep.include({ ok: false, failure: 'limit' });
+  expect(snapshotProviderValue(
+    new Date('2026-08-14T00:00:00.000Z'),
+    createProviderSnapshotBudget({ maxBytes: 8 }),
+  )).to.deep.include({ ok: false, failure: 'limit' });
+});

@@ -691,7 +691,7 @@ describe('search', () => {
 
   it('reports a retained lower bound when more than 10,000 nodes match', async function () {
     this.timeout(20_000);
-    const xml = `<root>${'<hit/>'.repeat(10_001)}</root>`;
+    const xml = `<root>${'<hit hit=""/>'.repeat(10_001)}</root>`;
     const el = (await fixture(html`<lr-xml-viewer></lr-xml-viewer>`)) as LyraXmlViewer;
     const doc = new DOMParser().parseFromString(xml, 'application/xml');
     const state = el as unknown as {
@@ -705,6 +705,27 @@ describe('search', () => {
 
     expect(await el.search('hit')).to.equal(10_000);
     expect(detail).to.deep.include({ matchCount: 10_000, matchCountExact: false });
+  });
+
+  it('recomputes and clamps an active search when a loaded document is replaced in place', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+    expect(await el.search('item')).to.equal(2);
+    expect(await el.searchNext()).to.equal(true);
+    const internals = el as unknown as {
+      generation: number;
+      setDoc(doc: Document, generation: number): void;
+    };
+    const replacement = new DOMParser().parseFromString(
+      '<root><item>replacement</item></root>',
+      'application/xml',
+    );
+    const changed = oneEvent(el, 'lr-search-change');
+
+    internals.setDoc(replacement, internals.generation);
+    const event = await changed as CustomEvent<{ matchCount: number; activeIndex: number }>;
+    await el.updateComplete;
+
+    expect(event.detail).to.deep.include({ matchCount: 1, activeIndex: 0 });
   });
 
   // Regression: this viewer moved `data-active-match` but never scrolled, so on a document taller

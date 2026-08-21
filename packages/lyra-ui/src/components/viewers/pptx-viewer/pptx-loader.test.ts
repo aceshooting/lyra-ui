@@ -80,10 +80,38 @@ describe('pptx loader', () => {
         nodeId: 'chart-4',
       },
     ]);
+
+    raw.dispatchEvent(new CustomEvent('slideerror', {
+      detail: { index: 99, error: 'unknown slide' },
+    }));
+    raw.dispatchEvent(new CustomEvent('nodeerror', {
+      detail: { nodeId: 'x'.repeat(1_025), error: 'unknown node' },
+    }));
+    expect(events[3]).to.deep.equal({
+      kind: 'diagnostic',
+      code: 'pptx-slide-render-error',
+      cause: 'unknown slide',
+      fatal: false,
+    });
+    expect(events[4]).to.deep.equal({
+      kind: 'diagnostic',
+      code: 'pptx-node-render-error',
+      cause: 'unknown node',
+      fatal: false,
+    });
+    adapter.destroy();
+    const unsubscribeAfterDestroy = adapter.subscribe((event) => events.push(event));
+    unsubscribeAfterDestroy();
     adapter.destroy();
     raw.dispatchEvent(new CustomEvent('slidechange', { detail: { index: 1 } }));
-    expect(events).to.have.lengthOf(3);
+    expect(events).to.have.lengthOf(5);
     expect(destroyed).to.equal(1);
+  });
+
+  it('rejects primitive and callable values that do not expose viewer capabilities', () => {
+    expect(adaptPptxViewer(null)).to.equal(null);
+    expect(adaptPptxViewer('viewer')).to.equal(null);
+    expect(adaptPptxViewer(() => undefined)).to.equal(null);
   });
 
   it('validates thumbnail requests and wraps renderer-owned handles with idempotent disposal', async () => {

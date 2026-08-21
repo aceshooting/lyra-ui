@@ -9951,7 +9951,7 @@
             },
             {
               "file": "src/components/layout/command-palette/command-palette.test.ts",
-              "line": 921,
+              "line": 960,
               "test": "is accessible with the active-command prop themed",
               "target": "el",
               "state": "populated"
@@ -32827,7 +32827,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pptx-viewer/pptx-viewer.test.ts",
-              "line": 817,
+              "line": 820,
               "test": "is accessible with a mounted presentation and its slide-nav controls visible",
               "target": "el",
               "state": "populated"
@@ -32847,7 +32847,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pptx-viewer/pptx-viewer.test.ts",
-              "line": 1505,
+              "line": 1588,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -32916,7 +32916,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pptx-viewer/pptx-viewer.test.ts",
-              "line": 243,
+              "line": 246,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -35369,14 +35369,14 @@
           "evidence": [
             {
               "file": "src/components/utility/random-content/random-content.test.ts",
-              "line": 1307,
+              "line": 1363,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/utility/random-content/random-content.test.ts",
-              "line": 1319,
+              "line": 1375,
               "test": "is accessible while autoplaying",
               "target": "el",
               "state": "populated"
@@ -40948,21 +40948,21 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/stack-trace/stack-trace.test.ts",
-              "line": 344,
+              "line": 409,
               "test": "is accessible with a parsed, internal-collapsed trace",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/stack-trace/stack-trace.test.ts",
-              "line": 452,
+              "line": 517,
               "test": "is accessible with a parsed trace under frame=\"plain\"",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/stack-trace/stack-trace.test.ts",
-              "line": 515,
+              "line": 580,
               "test": "is accessible in the compact presentation",
               "target": "el",
               "state": "populated"
@@ -49865,7 +49865,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/widget-renderer/widget-renderer.test.ts",
-              "line": 610,
+              "line": 666,
               "test": "renders a mixed document accessibly",
               "target": "el",
               "state": "populated"
@@ -49885,7 +49885,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/widget-renderer/widget-renderer.test.ts",
-              "line": 587,
+              "line": 643,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -49902,7 +49902,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/widget-renderer/widget-renderer.test.ts",
-              "line": 586,
+              "line": 642,
               "kind": "320px allocation test signal"
             }
           ]
@@ -50202,35 +50202,35 @@
           "evidence": [
             {
               "file": "src/components/viewers/xml-viewer/xml-viewer.test.ts",
-              "line": 961,
+              "line": 982,
               "test": "is accessible with an expanded tree and copyable on",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/xml-viewer/xml-viewer.test.ts",
-              "line": 999,
+              "line": 1020,
               "test": "is accessible with the active-match prop themed",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/xml-viewer/xml-viewer.test.ts",
-              "line": 1068,
+              "line": 1089,
               "test": "is accessible with the non-active match outline color themed",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/xml-viewer/xml-viewer.test.ts",
-              "line": 1073,
+              "line": 1094,
               "test": "is accessible with the non-active match background themed to a contrast-safe color",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/xml-viewer/xml-viewer.test.ts",
-              "line": 1490,
+              "line": 1511,
               "test": "is accessible with highlights painted",
               "target": "el",
               "state": "populated"
@@ -50250,7 +50250,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/xml-viewer/xml-viewer.test.ts",
-              "line": 940,
+              "line": 961,
               "kind": "rendered RTL test signal"
             }
           ]

@@ -41,6 +41,15 @@ describe('parseStackTrace', () => {
     expect(new TextEncoder().encode(result.source).byteLength).to.be.at.most(STACK_TRACE_LIMITS.bytes);
     expect(result.source.length).to.be.at.most(STACK_TRACE_LIMITS.lineCharacters);
   });
+
+  it('preserves complete UTF-8 surrogate pairs while bounding trace input', () => {
+    const trace = 'Error: 💥\n    at explode (/app/💥.js:1:1)';
+    const result = parseStackTraceResult(trace, { internalPatterns: [] });
+
+    expect(result.source).to.equal(trace);
+    expect(result.truncated).to.equal(false);
+    expect(result.groups[0]?.frames[0]?.file).to.equal('/app/💥.js');
+  });
   it('parses a V8/JS trace with function-named frames', () => {
     const trace = [
       'TypeError: Cannot read properties of undefined',

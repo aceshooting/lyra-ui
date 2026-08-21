@@ -279,3 +279,47 @@ it('represents tool failures through domain error fields without a generic error
   expect(message?.parts?.map((part) => part.state)).to.deep.equal(['complete', 'complete']);
   expect(message?.parts?.[1]).to.deep.include({ type: 'tool-result', error: 'failed' });
 });
+
+it('honors a custom part limit without partially adapting oversized messages', () => {
+  const accepted = adaptAiSdkMessage({
+    id: 'within-limit',
+    role: 'assistant',
+    parts: [{ type: 'text', text: 'one' }],
+  }, { maxParts: 1 });
+  const rejected = adaptAiSdkMessage({
+    id: 'over-limit',
+    role: 'assistant',
+    parts: [{ type: 'text', text: 'one' }, { type: 'text', text: 'two' }],
+  }, { maxParts: 1 });
+
+  expect(accepted?.parts).to.have.lengthOf(1);
+  expect(rejected).to.equal(null);
+});
+
+it('preserves reasoning failures and source identifier label fallbacks', () => {
+  const message = adaptAiSdkMessage({
+    id: 'fallbacks',
+    role: 'assistant',
+    parts: [
+      { id: 'reasoning', type: 'reasoning', text: 'Unable to continue', state: 'output-error' },
+      { type: 'source-document', sourceId: 'provider-source' },
+    ],
+  });
+
+  expect(message?.parts?.[0]).to.deep.include({ type: 'reasoning', state: 'complete' });
+  expect(message?.parts?.[1]).to.deep.include({
+    id: 'reasoning:error',
+    type: 'error',
+    code: 'provider_part_error',
+  });
+  expect(message?.parts?.[2]).to.deep.nested.include({
+    'citation.sourceId': 'provider-source',
+    'citation.label': 'provider-source',
+  });
+});
+
+it('accepts an omitted parts collection and rejects non-record metadata', () => {
+  expect(adaptAiSdkMessage({ id: 'empty', role: 'user' })?.parts).to.deep.equal([]);
+  expect(adaptAiSdkMessage({ id: 'bad-metadata', role: 'user', metadata: null } as never))
+    .to.equal(null);
+});

@@ -167,6 +167,32 @@ describe('ZIP resource guard', () => {
       view.setUint32(end + 12, view.getUint32(end + 12, true) + 1, true);
     }
     await expectLimit(trailingDirectoryByte, /malformed/);
+
+    const paddedDirectory = await buildZip();
+    {
+      const { end } = offsets(paddedDirectory);
+      const expanded = new Uint8Array(paddedDirectory.byteLength + 1);
+      expanded.set(new Uint8Array(paddedDirectory, 0, end));
+      expanded.set(new Uint8Array(paddedDirectory, end), end + 1);
+      const movedEnd = end + 1;
+      const view = new DataView(expanded.buffer);
+      view.setUint32(movedEnd + 12, view.getUint32(movedEnd + 12, true) + 1, true);
+      await expectLimit(expanded.buffer, /malformed/);
+    }
+  });
+
+  it('rejects empty, null-containing, and invalid UTF-8 entry names', async () => {
+    for (const replacement of [0, 0xff]) {
+      const source = await buildZip();
+      const { central } = offsets(source);
+      new Uint8Array(source)[central + 46] = replacement;
+      await expectLimit(source, /invalid entry name/);
+    }
+
+    const empty = await buildZip();
+    const { central } = offsets(empty);
+    new DataView(empty).setUint16(central + 28, 0, true);
+    await expectLimit(empty, /invalid entry name/);
   });
 
   it('rejects ZIP64 entry fields and declared expanded sizes above the budget', async () => {
@@ -208,6 +234,15 @@ describe('ZIP resource guard', () => {
       new DataView(impossibleDataOffset).setUint16(local + 26, 0xffff, true);
     }
     await expectLimit(impossibleDataOffset, /malformed/);
+
+    const misplacedLocalHeader = await buildZip();
+    {
+      const { central } = offsets(misplacedLocalHeader);
+      new DataView(misplacedLocalHeader).setUint32(central + 42, 1, true);
+    }
+    expect(() => assertZipArchiveMetadataWithinLimits(misplacedLocalHeader, options))
+      .to.throw(LyraResourceLimitError, /malformed/);
+    await expectLimit(clone(misplacedLocalHeader), /malformed/);
   });
 
   it('rejects unsupported compression and inconsistent stored entry sizes', async () => {
@@ -226,13 +261,30 @@ describe('ZIP resource guard', () => {
       new DataView(inconsistent).setUint32(central + 24, 6, true);
     }
     await expectLimit(inconsistent, /inconsistent entry sizes/);
+
+    const measuredOverBudget = await buildZip('123456');
+    {
+      const { central } = offsets(measuredOverBudget);
+      new DataView(measuredOverBudget).setUint32(central + 24, 5, true);
+    }
+    await expectLimit(measuredOverBudget, /expanded test archive is too large/, {
+      maxUncompressedBytes: 5,
+    });
   });
 
   it('measures valid DEFLATE entries and rejects corrupt compressed data', async () => {
+    let inspectorClosed = false;
     await assertZipArchiveWithinLimits(await buildZip('compress me '.repeat(50), 'DEFLATE'), {
       ...options,
       maxUncompressedBytes: 1_024,
+      createInspector: () => ({
+        write: () => undefined,
+        close: () => {
+          inspectorClosed = true;
+        },
+      }),
     });
+    expect(inspectorClosed).to.equal(true);
 
     const corrupt = await buildZip('compress me '.repeat(20), 'DEFLATE');
     {

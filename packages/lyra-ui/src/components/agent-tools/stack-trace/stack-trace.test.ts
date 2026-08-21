@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './stack-trace.js';
 import type { LyraStackTrace } from './stack-trace.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 async function settleClipboard(el: LyraStackTrace): Promise<void> {
   await Promise.resolve();
@@ -88,6 +89,21 @@ describe('lr-stack-trace', () => {
     expect(toggle.getAttribute('aria-expanded')).to.equal('true');
   });
 
+  it('renders a single internal frame directly instead of hiding it behind a run toggle', async () => {
+    const singleInternal = [
+      'Error: direct internal frame',
+      '    at app (/app/src/app.js:1:1)',
+      '    at loader (node:internal/modules/cjs/loader:2:1)',
+      '    at finish (/app/src/end.js:3:1)',
+    ].join('\n');
+    const el = (await fixture(
+      html`<lr-stack-trace .trace=${singleInternal}></lr-stack-trace>`,
+    )) as LyraStackTrace;
+
+    expect(el.shadowRoot!.querySelector('[part="internal-toggle"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelectorAll('button[part="frame"]')).to.have.lengthOf(3);
+  });
+
   it('formats collapsed internal-frame counts with the effective locale', async () => {
     const el = (await fixture(
       html`<lr-stack-trace lang="ar-EG" .trace=${trace} collapse-internal></lr-stack-trace>`,
@@ -165,6 +181,21 @@ describe('lr-stack-trace', () => {
     expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.equal('Trace shortened');
   });
 
+  it('announces when a previously bounded trace becomes truncated', async () => {
+    const el = (await fixture(html`<lr-stack-trace
+      trace="Error: short"
+      .strings=${{ stackTraceLimit: 'Trace shortened after update' }}
+    ></lr-stack-trace>`)) as LyraStackTrace;
+    const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
+    const priorMessages = sink.children.length;
+
+    el.trace = 'x'.repeat(300_000);
+    await el.updateComplete;
+
+    expect(Array.from(sink.children).slice(priorMessages).map((child) => child.textContent))
+      .to.deep.equal(['Trace shortened after update']);
+  });
+
   it('owns an independent default internal-pattern array per instance', async () => {
     const first = (await fixture(html`<lr-stack-trace></lr-stack-trace>`)) as LyraStackTrace;
     const second = (await fixture(html`<lr-stack-trace></lr-stack-trace>`)) as LyraStackTrace;
@@ -187,6 +218,40 @@ describe('lr-stack-trace', () => {
       expect(event.detail).to.deep.equal({ ok: true, text: trace });
     } finally {
       if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
+  it('returns copy feedback to rest when its owner timer fires', async () => {
+    const el = (await fixture(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`)) as LyraStackTrace;
+    const clipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const originalSetTimeout = window.setTimeout;
+    const originalClearTimeout = window.clearTimeout;
+    let queued: (() => void) | undefined;
+    try {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: () => Promise.resolve() },
+      });
+      window.setTimeout = ((handler: TimerHandler) => {
+        if (typeof handler === 'function') queued = handler as () => void;
+        return 812;
+      }) as typeof window.setTimeout;
+      window.clearTimeout = (() => undefined) as typeof window.clearTimeout;
+      const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+
+      button.click();
+      await settleClipboard(el);
+      expect(button.textContent?.trim()).to.equal('Copied!');
+      expect(queued).to.be.a('function');
+
+      queued!();
+      await el.updateComplete;
+      expect(button.textContent?.trim()).to.equal('Copy');
+    } finally {
+      window.setTimeout = originalSetTimeout;
+      window.clearTimeout = originalClearTimeout;
+      if (clipboard) Object.defineProperty(navigator, 'clipboard', clipboard);
       else Reflect.deleteProperty(navigator, 'clipboard');
     }
   });
