@@ -65,6 +65,7 @@ describe('color-core parsing', () => {
   };
 
   it('rejects blank and unparsable input', () => {
+    expect(parseColor(null as unknown as string)).to.equal(null);
     expect(parseColor('')).to.equal(null);
     expect(parseColor('   ')).to.equal(null);
     expect(parseColor('not-a-color')).to.equal(null);
@@ -112,6 +113,16 @@ describe('color-core parsing', () => {
     expect(parseColor('inherit')).to.equal(null);
     expect(parseColor('currentColor')).to.equal(null);
     expect(parseColor('initial')).to.equal(null);
+  });
+
+  it('fails closed when a modern CSS color cannot acquire a canvas context', () => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = (() => null) as typeof original;
+    try {
+      expect(parseColor('lab(49% 19 29)')).to.equal(null);
+    } finally {
+      HTMLCanvasElement.prototype.getContext = original;
+    }
   });
 });
 

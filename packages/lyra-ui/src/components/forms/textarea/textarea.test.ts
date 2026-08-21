@@ -290,6 +290,27 @@ it("relays exactly one native InputEvent payload and one Event change plus their
   expect(seen[3].event instanceof CustomEvent).to.be.true;
 });
 
+it("contains stale native edit and focus events delivered during same-task disablement", async () => {
+  const el = (await fixture(
+    html`<lr-textarea value="original"></lr-textarea>`
+  )) as LyraTextarea;
+  const textarea = el.shadowRoot!.querySelector(
+    "textarea"
+  ) as HTMLTextAreaElement;
+  const aliases: string[] = [];
+  el.addEventListener("lr-input", () => aliases.push("lr-input"));
+  el.addEventListener("lr-change", () => aliases.push("lr-change"));
+
+  el.disabled = true;
+  textarea.value = "stale edit";
+  textarea.dispatchEvent(new InputEvent("input", { bubbles: true }));
+  textarea.dispatchEvent(new Event("change", { bubbles: true }));
+  textarea.dispatchEvent(new FocusEvent("focus"));
+
+  expect(el.value).to.equal("original");
+  expect(aliases).to.deep.equal([]);
+});
+
 it("fires lr-change on native change (blur-after-edit timing)", async () => {
   const el = (await fixture(html`<lr-textarea></lr-textarea>`)) as LyraTextarea;
   const textarea = el.shadowRoot!.querySelector(
@@ -879,6 +900,8 @@ describe("forwarding getters/setters/methods before first render", () => {
     expect(el.input === null).to.equal(true);
     expect(el.selectionStart).to.equal(null);
     expect(el.selectionEnd).to.equal(null);
+    expect(el.scrollPosition()).to.equal(undefined);
+    expect(el.scrollPosition({ top: 12, left: 4 })).to.equal(undefined);
     expect(() => {
       el.selectionStart = 2;
     }).to.not.throw();
@@ -1693,6 +1716,10 @@ describe("lr-textarea mapped Textarea parity surface", () => {
     el.value = "edited";
     form.reset();
     expect(el.value).to.equal("seed");
+
+    el.removeAttribute("default-value");
+    await el.updateComplete;
+    expect(el.defaultValue).to.equal("");
   });
 
   it("accepts filled/help-text and with-label/with-hint SSR aliases", async () => {

@@ -721,6 +721,16 @@ it("ignores click and keydown activation while disabled, and is not focusable", 
   expect(el.checked).to.be.false;
 });
 
+it("contains a synthetic focus delivered during same-task disablement", async () => {
+  const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  let relayed = 0;
+  el.addEventListener("focus", () => relayed++);
+  el.disabled = true;
+  base.dispatchEvent(new FocusEvent("focus"));
+  expect(relayed).to.equal(0);
+});
+
 it("is focusable (tabindex 0) when enabled", async () => {
   const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;

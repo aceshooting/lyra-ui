@@ -3141,6 +3141,37 @@ describe("lr-radio-group branch-coverage edge cases", () => {
     expect((group.querySelector("lr-radio") as LyraRadio).checked).to.be.false;
   });
 
+  it("restores a standalone radio's native default value when its value is set to null", async () => {
+    const radio = (await fixture(
+      html`<lr-radio name="choice" value="custom" checked>Choice</lr-radio>`
+    )) as LyraRadio;
+    (radio as unknown as { value: string | null }).value = null;
+    expect(radio.value).to.equal("on");
+    expect(radio.hasAttribute("value")).to.equal(false);
+    await radio.updateComplete;
+    expect(radio.getAttribute("value")).to.equal("on");
+  });
+
+  it("does not move focus when a fieldset disables the radio group in the same task", async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <button type="button">Elsewhere</button>
+        <fieldset>
+          <lr-radio-group label="Choice">
+            <lr-radio value="a">A</lr-radio>
+          </lr-radio-group>
+        </fieldset>
+      </div>
+    `);
+    const button = wrapper.querySelector("button")!;
+    const fieldset = wrapper.querySelector("fieldset")!;
+    const group = wrapper.querySelector("lr-radio-group") as LyraRadioGroup;
+    button.focus();
+    fieldset.disabled = true;
+    group.focus();
+    expect(document.activeElement === button).to.equal(true);
+  });
+
   it('navigates horizontally in plain LTR (no dir="rtl"), unlike the already-covered RTL case', async () => {
     const group = (await fixture(html`
       <lr-radio-group orientation="horizontal" label="Choice">

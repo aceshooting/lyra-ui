@@ -1085,6 +1085,19 @@ describe('lr-time-input segment editing edge cases', () => {
     expect(el.value, 'uppercase key and a hyphen recompute back to the am hour').to.equal('09:30');
   });
 
+  it('preserves midnight when changing the day period in 12-hour mode', async () => {
+    const el = await fixture<LyraTimeInput>(
+      html`<lr-time-input hour-format="12" value="00:30"></lr-time-input>`,
+    );
+    expect(segment(el, 'hour').textContent?.trim()).to.equal('12');
+    key(segment(el, 'dayPeriod'), 'p');
+    await el.updateComplete;
+    expect(el.value).to.equal('12:30');
+    key(segment(el, 'dayPeriod'), 'a');
+    await el.updateComplete;
+    expect(el.value).to.equal('00:30');
+  });
+
   it('clears an individual populated segment back to blank via Backspace', async () => {
     const el = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="24" value="10:15"></lr-time-input>`);
     key(segment(el, 'minute'), 'Backspace');

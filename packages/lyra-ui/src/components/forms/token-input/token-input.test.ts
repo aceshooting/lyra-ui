@@ -2442,6 +2442,25 @@ describe("editable tokens", () => {
     expect(emitted).to.equal(0);
   });
 
+  it('contains a stale editor input delivered during same-task disablement', async () => {
+    const el = (await fixture(
+      html`<lr-token-input editable .value=${['alpha']}></lr-token-input>`
+    )) as LyraTokenInput;
+    tokenLabels(el)[0].click();
+    await el.updateComplete;
+    const field = editor(el)!;
+    let relayed = 0;
+    el.addEventListener('input', () => relayed++);
+
+    el.disabled = true;
+    field.value = 'stale edit';
+    field.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+
+    expect((el as unknown as { editDraft: string }).editDraft).to.equal('');
+    expect(el.value).to.deep.equal(['alpha']);
+    expect(relayed).to.equal(0);
+  });
+
   it('contains a stale native focus on the token editor in the same task that disablement starts', async () => {
     const el = (await fixture(
       html`<lr-token-input editable .value=${['alpha']}></lr-token-input>`

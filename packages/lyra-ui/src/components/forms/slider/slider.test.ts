@@ -1707,6 +1707,18 @@ it("forwards host focus()/blur() to the internal thumb control", async () => {
   expect(el.shadowRoot!.activeElement === null).to.equal(true);
 });
 
+it("keeps public focus, blur, click, and step methods safe before first connection", async () => {
+  const el = document.createElement("lr-slider") as LyraSlider;
+  expect(() => {
+    el.focus();
+    el.blur();
+    el.click();
+    el.stepUp();
+    el.stepDown();
+  }).to.not.throw();
+  expect(el.shadowRoot === null).to.equal(true);
+});
+
 it("blurs the active range thumb and relays exactly one native pair, never lr-focus/lr-blur", async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div><lr-slider range min-value="20" max-value="80"></lr-slider></div>
