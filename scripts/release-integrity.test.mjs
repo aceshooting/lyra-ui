@@ -192,6 +192,114 @@ test('requires the exhaustive packed ATTW matrix in the stable release gate', ()
   );
 });
 
+test('requires complete fail-closed coverage shards before the stable build gate passes', () => {
+  const workflow = readFileSync(
+    path.join(repoRoot, '.github/workflows/ci.yml'),
+    'utf8'
+  );
+  const lyraPackage = JSON.parse(
+    readFileSync(path.join(repoRoot, 'packages/lyra-ui/package.json'), 'utf8')
+  );
+  const ciScript = readFileSync(path.join(repoRoot, 'scripts/ci.sh'), 'utf8');
+  const shardStart = workflow.indexOf('\n  build_and_coverage_coverage_shard:');
+  const mergeStart = workflow.indexOf('\n  build_and_coverage_coverage:');
+  const aggregateStart = workflow.indexOf('\n  build-and-coverage:');
+  const packedStart = workflow.indexOf('\n  packed_consumer_contract:');
+  assert.ok(
+    shardStart > 0 &&
+      mergeStart > shardStart &&
+      aggregateStart > mergeStart &&
+      packedStart > aggregateStart,
+    'CI must retain separate coverage shard, merge/floor, and stable aggregate jobs'
+  );
+
+  const shardJob = workflow.slice(shardStart, mergeStart);
+  const mergeJob = workflow.slice(mergeStart, aggregateStart);
+  const aggregateJob = workflow.slice(aggregateStart, packedStart);
+  assert.match(
+    shardJob,
+    /name: build-and-coverage \/ coverage \/ shard \$\{\{ matrix\.shard \}\}\/4/u
+  );
+  assert.match(shardJob, /needs: build_and_coverage_build/u);
+  assert.match(shardJob, /fail-fast: false/u);
+  assert.match(shardJob, /shard: \[1, 2, 3, 4\]/u);
+  assert.match(
+    shardJob,
+    /image: mcr\.microsoft\.com\/playwright:v[0-9.]+-noble/u
+  );
+  assert.match(
+    shardJob,
+    /name: lyra-ui-dist\s+path: packages\/lyra-ui\/dist/u
+  );
+  assert.match(
+    shardJob,
+    /node scripts\/coverage-shard-runner\.mjs --shard \$\{\{ matrix\.shard \}\}/u
+  );
+  assert.match(
+    shardJob,
+    /if: \$\{\{ always\(\) \}\}[\s\S]*?uses: actions\/upload-artifact@[0-9a-f]+[\s\S]*?name: lyra-ui-coverage-shard-\$\{\{ matrix\.shard \}\}[\s\S]*?path: packages\/lyra-ui\/coverage\/shards\/coverage-shard-\$\{\{ matrix\.shard \}\}[\s\S]*?if-no-files-found: error/u
+  );
+  assert.equal(
+    [...shardJob.matchAll(/uses: actions\/upload-artifact@/gu)].length,
+    1,
+    'each matrix worker must publish exactly one uniquely named shard artifact'
+  );
+  assert.doesNotMatch(
+    shardJob,
+    /coverage\/\.(?:shard|coverage)|coverage\/shards\/\.coverage/u,
+    'coverage artifacts must not depend on upload-artifact hidden-file behavior'
+  );
+
+  assert.match(mergeJob, /if: \$\{\{ always\(\) \}\}/u);
+  assert.match(mergeJob, /- build_and_coverage_coverage_shard\b/u);
+  for (const shard of [1, 2, 3, 4]) {
+    assert.match(
+      mergeJob,
+      new RegExp(
+        `uses: actions/download-artifact@[0-9a-f]+[\\s\\S]*?name: lyra-ui-coverage-shard-${shard}\\s+path: packages/lyra-ui/coverage/shards/coverage-shard-${shard}\\b`,
+        'u'
+      )
+    );
+  }
+  assert.equal(
+    [...mergeJob.matchAll(/uses: actions\/download-artifact@/gu)].length,
+    4,
+    'the merge job must download exactly four individually named shard artifacts'
+  );
+  assert.doesNotMatch(mergeJob, /pattern:|merge-multiple:/u);
+  assert.match(mergeJob, /node scripts\/coverage-shard-runner\.mjs --merge/u);
+  assert.match(
+    mergeJob,
+    /pnpm --filter @aceshooting\/lyra-ui check:coverage-floors/u
+  );
+  assert.match(
+    mergeJob,
+    /COVERAGE_SHARD_RESULT: \$\{\{ needs\.build_and_coverage_coverage_shard\.result \}\}/u
+  );
+  assert.match(
+    mergeJob,
+    /if \[\[ "\$COVERAGE_SHARD_RESULT" != "success" \]\]/u
+  );
+
+  for (const dependency of [
+    'build_and_coverage_coverage_shard',
+    'build_and_coverage_coverage',
+  ]) {
+    assert.match(aggregateJob, new RegExp(`- ${dependency}\\b`, 'u'));
+    assert.match(
+      aggregateJob,
+      new RegExp(`needs\\.${dependency}\\.result`, 'u')
+    );
+  }
+
+  assert.equal(
+    lyraPackage.scripts['test:coverage'],
+    'node scripts/coverage-shard-runner.mjs'
+  );
+  assert.match(ciScript, /@aceshooting\/lyra-ui test:coverage/u);
+  assert.doesNotMatch(ciScript, /coverage-shard-runner\.mjs --(?:shard|merge)/u);
+});
+
 test('normalizes the manually dispatched browser matrix through a closed allowlist', () => {
   assert.deepEqual(
     [

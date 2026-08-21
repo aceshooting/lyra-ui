@@ -97,8 +97,8 @@ the PR checks list tells you which of these to reproduce locally:
    `custom-elements.json` (e.g. "N custom elements") is self-verifying, a separately hand-bumped
    "components" number silently drifts every release.
 
-3. **`build-and-coverage`** — this is still the critical gate, but it is now a split matrix of
-   four dependent lanes plus a final aggregator:
+3. **`build-and-coverage`** — a dependency graph shares one build and fans the browser-heavy
+   coverage path across four hosted runners before a final stable aggregator:
 
    - `build_and_coverage_build` (`pnpm build`) uploads `packages/lyra-ui/dist/` as artifact.
    - `build_and_coverage_quality` (`pnpm --filter @aceshooting/lyra-ui check:component-quality:built`,
@@ -108,17 +108,38 @@ the PR checks list tells you which of these to reproduce locally:
      dist.
    - `build_and_coverage_hydration` (`pnpm --filter @aceshooting/lyra-ui test:hydration`) consumes
      the shared dist.
-   - `build_and_coverage_coverage` (`pnpm --filter @aceshooting/lyra-ui test:coverage`,
-     `pnpm --filter @aceshooting/lyra-ui check:coverage-floors`, non-fatal Codecov uploads)
-     consumes the shared dist.
+   - `build_and_coverage_coverage_shard` is a four-leg matrix. Every worker consumes the shared
+     dist, runs `node scripts/coverage-shard-runner.mjs --shard N` in the pinned Playwright image,
+     and uploads exactly one non-hidden `coverage/shards/coverage-shard-N` artifact. Artifact
+     upload runs even after a red browser result for diagnostics, but `if-no-files-found: error`
+     prevents an absent report from passing.
+   - `build_and_coverage_coverage` runs with `always()` after the matrix. It downloads all four
+     artifacts to their exact expected directories, invokes `--merge`, enforces
+     `check:coverage-floors` against the merged whole-suite report, and performs the non-fatal
+     Codecov coverage/JUnit uploads. The runner refuses a missing `coverage-final.json`,
+     `junit.xml`, or `test-files.json`, and proves the four test manifests are disjoint,
+     exhaustive, and the deterministic partition of the current inventory. The job separately
+     rejects any non-success matrix result, so mergeable reports from a failed test cannot mask
+     that failure.
 
-   Coverage instrumentation still runs one browser file at a time for determinism on high-core hosts.
-   This remains the coverage behavior that gates `check:coverage-floors`; only the scheduling changed to
-   free the long path from unrelated dist-dependent work. This is the one time lyra-ui's own Chromium
-   suite runs; a separate `pnpm test` would repeat the same files without coverage. `build_and_coverage_build`'s
-   `pnpm build` step still runs `check:build-artifacts`, which is chained inside the package's
-   `build` script. Browser-dependent lanes use the Playwright image pinned in the workflow, so they
-   do not install browser binaries or OS packages on each run.
+   Each coverage worker still runs one browser file at a time for determinism; only independent
+   workers run concurrently. The prior coverage step took 14m05s in the reference run, while its
+   four sequential browser shards took 2m52s, 3m56s, 3m22s, and 3m49s. Hosting those same shards
+   independently moves the expected `build-and-coverage` critical path from about 17 minutes to
+   roughly 7–8 minutes after fixed checkout/install/artifact overhead, making the roughly
+   nine-minute lint job the likely long pole. Four is the useful split: finer shards would add
+   another full runner bootstrap per slice and compete with the workflow's other matrices for the
+   public-runner concurrency cap.
+
+   The ordinary local `pnpm --filter @aceshooting/lyra-ui test:coverage` remains complete and
+   sequential: it runs all four shards, merges, enforces the same floors when followed by
+   `check:coverage-floors`, and cleans its shard scratch tree. `scripts/ci.sh` and `scripts/test.sh`
+   continue to call that default rather than the CI-only `--shard`/`--merge` modes. This is the one
+   time lyra-ui's own Chromium suite runs in push CI; a separate `pnpm test` would repeat the same
+   files without coverage. `build_and_coverage_build`'s `pnpm build` step still runs
+   `check:build-artifacts`, which is chained inside the package's `build` script. Browser-dependent
+   lanes use the Playwright image pinned in the workflow, so they do not install browser binaries
+   or OS packages on each run.
 
 4. **`packed-consumer`** — a stable aggregate over three independent phases. The contract lane
    needs `dist/` (the tarball's `files` list includes it) but nothing else `build-and-coverage`
@@ -297,7 +318,8 @@ processes by default, since each drives its own browser/process and the machine'
 otherwise sit idle running them one at a time. `./scripts/test.sh --serial` runs them one at a time
 instead, for lower-core machines. Each lane's own steps still run in order within that lane (for
 example the `chromium` lane is `check:component-quality:built` -> `test:ssr` -> `test:hydration` ->
-`test:coverage` -> `check:coverage-floors`, matching `build-and-coverage`'s order); a shared
+`test:coverage` -> `check:coverage-floors`, covering the same gates while retaining the default
+sequential coverage runner); a shared
 `pnpm build` runs once up front since every lane needs `dist/` for `package-entrypoints.test.ts`.
 Each lane's output is captured to its own log file (path printed at start) so concurrent runs don't
 interleave on the terminal; a failing lane's log is printed in full at the end.
@@ -461,10 +483,10 @@ after a `test:coverage` run has written `coverage/`) sets each metric to
 `floor(measured − margin)`, default margin 1.5 points, and records the measurement and date it used
 alongside the floors.
 
-- `pnpm --filter @aceshooting/lyra-ui check:coverage-floors` is the non-mutating mode, and runs in
-  CI immediately after `test:coverage`. It fails both ways: a floor **above** the measurement (the
-  suite cannot pass) and a floor more than 5 points **below** it (the floor stopped gating
-  anything).
+- `pnpm --filter @aceshooting/lyra-ui check:coverage-floors` is the non-mutating mode. Locally it
+  runs after `test:coverage`; CI runs it after the four raw shard artifacts pass fail-closed merge
+  validation. It fails both ways: a floor **above** the measurement (the suite cannot pass) and a
+  floor more than 5 points **below** it (the floor stopped gating anything).
 - `--write-floors` never lowers a floor without `--allow-lower`, so a coverage regression is an
   explicit line in the diff rather than a silent re-baseline by whoever last ran the command.
 - Why generated at all: the hand-edited floors had drifted to statements 75 / branches 65 /
