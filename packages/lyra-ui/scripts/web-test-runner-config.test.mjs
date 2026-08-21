@@ -8,10 +8,12 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const configUrl = pathToFileURL(resolve(packageDirectory, 'web-test-runner.config.js')).href;
 
-function runConfigInspection({ coverage = false, port, concurrency } = {}) {
+function runConfigInspection({ coverage = false, coverageReportDir, port, concurrency } = {}) {
   const environment = { ...process.env };
   if (coverage) environment.WTR_COVERAGE = '1';
   else delete environment.WTR_COVERAGE;
+  if (coverageReportDir === undefined) delete environment.WTR_COVERAGE_REPORT_DIR;
+  else environment.WTR_COVERAGE_REPORT_DIR = coverageReportDir;
   if (port === undefined) delete environment.WTR_PORT;
   else environment.WTR_PORT = port;
   if (concurrency === undefined) delete environment.WTR_CONCURRENCY;
@@ -25,6 +27,11 @@ function runConfigInspection({ coverage = false, port, concurrency } = {}) {
       port: config.port ?? null,
       mediaCommand: config.plugins.some((plugin) => plugin.name === 'lyra-media-command'),
       keyCommand: config.plugins.some((plugin) => plugin.name === 'send-keys-command'),
+      ${coverageReportDir === undefined ? '' : `coverageDetails: {
+        threshold: config.coverageConfig.threshold ?? null,
+        reportDir: config.coverageConfig.reportDir,
+        reporters: config.coverageConfig.reporters,
+      },`}
     }));
   `;
   return spawnSync(process.execPath, ['--input-type=module', '--eval', source], {
@@ -54,6 +61,15 @@ test('caps coverage browser sessions without changing ordinary test concurrency'
     port: null,
     mediaCommand: true,
     keyCommand: true,
+  });
+});
+
+test('writes a shard raw report without applying the full-suite threshold early', () => {
+  const reportDir = 'coverage/shards/coverage-shard-2';
+  assert.deepEqual(inspectConfig({ coverage: true, coverageReportDir: reportDir }).coverageDetails, {
+    threshold: null,
+    reportDir,
+    reporters: ['lcovonly', 'json-summary', 'json'],
   });
 });
 
