@@ -5160,8 +5160,20 @@ it("tints the tag remove button on hover and deepens that tint while it is press
   const rest = getComputedStyle(remove).backgroundColor;
   try {
     await sendMouse({ type: "move", position: centre });
+    await waitUntil(
+      () =>
+        remove.matches(":hover") &&
+        getComputedStyle(remove).backgroundColor !== rest,
+      "the tag remove button never painted its hovered tint"
+    );
     const hovered = getComputedStyle(remove).backgroundColor;
     await sendMouse({ type: "down" });
+    await waitUntil(
+      () =>
+        remove.matches(":active") &&
+        getComputedStyle(remove).backgroundColor !== hovered,
+      "the tag remove button never painted its pressed tint"
+    );
     const pressed = getComputedStyle(remove).backgroundColor;
     await sendMouse({ type: "up" });
     expect(

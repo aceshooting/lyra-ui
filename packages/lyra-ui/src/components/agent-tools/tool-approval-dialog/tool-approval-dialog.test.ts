@@ -1,4 +1,4 @@
-import { fixture, expect, oneEvent, html } from '@open-wc/testing';
+import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import './tool-approval-dialog.js';
 import type { LyraToolApprovalDialog } from './tool-approval-dialog.js';
 import type { LyraJsonViewer } from '../../utility/json-viewer/json-viewer.js';
@@ -224,6 +224,10 @@ describe('editing', () => {
         type: 'move',
         position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
       });
+      await waitUntil(
+        () => ta.matches(':hover') && getComputedStyle(ta).borderTopColor === 'rgb(1, 2, 3)',
+        'the args editor never painted its hovered border',
+      );
       expect(getComputedStyle(ta).borderTopColor).to.equal('rgb(1, 2, 3)');
     } finally {
       await resetMouse();
@@ -254,6 +258,10 @@ describe('editing', () => {
         type: 'move',
         position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
       });
+      await waitUntil(
+        () => ta.matches(':hover') && getComputedStyle(ta).borderTopColor === 'rgb(10, 20, 30)',
+        'the hovered invalid editor never retained its semantic border',
+      );
       expect(getComputedStyle(ta).borderTopColor).to.equal('rgb(10, 20, 30)');
     } finally {
       await resetMouse();

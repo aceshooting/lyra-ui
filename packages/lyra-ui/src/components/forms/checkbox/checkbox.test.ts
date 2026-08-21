@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from "@open-wc/testing";
+import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import type { PropertyValues } from "lit";
 import "./checkbox.js";
 import type { LyraCheckbox } from "./checkbox.js";
@@ -1789,6 +1789,12 @@ describe("lr-checkbox hover and press feedback", () => {
     expect(getComputedStyle(box).boxShadow, "no ring at rest").to.equal("none");
     try {
       await sendMouse({ type: "move", position: centerOf(base) });
+      await waitUntil(
+        () =>
+          base.matches(":hover") &&
+          getComputedStyle(box).borderTopColor !== restingBorder,
+        "the checkbox never painted its hovered border"
+      );
       expect(
         getComputedStyle(box).borderTopColor,
         "hover moves the border"
@@ -1798,6 +1804,12 @@ describe("lr-checkbox hover and press feedback", () => {
         "hover alone must not ring"
       ).to.equal("none");
       await sendMouse({ type: "down" });
+      await waitUntil(
+        () =>
+          base.matches(":active") &&
+          getComputedStyle(box).boxShadow !== "none",
+        "the checkbox never painted its pressed ring"
+      );
       expect(
         getComputedStyle(box).boxShadow,
         "pressed rings the box"
@@ -1820,8 +1832,21 @@ describe("lr-checkbox hover and press feedback", () => {
     const box = el.shadowRoot!.querySelector('[part~="box"]') as HTMLElement;
     try {
       await sendMouse({ type: "move", position: centerOf(base) });
+      await waitUntil(
+        () =>
+          base.matches(":hover") &&
+          getComputedStyle(box).borderTopColor === "rgb(1, 2, 3)",
+        "the checkbox never painted its themed hover border"
+      );
       expect(getComputedStyle(box).borderTopColor).to.equal("rgb(1, 2, 3)");
       await sendMouse({ type: "down" });
+      await waitUntil(
+        () =>
+          base.matches(":active") &&
+          getComputedStyle(box).borderTopColor === "rgb(4, 5, 6)" &&
+          getComputedStyle(box).boxShadow.includes("rgb(7, 8, 9)"),
+        "the checkbox never painted its themed pressed state"
+      );
       expect(getComputedStyle(box).borderTopColor).to.equal("rgb(4, 5, 6)");
       expect(getComputedStyle(box).boxShadow).to.contain("rgb(7, 8, 9)");
     } finally {

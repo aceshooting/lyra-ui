@@ -4992,9 +4992,21 @@ describe("lr-select hover and press feedback", () => {
       const resting = getComputedStyle(trigger).backgroundColor;
       try {
         await sendMouse({ type: "move", position: centerOf(trigger) });
+        await waitUntil(
+          () =>
+            trigger.matches(":hover") &&
+            getComputedStyle(trigger).backgroundColor !== resting,
+          `${appearance} trigger never painted its hovered background`
+        );
         const hovered = getComputedStyle(trigger).backgroundColor;
         expect(hovered, `${appearance} hover vs resting`).to.not.equal(resting);
         await sendMouse({ type: "down" });
+        await waitUntil(
+          () =>
+            trigger.matches(":active") &&
+            getComputedStyle(trigger).backgroundColor !== hovered,
+          `${appearance} trigger never painted its pressed background`
+        );
         expect(
           getComputedStyle(trigger).backgroundColor,
           `${appearance} pressed vs hovered`
@@ -5027,10 +5039,22 @@ describe("lr-select hover and press feedback", () => {
     expect(getComputedStyle(trigger).borderTopColor).to.equal("rgb(7, 8, 9)");
     try {
       await sendMouse({ type: "move", position: centerOf(trigger) });
+      await waitUntil(
+        () =>
+          trigger.matches(":hover") &&
+          getComputedStyle(trigger).backgroundColor === "rgb(1, 2, 3)",
+        "the select trigger never painted its themed hover background"
+      );
       expect(getComputedStyle(trigger).backgroundColor).to.equal(
         "rgb(1, 2, 3)"
       );
       await sendMouse({ type: "down" });
+      await waitUntil(
+        () =>
+          trigger.matches(":active") &&
+          getComputedStyle(trigger).backgroundColor === "rgb(4, 5, 6)",
+        "the select trigger never painted its themed pressed background"
+      );
       expect(getComputedStyle(trigger).backgroundColor).to.equal(
         "rgb(4, 5, 6)"
       );
