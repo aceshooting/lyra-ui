@@ -4815,6 +4815,42 @@ describe("legendStops", () => {
       .true;
   });
 
+  it('skips an unchanged clone-owned legend repaint but detects mutation before reassignment', async () => {
+    const source = [
+      { value: 0, color: 'rgb(255, 0, 0)', label: 'low' },
+      { value: 9, color: 'rgb(0, 0, 255)', label: 'high' },
+    ];
+    const el = await fixture<LyraHeatmap>(html`
+      <lr-heatmap
+        .legendStops=${source}
+        .data=${{
+          kind: 'matrix',
+          rowLabels: ['a'],
+          colLabels: ['x', 'y'],
+          values: [[3, 9]],
+        }}
+      ></lr-heatmap>
+    `);
+    await el.updateComplete;
+    let requestedDraws = 0;
+    (el as unknown as { requestDraw: () => void }).requestDraw = () => {
+      requestedDraws += 1;
+    };
+
+    el.legendStops = source;
+    await el.updateComplete;
+    expect(requestedDraws).to.equal(0);
+
+    source[0]!.label = 'changed';
+    el.legendStops = source;
+    await el.updateComplete;
+    expect(requestedDraws).to.equal(1);
+    expect(el.legendStops![0]!.label).to.equal('changed');
+
+    source[0]!.label = 'changed again';
+    expect(el.legendStops![0]!.label).to.equal('changed');
+  });
+
   it("renders a caption-only stop (no `color`) with its label and no swatch element at all", async () => {
     const el = (await fixture(html`
       <lr-heatmap

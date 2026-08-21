@@ -9426,7 +9426,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "loadMaplibre",
       "kind": "function",
-      "fingerprint": "2a8074a325b26138506c",
+      "fingerprint": "982c0b9e7a83a248cc96",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9442,7 +9442,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreGeoJsonDiff",
       "kind": "interface",
-      "fingerprint": "1a09219c9c55ee8ee786",
+      "fingerprint": "e99160f03880ce0d052f",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9458,7 +9458,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreGeoJsonSource",
       "kind": "interface",
-      "fingerprint": "ba852f53ffdf23a8473d",
+      "fingerprint": "0c2c862cc0b6e27c586b",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9474,7 +9474,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreMapCapability",
       "kind": "interface",
-      "fingerprint": "adf1abc2629d5bf27311",
+      "fingerprint": "00bcb2108ac272bd0f3c",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9490,7 +9490,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreMarkerCapability",
       "kind": "interface",
-      "fingerprint": "430c971590970f4aaf87",
+      "fingerprint": "9ae61b1549d53f923b63",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9506,7 +9506,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MaplibreModule",
       "kind": "interface",
-      "fingerprint": "bc42ed17ce4c787c9df8",
+      "fingerprint": "556a99dc7378a818fe9c",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9538,7 +9538,7 @@
       "module": "src/components/media/map/map.class.ts",
       "exportName": "buildGeoJsonPropertyDiff",
       "kind": "function",
-      "fingerprint": "b012d9629a78240243a9",
+      "fingerprint": "c0bc8f0e1cecfd29f277",
       "routes": [
         "src/components/lr-map.ts",
         "src/components/media/index.ts",
