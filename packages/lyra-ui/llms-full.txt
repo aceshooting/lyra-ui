@@ -4165,6 +4165,48 @@ Filterable single/multi-select combining a text input with a listbox. Mirrors th
 `<wa-combobox>` API under the `lr-` prefix. **Form-associated** (hand-rolled internals, not the
 shared `FormAssociated` mixin — see gotchas).
 
+**First-interaction registration.** Where initial-route weight is stricter than a static combobox
+registration allows, keep a labelled native `<input list>` as the working pre-JavaScript control
+and import only the granular combobox registration on its first focus. Copy the native value after
+the import resolves so typing that happens while the chunk is in flight is not lost, then transfer
+focus explicitly — the browser does not replay the focus event after custom-element upgrade:
+
+```html
+<div id="country-fallback">
+  <label for="country-native">Country</label>
+  <input id="country-native" name="country" list="country-options">
+  <datalist id="country-options"><option value="France"></option></datalist>
+</div>
+<lr-combobox id="country-enhanced" name="country" label="Country" hidden>
+  <lr-option value="France">France</lr-option>
+</lr-combobox>
+<script type="module">
+  const fallback = document.querySelector("#country-fallback");
+  const input = document.querySelector("#country-native");
+  const combobox = document.querySelector("#country-enhanced");
+  let registration;
+  input.addEventListener("focus", async () => {
+    if (!combobox.hidden) return;
+    registration ??= import(
+      "@aceshooting/lyra-ui/components/forms/combobox/combobox.js"
+    ).catch((error) => {
+      registration = undefined; // let a later interaction retry
+      throw error;
+    });
+    await registration;
+    await customElements.whenDefined("lr-combobox");
+    combobox.value = input.value;
+    fallback.hidden = true;
+    combobox.hidden = false;
+    combobox.focus();
+  });
+</script>
+```
+
+Leave the native control in place if registration fails. This pattern preserves the initial shell;
+the full form-label, option, overlay, and first-open positioning contracts arrive in deferred
+chunks instead of being weakened in a separate partial combobox implementation.
+
 An `lr-option` row remains bounded by its owning listbox: the default label ellipsizes and each
 `start`/`end` (or `prefix`/`suffix`) adornment is capped at 40% of the row. Unbroken metadata
 therefore cannot widen a 320px LTR or RTL picker.
@@ -18952,6 +18994,45 @@ from the shared positioner and caps its dimensions to the measured available spa
 ## `lr-popover`
 
 A click-triggered, light-dismiss floating surface positioned with the shared Floating UI positioner.
+
+**First-interaction registration.** A performance-sensitive navigation shell can keep a native
+`<details>` disclosure working before JavaScript, then load only the granular popover registration
+when that fallback first opens. The interaction that starts an async import is not replayed after
+the custom element upgrades, so finish the handoff explicitly with `show()`:
+
+```html
+<details id="account-fallback">
+  <summary>Account</summary>
+  <nav aria-label="Account"><a href="/profile">Profile</a></nav>
+</details>
+<lr-popover id="account-popover" popup-role="none" hidden>
+  <button slot="trigger">Account</button>
+  <nav aria-label="Account"><a href="/profile">Profile</a></nav>
+</lr-popover>
+<script type="module">
+  const fallback = document.querySelector("#account-fallback");
+  const popover = document.querySelector("#account-popover");
+  let registration;
+  fallback.addEventListener("toggle", async () => {
+    if (!fallback.open || !popover.hidden) return;
+    registration ??= import(
+      "@aceshooting/lyra-ui/components/overlays/overlay/popover.js"
+    ).catch((error) => {
+      registration = undefined; // let a later interaction retry
+      throw error;
+    });
+    await registration;
+    await customElements.whenDefined("lr-popover");
+    fallback.hidden = true;
+    popover.hidden = false;
+    await popover.show();
+  });
+</script>
+```
+
+This keeps the fallback's markup and semantics in the initial document. The registration, Lyra
+base, nonmodal stack, and first-open positioning runtime remain outside that initial module graph.
+If the import fails, leave the native disclosure visible and usable.
 
 **Properties:**
 

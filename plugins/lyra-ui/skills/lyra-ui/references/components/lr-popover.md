@@ -17,6 +17,45 @@
 
 A click-triggered, light-dismiss floating surface positioned with the shared Floating UI positioner.
 
+**First-interaction registration.** A performance-sensitive navigation shell can keep a native
+`<details>` disclosure working before JavaScript, then load only the granular popover registration
+when that fallback first opens. The interaction that starts an async import is not replayed after
+the custom element upgrades, so finish the handoff explicitly with `show()`:
+
+```html
+<details id="account-fallback">
+  <summary>Account</summary>
+  <nav aria-label="Account"><a href="/profile">Profile</a></nav>
+</details>
+<lr-popover id="account-popover" popup-role="none" hidden>
+  <button slot="trigger">Account</button>
+  <nav aria-label="Account"><a href="/profile">Profile</a></nav>
+</lr-popover>
+<script type="module">
+  const fallback = document.querySelector("#account-fallback");
+  const popover = document.querySelector("#account-popover");
+  let registration;
+  fallback.addEventListener("toggle", async () => {
+    if (!fallback.open || !popover.hidden) return;
+    registration ??= import(
+      "@aceshooting/lyra-ui/components/overlays/overlay/popover.js"
+    ).catch((error) => {
+      registration = undefined; // let a later interaction retry
+      throw error;
+    });
+    await registration;
+    await customElements.whenDefined("lr-popover");
+    fallback.hidden = true;
+    popover.hidden = false;
+    await popover.show();
+  });
+</script>
+```
+
+This keeps the fallback's markup and semantics in the initial document. The registration, Lyra
+base, nonmodal stack, and first-open positioning runtime remain outside that initial module graph.
+If the import fails, leave the native disclosure visible and usable.
+
 **Properties:**
 
 - `open: boolean = false` (reflected) — assigning it runs the same `lr-show`/`lr-hide` lifecycle as
