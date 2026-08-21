@@ -7,7 +7,7 @@ import {
   oneEvent,
   waitUntil,
 } from '@open-wc/testing';
-import type { PropertyValues } from 'lit';
+import { render, type PropertyValues } from 'lit';
 import './map.js';
 import { LyraMap } from './map.js';
 import { buildGeoJsonPropertyDiff } from './map.class.js';
@@ -3294,6 +3294,9 @@ describe('continuous choropleth legend', () => {
   it('sorts stops ascending and drops unusable ones', async () => {
     const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
     el.legendGradient = [
+      null,
+      [50],
+      [75, 42],
       [100, '#08306b'],
       [Number.NaN, '#ff0000'],
       [0, '#f7fbff'],
@@ -3304,6 +3307,10 @@ describe('continuous choropleth legend', () => {
       el.legendGradient.map(([value]) => value),
       'sorted ascending, non-finite and unparsable-colour stops removed'
     ).to.deep.equal([0, 100]);
+
+    el.legendGradient = null as never;
+    await el.updateComplete;
+    expect(el.legendGradient).to.deep.equal([]);
   });
 
   it('renders no bar for fewer than two usable stops, since a flat block describes nothing', async () => {
@@ -3727,6 +3734,103 @@ describe('incremental GeoJSON updates', () => {
     expect((diffs[0] as { add?: unknown[] }).add).to.have.length(1);
     expect((diffs[1] as { remove?: unknown[] }).remove).to.deep.equal(['b']);
   });
+
+  it('keeps incremental data updates when Lit rebinds unchanged map collections by identity', async () => {
+    const mapStyle = LOCAL_STYLE;
+    const center = [6, 49] as const;
+    let choropleth = {
+      sourceId: 'timeline-regions',
+      geojson: collection(1),
+      field: 'value',
+      stops: [[0, '#000000'], [10, '#ffffff']] as const,
+    };
+    let dataLayers = [{ sourceId: 'timeline-points', geojson: collection(1) }];
+    const mount = document.createElement('div');
+    const view = () => html`
+      <lr-map
+        .mapStyle=${mapStyle}
+        .center=${center}
+        .choropleth=${choropleth}
+        .dataLayers=${dataLayers}
+      ></lr-map>
+    `;
+
+    // Render while detached so the instance loader can be replaced before connectedCallback.
+    // Re-rendering this same template below exercises Lit's real declarative property writes.
+    render(view(), mount);
+    const el = mount.querySelector('lr-map') as LyraMap;
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () =>
+      new Promise(() => {});
+    document.body.append(mount);
+
+    try {
+      await el.updateComplete;
+      let setStyleCalls = 0;
+      let setDataCalls = 0;
+      let updateDataCalls = 0;
+      let setCenterCalls = 0;
+      const sources = new Map<string, {
+        data: unknown;
+        setData(value: unknown): void;
+        updateData(diff: unknown): void;
+      }>();
+      const layers = new Map<string, Record<string, unknown>>();
+      const map = {
+        once: () => map,
+        setStyle: () => {
+          setStyleCalls += 1;
+          return map;
+        },
+        setCenter: () => {
+          setCenterCalls += 1;
+          return map;
+        },
+        getSource: (id: string) => sources.get(id),
+        addSource: (id: string, spec: { data: unknown }) => {
+          const source = {
+            data: spec.data,
+            setData(value: unknown) {
+              setDataCalls += 1;
+              this.data = value;
+            },
+            updateData(_diff: unknown) {
+              updateDataCalls += 1;
+            },
+          };
+          sources.set(id, source);
+        },
+        removeSource: (id: string) => sources.delete(id),
+        getLayer: (id: string) => layers.get(id),
+        addLayer: (layer: Record<string, unknown>) => layers.set(String(layer['id']), layer),
+        removeLayer: (id: string) => layers.delete(id),
+        setPaintProperty: () => map,
+        getStyle: () => ({ layers: [] }),
+        getCanvas: () => document.createElement('canvas'),
+      };
+      const privateMap = el as unknown as {
+        _map: unknown;
+        _styleLoaded: boolean;
+        applyChoropleth(): void;
+        applyDataLayers(): void;
+      };
+      privateMap._map = map;
+      privateMap._styleLoaded = true;
+      privateMap.applyDataLayers();
+      privateMap.applyChoropleth();
+
+      choropleth = { ...choropleth, geojson: collection(2) };
+      dataLayers = [{ ...dataLayers[0]!, geojson: collection(2) }];
+      render(view(), mount);
+      await el.updateComplete;
+
+      expect(setStyleCalls, 'the unchanged style must not win the update branch').to.equal(0);
+      expect(setCenterCalls, 'the unchanged tuple must remain referentially stable').to.equal(0);
+      expect(setDataCalls, 'neither source should be fully replaced').to.equal(0);
+      expect(updateDataCalls, 'choropleth and dataLayers each update incrementally').to.equal(2);
+    } finally {
+      mount.remove();
+    }
+  });
 });
 
 // `maxBounds` regression coverage. Both halves below shipped broken in 11.2.0 and were reported
@@ -3916,6 +4020,39 @@ describe('dataLayers clustering and heatmap', () => {
       'get',
       'point_count_abbreviated',
     ]);
+  });
+
+  it('filters malformed cluster font fallbacks while preserving the usable font order', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
+    el.dataLayers = entry({
+      cluster: {
+        countFont: ['Inter', '', 42, 'Noto Sans'],
+      },
+    });
+    await el.updateComplete;
+
+    const sourceId = dataLayerResourceId(el, 'pins');
+    expect(layers.get(`${sourceId}-cluster-count`)!.layout!['text-font']).to.deep.equal([
+      'Inter',
+      'Noto Sans',
+    ]);
+  });
+
+  it('omits a hostile data-layer record without aborting later valid layers', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { sources } = stubMaplibreMap(el);
+    const hostile = new Proxy({}, {
+      get(_target, property): never {
+        throw new Error(`hostile ${String(property)} getter`);
+      },
+    });
+    el.dataLayers = [hostile, ...entry({})] as unknown as LyraMap['dataLayers'];
+    await el.updateComplete;
+
+    const sourceId = dataLayerResourceId(el, 'pins');
+    expect(sourceId).to.not.equal('');
+    expect(sources.has(sourceId)).to.be.true;
   });
 
   it('emits step expressions for cluster radius and colour keyed on point_count', async () => {

@@ -326,6 +326,50 @@ it("uses the same bounded overscan fallback for direct property assignments", as
   }
 });
 
+it('restores overscan and row-height defaults when their attributes are removed', async () => {
+  const el = await fixture<LyraVirtualList>(html`
+    <lr-virtual-list
+      overscan="2"
+      row-height="40"
+      .items=${[1, 2, 3]}
+      .renderItem=${renderText}
+    ></lr-virtual-list>
+  `);
+  el.removeAttribute('overscan');
+  el.removeAttribute('row-height');
+  await el.updateComplete;
+
+  expect(el.overscan).to.equal(6);
+  expect(el.rowHeight).to.equal('auto');
+});
+
+it('computes a bounded first window before a viewport can be measured', () => {
+  const el = document.createElement('lr-virtual-list') as LyraVirtualList;
+  el.items = Array.from({ length: 20 }, (_, index) => index);
+  el.overscan = 3;
+  const internals = el as unknown as {
+    viewportHeight: number;
+    renderUnmeasuredWindow: boolean;
+    recomputeOffsets(): void;
+    computeRange(): void;
+    visibleStart: number;
+    visibleEnd: number;
+    renderStart: number;
+    renderEnd: number;
+  };
+  internals.viewportHeight = 0;
+  internals.renderUnmeasuredWindow = true;
+  internals.recomputeOffsets();
+  internals.computeRange();
+
+  expect([
+    internals.visibleStart,
+    internals.visibleEnd,
+    internals.renderStart,
+    internals.renderEnd,
+  ]).to.deep.equal([0, 0, 0, 3]);
+});
+
 it('uses role="list"/"listitem" (not listbox/option) and reflects the real item index via aria-setsize/aria-posinset', async () => {
   const items = Array.from({ length: 100 }, (_, i) => i);
   const el = (await fixture(

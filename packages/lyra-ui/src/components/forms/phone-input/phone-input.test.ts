@@ -1110,6 +1110,7 @@ it('rejects malformed catalog rows and hostile getters without aborting the rema
         { code: 'LU' },
         hostile,
         { code: 'FR', callingCode: 'not-a-code' },
+        { code: 'DE', callingCode: '49', label: 42 },
         { code: 'be', callingCode: '+32' },
       ] as unknown as Array<{ code: string; callingCode: string }>}
     ></lr-phone-input>
@@ -1120,6 +1121,24 @@ it('rejects malformed catalog rows and hostile getters without aborting the rema
   expect([...select.options].map((option) => option.value)).to.deep.equal(['BE']);
   expect(el.country).to.equal('BE');
   expect(el.shadowRoot!.querySelector('[part="calling-code"]')!.textContent!.trim()).to.equal('+32');
+});
+
+it('fails closed when a country catalog exposes a hostile length getter', async () => {
+  const hostileLength = new Proxy([], {
+    get(target, property, receiver) {
+      if (property === 'length') throw new Error('hostile catalog length');
+      return Reflect.get(target, property, receiver);
+    },
+  }) as unknown as LyraPhoneNumberAdapter['countries'];
+  const el = await fixture<LyraPhoneInput>(html`
+    <lr-phone-input label="Phone number" .countries=${hostileLength}></lr-phone-input>
+  `);
+  await el.updateComplete;
+
+  const select = el.shadowRoot!.querySelector<HTMLSelectElement>('[part="country-select"]')!;
+  expect([...select.options].map((option) => option.value)).to.deep.equal(['']);
+  expect(el.country).to.equal('');
+  expect(select.disabled).to.be.true;
 });
 
 it('falls back to the raw code if Intl.DisplayNames.prototype.of ever returns a nullish value', async () => {
@@ -1141,6 +1160,28 @@ it('falls back to the raw code if Intl.DisplayNames.prototype.of ever returns a 
     // `getDisplayNames(...).of('LU')` was stubbed to return `undefined`; the
     // `?? row.code` fallback in `countryName()` must still resolve to 'LU'
     // rather than rendering "undefined".
+    expect(select.options[0]!.textContent).to.equal('LU (+352)');
+  } finally {
+    Intl.DisplayNames.prototype.of = original;
+  }
+});
+
+it('falls back to the raw code if Intl.DisplayNames throws for a country', async () => {
+  const original = Intl.DisplayNames.prototype.of;
+  Intl.DisplayNames.prototype.of = function (this: Intl.DisplayNames, code: string) {
+    if (code === 'LU') throw new RangeError('region data unavailable');
+    return original.call(this, code);
+  };
+  try {
+    const el = await fixture<LyraPhoneInput>(html`
+      <lr-phone-input
+        label="Phone number"
+        default-country="LU"
+        .countries=${[{ code: 'LU', callingCode: '352' }]}
+      ></lr-phone-input>
+    `);
+    await el.updateComplete;
+    const select = el.shadowRoot!.querySelector<HTMLSelectElement>('[part="country-select"]')!;
     expect(select.options[0]!.textContent).to.equal('LU (+352)');
   } finally {
     Intl.DisplayNames.prototype.of = original;
@@ -1240,6 +1281,30 @@ it('fails closed on unknown discriminators and hostile parse-result getters', as
     expect(el.value).to.equal('');
     expect(el.validity.typeMismatch).to.be.true;
   }
+});
+
+it('rejects non-string formatted and country fields returned by an adapter', async () => {
+  const results: unknown[] = [
+    { status: 'incomplete', formatted: 42 },
+    { status: 'invalid', formatted: 'adapter text', country: 42 },
+  ];
+  const malformedAdapter = {
+    parse: () => results.shift(),
+  } as unknown as LyraPhoneNumberAdapter;
+  const el = await fixture<LyraPhoneInput>(html`
+    <lr-phone-input label="Phone number" .adapter=${malformedAdapter}></lr-phone-input>
+  `);
+
+  el.input!.value = 'first';
+  el.input!.dispatchEvent(new InputEvent('input', { bubbles: true }));
+  expect(el.phoneStatus).to.equal('invalid');
+  expect(el.inputValue).to.equal('first');
+
+  el.input!.value = 'second';
+  el.input!.dispatchEvent(new InputEvent('input', { bubbles: true }));
+  expect(el.phoneStatus).to.equal('invalid');
+  expect(el.inputValue).to.equal('adapter text');
+  expect(el.country).to.equal('');
 });
 
 it('forwards readonly/autofocus to the telephone input and locks every user mutation', async () => {

@@ -3714,6 +3714,19 @@ describe('scale="logarithmic"', () => {
     ).to.be.true;
   });
 
+  it('uses finite baseline geometry when the complete logarithmic domain is non-positive', async () => {
+    const el = await build('logarithmic', 'bar', [-100, -10, -1]);
+    await aTimeout(0);
+    const bars = Array.from(el.shadowRoot!.querySelectorAll('[part="bar"]'));
+    const geometry = bars.flatMap((bar) => [
+      Number.parseFloat(bar.getAttribute('y') ?? 'NaN'),
+      Number.parseFloat(bar.getAttribute('height') ?? 'NaN'),
+    ]);
+    expect(bars).to.have.length(3);
+    expect(geometry.every(Number.isFinite)).to.be.true;
+    expect(geometry.every((value) => value >= 0)).to.be.true;
+  });
+
   it('applies to line series and their gridlines, not only bars', async () => {
     // A log axis whose lines or gridlines stayed linear would be actively misleading.
     const el = await build('logarithmic', 'line', [1, 10, 100, 1000]);

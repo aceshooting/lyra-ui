@@ -156,6 +156,43 @@ it('renders one roving tab stop and wraps Arrow navigation', async () => {
   expect(document.activeElement === first).to.equal(true);
 });
 
+it('activates the focused item with Enter and Space through the menu controller', async () => {
+  const menu = await fixture<LyraMenu>(basic());
+  const [first, second] = ownItems(menu);
+  const selected: string[] = [];
+  menu.addEventListener('lr-select', (event) => {
+    selected.push((event as CustomEvent<{ item: LyraMenuItem }>).detail.item.value);
+  });
+
+  first.focus();
+  const enter = press(first, 'Enter');
+  second.focus();
+  const space = press(second, ' ');
+
+  expect(enter.defaultPrevented).to.be.true;
+  expect(space.defaultPrevented).to.be.true;
+  expect(selected).to.deep.equal(['rename', 'duplicate']);
+});
+
+it('treats Enter on a submenu parent as disclosure activation rather than selection', async () => {
+  const menu = await fixture<LyraMenu>(nested());
+  const share = byId<LyraMenuItem>(menu, 'share');
+  const child = byId<LyraMenu>(menu, 'share-menu');
+  let selections = 0;
+  menu.addEventListener('lr-select', () => {
+    selections += 1;
+  });
+
+  share.focus();
+  const enter = press(share, 'Enter');
+  await settle(menu, child);
+
+  expect(enter.defaultPrevented).to.be.true;
+  expect(share.submenuOpen).to.be.true;
+  expect(document.activeElement?.id).to.equal('email');
+  expect(selections).to.equal(0);
+});
+
 it('skips disabled, hidden, aria-hidden, and inert items', async () => {
   const menu = await fixture<LyraMenu>(html`
     <lr-menu label="Actions">
