@@ -7546,7 +7546,7 @@
           "evidence": [
             {
               "file": "src/components/forms/checkbox/checkbox.test.ts",
-              "line": 1958,
+              "line": 1983,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -7563,7 +7563,7 @@
           "evidence": [
             {
               "file": "src/components/forms/checkbox/checkbox.test.ts",
-              "line": 1956,
+              "line": 1981,
               "kind": "320px allocation test signal"
             }
           ]
@@ -46083,35 +46083,35 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts",
-              "line": 1203,
+              "line": 1211,
               "test": "is accessible while a decision is pending (loading + disabled lr-button still expose a valid name/state)",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts",
-              "line": 1225,
+              "line": 1233,
               "test": "is accessible while open in the read-only view",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts",
-              "line": 1233,
+              "line": 1241,
               "test": "is accessible while open and editing, including with an invalid-JSON error shown",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts",
-              "line": 1233,
+              "line": 1241,
               "test": "is accessible while open and editing, including with an invalid-JSON error shown",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts",
-              "line": 1218,
+              "line": 1226,
               "test": "is accessible while closed",
               "target": "el",
               "state": "populated"
@@ -46125,7 +46125,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts",
-              "line": 599,
+              "line": 607,
               "kind": "component keyboard assertion signal"
             }
           ]
