@@ -312,8 +312,9 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     // Seed the host's accessible name before the first visual slotchange. The rendered wrapper is
     // intentionally inert, so later reads skip that presentation fence while still respecting the
     // author-owned label branch and its composed ancestors.
-    const initialLabel = this.readSlottedLabel(null);
+    const initialLabel = this.readSlottedLabel(null, false);
     if (initialLabel !== this.slottedLabel) this.slottedLabel = initialLabel;
+    this.applyComputedName();
     // A safe, focusable-but-out-of-tab-order baseline before <lr-menu> ever
     // gets a chance to assign roving-tabindex state (e.g. a standalone
     // fixture in a test, or the brief window before the parent's own
@@ -589,7 +590,8 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   }
 
   private readSlottedLabel(
-    slot: HTMLSlotElement | null = this.defaultLabelSlot()
+    slot: HTMLSlotElement | null = this.defaultLabelSlot(),
+    requireRendered = true,
   ): string {
     const nodes = slot
       ? slot.assignedNodes({ flatten: true })
@@ -599,6 +601,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     return composedAccessibilityText(nodes, {
       ancestorBoundary: this,
       isSubtreeExcluded: (element) => this.isLabelSubtreeExcluded(element),
+      requireRendered,
     })
       .replace(/\s+/g, ' ')
       .trim();
@@ -632,6 +635,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
         'aria-labelledby',
         'alt',
         'class',
+        'data-hidden',
         'hidden',
         'inert',
         'id',
