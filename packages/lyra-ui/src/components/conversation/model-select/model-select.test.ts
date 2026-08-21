@@ -2879,6 +2879,17 @@ describe("validity custom states", () => {
 });
 
 describe("setCustomValidity()", () => {
+  it("treats an untyped undefined message as clearing the custom error", async () => {
+    const el = (await fixture(
+      html`<lr-model-select label="Model" .catalog=${CATALOG}></lr-model-select>`
+    )) as LyraModelSelect;
+    el.setCustomValidity("Rejected");
+    (el as unknown as { setCustomValidity(message: undefined): void }).setCustomValidity(undefined);
+
+    expect(el.validity.customError).to.equal(false);
+    expect(el.validationMessage).to.equal("");
+  });
+
   it("blocks form submission with a consumer-supplied error, and reports it as validationMessage", async () => {
     const form = await fixture<HTMLFormElement>(
       html`<form>

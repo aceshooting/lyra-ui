@@ -274,6 +274,21 @@ it('fails closed when a hostile catalog container hides its length', async () =>
   expect(input(el).getAttribute('role')).to.equal('combobox');
 });
 
+it('treats non-array and sparse catalogs as safe empty snapshots', async () => {
+  const el = (await fixture(html`<lr-voice-picker></lr-voice-picker>`)) as LyraVoicePicker;
+
+  (el as unknown as { catalog: unknown }).catalog = { 0: 'not-an-array', length: 1 };
+  await el.updateComplete;
+  expect(el.catalog).to.equal(undefined);
+  expect(input(el).getAttribute('role')).to.equal('combobox');
+
+  const sparse = new Array<string>(2);
+  (el as unknown as { catalog: unknown }).catalog = sparse;
+  await el.updateComplete;
+  expect(el.catalog).to.deep.equal([]);
+  expect(Object.isFrozen(el.catalog)).to.equal(true);
+});
+
 it('retains valid mixed catalog rows around descriptor traps and accessor-only fields', async () => {
   const hostileEntry = new Proxy({}, {
     getOwnPropertyDescriptor(): never {

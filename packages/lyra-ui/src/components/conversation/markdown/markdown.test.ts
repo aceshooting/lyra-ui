@@ -80,6 +80,12 @@ function withNavigationBlocked<T>(run: () => T): T {
   }
 }
 
+it("explains how to preload the optional parser when getMarked() is called cold", () => {
+  expect(() => LyraMarkdownClass.getMarked()).to.throw(
+    "await preloadMarkdown() first"
+  );
+});
+
 it("is accessible with no content set", async () => {
   const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
   await expect(el).to.be.accessible();
@@ -2516,6 +2522,30 @@ describe("repaintHighlights <mark>-wrap fallback (forced via a hidden Highlight 
     );
     expect(mark != null).to.equal(true);
     expect(mark!.getAttribute("part")).to.equal("highlight");
+  });
+
+  it('repaints fallback highlights after text-quote navigation and selection anchoring', async () => {
+    const el = (await fixture(html`
+      <lr-markdown content=${"The quick brown fox jumps over the lazy dog."}></lr-markdown>
+    `)) as LyraMarkdown;
+    el.highlights = [
+      { id: "h1", anchor: { kind: "text-quote", quote: "brown fox" } },
+    ];
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="content"] mark') !== null);
+    const paragraph = el.shadowRoot!.querySelector('[part="content"] p')!;
+    (paragraph as HTMLElement).scrollIntoView = () => {};
+
+    expect(await el.scrollToAnchor({ kind: "text-quote", quote: "brown fox" })).to.equal(true);
+    const firstText = paragraph.firstChild!;
+    const range = document.createRange();
+    range.setStart(firstText, 4);
+    range.setEnd(firstText, 9);
+    const anchor = (
+      el as unknown as { computeSelectionAnchor(range: Range): { kind: string } | null }
+    ).computeSelectionAnchor(range);
+    expect(anchor?.kind).to.equal("text-quote");
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="content"] mark') !== null).to.equal(true);
   });
 
   it("stamps the fallback part when the adopted owner registry rejects CSS highlight registration", async () => {

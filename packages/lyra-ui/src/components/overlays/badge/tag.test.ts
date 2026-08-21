@@ -382,6 +382,43 @@ describe('withRemove', () => {
     );
   });
 
+  it('excludes a closed details body from the remove name until it is disclosed', async () => {
+    const wrapper = (await fixture(html`
+      <tag-label-forward-wrapper>
+        <details>
+          <summary>Advanced filter</summary>
+          <span>Confidential value</span>
+        </details>
+      </tag-label-forward-wrapper>
+    `)) as TagLabelForwardWrapper;
+    const el = wrapper.shadowRoot!.querySelector('lr-tag') as LyraTag;
+    const details = wrapper.querySelector('details')!;
+
+    await waitUntil(() => removeButton(el)?.getAttribute('aria-label') === 'Remove Advanced filter');
+    expect(removeButton(el)?.getAttribute('aria-label')).to.equal('Remove Advanced filter');
+
+    details.open = true;
+    await waitUntil(
+      () => removeButton(el)?.getAttribute('aria-label') === 'Remove Advanced filter Confidential value',
+    );
+    expect(removeButton(el)?.getAttribute('aria-label')).to.equal(
+      'Remove Advanced filter Confidential value',
+    );
+  });
+
+  it('excludes a forwarded label nested under an inaccessible source ancestor', async () => {
+    const wrapper = (await fixture(html`
+      <tag-label-forward-wrapper>
+        <span>Visible label</span>
+        <span hidden><span>Hidden source label</span></span>
+      </tag-label-forward-wrapper>
+    `)) as TagLabelForwardWrapper;
+    const el = wrapper.shadowRoot!.querySelector('lr-tag') as LyraTag;
+
+    await waitUntil(() => removeButton(el)?.getAttribute('aria-label') === 'Remove Visible label');
+    expect(removeButton(el)?.getAttribute('aria-label')).to.equal('Remove Visible label');
+  });
+
   it('keeps no label observer alive once disconnected', async () => {
     const host = (await fixture(html`<div><lr-tag with-remove>beta</lr-tag></div>`)) as HTMLElement;
     const tag = host.querySelector('lr-tag') as LyraTag;

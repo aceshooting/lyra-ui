@@ -413,6 +413,20 @@ describe('lr-tour', () => {
     expect(tour.steps.map((step) => step.stepId)).to.deep.equal(['safe']);
   });
 
+  it('fails closed when target realm checks encounter a revoked proxy', async () => {
+    const { proxy: target, revoke } = Proxy.revocable({}, {});
+    revoke();
+    const tour = await fixture<LyraTour>(html`<lr-tour></lr-tour>`);
+
+    expect(() => {
+      tour.steps = [
+        { stepId: 'revoked-target', target: target as unknown as HTMLElement, heading: 'Unsafe target' },
+        { stepId: 'safe', target: '#tour-target-0', heading: 'Safe heading' },
+      ];
+    }).to.not.throw();
+    expect(tour.steps.map((step) => step.stepId)).to.deep.equal(['safe']);
+  });
+
   it('silently drops a step reached through a poisoned array index descriptor', async () => {
     const real = [{ stepId: 'poisoned', target: '#tour-target-0', heading: 'Poisoned index' }];
     const poisonedArray = new Proxy(real, {

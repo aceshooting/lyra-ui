@@ -11,6 +11,20 @@ it('defaults to index 0, count 1, and renders nothing while count < 2', async ()
   expect((el.shadowRoot!.querySelector('[part="base"]')) == null).to.be.true;
 });
 
+it('exposes no toolbar actions and keeps imperative focus/click inert for zero branches', async () => {
+  const el = (await fixture(html`<lr-branch-picker count="0"></lr-branch-picker>`)) as LyraBranchPicker;
+  let changes = 0;
+  el.addEventListener('lr-branch-change', () => changes++);
+
+  expect(el.getToolbarActions()).to.deep.equal([]);
+  expect(() => {
+    el.focus();
+    el.click();
+  }).to.not.throw();
+  expect(el.shadowRoot!.activeElement === null).to.equal(true);
+  expect(changes).to.equal(0);
+});
+
 it('renders the 1-based position for a 0-based index', async () => {
   const el = (await fixture(
     html`<lr-branch-picker index="1" count="3"></lr-branch-picker>`,

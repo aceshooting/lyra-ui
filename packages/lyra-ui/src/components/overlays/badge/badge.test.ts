@@ -3,6 +3,35 @@ import './badge.js';
 import './tag.js';
 import type { LyraBadge } from './badge.js';
 
+class BadgeStartTextForwarder extends HTMLElement {
+  constructor() {
+    super();
+    const badge = this.ownerDocument.createElement('lr-badge');
+    const slot = this.ownerDocument.createElement('slot');
+    slot.slot = 'start';
+    badge.append(slot, this.ownerDocument.createTextNode('Label'));
+    this.attachShadow({ mode: 'open' }).append(badge);
+  }
+}
+
+class BadgeEndTextForwarder extends HTMLElement {
+  constructor() {
+    super();
+    const badge = this.ownerDocument.createElement('lr-badge');
+    const slot = this.ownerDocument.createElement('slot');
+    slot.slot = 'end';
+    badge.append(this.ownerDocument.createTextNode('Label'), slot);
+    this.attachShadow({ mode: 'open' }).append(badge);
+  }
+}
+
+if (!customElements.get('badge-start-text-forwarder')) {
+  customElements.define('badge-start-text-forwarder', BadgeStartTextForwarder);
+}
+if (!customElements.get('badge-end-text-forwarder')) {
+  customElements.define('badge-end-text-forwarder', BadgeEndTextForwarder);
+}
+
 const TRANSPARENT = 'rgba(0, 0, 0, 0)';
 
 /** Resolves a `--lr-*` token to the same concrete computed string `getComputedStyle` reports for a
@@ -131,6 +160,32 @@ it("preserves every valid upstream variant and size spelling as the observable p
     "large"
   );
   expect(mutations).to.include("large");
+});
+
+it("keeps unsupported variant and size writes observable while rendering safe fallbacks", async () => {
+  const el = (await fixture(html`
+    <lr-badge variant="unknown" size="huge">Safe badge</lr-badge>
+  `)) as LyraBadge;
+
+  expect(el.variant).to.equal("unknown");
+  expect(el.size).to.equal("huge");
+  expect(el.dataset["effectiveVariant"]).to.equal("neutral");
+  expect(el.dataset["effectiveSize"]).to.equal("m");
+});
+
+it('recognizes text forwarded through a composed slot in either adornment position', async () => {
+  const startWrapper = await fixture<BadgeStartTextForwarder>(html`
+    <badge-start-text-forwarder>+</badge-start-text-forwarder>
+  `);
+  const endWrapper = await fixture<BadgeEndTextForwarder>(html`
+    <badge-end-text-forwarder>?</badge-end-text-forwarder>
+  `);
+  const startBadge = startWrapper.shadowRoot!.querySelector('lr-badge') as LyraBadge;
+  const endBadge = endWrapper.shadowRoot!.querySelector('lr-badge') as LyraBadge;
+  await Promise.all([startBadge.updateComplete, endBadge.updateComplete]);
+
+  expect(startBadge.shadowRoot!.querySelector<HTMLElement>('[part="start"]')!.hidden).to.equal(false);
+  expect(endBadge.shadowRoot!.querySelector<HTMLElement>('[part="end"]')!.hidden).to.equal(false);
 });
 
 it('defaults size to "m" and offers the same 2xs-xl scale as its sibling lr-chip', async () => {

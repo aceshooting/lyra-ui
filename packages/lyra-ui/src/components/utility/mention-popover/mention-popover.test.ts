@@ -94,6 +94,16 @@ it('owns a frozen item snapshot so later caller mutation cannot silently alter s
   expect(el.filteredItems[0]!.label).to.equal('Alice Johansson');
 });
 
+it('fails closed to a frozen empty snapshot for non-array items', async () => {
+  const el = (await fixture(html`<lr-mention-popover></lr-mention-popover>`)) as LyraMentionPopover;
+  (el as unknown as { items: unknown }).items = { suggestionId: 'not-a-list', label: 'Ignored' };
+  await el.updateComplete;
+
+  expect(el.items).to.deep.equal([]);
+  expect(Object.isFrozen(el.items)).to.equal(true);
+  expect(el.filteredItems).to.deep.equal([]);
+});
+
 it('uses the effective locale for built-in case-insensitive filtering', async () => {
   const el = await openWithItems([{ suggestionId: 'istanbul', label: 'İstanbul' }]);
   el.lang = 'tr';

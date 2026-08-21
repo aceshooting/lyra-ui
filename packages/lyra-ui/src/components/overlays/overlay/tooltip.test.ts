@@ -151,6 +151,23 @@ it('classifies closed actionable content without ignoring consumer accessibility
   expect(descriptionProxy(el).textContent).to.equal('');
 });
 
+it('restores an authored inline popup visibility and priority after closed-content inspection', async () => {
+  const el = (await fixture(html`
+    <lr-tooltip manual>
+      <button type="button" slot="trigger">Help</button>
+      <span id="content">Initial help</span>
+    </lr-tooltip>
+  `)) as LyraTooltip;
+  const popupElement = popup(el);
+  popupElement.style.setProperty('visibility', 'collapse', 'important');
+
+  el.querySelector('#content')!.textContent = 'Updated help';
+  await waitUntil(() => descriptionProxy(el).textContent === 'Updated help');
+
+  expect(popupElement.style.getPropertyValue('visibility')).to.equal('collapse');
+  expect(popupElement.style.getPropertyPriority('visibility')).to.equal('important');
+});
+
 it('opens from keyboard focus and lets Escape dismiss it without moving focus', async () => {
   const el = (await fixture(html`
     <lr-tooltip show-delay="0">

@@ -59,6 +59,12 @@ function withNavigationBlocked<T>(run: () => T): T {
   }
 }
 
+it("explains how to preload the optional parser when core getMarked() is called cold", () => {
+  expect(() => LyraMarkdownCoreClass.getMarked()).to.throw(
+    "await preloadMarkdown() first"
+  );
+});
+
 describe("lr-markdown-core", () => {
   it("renders sanitized GFM content (heading/bold/link/blockquote/table) identically to lr-markdown", async () => {
     const content = `# Heading

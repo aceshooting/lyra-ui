@@ -1,5 +1,12 @@
 import { expect } from '@open-wc/testing';
-import { escapeCsvField, buildCsv } from './csv.js';
+import { escapeCsvField, buildCsv, downloadBlob } from './csv.js';
+
+it('rejects a download request whose owner document has no browsing context', () => {
+  const ownerless = document.implementation.createHTMLDocument('ownerless');
+  expect(() => downloadBlob('content', 'report.txt', 'text/plain', ownerless)).to.throw(
+    'Cannot start a download without a browsing context.',
+  );
+});
 
 it('quotes fields containing commas, quotes, or newlines', () => {
   expect(escapeCsvField('a,b')).to.equal('"a,b"');

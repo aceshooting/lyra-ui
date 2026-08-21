@@ -955,6 +955,7 @@ describe('owner-window runtime after adoption', () => {
     interface QueryRecord {
       media: string;
       listeners: Set<EventListenerOrEventListenerObject>;
+      removedListeners: EventListenerOrEventListenerObject[];
       removals: number;
     }
 
@@ -1054,7 +1055,7 @@ describe('owner-window runtime after adoption', () => {
       (frameWindow as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver =
         FrameIntersectionObserver as unknown as typeof IntersectionObserver;
       frameWindow.matchMedia = ((media: string) => {
-        const record: QueryRecord = { media, listeners: new Set(), removals: 0 };
+        const record: QueryRecord = { media, listeners: new Set(), removedListeners: [], removals: 0 };
         queryRecords.push(record);
         return {
           media,
@@ -1064,7 +1065,10 @@ describe('owner-window runtime after adoption', () => {
             record.listeners.add(listener);
           },
           removeEventListener: (_type: string, listener: EventListenerOrEventListenerObject) => {
-            if (record.listeners.delete(listener)) record.removals++;
+            if (record.listeners.delete(listener)) {
+              record.removedListeners.push(listener);
+              record.removals++;
+            }
           },
           addListener: () => {},
           removeListener: () => {},
@@ -1112,6 +1116,13 @@ describe('owner-window runtime after adoption', () => {
       expect(resizeRecords.length).to.equal(2);
       expect(intersectionRecords.length).to.equal(2);
       cancelCurrentFrame(el);
+      for (const record of staleQueries) {
+        for (const listener of record.removedListeners) {
+          if (typeof listener === 'function') listener.call(frameWindow, new Event('change'));
+          else listener.handleEvent(new Event('change'));
+        }
+      }
+      expect(frameRequest(el) === undefined).to.be.true;
       const priv = el as unknown as {
         hostSize?: { width: number; height: number };
         visible: boolean;
@@ -1131,6 +1142,21 @@ describe('owner-window runtime after adoption', () => {
       expect(priv.hostSize).to.be.undefined;
       expect(priv.visible).to.be.true;
       expect(frameRequest(el) === undefined).to.be.true;
+
+      const activeIntersection = intersectionRecords[1]!;
+      activeIntersection.callback(
+        [{ isIntersecting: false } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      expect(priv.visible).to.be.false;
+      expect(frameRequest(el) === undefined).to.be.true;
+      activeIntersection.callback(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      expect(priv.visible).to.be.true;
+      expect(frameRequest(el)?.owner === frameWindow).to.equal(true);
+      cancelCurrentFrame(el);
 
       priv.hostSize = { width: 20, height: 10 };
       priv.resolvedColors = undefined;
@@ -1239,6 +1265,33 @@ describe('resolveColors()', () => {
       window.getComputedStyle = original;
     }
   });
+
+  it('uses the token-backed ambient duration when the public hook is empty', async () => {
+    const el = (await fixture(html`
+      <lr-audio-visualizer
+        style="--lr-audio-visualizer-ambient-duration: ; --_lr-audio-visualizer-ambient-duration-default: 2.5s"
+      ></lr-audio-visualizer>
+    `)) as LyraAudioVisualizer;
+    const duration = (
+      el as unknown as { resolveAmbientDuration(): number }
+    ).resolveAmbientDuration();
+    expect(duration).to.equal(2500);
+  });
+});
+
+it('fails closed when a media stream throws while exposing its audio tracks', async () => {
+  const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+  const hostileStream = {
+    getAudioTracks(): never {
+      throw new DOMException('Track access failed', 'InvalidStateError');
+    },
+  };
+
+  expect(() => {
+    el.stream = hostileStream as unknown as MediaStream;
+  }).to.not.throw();
+  await el.updateComplete;
+  expect((el as unknown as { analyser?: AnalyserNode }).analyser).to.equal(undefined);
 });
 
 // Round-tripping a raw token value (hex, or the hex canvas.fillStyle normalizes to) through a real
