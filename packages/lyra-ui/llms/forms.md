@@ -1074,7 +1074,7 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
 **Properties (44):**
 
 - `appearance: 'filled'|'outlined'|'filled-outlined' = 'outlined'` (reflected)
-- `appliedPreset: LyraDateRangePreset | undefined` (read-only, new in 12.1.0) — the `presets` entry
+- `appliedPreset: LyraDateRangePreset | undefined` (read-only, new in 12.0.0) — the `presets` entry
   whose button produced the current `value`, or `undefined` when the value was picked on the
   calendar, typed into the field, cleared, or reset. Read it inside your own `change`/`input`
   handler; it is updated before those events are relayed, so a handler observes the preset that

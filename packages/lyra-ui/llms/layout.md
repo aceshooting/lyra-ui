@@ -3387,7 +3387,7 @@ value therefore stays inside a 320px LTR or RTL bar, with the chip's own label e
 overflow ownership rather than widening the page.
 
 Each edit exposes one filter-bar `lr-input` carrying a detached, deeply frozen snapshot of the
-complete value object, plus the `filterId` that changed and (new in 12.1.0) `appliedPreset` — see
+complete value object, plus the `filterId` that changed and (new in 12.0.0) `appliedPreset` — see
 "Date-range quick ranges" below. A built-in or
 custom control's own `lr-input`/`lr-change` aliases stay inside the wrapper so their incompatible
 detail shapes cannot escape as duplicate bar events; native-style `input`/`change` events from the
@@ -3440,7 +3440,7 @@ text the user typed, not a truncated or normalized form.
 
 ### Date-range quick ranges
 
-A `'date-range'` definition also accepts `presets?: readonly LyraDateRangePreset[]` (new in 12.1.0),
+A `'date-range'` definition also accepts `presets?: readonly LyraDateRangePreset[]` (new in 12.0.0),
 forwarded to its composed `<lr-date-input>` exactly like `min`/`max`, so the quick-range row
 ("Today", "Last 7 days", "All time") renders inside that filter's own calendar popover. Entries are
 `LyraDateRangePreset { label, start?, end? }` with ISO `YYYY-MM-DD` bounds; an omitted bound is open

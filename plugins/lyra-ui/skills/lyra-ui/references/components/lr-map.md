@@ -136,7 +136,7 @@ heatmap?: LyraMapHeatmapOptions; cluster?: LyraMapClusterOptions }`. `sourceId` 
   its private source/layers removed, and a genuinely new `sourceId` gets new resources — nothing
   leaks on removal, style change, or disconnect.
 
-  `cluster` and `kind` (both new in 12.1.0) opt one entry out of that three-layer geometry split.
+  `cluster` and `kind` (both new in 12.0.0) opt one entry out of that three-layer geometry split.
   **Both are strictly additive: an entry that sets neither renders exactly what it rendered before,
   down to the layer ids and the point layer's filter.**
 
