@@ -52,6 +52,26 @@ describe('lr-svg-viewer', () => {
     }
   });
 
+  it('fails closed when sanitization does not yield an SVG document', async () => {
+    const restore = fetchSvg('<div>not an SVG document</div>');
+    try {
+      const el = await fixture<LyraSvgViewer>(html`<lr-svg-viewer></lr-svg-viewer>`);
+      const failure = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/not-svg.svg';
+      const event = await failure;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+
+      expect((event.detail.error as Error).message)
+        .to.equal('SVG sanitizer did not return an SVG document.');
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent)
+        .to.equal('Failed to load document.');
+      expect(el.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]'))
+        .to.have.lengthOf(0);
+    } finally {
+      restore();
+    }
+  });
+
   it('removes stylesheet and external resource references while preserving local SVG references', async () => {
     const restore = fetchSvg(`
       <svg xmlns="http://www.w3.org/2000/svg">
@@ -188,6 +208,61 @@ describe('lr-svg-viewer', () => {
       expect(el.shadowRoot!.querySelector('[part="svg"]') !== null).to.be.true;
     } finally {
       window.fetch = original;
+    }
+  });
+
+  it('ignores a stale response body after a newer SVG has rendered', async () => {
+    const original = window.fetch;
+    let staleReadStarted = false;
+    let resolveStale!: (value: string) => void;
+    window.fetch = ((url: RequestInfo | URL) => {
+      const body = String(url).includes('stale')
+        ? new Promise<string>((resolve) => {
+            staleReadStarted = true;
+            resolveStale = resolve;
+          })
+        : Promise.resolve('<svg xmlns="http://www.w3.org/2000/svg"><circle id="fresh" /></svg>');
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: () => body,
+      } as Response);
+    }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraSvgViewer>(html`<lr-svg-viewer></lr-svg-viewer>`);
+      el.src = 'https://example.test/stale.svg';
+      await waitUntil(() => staleReadStarted);
+      el.src = 'https://example.test/fresh.svg';
+      await waitUntil(() => el.shadowRoot!.querySelector('#fresh') !== null);
+
+      resolveStale('<svg xmlns="http://www.w3.org/2000/svg"><circle id="stale" /></svg>');
+      await aTimeout(0);
+
+      expect(el.shadowRoot!.querySelector('#fresh') !== null).to.equal(true);
+      expect(el.shadowRoot!.querySelector('#stale') === null).to.equal(true);
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('loads without a signal when AbortController is unavailable', async () => {
+    const originalAbortController = globalThis.AbortController;
+    const originalFetch = window.fetch;
+    let observedSignal: AbortSignal | null | undefined = null;
+    globalThis.AbortController = undefined as unknown as typeof AbortController;
+    window.fetch = ((_url: RequestInfo | URL, init?: RequestInit) => {
+      observedSignal = init?.signal;
+      return Promise.resolve(response('<svg xmlns="http://www.w3.org/2000/svg"></svg>'));
+    }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraSvgViewer>(html`<lr-svg-viewer></lr-svg-viewer>`);
+      el.src = 'https://example.test/no-abort-controller.svg';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+      expect(observedSignal).to.equal(undefined);
+    } finally {
+      window.fetch = originalFetch;
+      globalThis.AbortController = originalAbortController;
     }
   });
 

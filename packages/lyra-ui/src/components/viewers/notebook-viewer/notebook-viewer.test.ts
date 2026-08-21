@@ -754,6 +754,82 @@ describe('loading a notebook from src', () => {
     } finally { window.fetch = original; }
   });
 
+  it('drops a stale response body when src changes after the first response resolves', async () => {
+    const original = window.fetch;
+    const freshNotebook = {
+      nbformat: 4,
+      nbformat_minor: 5,
+      cells: [{ cell_type: 'raw', id: 'fresh', source: 'Fresh notebook' }],
+    };
+    const staleNotebook = {
+      nbformat: 4,
+      nbformat_minor: 5,
+      cells: [{ cell_type: 'raw', id: 'stale', source: 'Stale notebook' }],
+    };
+    let staleReadStarted = false;
+    let resolveStale!: (value: string) => void;
+    window.fetch = ((url: RequestInfo | URL) => {
+      const body = String(url).includes('stale')
+        ? new Promise<string>((resolve) => {
+            staleReadStarted = true;
+            resolveStale = resolve;
+          })
+        : Promise.resolve(JSON.stringify(freshNotebook));
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: () => body,
+      } as Response);
+    }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraNotebookViewer>(html`<lr-notebook-viewer></lr-notebook-viewer>`);
+      el.src = 'https://example.test/stale.ipynb';
+      await waitUntil(() => staleReadStarted);
+      el.src = 'https://example.test/fresh.ipynb';
+      await waitUntil(
+        () => el.shadowRoot?.querySelector('lr-virtual-list')?.shadowRoot?.textContent
+          ?.includes('Fresh notebook') ?? false,
+      );
+
+      resolveStale(JSON.stringify(staleNotebook));
+      await aTimeout(0);
+
+      expect(rowRoot(el).textContent).to.include('Fresh notebook');
+      expect(rowRoot(el).textContent).not.to.include('Stale notebook');
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('loads a source without a signal when AbortController is unavailable', async () => {
+    const originalAbortController = globalThis.AbortController;
+    const originalFetch = window.fetch;
+    let observedSignal: AbortSignal | null | undefined = null;
+    globalThis.AbortController = undefined as unknown as typeof AbortController;
+    window.fetch = ((_url: RequestInfo | URL, init?: RequestInit) => {
+      observedSignal = init?.signal;
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: () => Promise.resolve(JSON.stringify(NOTEBOOK)),
+      } as Response);
+    }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraNotebookViewer>(html`<lr-notebook-viewer></lr-notebook-viewer>`);
+      el.src = 'https://example.test/no-abort-controller.ipynb';
+      await waitUntil(
+        () => (el.shadowRoot?.querySelector('lr-virtual-list')?.shadowRoot
+          ?.querySelectorAll('[part~="cell"]').length ?? 0) > 0,
+      );
+      expect(observedSignal).to.equal(undefined);
+    } finally {
+      window.fetch = originalFetch;
+      globalThis.AbortController = originalAbortController;
+    }
+  });
+
   it('resets to idle on disconnect and re-fetches from src on reconnect (a pure DOM move, unlike the inline-authority reconnect above)', async () => {
     const original = window.fetch;
     let fetches = 0;

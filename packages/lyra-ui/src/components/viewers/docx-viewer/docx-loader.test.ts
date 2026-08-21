@@ -35,6 +35,22 @@ describe('loadMammothAndSanitizer()', () => {
     expect(deps.DOMPurify === bareSanitizer).to.equal(true);
   });
 
+  it('accepts callable peer namespaces when their required methods are present', async () => {
+    const callableMammoth = Object.assign(() => undefined, {
+      convertToHtml: () => Promise.resolve({ value: '', messages: [] }),
+    });
+    const callableSanitizer = Object.assign(() => undefined, {
+      sanitize: (html: string) => html,
+    });
+    const deps = await loadMammothAndSanitizer(
+      () => Promise.resolve(callableMammoth),
+      () => Promise.resolve(callableSanitizer),
+    );
+
+    expect(deps.mammoth).to.equal(callableMammoth);
+    expect(deps.DOMPurify).to.equal(callableSanitizer);
+  });
+
   it('keeps DOMPurify available when mammoth fails', async () => {
     const error = new Error('mammoth boom');
     const originalWarn = console.warn;
