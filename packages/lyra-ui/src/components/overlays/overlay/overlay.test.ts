@@ -339,8 +339,11 @@ it('keeps an open orphan popover hidden until a live trigger is assigned', async
   trigger.textContent = 'Open';
   el.append(trigger);
   await el.updateComplete;
-  await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
-  expect(surface.hasAttribute('data-hidden')).to.equal(false);
+  await waitUntil(
+    () => !surface.hasAttribute('data-hidden'),
+    'popover did not become visible after receiving a live trigger',
+    { timeout: 5000 },
+  );
 });
 
 it('keeps an open popover on its direct anchor when its slotted trigger is removed', async () => {
@@ -3109,6 +3112,11 @@ describe('public animation registry integration', () => {
         const shown = element.show().then(() => order.push('show-promise'));
         await element.updateComplete;
         const popup = element.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
+        await waitUntil(
+          () => popup.getAnimations().some((animation) => animation.id === showName),
+          `${showName} registry animation did not start`,
+          { timeout: 5000 },
+        );
         const nativeAnimation = popup.getAnimations().find((animation) => animation.id === showName);
         expect(nativeAnimation?.id).to.equal(showName);
         expect(String(nativeAnimation?.effect?.getKeyframes()[0]?.opacity)).to.equal('0.2');
