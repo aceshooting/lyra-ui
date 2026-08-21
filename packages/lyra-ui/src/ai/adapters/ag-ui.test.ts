@@ -272,3 +272,63 @@ it('recursively snapshots provider payloads before returning adapted events', ()
     code: 'invalid_provider_event',
   });
 });
+
+it('fails closed for hostile event descriptors and configured text limits', () => {
+  const adapter = new AgUiStreamAdapter({ maxTextDeltaCharacters: 4 });
+  const hostile = new Proxy({ type: 'RUN_STARTED' }, {
+    getOwnPropertyDescriptor: () => {
+      throw new Error('blocked');
+    },
+  });
+
+  expect(adapter.push(hostile)).to.deep.equal([]);
+  expect(adapter.push({
+    type: 'TEXT_MESSAGE_CONTENT',
+    messageId: 'message-1',
+    delta: 'exceeds',
+  })[0]).to.deep.include({ type: 'error', code: 'stream_limit_exceeded' });
+});
+
+it('does not allocate an out-of-order argument buffer after reaching the tool limit', () => {
+  const adapter = new AgUiStreamAdapter({ maxBufferedTools: 1 });
+  adapter.push({ type: 'TOOL_CALL_START', toolCallId: 'first' });
+
+  expect(adapter.push({
+    type: 'TOOL_CALL_ARGS',
+    toolCallId: 'second',
+    delta: '{}',
+  })[0]).to.deep.include({ type: 'error', code: 'stream_limit_exceeded' });
+  expect(adapter.push({ type: 'STATE_SNAPSHOT' })).to.deep.equal([]);
+});
+
+it('maps snapshot-budget failures to stream limits and omits absent optional payloads', () => {
+  const limited = new AgUiStreamAdapter({ maxNodes: 1 });
+  expect(limited.push({ type: 'RUN_STARTED', runId: 'run-1' })[0]).to.deep.include({
+    type: 'error',
+    code: 'stream_limit_exceeded',
+  });
+
+  const adapter = new AgUiStreamAdapter();
+  expect(adapter.push({ type: 'RUN_FINISHED' })[0]).not.to.have.property('runId');
+  expect(adapter.push({ type: 'TOOL_CALL_RESULT', toolCallId: 'missing' })[0])
+    .not.to.have.nested.property('invocation.result');
+  expect(adapter.push({ type: 'MESSAGES_SNAPSHOT' })[0]).to.deep.include({
+    type: 'messages-snapshot',
+    messages: [],
+  });
+});
+
+it('rejects an event whose snapshotted type differs from its inspected type', () => {
+  const target = { type: 'RUN_STARTED', runId: 'run-1' };
+  let typeReads = 0;
+  const unstable = new Proxy(target, {
+    getOwnPropertyDescriptor(source, key) {
+      const descriptor = Reflect.getOwnPropertyDescriptor(source, key);
+      if (key !== 'type' || !descriptor) return descriptor;
+      typeReads += 1;
+      return { ...descriptor, value: typeReads === 1 ? 'RUN_STARTED' : 'RUN_FINISHED' };
+    },
+  });
+
+  expect(new AgUiStreamAdapter().push(unstable)).to.deep.equal([]);
+});

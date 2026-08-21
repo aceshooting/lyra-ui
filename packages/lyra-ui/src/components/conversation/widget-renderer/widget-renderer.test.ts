@@ -306,6 +306,30 @@ describe("lr-widget-renderer", () => {
     }
   });
 
+  it('normalizes a non-Error registry failure at the renderer boundary', async () => {
+    const baseRegistry = createWidgetTypeRegistry();
+    const hostileRegistry = new Proxy(baseRegistry, {
+      get(target, key, receiver) {
+        if (key === 'get') {
+          return () => {
+            throw 'registry lookup failed';
+          };
+        }
+        return Reflect.get(target, key, receiver);
+      },
+    });
+    const el = await fixture<LyraWidgetRenderer>(
+      html`<lr-widget-renderer .registry=${hostileRegistry}></lr-widget-renderer>`,
+    );
+    const renderedError = oneEvent(el, 'lr-render-error');
+
+    el.document = documentFor({ type: 'provider-widget' });
+    await el.updateComplete;
+
+    const event = (await renderedError) as CustomEvent<{ error: Error }>;
+    expect(event.detail.error.message).to.equal('lr-widget-renderer: document resolution failed');
+  });
+
   it("fails closed for an unsupported document version without using a legacy tree", async () => {
     const el = await fixture<LyraWidgetRenderer>(
       html`<lr-widget-renderer></lr-widget-renderer>`
@@ -451,6 +475,38 @@ describe("lr-widget-renderer", () => {
       nodePath: "0",
       prop: "value",
     });
+  });
+
+  it('falls back to the mapped property when a binding event has no detail value', async () => {
+    const registry = createWidgetTypeRegistry([
+      [
+        'field',
+        {
+          tag: 'lr-input',
+          props: { value: 'string' },
+          interaction: 'control',
+          bindings: { value: { event: 'lr-input' } },
+        },
+      ],
+    ]);
+    const el = await fixture<LyraWidgetRenderer>(html`
+      <lr-widget-renderer
+        .registry=${registry}
+        .bindingState=${{ name: 'Ada' }}
+        .document=${documentFor({
+          id: 'name-field',
+          type: 'field',
+          props: { value: { $bind: '/name' } },
+        })}
+      ></lr-widget-renderer>
+    `);
+    const input = el.shadowRoot!.querySelector('lr-input') as HTMLElement & { value: string };
+    input.value = 'Grace';
+    const changed = oneEvent(el, 'lr-widget-state-change');
+
+    input.dispatchEvent(new CustomEvent('lr-input', { bubbles: true, composed: true }));
+
+    expect((await changed).detail.value).to.equal('Grace');
   });
 
   it("detaches obsolete binding/action callbacks when nodes disappear", async () => {

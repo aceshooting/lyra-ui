@@ -547,6 +547,45 @@ it("closes on a document-level Escape via the shared overlay manager", async () 
   expect(el.open).to.be.false;
 });
 
+it('closes when the backdrop itself is activated', async () => {
+  const el = (await fixture(
+    html`<lr-command-palette
+      .commands=${[{ commandId: 'save', label: 'Save' }]}
+    ></lr-command-palette>`,
+  )) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+  const closed = oneEvent(el, 'lr-close');
+
+  (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
+
+  await closed;
+  await el.updateComplete;
+  expect(el.open).to.equal(false);
+});
+
+it('remains usable when ResizeObserver is unavailable', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(window, 'ResizeObserver');
+  try {
+    Object.defineProperty(window, 'ResizeObserver', {
+      configurable: true,
+      value: undefined,
+    });
+    const el = (await fixture(html`
+      <lr-command-palette
+        .commands=${[{ commandId: 'save', label: 'Save' }]}
+      ></lr-command-palette>
+    `)) as LyraCommandPalette;
+
+    el.openPalette();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="command"]')).to.have.lengthOf(1);
+  } finally {
+    if (descriptor) Object.defineProperty(window, 'ResizeObserver', descriptor);
+    else Reflect.deleteProperty(window, 'ResizeObserver');
+  }
+});
+
 it("locks document scroll while open and releases it on close", async () => {
   const el = (await fixture(
     html`<lr-command-palette

@@ -1151,6 +1151,62 @@ it('ignores queued focusout and slotchange work after disconnect', async () => {
   }
 });
 
+it('retires a stale autoplay callback from an earlier connection generation', async () => {
+  const originalSetInterval = window.setInterval;
+  const originalClearInterval = window.clearInterval;
+  let queued: (() => void) | undefined;
+  const cleared: number[] = [];
+  try {
+    window.setInterval = ((handler: TimerHandler) => {
+      if (typeof handler === 'function') queued = handler as () => void;
+      return 731;
+    }) as typeof window.setInterval;
+    window.clearInterval = ((handle?: number) => {
+      if (handle !== undefined) cleared.push(handle);
+    }) as typeof window.clearInterval;
+    const el = (await fixture(html`
+      <lr-random-content autoplay autoplay-interval="1000" mode="sequence">
+        <div>First</div>
+        <div>Second</div>
+      </lr-random-content>
+    `)) as LyraRandomContent;
+    await el.updateComplete;
+    expect(queued).to.be.a('function');
+    let changes = 0;
+    el.addEventListener('lr-content-change', () => changes++);
+
+    el.remove();
+    queued!();
+
+    expect(changes).to.equal(0);
+    expect(cleared).to.include(731);
+  } finally {
+    window.setInterval = originalSetInterval;
+    window.clearInterval = originalClearInterval;
+  }
+});
+
+it('settles focusout through the ambient microtask queue in an ownerless document', async () => {
+  const el = (await fixture(html`
+    <lr-random-content>
+      <button>First</button>
+      <button>Second</button>
+    </lr-random-content>
+  `)) as LyraRandomContent;
+  const ownerless = document.implementation.createHTMLDocument('ownerless');
+  el.remove();
+  ownerless.body.append(ownerless.adoptNode(el));
+  try {
+    expect(el.ownerDocument.defaultView).to.equal(null);
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    base.dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
+    await Promise.resolve();
+    expect(el.isConnected).to.equal(true);
+  } finally {
+    el.remove();
+  }
+});
+
 it('restores every author-supplied hidden/aria-hidden state when it stops managing a child', async () => {
   const el = (await fixture(html`
     <lr-random-content mode="sequence">

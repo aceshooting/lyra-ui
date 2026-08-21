@@ -1,10 +1,12 @@
 import { render } from "lit";
 import { expect } from "@open-wc/testing";
 import {
+  CodeBlockInteractionController,
   codeBlockEventLine,
   codeBlockLineTransformer,
   parseHighlightLines,
   renderCodeBlockPlainCode,
+  restoreCodeBlockLineFocus,
   scrollCodeBlockToAnchor,
 } from "./code-block-shared.js";
 
@@ -59,6 +61,30 @@ describe("parseHighlightLines", () => {
 });
 
 describe("codeBlockLineTransformer", () => {
+  it('normalizes scalar and absent pre classes while removing shiki tabindex', () => {
+    const transformer = codeBlockLineTransformer({
+      lineNumbers: true,
+      activatableLines: false,
+      focusedLine: 1,
+      highlightedLines: new Set(),
+      activeLines: new Set(),
+      lineLabel: String,
+      lineNumberText: String,
+    });
+    const scalar = { properties: { class: 'language-ts', tabindex: '0' } as Record<string, unknown> };
+    const array = { properties: { class: ['language-js', 7] } as Record<string, unknown> };
+    const absent = { properties: {} as Record<string, unknown> };
+
+    transformer.pre(scalar);
+    transformer.pre(array);
+    transformer.pre(absent);
+
+    expect(scalar.properties.class).to.deep.equal(['language-ts', 'line-numbers']);
+    expect(scalar.properties).not.to.have.property('tabindex');
+    expect(array.properties.class).to.deep.equal(['language-js', '7', 'line-numbers']);
+    expect(absent.properties.class).to.deep.equal(['line-numbers']);
+  });
+
   it("stamps data-line, data-highlighted, and part on a highlighted line node", () => {
     const transformer = codeBlockLineTransformer({
       lineNumbers: false,
@@ -318,6 +344,88 @@ describe("owner-realm line interactions", () => {
       expect(codeBlockEventLine(event)).to.equal(4);
     } finally {
       frame.remove();
+    }
+  });
+
+  it('rejects non-element and invalid line event targets', () => {
+    expect(codeBlockEventLine({ composedPath: () => ['line'] } as unknown as Event)).to.equal(null);
+    const button = document.createElement('button');
+    button.dataset['line'] = '0';
+    button.setAttribute('part', 'line-button');
+    expect(codeBlockEventLine({ composedPath: () => [button] } as unknown as Event)).to.equal(null);
+  });
+
+  it('does not steal focus from an external control during line restoration', () => {
+    const host = document.createElement('div') as HTMLElement & { readonly renderRoot: ShadowRoot };
+    const root = host.attachShadow({ mode: 'open' });
+    Object.defineProperty(host, 'renderRoot', { value: root });
+    const line = document.createElement('button');
+    line.dataset['line'] = '1';
+    line.setAttribute('part', 'line-button');
+    root.append(line);
+    const external = document.createElement('button');
+    document.body.append(host, external);
+    try {
+      external.focus();
+      expect(restoreCodeBlockLineFocus(host, 1)).to.equal(false);
+      expect(document.activeElement === external).to.equal(true);
+    } finally {
+      host.remove();
+      external.remove();
+    }
+  });
+
+  it('routes delegated gutter key events through roving focus', async () => {
+    const host = document.createElement('div') as HTMLElement & {
+      renderRoot: ShadowRoot;
+      updateComplete: Promise<boolean>;
+      code: string;
+      collapsed: boolean;
+    };
+    const root = host.attachShadow({ mode: 'open' });
+    Object.defineProperty(host, 'renderRoot', { value: root });
+    host.updateComplete = Promise.resolve(true);
+    host.code = 'first\nsecond';
+    host.collapsed = false;
+    const first = document.createElement('button');
+    const second = document.createElement('button');
+    for (const [index, button] of [first, second].entries()) {
+      button.dataset['line'] = String(index + 1);
+      button.setAttribute('part', 'line-button');
+      root.append(button);
+    }
+    const focused: number[] = [];
+    const controller = new CodeBlockInteractionController({
+      host,
+      setFocusedLine: (line) => focused.push(line),
+      setJustCopied: () => undefined,
+      setCopyFailed: () => undefined,
+      setDarkTheme: () => undefined,
+      emitLineActivate: () => undefined,
+      emitCopy: () => undefined,
+      emitError: () => undefined,
+      emitCopyError: () => undefined,
+      requestToggle: () => true,
+      emitToggle: () => undefined,
+      emitTextSelect: () => undefined,
+    });
+    root.addEventListener('keydown', controller.onBodyKeyDown as EventListener);
+    document.body.append(host);
+    try {
+      const event = new KeyboardEvent('keydown', {
+        key: 'ArrowDown',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      });
+      first.dispatchEvent(event);
+      await Promise.resolve();
+
+      expect(event.defaultPrevented).to.equal(true);
+      expect(focused).to.deep.equal([2]);
+      expect(root.activeElement === second).to.equal(true);
+    } finally {
+      host.remove();
     }
   });
 });

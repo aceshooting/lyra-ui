@@ -17,7 +17,10 @@ import type {
 import { styles } from "./pptx-viewer.styles.js";
 import { getDefaultDocumentRendererRegistry } from "../document-viewer/registry.js";
 import type { LyraHighlight } from "../document-viewer/anchors.js";
-import { VIEWER_SEARCH_QUERY_LIMIT } from "../viewer-search-limits.js";
+import {
+  VIEWER_SEARCH_QUERY_LIMIT,
+  VIEWER_SEARCH_WORK_LIMIT,
+} from "../viewer-search-limits.js";
 
 function zipWithDeclaredSize(uncompressedBytes = 1): ArrayBuffer {
   const localSize = 32;
@@ -1222,6 +1225,86 @@ describe("lr-pptx-viewer", () => {
       await oneEvent(el, 'lr-load');
 
       expect(await el.search('x')).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('ignores a search result superseded synchronously by a newer search generation', async () => {
+    const match: PptxTextSearchResult = {
+      slideIndex: 0,
+      nodeId: 'stale',
+      matchStart: 0,
+      matchEnd: 1,
+      text: 'x',
+    };
+    const fake = fakeModule(1, [match]);
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+      fake.viewer.searchText = () => {
+        el.clearSearch();
+        return [match];
+      };
+
+      expect(await el.search('x')).to.equal(0);
+      expect(fake.calls.highlightSearchResult).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('rejects an individual search result that exceeds the shared model-work budget', async () => {
+    const fake = fakeModule(1, [{
+      slideIndex: 0,
+      nodeId: 'x'.repeat(VIEWER_SEARCH_WORK_LIMIT + 1),
+      matchStart: 0,
+      matchEnd: 1,
+      text: 'x',
+    }]);
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+
+      expect(await el.search('x')).to.equal(0);
+      expect(fake.calls.highlightSearchResult).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('disposes a late search highlight after clearSearch supersedes it', async () => {
+    const match: PptxTextSearchResult = {
+      slideIndex: 0,
+      nodeId: 'late-highlight',
+      matchStart: 0,
+      matchEnd: 1,
+      text: 'x',
+    };
+    const fake = fakeModule(1, [match]);
+    const highlight = deferred<{ dispose(): void }>();
+    let disposals = 0;
+    fake.viewer.highlightSearchResult = async () => highlight.promise;
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+      const pending = el.search('x');
+      await waitUntil(() => fake.calls.goToSlide === 1);
+
+      el.clearSearch();
+      highlight.resolve({ dispose: () => disposals++ });
+
+      expect(await pending).to.equal(0);
+      expect(disposals).to.equal(1);
     } finally {
       restore();
     }
