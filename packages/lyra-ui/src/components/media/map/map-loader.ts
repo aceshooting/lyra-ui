@@ -1,3 +1,4 @@
+import type { Feature } from 'geojson';
 import {
   resolveOptionalPeerCapability,
   unwrapOptionalPeerDefault,
@@ -9,8 +10,10 @@ export interface MapLibreGeoJsonSource {
   updateData?(diff: MapLibreGeoJsonDiff): void;
 }
 
-/** The subset of maplibre-gl's GeoJSON diff this component emits: per-feature property updates. */
+/** The subset of maplibre-gl's GeoJSON diff this component emits. */
 export interface MapLibreGeoJsonDiff {
+  readonly remove?: readonly (string | number)[];
+  readonly add?: readonly Feature[];
   readonly update: readonly {
     readonly id: string | number;
     readonly addOrUpdateProperties: readonly { readonly key: string; readonly value: unknown }[];

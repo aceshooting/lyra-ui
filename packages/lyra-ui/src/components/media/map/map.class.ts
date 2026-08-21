@@ -874,31 +874,203 @@ function warnOnUntileableProperties(geojson: unknown, sourceLabel: string): void
 /** Ceiling on the features one property-diff pass inspects, matching the untileable-property scan:
  *  past it, falling back to a whole-source replace is cheaper than the comparison itself. */
 const GEOJSON_DIFF_FEATURE_LIMIT = 10_000;
+/** Maximum values traversed while proving retained GeoJSON geometry unchanged. */
+const GEOJSON_DIFF_VALUE_LIMIT = 50_000;
+
+interface GeoJsonValueComparison {
+  remaining: number;
+  readonly forward: WeakMap<object, object>;
+  readonly reverse: WeakMap<object, object>;
+}
+
+function isPlainGeoJsonRecord(value: object): boolean {
+  try {
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype === null) return true;
+    const constructor = Object.getOwnPropertyDescriptor(prototype, 'constructor');
+    return Boolean(
+      constructor &&
+        'value' in constructor &&
+        typeof constructor.value === 'function' &&
+        constructor.value.name === 'Object' &&
+        Object.getPrototypeOf(prototype) === null
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** Bounded equality for the JSON data model GeoJSON geometry/bbox values are allowed to contain.
+ * It reads data descriptors only, preserves sparse-array and alias distinctions, and fails closed
+ * for accessors, custom prototypes, exhausted work, or any reflective error. */
+function sameGeoJsonValue(
+  previous: unknown,
+  next: unknown,
+  comparison: GeoJsonValueComparison
+): boolean {
+  if (comparison.remaining <= 0) return false;
+  comparison.remaining -= 1;
+  if (Object.is(previous, next)) return true;
+  if (
+    previous === null ||
+    next === null ||
+    typeof previous !== 'object' ||
+    typeof next !== 'object'
+  )
+    return false;
+
+  const pairedNext = comparison.forward.get(previous);
+  if (pairedNext) return pairedNext === next;
+  const pairedPrevious = comparison.reverse.get(next);
+  if (pairedPrevious) return pairedPrevious === previous;
+  comparison.forward.set(previous, next);
+  comparison.reverse.set(next, previous);
+
+  const previousIsArray = Array.isArray(previous);
+  const nextIsArray = Array.isArray(next);
+  if (previousIsArray || nextIsArray) {
+    if (!previousIsArray || !nextIsArray || previous.length !== next.length) return false;
+    for (let index = 0; index < previous.length; index += 1) {
+      const before = Object.getOwnPropertyDescriptor(previous, String(index));
+      const after = Object.getOwnPropertyDescriptor(next, String(index));
+      if (Boolean(before) !== Boolean(after)) return false;
+      if (!before || !after) continue;
+      if (!('value' in before) || !('value' in after)) return false;
+      if (!sameGeoJsonValue(before.value, after.value, comparison)) return false;
+    }
+    return true;
+  }
+
+  if (!isPlainGeoJsonRecord(previous) || !isPlainGeoJsonRecord(next)) return false;
+  const previousKeys = Object.keys(previous);
+  const nextKeys = Object.keys(next);
+  if (previousKeys.length !== nextKeys.length) return false;
+  for (let index = 0; index < previousKeys.length; index += 1) {
+    const key = previousKeys[index]!;
+    if (key !== nextKeys[index]) return false;
+    const before = Object.getOwnPropertyDescriptor(previous, key);
+    const after = Object.getOwnPropertyDescriptor(next, key);
+    if (!before || !after || !('value' in before) || !('value' in after)) return false;
+    if (!sameGeoJsonValue(before.value, after.value, comparison)) return false;
+  }
+  return true;
+}
+
+function sameGeoJsonSnapshots(previous: unknown, next: unknown): boolean {
+  try {
+    return sameGeoJsonValue(previous, next, {
+      remaining: GEOJSON_DIFF_VALUE_LIMIT,
+      forward: new WeakMap(),
+      reverse: new WeakMap(),
+    });
+  } catch {
+    return false;
+  }
+}
+
+interface IndexedGeoJsonFeature {
+  readonly id: string | number;
+  readonly index: number;
+  readonly feature: Feature;
+  readonly geometry: unknown;
+  readonly bbox: unknown;
+  readonly properties: Record<string, unknown>;
+}
+
+interface IndexedGeoJsonCollection {
+  readonly ordered: readonly IndexedGeoJsonFeature[];
+  readonly byId: ReadonlyMap<string | number, IndexedGeoJsonFeature>;
+}
+
+function indexGeoJsonCollection(value: unknown): IndexedGeoJsonCollection | null {
+  try {
+    if ((value as { type?: unknown })?.type !== 'FeatureCollection') return null;
+    const features = (value as { features?: unknown })?.features;
+    if (!Array.isArray(features) || features.length > GEOJSON_DIFF_FEATURE_LIMIT) return null;
+    const ordered: IndexedGeoJsonFeature[] = [];
+    const byId = new Map<string | number, IndexedGeoJsonFeature>();
+    for (let index = 0; index < features.length; index += 1) {
+      const feature = features[index] as Record<string, unknown> | null | undefined;
+      if (!feature || Array.isArray(feature) || feature['type'] !== 'Feature') return null;
+      const id = feature['id'];
+      if ((typeof id !== 'string' && typeof id !== 'number') || byId.has(id)) return null;
+      const rawProperties = feature['properties'];
+      if (
+        rawProperties !== null &&
+        rawProperties !== undefined &&
+        (typeof rawProperties !== 'object' || Array.isArray(rawProperties))
+      )
+        return null;
+      const indexed = {
+        id,
+        index,
+        feature: feature as unknown as Feature,
+        geometry: feature['geometry'],
+        bbox: feature['bbox'],
+        properties: (rawProperties ?? {}) as Record<string, unknown>,
+      };
+      ordered.push(indexed);
+      byId.set(id, indexed);
+    }
+    return { ordered, byId };
+  } catch {
+    return null;
+  }
+}
 
 /**
- * Builds a maplibre-gl `updateData()` diff when `next` differs from `previous` only in feature
- * properties, and returns `null` otherwise so the caller replaces the whole source instead.
+ * Builds a maplibre-gl `updateData()` diff when stable feature ids make the change addressable,
+ * and returns `null` otherwise so the caller replaces the whole source instead. Property changes,
+ * additions, removals, and order changes all stay on the incremental path.
  *
  * `setData()` unconditionally re-tiles and repaints an entire source with no diffing. That is
  * invisible on a static map and expensive on an animated one: advancing a choropleth a step every
  * few hundred milliseconds re-tiles every polygon each time, when all that changed were the values
  * driving the colour ramp.
  *
- * Deliberately strict about what counts as "geometry unchanged": geometries must be the *same
- * object*, not merely deep-equal. Structurally comparing polygon rings would cost on the order of
- * the re-tile this exists to avoid, and a false positive here paints stale geometry -- a visibly
- * wrong map -- whereas a false negative merely takes the old path. An animation that reuses its
- * geometry across frames, which is the efficient way to build one anyway, hits the fast path.
+ * Geometry and bbox values must remain semantically unchanged. The component's ownership boundary
+ * necessarily detaches them on every accepted assignment, so reference identity cannot establish
+ * that fact; a bounded, accessor-free comparison verifies their JSON data graph instead. Any
+ * uncertainty still falls back to `setData()`.
+ *
+ * MapLibre applies removals before additions. To preserve the feature collection's observable
+ * order, the longest next-order prefix already appearing in previous order stays in place; the
+ * remaining suffix is removed and re-added in its exact next order. Appends and ordinary removals
+ * therefore remain minimal, while a reorder changes only the suffix it invalidated.
  */
 export function buildGeoJsonPropertyDiff(
   previous: unknown,
   next: unknown
 ): MapLibreGeoJsonDiff | null {
-  const previousFeatures = (previous as { features?: unknown })?.features;
-  const nextFeatures = (next as { features?: unknown })?.features;
-  if (!Array.isArray(previousFeatures) || !Array.isArray(nextFeatures)) return null;
-  if (previousFeatures.length !== nextFeatures.length) return null;
-  if (nextFeatures.length > GEOJSON_DIFF_FEATURE_LIMIT) return null;
+  const previousCollection = indexGeoJsonCollection(previous);
+  const nextCollection = indexGeoJsonCollection(next);
+  if (!previousCollection || !nextCollection) return null;
+
+  const previousGeometry: unknown[] = [];
+  const nextGeometry: unknown[] = [];
+  for (const after of nextCollection.ordered) {
+    const before = previousCollection.byId.get(after.id);
+    if (!before) continue;
+    previousGeometry.push(before.geometry, before.bbox);
+    nextGeometry.push(after.geometry, after.bbox);
+  }
+  if (!sameGeoJsonSnapshots(previousGeometry, nextGeometry)) return null;
+
+  const retained = new Set<string | number>();
+  let previousIndex = -1;
+  for (const feature of nextCollection.ordered) {
+    const before = previousCollection.byId.get(feature.id);
+    if (!before || before.index <= previousIndex) break;
+    retained.add(feature.id);
+    previousIndex = before.index;
+  }
+
+  const remove = previousCollection.ordered
+    .filter((feature) => !retained.has(feature.id))
+    .map((feature) => feature.id);
+  const add = nextCollection.ordered
+    .filter((feature) => !retained.has(feature.id))
+    .map((feature) => feature.feature);
 
   const update: {
     id: string | number;
@@ -906,33 +1078,25 @@ export function buildGeoJsonPropertyDiff(
     removeProperties: string[];
   }[] = [];
 
-  for (let index = 0; index < nextFeatures.length; index += 1) {
-    const before = previousFeatures[index] as
-      | { id?: unknown; geometry?: unknown; properties?: Record<string, unknown> | null }
-      | undefined;
-    const after = nextFeatures[index] as
-      | { id?: unknown; geometry?: unknown; properties?: Record<string, unknown> | null }
-      | undefined;
-    if (!before || !after) return null;
-    // No id means maplibre-gl cannot address the feature in a diff at all.
-    const id = after.id;
-    if ((typeof id !== 'string' && typeof id !== 'number') || before.id !== id) return null;
-    if (before.geometry !== after.geometry) return null;
-
-    const beforeProperties = before.properties ?? {};
-    const afterProperties = after.properties ?? {};
+  for (const after of nextCollection.ordered) {
+    if (!retained.has(after.id)) continue;
+    const before = previousCollection.byId.get(after.id)!;
     const addOrUpdateProperties: { key: string; value: unknown }[] = [];
-    for (const [key, value] of Object.entries(afterProperties)) {
-      if (!Object.is(beforeProperties[key], value)) addOrUpdateProperties.push({ key, value });
+    for (const [key, value] of Object.entries(after.properties)) {
+      if (!Object.is(before.properties[key], value)) addOrUpdateProperties.push({ key, value });
     }
-    const removeProperties = Object.keys(beforeProperties).filter(
-      (key) => !(key in afterProperties)
+    const removeProperties = Object.keys(before.properties).filter(
+      (key) => !Object.hasOwn(after.properties, key)
     );
     if (addOrUpdateProperties.length === 0 && removeProperties.length === 0) continue;
-    update.push({ id, addOrUpdateProperties, removeProperties });
+    update.push({ id: after.id, addOrUpdateProperties, removeProperties });
   }
 
-  return { update };
+  return {
+    ...(remove.length ? { remove } : {}),
+    ...(add.length ? { add } : {}),
+    update,
+  };
 }
 
 export interface LyraMapEventMap {
@@ -1313,7 +1477,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         ? buildGeoJsonPropertyDiff(previous, geojson)
         : null;
     if (diff === null || typeof source.updateData !== 'function') source.setData(geojson);
-    else if (diff.update.length > 0) source.updateData(diff);
+    else if (diff.update.length > 0 || diff.add?.length || diff.remove?.length)
+      source.updateData(diff);
     this._appliedGeoJson.set(resolvedSourceId, geojson);
   }
 

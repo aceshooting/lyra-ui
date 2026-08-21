@@ -3537,11 +3537,29 @@ describe('incremental GeoJSON updates', () => {
     expect(diff!.update).to.have.length(0);
   });
 
-  it('refuses the fast path when the geometry object differs', () => {
-    // Deliberately strict: a deep compare would cost about what the re-tile costs, and a false
-    // positive would paint stale geometry -- a visibly wrong map.
+  it('accepts semantically unchanged geometry after the ownership boundary detached it', () => {
     const moved = { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] };
-    expect(buildGeoJsonPropertyDiff(collection(1), collection(1, moved))).to.equal(null);
+    const diff = buildGeoJsonPropertyDiff(collection(1), collection(2, moved));
+    expect(diff).to.not.equal(null);
+    expect(diff!.update[0]!.addOrUpdateProperties).to.deep.equal([{ key: 'value', value: 2 }]);
+  });
+
+  it('refuses the fast path when retained geometry or bbox values actually change', () => {
+    const changedGeometry = {
+      type: 'Polygon',
+      coordinates: [[[0, 0], [2, 0], [2, 2], [0, 0]]],
+    };
+    expect(buildGeoJsonPropertyDiff(collection(1), collection(2, changedGeometry))).to.equal(null);
+
+    const withBbox = (bbox: readonly number[]) => ({
+      type: 'FeatureCollection',
+      features: [
+        { type: 'Feature', id: 'a', bbox, geometry, properties: { value: 1 } },
+      ],
+    });
+    expect(buildGeoJsonPropertyDiff(withBbox([0, 0, 1, 1]), withBbox([0, 0, 2, 2]))).to.equal(
+      null
+    );
   });
 
   it('refuses the fast path when a feature has no addressable id', () => {
@@ -3552,7 +3570,7 @@ describe('incremental GeoJSON updates', () => {
     expect(buildGeoJsonPropertyDiff(withoutId, withoutId)).to.equal(null);
   });
 
-  it('refuses the fast path when the feature count changes', () => {
+  it('adds and removes stable-id features without replacing the source', () => {
     const two = {
       type: 'FeatureCollection',
       features: [
@@ -3560,7 +3578,59 @@ describe('incremental GeoJSON updates', () => {
         { type: 'Feature', id: 'b', geometry, properties: { value: 2 } },
       ],
     };
-    expect(buildGeoJsonPropertyDiff(collection(1), two)).to.equal(null);
+    const added = buildGeoJsonPropertyDiff(collection(1), two);
+    expect(added).to.not.equal(null);
+    expect(added!.add?.map((feature) => feature.id)).to.deep.equal(['b']);
+    expect(added!.remove ?? []).to.deep.equal([]);
+
+    const removed = buildGeoJsonPropertyDiff(two, collection(1));
+    expect(removed).to.not.equal(null);
+    expect(removed!.remove).to.deep.equal(['b']);
+    expect(removed!.add ?? []).to.deep.equal([]);
+  });
+
+  it('preserves observable feature order by minimally removing and re-adding the changed suffix', () => {
+    const feature = (id: string) => ({
+      type: 'Feature',
+      id,
+      geometry,
+      properties: { value: id },
+    });
+    const before = {
+      type: 'FeatureCollection',
+      features: [feature('a'), feature('b'), feature('c')],
+    };
+    const after = {
+      type: 'FeatureCollection',
+      features: [feature('b'), feature('a'), feature('c')],
+    };
+
+    const diff = buildGeoJsonPropertyDiff(before, after);
+    expect(diff).to.not.equal(null);
+    expect(diff!.remove).to.deep.equal(['a', 'c']);
+    expect(diff!.add?.map((entry) => entry.id)).to.deep.equal(['a', 'c']);
+    expect(diff!.update).to.deep.equal([]);
+  });
+
+  it('refuses duplicate ids because MapLibre cannot address them without dropping a feature', () => {
+    const duplicate = {
+      type: 'FeatureCollection',
+      features: [
+        { type: 'Feature', id: 'a', geometry, properties: { value: 1 } },
+        { type: 'Feature', id: 'a', geometry, properties: { value: 2 } },
+      ],
+    };
+    expect(buildGeoJsonPropertyDiff(collection(1), duplicate)).to.equal(null);
+  });
+
+  it('falls back once semantic geometry comparison exhausts its bounded work', () => {
+    const geometryWith = (coordinates: readonly number[]) => ({
+      type: 'LineString',
+      coordinates,
+    });
+    const before = collection(1, geometryWith(Array.from({ length: 50_001 }, () => 0)));
+    const after = collection(2, geometryWith(Array.from({ length: 50_001 }, () => 0)));
+    expect(buildGeoJsonPropertyDiff(before, after)).to.equal(null);
   });
 
   it('reports removed properties so a stale key cannot survive the update', () => {
@@ -3575,6 +3645,40 @@ describe('incremental GeoJSON updates', () => {
   it('refuses non-collections rather than guessing', () => {
     expect(buildGeoJsonPropertyDiff(null, collection(1))).to.equal(null);
     expect(buildGeoJsonPropertyDiff(collection(1), undefined)).to.equal(null);
+  });
+
+  it('routes add/remove-only diffs through updateData instead of setData', () => {
+    const el = document.createElement('lr-map') as LyraMap;
+    const two = {
+      type: 'FeatureCollection',
+      features: [
+        { type: 'Feature', id: 'a', geometry, properties: { value: 1 } },
+        { type: 'Feature', id: 'b', geometry, properties: { value: 2 } },
+      ],
+    };
+    const applied = (el as unknown as { _appliedGeoJson: Map<string, unknown> })._appliedGeoJson;
+    applied.set('source', collection(1));
+    const diffs: unknown[] = [];
+    let replacements = 0;
+    const source = {
+      setData: () => {
+        replacements += 1;
+      },
+      updateData: (diff: unknown) => {
+        diffs.push(diff);
+      },
+    };
+    const push = (el as unknown as {
+      pushGeoJson: (source: typeof source, id: string, value: unknown) => void;
+    }).pushGeoJson.bind(el);
+
+    push(source, 'source', two);
+    push(source, 'source', collection(1));
+
+    expect(replacements).to.equal(0);
+    expect(diffs).to.have.length(2);
+    expect((diffs[0] as { add?: unknown[] }).add).to.have.length(1);
+    expect((diffs[1] as { remove?: unknown[] }).remove).to.deep.equal(['b']);
   });
 });
 

@@ -46,11 +46,14 @@ import type {
   LyraChartPoint,
   ChipSelectDetail,
   LyraMapChoroplethLayer,
+  LyraMapEventMap,
   LyraGraphLink,
   LyraGraphNode,
   HeatmapSelectedCell,
   KbdLocalize,
   LyraMapLegendEntry,
+  LyraMapMarkerActivationDetail,
+  LyraMapMarkerActivationSource,
   LyraChartType,
   LyraComboboxSelectionDirection,
   LyraMapMarker,
@@ -400,7 +403,10 @@ const barrelPublicSurfaceTypes: [
   LyraGraphLink,
   LyraMapLegendEntry,
   LyraMapChoroplethLayer,
+  LyraMapEventMap,
   LyraMapMarker,
+  LyraMapMarkerActivationDetail,
+  LyraMapMarkerActivationSource,
   LyraWidgetView,
   MenuItemType,
   ToolApprovalDialogWrap,
@@ -412,6 +418,11 @@ const barrelPublicSurfaceTypes: [
   PromptStudioMessageReorderDetail,
 ] | undefined = undefined;
 void barrelPublicSurfaceTypes;
+
+declare const mapMarkerActivationEvent: LyraMapEventMap['lr-map-marker-activate'];
+const mapMarkerActivationDetail: LyraMapMarkerActivationDetail = mapMarkerActivationEvent.detail;
+const mapMarkerActivationSource: LyraMapMarkerActivationSource = mapMarkerActivationDetail.source;
+void mapMarkerActivationSource;
 
 declare const appRail: LyraAppRail;
 appRail.addEventListener('lr-mode-change', (event) => {

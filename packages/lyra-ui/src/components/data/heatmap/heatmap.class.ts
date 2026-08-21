@@ -247,6 +247,35 @@ export interface HeatmapLegendStop {
   partOfRamp?: boolean;
 }
 
+/** The ownership boundary clones every assignment before Lit sees it, so reference equality can
+ * never suppress a repeated legend binding. Compare only the four fields the legend consumes;
+ * unknown record fields are deliberately irrelevant to heatmap rendering. */
+function legendStopsChanged(
+  value: readonly HeatmapLegendStop[] | undefined,
+  previous: readonly HeatmapLegendStop[] | undefined
+): boolean {
+  if (Object.is(value, previous)) return false;
+  if (!Array.isArray(value) || !Array.isArray(previous) || value.length !== previous.length)
+    return true;
+  for (let index = 0; index < value.length; index += 1) {
+    if (Object.hasOwn(value, index) !== Object.hasOwn(previous, index)) return true;
+    const next = value[index];
+    const before = previous[index];
+    if (!next || !before) {
+      if (!Object.is(next, before)) return true;
+      continue;
+    }
+    if (
+      !Object.is(next.value, before.value) ||
+      !Object.is(next.color, before.color) ||
+      !Object.is(next.label, before.label) ||
+      !Object.is(next.partOfRamp, before.partOfRamp)
+    )
+      return true;
+  }
+  return false;
+}
+
 /** A single cell to mark as persistently selected -- `row`/`col` in matrix mode, `date` in
  *  calendar mode (whichever pair matches the active `mode`; the other field is ignored),
  *  mirroring `HeatmapAnnotation`'s own row/col/date shape. */
@@ -1187,9 +1216,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * Strictly presentation: the stops are never consulted by the color ramp, the bucket math, the
    * tooltip, or the accessible name — supplying them changes nothing a cell renders. Any
    * `annotations` with a `label` still render their `[part="legend-annotation"]` entries after
-   * the stops. Unset (the default) or an empty array reproduces today's exact gradient legend.
+   * the stops. Reassigning stops whose supported fields are unchanged does not schedule a redraw;
+   * every assignment is still clone-owned, so mutating and reassigning the caller's array is
+   * detected without exposing that mutation in place. Unset (the default) or an empty array
+   * reproduces today's exact gradient legend.
    */
-  @property({ attribute: false }) legendStops?: readonly HeatmapLegendStop[];
+  @property({ attribute: false, hasChanged: legendStopsChanged })
+  legendStops?: readonly HeatmapLegendStop[];
   /**
    * The single cell to mark as persistently selected -- `row`/`col` in matrix mode, `date` in
    * calendar mode. Purely a controlled, consumer-owned visual/accessibility marker, mirroring

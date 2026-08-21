@@ -1,10 +1,13 @@
 import type {
   LyraMapChoroplethLayer,
   LyraMapGeoJsonDataLayer,
+  LyraMapHeatmapZoomValue,
   LyraMapLegendEntry,
   LyraMapLegendPattern,
   LyraMapLegendProjection,
   LyraMapMarker,
+  LyraMapMarkerActivationDetail,
+  LyraMapMarkerActivationSource,
 } from '../src/components/media/map/map.js';
 import type {
   LyraFrame,
@@ -17,10 +20,13 @@ import type { VideoState } from '../src/components/media/video/video.js';
 declare const canonicalMediaTypes: [
   LyraMapChoroplethLayer,
   LyraMapGeoJsonDataLayer,
+  LyraMapHeatmapZoomValue,
   LyraMapLegendEntry,
   LyraMapLegendPattern,
   LyraMapLegendProjection,
   LyraMapMarker,
+  LyraMapMarkerActivationDetail,
+  LyraMapMarkerActivationSource,
   LyraFrame,
   LyraMediaCardKind,
   LyraMediaCardOpenDetail,
@@ -28,6 +34,20 @@ declare const canonicalMediaTypes: [
   VideoState
 ];
 void canonicalMediaTypes;
+
+const granularMapHeatmapZoomValue: LyraMapHeatmapZoomValue = [
+  [0, 12],
+  [9, 36],
+];
+const granularMapActivationSource: LyraMapMarkerActivationSource = 'keyboard';
+const granularMapActivationDetail: LyraMapMarkerActivationDetail = {
+  id: 'station',
+  lngLat: [6.13, 49.61],
+  marker: { id: 'station', lngLat: [6.13, 49.61], label: 'Station' },
+  source: granularMapActivationSource,
+};
+void granularMapHeatmapZoomValue;
+void granularMapActivationDetail;
 
 // @ts-expect-error LegendEntry was removed in favor of LyraMapLegendEntry.
 import type { LegendEntry } from '../src/components/media/map/map.js';
