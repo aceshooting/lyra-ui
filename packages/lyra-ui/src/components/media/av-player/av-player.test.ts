@@ -1431,6 +1431,12 @@ describe('time-range anchors', () => {
     await el.updateComplete;
     expect(await el.scrollToAnchor({ kind: 'time-range', start: 25 })).to.be.true;
     expect(media.currentTime).to.equal(25);
+    const anchorTiming = el as unknown as {
+      anchorRetryIntervalMs: number;
+      anchorTimeoutMs: number;
+    };
+    anchorTiming.anchorRetryIntervalMs = 0;
+    anchorTiming.anchorTimeoutMs = 0;
     expect(await el.scrollToAnchor({ kind: 'page', page: 1 })).to.be.false;
   });
 });
