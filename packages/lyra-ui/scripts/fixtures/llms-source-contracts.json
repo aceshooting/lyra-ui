@@ -6489,6 +6489,29 @@
       }
     },
     {
+      "module": "src/components/data/timeline/timeline.class.ts",
+      "exportName": "LyraTimelineClusterActivateDetail",
+      "kind": "interface",
+      "fingerprint": "0a9672cad8eda367d915",
+      "routes": [
+        "src/all.ts",
+        "src/components/data/index.ts",
+        "src/components/data/timeline/timeline.class.ts",
+        "src/components/data/timeline/timeline.ts",
+        "src/components/lr-timeline.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/data.md",
+      "family": "data",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-timeline",
+        "declaration": "LyraTimelineClusterActivateDetail"
+      }
+    },
+    {
       "module": "src/components/data/tree/tree-types.ts",
       "exportName": "LyraTreeNodeData",
       "kind": "interface",
@@ -13641,7 +13664,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "e044d11ded02a9a91b4b",
+      "fingerprint": "2f3c982aa665f34b355e",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -14552,7 +14575,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "e5ec73c4cb4f0fce6a18",
+      "fingerprint": "0d4d4bc9c71c1ab40a3a",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -14693,7 +14716,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "6f0d5df18a32b674bf79",
+      "fingerprint": "c524586ccc2aa0e5be9d",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15242,7 +15265,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "1ad8a14425f2ea26fca1",
+      "fingerprint": "24ac304aee026d397c97",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15677,7 +15700,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "80fe3c166b5a2f1fa983",
+      "fingerprint": "096d7de22b1ec0015789",
       "routes": [
         "src/vue.ts"
       ],
