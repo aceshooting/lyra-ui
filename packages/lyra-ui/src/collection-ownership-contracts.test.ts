@@ -375,6 +375,9 @@ describe('original component collection ownership contracts', () => {
 
       const snapshot = element[property] as ReadonlySet<string>;
       expect([...snapshot]).to.deep.equal(['first']);
+      expect([...snapshot.entries()]).to.deep.equal([['first', 'first']]);
+      expect([...snapshot.keys()]).to.deep.equal(['first']);
+      expect([...snapshot.values()]).to.deep.equal(['first']);
       expect(Object.isFrozen(snapshot)).to.equal(true);
       expect('add' in snapshot).to.equal(false);
 
