@@ -125,6 +125,48 @@ Filterable single/multi-select combining a text input with a listbox. Mirrors th
 `<wa-combobox>` API under the `lr-` prefix. **Form-associated** (hand-rolled internals, not the
 shared `FormAssociated` mixin — see gotchas).
 
+**First-interaction registration.** Where initial-route weight is stricter than a static combobox
+registration allows, keep a labelled native `<input list>` as the working pre-JavaScript control
+and import only the granular combobox registration on its first focus. Copy the native value after
+the import resolves so typing that happens while the chunk is in flight is not lost, then transfer
+focus explicitly — the browser does not replay the focus event after custom-element upgrade:
+
+```html
+<div id="country-fallback">
+  <label for="country-native">Country</label>
+  <input id="country-native" name="country" list="country-options">
+  <datalist id="country-options"><option value="France"></option></datalist>
+</div>
+<lr-combobox id="country-enhanced" name="country" label="Country" hidden>
+  <lr-option value="France">France</lr-option>
+</lr-combobox>
+<script type="module">
+  const fallback = document.querySelector("#country-fallback");
+  const input = document.querySelector("#country-native");
+  const combobox = document.querySelector("#country-enhanced");
+  let registration;
+  input.addEventListener("focus", async () => {
+    if (!combobox.hidden) return;
+    registration ??= import(
+      "@aceshooting/lyra-ui/components/forms/combobox/combobox.js"
+    ).catch((error) => {
+      registration = undefined; // let a later interaction retry
+      throw error;
+    });
+    await registration;
+    await customElements.whenDefined("lr-combobox");
+    combobox.value = input.value;
+    fallback.hidden = true;
+    combobox.hidden = false;
+    combobox.focus();
+  });
+</script>
+```
+
+Leave the native control in place if registration fails. This pattern preserves the initial shell;
+the full form-label, option, overlay, and first-open positioning contracts arrive in deferred
+chunks instead of being weakened in a separate partial combobox implementation.
+
 An `lr-option` row remains bounded by its owning listbox: the default label ellipsizes and each
 `start`/`end` (or `prefix`/`suffix`) adornment is capped at 40% of the row. Unbroken metadata
 therefore cannot widen a 320px LTR or RTL picker.

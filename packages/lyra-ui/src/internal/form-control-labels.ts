@@ -1,6 +1,6 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { deepActiveElementIn } from './active-element.js';
-import { collectFocusableElements } from './overlay-manager.js';
+import { collectComposedFocusTargets } from './focus-navigation.js';
 import { registerFormControlLabelSupport, type LyraElement } from './lyra-element.js';
 
 /**
@@ -852,7 +852,7 @@ export class ExternalLabelController implements ReactiveController {
 
   private resolveFocusTarget(): HTMLElement | null {
     if (this.hostSemanticOwner) return this.host;
-    return collectFocusableElements(this.host)[0] ?? null;
+    return collectComposedFocusTargets(this.host).elements[0] ?? null;
   }
 
   /** Host-owned semantic controls opt in with a symbol so the protocol cannot accidentally become
@@ -998,12 +998,22 @@ export class ExternalLabelController implements ReactiveController {
   };
 }
 
-// Registers this module's two symbols with `LyraElement` as a side effect of importing this file,
-// instead of `LyraElement` statically importing them -- see `registerFormControlLabelSupport()`'s
-// own doc for why. Importing this file at all is now what opts a component's constructor/
-// `attachInternals()` into form-control-label support; the `FormAssociated` mixin and every
-// hand-rolled form-associated component import it for exactly that reason.
-registerFormControlLabelSupport(
-  captureFormInternals,
-  (host: LyraElement<any>) => new ExternalLabelController(host),
-);
+let supportInstalled = false;
+
+/**
+ * Installs the two form-control hooks used by `LyraElement`.
+ *
+ * Callers deliberately use this value import instead of relying on a bare module import: package
+ * tree-shaking metadata is then free to classify this module as otherwise side-effect-free without
+ * erasing the form-label contract from a production component bundle.
+ *
+ * @internal
+ */
+export function installFormControlLabelSupport(): void {
+  if (supportInstalled) return;
+  supportInstalled = true;
+  registerFormControlLabelSupport(
+    captureFormInternals,
+    (host: LyraElement<any>) => new ExternalLabelController(host),
+  );
+}

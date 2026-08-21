@@ -60,6 +60,30 @@ async function measureOne({ component, packageDir, esbuild, external }) {
   };
 }
 
+function isValidMeasuredGzipEvidence(evidence) {
+  return evidence?.status === 'measured' &&
+    Number.isInteger(evidence.bytes) &&
+    evidence.bytes > 0 &&
+    evidence.kib === Number((evidence.bytes / 1024).toFixed(1)) &&
+    /^[0-9a-f]{64}$/.test(evidence.bundleSha256 ?? '');
+}
+
+/**
+ * Keeps gzip evidence stable across Node builds that emit byte-identical bundles but link a
+ * different zlib patch. The uncompressed bundle digest remains the fail-closed authority: any
+ * emitted-byte change adopts the live measurement and therefore makes the generated ledger stale.
+ */
+export function canonicalizeGzipEvidence(measured, previous) {
+  if (
+    isValidMeasuredGzipEvidence(measured) &&
+    isValidMeasuredGzipEvidence(previous) &&
+    measured.bundleSha256 === previous.bundleSha256
+  ) {
+    return { ...measured, bytes: previous.bytes, kib: previous.kib };
+  }
+  return measured;
+}
+
 async function mapLimit(items, limit, mapper) {
   const results = new Array(items.length);
   let cursor = 0;
@@ -106,13 +130,17 @@ export async function buildComponentIntegration({
 
   const components = inventory.components.map((component) => {
     const graph = graphByTag.get(component.tag);
-    const gzip = measured.get(component.tag) ?? previousByTag.get(component.tag)?.gzip ?? {
+    const previousGzip = previousByTag.get(component.tag)?.gzip;
+    const liveGzip = measured.get(component.tag);
+    const gzip = liveGzip
+      ? canonicalizeGzipEvidence(liveGzip, previousGzip)
+      : previousGzip ?? {
       status: 'not-measured',
       bytes: null,
       kib: null,
       bundleSha256: null,
       limitation: 'Per-tag gzip data has not been generated from built dist output.',
-    };
+      };
     return {
       tag: component.tag,
       family: component.family,
@@ -135,7 +163,7 @@ export async function buildComponentIntegration({
     schemaVersion: COMPONENT_INTEGRATION_SCHEMA_VERSION,
     methodology: {
       dependencies: 'Direct edges are exact rendered-component or direct registration imports; transitive edges are the remaining reachable registrations.',
-      gzip: 'esbuild bundle=true format=esm minify=true, then gzip level 9; optional peer packages and subpaths externalized.',
+      gzip: 'esbuild bundle=true format=esm minify=true, then gzip level 9; optional peer packages and subpaths externalized. A byte-identical bundle SHA-256 retains its canonical gzip count across zlib patch versions.',
     },
     summary: {
       componentCount: components.length,

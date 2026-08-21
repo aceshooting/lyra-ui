@@ -25,7 +25,11 @@ import {
   omittedEmptyStringConverter,
   trueDefaultBooleanConverter,
 } from '../../../internal/converters.js';
-import { activateOverlay, composedContains, type OverlayHandle } from '../../../internal/overlay-manager.js';
+import {
+  activateNonmodalOverlay,
+  composedContains,
+  type OverlayHandle,
+} from '../../../internal/nonmodal-overlay-manager.js';
 import { animateRegistered } from '../../../internal/registered-animation.js';
 import { composedAccessibilityTextResult } from '../../../internal/accessibility-visibility.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from './overlay-arrow.js';
@@ -281,6 +285,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   private readonly descriptionId = nextId('tooltip-description');
   private descriptionProxy?: HTMLSpanElement;
   private contentObserver?: MutationObserver;
+  private triggerSyncGeneration = 0;
   private stopLabelReferenceIdentityObservation?: () => void;
   private readonly contentSlotListeners = new Set<HTMLSlotElement>();
   /** While an open tooltip contains a rootless custom element, rescan for a bounded initialization
@@ -431,6 +436,8 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   }
   override connectedCallback(): void {
     super.connectedCallback();
+    const triggerSyncGeneration = ++this.triggerSyncGeneration;
+    const triggerSyncDocument = this.ownerDocument;
     this.syncAnchorIdentityObservation();
     this.ensureDescriptionProxy();
     this.contentObserver?.disconnect();
@@ -443,6 +450,20 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       : undefined;
     this.updateInteractiveContent();
     this.syncInteractionTrigger();
+    // A cross-document move can connect before the adopted shadow slot has redistributed. Refresh
+    // from the live slot after this render instead of retaining a detached-realm trigger snapshot.
+    void this.updateComplete.then(() => {
+      if (
+        triggerSyncGeneration !== this.triggerSyncGeneration ||
+        !this.isConnected ||
+        this.ownerDocument !== triggerSyncDocument
+      ) {
+        return;
+      }
+      const slot = this.renderRoot.querySelector<HTMLSlotElement>('[part="trigger"] > slot');
+      this.slottedTriggerElement = slot?.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
+      this.syncInteractionTrigger();
+    });
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element
     // instance) fires disconnectedCallback then connectedCallback
     // synchronously with no update in between, so updated() never reruns to
@@ -459,6 +480,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     }
   }
   override disconnectedCallback(): void {
+    this.triggerSyncGeneration++;
     this.stopAnchorIdentityObservation?.();
     this.stopAnchorIdentityObservation = undefined;
     this.cancelPendingTransition();
@@ -485,6 +507,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.triggerSyncGeneration++;
     this.stopAnchorIdentityObservation?.();
     this.stopAnchorIdentityObservation = undefined;
     // Every asynchronous primitive is paired with the Window that created it. Adoption normally
@@ -558,13 +581,11 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       this.overlayHandle.updateRestoreFocusTo(restoreFocusTarget);
       return;
     }
-    this.overlayHandle = activateOverlay({
+    this.overlayHandle = activateNonmodalOverlay({
       host: this,
       panel: () => this.renderRoot.querySelector('[part~="popup"]') as HTMLElement | null,
       onEscape: () => this.hide({ restoreFocus: this.shouldRestoreFocusAfterEscape() }),
       restoreFocusTo: restoreFocusTarget,
-      modal: false,
-      trapFocus: false,
     });
     // A hover tooltip must never steal focus, so initial focus is moved only when the content
     // explicitly asks for it.

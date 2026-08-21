@@ -4,6 +4,7 @@ import {
   captureFormInternals,
   EXTERNAL_LABEL_HOST_SEMANTICS,
   ExternalLabelController,
+  installFormControlLabelSupport,
   resolveExternalLabels,
   resolveExternalLabelText,
   type ExternalLabelHostSemanticOperation,
@@ -242,6 +243,24 @@ function mountFace(testCase: FaceCase, fieldsetDisabled = false): {
 }
 
 describe('external FACE label contract', () => {
+  it('keeps repeated support installation idempotent', async () => {
+    installFormControlLabelSupport();
+    installFormControlLabelSupport();
+
+    const testCase = FACE_CASES.find(({ name }) => name === 'checkbox');
+    expect(testCase?.name).to.equal('checkbox');
+    const { container, control, label } = mountFace(testCase!);
+    try {
+      await settle(control);
+      expect(control.checked).to.be.false;
+      label.click();
+      await nextTask();
+      expect(control.checked).to.be.true;
+    } finally {
+      container.remove();
+    }
+  });
+
   for (const testCase of FACE_CASES) {
     it(`${testCase.name} forwards its external label name and activation to the semantic control`, async () => {
       const { container, control, label } = mountFace(testCase);

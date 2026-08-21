@@ -76,6 +76,36 @@ check('only a declaration counts as declaring setCustomValidity, never a call', 
   assert.equal(declaresSetCustomValidity(`this.input?.setCustomValidity('');`), false);
 });
 
+// --- rule (g): production-retained form-label installation -----------------------------------
+
+check('a direct form-associated control must explicitly install form-label support', () => {
+  const source = `
+import './form-control-labels.js';
+export class LyraFixture extends LyraElement {
+  static formAssociated = true;
+}
+`;
+  assert.deepEqual(rulesFor(source, { requireLabelSupport: true }), ['g']);
+});
+
+check('a direct form-associated control satisfies label support with a value import and call', () => {
+  const source = `
+import { installFormControlLabelSupport } from './form-control-labels.js';
+installFormControlLabelSupport();
+export class LyraFixture extends LyraElement {
+  static formAssociated = true;
+}
+`;
+  assert.deepEqual(rulesFor(source, { requireLabelSupport: true }), []);
+});
+
+check('a shared-mixin control inherits the mixin module label-support installation', () => {
+  const source = `
+export class LyraFixture extends FormAssociated(LyraElement) {}
+`;
+  assert.deepEqual(rulesFor(source, { requireLabelSupport: true }), []);
+});
+
 // --- rule (c): a value-carrying form-associated control must expose setCustomValidity -----------
 
 const HARDENED_JSDOC = [
@@ -549,4 +579,3 @@ check('the backlog is a real, non-empty census of shipped paths', () => {
 });
 
 console.log(`Form-associated checker self-tests passed (${passed} checks).`);
-

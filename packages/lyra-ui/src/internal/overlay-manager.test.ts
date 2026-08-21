@@ -7,6 +7,7 @@ import {
   deepActiveElement,
   suspendLyraModalsFor,
 } from './overlay-manager.js';
+import { activateNonmodalOverlay } from './nonmodal-overlay-manager.js';
 
 function createOverlay(doc: Document, label: string) {
   const host = doc.createElement('section');
@@ -129,6 +130,74 @@ it('routes Escape only to the topmost overlay across different overlay owners', 
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
   expect(dismissed).to.deep.equal(['responsive-panel', 'dialog']);
   bottomHandle.deactivate();
+});
+
+it('shares ordering, Escape, inerting, and focus return across modal and nonmodal adapters', () => {
+  const background = document.createElement('button');
+  background.dataset.overlayBackground = '';
+  document.body.append(background);
+  background.focus();
+  const modal = createOverlay(document, 'mixed-modal');
+  const popup = createOverlay(document, 'mixed-nonmodal');
+  const dismissed: string[] = [];
+  const modalHandle = activateOverlay({
+    host: modal.host,
+    panel: () => modal.panel,
+    onEscape: () => dismissed.push('modal'),
+  });
+  const popupHandle = activateNonmodalOverlay({
+    host: popup.host,
+    panel: () => popup.panel,
+    onEscape: () => dismissed.push('nonmodal'),
+    restoreFocusTo: modal.first,
+  });
+
+  expect(background.inert).to.be.true;
+  expect(modal.host.inert).to.be.false;
+  expect(popup.host.inert).to.be.false;
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  expect(dismissed.join(',')).to.equal('nonmodal');
+
+  popupHandle.deactivate();
+  expect((deepActiveElement(document) as HTMLElement | null)?.textContent).to.equal('mixed-modal first');
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  expect(dismissed.join(',')).to.equal('nonmodal,modal');
+
+  modalHandle.deactivate();
+  expect(background.inert).to.be.false;
+});
+
+it('moves a suspended nonmodal entry between document stacks without disturbing a modal owner', () => {
+  const modal = createOverlay(document, 'adoption-modal');
+  const popup = createOverlay(document, 'adoption-nonmodal');
+  const dismissed: string[] = [];
+  const modalHandle = activateOverlay({
+    host: modal.host,
+    panel: () => modal.panel,
+    onEscape: () => dismissed.push('modal'),
+  });
+  const popupHandle = activateNonmodalOverlay({
+    host: popup.host,
+    panel: () => popup.panel,
+    onEscape: () => dismissed.push('nonmodal'),
+  });
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const frameDocument = frame.contentDocument!;
+
+  try {
+    popupHandle.suspend();
+    frameDocument.body.append(frameDocument.adoptNode(popup.host));
+    popupHandle.resume();
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    frameDocument.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    expect(dismissed.join(',')).to.equal('modal,nonmodal');
+  } finally {
+    popupHandle.deactivate({ restoreFocus: false });
+    modalHandle.deactivate({ restoreFocus: false });
+    frame.remove();
+  }
 });
 
 it('scopes a third-party modal above the Lyra stack until its release handle is called', () => {
@@ -1745,6 +1814,22 @@ it('falls back to the global MutationObserver constructor for a document with no
   expect(handle.isActive()).to.be.true;
 
   handle.deactivate({ restoreFocus: false });
+});
+
+it('returns an inert rendered-state handle when an SSR host has no owner document', () => {
+  const host = {} as HTMLElement;
+  const handle = activateOverlay({
+    host,
+    panel: () => null,
+    onEscape: () => undefined,
+    lockScroll: true,
+    suspendWhenUnrendered: true,
+  });
+
+  expect(handle.isActive()).to.be.false;
+  expect(handle.isTopmost()).to.be.false;
+  expect(() => handle.focusInitial()).to.not.throw();
+  expect(() => handle.deactivate()).to.not.throw();
 });
 
 it('skips inerting a non-HTMLElement sibling such as an SVG element', () => {

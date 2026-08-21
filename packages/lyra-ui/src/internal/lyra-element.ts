@@ -29,15 +29,13 @@ let externalLabelFactory: ExternalLabelFactory | undefined;
  * hook existed, paid for anyway (every component extends `LyraElement`, and the base class's own
  * constructor/`attachInternals()` referenced both symbols unconditionally).
  *
- * Called exactly once, as a side effect of importing `form-control-labels.js` -- directly from the
- * `FormAssociated` mixin (covering every mixin-based control), or via one explicit
- * `import './form-control-labels.js';` line in each hand-rolled form-associated component that
- * does not use the mixin. A component that never imports it (because it is not form-associated)
- * simply never registers the hook, which is the same no-op outcome `formAssociated` being unset
- * already produced.
+ * Installed idempotently through an explicit function call from the `FormAssociated` mixin
+ * (covering every mixin-based control), or from each hand-rolled form-associated component that
+ * does not use the mixin. A component that never requests installation (because it is not
+ * form-associated) simply never registers the hook, which is the same no-op outcome
+ * `formAssociated` being unset already produced.
  *
- * @internal Called only by `form-control-labels.js`'s own module-load side effect -- never call
- * this directly.
+ * @internal Called only by `installFormControlLabelSupport()`.
  */
 export function registerFormControlLabelSupport(
   hook: FormInternalsHook,

@@ -7,7 +7,11 @@ import { FormAssociated } from '../../../internal/form-associated.js';
 import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import { place } from '../../../internal/positioner.js';
 import { isRtl, rtlAwarePlacement } from '../../../internal/rtl.js';
-import { activateOverlay, composedContains, type OverlayHandle } from '../../../internal/overlay-manager.js';
+import {
+  activateNonmodalOverlay,
+  composedContains,
+  type OverlayHandle,
+} from '../../../internal/nonmodal-overlay-manager.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteRange } from '../../../internal/numbers.js';
@@ -686,7 +690,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     if (!this.isConnected || this.inline) return;
     this.positionPanel();
     this.restoreFocusOnClose = true;
-    this.overlayHandle = activateOverlay({
+    this.overlayHandle = activateNonmodalOverlay({
       host: this,
       panel: () => this.panelEl(),
       onEscape: () => this.hide(),
@@ -696,8 +700,6 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
         if (this.open) this.restoreFocusOnClose = true;
       },
       restoreFocusTo: this.triggerEl(),
-      modal: false,
-      trapFocus: false,
     });
     this.overlayHandle.focusInitial();
     this.lightDismissDocument = this.ownerDocument;

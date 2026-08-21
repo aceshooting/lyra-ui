@@ -351,7 +351,7 @@ export const styles = css`
     min-inline-size: 0;
     overflow-wrap: anywhere;
   }
-  :host([open]) [part="listbox"] {
+  :host([open]) [part="listbox"][data-positioned] {
     visibility: visible;
     opacity: 1;
     transform: translateY(0);

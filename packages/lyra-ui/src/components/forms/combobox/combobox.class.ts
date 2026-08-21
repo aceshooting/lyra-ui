@@ -5,9 +5,9 @@ import {
   LyraElement,
   type LyraEventDetailSnapshot,
 } from '../../../internal/lyra-element.js';
-// Side-effect only: registers this component's form-control-label support (external-label bridge + form-internals capture) with LyraElement, since the base class no longer imports it unconditionally. See registerFormControlLabelSupport()'s own doc in internal/lyra-element.ts.
-import '../../../internal/form-control-labels.js';
-import { place } from '../../../internal/positioner.js';
+import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
+installFormControlLabelSupport();
+import { loadAnchoredOverlayRuntime } from '../../../internal/anchored-overlay-runtime.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { chevronIcon, closeIcon } from '../../../internal/icons.js';
 import {
@@ -49,9 +49,9 @@ import {
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
 import {
-  activateOverlay,
+  activateNonmodalOverlay,
   type OverlayHandle,
-} from '../../../internal/overlay-manager.js';
+} from '../../../internal/nonmodal-overlay-manager.js';
 import {
   isOptionSelectedDirty,
   wasOptionInitiallySelected,
@@ -725,6 +725,10 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   private listId = nextId('combobox-list');
   private inputId = nextId('combobox-input');
   private cleanup?: () => void;
+  @state() private listboxPositioned = false;
+  private positioningGeneration = 0;
+  private positioningReady: Promise<boolean> = Promise.resolve(false);
+  private resolvePositioningReady?: (positioned: boolean) => void;
   private overlayHandle?: OverlayHandle;
   private restoreFocusOnClose = true;
   private restoringOverlayFocus = false;
@@ -970,8 +974,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.cleanup?.();
-    this.cleanup = undefined;
+    this.listboxPositioned = false;
+    this.invalidateListboxPositioning();
     this.overlayHandle?.deactivate({ restoreFocus: false });
     this.overlayHandle = undefined;
     this.unbindDocumentPointer();
@@ -1011,6 +1015,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     // `updated()`'s `open`-handling below to consult.
     this._isFirstUpdate = !this.hasUpdated;
     this.announceOpenTransition(changed);
+    if (changed.has('open') && !this.openVetoed) this.listboxPositioned = false;
     if (changed.has('open') && this.openVetoed) {
       this.closeCleanupPending = false;
     } else if (changed.has('open') && !this.open) {
@@ -1519,11 +1524,11 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
 
   override disconnectedCallback(): void {
     this.transitionToken++;
+    this.listboxPositioned = false;
     this.releaseSourceErrorAnnouncementSink();
     this.disconnectValidatorAttributeObserver();
     super.disconnectedCallback();
-    this.cleanup?.();
-    this.cleanup = undefined;
+    this.invalidateListboxPositioning();
     this.clearSourceTimer();
     this.sourceToken += 1;
     // Cancel any in-flight source request so its fetch is aborted on disconnect.
@@ -1941,11 +1946,10 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   };
 
   private activateListboxOverlay(): void {
-    this.cleanup?.();
-    this.cleanup = undefined;
+    this.invalidateListboxPositioning();
     this.overlayHandle?.deactivate({ restoreFocus: false });
     this.restoreFocusOnClose = true;
-    this.overlayHandle = activateOverlay({
+    this.overlayHandle = activateNonmodalOverlay({
       host: this,
       panel: () =>
         this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null,
@@ -1955,8 +1959,6 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
         void this.hide();
       },
       restoreFocusTo: this.inputEl ?? null,
-      modal: false,
-      trapFocus: false,
     });
     this.bindDocumentPointer();
     const anchor = this.renderRoot.querySelector(
@@ -1966,17 +1968,68 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       '[part="listbox"]'
     ) as HTMLElement | null;
     if (anchor && listbox) {
-      this.cleanup = place(anchor, listbox, {
-        placement: `${this.placement}-start`,
+      const generation = this.positioningGeneration;
+      this.positioningReady = new Promise<boolean>((resolve) => {
+        this.resolvePositioningReady = resolve;
       });
+      void this.startListboxPositioning(generation, anchor, listbox);
+    }
+  }
+
+  private invalidateListboxPositioning(): void {
+    this.positioningGeneration++;
+    this.cleanup?.();
+    this.cleanup = undefined;
+    this.resolvePositioningReady?.(false);
+    this.resolvePositioningReady = undefined;
+  }
+
+  private resolveCurrentPositioning(positioned: boolean): void {
+    const resolve = this.resolvePositioningReady;
+    this.resolvePositioningReady = undefined;
+    resolve?.(positioned);
+  }
+
+  private async startListboxPositioning(
+    generation: number,
+    anchor: HTMLElement,
+    listbox: HTMLElement,
+  ): Promise<void> {
+    try {
+      const { place } = await loadAnchoredOverlayRuntime();
+      if (
+        generation !== this.positioningGeneration ||
+        !this.open ||
+        !this.isConnected ||
+        this.renderRoot.querySelector('[part="combobox"]') !== anchor ||
+        this.renderRoot.querySelector('[part="listbox"]') !== listbox
+      ) {
+        return;
+      }
+      const cleanup = place(anchor, listbox, {
+        placement: `${this.placement}-start`,
+        onPlaced: () => {
+          if (generation !== this.positioningGeneration) return;
+          this.listboxPositioned = true;
+          void this.updateComplete.then(() => {
+            if (generation !== this.positioningGeneration || !this.open) return;
+            this.resolveCurrentPositioning(true);
+          });
+        },
+      });
+      if (generation !== this.positioningGeneration) cleanup();
+      else this.cleanup = cleanup;
+    } catch {
+      if (generation !== this.positioningGeneration) return;
+      this.resolveCurrentPositioning(false);
+      void this.hide();
     }
   }
 
   private teardownListboxOverlay(
     restoreFocus = this.restoreFocusOnClose
   ): void {
-    this.cleanup?.();
-    this.cleanup = undefined;
+    this.invalidateListboxPositioning();
     this.restoringOverlayFocus = restoreFocus;
     try {
       this.overlayHandle?.deactivate({ restoreFocus });
@@ -2138,6 +2191,17 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     const token = ++this.transitionToken;
     await this.updateComplete;
     if (this.transitionToken !== token) return;
+    if (event === 'lr-after-show') {
+      while (this.open && !this.listboxPositioned) {
+        const readiness = this.positioningReady;
+        const positioned = await readiness;
+        if (this.transitionToken !== token) return;
+        if (positioned) break;
+        if (readiness === this.positioningReady) return;
+      }
+      await this.updateComplete;
+      if (this.transitionToken !== token) return;
+    }
     if (this.isConnected) {
       const view = this.ownerDocument.defaultView;
       if (view)
@@ -2761,6 +2825,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
         </div>
         <div
           part="listbox"
+          ?data-positioned=${this.listboxPositioned}
           id=${this.listId}
           role="listbox"
           aria-multiselectable=${this.multiple ? 'true' : 'false'}

@@ -1,0 +1,14 @@
+{
+  "$comment": "Hard marginal gzip budgets in KiB for splitting-aware production ESM. Each route adds one anchored component to the representative application shell in $baseline; only the entry and its transitively static chunks count as initial, while dynamic first-open chunks remain part of the separate total-cost budgets.",
+  "$baseline": [
+    "dist/components/data/stat/stat.js",
+    "dist/components/overlays/callout/callout.js",
+    "dist/components/layout/card/card.js",
+    "dist/components/overlays/skeleton/skeleton.js",
+    "dist/components/utility/icon/icon.js"
+  ],
+  "$marginalGzipKb": {
+    "dist/components/forms/combobox/combobox.js": 24,
+    "dist/components/overlays/overlay/popover.js": 12
+  }
+}

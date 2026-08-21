@@ -13,20 +13,23 @@ import {
   type AriaOwnershipLease,
 } from '../../../internal/aria-ownership.js';
 import { tag } from '../../../internal/prefix.js';
-import {
-  place,
-  virtualAnchorFromRect,
-  type PlaceStrategy,
-  type PlaceSync,
-  type VirtualAnchor,
+import type {
+  PlaceStrategy,
+  PlaceSync,
+  VirtualAnchor,
 } from '../../../internal/positioner.js';
+import { createVirtualAnchorFromRect } from '../../../internal/virtual-anchor.js';
+import { loadAnchoredOverlayRuntime } from '../../../internal/anchored-overlay-runtime.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import {
   omittedEmptyStringConverter,
   trueDefaultBooleanConverter,
 } from '../../../internal/converters.js';
-import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
+import {
+  activateNonmodalOverlay,
+  type OverlayHandle,
+} from '../../../internal/nonmodal-overlay-manager.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { animateRegistered } from '../../../internal/registered-animation.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from './overlay-arrow.js';
@@ -265,6 +268,9 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    *  `showAt()`'s doc comment and `activatePopoverOverlay()`'s focus-return configuration. */
   private returnFocusTo?: HTMLElement;
   private cleanup?: () => void;
+  private positioningGeneration = 0;
+  private positioningReady: Promise<boolean> = Promise.resolve(false);
+  private resolvePositioningReady?: (positioned: boolean) => void;
   /** Registered with the shared overlay manager while every popover is open, so one topmost stack
    *  owns Escape and focus restoration. */
   private overlayHandle?: OverlayHandle;
@@ -409,9 +415,8 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       changed.has('arrowPadding') ||
       changed.has('popupRole')
     ) {
-      this.cleanup?.();
-      this.cleanup = undefined;
       if (this.open && this.isConnected) this.positionPopup();
+      else if (changed.has('open')) this.invalidatePositioning();
       // Scoped to a real open/close transition -- a placement/distance-only
       // change re-runs this whole block to reposition, but must not toggle the
       // document listener when `open` itself didn't change. The lifecycle
@@ -465,8 +470,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   override disconnectedCallback(): void {
     this.stopAnchorIdentityObservation?.();
     this.stopAnchorIdentityObservation = undefined;
-    this.cleanup?.();
-    this.cleanup = undefined;
+    this.invalidatePositioning();
     this.stopLightDismiss();
     this.resetHostIdObserver();
     this.overlayHandle?.suspend();
@@ -560,13 +564,11 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    *  trigger (or a virtual anchor's explicit `returnFocusTo`). */
   private activatePopoverOverlay(): void {
     if (!this.isConnected || this.overlayHandle?.isActive()) return;
-    this.overlayHandle = activateOverlay({
+    this.overlayHandle = activateNonmodalOverlay({
       host: this,
       panel: () => this.renderRoot.querySelector('[part~="popup"]') as HTMLElement | null,
       onEscape: () => void this.hide(),
       restoreFocusTo: this.virtualAnchor ? (this.returnFocusTo ?? null) : this.accessibleTrigger,
-      modal: false,
-      trapFocus: false,
     });
   }
 
@@ -610,7 +612,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     if (!normalizedRect) return;
     const previousAnchor = this.virtualAnchor;
     const previousReturnFocusTo = this.returnFocusTo;
-    this.virtualAnchor = virtualAnchorFromRect(normalizedRect);
+    this.virtualAnchor = createVirtualAnchorFromRect(normalizedRect);
     this.returnFocusTo = options?.returnFocusTo;
     this.syncInteractionTrigger();
     if (this.open) {
@@ -636,8 +638,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     });
   }
   protected positionPopup(): void {
-    this.cleanup?.();
-    this.cleanup = undefined;
+    this.invalidatePositioning();
     const popup = this.renderRoot.querySelector('[part~="popup"]') as HTMLElement | null;
     const arrowElement = this.renderRoot.querySelector('[part~="arrow"]') as HTMLElement | null;
     const anchor = this.resolveAnchor();
@@ -649,40 +650,92 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     if (anchor !== this.positionedAnchor) {
       this.anchorPositioned = false;
     }
-    this.cleanup = place(anchor, popup, {
-      placement: rtlAwarePlacement(this.placement, this),
-      strategy: this.positioningStrategy,
-      offset: finiteNumber(this.distance, this.defaultDistance),
-      skidding: finiteNumber(this.skidding, 0),
-      sync: this.positioningSync,
-      arrow: this.rendersArrow && arrowElement ? arrowElement : undefined,
-      arrowPadding: Math.max(0, finiteNumber(this.arrowPadding, 0)),
-      onPlaced: ({ placement, arrow }) => {
-        const becamePositioned = !this.anchorPositioned || this.positionedAnchor !== anchor;
-        this.positionedAnchor = anchor;
-        this.anchorPositioned = true;
-        if (becamePositioned) {
+    const generation = this.positioningGeneration;
+    this.positioningReady = new Promise<boolean>((resolve) => {
+      this.resolvePositioningReady = resolve;
+    });
+    void this.startPositioning(generation, anchor, popup, arrowElement);
+  }
+
+  private invalidatePositioning(): void {
+    this.positioningGeneration++;
+    this.cleanup?.();
+    this.cleanup = undefined;
+    this.resolvePositioningReady?.(false);
+    this.resolvePositioningReady = undefined;
+  }
+
+  private resolveCurrentPositioning(positioned: boolean): void {
+    const resolve = this.resolvePositioningReady;
+    this.resolvePositioningReady = undefined;
+    resolve?.(positioned);
+  }
+
+  private async startPositioning(
+    generation: number,
+    anchor: Element | VirtualAnchor,
+    popup: HTMLElement,
+    arrowElement: HTMLElement | null,
+  ): Promise<void> {
+    try {
+      const { place } = await loadAnchoredOverlayRuntime();
+      if (
+        generation !== this.positioningGeneration ||
+        !this.open ||
+        !this.isConnected ||
+        this.resolveAnchor() !== anchor ||
+        this.renderRoot.querySelector('[part~="popup"]') !== popup
+      ) {
+        return;
+      }
+      const cleanup = place(anchor, popup, {
+        placement: rtlAwarePlacement(this.placement, this),
+        strategy: this.positioningStrategy,
+        offset: finiteNumber(this.distance, this.defaultDistance),
+        skidding: finiteNumber(this.skidding, 0),
+        sync: this.positioningSync,
+        arrow: this.rendersArrow && arrowElement ? arrowElement : undefined,
+        arrowPadding: Math.max(0, finiteNumber(this.arrowPadding, 0)),
+        onPlaced: ({ placement, arrow }) => {
+          if (generation !== this.positioningGeneration) return;
+          const becamePositioned = !this.anchorPositioned || this.positionedAnchor !== anchor;
+          this.positionedAnchor = anchor;
+          this.anchorPositioned = true;
           // onPopupPositioned()'s whole contract is "the popup is no longer visibility-hidden" --
           // true the instant this callback ran when data-hidden was removed imperatively here, but
           // anchorPositioned reactively driving that removal now defers it to Lit's own update.
           // Wait for that update to actually commit before handing off to focus-dependent callers.
-          void this.updateComplete.then(() => {
-            if (this.open && this.resolveAnchor() === anchor) this.onPopupPositioned();
+          const side = applyOverlayArrow(arrowElement, {
+            placement,
+            coords: arrow,
+            enabled: this.rendersArrow,
+            arrowPlacement: this.arrowPlacement,
+            arrowPadding: Math.max(0, finiteNumber(this.arrowPadding, 0)),
+            rtl: this.effectiveDirection === 'rtl',
+            sizeProperty: '--arrow-size',
+            fallbackSizeProperty: '--lr-overlay-arrow-size',
           });
-        }
-        const side = applyOverlayArrow(arrowElement, {
-          placement,
-          coords: arrow,
-          enabled: this.rendersArrow,
-          arrowPlacement: this.arrowPlacement,
-          arrowPadding: Math.max(0, finiteNumber(this.arrowPadding, 0)),
-          rtl: this.effectiveDirection === 'rtl',
-          sizeProperty: '--arrow-size',
-          fallbackSizeProperty: '--lr-overlay-arrow-size',
-        });
-        if (side !== this.resolvedSide) this.resolvedSide = side;
-      },
-    });
+          if (side !== this.resolvedSide) this.resolvedSide = side;
+          void this.updateComplete.then(() => {
+            if (
+              generation !== this.positioningGeneration ||
+              !this.open ||
+              this.resolveAnchor() !== anchor
+            ) {
+              return;
+            }
+            this.resolveCurrentPositioning(true);
+            if (becamePositioned) this.onPopupPositioned();
+          });
+        },
+      });
+      if (generation !== this.positioningGeneration) cleanup();
+      else this.cleanup = cleanup;
+    } catch {
+      if (generation !== this.positioningGeneration) return;
+      this.resolveCurrentPositioning(false);
+      void this.forceClose({ focusTrigger: false });
+    }
   }
   private syncTriggerA11y(): void {
     const trigger = this.trigger ?? null;
@@ -913,8 +966,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     this.transitionToken++;
     this.cancelTransitionAnimation();
     this.removeAttribute('data-closing');
-    this.cleanup?.();
-    this.cleanup = undefined;
+    this.invalidatePositioning();
     this.stopLightDismiss();
     this.overlayHandle?.deactivate({ restoreFocus: false });
     this.overlayHandle = undefined;
@@ -970,6 +1022,17 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     const token = ++this.transitionToken;
     await this.updateComplete;
     if (this.transitionToken !== token) return;
+    if (event === 'lr-after-show') {
+      while (this.open && !this.anchorPositioned) {
+        const readiness = this.positioningReady;
+        const positioned = await readiness;
+        if (this.transitionToken !== token) return;
+        if (positioned) break;
+        if (readiness === this.positioningReady) return;
+      }
+      await this.updateComplete;
+      if (this.transitionToken !== token) return;
+    }
     if (this.isConnected) {
       const popup = this.renderRoot.querySelector<HTMLElement>('[part~="popup"]');
       const showing = event === 'lr-after-show';
