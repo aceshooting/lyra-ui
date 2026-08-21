@@ -100,7 +100,7 @@ describe('lr-stack-trace', () => {
       html`<lr-stack-trace .trace=${singleInternal}></lr-stack-trace>`,
     )) as LyraStackTrace;
 
-    expect(el.shadowRoot!.querySelector('[part="internal-toggle"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('[part="internal-toggle"]') == null).to.equal(true);
     expect(el.shadowRoot!.querySelectorAll('button[part="frame"]')).to.have.lengthOf(3);
   });
 
