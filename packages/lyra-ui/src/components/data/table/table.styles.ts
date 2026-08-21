@@ -14,7 +14,7 @@ export const styles = css`
   [part='base'] {
     overflow: auto;
     max-block-size: var(--lr-table-max-height, none);
-    /* scroll-mode="page" below drops both, handing scrolling back to the document. */
+    /* Page flow below drops both; auto restores them only while inline content really overflows. */
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     /* Makes [part='base'] a query container, so the @container rules below react to the table's own
@@ -27,7 +27,8 @@ export const styles = css`
      containing block even when nothing scrolls -- with no --lr-table-max-height the header then
      scrolls away with the page. Opting into page scrolling makes the page the header's scrollport,
      so an uncapped table can still pin its header. */
-  :host([scroll-mode='page']) [part='base'] {
+  :host([scroll-mode='page']) [part='base'],
+  :host([scroll-mode='auto']) [part='base']:not([data-scroll-overflow]) {
     overflow: visible;
     max-block-size: none;
   }

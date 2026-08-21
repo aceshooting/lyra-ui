@@ -331,7 +331,7 @@ no-rows states return the empty element as the shadow root's own root, with no `
 wrapper around it — `::part(base)` does not apply in those two states, only in the filtered-to-zero
 one — and that `empty` disappears entirely once the `empty` slot is filled.
 
-- `scrollMode: 'self' | 'page' = 'self'` (attribute `scroll-mode`, reflected) — which element
+- `scrollMode: 'self' | 'page' | 'auto' = 'self'` (attribute `scroll-mode`, reflected) — which element
   scrolls when the table overflows. `'self'` makes `[part="base"]` the scroll container, which is
   what pairs with `--lr-table-max-height` and makes the sticky header pin inside the table's own
   viewport. `'page'` hands scrolling back to the document. Needed because a scroll container clips
@@ -339,8 +339,12 @@ one — and that `empty` disappears entirely once the `empty` slot is filled.
   still `overflow: auto` becomes a sticky containing block that never scrolls, and its header
   scrolls away with the page. With `'page'` the header's nearest scrollport is the page, so it pins
   there; the cost is that a table wider than its host overflows the page instead of scrolling
-  inside itself. Named `scrollMode` rather than `scroll` because a `scroll` property would shadow
-  `Element.prototype.scroll()`
+  inside itself. The opt-in `'auto'` mode resolves between those two behaviors from the rendered
+  allocation: while content fits it uses page flow, and only while content actually overflows
+  horizontally does `[part="base"]` become the contained scrollport. It re-evaluates when either
+  the allocated width or the rendered table's intrinsic width changes, so the same table can flow
+  with a desktop page and contain itself in a 320px panel. The default remains `'self'`. Named
+  `scrollMode` rather than `scroll` because a `scroll` property would shadow `Element.prototype.scroll()`
 
 **Themeable custom properties:** `--lr-table-cell-color` (default `inherit`),
 `--lr-table-cell-link-color` (default `var(--lr-color-brand)`) and

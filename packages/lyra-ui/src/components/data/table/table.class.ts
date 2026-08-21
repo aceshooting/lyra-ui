@@ -52,6 +52,7 @@ const MAX_PAGE_SIZE = 500;
 const LOW_PRIORITY_MAX_INLINE_SIZE = 899.98;
 const MEDIUM_PRIORITY_MAX_INLINE_SIZE = 639.98;
 const MAX_TABLE_COLLECTION_ENTRIES = 10_000;
+const TABLE_SCROLL_OVERFLOW_TOLERANCE_PX = 1;
 
 const DEFAULT_RESIZE_MIN_WIDTH_PX = 48; // used when --lr-table-resize-min-width carries no resolvable length
 
@@ -210,8 +211,12 @@ export type TableSortMode = 'client' | 'server';
  * still `overflow: auto` creates a sticky containing block that never scrolls, and its header
  * scrolls off with the document instead of pinning. With `'page'` the header's nearest scrollport
  * is the page, so it pins there; the cost is that a table wider than its host overflows the page
- * rather than scrolling inside itself. */
-export type TableScrollMode = 'self' | 'page';
+ * rather than scrolling inside itself.
+ *
+ * `'auto'` uses page flow while the rendered content fits the table's allocation, then switches
+ * `[part="base"]` to the same contained scrolling as `'self'` only while it actually overflows
+ * horizontally. */
+export type TableScrollMode = 'self' | 'page' | 'auto';
 
 const TABLE_LAYOUT = literalSetConverter<'auto' | 'fixed'>(['auto', 'fixed'], 'auto');
 
@@ -900,8 +905,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  wins. */
   @property({ attribute: false }) rowKey?: (row: T) => string | number;
   @property({ reflect: true, attribute: 'selection-mode' }) selectionMode: TableSelectionMode = 'none';
-  /** Which element scrolls when the table overflows; see `TableScrollMode`. Defaults to `'self'`,
-   *  which is the pre-10.0 behaviour. */
+  /** Which element scrolls when the table overflows; see `TableScrollMode`. `'auto'` keeps page
+   *  flow while content fits and contains horizontal overflow only when needed. Defaults to
+   *  `'self'`, which is the pre-10.0 behaviour. */
   @property({ reflect: true, attribute: 'scroll-mode' }) scrollMode: TableScrollMode = 'self';
   private _selectedKeys = new Set<string | number>();
   /** Selected raw row keys in every selection mode, bounded to 10,000 keys. Single mode replaces
@@ -1138,6 +1144,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  identity on the next non-empty render, so `updated()` re-observes
    *  whenever this no longer matches the live element. */
   private observedBase?: Element;
+  /** The rendered `<table>` is observed separately because intrinsic content can grow its width
+   *  without changing `[part='base']`'s own border box. */
+  private observedTable?: Element;
   private readonly observedHeaders = new Set<Element>();
 
   private parsePixelLength(value: string | undefined): number | undefined {
@@ -1388,6 +1397,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       if (this.layoutFrame !== frame) return;
       this.layoutFrame = null;
       if (!this.isConnected || this.ownerDocument.defaultView !== owner) return;
+      this.syncAutoScrollMode();
       this.recomputeHiddenPriorityColumns();
       this.applyStickyOffsets();
       this.syncResizeHandleValues();
@@ -1436,6 +1446,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const base = this.renderRoot?.querySelector('[part="base"]');
     if (base) {
       this.observeBase(base);
+      this.observeTable(this.renderRoot.querySelector('[part="table"]') ?? undefined);
       this.observeHeaders();
     }
   }
@@ -1450,6 +1461,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     if (frame) frame.owner.cancelAnimationFrame(frame.handle);
     this.layoutFrame = null;
     this.observedBase = undefined;
+    this.observedTable = undefined;
     this.observedHeaders.clear();
   }
 
@@ -1484,6 +1496,26 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     if (this.observedBase) this.resizeObserver?.unobserve(this.observedBase);
     this.resizeObserver?.observe(base);
     this.observedBase = base;
+  }
+
+  private observeTable(table: Element | undefined): void {
+    if (this.observedTable === table) return;
+    if (this.observedTable) this.resizeObserver?.unobserve(this.observedTable);
+    if (table) this.resizeObserver?.observe(table);
+    this.observedTable = table;
+  }
+
+  /** Applies the opt-in responsive scroll policy from rendered geometry. A one-pixel tolerance
+   *  absorbs CSSOM's integer rounding of fractional layouts, matching the library's other
+   *  overflow-aware controls. Existing `'self'` and `'page'` modes never retain this internal
+   *  measurement marker, so their established CSS remains authoritative. */
+  private syncAutoScrollMode(): void {
+    const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+    if (!base) return;
+    const overflows =
+      this.scrollMode === 'auto' &&
+      base.scrollWidth - base.clientWidth > TABLE_SCROLL_OVERFLOW_TOLERANCE_PX;
+    base.toggleAttribute('data-scroll-overflow', overflows);
   }
 
   private observeHeaders(): void {
@@ -2140,6 +2172,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     // already observed.
     const base = this.renderRoot.querySelector('[part="base"]');
     if (base) this.observeBase(base);
+    this.observeTable(this.renderRoot.querySelector('[part="table"]') ?? undefined);
+    this.syncAutoScrollMode();
     this.observeHeaders();
     this.restoreRovingFocus();
     if (this.hasAlwaysOnEditors) this.restoreAlwaysOnEditorFocus();

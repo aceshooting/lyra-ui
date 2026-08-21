@@ -24641,7 +24641,7 @@
           "name": "scroll-mode",
           "description": {
             "kind": "markdown",
-            "value": "Which element scrolls when the table overflows; see `TableScrollMode`. Defaults to `'self'`,\nwhich is the pre-10.0 behaviour.\n\nType: `TableScrollMode`  \nDefault: `'self'`"
+            "value": "Which element scrolls when the table overflows; see `TableScrollMode`. `'auto'` keeps page\nflow while content fits and contains horizontal overflow only when needed. Defaults to\n`'self'`, which is the pre-10.0 behaviour.\n\nType: `TableScrollMode`  \nDefault: `'self'`"
           },
           "values": [
             {
@@ -24649,6 +24649,9 @@
             },
             {
               "name": "page"
+            },
+            {
+              "name": "auto"
             }
           ]
         },
