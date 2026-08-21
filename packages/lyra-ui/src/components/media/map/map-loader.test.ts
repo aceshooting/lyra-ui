@@ -70,8 +70,12 @@ it('normalizes a default-wrapped MapLibre module and prefers a valid named names
 });
 
 it('fails closed with a clear Error for every consumed MapLibre constructor/method', async () => {
+  const MapWithoutPrototype = function () {} as unknown as new (...args: never[]) => object;
+  Object.defineProperty(MapWithoutPrototype, 'prototype', { value: null });
   const malformedCases: Array<[string, unknown]> = [
+    ['module namespace', null],
     ['Map', { ...fakeMaplibreModule(), Map: () => ({}) }],
+    ['Map.prototype', { ...fakeMaplibreModule(), Map: MapWithoutPrototype }],
     ['Marker', { ...fakeMaplibreModule(), Marker: () => ({}) }],
     ['Popup', { ...fakeMaplibreModule(), Popup: () => ({}) }],
   ];

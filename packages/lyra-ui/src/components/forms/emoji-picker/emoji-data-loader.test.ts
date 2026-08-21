@@ -33,6 +33,23 @@ it('adapts a well-formed raw payload into EmojiPickerGroup[]', async () => {
   expect(allEmojis.some((e) => e.emoji === '😀' && e.name === 'grinning face')).to.be.true;
 });
 
+it('drops entries that do not provide every required identity field', async () => {
+  const result = await loadEmojiData(() => Promise.resolve([
+    { group: 0, annotation: 'missing glyph' },
+    { emoji: '😀', annotation: 'missing group' },
+    { emoji: '🐶', group: 3 },
+    { emoji: '✅', group: 8, annotation: 'valid entry' },
+  ]));
+
+  expect(result).to.deep.equal([
+    {
+      key: '8',
+      label: 'Symbols',
+      emojis: [{ emoji: '✅', name: 'valid entry', shortcodes: undefined }],
+    },
+  ]);
+});
+
 it('unwraps a { default: [...] } module namespace, matching the real installed peer\'s JSON-import shape', async () => {
   // Verified against the real published `emoji-picker-element-data`: a dynamic import with JSON
   // import attributes resolves to a namespace object `{ default: [...] }`, not a bare array --

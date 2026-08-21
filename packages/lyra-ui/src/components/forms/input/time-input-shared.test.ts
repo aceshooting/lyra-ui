@@ -6,6 +6,7 @@ import {
   localeTimePattern,
   normalizeTimeValue,
   parseTimeValue,
+  timeValueFromMilliseconds,
   timeStepBaseMilliseconds,
   to24Hour,
   wrapTimeMilliseconds,
@@ -126,6 +127,10 @@ describe('time-input shared value helpers', () => {
 });
 
 describe('time-input millisecond wrap helper', () => {
+  it('preserves nonzero whole seconds without adding fractional precision', () => {
+    expect(timeValueFromMilliseconds(3_723_000)).to.equal('01:02:03');
+  });
+
   it('wraps values at, within, and beyond a 24-hour day in both directions', () => {
     expect(wrapTimeMilliseconds(0)).to.equal(0);
     expect(wrapTimeMilliseconds(3_600_000)).to.equal(3_600_000);

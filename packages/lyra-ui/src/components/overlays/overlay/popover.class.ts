@@ -18,7 +18,6 @@ import type {
   PlaceSync,
   VirtualAnchor,
 } from '../../../internal/positioner.js';
-import { createVirtualAnchorFromRect } from '../../../internal/virtual-anchor.js';
 import { loadAnchoredOverlayRuntime } from '../../../internal/anchored-overlay-runtime.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { finiteNumber } from '../../../internal/numbers.js';
@@ -612,7 +611,16 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     if (!normalizedRect) return;
     const previousAnchor = this.virtualAnchor;
     const previousReturnFocusTo = this.returnFocusTo;
-    this.virtualAnchor = createVirtualAnchorFromRect(normalizedRect);
+    const bounds = new DOMRect(
+      normalizedRect.x,
+      normalizedRect.y,
+      normalizedRect.width,
+      normalizedRect.height,
+    );
+    this.virtualAnchor = {
+      getBoundingClientRect: () => bounds,
+      contextElement: normalizedRect.contextElement,
+    };
     this.returnFocusTo = options?.returnFocusTo;
     this.syncInteractionTrigger();
     if (this.open) {
