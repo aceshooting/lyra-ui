@@ -21758,35 +21758,35 @@
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 4903,
+              "line": 4939,
               "test": "stays accessible with a caption-only legend stop",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 5242,
+              "line": 5278,
               "test": "stays accessible with both clamps applied",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 5459,
+              "line": 5495,
               "test": "stays accessible with a date-driven cellText on the accessible-cell overlay",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 7978,
+              "line": 8014,
               "test": "scrolls the keyboard-focused cell into the scrollport, and stays axe-clean there",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 8068,
+              "line": 8104,
               "test": "hides the duplicated bands from assistive technology and stays axe-clean",
               "target": "el",
               "state": "populated"
@@ -21902,7 +21902,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 2052,
+              "line": 2085,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -26034,7 +26034,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 1442,
+              "line": 1607,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

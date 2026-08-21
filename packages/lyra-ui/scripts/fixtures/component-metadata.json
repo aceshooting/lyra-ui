@@ -12860,7 +12860,7 @@
     "current": {
       "version": "12.0.0",
       "sourceCommit": null,
-      "manifestSha256": "0f9b29b9e64d6e689ceea4180a007264b50beae422b18a8cc8714e67542eb726",
+      "manifestSha256": "29bb60526289b99af2fea0d31c8b71775ed493e5276a41b1bd6818147aa319bd",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",
