@@ -120,16 +120,19 @@ the PR checks list tells you which of these to reproduce locally:
    `build` script. Browser-dependent lanes use the Playwright image pinned in the workflow, so they
    do not install browser binaries or OS packages on each run.
 
-4. **`packed-consumer`** — a stable aggregate over two independent lanes. The contract lane needs
-   `dist/` (the tarball's `files` list includes it) but nothing else `build-and-coverage` needs, so
-   it gets its own `pnpm build` rather than waiting on that job. It then runs `pnpm --filter
-   @aceshooting/lyra-ui pack --dry-run`, verifies `dist/ssr-loader.js`,
-   `custom-elements.json`, `llms.txt`, `llms-full.txt`, and the required `llms/`
-   index/shared/tokens/peers/migration/component files, then runs `pnpm check:packed-consumer` and
-   the packed-size budget. In parallel, the public-API lane consumes the shared dist artifact from
-   `build_and_coverage_build` and runs the networked public-API semver gate. The split preserves
-   one required `packed-consumer` result while keeping the 2.5-minute public-API comparison off the
-   end of the workflow's longest serial lane.
+4. **`packed-consumer`** — a stable aggregate over three independent phases. The contract lane
+   needs `dist/` (the tarball's `files` list includes it) but nothing else `build-and-coverage`
+   needs, so it gets its own `pnpm build` rather than waiting on that job. It verifies the tarball's
+   required files, then runs the complete packed install/import/declaration/bundle/framework
+   contract and packed-size budget. Only ATTW is skipped in this lane. ATTW's 935 non-CSS package
+   exports are sorted and round-robin partitioned across four independent runners (234/234/234/233),
+   cutting the measured ~15-minute monolithic type-resolution path to roughly four minutes without
+   increasing ATTW process concurrency. Each shard runs `pnpm pack`, so it analyzes exact
+   publishable bytes rather than the source directory. In parallel, the public-API lane consumes
+   the shared dist artifact from `build_and_coverage_build` and runs the networked public-API
+   semver gate. The aggregate requires the contract lane, all four ATTW shards, and the public-API
+   lane. The ordinary local `pnpm check:packed-consumer` remains complete and unsharded; the
+   CI-specific `pnpm check:packed-consumer:contracts` is the only path that skips ATTW.
 
    `packages/lyra-ui/tsconfig.json` sets `"stripInternal": true` — a declaration whose JSDoc
    carries `@internal` is erased from the emitted `.d.ts` even if a _public_ property's type
@@ -189,7 +192,11 @@ per-job overhead (checkout/install/browser setup) rather than test execution aga
 gain. Node 20 uses the pnpm version pinned in `.github/ci-pnpm10.json` (`pnpm@10.34.5`); Node 22
 uses `package.json#packageManager` (`pnpm@11.22.0`). The package's supported engine remains
 `node >=20`; this matrix uses 11 legs total (9 on Node 22, 2 on Node 20), well under the public-repo
-20-job throughput limit, so `max-parallel` no longer needs to chase that cap.
+20-job throughput limit, so `max-parallel` no longer needs to chase that cap. The Firefox/Node 20
+leg runs the same packed contract mode as the primary contract lane: every runtime, install,
+declaration, bundle, and framework recipe check at the supported floor, with only the duplicate
+ATTW sweep omitted. ATTW uses its own bundled TypeScript resolver, so the four exhaustive Node 22
+shards cover that package-level contract without turning Node 20 into the new critical path.
 
 ## Scheduled full Firefox/WebKit suite
 

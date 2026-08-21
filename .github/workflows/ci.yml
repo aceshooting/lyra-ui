@@ -395,19 +395,13 @@ jobs:
 
   # Needs dist/ (the tarball's `files` list includes it) but not the Chromium test suite or the
   # docs build -- independent of build-and-coverage other than both running `pnpm build`.
-  # The networked public-API comparison is independent of the long packed fixture/ATTW sweep, so
-  # it consumes the shared dist artifact in its own lane rather than waiting ~16 minutes before
-  # it starts. A stable aggregate below keeps branch protection and release qualification strict.
+  # The packed runtime/install/bundle contracts, ATTW type-resolution shards, and networked
+  # public-API comparison are independent. Run them concurrently, then retain one stable aggregate
+  # below for branch protection and release qualification.
   packed_consumer_contract:
     name: packed-consumer / contract
     runs-on: ubuntu-latest
-    # check:packed-consumer alone (attw across every packed entry point, plus the
-    # React/Vue/Svelte framework recipes) has been observed taking ~13-14 minutes on a normal
-    # runner, consistently exceeding the previous 15-minute ceiling right as it finished and
-    # getting cancelled -- not failed -- so the job silently never reached check:package-size.
-    # The platform-contracts matrix's Node-20 leg runs this same check (plus a full platform test
-    # suite) under its existing 30-minute budget without issue.
-    timeout-minutes: 25
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
@@ -436,11 +430,34 @@ jobs:
       # Includes a single-component (<lr-button>) gzip-size canary, gated far tighter than the
       # core-bundle budget, to catch a PR that silently drags something heavy into the eager
       # import graph -- see bundleEntries.button in scripts/check-packed-consumer.mjs.
-      - run: pnpm check:packed-consumer
+      # Runs every packed-consumer check except ATTW. The exhaustive ATTW matrix below checks the
+      # same tarball surface in four disjoint shards; the ordinary local command remains unsharded.
+      - run: pnpm check:packed-consumer:contracts
 
       # Hard tarball budgets (packed/unpacked bytes and file count). Runs here rather than in
       # contract-policy because it shells out to `npm pack --dry-run`, which needs a built dist/.
       - run: pnpm --filter @aceshooting/lyra-ui check:package-size
+
+  packed_consumer_attw:
+    name: packed-consumer / attw / shard ${{ matrix.shard_index }}/4
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        shard_index: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # pnpm pack runs the complete prepack chain and produces the exact published bytes. Explicit
+      # entrypoints disable ATTW's implicit discovery, so deterministic round-robin partitioning
+      # checks every non-CSS export exactly once across these four workers.
+      - run: pnpm check:packed-attw --shard-index ${{ matrix.shard_index }} --shard-total 4
 
   packed_consumer_public_api:
     name: packed-consumer / public-api
@@ -469,6 +486,7 @@ jobs:
     if: ${{ always() }}
     needs:
       - packed_consumer_contract
+      - packed_consumer_attw
       - packed_consumer_public_api
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -476,12 +494,17 @@ jobs:
       - name: Aggregate packed-consumer lanes
         env:
           CONTRACT_RESULT: ${{ needs.packed_consumer_contract.result }}
+          ATTW_RESULT: ${{ needs.packed_consumer_attw.result }}
           PUBLIC_API_RESULT: ${{ needs.packed_consumer_public_api.result }}
         run: |
           set -euo pipefail
           failed=0
           if [[ "$CONTRACT_RESULT" != "success" ]]; then
             echo "::error::packed_consumer_contract failed with status: $CONTRACT_RESULT"
+            failed=1
+          fi
+          if [[ "$ATTW_RESULT" != "success" ]]; then
+            echo "::error::packed_consumer_attw failed with status: $ATTW_RESULT"
             failed=1
           fi
           if [[ "$PUBLIC_API_RESULT" != "success" ]]; then
@@ -938,7 +961,8 @@ jobs:
           WTR_STRICT_CONSOLE: "1"
         run: pnpm --filter @aceshooting/lyra-ui test:platform-shard
       # The package supports Node 20. Exercise the real tarball/install/import/type/style bundle
-      # matrix once at that floor; the dedicated packed-consumer job covers Node 22.
+      # matrix once at that floor. ATTW resolves declarations with its bundled TypeScript rather
+      # than the active Node runtime, so the exhaustive Node-22 ATTW matrix above is sufficient.
       - name: Run packed consumer at the supported Node floor
         if: ${{ matrix.browser == 'firefox' && matrix.node-version == 20 && matrix.shard_index == 1 }}
-        run: pnpm build && pnpm check:packed-consumer
+        run: pnpm build && pnpm check:packed-consumer:contracts
