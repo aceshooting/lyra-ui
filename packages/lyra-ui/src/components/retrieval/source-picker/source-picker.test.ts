@@ -1338,3 +1338,37 @@ describe("depth indent", () => {
     ).to.be.closeTo(128, 0.5);
   });
 });
+
+it('returns focus to the search control when filtering removes every focused row', async () => {
+  const el = await fixture<LyraSourcePicker>(html`
+    <lr-source-picker .sources=${sources}></lr-source-picker>
+  `);
+  el.shadowRoot!.querySelector<HTMLElement>('[role="treeitem"]')!.focus();
+  el.shadowRoot!.querySelector('lr-input')!.dispatchEvent(
+    new CustomEvent('lr-input', {
+      detail: { value: 'no matching source' },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelectorAll('[role="treeitem"]')).to.have.length(0);
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.include('search');
+});
+
+it('collapses an expanded folder from its pointer disclosure without toggling selection', async () => {
+  const el = await fixture<LyraSourcePicker>(html`
+    <lr-source-picker .sources=${sources}></lr-source-picker>
+  `);
+  const disclosure = () =>
+    el.shadowRoot!.querySelector<HTMLElement>('[role="treeitem"] [part="disclosure"]')!;
+  disclosure().click();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[role="treeitem"]')).to.have.length(4);
+
+  disclosure().click();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[role="treeitem"]')).to.have.length(2);
+  expect(el.selectedSourceIds).to.deep.equal([]);
+});

@@ -390,3 +390,73 @@ it('moves focus to the empty base when the focused path is cleared', async () =>
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
   expect(el.shadowRoot!.activeElement?.getAttribute('tabindex')).to.equal('-1');
 });
+
+it('activates the focused relation from the keyboard', async () => {
+  const el = await fixture<LyraPathStrip>(html`<lr-path-strip .path=${path}></lr-path-strip>`);
+  const relation = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="relation"]')!;
+  relation.focus();
+  const activated = oneEvent(el, 'lr-relation-activate');
+
+  relation.dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'Enter',
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+  }));
+
+  expect((await activated).detail).to.deep.equal({
+    relation: 'discovered',
+    sourceNodeId: 'e1',
+    targetNodeId: 'e2',
+    occurrenceIndex: 1,
+  });
+});
+
+it('moves the roving stop to either endpoint with End and Home', async () => {
+  const el = await fixture<LyraPathStrip>(html`<lr-path-strip .path=${path}></lr-path-strip>`);
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const controls = () => [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="node"], [part="relation"]'),
+  ];
+  controls().forEach((control) => {
+    control.scrollIntoView = () => {};
+  });
+
+  base.dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'End',
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+  }));
+  await el.updateComplete;
+  await Promise.resolve();
+  expect(controls().map((control) => control.tabIndex)).to.deep.equal([-1, -1, 0]);
+  expect(el.shadowRoot!.activeElement === controls()[2]).to.equal(true);
+
+  base.dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'Home',
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+  }));
+  await el.updateComplete;
+  await Promise.resolve();
+  expect(controls().map((control) => control.tabIndex)).to.deep.equal([0, -1, -1]);
+  expect(el.shadowRoot!.activeElement === controls()[0]).to.equal(true);
+});
+
+it('mirrors a reverse directed edge in both logical directions', async () => {
+  const reversePath: LyraPathElement[] = [
+    { kind: 'node', node: { id: 'source' } },
+    { kind: 'edge', relation: 'reverse', directed: true, reverse: true },
+    { kind: 'node', node: { id: 'target' } },
+  ];
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <lr-path-strip .path=${reversePath}></lr-path-strip>
+    <lr-path-strip dir="rtl" .path=${reversePath}></lr-path-strip>
+  </div>`);
+  const [ltr, rtl] = [...wrapper.querySelectorAll('lr-path-strip')] as LyraPathStrip[];
+
+  expect(ltr!.shadowRoot!.querySelector('[part="arrow"]')!.textContent).to.equal('←');
+  expect(rtl!.shadowRoot!.querySelector('[part="arrow"]')!.textContent).to.equal('→');
+});

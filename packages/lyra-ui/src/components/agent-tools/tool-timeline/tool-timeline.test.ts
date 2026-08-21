@@ -773,3 +773,46 @@ it('is accessible with a populated timeline and the approval dialog open', async
   expect(dialog(el).open).to.be.true;
   await expect(el).to.be.accessible();
 });
+
+it('releases document-owned announcement state when adopted', async () => {
+  const el = await fixture<LyraToolTimeline>(html`
+    <lr-tool-timeline .entries=${[makeEntry()]}></lr-tool-timeline>
+  `);
+  const foreignDocument = document.implementation.createHTMLDocument('tool timeline owner');
+
+  foreignDocument.adoptNode(el);
+
+  expect(el.ownerDocument === foreignDocument).to.equal(true);
+  expect(el.isConnected).to.equal(false);
+  document.adoptNode(el);
+});
+
+it('forgets a closed details disclosure and keeps it closed after rerender', async () => {
+  const el = await fixture<LyraToolTimeline>(html`
+    <lr-tool-timeline .entries=${[makeEntry()]}></lr-tool-timeline>
+  `);
+  await openEntry(el);
+  const details = entriesEl(el)[0]!.querySelector('lr-details') as HTMLElement & { open: boolean };
+  expect(details.open).to.equal(true);
+
+  details.dispatchEvent(new CustomEvent('lr-toggle', {
+    detail: { open: false },
+    bubbles: true,
+    composed: true,
+  }));
+  await el.updateComplete;
+
+  expect((entriesEl(el)[0]!.querySelector('lr-details') as HTMLElement & { open: boolean }).open)
+    .to.equal(false);
+});
+
+it('redacts a top-level error before rendering expanded details', async () => {
+  const el = await fixture<LyraToolTimeline>(html`
+    <lr-tool-timeline
+      .entries=${[makeEntry({ error: 'private failure', redactedFields: ['error'] })]}
+    ></lr-tool-timeline>
+  `);
+  const row = await openEntry(el);
+
+  expect(row.querySelector('[part="entry-error"]')!.textContent).to.equal('Value hidden');
+});

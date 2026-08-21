@@ -797,3 +797,51 @@ describe("lifecycle: super calls", () => {
     }
   });
 });
+
+it('correlates and contains chunk expansion events from an evidence inspector', async () => {
+  const el = await fixture<LyraRetrievalTrace>(html`
+    <lr-retrieval-trace .stages=${STAGES}></lr-retrieval-trace>
+  `);
+  el.shadowRoot!.querySelector<HTMLButtonElement>(
+    '[data-id="retrieve"] [part="evidence-toggle"]',
+  )!.click();
+  await el.updateComplete;
+  const inspector = el.shadowRoot!.querySelector(
+    '[data-id="retrieve"] lr-chunk-inspector',
+  ) as LyraChunkInspector;
+  let leaked = 0;
+  el.addEventListener('lr-expand', () => leaked++);
+  const correlated = oneEvent(el, 'lr-stage-chunk-action');
+
+  inspector.dispatchEvent(new CustomEvent('lr-expand', {
+    detail: { chunkId: 'c2', expanded: true },
+    bubbles: true,
+    composed: true,
+  }));
+
+  expect((await correlated).detail).to.deep.equal({
+    stageId: 'retrieve',
+    action: 'expand',
+    chunkId: 'c2',
+    expanded: true,
+  });
+  expect(leaked).to.equal(0);
+});
+
+it('falls back to string conversion for non-JSON metadata scalars', async () => {
+  const stages: RetrievalStage[] = [{
+    id: 'embed-bigint',
+    kind: 'embed',
+    startMs: 0,
+    status: 'success',
+    evidence: { metadata: { dimensions: 1n } },
+  }];
+  const el = await fixture<LyraRetrievalTrace>(html`
+    <lr-retrieval-trace .stages=${stages}></lr-retrieval-trace>
+  `);
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="evidence-toggle"]')!.click();
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="evidence-metadata-value"]')!.textContent?.trim())
+    .to.equal('1');
+});

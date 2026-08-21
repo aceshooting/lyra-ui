@@ -296,3 +296,37 @@ it('delegates expandAll() and collapseAll() to the embedded lr-tree', async () =
   );
   expect(stillOpen.length).to.equal(0);
 });
+
+it('fails hostile array descriptors and record getters closed while retaining later valid siblings', async () => {
+  const el = await fixture<LyraFileTree>(html`<lr-file-tree></lr-file-tree>`);
+  const hostileLength = new Proxy([] as FileTreeNode[], {
+    getOwnPropertyDescriptor(target, property) {
+      if (property === 'length') throw new Error('hostile length descriptor');
+      return Reflect.getOwnPropertyDescriptor(target, property);
+    },
+  });
+  el.nodes = hostileLength;
+  expect(el.nodes).to.deep.equal([]);
+
+  const hostileRecord = new Proxy({ path: 'unreadable.ts' }, {
+    get(target, property, receiver) {
+      if (property === 'path') throw new Error('hostile path getter');
+      return Reflect.get(target, property, receiver);
+    },
+  });
+  const hostileEntryDescriptor = new Proxy(
+    [{ path: 'skipped.ts' }, hostileRecord, { path: 'retained.ts' }],
+    {
+      getOwnPropertyDescriptor(target, property) {
+        if (property === '0') throw new Error('hostile entry descriptor');
+        return Reflect.getOwnPropertyDescriptor(target, property);
+      },
+    },
+  );
+  el.nodes = hostileEntryDescriptor;
+  await el.updateComplete;
+
+  expect(el.nodes.map((node) => node.path)).to.deep.equal(['retained.ts']);
+  expect(el.shadowRoot!.querySelector('lr-tree')!.data.map((node: { id: string }) => node.id))
+    .to.deep.equal(['retained.ts']);
+});

@@ -1009,3 +1009,47 @@ it("rebinds live action observation to the current realm after adoption", async 
     iframe.remove();
   }
 });
+
+it('fails hostile toolbar providers closed without stranding the roving tab stop', async () => {
+  const el = await fixture<LyraMessageActions>(html`
+    <lr-message-actions>
+      <test-closed-toolbar-provider></test-closed-toolbar-provider>
+      <button id="hostile-provider-fallback">Fallback</button>
+    </lr-message-actions>
+  `);
+  const provider = el.querySelector('test-closed-toolbar-provider') as ClosedToolbarProvider;
+  const fallback = el.querySelector<HTMLButtonElement>('#hostile-provider-fallback')!;
+  await waitUntil(() => provider.actionTabIndex === 0);
+  Object.defineProperty(provider.action, 'disabled', {
+    configurable: true,
+    get(): never {
+      throw new Error('hostile disabled getter');
+    },
+  });
+  provider.dispatchEvent(new CustomEvent('lr-toolbar-actions-change', {
+    bubbles: true,
+    composed: true,
+  }));
+  await waitUntil(() => fallback.tabIndex === 0);
+  expect(provider.actionTabIndex).to.equal(-1);
+
+  provider.getToolbarActions = (): never => {
+    throw new Error('hostile toolbar provider');
+  };
+  provider.dispatchEvent(new CustomEvent('lr-toolbar-actions-change', {
+    bubbles: true,
+    composed: true,
+  }));
+  await el.updateComplete;
+  expect(fallback.tabIndex).to.equal(0);
+});
+
+it('recognizes a callable toolbar provider structurally', async () => {
+  const { isLyraToolbarActionProvider } = await import('./toolbar-actions.js');
+  const provider = (() => {}) as (() => void) & {
+    getToolbarActions?: () => readonly LyraToolbarAction[];
+  };
+  provider.getToolbarActions = () => [];
+
+  expect(isLyraToolbarActionProvider(provider)).to.equal(true);
+});
