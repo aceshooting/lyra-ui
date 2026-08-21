@@ -8,11 +8,25 @@ const arrowOf = (el: Element): HTMLElement => el.shadowRoot!.querySelector('[par
 const partsOf = (node: Element | null): string[] => (node?.getAttribute('part') ?? '').split(/\s+/);
 const sideOf = (el: Element): string[] => partsOf(popupOf(el));
 
-/** One update cycle plus enough real time for autoUpdate's async computePosition pass to land.
- *  Real timers on purpose — @sinonjs/fake-timers does not work under this runner. */
-async function settle(el: LyraPopup): Promise<void> {
+/** Waits for the placement pass caused by the current update, without assuming a frame duration. */
+async function settle(el: LyraPopup, positioned = true): Promise<void> {
+  const popup = popupOf(el);
+  const updateWasPending = (el as unknown as { isUpdatePending: boolean }).isUpdatePending;
+  const wasPositioned = popup.hasAttribute('data-active');
+  const repositioned = positioned && updateWasPending && wasPositioned
+    ? oneEvent(el, 'lr-reposition')
+    : undefined;
+
   await el.updateComplete;
-  await aTimeout(80);
+  if (!positioned) {
+    await waitUntil(() => !popup.hasAttribute('data-active'), 'popup remained positioned');
+    return;
+  }
+  if (repositioned) {
+    await repositioned;
+    return;
+  }
+  await waitUntil(() => popup.hasAttribute('data-active'), 'popup did not finish positioning');
 }
 
 it('renders nothing visible until activated', async () => {
@@ -71,8 +85,9 @@ it('accepts popup writes without replacing the shadow-owned positioning node', a
   expect((el.popup) === (renderedPopup)).to.equal(true);
   expect((el.popup) === (popupOf(el))).to.equal(true);
 
+  const repositioned = oneEvent(el, 'lr-reposition');
   el.reposition();
-  await settle(el);
+  await repositioned;
   expect(el.popup.style.position).to.equal('absolute');
   expect(replacement.style.position).to.equal('');
 });
@@ -84,7 +99,7 @@ it('positions the popup against the slotted anchor once active', async () => {
       <div style="inline-size: 4rem;">Content</div>
     </lr-popup>
   `);
-  await aTimeout(50);
+  await settle(el);
   const popup = popupOf(el);
   const anchor = el.querySelector('button')!;
   expect(getComputedStyle(popup).display).to.not.equal('none');
@@ -125,7 +140,7 @@ it('anchors to an element resolved through for', async () => {
     </div>
   `);
   const el = wrapper.querySelector('lr-popup') as LyraPopup;
-  await aTimeout(50);
+  await settle(el);
   const target = wrapper.querySelector('#target')!;
   expect(popupOf(el).getBoundingClientRect().top).to.be.greaterThan(target.getBoundingClientRect().top);
 });
@@ -150,7 +165,7 @@ describe('live anchor identity and positioned readiness', () => {
     const el = wrapper.querySelector('lr-popup') as LyraPopup;
     const popup = popupOf(el);
     const bridge = el.shadowRoot!.querySelector<HTMLElement>('[part~="hover-bridge"]')!;
-    await settle(el);
+    await settle(el, false);
 
     expect(el.active).to.equal(true);
     expect(popup.hasAttribute('data-active')).to.equal(false);
@@ -268,7 +283,7 @@ describe('live anchor identity and positioned readiness', () => {
         <div style="inline-size: 80px;">Content</div>
       </lr-popup>
     `);
-    await settle(direct);
+    await settle(direct, false);
     expect(popupOf(direct).hasAttribute('data-active')).to.equal(false);
 
     const first = document.createElement('button');
@@ -416,12 +431,10 @@ it('lets virtualAnchor override anchor without removing either compatibility pat
 it('anchors to a virtual rect and re-places when the rect moves', async () => {
   const el = await fixture<LyraPopup>(html`<lr-popup active><div>Content</div></lr-popup>`);
   el.virtualAnchor = { x: 20, y: 30 };
-  await el.updateComplete;
-  await aTimeout(50);
+  await settle(el);
   const first = popupOf(el).getBoundingClientRect().top;
   el.virtualAnchor = { x: 20, y: 200 };
-  await el.updateComplete;
-  await aTimeout(50);
+  await settle(el);
   expect(popupOf(el).getBoundingClientRect().top).to.be.greaterThan(first);
 });
 
@@ -439,7 +452,7 @@ it('clamps negative virtual-anchor dimensions and ignores non-finite rects', asy
   const priorLeft = popupOf(el).style.left;
   const priorTop = popupOf(el).style.top;
   el.virtualAnchor = { x: 300, y: 200, width: Number.POSITIVE_INFINITY, height: 0 };
-  await settle(el);
+  await settle(el, false);
 
   expect(popupOf(el).style.left).to.equal(priorLeft);
   expect(popupOf(el).style.top).to.equal(priorTop);
@@ -452,7 +465,7 @@ it('encodes the resolved side in the part name', async () => {
   const el = await fixture<LyraPopup>(html`
     <lr-popup active placement="bottom"><button slot="anchor">A</button><div>C</div></lr-popup>
   `);
-  await aTimeout(50);
+  await settle(el);
   expect(popupOf(el).getAttribute('part')!.split(/\s+/)).to.include('bottom');
 });
 
@@ -534,7 +547,7 @@ it('does not flip when flip is turned off', async () => {
       <button slot="anchor">A</button><div style="block-size: 3rem;">C</div>
     </lr-popup>
   `);
-  await aTimeout(50);
+  await settle(el);
   expect(popupOf(el).getAttribute('part')!.split(/\s+/)).to.not.include('bottom');
 });
 
@@ -560,6 +573,10 @@ it('is accessible while active, with content rendered', async () => {
   `);
   await settle(el);
   expect(getComputedStyle(popupOf(el)).display).to.not.equal('none');
+  await waitUntil(
+    () => getComputedStyle(popupOf(el)).opacity === '1',
+    'popup show transition did not finish before the accessibility scan',
+  );
   await expect(el).to.be.accessible();
 });
 
