@@ -203,7 +203,7 @@ for (const tagName of ['lr-model-select', 'lr-voice-picker', 'lr-locale-picker']
           ? html`<lr-model-select name="choice" value="initial"></lr-model-select>`
           : tagName === 'lr-voice-picker'
             ? html`<lr-voice-picker name="choice" value="initial"></lr-voice-picker>`
-            : html`<lr-locale-picker name="choice" value="initial"></lr-locale-picker>`}
+            : html`<lr-locale-picker name="choice" value="initial" .showFlags=${false}></lr-locale-picker>`}
       </form>
     `);
     const control = form.querySelector(tagName) as HTMLElement & {

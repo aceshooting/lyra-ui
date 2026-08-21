@@ -7,7 +7,11 @@ import type { LyraLocalePicker } from './locale-picker.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getRegisteredLyraLocales, registerLyraLocale, setLyraLocale, getLyraLocale } from '../../../internal/localization.js';
 import { localeNativeName } from '../../media/flag/language-map.js';
+import { setFlagUrlResolver } from '../../media/flag/flag.class.js';
 import { setForcedColors } from "../../../../test/wtr-media.js";
+
+const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
+setFlagUrlResolver(async () => TEST_FLAG_SRC);
 
 function trigger(el: LyraLocalePicker): HTMLButtonElement {
   return el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
