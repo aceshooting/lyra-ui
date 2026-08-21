@@ -84,6 +84,23 @@ it('disabled blocks programmatic show() and a direct open=true assignment', asyn
   expect(el.open).to.equal(false);
 });
 
+it('rolls back a virtual anchor when opening is vetoed', async () => {
+  const el = await basic();
+  const returnFocusTo = document.createElement('button');
+  const seam = el as unknown as {
+    virtualAnchor?: unknown;
+    returnFocusTo?: HTMLElement;
+  };
+  el.addEventListener('lr-show', (event) => event.preventDefault(), { once: true });
+
+  el.showAt({ x: 12, y: 24, width: 8, height: 6 }, { returnFocusTo });
+  await el.updateComplete;
+
+  expect(el.open).to.equal(false);
+  expect(seam.virtualAnchor === undefined).to.equal(true);
+  expect(seam.returnFocusTo === undefined).to.equal(true);
+});
+
 it('closes an already-rendered open popover immediately when disabled is set afterward', async () => {
   const el = await basic();
   el.open = true;
@@ -196,6 +213,26 @@ it('invalidates a deferred positioning generation when disconnected before the r
     await Promise.resolve();
 
     expect(placeCalls).to.equal(0);
+  } finally {
+    __setAnchoredOverlayRuntimeLoaderForTesting(undefined);
+  }
+});
+
+it('fails closed when the positioning runtime rejects', async () => {
+  __setAnchoredOverlayRuntimeLoaderForTesting(() =>
+    Promise.reject(new Error('positioning unavailable')),
+  );
+  try {
+    const el = await basic();
+    let afterShow = 0;
+    el.addEventListener('lr-after-show', () => afterShow++);
+
+    await el.show();
+    await el.updateComplete;
+
+    expect(el.open).to.equal(false);
+    expect(afterShow).to.equal(0);
+    expect(popup(el).hasAttribute('data-hidden')).to.equal(true);
   } finally {
     __setAnchoredOverlayRuntimeLoaderForTesting(undefined);
   }

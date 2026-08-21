@@ -228,6 +228,24 @@ it('tracks live author hidden edits instead of restoring the initial snapshot', 
   expect(second.hidden, 'disconnect must restore the latest authored hidden state').to.be.true;
 });
 
+it('settles rapid author hidden toggles to the final state', async () => {
+  const el = (await fixture(html`
+    <lr-chip-group max-visible="2">
+      <lr-chip>one</lr-chip><lr-chip>two</lr-chip>
+    </lr-chip-group>
+  `)) as LyraChipGroup;
+  const second = el.querySelectorAll<HTMLElement>('lr-chip')[1]!;
+
+  second.hidden = true;
+  second.hidden = false;
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  await el.updateComplete;
+
+  expect(second.hidden).to.be.false;
+  el.remove();
+  expect(second.hidden).to.be.false;
+});
+
 it('sanitizes a NaN/negative maxVisible to a finite non-negative integer instead of poisoning overflow math with NaN', async () => {
   const el = (await fixture(fiveChips())) as LyraChipGroup;
 

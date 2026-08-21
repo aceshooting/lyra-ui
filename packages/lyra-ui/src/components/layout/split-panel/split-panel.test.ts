@@ -733,6 +733,25 @@ it('caps and caches the normalized snap-token projection', () => {
   expect(withSnapNormalizer.normalizedSnapTokens).to.not.equal(first);
 });
 
+it('normalizes decimal snap lengths and salvages a malformed repeat wrapper once', () => {
+  const element = document.createElement('lr-split-panel') as LyraSplitPanel;
+  const withSnapNormalizer = element as unknown as {
+    readonly normalizedSnapTokens: ReadonlyArray<{
+      repeated: boolean;
+      value: number;
+      unit: 'px' | '%';
+    }>;
+  };
+
+  element.snap = '12.5px .25% repeat(.5px) repeat(7.5px';
+  expect(withSnapNormalizer.normalizedSnapTokens).to.deep.equal([
+    { repeated: false, value: 12.5, unit: 'px' },
+    { repeated: false, value: 0.25, unit: '%' },
+    { repeated: true, value: 0.5, unit: 'px' },
+    { repeated: false, value: 7.5, unit: 'px' },
+  ]);
+});
+
 it('renders upstream CSS-property aliases and an expanded divider hit target', async () => {
   const element = (await fixture(html`
     <lr-split-panel

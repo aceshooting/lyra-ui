@@ -1766,6 +1766,27 @@ describe("frame", () => {
   });
 });
 
+it("keeps native selection and range-editing methods safe before first connection", async () => {
+  const el = document.createElement("lr-chat-composer") as LyraChatComposer;
+
+  expect(el.input === null).to.equal(true);
+  expect(el.selectionStart).to.equal(null);
+  expect(el.selectionEnd).to.equal(null);
+  el.selectionStart = null;
+  el.selectionEnd = null;
+  el.setRangeText("ignored");
+
+  el.setAttribute("autocorrect", "");
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    expect(textareaOf(el).getAttribute("autocorrect")).to.equal("on");
+    expect(el.value).to.equal("");
+  } finally {
+    el.remove();
+  }
+});
+
 it("reads and writes the textarea selection direction through the host", async () => {
   const el = (await fixture(
     html`<lr-chat-composer></lr-chat-composer>`

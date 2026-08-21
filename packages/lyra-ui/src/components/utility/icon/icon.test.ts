@@ -2,7 +2,12 @@ import { fixture, expect, html, aTimeout, oneEvent, waitUntil } from '@open-wc/t
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './icon.js';
 import type { LyraIcon } from './icon.js';
-import { getIconLibrary, registerIconLibrary, unregisterIconLibrary } from './icon-library.js';
+import {
+  getIconLibrary,
+  registerIconLibrary,
+  subscribeIconLibrary,
+  unregisterIconLibrary,
+} from './icon-library.js';
 import { clearIconSanitizerCache, loadIconSanitizer } from './dompurify-loader.js';
 import { __clearIconResourceCacheForTesting } from './icon-resource.js';
 
@@ -212,6 +217,9 @@ describe('lr-icon icon libraries', () => {
     unregisterIconLibrary('mutator-a');
     unregisterIconLibrary('mutator-b');
     unregisterIconLibrary('duotone-lib');
+    unregisterIconLibrary('notify-lib');
+    unregisterIconLibrary('invalid-resolver');
+    unregisterIconLibrary('empty-resolver');
   });
 
   it('registers, looks up, and unregisters a library', () => {
@@ -221,6 +229,56 @@ describe('lr-icon icon libraries', () => {
     expect(getIconLibrary('test-lib')?.resolver('star', '', '')).to.equal('https://icons.test/star.svg');
     unregisterIconLibrary('test-lib');
     expect(getIconLibrary('test-lib')).to.equal(undefined);
+  });
+
+  it('continues notifying icon subscribers after one listener throws', () => {
+    const failure = new Error('subscriber failed');
+    const notifications: string[] = [];
+    const warnings: unknown[][] = [];
+    const unsubscribeThrowing = subscribeIconLibrary(() => {
+      throw failure;
+    });
+    const unsubscribeHealthy = subscribeIconLibrary((name) => notifications.push(name));
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => warnings.push(args);
+    try {
+      registerIconLibrary('notify-lib', { resolver: () => '' });
+    } finally {
+      unsubscribeThrowing();
+      unsubscribeHealthy();
+      console.warn = originalWarn;
+    }
+
+    expect(notifications).to.deep.equal(['notify-lib']);
+    expect(warnings).to.have.lengthOf(1);
+    expect(warnings[0]?.[1]).to.equal(failure);
+  });
+
+  it('fails closed when an icon-library resolver returns a non-string value', async () => {
+    registerIconLibrary('invalid-resolver', {
+      resolver: () => 42 as unknown as string,
+    });
+    const el = (await fixture(html`<lr-icon></lr-icon>`)) as LyraIcon;
+    const errored = oneEvent(el, 'lr-error');
+    el.library = 'invalid-resolver';
+    el.name = 'bad-icon';
+    const event = await errored;
+
+    expect((event.detail as { src: string }).src).to.equal('bad-icon');
+    expect(partCount(el, '[part="error"]')).to.equal(1);
+    expect(partCount(el, 'svg')).to.equal(0);
+  });
+
+  it('treats an empty icon-library resolution as idle input', async () => {
+    registerIconLibrary('empty-resolver', { resolver: () => '' });
+    const el = (await fixture(
+      html`<lr-icon library="empty-resolver" name="missing"></lr-icon>`,
+    )) as LyraIcon;
+    const seam = el as unknown as { fetchState: { kind: string } };
+
+    await waitUntil(() => seam.fetchState.kind === 'idle');
+    expect(partCount(el, '[part="error"]')).to.equal(0);
+    expect(partCount(el, '[part="empty"]')).to.equal(0);
   });
 
   it('resolves a library icon through the resolver and renders the sanitized SVG', async () => {
@@ -251,6 +309,44 @@ describe('lr-icon icon libraries', () => {
       const event = await loaded;
       expect((event.detail as { src: string }).src).to.equal('https://icons.test/star.svg');
       expect(partCount(el, '[part="svg"] circle')).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('turns a rejected network request into the localized load fallback', async () => {
+    const restore = stubFetch(() => Promise.reject(new TypeError('offline')));
+    try {
+      const el = (await fixture(html`<lr-icon></lr-icon>`)) as LyraIcon;
+      const errored = oneEvent(el, 'lr-error');
+      el.src = 'https://icons.test/offline.svg';
+      const event = await errored;
+
+      expect((event.detail as { src: string }).src).to.equal('https://icons.test/offline.svg');
+      expect(partCount(el, '[part="error"]')).to.equal(1);
+      expect(el.shadowRoot!.textContent).to.not.include('offline');
+    } finally {
+      restore();
+    }
+  });
+
+  it('turns a rejected response body into the localized load fallback', async () => {
+    const restore = stubFetch(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: () => Promise.reject(new Error('stream failed')),
+      } as Response),
+    );
+    try {
+      const el = (await fixture(html`<lr-icon></lr-icon>`)) as LyraIcon;
+      const errored = oneEvent(el, 'lr-error');
+      el.src = 'https://icons.test/broken-stream.svg';
+      await errored;
+
+      expect(partCount(el, '[part="error"]')).to.equal(1);
+      expect(el.shadowRoot!.textContent).to.not.include('stream failed');
     } finally {
       restore();
     }
@@ -416,6 +512,8 @@ describe('lr-icon icon libraries', () => {
       '<use id="same" href="#local"/><use id="external" href="https://tracker.test/a.svg#x"/>' +
       '<image id="image" xlink:href="https://tracker.test/pixel.png"/>' +
       '<path id="paint" fill="url(https://tracker.test/paint.svg#x)" style="filter:url(https://tracker.test/f.svg#x)"/>' +
+      '<path id="safe-paint" fill="currentColor"/>' +
+      '<path id="escaped-paint" fill="u\\72l(https://tracker.test/escaped.svg#x)"/>' +
       '<style>@import url(https://tracker.test/icon.css); path{stroke:url(https://tracker.test/s.svg#x)}</style>' +
       '</svg>';
     const restore = stubFetch(() => Promise.resolve(svgResponse(remote)));
@@ -426,12 +524,16 @@ describe('lr-icon icon libraries', () => {
       const external = el.shadowRoot!.querySelector('#external')!;
       const image = el.shadowRoot!.querySelector('#image');
       const paint = el.shadowRoot!.querySelector('#paint')!;
+      const safePaint = el.shadowRoot!.querySelector('#safe-paint')!;
+      const escapedPaint = el.shadowRoot!.querySelector('#escaped-paint')!;
       expect(same.getAttribute('href')).to.equal('#local');
       expect(external.hasAttribute('href')).to.be.false;
       expect(image?.hasAttribute('href') ?? false).to.be.false;
       expect(image?.hasAttributeNS('http://www.w3.org/1999/xlink', 'href') ?? false).to.be.false;
       expect(paint.hasAttribute('fill')).to.be.false;
       expect(paint.hasAttribute('style')).to.be.false;
+      expect(safePaint.getAttribute('fill')).to.equal('currentColor');
+      expect(escapedPaint.hasAttribute('fill')).to.be.false;
       expect(el.shadowRoot!.querySelectorAll('style').length).to.equal(0);
       expect(el.shadowRoot!.innerHTML.includes('tracker.test')).to.be.false;
     } finally {
