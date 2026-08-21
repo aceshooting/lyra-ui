@@ -322,6 +322,19 @@ describe('TextViewerTarget mixin', () => {
       expect(scrolled).to.be.true;
     });
 
+    it('scrolls a quote and search match whose common ancestor is the body element', async () => {
+      const el = await stubFixture();
+      const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+      let scrolls = 0;
+      body.scrollIntoView = () => {
+        scrolls += 1;
+      };
+
+      expect(await el.search('dog.The fox')).to.equal(1);
+      expect(await el.scrollToAnchor({ kind: 'text-quote', quote: 'dog.The fox' })).to.equal(true);
+      expect(scrolls).to.equal(2);
+    });
+
     it('text-quote: resolves false when the quote cannot be found', async () => {
       const el = await stubFixture();
       shrinkAnchorTimeouts(el);
@@ -420,6 +433,31 @@ describe('TextViewerTarget mixin', () => {
       await el.updateComplete;
       await Promise.resolve();
       expect(details).to.have.length(1);
+    });
+
+    it('clamps a stale active match when same-task content shrink leaves one occurrence', async () => {
+      const el = await stubFixture();
+      await el.search('fox');
+      await el.searchNext();
+      expect(internals(el).searchActiveIndex).to.equal(1);
+      const secondParagraph = el.shadowRoot!.querySelectorAll('p')[1]!;
+      const walker = secondParagraph.ownerDocument.createTreeWalker(secondParagraph, NodeFilter.SHOW_TEXT);
+      let secondText: Text | null = null;
+      while (walker.nextNode()) {
+        const candidate = walker.currentNode as Text;
+        if (candidate.data.includes('fox')) {
+          secondText = candidate;
+          break;
+        }
+      }
+      expect(secondText !== null).to.equal(true);
+      secondText!.data = secondText!.data.replace('fox', 'cat');
+      const eventPromise = oneEvent(el, 'lr-search-change');
+
+      expect(await el.searchNext()).to.equal(true);
+      expect(internals(el).searchMatches.length).to.equal(1);
+      expect(internals(el).searchActiveIndex).to.equal(0);
+      expect((await eventPromise).detail).to.deep.include({ matchCount: 1, activeIndex: 0 });
     });
 
     it('refreshes node mappings without emitting when an external mutation preserves normalized text', async () => {

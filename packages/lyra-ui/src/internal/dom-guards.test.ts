@@ -64,3 +64,27 @@ it('resolves an image-map association inside the map tree instead of the light d
 
   expect(imageMapImageFor(area) === image).to.equal(true);
 });
+
+it('fails closed for malformed or over-budget image maps and supports a detached map root', () => {
+  const orphanArea = document.createElement('area');
+  expect(imageMapImageFor(orphanArea)).to.equal(null);
+
+  const unnamedMap = document.createElement('map');
+  unnamedMap.append(orphanArea);
+  expect(imageMapImageFor(orphanArea)).to.equal(null);
+
+  const map = document.createElement('map');
+  map.name = 'detached-map';
+  const image = document.createElement('img');
+  image.useMap = '#detached-map';
+  const area = document.createElement('area');
+  map.append(image, area);
+
+  expect(map.getRootNode() === map).to.equal(true);
+  expect(imageMapImageFor(area) === image).to.equal(true);
+  expect(imageMapImageFor(area, { maxNodes: 0 })).to.equal(null);
+  expect(imageMapImageFor(map, { consume: () => false })).to.equal(null);
+  let work = 0;
+  expect(imageMapImageFor(map, { consume: () => ++work === 1 })).to.equal(null);
+  expect(work).to.equal(2);
+});

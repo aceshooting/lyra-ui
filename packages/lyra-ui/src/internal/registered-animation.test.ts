@@ -109,4 +109,86 @@ describe('animateRegistered()', () => {
       restore();
     }
   });
+
+  it('falls through malformed duration tokens and parses compound seconds safely', async () => {
+    const restore = stubReducedMotion(false);
+    const host = await fixture<HTMLElement>(html`
+      <div style="--good-duration: -.25s ease-in"></div>
+    `);
+    host.style.setProperty('--bad-duration', `${'9'.repeat(400)}ms`);
+    const spec: RegisteredAnimationSpec = {
+      keyframes: [{ opacity: 0 }, { opacity: 1 }],
+      durationProperties: ['--bad-duration', '--good-duration'],
+      easingProperties: ['--missing-easing'],
+      fallbackDuration: 900,
+      fallbackEasing: 'ease-out',
+    };
+
+    try {
+      const animation = animateRegistered(host, host, 'test.show.compound', 'ltr', spec);
+      const timing = timingOf(animation);
+      expect(timing.duration).to.equal(0);
+      expect(timing.easing).to.equal('ease-in');
+      animation?.cancel();
+    } finally {
+      restore();
+    }
+  });
+
+  it('accepts a nonempty easing on browsers without CSS.supports()', async function () {
+    const supportsDescriptor = Object.getOwnPropertyDescriptor(CSS, 'supports');
+    if (supportsDescriptor && !supportsDescriptor.configurable) this.skip();
+    const restore = stubReducedMotion(false);
+    const host = await fixture<HTMLElement>(html`
+      <div style="--show-duration: 20ms ease-in"></div>
+    `);
+    Object.defineProperty(CSS, 'supports', {
+      configurable: true,
+      value: undefined,
+    });
+
+    try {
+      const animation = animateRegistered(host, host, 'test.show.legacy-css', 'ltr', showSpec());
+      expect(timingOf(animation).easing).to.equal('ease-in');
+      animation?.cancel();
+    } finally {
+      if (supportsDescriptor) Object.defineProperty(CSS, 'supports', supportsDescriptor);
+      else Reflect.deleteProperty(CSS, 'supports');
+      restore();
+    }
+  });
+
+  it('uses the RTL fallback after an override throws and contains a second animation failure', async () => {
+    const restore = stubReducedMotion(false);
+    const host = await fixture<HTMLElement>(html`<div></div>`);
+    const fallbackFrames: Keyframe[] = [{ transform: 'translateX(1px)' }];
+    const rtlFrames: Keyframe[] = [{ transform: 'translateX(-1px)' }];
+    const cleanup = setAnimation(host, 'test.show.fallback-failure', {
+      keyframes: [{ opacity: 0 }, { opacity: 1 }],
+      options: { duration: 20 },
+    });
+    const calls: Keyframe[][] = [];
+    const originalAnimate = host.animate;
+    host.animate = ((keyframes: Keyframe[] | PropertyIndexedKeyframes | null) => {
+      calls.push(keyframes as Keyframe[]);
+      throw new DOMException('animation unavailable', 'NotSupportedError');
+    }) as typeof host.animate;
+
+    try {
+      const animation = animateRegistered(host, host, 'test.show.fallback-failure', 'rtl', {
+        keyframes: fallbackFrames,
+        rtlKeyframes: rtlFrames,
+        durationProperties: ['--missing-duration'],
+      });
+      expect(animation).to.equal(undefined);
+      expect(calls).to.have.length(2);
+      expect(calls[0]).to.deep.equal([{ opacity: 0 }, { opacity: 1 }]);
+      expect(calls[1]).to.deep.equal(rtlFrames);
+      expect(calls[1] === rtlFrames).to.equal(false);
+    } finally {
+      host.animate = originalAnimate;
+      cleanup();
+      restore();
+    }
+  });
 });

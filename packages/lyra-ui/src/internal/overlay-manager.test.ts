@@ -108,6 +108,36 @@ it('returns an inert handle when an overlay host has no owner document', () => {
   expect(dismissals).to.equal(0);
 });
 
+it('uses the lean nonmodal adapter when neither focus trapping nor modal resources are requested', () => {
+  const background = document.createElement('button');
+  background.dataset.overlayBackground = '';
+  document.body.append(background);
+  const overlay = createOverlay(document, 'lean-nonmodal');
+  let escapes = 0;
+  const handle = activateOverlay({
+    host: overlay.host,
+    panel: () => overlay.panel,
+    modal: false,
+    trapFocus: false,
+    onEscape: () => escapes++,
+  });
+
+  try {
+    expect(handle.isActive()).to.equal(true);
+    expect(handle.isTopmost()).to.equal(true);
+    expect(background.inert).to.equal(false);
+    document.dispatchEvent(new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: 'Escape',
+    }));
+    expect(escapes).to.equal(1);
+  } finally {
+    handle.deactivate({ restoreFocus: false });
+    background.remove();
+  }
+});
+
 it('routes Escape only to the topmost overlay across different overlay owners', () => {
   const bottom = createOverlay(document, 'dialog');
   const top = createOverlay(document, 'responsive-panel');
