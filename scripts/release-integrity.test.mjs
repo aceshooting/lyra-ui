@@ -165,10 +165,10 @@ test('requires exhaustive fail-closed lint shards behind the stable lint gate', 
   assert.match(shardJob, /pnpm install --frozen-lockfile/u);
   assert.match(
     shardJob,
-    /pnpm --filter @aceshooting\/lyra-ui lint:ci-shard -- --shard "\$\{\{ matrix\.shard \}\}\/3"/u
+    /node packages\/lyra-ui\/scripts\/lint-ci-shard\.mjs --shard "\$\{\{ matrix\.shard \}\}\/3"/u
   );
   assert.equal(
-    [...shardJob.matchAll(/lint:ci-shard/gu)].length,
+    [...shardJob.matchAll(/lint-ci-shard\.mjs/gu)].length,
     1,
     'each lint matrix worker must invoke exactly one selected shard'
   );

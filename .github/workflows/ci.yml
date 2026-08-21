@@ -55,7 +55,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @aceshooting/lyra-ui lint:ci-shard -- --shard "${{ matrix.shard }}/3"
+      - run: node packages/lyra-ui/scripts/lint-ci-shard.mjs --shard "${{ matrix.shard }}/3"
 
   # Preserve the stable branch-protection/release check while requiring every matrix worker.
   # `always()` makes a failed or cancelled shard an explicit red result rather than a skipped job.
