@@ -2915,7 +2915,7 @@
         "status": "measured",
         "bytes": 42134,
         "kib": 41.1,
-        "bundleSha256": "5c4fb85efdf59c19646ff63a94b3cfd6a573d46131b79de86d9527c373c29a74",
+        "bundleSha256": "4504bae0c334b88f99b9874fc542de8838a002726ff1758792a3a6539a5b0481",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
