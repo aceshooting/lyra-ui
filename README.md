@@ -275,6 +275,10 @@ on 2026-08-21. The workflow badges above remain the source of truth for newer co
 | [Full browser-engine suite](https://github.com/aceshooting/lyra-ui/actions/runs/32515535347) | 16/16 complete Firefox/WebKit shards passed in 8m54s |
 | [Test All Browsers](https://github.com/aceshooting/lyra-ui/actions/runs/32515537763) | Plan, 20/20 Chromium/Chrome/Edge/Firefox/Safari shards, and 5/5 fail-closed aggregates passed in 13m02s |
 
+The post-release quality pass raises the current four-shard Chromium coverage gate to 99.61%
+statements, 96.97% branches, 99.90% functions, and 99.61% lines (99.02% arithmetic mean),
+with 496 test files and zero failures in the merged run.
+
 ## Built with
 
 - [Lit 3](https://lit.dev) — the web-component base every Lyra element extends
