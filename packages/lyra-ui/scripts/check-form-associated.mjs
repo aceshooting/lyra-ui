@@ -362,7 +362,6 @@ export const HAND_ROLLED_FORM_VALUE = new Set([
   'src/components/forms/select/select.class.ts',
   'src/components/forms/slider/slider.class.ts',
   'src/components/forms/switch/switch.class.ts',
-  'src/components/forms/time-range/time-range.class.ts',
   'src/components/forms/token-input/token-input.class.ts',
   'src/components/media/file-input/file-input.class.ts',
   'src/components/overlays/rating/rating.class.ts',
