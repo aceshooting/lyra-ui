@@ -43,6 +43,11 @@ describe("Web Awesome carousel surface", () => {
     expect(upstream.currentSlide).to.equal(1);
     expect(upstream.getAttribute("current-slide")).to.equal("1");
 
+    upstream.removeAttribute('currentslide');
+    await upstream.updateComplete;
+    expect(upstream.currentSlide).to.equal(0);
+    expect(upstream.getAttribute('current-slide')).to.equal('0');
+
     const both = await carousel(html`
       <lr-carousel currentSlide="2" current-slide="1">
         <div>One</div>
@@ -3157,6 +3162,7 @@ it('keeps opt-in mouse dragging away from nested controls and non-primary pointe
         <button type="button">Action</button>
         <label>Label <span>text</span></label>
         <span contenteditable="true">Editable</span>
+        <span role="button" id="role-button" tabindex="0">Role button</span>
         <x-carousel-control></x-carousel-control>
         <span id="drag-background">Background</span>
       </div>
@@ -3172,6 +3178,7 @@ it('keeps opt-in mouse dragging away from nested controls and non-primary pointe
     el.querySelector('button')!,
     el.querySelector('label span')!,
     el.querySelector('[contenteditable]')!,
+    el.querySelector('#role-button')!,
     el.querySelector('x-carousel-control')!,
   ];
   let pointerId = 300;

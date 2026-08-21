@@ -1282,6 +1282,29 @@ it("ignores a tab-show event naming an unavailable category, reverting the tab s
   expect(el.activeCategory).to.equal("");
 });
 
+it('ignores a late tab event from the panel detached when the path cleared', async () => {
+  const el = await populated();
+  const staleTabs = el.shadowRoot!.querySelector('lr-tab-group') as LyraTabGroup;
+  let changeEvents = 0;
+  el.addEventListener('lr-drilldown-category-change', () => {
+    changeEvents += 1;
+  });
+
+  el.path = [];
+  await el.updateComplete;
+  expect(staleTabs.isConnected).to.equal(false);
+
+  staleTabs.dispatchEvent(new CustomEvent('lr-tab-show', {
+    bubbles: true,
+    composed: true,
+    detail: { name: 'documents' },
+  }));
+  await el.updateComplete;
+
+  expect(changeEvents).to.equal(0);
+  expect(el.path).to.deep.equal([]);
+});
+
 it("does not emit lr-drilldown-category-change when a tab-show event repeats the already-active category", async () => {
   const el = await populated();
   const tabs = el.shadowRoot!.querySelector("lr-tab-group") as LyraTabGroup;

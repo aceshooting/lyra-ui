@@ -114,6 +114,13 @@ describe("<lr-scroller>", () => {
       callback?.([], {} as ResizeObserver);
       await el.updateComplete;
       expect(next.disabled).to.be.false;
+
+      let staleEvents = 0;
+      el.addEventListener('lr-scroll', () => staleEvents += 1);
+      el.remove();
+      callback?.([], {} as ResizeObserver);
+      await Promise.resolve();
+      expect(staleEvents).to.equal(0);
     } finally {
       window.ResizeObserver = OriginalResizeObserver;
     }
@@ -463,6 +470,28 @@ describe("<lr-scroller>", () => {
 
     expect(moveCalls).to.deep.equal([{ top: 42 }, { top: -42 }]);
     expect(edgeCalls).to.deep.equal([{ top: viewport.scrollHeight }, { top: 0 }]);
+  });
+
+  it('uses eighty percent of block allocation as the default vertical step', async () => {
+    const el = await fixture<LyraScroller>(html`
+      <lr-scroller controls orientation="vertical">
+        <div>tall content</div>
+      </lr-scroller>
+    `);
+    const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+    Object.defineProperty(viewport, 'clientHeight', { configurable: true, value: 100 });
+    Object.defineProperty(viewport, 'scrollHeight', { configurable: true, value: 400 });
+    Object.defineProperty(viewport, 'scrollTop', { configurable: true, value: 50, writable: true });
+    viewport.dispatchEvent(new Event('scroll'));
+    await nextFrame();
+    await el.updateComplete;
+    const calls: ScrollToOptions[] = [];
+    viewport.scrollBy = ((options: ScrollToOptions) => calls.push(options)) as typeof viewport.scrollBy;
+
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="next"]')!.click();
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="previous"]')!.click();
+
+    expect(calls).to.deep.equal([{ top: 80 }, { top: -80 }]);
   });
 
   it("gives control a hover state", () => {

@@ -353,11 +353,39 @@ it("releases parent-owned icon-only state when an item leaves the rail", async (
   const item = wrapper.querySelector("lr-app-rail-item") as HTMLElement;
   expect(item.hasAttribute("icon-only")).to.be.true;
 
+  const slot = rail.shadowRoot!.querySelector<HTMLSlotElement>('[part="nav"] > slot')!;
+  const released = oneEvent(slot, 'slotchange');
   wrapper.querySelector("#outside")!.append(item);
-  await new Promise<void>((resolve) => setTimeout(resolve));
+  await released;
   await rail.updateComplete;
 
   expect(item.hasAttribute("icon-only")).to.be.false;
+});
+
+it('hands parent-owned icon-only state directly from one rail to another', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <lr-app-rail id="compact" force-mode="icon-only">
+        <lr-app-rail-item>Inbox</lr-app-rail-item>
+      </lr-app-rail>
+      <lr-app-rail id="wide" force-mode="full"></lr-app-rail>
+    </div>
+  `);
+  const compact = wrapper.querySelector<LyraAppRail>('#compact')!;
+  const wide = wrapper.querySelector<LyraAppRail>('#wide')!;
+  const item = compact.querySelector<HTMLElement>('lr-app-rail-item')!;
+  expect(item.hasAttribute('icon-only')).to.equal(true);
+
+  const compactSlot = compact.shadowRoot!.querySelector<HTMLSlotElement>('[part="nav"] > slot')!;
+  const wideSlot = wide.shadowRoot!.querySelector<HTMLSlotElement>('[part="nav"] > slot')!;
+  const released = oneEvent(compactSlot, 'slotchange');
+  const assigned = oneEvent(wideSlot, 'slotchange');
+  wide.append(item);
+  await Promise.all([released, assigned]);
+  await Promise.all([compact.updateComplete, wide.updateComplete]);
+
+  expect(item.parentElement === wide).to.equal(true);
+  expect(item.hasAttribute('icon-only')).to.equal(false);
 });
 
 it("manages destination-realm app-rail items structurally after adoption", async () => {
@@ -398,6 +426,15 @@ it("manages destination-realm app-rail items structurally after adoption", async
 });
 
 // -- breakpoint-driven mode wiring ---------------------------------------
+
+it('stays in the full fallback mode when matchMedia is unavailable', async () => {
+  window.matchMedia = undefined as unknown as typeof window.matchMedia;
+  const el = await fixture<LyraAppRail>(html`<lr-app-rail resizable></lr-app-rail>`);
+
+  expect(el.mode).to.equal('full');
+  expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('role')).to.equal('navigation');
+  expect(el.shadowRoot!.querySelectorAll('[part="resizer"]').length).to.equal(1);
+});
 
 it("resolves the correct mode on the first rendered frame, before any matchMedia change event", async () => {
   // Regression guard mirroring split.test.ts's first-paint collapse-state test: `mode` is derived

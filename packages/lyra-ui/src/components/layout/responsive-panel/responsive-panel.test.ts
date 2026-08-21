@@ -28,6 +28,63 @@ it("falls back to the owner window resize signal when ResizeObserver is unavaila
   }
 });
 
+it('accepts both fallback and target-specific ResizeObserver entry shapes', async () => {
+  const original = window.ResizeObserver;
+  const callbacks: ResizeObserverCallback[] = [];
+  class ControlledResizeObserver implements ResizeObserver {
+    constructor(next: ResizeObserverCallback) {
+      callbacks.push(next);
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  window.ResizeObserver = ControlledResizeObserver;
+  try {
+    const el = await fixture<LyraResponsivePanel>(html`
+      <lr-responsive-panel overlay-breakpoint="500px" open>body</lr-responsive-panel>
+    `);
+    expect(callbacks.length).to.be.greaterThan(0);
+    const callback = callbacks[0];
+
+    callback?.(
+      [{ target: document.body, contentRect: { width: 320 } } as unknown as ResizeObserverEntry],
+      {} as ResizeObserver,
+    );
+    await Promise.resolve();
+    await el.updateComplete;
+    expect(el.effectiveMode).to.equal('overlay');
+
+    callback?.(
+      [{ target: el, contentBoxSize: [{ inlineSize: 800 }] } as unknown as ResizeObserverEntry],
+      {} as ResizeObserver,
+    );
+    await Promise.resolve();
+    await el.updateComplete;
+    await el.updateComplete;
+    expect(el.effectiveMode).to.equal('inline');
+  } finally {
+    window.ResizeObserver = original;
+  }
+});
+
+it('keeps initial header naming when MutationObserver is unavailable', async () => {
+  const el = await fixture<LyraResponsivePanel>(html`
+    <lr-responsive-panel mode="overlay" open><h2 slot="header">Filters</h2></lr-responsive-panel>
+  `);
+  const header = el.querySelector('[slot="header"]')!;
+  const descriptor = Object.getOwnPropertyDescriptor(window, 'MutationObserver');
+  Object.defineProperty(window, 'MutationObserver', { configurable: true, value: undefined });
+  try {
+    asAny(el).syncHeaderSlot([header]);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="panel"]')?.getAttribute('aria-label')).to.equal('Filters');
+  } finally {
+    if (descriptor) Object.defineProperty(window, 'MutationObserver', descriptor);
+    else Reflect.deleteProperty(window, 'MutationObserver');
+  }
+});
+
 it("pads an open bottom sheet with the --lr-safe-area-bottom token, not a hardcoded value", async () => {
   // Reads the real rendered/computed padding instead of substring-matching the exported
   // stylesheet source, which would still pass even if the declaration lived on a selector that

@@ -646,9 +646,25 @@ it('reapplies owned overflow hiding when reconnected', async () => {
   expect(avatars.map(isGroupHidden)).to.deep.equal([false, false, false, true, true]);
 });
 
+it('ignores a stale slotchange after disconnection instead of reclaiming restored children', async () => {
+  const el = await fixture<LyraAvatarGroup>(fiveAvatars());
+  const slot = el.shadowRoot!.querySelector('slot')!;
+  const avatars = [...el.querySelectorAll('lr-avatar')];
+  el.remove();
+  expect(avatars.every((avatar) => !isGroupHidden(avatar))).to.equal(true);
+
+  slot.dispatchEvent(new Event('slotchange'));
+  await Promise.resolve();
+  await Promise.resolve();
+
+  expect(avatars.every((avatar) => !isGroupHidden(avatar))).to.equal(true);
+  expect(avatars.every((avatar) => !avatar.hasAttribute('size'))).to.equal(true);
+});
+
 it('reconnects its avatar attribute observer to the adopted owner realm', async () => {
   const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
   const frameDocument = frame.contentDocument!;
+  const frameWindow = frame.contentWindow!;
   const el = (await fixture(html`
     <lr-avatar-group>
       <lr-avatar id="a" initials="A"></lr-avatar>
@@ -669,7 +685,8 @@ it('reconnects its avatar attribute observer to the adopted owner realm', async 
     // MutationObserver -- proving adoptedCallback() actually rebound observation to the adopted
     // realm rather than leaving a dead observer bound to the original document.
     a.setAttribute('hidden', '');
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await new Promise<void>((resolve) => frameWindow.queueMicrotask(resolve));
+    await el.updateComplete;
 
     expect(a.hasAttribute('data-lr-avatar-group-first')).to.be.false;
     expect(b.hasAttribute('data-lr-avatar-group-first')).to.be.true;
@@ -761,6 +778,32 @@ it('relinquishes a group-owned default after an explicit same-value author attri
   el.size = 'xl';
   await el.updateComplete;
   expect(owned.getAttribute('size')).to.equal('large');
+});
+
+it('relinquishes every default after the author explicitly claims all three values', async () => {
+  const el = await fixture<LyraAvatarGroup>(html`
+    <lr-avatar-group size="large" shape="rounded" variant="brand">
+      <lr-avatar id="owned"></lr-avatar>
+    </lr-avatar-group>
+  `);
+  const owned = el.querySelector('#owned')!;
+  for (const [attribute, value] of [
+    ['size', 'large'],
+    ['shape', 'rounded'],
+    ['variant', 'brand'],
+  ] as const) owned.setAttribute(attribute, value);
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+
+  el.size = 'small';
+  el.shape = 'square';
+  el.variant = 'danger';
+  await el.updateComplete;
+
+  expect([
+    owned.getAttribute('size'),
+    owned.getAttribute('shape'),
+    owned.getAttribute('variant'),
+  ]).to.deep.equal(['large', 'rounded', 'brand']);
 });
 
 it('keeps restored defaults absent after a removed avatar settles', async () => {
