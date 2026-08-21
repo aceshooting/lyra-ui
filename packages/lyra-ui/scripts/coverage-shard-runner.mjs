@@ -122,7 +122,12 @@ export function runCoverageShard(
       `${files.length} of ${testFiles.length} sorted test files.`,
   );
 
-  const executable = process.platform === 'win32' ? 'wtr.cmd' : 'wtr';
+  const executable = resolve(
+    packageDirectory,
+    'node_modules',
+    '.bin',
+    process.platform === 'win32' ? 'wtr.cmd' : 'wtr',
+  );
   const result = spawn(executable, files, {
     cwd: packageDirectory,
     env: {

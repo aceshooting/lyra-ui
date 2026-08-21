@@ -163,9 +163,11 @@ test('runs exactly the deterministic shard selection and writes its manifest bef
   const fixture = await mkdtemp(join(tmpdir(), 'lyra-coverage-shard-runner-'));
   try {
     const calls = [];
+    const packageDirectory = join(fixture, 'package');
     const result = runCoverageShard(2, inventory, {
       coverageDirectory: fixture,
       environment: { SENTINEL: 'preserved' },
+      packageDirectory,
       spawn: (executable, files, options) => {
         calls.push({ executable, files, options });
         return { status: 0 };
@@ -174,7 +176,15 @@ test('runs exactly the deterministic shard selection and writes its manifest bef
 
     assert.equal(result, 0);
     assert.equal(calls.length, 1);
-    assert.match(calls[0].executable, /^wtr(?:\.cmd)?$/u);
+    assert.equal(
+      calls[0].executable,
+      join(
+        packageDirectory,
+        'node_modules',
+        '.bin',
+        process.platform === 'win32' ? 'wtr.cmd' : 'wtr',
+      ),
+    );
     assert.deepEqual(calls[0].files, shardTestFiles(inventory, 2, COVERAGE_SHARD_TOTAL));
     assert.equal(calls[0].options.env.SENTINEL, 'preserved');
     assert.equal(calls[0].options.env.WTR_COVERAGE, '1');
