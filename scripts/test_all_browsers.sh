@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Runs the complete browser-driven test surface on every browser engine currently
 # used in CI/platform coverage: Chromium, Firefox, Chrome, Edge, Safari (mapped
-# to webkit here). Uses the same shardless full-engine test runner and keeps all
+# to webkit here). Uses the same full-engine shard runner and keeps all
 # browser lanes parallel unless requested otherwise.
 #
 # Usage:
@@ -9,6 +9,7 @@
 #   ./scripts/test_all_browsers.sh --serial             # run lanes one by one
 #   ./scripts/test_all_browsers.sh --browser chrome      # run only Chrome
 #   ./scripts/test_all_browsers.sh --browsers chromium,firefox,edge,safari
+#   ./scripts/test_all_browsers.sh --browser firefox --shards 1,2
 #   TEST_ALL_BROWSERS_SKIP_INSTALL=1 ./scripts/test_all_browsers.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -19,6 +20,9 @@ DEFAULT_BROWSERS=(chromium firefox chrome edge safari)
 SERIAL=0
 declare -a REQUESTED_BROWSERS=()
 declare -A BROWSER_SEEN=()
+declare -a REQUESTED_SHARDS=()
+declare -A SHARD_SEEN=()
+SHARD_TOTAL=4
 
 step() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
@@ -31,12 +35,34 @@ Options:
   --serial                  Run browser lanes one at a time
   --browser <name>          Add a browser to the run (can be repeated)
   --browsers <name,name>    Comma-separated browser list to run
+  --shards <index,index>    Run selected shards from the fixed 1-4 partition
   -h, --help               Show this help text
 
 Supported browsers:
   chromium, firefox, chrome, edge, safari, webkit
 USAGE
   exit 0
+}
+
+add_shards() {
+  local shard
+  local -a shards
+  IFS=',' read -r -a shards <<< "$1"
+  for shard in "${shards[@]}"; do
+    shard="$(printf '%s' "$shard" | xargs)"
+    case "$shard" in
+      1|2|3|4)
+        if [[ -z "${SHARD_SEEN[$shard]:-}" ]]; then
+          SHARD_SEEN[$shard]=1
+          REQUESTED_SHARDS+=("$shard")
+        fi
+        ;;
+      *)
+        echo "Unsupported shard '$shard'. Use a comma-separated subset of 1,2,3,4."
+        exit 1
+        ;;
+    esac
+  done
 }
 
 normalize_browser() {
@@ -100,6 +126,18 @@ while [[ "$#" -gt 0 ]]; do
       add_browser "${1#*=}"
       shift
       ;;
+    --shards)
+      if [[ $# -lt 2 ]]; then
+        echo "--shards requires a comma-separated shard list argument."
+        exit 2
+      fi
+      add_shards "$2"
+      shift 2
+      ;;
+    --shards=*)
+      add_shards "${1#*=}"
+      shift
+      ;;
     -h|--help)
       usage
       ;;
@@ -112,6 +150,9 @@ done
 
 if (( ${#REQUESTED_BROWSERS[@]} == 0 )); then
   REQUESTED_BROWSERS=("${DEFAULT_BROWSERS[@]}")
+fi
+if (( ${#REQUESTED_SHARDS[@]} == 0 )); then
+  REQUESTED_SHARDS=(1 2 3 4)
 fi
 
 require_primary_toolchain() {
@@ -154,19 +195,17 @@ declare -Ar WTR_LANE_PORTS=(
   [safari]=18094
 )
 
-# Test All Browsers deliberately runs each browser's complete non-coverage suite as four
-# sequential shards on one browser-specific runner. This is distinct from full-engine.yml's eight
-# independently-hosted shards per Firefox/WebKit engine. The smaller sequential split matters here
-# because a handful of tests (see
+# Test All Browsers partitions each browser's complete non-coverage suite into four shards. The
+# workflow assigns each shard to a separate browser-specific runner, while an ordinary local
+# invocation still runs all four. This is distinct from full-engine.yml's eight independently-hosted
+# shards per Firefox/WebKit engine. The smaller split matters because a handful of tests (see
 # src/performance.test.ts's own large-graph/large-flow benchmarks) have been observed to time out
 # only when accumulated load from hundreds of preceding files in one giant run pushes them past
 # their deadline, never when run in a ~120-file shard or standalone.
-SHARD_TOTAL=4
-
 run_browser_lane() {
   local browser="$1"
   local shard
-  for shard in $(seq 1 "$SHARD_TOTAL"); do
+  for shard in "${REQUESTED_SHARDS[@]}"; do
     WTR_BROWSER="$browser" WTR_PORT="${WTR_LANE_PORTS[$browser]}" \
       WTR_SHARD_INDEX="$shard" WTR_SHARD_TOTAL="$SHARD_TOTAL" WTR_STRICT_CONSOLE=1 \
       pnpm --filter @aceshooting/lyra-ui test:full-engine-shard

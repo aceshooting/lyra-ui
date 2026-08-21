@@ -195,9 +195,12 @@ uses `package.json#packageManager` (`pnpm@11.22.0`). The package's supported eng
 
 `.github/workflows/full-engine.yml` complements the fast pull-request matrix with the complete
 non-coverage `src/**/*.test.ts` suite in Firefox and WebKit. It runs weekly and can also be started
-with `workflow_dispatch`. Each browser is split into eight deterministic round-robin shards under
+with `workflow_dispatch`. Each browser is split into eight deterministic cost-balanced shards under
 Node 22. The runner discovers and lexically sorts the live test inventory, so every test file runs
-exactly once across the eight shards without maintaining a second allowlist.
+exactly once across the eight shards without maintaining a second allowlist. Unknown files have a
+unit cost; the package-entrypoint contract has a source-controlled higher cost because importing the
+complete unbundled graph takes roughly as long as 50 ordinary files. Greedy least-cost assignment
+keeps that graph from dominating one shard while remaining deterministic and exhaustive.
 
 Eight rather than four, and deliberately *more shards* rather than more concurrency inside each
 one. The two levers are not equivalent: raising a lane's `WTR_CONCURRENCY` from 4 to 10 was
@@ -230,11 +233,14 @@ discovery and sharding logic is covered by the package's blocking `test:tooling`
 ## Manually dispatched five-browser suite
 
 `.github/workflows/test-all-browsers.yml` runs the complete non-coverage suite in Chromium,
-Firefox, Chrome, Edge, and Safari (WebKit). Each browser gets an isolated runner and executes four
-deterministic shards sequentially through `scripts/test_all_browsers.sh`; that four-shard shape is
-deliberately distinct from `full-engine.yml`'s eight independently-hosted shards per Firefox/WebKit
-engine. Manual diagnostic runs may select a subset through the workflow input, but release
-qualification always dispatches the complete five-browser list.
+Firefox, Chrome, Edge, and Safari (WebKit). Each browser's four existing deterministic shards run on
+independent runners through `scripts/test_all_browsers.sh`. The test process and concurrency shape
+are unchanged; scheduling the same shards independently removes their former sequential critical
+path without raising browser concurrency inside a shard. Five lightweight browser-named aggregate
+jobs preserve the stable release checks; the individual worker names expose the exact failed shard.
+This four-shard shape is deliberately distinct from `full-engine.yml`'s eight independently-hosted
+shards per Firefox/WebKit engine. Manual diagnostic runs may select a subset through the workflow
+input, but release qualification always dispatches the complete five-browser list.
 
 For a release, the generated qualification manifest requires all five named browser jobs from one
 successful `workflow_dispatch` run whose `head_branch` is `main` and whose `head_sha` is the exact

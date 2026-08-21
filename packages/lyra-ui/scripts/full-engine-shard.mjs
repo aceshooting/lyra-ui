@@ -5,6 +5,13 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
+// The package-entrypoint contract imports the complete unbundled package graph in a fresh iframe
+// realm. On CI it costs roughly as much wall time as 50 ordinary test files, so plain file-count
+// round-robin assignment leaves its shard on the critical path long after the others finish.
+// Explicit, source-controlled costs keep the split deterministic; unknown and new files retain a
+// unit cost and therefore preserve the former lexical round-robin behavior.
+const TEST_FILE_COSTS = new Map([['src/package-entrypoints.test.ts', 50]]);
+
 function comparePaths(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
 }
@@ -102,10 +109,7 @@ export function readShardConfiguration(environment = process.env) {
   return { shardIndex, shardTotal };
 }
 
-/**
- * Assigns sorted test paths round-robin so the shards are deterministic,
- * disjoint, exhaustive, and reasonably balanced by file count.
- */
+/** Assigns test paths deterministically, balancing known expensive contracts by estimated cost. */
 export function shardTestFiles(testFiles, shardIndex, shardTotal) {
   const index = positiveInteger(shardIndex, 'shardIndex');
   const total = positiveInteger(shardTotal, 'shardTotal');
@@ -113,9 +117,23 @@ export function shardTestFiles(testFiles, shardIndex, shardTotal) {
     throw new Error(`shardIndex (${index}) cannot exceed shardTotal (${total}).`);
   }
 
-  return [...testFiles]
-    .sort(comparePaths)
-    .filter((_file, fileIndex) => fileIndex % total === index - 1);
+  const shards = Array.from({ length: total }, () => []);
+  const costs = Array.from({ length: total }, () => 0);
+  const ordered = [...testFiles].sort((left, right) => {
+    const costDifference = (TEST_FILE_COSTS.get(right) ?? 1) - (TEST_FILE_COSTS.get(left) ?? 1);
+    return costDifference || comparePaths(left, right);
+  });
+
+  for (const file of ordered) {
+    let target = 0;
+    for (let candidate = 1; candidate < total; candidate += 1) {
+      if (costs[candidate] < costs[target]) target = candidate;
+    }
+    shards[target].push(file);
+    costs[target] += TEST_FILE_COSTS.get(file) ?? 1;
+  }
+
+  return shards[index - 1].sort(comparePaths);
 }
 
 export function runShard(testFiles, { shardIndex, shardTotal }, environment = process.env) {

@@ -54,6 +54,27 @@ test('creates deterministic, disjoint, exhaustive round-robin shards', () => {
   assert.deepEqual(shardTestFiles([...files].reverse(), 1, 3), shards[0]);
 });
 
+test('keeps the expensive package-entrypoint contract from dominating one full-suite shard', () => {
+  const heavyweight = 'src/package-entrypoints.test.ts';
+  const files = [
+    heavyweight,
+    ...Array.from({ length: 15 }, (_value, index) => `src/component-${index}.test.ts`),
+  ];
+
+  const shards = [1, 2, 3, 4].map((index) => shardTestFiles(files, index, 4));
+  const heavyweightShard = shards.find((shard) => shard.includes(heavyweight));
+
+  assert.ok(heavyweightShard);
+  const companionCounts = shards
+    .filter((shard) => shard !== heavyweightShard)
+    .map((shard) => shard.length);
+  assert.ok(
+    heavyweightShard.length < Math.min(...companionCounts),
+  );
+  assert.deepEqual([...shards.flat()].sort(), [...files].sort());
+  assert.equal(new Set(shards.flat()).size, files.length);
+});
+
 test('validates environment shard coordinates', () => {
   assert.deepEqual(
     readShardConfiguration({ WTR_SHARD_INDEX: '2', WTR_SHARD_TOTAL: '4' }),
