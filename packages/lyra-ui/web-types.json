@@ -50103,11 +50103,12 @@
             },
             {
               "name": "scroll-mode",
-              "description": "Which element scrolls when the table overflows; see `TableScrollMode`. Defaults to `'self'`,\nwhich is the pre-10.0 behaviour.\n\nType: `TableScrollMode`  \nDefault: `'self'`",
+              "description": "Which element scrolls when the table overflows; see `TableScrollMode`. `'auto'` keeps page\nflow while content fits and contains horizontal overflow only when needed. Defaults to\n`'self'`, which is the pre-10.0 behaviour.\n\nType: `TableScrollMode`  \nDefault: `'self'`",
               "value": {
                 "type": [
                   "'self'",
-                  "'page'"
+                  "'page'",
+                  "'auto'"
                 ]
               }
             },
@@ -50407,7 +50408,7 @@
               },
               {
                 "name": "scrollMode",
-                "description": "Which element scrolls when the table overflows; see `TableScrollMode`. Defaults to `'self'`,\nwhich is the pre-10.0 behaviour.\n\nAttribute: `scroll-mode`  \nReflected to its attribute.",
+                "description": "Which element scrolls when the table overflows; see `TableScrollMode`. `'auto'` keeps page\nflow while content fits and contains horizontal overflow only when needed. Defaults to\n`'self'`, which is the pre-10.0 behaviour.\n\nAttribute: `scroll-mode`  \nReflected to its attribute.",
                 "type": "TableScrollMode",
                 "default": "'self'"
               },

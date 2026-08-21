@@ -7091,6 +7091,87 @@ describe('scrollMode', () => {
     await el.updateComplete;
     expect(getComputedStyle(base(el)).maxBlockSize).to.equal('none');
   });
+
+  const responsiveColumns: TableColumn<Row>[] = [
+    { key: 'name', label: 'Long localized account name', cell: (row) => row.name },
+    { key: 'score', label: 'Current quality score', cell: (row) => row.score },
+    { key: 'id', label: 'Persistent external identifier', cell: (row) => row.id },
+  ];
+
+  async function responsiveTable(width: number): Promise<{ wrapper: HTMLElement; el: LyraTable<Row> }> {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style=${`inline-size: ${width}px; max-inline-size: 100%;`}>
+        <lr-table scroll-mode="auto" accessible-label="Accounts"></lr-table>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
+    el.columns = responsiveColumns;
+    el.rows = rows;
+    await el.updateComplete;
+    return { wrapper, el };
+  }
+
+  it("scroll-mode='auto' keeps page flow at desktop width when rendered content fits", async () => {
+    const { wrapper, el } = await responsiveTable(960);
+    const scrollport = base(el);
+    await waitUntil(() => scrollport.scrollWidth <= scrollport.clientWidth + 1);
+
+    const style = getComputedStyle(scrollport);
+    expect(style.overflowX).to.equal('visible');
+    expect(style.overflowY).to.equal('visible');
+    expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth + 1);
+  });
+
+  it("scroll-mode='auto' contains actual horizontal overflow inside a 320px allocation", async () => {
+    const { wrapper, el } = await responsiveTable(320);
+    const scrollport = base(el);
+    await waitUntil(
+      () => scrollport.scrollWidth > scrollport.clientWidth && getComputedStyle(scrollport).overflowX === 'auto',
+      'the narrow table never became its own horizontal scrollport'
+    );
+
+    expect(scrollport.scrollWidth).to.be.greaterThan(scrollport.clientWidth);
+    expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth + 1);
+  });
+
+  it("scroll-mode='auto' re-evaluates when its allocation moves between desktop and 320px", async () => {
+    const { wrapper, el } = await responsiveTable(960);
+    const scrollport = base(el);
+    await waitUntil(() => getComputedStyle(scrollport).overflowX === 'visible');
+
+    wrapper.style.inlineSize = '320px';
+    await waitUntil(
+      () => scrollport.scrollWidth > scrollport.clientWidth && getComputedStyle(scrollport).overflowX === 'auto',
+      'the resized table never contained its horizontal overflow'
+    );
+    expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth + 1);
+
+    wrapper.style.inlineSize = '960px';
+    await waitUntil(
+      () => scrollport.scrollWidth <= scrollport.clientWidth + 1 && getComputedStyle(scrollport).overflowX === 'visible',
+      'the table never returned to page flow after its content fit again'
+    );
+  });
+
+  it("scroll-mode='auto' re-evaluates intrinsic table growth without a host update", async () => {
+    const { wrapper, el } = await responsiveTable(960);
+    const scrollport = base(el);
+    const table = el.shadowRoot!.querySelector('[part="table"]') as HTMLTableElement;
+    await waitUntil(() => getComputedStyle(scrollport).overflowX === 'visible');
+
+    table.style.minInlineSize = '1200px';
+    await waitUntil(
+      () => scrollport.scrollWidth > scrollport.clientWidth && getComputedStyle(scrollport).overflowX === 'auto',
+      'intrinsic table growth never activated contained scrolling'
+    );
+    expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth + 1);
+
+    table.style.removeProperty('min-inline-size');
+    await waitUntil(
+      () => scrollport.scrollWidth <= scrollport.clientWidth + 1 && getComputedStyle(scrollport).overflowX === 'visible',
+      'intrinsic table shrinkage never restored page flow'
+    );
+  });
 });
 
 describe('sticky + sortable header pointer feedback', () => {

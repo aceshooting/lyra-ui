@@ -139,6 +139,33 @@ export const FixedLayout: Story = {
   `,
 };
 
+const responsiveScrollColumns: TableColumn<DemoRow>[] = [
+  { key: 'name', label: 'Long localized account name', cell: (row) => row.name },
+  { key: 'score', label: 'Current quality score', align: 'end', cell: (row) => row.score },
+  { key: 'id', label: 'Persistent external identifier', cell: (row) => row.id },
+];
+
+export const ResponsiveScroll: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`scroll-mode="auto"` leaves the table in ordinary page flow while these columns fit, so a sticky header can follow the page. Narrow the canvas to 320px and the same rendered table becomes its own horizontal scrollport instead of widening the page. The existing `self` default and explicit `page` mode remain unchanged.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="inline-size: min(100%, 60rem)">
+      <lr-table
+        scroll-mode="auto"
+        accessible-label="Accounts"
+        .columns=${responsiveScrollColumns}
+        .rows=${rows}
+      ></lr-table>
+    </div>
+  `,
+};
+
 export const SelectedRowColor: Story = {
   parameters: {
     docs: {
