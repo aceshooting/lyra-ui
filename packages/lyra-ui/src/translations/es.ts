@@ -488,6 +488,7 @@ const strings: LyraLocaleStrings = {
   details: 'Detalles',
   breadcrumb: 'Ruta de navegación',
   timeline: 'Cronología',
+  timelineClusterCount: 'Mostrar eventos de la cronología ({count})',
   rating: 'Valoración',
   sliderLabel: 'Control deslizante',
   feedbackPositive: 'Buena respuesta',

@@ -119521,8 +119521,12 @@
         "ledger": "scripts/fixtures/component-qualification.json"
       },
       "dependencies": {
-        "direct": [],
-        "transitive": [],
+        "direct": [
+          "lr-timeline-item"
+        ],
+        "transitive": [
+          "lr-relative-time"
+        ],
         "ledger": "scripts/fixtures/component-integration.json"
       },
       "counterparts": [],
@@ -119656,7 +119660,14 @@
             "deprecated": null
           }
         ],
-        "events": [],
+        "events": [
+          {
+            "name": "lr-cluster-activate",
+            "type": "CustomEvent<LyraTimelineClusterActivateDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          }
+        ],
         "parts": [
           {
             "name": "base",
@@ -119669,6 +119680,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "2rem"
+          },
+          {
+            "name": "--lr-timeline-cluster-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-timeline-cluster-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-on-brand)"
+          },
+          {
+            "name": "--lr-timeline-cluster-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-2rem)"
           },
           {
             "name": "--lr-timeline-collision-offset",
@@ -119855,6 +119884,14 @@
             "deprecated": null
           },
           {
+            "name": "cluster",
+            "deprecated": null
+          },
+          {
+            "name": "cluster-count",
+            "deprecated": null
+          },
+          {
             "name": "content",
             "deprecated": null
           },
@@ -119893,6 +119930,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-timeline-marker-color)"
+          },
+          {
+            "name": "--lr-timeline-cluster-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-timeline-cluster-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-on-brand)"
+          },
+          {
+            "name": "--lr-timeline-cluster-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-2rem)"
           },
           {
             "name": "--lr-timeline-marker-color",

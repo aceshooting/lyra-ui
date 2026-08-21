@@ -157,4 +157,69 @@ export const styles = css`
   [part='description'][hidden] {
     display: none;
   }
+
+  [part='cluster'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  [part='cluster-count'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-inline-size: var(--lr-timeline-cluster-size, var(--lr-size-2rem));
+    min-block-size: var(--lr-timeline-cluster-size, var(--lr-size-2rem));
+    padding-inline: var(--lr-space-xs);
+    border-radius: var(--lr-radius-pill);
+    background: var(--lr-timeline-cluster-bg, var(--lr-color-brand));
+    color: var(--lr-timeline-cluster-color, var(--lr-color-on-brand));
+    font-size: var(--lr-font-size-sm);
+    font-weight: var(--lr-font-weight-semibold);
+    line-height: var(--lr-line-height-snug);
+  }
+  [part='cluster']:hover [part='cluster-count'] {
+    background: color-mix(
+      in oklab,
+      var(--lr-timeline-cluster-bg, var(--lr-color-brand)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+    );
+  }
+  [part='cluster']:active [part='cluster-count'] {
+    background: color-mix(
+      in oklab,
+      var(--lr-timeline-cluster-bg, var(--lr-color-brand)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
+  [part='cluster']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+
+  @media (forced-colors: active) {
+    [part='cluster-count'] {
+      border: var(--lr-border-width-medium) solid ButtonText;
+      background: ButtonFace;
+      color: ButtonText;
+      forced-color-adjust: auto;
+    }
+    [part='cluster']:hover [part='cluster-count'] {
+      border-color: Highlight;
+    }
+    [part='cluster']:focus-visible {
+      outline-color: Highlight;
+    }
+  }
 `;

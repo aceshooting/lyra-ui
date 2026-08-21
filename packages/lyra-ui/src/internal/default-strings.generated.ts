@@ -1188,6 +1188,7 @@ export const LYRA_DEFAULT_timeInputRangeMessage: LyraMessage = 'Time must be bet
 export const LYRA_DEFAULT_timeInputSecond: LyraMessage = 'Second';
 export const LYRA_DEFAULT_timeInputStepMessage: LyraMessage = 'Enter a time matching the required interval.';
 export const LYRA_DEFAULT_timeline: LyraMessage = 'Timeline';
+export const LYRA_DEFAULT_timelineClusterCount: LyraMessage = 'Show timeline events ({count})';
 export const LYRA_DEFAULT_toastContentIncomplete: LyraMessage = 'Notification with incomplete content';
 export const LYRA_DEFAULT_toastOverflow: LyraMessage = 'Notifications not shown: {count}.';
 export const LYRA_DEFAULT_tokenInputEditWithContext: LyraMessage = 'Edit {label}';

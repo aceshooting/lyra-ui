@@ -464,6 +464,7 @@ export type LyraMessageKey =
   | 'details'
   | 'breadcrumb'
   | 'timeline'
+  | 'timelineClusterCount'
   | 'rating'
   | 'sliderLabel'
   | 'feedbackPositive'

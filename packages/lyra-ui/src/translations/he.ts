@@ -475,6 +475,7 @@ const strings: LyraLocaleStrings = {
   details: 'פרטים',
   breadcrumb: 'פירורי לחם',
   timeline: 'ציר זמן',
+  timelineClusterCount: 'הצג אירועים בציר הזמן ({count})',
   rating: 'דירוג',
   sliderLabel: 'סליידר',
   feedbackPositive: 'תגובה טובה',

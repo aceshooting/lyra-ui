@@ -45187,8 +45187,15 @@
           "evidence": [
             {
               "file": "src/components/data/timeline/timeline.test.ts",
-              "line": 394,
+              "line": 397,
               "test": "is accessible with a realistic set of timeline items",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/timeline/timeline.test.ts",
+              "line": 1168,
+              "test": "has no axe violations in a populated clustered state",
               "target": "el",
               "state": "populated"
             }
@@ -45196,10 +45203,15 @@
           "exemption": null
         },
         "keyboard": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No component-owned interactive surface was detected; applicability is re-evaluated when the source changes."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/data/timeline/timeline.test.ts",
+              "line": 2,
+              "kind": "component keyboard assertion signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -45207,7 +45219,7 @@
           "evidence": [
             {
               "file": "src/components/data/timeline/timeline.test.ts",
-              "line": 117,
+              "line": 120,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -45224,7 +45236,7 @@
           "evidence": [
             {
               "file": "src/components/data/timeline/timeline.test.ts",
-              "line": 56,
+              "line": 59,
               "kind": "320px allocation test signal"
             }
           ]
@@ -45282,10 +45294,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/data/timeline/timeline.class.ts",
+              "line": 742,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -45304,13 +45322,12 @@
         }
       },
       "knownLimitations": [
-        "No component-owned interactive surface was detected; applicability is re-evaluated when the source changes.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -45354,8 +45371,15 @@
             },
             {
               "file": "src/components/data/timeline/timeline.test.ts",
-              "line": 394,
+              "line": 397,
               "test": "is accessible with a realistic set of timeline items",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/timeline/timeline.test.ts",
+              "line": 1168,
+              "test": "has no axe violations in a populated clustered state",
               "target": "el",
               "state": "populated"
             }
@@ -45363,10 +45387,15 @@
           "exemption": null
         },
         "keyboard": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No component-owned interactive surface was detected; applicability is re-evaluated when the source changes."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/data/timeline/timeline.test.ts",
+              "line": 2,
+              "kind": "component keyboard assertion signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -45374,7 +45403,7 @@
           "evidence": [
             {
               "file": "src/components/data/timeline/timeline.test.ts",
-              "line": 117,
+              "line": 120,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -45391,7 +45420,7 @@
           "evidence": [
             {
               "file": "src/components/data/timeline/timeline.test.ts",
-              "line": 56,
+              "line": 59,
               "kind": "320px allocation test signal"
             }
           ]
@@ -45449,10 +45478,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/data/timeline/timeline.class.ts",
+              "line": 742,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -45471,13 +45506,12 @@
         }
       },
       "knownLimitations": [
-        "No component-owned interactive surface was detected; applicability is re-evaluated when the source changes.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],

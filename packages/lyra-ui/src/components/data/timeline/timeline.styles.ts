@@ -35,8 +35,8 @@ export const styles = css`
   /* scale="time": items sit at their true proportion of the range, not evenly spaced, so the shape
      of the history shows. Absolute positioning needs a definite extent -- percentages against an
      auto-sized track resolve to zero -- hence tokenized --lr-timeline-time-extent, not content
-     height. Coincident items deliberately overlap; lane assignment, brushing and per-event
-     selection belong to a denser component. */
+     height. collision controls whether nearby markers overlap, fan into lanes, or collapse into
+     count actions. */
   :host([scale='time']) [part='base'] {
     position: relative;
     display: block;
@@ -78,6 +78,20 @@ export const styles = css`
     inset-inline-start: var(--_lr-timeline-item-offset, 0%);
     inline-size: auto;
   }
+
+  :host([scale='time'][collision='cluster'])
+    ::slotted([data-lr-timeline-cluster-hidden]) {
+    display: none !important;
+  }
+
+  :host([scale='time'][collision='cluster'][orientation='horizontal'])
+    [part='base'] {
+    min-block-size: max(
+      var(--lr-icon-button-size),
+      var(--lr-timeline-cluster-size, var(--lr-size-2rem))
+    );
+  }
+
   :host([orientation='horizontal']) [part='base'] {
     flex-direction: row;
     /* Mirrors <lr-tab-group>: a horizontal timeline becomes a horizontally-scrollable strip rather

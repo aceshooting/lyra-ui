@@ -4,6 +4,12 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './timeline-item.styles.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import type { LyraVariant } from '../../../internal/variants.js';
+import {
+  OBSERVE_TIMELINE_ITEM_TIMESTAMP,
+  SET_TIMELINE_CLUSTER_PRESENTATION,
+  type TimelineClusterPresentation,
+  type TimelineTimestampObserver,
+} from './timeline-cluster.js';
 
 const timelineItemVariantConverter = {
   fromAttribute(value: string | null): LyraVariant {
@@ -42,8 +48,12 @@ const normalizeTimelineItemVariant = (value: unknown): LyraVariant =>
  * `::slotted(:last-child)` rule (see that component's stylesheet) — no JS coordination between the
  * two components is needed anywhere in this mechanism.
  *
- * A pure display row: no events, no keyboard interaction, and no selection/expansion state of its
- * own — a deliberate scope decision, not an oversight. An earlier "interactive row" design (mirroring
+ * A pure display row by default: no events, no keyboard interaction, and no selection/expansion
+ * state of its own — a deliberate scope decision, not an oversight. When a parent timeline opts
+ * into collision clustering, the first item in each author-ordered group temporarily represents
+ * that group with a native count button in this item's list position; activation still belongs to
+ * the parent timeline and emits its `lr-cluster-activate` event. An earlier "interactive row"
+ * design (mirroring
  * `<lr-conversation-item>`'s clickable `role="button"` row) was considered and dropped: this
  * component's `title` and `description` are slots that routinely contain focusable content of their
  * own (a link, a button) — wrapping them in an ancestor `role="button"` would trip axe's
@@ -84,6 +94,9 @@ const normalizeTimelineItemVariant = (value: unknown): LyraVariant =>
  *   fallback. Hidden entirely when there's nothing to show.
  * @csspart description - Wrapper around the `description` slot. Hidden entirely when the slot is
  *   empty.
+ * @csspart cluster - The native count-marker button rendered while this item represents a parent
+ *   timeline collision cluster; retains the shared 40px minimum action surface.
+ * @csspart cluster-count - The painted count pill inside a representative cluster button.
  * @cssprop [--lr-timeline-marker-size=var(--lr-size-1-25rem)] - Diameter of the marker circle
  *   (both inline-size and block-size, so the default dot stays circular). Inherits from theme
  *   ancestors.
@@ -100,6 +113,11 @@ const normalizeTimelineItemVariant = (value: unknown): LyraVariant =>
  * @cssprop [--lr-timeline-active-ring-color=var(--lr-timeline-marker-color)] - Static outline color
  *   for the current/in-progress marker. The outline remains visible when reduced motion disables
  *   the optional pulse animation.
+ * @cssprop [--lr-timeline-cluster-size=var(--lr-size-2rem)] - Minimum inline and block size of the
+ *   painted cluster count pill. Its containing button retains the shared 40px minimum action
+ *   surface.
+ * @cssprop [--lr-timeline-cluster-bg=var(--lr-color-brand)] - Cluster count pill background.
+ * @cssprop [--lr-timeline-cluster-color=var(--lr-color-on-brand)] - Cluster count pill foreground.
  * @status stable
  * @since 4.0.0
  */
@@ -157,6 +175,36 @@ export class LyraTimelineItem extends LyraElement {
   @state() private hasIconSlot = false;
   @state() private hasTimestampSlot = false;
   @state() private hasDescriptionSlot = false;
+  @state() private clusterPresentation?: TimelineClusterPresentation;
+  private readonly timestampObservers = new Set<TimelineTimestampObserver>();
+  private timestampObserversReady = false;
+
+  /** @internal */
+  [SET_TIMELINE_CLUSTER_PRESENTATION](
+    presentation: TimelineClusterPresentation | undefined
+  ): void {
+    const current = this.clusterPresentation;
+    if (
+      current === presentation ||
+      (current !== undefined &&
+        presentation !== undefined &&
+        current.accessibleLabel === presentation.accessibleLabel &&
+        current.countText === presentation.countText &&
+        current.activate === presentation.activate)
+    ) {
+      return;
+    }
+    this.clusterPresentation = presentation;
+  }
+
+  /** @internal */
+  [OBSERVE_TIMELINE_ITEM_TIMESTAMP](
+    observer: TimelineTimestampObserver,
+    observe: boolean
+  ): void {
+    if (observe) this.timestampObservers.add(observer);
+    else this.timestampObservers.delete(observer);
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -167,7 +215,8 @@ export class LyraTimelineItem extends LyraElement {
     super.willUpdate(changed);
     // aria-current lives on the host (role="listitem" does too -- see connectedCallback), so it's a
     // plain imperative attribute write here rather than part of render()'s shadow-DOM template.
-    this.setAttribute('aria-current', String(this.active));
+    if (this.clusterPresentation) this.removeAttribute('aria-current');
+    else this.setAttribute('aria-current', String(this.active));
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -178,6 +227,15 @@ export class LyraTimelineItem extends LyraElement {
       else if (this.getAttribute('variant') !== reflected)
         this.setAttribute('variant', reflected);
     }
+    if (this.timestampObserversReady && changed.has('timestamp')) {
+      this.scheduleAfterUpdate(
+        () => {
+          for (const observer of [...this.timestampObservers]) observer();
+        },
+        'timeline-item-timestamp-observers'
+      );
+    }
+    this.timestampObserversReady = true;
   }
 
   private get normalizedTimestamp(): Date | undefined {
@@ -211,6 +269,20 @@ export class LyraTimelineItem extends LyraElement {
   };
 
   override render(): TemplateResult {
+    if (this.clusterPresentation) {
+      return html`
+        <button
+          part="cluster"
+          type="button"
+          aria-label=${this.clusterPresentation.accessibleLabel}
+          @click=${this.clusterPresentation.activate}
+        >
+          <span part="cluster-count" aria-hidden="true"
+            >${this.clusterPresentation.countText}</span
+          >
+        </button>
+      `;
+    }
     const ts = this.normalizedTimestamp;
     const showTimestampFallback = !this.hasTimestampSlot && ts !== undefined;
     const showTimestamp = this.hasTimestampSlot || ts !== undefined;

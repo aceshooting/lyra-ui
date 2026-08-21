@@ -487,6 +487,7 @@ const strings: LyraLocaleStrings = {
   details: 'Détails',
   breadcrumb: 'Fil d’Ariane',
   timeline: 'Chronologie',
+  timelineClusterCount: 'Afficher les événements de la chronologie ({count})',
   rating: 'Note',
   sliderLabel: 'Curseur',
   feedbackPositive: 'Bonne réponse',

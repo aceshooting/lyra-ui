@@ -78,6 +78,7 @@ import type { LyraHeatmapEventMap } from './components/data/heatmap/heatmap.clas
 import type { LyraPaginationEventMap } from './components/data/pagination/pagination.class.js';
 import type { LyraSequenceStripEventMap } from './components/data/sequence-strip/sequence-strip.class.js';
 import type { LyraTableEventMap } from './components/data/table/table.class.js';
+import type { LyraTimelineEventMap } from './components/data/timeline/timeline.class.js';
 import type { LyraTreeItemEventMap } from './components/data/tree/tree-item.class.js';
 import type { LyraTreeEventMap } from './components/data/tree/tree.class.js';
 import type { LyraWordCloudEventMap } from './components/data/word-cloud/word-cloud.class.js';
@@ -736,6 +737,13 @@ export type LyraCloseEvent =
   | LyraToolApprovalDialogEventMap['lr-close']
   | LyraToolResultDialogEventMap['lr-close']
   | LyraToolSelectDialogEventMap['lr-close'];
+
+/**
+ * `lr-cluster-activate` — dispatched by `<lr-timeline>`.
+ *
+ * Detail type: `LyraTimelineEventMap['lr-cluster-activate']`.
+ */
+export type LyraClusterActivateEvent = LyraTimelineEventMap['lr-cluster-activate'];
 
 /**
  * `lr-collapse` — dispatched by 3 components: `<lr-accordion>`, `<lr-tree-item>`, `<lr-tree>`.
@@ -3519,6 +3527,7 @@ export interface LyraGlobalEventMap {
   'lr-claim-select': LyraClaimSelectEvent;
   'lr-clear': LyraClearEvent;
   'lr-close': LyraCloseEvent;
+  'lr-cluster-activate': LyraClusterActivateEvent;
   'lr-collapse': LyraCollapseEvent;
   'lr-collapse-change': LyraCollapseChangeEvent;
   'lr-collapse-request': LyraCollapseRequestEvent;

@@ -1,9 +1,12 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import './timeline.js';
 import './timeline-item.js';
 import type { LyraTimeline } from './timeline.js';
+import type { LyraTimelineItem } from './timeline-item.js';
 import { styles as timelineStyles } from './timeline.styles.js';
 import { styles as itemStyles } from './timeline-item.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 
 /** Two animation frames, long enough for the overflow controller's `ResizeObserver` callback to
@@ -611,11 +614,560 @@ describe('collision="stack"', () => {
 
   it('normalizes an unknown collision mode to overlap', async () => {
     const el = (await fixture(
-      html`<lr-timeline scale="time" collision="cluster"></lr-timeline>`
+      html`<lr-timeline scale="time" collision="merge"></lr-timeline>`
     )) as LyraTimeline;
     await el.updateComplete;
-    // 'cluster' is deliberately not implemented: it needs a selection model and click events this
-    // passive component does not have.
     expect(el.collision).to.equal('overlap');
+  });
+});
+
+describe('collision="cluster"', () => {
+  const CLUSTERED = html`
+    <lr-timeline
+      scale="time"
+      collision="cluster"
+      style="--lr-timeline-time-extent: 400px"
+    >
+      <lr-timeline-item id="a" .timestamp=${new Date('2000-01-03T00:00:00Z')}
+        >A</lr-timeline-item
+      >
+      <lr-timeline-item id="b" .timestamp=${new Date('2000-01-01T00:00:00Z')}
+        >B</lr-timeline-item
+      >
+      <lr-timeline-item id="c" .timestamp=${new Date('2000-01-02T00:00:00Z')}
+        >C</lr-timeline-item
+      >
+      <lr-timeline-item id="d" .timestamp=${new Date('2100-01-01T00:00:00Z')}
+        >D</lr-timeline-item
+      >
+    </lr-timeline>
+  `;
+
+  const clusterButtons = (el: LyraTimeline): HTMLButtonElement[] =>
+    Array.from(el.querySelectorAll<LyraTimelineItem>('lr-timeline-item')).flatMap(
+      (item) =>
+        Array.from(
+          item.shadowRoot?.querySelectorAll<HTMLButtonElement>(
+            '[part="cluster"]'
+          ) ?? []
+        )
+    );
+
+  const clusterHidden = (el: LyraTimeline): string[] =>
+    Array.from(
+      el.querySelectorAll<HTMLElement>('[data-lr-timeline-cluster-hidden]')
+    ).map((item) => item.id);
+
+  async function settleClusters(el: LyraTimeline): Promise<void> {
+    await el.updateComplete;
+    await el.updateComplete;
+  }
+
+  it('is opt-in: the existing overlap default never hides items or renders an action', async () => {
+    const el = (await fixture(html`
+      <lr-timeline scale="time">
+        <lr-timeline-item .timestamp=${new Date('2000-01-01T00:00:00Z')}
+          >A</lr-timeline-item
+        >
+        <lr-timeline-item .timestamp=${new Date('2000-01-02T00:00:00Z')}
+          >B</lr-timeline-item
+        >
+      </lr-timeline>
+    `)) as LyraTimeline;
+    await settleClusters(el);
+
+    expect(el.collision).to.equal('overlap');
+    expect(clusterButtons(el)).to.have.lengthOf(0);
+    expect(clusterHidden(el)).to.deep.equal([]);
+  });
+
+  it('replaces overlapping items with one semantic, natively focusable count marker', async () => {
+    const el = (await fixture(CLUSTERED)) as LyraTimeline;
+    await settleClusters(el);
+
+    expect(el.collision).to.equal('cluster');
+    expect(clusterHidden(el)).to.deep.equal(['b', 'c']);
+    const buttons = clusterButtons(el);
+    expect(buttons).to.have.lengthOf(1);
+    expect(buttons[0]!.localName).to.equal('button');
+    expect(buttons[0]!.type).to.equal('button');
+    expect(buttons[0]!.hasAttribute('tabindex')).to.be.false;
+    expect(buttons[0]!.hasAttribute('aria-expanded')).to.be.false;
+    expect(buttons[0]!.getAttribute('aria-label')).to.equal(
+      'Show timeline events (3)'
+    );
+    expect(buttons[0]!.textContent!.trim()).to.equal('3');
+    expect((buttons[0]!.getRootNode() as ShadowRoot).host.getAttribute('role')).to.equal(
+      'listitem'
+    );
+    const hitArea = buttons[0]!.getBoundingClientRect();
+    expect(hitArea.width).to.be.at.least(40);
+    expect(hitArea.height).to.be.at.least(40);
+    expect(
+      getComputedStyle(el.querySelector<HTMLElement>('#a')!).display
+    ).to.not.equal('none');
+    expect(
+      getComputedStyle(el.querySelector<HTMLElement>('#b')!).display
+    ).to.equal('none');
+    expect(
+      getComputedStyle(el.querySelector<HTMLElement>('#d')!).display
+    ).to.not.equal('none');
+  });
+
+  it('emits a frozen, typed member snapshot in document order when clicked', async () => {
+    const el = (await fixture(CLUSTERED)) as LyraTimeline;
+    await settleClusters(el);
+    const button = clusterButtons(el)[0]!;
+
+    const pending = oneEvent(el, 'lr-cluster-activate');
+    button.click();
+    const event = await pending;
+
+    expect(event.bubbles).to.be.true;
+    expect(event.composed).to.be.true;
+    expect(event.cancelable).to.be.false;
+    expect(Object.isFrozen(event.detail)).to.be.true;
+    expect(Object.isFrozen(event.detail.items)).to.be.true;
+    expect(event.detail.items.length).to.equal(3);
+    expect(event.detail.items[0] === el.querySelector('#a')).to.be.true;
+    expect(
+      event.detail.items.map((item: HTMLElement) => item.id)
+    ).to.deep.equal(['a', 'b', 'c']);
+  });
+
+  it('keeps every member beyond the shared 10,000-entry snapshot boundary', async () => {
+    const el = (await fixture(html`<lr-timeline></lr-timeline>`)) as LyraTimeline;
+    const items = Array.from({ length: 10_001 }, () =>
+      document.createElement('lr-timeline-item')
+    );
+    const pending = oneEvent(el, 'lr-cluster-activate');
+
+    (
+      el as unknown as {
+        activateCluster(clusterItems: readonly LyraTimelineItem[]): void;
+      }
+    ).activateCluster(items);
+    const event = await pending;
+
+    expect(event.detail.items.length).to.equal(10_001);
+    expect(event.detail.items[10_000] === items[10_000]).to.be.true;
+    expect(Object.isFrozen(event.detail.items)).to.be.true;
+  });
+
+  it('is ignored with the default flow scale', async () => {
+    const el = (await fixture(html`
+      <lr-timeline collision="cluster">
+        <lr-timeline-item .timestamp=${new Date('2000-01-01T00:00:00Z')}
+          >A</lr-timeline-item
+        >
+        <lr-timeline-item .timestamp=${new Date('2000-01-01T00:00:00Z')}
+          >B</lr-timeline-item
+        >
+      </lr-timeline>
+    `)) as LyraTimeline;
+    await settleClusters(el);
+
+    expect(el.scale).to.equal('flow');
+    expect(clusterButtons(el)).to.have.lengthOf(0);
+    expect(clusterHidden(el)).to.deep.equal([]);
+  });
+
+  it('clusters coincident timestamps even when they are the only instant on the axis', async () => {
+    const el = (await fixture(html`
+      <lr-timeline scale="time" collision="cluster">
+        <lr-timeline-item id="same-a" .timestamp=${new Date('2000-01-01T00:00:00Z')}
+          >A</lr-timeline-item
+        >
+        <lr-timeline-item id="same-b" .timestamp=${new Date('2000-01-01T00:00:00Z')}
+          >B</lr-timeline-item
+        >
+      </lr-timeline>
+    `)) as LyraTimeline;
+    await settleClusters(el);
+
+    expect(clusterButtons(el)).to.have.lengthOf(1);
+    expect(clusterHidden(el)).to.deep.equal(['same-b']);
+  });
+
+  for (const key of ['Enter', 'Space'] as const) {
+    it(`supports real native ${key} activation with focus on the marker`, async () => {
+      const el = (await fixture(CLUSTERED)) as LyraTimeline;
+      await settleClusters(el);
+      const button = clusterButtons(el)[0]!;
+      button.focus();
+
+      const pending = oneEvent(el, 'lr-cluster-activate');
+      await sendKeys({ press: key });
+      const event = await pending;
+
+      expect(event.detail.items.length).to.equal(3);
+      expect((button.getRootNode() as ShadowRoot).activeElement === button).to.be.true;
+    });
+  }
+
+  it('supports pointer activation through the full rendered hit area', async () => {
+    const el = (await fixture(CLUSTERED)) as LyraTimeline;
+    await settleClusters(el);
+    const button = clusterButtons(el)[0]!;
+    const rect = button.getBoundingClientRect();
+    const pending = oneEvent(el, 'lr-cluster-activate');
+
+    try {
+      await sendMouse({
+        type: 'click',
+        position: [
+          Math.round(rect.left + 1),
+          Math.round(rect.top + 1),
+        ],
+      });
+      const event = await pending;
+      expect(event.detail.items.length).to.equal(3);
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('localizes and locale-number-formats the cluster action label', async () => {
+    const el = (await fixture(html`
+      <lr-timeline
+        scale="time"
+        collision="cluster"
+        locale="ar-u-nu-arab"
+        .strings=${{ timelineClusterCount: 'Count {count}' }}
+      >
+        <lr-timeline-item .timestamp=${new Date('2000-01-01T00:00:00Z')}
+          >A</lr-timeline-item
+        >
+        <lr-timeline-item .timestamp=${new Date('2000-01-02T00:00:00Z')}
+          >B</lr-timeline-item
+        >
+        <lr-timeline-item .timestamp=${new Date('2100-01-01T00:00:00Z')}
+          >C</lr-timeline-item
+        >
+      </lr-timeline>
+    `)) as LyraTimeline;
+    await settleClusters(el);
+
+    expect(clusterButtons(el)[0]!.getAttribute('aria-label')).to.equal(
+      'Count ٢'
+    );
+  });
+
+  it('keeps a clustered action in author-order Tab sequence before later item content', async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <button id="before">Before</button>
+        <lr-timeline scale="time" collision="cluster">
+          <lr-timeline-item id="ordered-a" .timestamp=${new Date('2000-01-01T00:00:00Z')}
+            >A</lr-timeline-item
+          >
+          <lr-timeline-item id="ordered-b" .timestamp=${new Date('2000-01-02T00:00:00Z')}
+            >B</lr-timeline-item
+          >
+          <lr-timeline-item .timestamp=${new Date('2100-01-01T00:00:00Z')}
+            ><button id="later">Later action</button></lr-timeline-item
+          >
+        </lr-timeline>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-timeline') as LyraTimeline;
+    const before = wrapper.querySelector<HTMLButtonElement>('#before')!;
+    const later = wrapper.querySelector<HTMLButtonElement>('#later')!;
+    await settleClusters(el);
+
+    before.focus();
+    await sendKeys({ press: 'Tab' });
+    expect(
+      el.querySelector<HTMLElement>('#ordered-a')!.shadowRoot!.activeElement ===
+        clusterButtons(el)[0]
+    ).to.be.true;
+
+    await sendKeys({ press: 'Tab' });
+    expect(document.activeElement === later).to.be.true;
+  });
+
+  it('reclusters when a slotted item timestamp changes without a slot mutation', async () => {
+    const el = (await fixture(CLUSTERED)) as LyraTimeline;
+    await settleClusters(el);
+    const a = el.querySelector<LyraTimelineItem>('#a')!;
+
+    a.timestamp = new Date('2050-01-01T00:00:00Z');
+    await a.updateComplete;
+    await waitUntil(
+      () => clusterHidden(el).join(',') === 'c',
+      'timestamp change did not update cluster membership'
+    );
+
+    const pending = oneEvent(el, 'lr-cluster-activate');
+    clusterButtons(el)[0]!.click();
+    const event = await pending;
+    expect(event.detail.items.map((item: HTMLElement) => item.id)).to.deep.equal([
+      'b',
+      'c',
+    ]);
+  });
+
+  it('moves focus from item content into the cluster action when regrouping hides it', async () => {
+    const el = (await fixture(html`
+      <lr-timeline scale="time" collision="overlap">
+        <lr-timeline-item id="focus-a" .timestamp=${new Date('2000-01-01T00:00:00Z')}
+          ><a id="focus-link" href="#focus-target">A</a></lr-timeline-item
+        >
+        <lr-timeline-item .timestamp=${new Date('2000-01-02T00:00:00Z')}
+          >B</lr-timeline-item
+        >
+        <lr-timeline-item .timestamp=${new Date('2100-01-01T00:00:00Z')}
+          >C</lr-timeline-item
+        >
+      </lr-timeline>
+    `)) as LyraTimeline;
+    const link = el.querySelector<HTMLAnchorElement>('#focus-link')!;
+    link.focus();
+    expect(document.activeElement === link).to.be.true;
+
+    el.collision = 'cluster';
+    await waitUntil(
+      () =>
+        el.querySelector<HTMLElement>('#focus-a')!.shadowRoot!.activeElement ===
+        clusterButtons(el)[0],
+      'focus did not move into the new cluster action'
+    );
+  });
+
+  it('returns focus to surviving item content when a focused cluster dissolves', async () => {
+    const el = (await fixture(html`
+      <lr-timeline scale="time" collision="cluster">
+        <lr-timeline-item id="focus-a" .timestamp=${new Date('2000-01-01T00:00:00Z')}
+          ><a id="focus-link" href="#focus-target">A</a></lr-timeline-item
+        >
+        <lr-timeline-item .timestamp=${new Date('2000-01-02T00:00:00Z')}
+          >B</lr-timeline-item
+        >
+        <lr-timeline-item .timestamp=${new Date('2100-01-01T00:00:00Z')}
+          >C</lr-timeline-item
+        >
+      </lr-timeline>
+    `)) as LyraTimeline;
+    await settleClusters(el);
+    const link = el.querySelector<HTMLAnchorElement>('#focus-link')!;
+    clusterButtons(el)[0]!.focus();
+
+    el.collision = 'overlap';
+    await waitUntil(
+      () => document.activeElement === link,
+      'focus did not return to the representative item content'
+    );
+  });
+
+  it('applies the cluster size and color theme hooks to the rendered count pill', async () => {
+    const el = (await fixture(CLUSTERED)) as LyraTimeline;
+    el.style.setProperty('--lr-timeline-cluster-size', '28px');
+    el.style.setProperty('--lr-timeline-cluster-bg', 'rgb(1, 2, 3)');
+    el.style.setProperty('--lr-timeline-cluster-color', 'rgb(250, 251, 252)');
+    await settleClusters(el);
+    const count = clusterButtons(el)[0]!.querySelector<HTMLElement>(
+      '[part="cluster-count"]'
+    )!;
+    const computed = getComputedStyle(count);
+
+    expect(count.getBoundingClientRect().height).to.equal(28);
+    expect(computed.backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(computed.color).to.equal('rgb(250, 251, 252)');
+  });
+
+  it('places horizontal markers on logical inline-start, so RTL reverses the time axis', async () => {
+    for (const direction of ['ltr', 'rtl'] as const) {
+      const el = (await fixture(html`
+        <lr-timeline
+          dir=${direction}
+          orientation="horizontal"
+          scale="time"
+          collision="cluster"
+          style="--lr-timeline-time-extent: 400px"
+        >
+          <lr-timeline-item .timestamp=${new Date('2000-01-01T00:00:00Z')}
+            >A</lr-timeline-item
+          >
+          <lr-timeline-item .timestamp=${new Date('2000-01-02T00:00:00Z')}
+            >B</lr-timeline-item
+          >
+          <lr-timeline-item id="last" .timestamp=${new Date('2100-01-01T00:00:00Z')}
+            >C</lr-timeline-item
+          >
+        </lr-timeline>
+      `)) as LyraTimeline;
+      await settleClusters(el);
+      const marker = clusterButtons(el)[0]!.getBoundingClientRect();
+      const last = el.querySelector<HTMLElement>('#last')!.getBoundingClientRect();
+
+      if (direction === 'ltr') {
+        expect(marker.left).to.be.lessThan(last.left);
+      } else {
+        expect(marker.left).to.be.greaterThan(last.left);
+      }
+    }
+  });
+
+  it('cleans hidden state after data shrinks below a cluster and on mode changes', async () => {
+    const el = (await fixture(CLUSTERED)) as LyraTimeline;
+    await settleClusters(el);
+    const slot = el.shadowRoot!.querySelector('slot') as HTMLSlotElement;
+    const a = el.querySelector<HTMLElement>('#a')!;
+    const b = el.querySelector<HTMLElement>('#b')!;
+    const c = el.querySelector<HTMLElement>('#c')!;
+
+    let changed = oneEvent(slot, 'slotchange');
+    b.remove();
+    c.remove();
+    await changed;
+    await settleClusters(el);
+    expect(clusterButtons(el)).to.have.lengthOf(0);
+    expect(a.hasAttribute('data-lr-timeline-cluster-hidden')).to.be.false;
+    expect(getComputedStyle(a).display).to.not.equal('none');
+    expect(b.hasAttribute('data-lr-timeline-cluster-hidden')).to.be.false;
+    expect(c.hasAttribute('data-lr-timeline-cluster-hidden')).to.be.false;
+
+    changed = oneEvent(slot, 'slotchange');
+    el.insertBefore(b, el.querySelector('#d'));
+    await changed;
+    await settleClusters(el);
+    expect(clusterButtons(el)).to.have.lengthOf(1);
+
+    el.collision = 'overlap';
+    await settleClusters(el);
+    expect(clusterButtons(el)).to.have.lengthOf(0);
+    expect(clusterHidden(el)).to.deep.equal([]);
+  });
+
+  it('restores owned child state while disconnected and reapplies clustering on reconnect', async () => {
+    const el = (await fixture(CLUSTERED)) as LyraTimeline;
+    await settleClusters(el);
+    const parent = el.parentElement!;
+    expect(clusterHidden(el)).to.deep.equal(['b', 'c']);
+
+    el.remove();
+    expect(clusterHidden(el)).to.deep.equal([]);
+
+    parent.append(el);
+    await settleClusters(el);
+    expect(clusterHidden(el)).to.deep.equal(['b', 'c']);
+    expect(clusterButtons(el)).to.have.lengthOf(1);
+
+    const pending = oneEvent(el, 'lr-cluster-activate');
+    clusterButtons(el)[0]!.click();
+    const event = await pending;
+    expect(event.detail.items.map((item: HTMLElement) => item.id)).to.deep.equal([
+      'a',
+      'b',
+      'c',
+    ]);
+  });
+
+  it('handles 1,772 items while preserving a 42-item coincident cluster', async () => {
+    const el = (await fixture(html`
+      <lr-timeline scale="time" collision="cluster"></lr-timeline>
+    `)) as LyraTimeline;
+    el.rangeStart = 0;
+    el.rangeEnd = 1_000_000;
+    const fragment = document.createDocumentFragment();
+    for (let index = 0; index < 1_772; index += 1) {
+      const item = document.createElement('lr-timeline-item');
+      item.id = `event-${index}`;
+      item.timestamp =
+        index < 42
+          ? 0
+          : 200_000 + ((index - 42) / (1_772 - 43)) * 800_000;
+      fragment.append(item);
+    }
+    const slot = el.shadowRoot!.querySelector('slot') as HTMLSlotElement;
+    const changed = oneEvent(slot, 'slotchange');
+    el.append(fragment);
+    await changed;
+    await settleClusters(el);
+
+    expect(el.itemCount).to.equal(1_772);
+    const marker = clusterButtons(el).find(
+      (button) => button.getAttribute('aria-label') === 'Show timeline events (42)'
+    );
+    expect(marker?.textContent?.trim()).to.equal('42');
+
+    const pending = oneEvent(el, 'lr-cluster-activate');
+    marker!.click();
+    const event = await pending;
+    expect(event.detail.items.length).to.equal(42);
+    expect(event.detail.items[0].id).to.equal('event-0');
+    expect(event.detail.items[41].id).to.equal('event-41');
+  });
+
+  it('keeps dense count-marker hit areas separate as action size and allocation change', async () => {
+    const el = (await fixture(html`
+      <lr-timeline
+        scale="time"
+        collision="cluster"
+        style="--lr-timeline-time-extent: 800px"
+      ></lr-timeline>
+    `)) as LyraTimeline;
+    el.rangeStart = 0;
+    el.rangeEnd = 1_000;
+    const fragment = document.createDocumentFragment();
+    for (let index = 0; index < 100; index += 1) {
+      const item = document.createElement('lr-timeline-item');
+      item.timestamp = (index / 99) * 1_000;
+      fragment.append(item);
+    }
+    const slot = el.shadowRoot!.querySelector('slot') as HTMLSlotElement;
+    const changed = oneEvent(slot, 'slotchange');
+    el.append(fragment);
+    await changed;
+    await settleClusters(el);
+
+    await waitUntil(() => {
+      const rects = clusterButtons(el)
+        .map((button) => button.getBoundingClientRect())
+        .sort((a, b) => a.top - b.top);
+      return rects.every(
+        (rect, index) => index === 0 || rect.top >= rects[index - 1]!.bottom - 1
+      );
+    }, 'cluster marker actions still overlap at the initial allocation');
+    const wideCount = clusterButtons(el).length;
+    expect(wideCount).to.be.greaterThan(1);
+
+    await nextFrames();
+    el.style.setProperty('--lr-timeline-cluster-size', '80px');
+    await waitUntil(
+      () => clusterButtons(el).length < wideCount,
+      'cluster membership did not respond to a larger themed action'
+    );
+    const themedCount = clusterButtons(el).length;
+    const themedRects = clusterButtons(el)
+      .map((button) => button.getBoundingClientRect())
+      .sort((a, b) => a.top - b.top);
+    expect(
+      themedRects.every(
+        (rect, index) =>
+          index === 0 || rect.top >= themedRects[index - 1]!.bottom - 1
+      )
+    ).to.be.true;
+
+    el.style.setProperty('--lr-timeline-time-extent', '200px');
+    await waitUntil(
+      () => clusterButtons(el).length < themedCount,
+      'cluster membership did not respond to the smaller axis allocation'
+    );
+    const narrowRects = clusterButtons(el)
+      .map((button) => button.getBoundingClientRect())
+      .sort((a, b) => a.top - b.top);
+    expect(
+      narrowRects.every(
+        (rect, index) =>
+          index === 0 || rect.top >= narrowRects[index - 1]!.bottom - 1
+      )
+    ).to.be.true;
+  });
+
+  it('has no axe violations in a populated clustered state', async () => {
+    const el = (await fixture(CLUSTERED)) as LyraTimeline;
+    await settleClusters(el);
+    await expect(el).to.be.accessible();
   });
 });

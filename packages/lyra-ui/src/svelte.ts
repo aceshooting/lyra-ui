@@ -105,7 +105,7 @@ import type { LyraSparkline } from './components/data/sparkline/sparkline.class.
 import type { LyraStat } from './components/data/stat/stat.class.js';
 import type { LyraTable, LyraTableEventMap } from './components/data/table/table.class.js';
 import type { LyraTimelineItem } from './components/data/timeline/timeline-item.class.js';
-import type { LyraTimeline } from './components/data/timeline/timeline.class.js';
+import type { LyraTimeline, LyraTimelineEventMap } from './components/data/timeline/timeline.class.js';
 import type { LyraTreeItem, LyraTreeItemEventMap } from './components/data/tree/tree-item.class.js';
 import type { LyraTree, LyraTreeEventMap } from './components/data/tree/tree.class.js';
 import type { LyraWordCloud, LyraWordCloudEventMap } from './components/data/word-cloud/word-cloud.class.js';
@@ -9894,9 +9894,12 @@ export type LyraTimelineSvelteProps = LyraSvelteElementProps<
   | 'scale'
   | 'strings',
   {},
-  {},
-never,
+  LyraTimelineEventMap,
+  | 'lr-cluster-activate',
   | '--lr-scroll-fade-size'
+  | '--lr-timeline-cluster-bg'
+  | '--lr-timeline-cluster-color'
+  | '--lr-timeline-cluster-size'
   | '--lr-timeline-collision-offset'
   | '--lr-timeline-gap'
   | '--lr-timeline-time-extent',
@@ -9917,6 +9920,9 @@ export type LyraTimelineItemSvelteProps = LyraSvelteElementProps<
   {},
 never,
   | '--lr-timeline-active-ring-color'
+  | '--lr-timeline-cluster-bg'
+  | '--lr-timeline-cluster-color'
+  | '--lr-timeline-cluster-size'
   | '--lr-timeline-marker-color'
   | '--lr-timeline-marker-size'
   | '--lr-timeline-rail-color'

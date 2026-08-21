@@ -488,6 +488,7 @@ const strings: LyraLocaleStrings = {
   details: 'التفاصيل',
   breadcrumb: 'مسار التنقل',
   timeline: 'مخطط زمني',
+  timelineClusterCount: 'عرض أحداث المخطط الزمني ({count})',
   rating: 'تقييم',
   sliderLabel: 'شريط تمرير',
   feedbackPositive: 'ردّ جيد',

@@ -460,6 +460,7 @@ const strings: LyraLocaleStrings = {
   details: '详情',
   breadcrumb: '面包屑导航',
   timeline: '时间线',
+  timelineClusterCount: '显示时间线事件（{count}个）',
   rating: '评分',
   sliderLabel: '滑块',
   feedbackPositive: '回复很好',

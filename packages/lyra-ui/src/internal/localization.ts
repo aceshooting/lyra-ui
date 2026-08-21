@@ -468,6 +468,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   details: 'Details',
   breadcrumb: 'Breadcrumb',
   timeline: 'Timeline',
+  timelineClusterCount: 'Show timeline events ({count})',
   rating: 'Rating',
   sliderLabel: 'Slider',
   feedbackPositive: 'Good response',
