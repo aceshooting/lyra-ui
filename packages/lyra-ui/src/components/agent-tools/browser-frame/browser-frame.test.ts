@@ -215,6 +215,27 @@ describe('lr-browser-frame', () => {
     expect(pingLeft()).to.equal('50%');
   });
 
+  it('keeps ping geometry finite when the image loads before its viewport has an allocation', async () => {
+    const el = await fixture<LyraBrowserFrame>(html`
+      <lr-browser-frame
+        frame-src="https://example.com/shot.png"
+        .pings=${[{ id: 'p1', x: 50, y: 50, kind: 'click' }]}
+      ></lr-browser-frame>
+    `);
+    const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    const img = el.shadowRoot!.querySelector('[part="frame"]') as HTMLImageElement;
+    Object.defineProperty(viewport, 'clientWidth', { value: 0, configurable: true });
+    Object.defineProperty(viewport, 'clientHeight', { value: 0, configurable: true });
+    Object.defineProperty(img, 'naturalWidth', { value: 800, configurable: true });
+    Object.defineProperty(img, 'naturalHeight', { value: 450, configurable: true });
+
+    img.dispatchEvent(new Event('load'));
+    await el.updateComplete;
+    const ping = el.shadowRoot!.querySelector('[part="ping"]') as HTMLElement;
+    expect(ping.style.left).to.equal('0px');
+    expect(ping.style.top).to.equal('0px');
+  });
+
   it('keeps all toolbar controls reachable in a 320px allocation with long localized text', async () => {
     const wrap = await fixture(html`
       <div style="inline-size:320px">
@@ -369,8 +390,12 @@ describe('lr-browser-frame', () => {
       expect(pingLeft()).to.include('px');
       expect(observers).to.have.length(1);
 
+      const disconnectedPing = pingLeft();
       el.remove();
       expect(observers[0]!.disconnected).to.be.true;
+      observers[0]!.trigger();
+      await el.updateComplete;
+      expect(pingLeft(), 'the disconnected observer is stale').to.equal(disconnectedPing);
       wrapper.append(el);
       await el.updateComplete;
       expect(observers).to.have.length(2);

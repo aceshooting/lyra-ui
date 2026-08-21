@@ -988,6 +988,10 @@ it('fails closed for malformed root schemas without retaining form data', async 
   expect(el.internals.validity.customError).to.be.true;
   expect(new FormData(form).has('args')).to.be.false;
 
+  el.schema = { type: 'object' } as unknown as FlatToolParamSchema;
+  expect(el.formError).to.equal('Schema properties must be a flat object.');
+  expect(new FormData(form).has('args')).to.be.false;
+
   el.schema = { type: 'object', properties: null } as unknown as FlatToolParamSchema;
   expect(el.formError).to.equal('Schema properties must be a flat object.');
   expect(new FormData(form).has('args')).to.be.false;

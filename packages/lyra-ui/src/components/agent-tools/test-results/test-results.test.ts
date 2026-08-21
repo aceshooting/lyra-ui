@@ -598,6 +598,13 @@ describe('lr-test-results', () => {
     expect(event.detail.statuses).to.deep.equal(['failed']);
     expect(el.statusFilter).to.deep.equal(['failed']);
     expect(el.shadowRoot!.querySelectorAll('[part="test"]').length).to.equal(1);
+
+    const cleared = oneEvent(el, 'lr-filter-change');
+    (el.shadowRoot!.querySelector('[part="filter-toggle"][data-status="failed"]') as HTMLButtonElement).click();
+    expect((await cleared).detail.statuses).to.deep.equal([]);
+    await el.updateComplete;
+    expect(el.statusFilter).to.deep.equal([]);
+    expect(el.shadowRoot!.querySelectorAll('[part="test"]')).to.have.lengthOf(3);
   });
 
   it('renders an explicit empty state when filters hide every populated result, distinct from the genuinely-empty "no data" text', async () => {

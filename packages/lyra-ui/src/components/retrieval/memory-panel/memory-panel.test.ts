@@ -74,6 +74,17 @@ describe("lr-memory-panel", () => {
     expect(el.label).to.be.undefined;
   });
 
+  it('fails non-array runtime memory collections closed', async () => {
+    const el = await fixture<LyraMemoryPanel>(html`<lr-memory-panel></lr-memory-panel>`);
+    const invalid = { 0: shortTermItems[0], length: 1 } as unknown as LyraMemoryItem[];
+    el.shortTerm = invalid;
+    el.longTerm = invalid;
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelectorAll('[part="item"]')).to.have.lengthOf(0);
+    expect(el.shadowRoot!.querySelectorAll('lr-empty')).to.have.lengthOf(1);
+  });
+
   it("keeps an explicitly empty label distinct from an omitted one", async () => {
     const el = (await fixture(
       html`<lr-memory-panel label=""></lr-memory-panel>`

@@ -930,6 +930,26 @@ describe('lr-terminal', () => {
     expect(fired).to.be.false;
   });
 
+  it('contains a platform selection that reports content but exposes no readable range', async () => {
+    const el = await fixture<LyraTerminal>(html`<lr-terminal></lr-terminal>`);
+    el.write('selected output');
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const fakeSelection = {
+      isCollapsed: false,
+      getRangeAt: () => { throw new Error('range unavailable'); },
+    } as unknown as Selection;
+    (list.shadowRoot as unknown as { getSelection: () => Selection }).getSelection = () => fakeSelection;
+    let selections = 0;
+    el.addEventListener('lr-text-select', () => selections++);
+
+    el.shadowRoot!.querySelector('[part="viewport"]')!.dispatchEvent(
+      new PointerEvent('pointerup', { bubbles: true }),
+    );
+
+    expect(selections).to.equal(0);
+  });
+
   it('honors a .strings override for terminalLabel', async () => {
     const el = (await fixture(
       html`<lr-terminal .strings=${{ terminalLabel: 'Console de sortie' }}></lr-terminal>`,

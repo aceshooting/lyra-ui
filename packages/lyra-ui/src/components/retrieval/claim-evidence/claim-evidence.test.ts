@@ -32,6 +32,25 @@ it('renders claim status, confidence, and only evidence that resolves', async ()
   expect(el.shadowRoot!.textContent).to.contain('No matching source was found.');
 });
 
+it('renders distinct localized labels for partially supported and contradicted claims', async () => {
+  const el = await fixture<LyraClaimEvidence>(html`
+    <lr-claim-evidence
+      .claims=${[
+        { id: 'partial', text: 'Partially grounded', status: 'partially-supported', citationIds: [] },
+        { id: 'contradicted', text: 'Contradicted by evidence', status: 'contradicted', citationIds: [] },
+      ] as GroundedClaim[]}
+      .strings=${{
+        claimEvidencePartiallySupported: 'Partial evidence',
+        claimEvidenceContradicted: 'Contradicting evidence',
+      }}
+    ></lr-claim-evidence>
+  `);
+
+  expect(
+    [...el.shadowRoot!.querySelectorAll('[part="status"]')].map((status) => status.textContent?.trim()),
+  ).to.deep.equal(['Partial evidence', 'Contradicting evidence']);
+});
+
 it('emits controlled claim and citation selection events with complete records', async () => {
   const el = (await fixture(html`<lr-claim-evidence .claims=${claims} .citations=${citations}></lr-claim-evidence>`)) as LyraClaimEvidence;
   const claimEvent = oneEvent(el, 'lr-claim-select');

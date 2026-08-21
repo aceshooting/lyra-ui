@@ -168,6 +168,22 @@ describe('editing', () => {
     expect(editButton(el).textContent!.trim()).to.equal('Cancel');
   });
 
+  it('falls back to editable JSON null when the proposed args are circular', async () => {
+    const circular: Record<string, unknown> = {};
+    circular['self'] = circular;
+    const el = await fixture<LyraToolApprovalDialog>(html`
+      <lr-tool-approval-dialog tool-name="unsafe_args" .args=${circular}></lr-tool-approval-dialog>
+    `);
+
+    expect(() => editButton(el).click()).to.not.throw();
+    await el.updateComplete;
+    expect(textarea(el).value).to.equal('null');
+
+    const approved = oneEvent(el, 'lr-approve');
+    approveButton(el).click();
+    expect((await approved).detail).to.deep.equal({ args: null });
+  });
+
   it('shows an inline error and disables Approve when the textarea content is invalid JSON', async () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS}></lr-tool-approval-dialog>`,
