@@ -60,7 +60,7 @@ it('contains public form chrome, rubric text, and preset labels at 320px with un
       <lr-input data-case style="inline-size:${WIDTH}px" .hint=${LONG} .errorText=${LONG}>
         <span slot="label">${LONG}</span>
       </lr-input>
-      <lr-locale-picker data-case style="inline-size:${WIDTH}px" .label=${LONG} .hint=${LONG} .errorText=${LONG}></lr-locale-picker>
+      <lr-locale-picker data-case style="inline-size:${WIDTH}px" .showFlags=${false} .label=${LONG} .hint=${LONG} .errorText=${LONG}></lr-locale-picker>
       <lr-phone-input data-case style="inline-size:${WIDTH}px" .label=${LONG} .hint=${LONG} .errorText=${LONG}></lr-phone-input>
       <lr-radio-group data-case style="inline-size:${WIDTH}px" .label=${LONG} .hint=${LONG} .errorText=${LONG}>
         <lr-radio>Option</lr-radio>

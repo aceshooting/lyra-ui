@@ -12,6 +12,20 @@ const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/s
 const TEST_FLAG_SRC_REPLACEMENT =
   'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3Ccircle cx="1" cy="1" r="1"%3E%3C/circle%3E%3C/svg%3E';
 
+async function captureConsoleWarnings<T>(operation: () => Promise<T>): Promise<{
+  result: T;
+  warnings: string[];
+}> {
+  const originalWarn = console.warn;
+  const warnings: string[] = [];
+  console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '));
+  try {
+    return { result: await operation(), warnings };
+  } finally {
+    console.warn = originalWarn;
+  }
+}
+
 function assertiveAnnouncements(): string[] {
   const sink = document.querySelector<HTMLElement>(
     `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
@@ -551,9 +565,13 @@ describe('live resolver registration', () => {
   afterEach(() => setFlagUrlResolver(registerLyraFlagPeer()));
 
   it('recovers a mounted peer-missing flag as soon as a resolver is registered', async () => {
-    setFlagUrlResolver(null);
-    const el = await fixture<LyraFlag>(html`<lr-flag country="fr"></lr-flag>`);
-    await waitUntil(() => !!el.shadowRoot!.querySelector('[part="error"]'));
+    const { result: el, warnings } = await captureConsoleWarnings(async () => {
+      setFlagUrlResolver(null);
+      const mounted = await fixture<LyraFlag>(html`<lr-flag country="fr"></lr-flag>`);
+      await waitUntil(() => !!mounted.shadowRoot!.querySelector('[part="error"]'));
+      return mounted;
+    });
+    expect(warnings.length).to.equal(1);
 
     setFlagUrlResolver(async () => TEST_FLAG_SRC);
     const image = await img(el);
@@ -581,9 +599,13 @@ describe('live resolver registration', () => {
   });
 
   it('observes the latest resolver generation after reconnect', async () => {
-    setFlagUrlResolver(null);
-    const el = await fixture<LyraFlag>(html`<lr-flag country="fr"></lr-flag>`);
-    await waitUntil(() => !!el.shadowRoot!.querySelector('[part="error"]'));
+    const { result: el, warnings } = await captureConsoleWarnings(async () => {
+      setFlagUrlResolver(null);
+      const mounted = await fixture<LyraFlag>(html`<lr-flag country="fr"></lr-flag>`);
+      await waitUntil(() => !!mounted.shadowRoot!.querySelector('[part="error"]'));
+      return mounted;
+    });
+    expect(warnings.length).to.equal(1);
     const parent = el.parentElement!;
     el.remove();
     setFlagUrlResolver(async () => TEST_FLAG_SRC);
@@ -903,20 +925,28 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
   it('renders a real English sentence, not the raw key name, when no locale is registered', async () => {
     // Every other test here supplies `.strings`, which masked a missing DEFAULT_STRINGS entry:
     // resolveLyraString() falls back to the key itself, so [part="error"] read "flagLoadError".
-    setFlagUrlResolver(null);
-    const el = (await fixture(html`<lr-flag country="fr"></lr-flag>`)) as LyraFlag;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('[part="error"]'));
+    const { result: el, warnings } = await captureConsoleWarnings(async () => {
+      setFlagUrlResolver(null);
+      const mounted = (await fixture(html`<lr-flag country="fr"></lr-flag>`)) as LyraFlag;
+      await waitUntil(() => !!mounted.shadowRoot!.querySelector('[part="error"]'));
+      return mounted;
+    });
+    expect(warnings.length).to.equal(1);
     const text = el.shadowRoot!.querySelector('[part="error"]')!.textContent!.trim();
     expect(text).to.not.equal('flagLoadError');
     expect(text).to.equal('Flag unavailable');
   });
 
   it('distinguishes a missing resolver from a valid resolver returning no flag', async () => {
-    setFlagUrlResolver(null);
-    const missing = (await fixture(html`
-      <lr-flag country="fr" .strings=${{ flagLoadError: 'Flags unavailable.' }}></lr-flag>
-    `)) as LyraFlag;
-    await waitUntil(() => !!missing.shadowRoot!.querySelector('[part="error"]'));
+    const { result: missing, warnings } = await captureConsoleWarnings(async () => {
+      setFlagUrlResolver(null);
+      const mounted = (await fixture(html`
+        <lr-flag country="fr" .strings=${{ flagLoadError: 'Flags unavailable.' }}></lr-flag>
+      `)) as LyraFlag;
+      await waitUntil(() => !!mounted.shadowRoot!.querySelector('[part="error"]'));
+      return mounted;
+    });
+    expect(warnings.length).to.equal(1);
     expect(missing.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
       'Flags unavailable.',
     );

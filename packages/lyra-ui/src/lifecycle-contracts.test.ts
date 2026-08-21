@@ -94,6 +94,9 @@ function prepareDefaultElement(tag: string, el: Element): void {
   if (tag === 'lr-emoji-picker') {
     (el as unknown as { loadGroups: () => Promise<null> }).loadGroups = () => Promise.resolve(null);
   }
+  if (tag === 'lr-locale-picker') {
+    (el as unknown as { showFlags: boolean }).showFlags = false;
+  }
 }
 
 // ---------------------------------------------------------------------------

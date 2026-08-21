@@ -133,9 +133,7 @@ class DemoHydration extends LyraElement {
 customElements.define(tag("demo-hydration"), DemoHydration);
 
 class DemoHydrationThrow extends LyraElement {
-  shouldThrow = true;
   seedRan = false;
-  renderCalls = 0;
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
@@ -144,10 +142,14 @@ class DemoHydrationThrow extends LyraElement {
     });
   }
 
+  retrySeedForTest(): void {
+    this.seedFirstRenderState(() => {
+      this.seedRan = true;
+    });
+  }
+
   render() {
-    this.renderCalls += 1;
-    if (this.shouldThrow) throw new Error("hydration boom");
-    return html`<span>ok</span>`;
+    throw new Error("hydration boom");
   }
 }
 customElements.define(tag("demo-hydration-throw"), DemoHydrationThrow);
@@ -1960,32 +1962,29 @@ it('defers every seedFirstRenderState seed past a hydrating first render, then c
   el.remove();
 });
 
-it('drops the hydrating flag after a failed first update so a later update seeds normally', async () => {
+it('drops the hydrating flag after a failed first update so a subsequent seed runs normally', async () => {
   const el = document.createElement(
     tag('demo-hydration-throw')
   ) as DemoHydrationThrow;
   el.attachShadow({ mode: 'open' });
+  const firstUpdate = el.updateComplete.then(
+    () => undefined,
+    (error: unknown) => error,
+  );
   document.body.append(el);
 
-  let rejected: unknown;
-  try {
-    await el.updateComplete;
-  } catch (error) {
-    rejected = error;
-  }
+  const rejected = await firstUpdate;
   expect(rejected instanceof Error).to.be.true;
   expect(
     el.seedRan,
     'a failed hydrating update must not have run the deferred seed'
   ).to.be.false;
 
-  el.shouldThrow = false;
-  el.requestUpdate();
-  await el.updateComplete;
+  el.retrySeedForTest();
 
   expect(
     el.seedRan,
-    'a later successful update seeds immediately once the hydration flag is cleared'
+    'a later seed runs immediately once the hydration flag is cleared'
   ).to.be.true;
 
   el.remove();

@@ -18581,7 +18581,7 @@
           "evidence": [
             {
               "file": "src/components/media/flag/flag.test.ts",
-              "line": 377,
+              "line": 391,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -18601,7 +18601,7 @@
           "evidence": [
             {
               "file": "src/components/media/flag/flag.test.ts",
-              "line": 794,
+              "line": 816,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -18670,7 +18670,7 @@
           "evidence": [
             {
               "file": "src/components/media/flag/flag.test.ts",
-              "line": 55,
+              "line": 69,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -25747,14 +25747,14 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.test.ts",
-              "line": 616,
+              "line": 620,
               "test": "is accessible while open",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/forms/locale-picker/locale-picker.test.ts",
-              "line": 609,
+              "line": 613,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -25768,7 +25768,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.test.ts",
-              "line": 493,
+              "line": 497,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -25779,7 +25779,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.test.ts",
-              "line": 633,
+              "line": 637,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -31542,14 +31542,14 @@
           "evidence": [
             {
               "file": "src/components/forms/phone-input/phone-input.test.ts",
-              "line": 853,
+              "line": 857,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/phone-input/phone-input.test.ts",
-              "line": 1543,
+              "line": 1547,
               "test": "is accessible with flags enabled",
               "target": "el",
               "state": "populated"
@@ -31563,7 +31563,7 @@
           "evidence": [
             {
               "file": "src/components/forms/phone-input/phone-input.test.ts",
-              "line": 1605,
+              "line": 1609,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -31649,7 +31649,7 @@
           "evidence": [
             {
               "file": "src/components/forms/phone-input/phone-input.test.ts",
-              "line": 379,
+              "line": 383,
               "kind": "optional-peer failure-path test signal"
             }
           ],
