@@ -154,7 +154,10 @@ it('applies per-instance localized strings', async () => {
 
 it('announces connection transitions after mount without announcing the initial state', async () => {
   const el = (await fixture(html`
-    <lr-realtime-session .strings=${{ realtimeSessionConnected: 'SESSION READY' }}></lr-realtime-session>
+    <lr-realtime-session .strings=${{
+      realtimeSessionConnected: 'SESSION READY',
+      realtimeSessionReconnecting: 'SESSION RETRYING',
+    }}></lr-realtime-session>
   `)) as LyraRealtimeSession;
   expect(sinkTexts('polite')).to.deep.equal([]);
   expect(el.shadowRoot!.querySelectorAll('lr-live-region').length).to.equal(0);
@@ -162,6 +165,26 @@ it('announces connection transitions after mount without announcing the initial 
   el.state = 'connected';
   await el.updateComplete;
   expect(sinkTexts('polite')).to.deep.equal(['SESSION READY']);
+
+  el.state = 'reconnecting';
+  await el.updateComplete;
+  expect(sinkTexts('polite')).to.deep.equal(['SESSION READY', 'SESSION RETRYING']);
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-busy')).to.equal('true');
+});
+
+it('keeps repeated sink synchronization idempotent in the same owner document', async () => {
+  const el = (await fixture(html`<lr-realtime-session></lr-realtime-session>`)) as LyraRealtimeSession;
+  const internals = el as unknown as {
+    statusAnnouncementSink: unknown;
+    errorAnnouncementSink: unknown;
+    syncAnnouncementSinks(): void;
+  };
+  const status = internals.statusAnnouncementSink;
+  const error = internals.errorAnnouncementSink;
+
+  internals.syncAnnouncementSinks();
+  expect(internals.statusAnnouncementSink === status).to.equal(true);
+  expect(internals.errorAnnouncementSink === error).to.equal(true);
 });
 
 it('moves focus to the replacement connection action when state changes', async () => {

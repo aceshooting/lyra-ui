@@ -25,6 +25,21 @@ async function basic(extra = ''): Promise<LyraDropdown> {
   `) as Promise<LyraDropdown>;
 }
 
+it('keeps menu and trigger imperative helpers inert on a hydration-shaped pre-render root', () => {
+  const el = document.createElement('lr-dropdown') as LyraDropdown;
+  const hydrationState = el as unknown as {
+    createRenderRoot(): ShadowRoot;
+    renderRoot: ShadowRoot;
+  };
+  hydrationState.renderRoot = hydrationState.createRenderRoot();
+
+  expect(el.getMenu() === null).to.equal(true);
+  expect(() => {
+    el.focusOnTrigger({ preventScroll: true });
+    el.reposition();
+  }).to.not.throw();
+});
+
 it('keeps the positioning shell neutral while the generated menu owns role and name', async () => {
   const el = await basic();
   const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;

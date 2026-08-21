@@ -433,6 +433,24 @@ describe('lr-copy-button', () => {
     expect(partTokens(baseButton(el))).to.include('base-error');
   });
 
+  for (const expression of ['[data-copy]', 'copy-source[ ]', 'copy-source.', 'copy-source[missing]']) {
+    it(`fails closed for the malformed or empty source expression ${expression}`, async () => {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div>
+          <span id="copy-source">Source text</span>
+          <lr-copy-button from=${expression}></lr-copy-button>
+        </div>
+      `);
+      const el = wrapper.querySelector('lr-copy-button') as LyraCopyButton;
+      const failed = oneEvent(el, 'lr-copy-error');
+
+      baseButton(el).click();
+      const event = await failed;
+      expect(event.detail.reason).to.equal('failed');
+      expect(writes).to.deep.equal([]);
+    });
+  }
+
   it('configures full, copy-only, and disabled tooltip modes with placement and hoisting', async () => {
     const el = (await fixture(html`
       <lr-copy-button value="hello" tooltip="copy" tooltip-placement="right" hoist></lr-copy-button>

@@ -47,6 +47,93 @@ it('reflects value on both progress components', async () => {
   expect(ring.getAttribute('value')).to.equal('30');
 });
 
+it('tears down label observation safely after adoption into an ownerless document', async () => {
+  const ownerless = document.implementation.createHTMLDocument('ownerless');
+  const bar = (await fixture(html`<lr-progress-bar>Upload</lr-progress-bar>`)) as LyraProgressBar;
+  const ring = (await fixture(html`<lr-progress-ring>Upload</lr-progress-ring>`)) as LyraProgressRing;
+  bar.remove();
+  ring.remove();
+  ownerless.adoptNode(bar);
+  ownerless.adoptNode(ring);
+
+  expect(() => {
+    (bar as unknown as { rebuildLabelObserver(): void }).rebuildLabelObserver();
+    (ring as unknown as { rebuildLabelObserver(): void }).rebuildLabelObserver();
+  }).to.not.throw();
+  expect((bar as unknown as { labelObserver?: MutationObserver }).labelObserver).to.equal(undefined);
+  expect((ring as unknown as { labelObserver?: MutationObserver }).labelObserver).to.equal(undefined);
+});
+
+it('ignores stale cascade-label frame and timeout callbacks after cancellation', async () => {
+  const el = (await fixture(html`<lr-progress-bar>Upload</lr-progress-bar>`)) as LyraProgressBar;
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const originalCancelAnimationFrame = window.cancelAnimationFrame;
+  const originalSetTimeout = window.setTimeout;
+  const originalClearTimeout = window.clearTimeout;
+  const frames = new Map<number, FrameRequestCallback>();
+  const timeouts = new Map<number, TimerHandler>();
+  let handle = 1;
+  const internals = el as unknown as {
+    cancelCascadeLabelRefresh(): void;
+    scheduleCascadeLabelRefresh(): void;
+  };
+
+  try {
+    internals.cancelCascadeLabelRefresh();
+    window.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+      const id = handle++;
+      frames.set(id, callback);
+      return id;
+    }) as typeof window.requestAnimationFrame;
+    window.cancelAnimationFrame = ((id: number) => {
+      frames.delete(id);
+    }) as typeof window.cancelAnimationFrame;
+    window.setTimeout = ((callback: TimerHandler) => {
+      const id = handle++;
+      timeouts.set(id, callback);
+      return id;
+    }) as typeof window.setTimeout;
+    window.clearTimeout = ((id?: number) => {
+      if (id !== undefined) timeouts.delete(id);
+    }) as typeof window.clearTimeout;
+
+    internals.scheduleCascadeLabelRefresh();
+    const staleFrame = [...frames.values()][0]!;
+    internals.cancelCascadeLabelRefresh();
+    expect(() => staleFrame(0)).to.not.throw();
+
+    internals.scheduleCascadeLabelRefresh();
+    const activeFrame = [...frames.values()][0]!;
+    activeFrame(0);
+    const staleTimeout = [...timeouts.values()][0]!;
+    internals.cancelCascadeLabelRefresh();
+    expect(() => {
+      if (typeof staleTimeout === 'function') staleTimeout();
+    }).to.not.throw();
+  } finally {
+    internals.cancelCascadeLabelRefresh();
+    window.requestAnimationFrame = originalRequestAnimationFrame;
+    window.cancelAnimationFrame = originalCancelAnimationFrame;
+    window.setTimeout = originalSetTimeout;
+    window.clearTimeout = originalClearTimeout;
+  }
+});
+
+it('keeps visible-label extraction safe when the style engine rejects a visibility probe', async () => {
+  const el = (await fixture(html`<lr-progress-bar>Upload</lr-progress-bar>`)) as LyraProgressBar;
+  const originalGetComputedStyle = window.getComputedStyle;
+  window.getComputedStyle = (() => {
+    throw new DOMException('No style engine', 'InvalidStateError');
+  }) as typeof window.getComputedStyle;
+  try {
+    expect(() => (
+      el as unknown as { computeVisibleLabelText(): string }
+    ).computeVisibleLabelText()).to.not.throw();
+  } finally {
+    window.getComputedStyle = originalGetComputedStyle;
+  }
+});
+
 it('exposes the live progress-ring indicator and normalized offset', async () => {
   const el = (await fixture(html`<lr-progress-ring value="25"></lr-progress-ring>`)) as LyraProgressRing;
   const first = el.indicator;

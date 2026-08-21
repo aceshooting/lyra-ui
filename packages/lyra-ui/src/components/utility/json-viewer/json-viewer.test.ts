@@ -21,6 +21,49 @@ const sample = {
   address: { city: "London", country: "UK" },
 };
 
+it("renders only own enumerable object data, never inherited prototype fields", async () => {
+  const data = Object.create({ inheritedSecret: "must stay hidden" }) as Record<string, unknown>;
+  data["ownValue"] = "visible";
+  const el = (await fixture(
+    html`<lr-json-viewer .data=${data}></lr-json-viewer>`
+  )) as LyraJsonViewer;
+
+  expect(el.shadowRoot!.textContent).to.contain("ownValue");
+  expect(el.shadowRoot!.textContent).to.not.contain("inheritedSecret");
+  expect(el.shadowRoot!.textContent).to.not.contain("must stay hidden");
+});
+
+it("uses instant search scrolling when the owner prefers reduced motion", async () => {
+  const originalMatchMedia = window.matchMedia;
+  const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+  let behavior: ScrollBehavior | undefined;
+  window.matchMedia = ((query: string) => ({
+    matches: query === "(prefers-reduced-motion: reduce)",
+    media: query,
+    onchange: null,
+    addListener() {},
+    removeListener() {},
+    addEventListener() {},
+    removeEventListener() {},
+    dispatchEvent: () => true,
+  })) as typeof window.matchMedia;
+  HTMLElement.prototype.scrollIntoView = function (options?: boolean | ScrollIntoViewOptions) {
+    if (typeof options === "object") behavior = options.behavior;
+  };
+
+  try {
+    const el = (await fixture(
+      html`<lr-json-viewer .data=${{ name: "Ada" }}></lr-json-viewer>`
+    )) as LyraJsonViewer;
+    await el.runSearch("Ada");
+    expect(await el.searchNext()).to.equal(true);
+    expect(behavior).to.equal("auto");
+  } finally {
+    window.matchMedia = originalMatchMedia;
+    HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+  }
+});
+
 let originalClipboard: PropertyDescriptor | undefined;
 
 beforeEach(() => {

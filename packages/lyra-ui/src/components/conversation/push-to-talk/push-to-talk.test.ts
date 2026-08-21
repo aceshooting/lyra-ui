@@ -479,9 +479,9 @@ describe("owner-window capture runtime", () => {
     let audioContextCloses = 0;
     let nowMs = 0;
     let nextHandle = 10;
-    const timeoutHandles = new Set<number>();
-    const intervalHandles = new Set<number>();
-    const frameHandles = new Set<number>();
+    const timeoutHandles = new Map<number, TimerHandler>();
+    const intervalHandles = new Map<number, TimerHandler>();
+    const frameHandles = new Map<number, FrameRequestCallback>();
     const clearedTimeouts: number[] = [];
     const clearedIntervals: number[] = [];
     const canceledFrames: number[] = [];
@@ -535,9 +535,9 @@ describe("owner-window capture runtime", () => {
         OwnerMediaRecorder as unknown as typeof MediaRecorder;
       runtime.AudioContext =
         OwnerAudioContext as unknown as typeof AudioContext;
-      frameWindow.setTimeout = ((_handler: TimerHandler, _delay?: number) => {
+      frameWindow.setTimeout = ((handler: TimerHandler, _delay?: number) => {
         const handle = nextHandle++;
-        timeoutHandles.add(handle);
+        timeoutHandles.set(handle, handler);
         return handle;
       }) as typeof frameWindow.setTimeout;
       frameWindow.clearTimeout = ((handle?: number) => {
@@ -546,9 +546,9 @@ describe("owner-window capture runtime", () => {
           timeoutHandles.delete(handle);
         }
       }) as typeof frameWindow.clearTimeout;
-      frameWindow.setInterval = ((_handler: TimerHandler, _delay?: number) => {
+      frameWindow.setInterval = ((handler: TimerHandler, _delay?: number) => {
         const handle = nextHandle++;
-        intervalHandles.add(handle);
+        intervalHandles.set(handle, handler);
         return handle;
       }) as typeof frameWindow.setInterval;
       frameWindow.clearInterval = ((handle?: number) => {
@@ -558,10 +558,10 @@ describe("owner-window capture runtime", () => {
         }
       }) as typeof frameWindow.clearInterval;
       frameWindow.requestAnimationFrame = ((
-        _callback: FrameRequestCallback
+        callback: FrameRequestCallback
       ) => {
         const handle = nextHandle++;
-        frameHandles.add(handle);
+        frameHandles.set(handle, callback);
         return handle;
       }) as typeof frameWindow.requestAnimationFrame;
       frameWindow.cancelAnimationFrame = ((handle: number) => {
@@ -590,19 +590,32 @@ describe("owner-window capture runtime", () => {
       };
       const maxDurationTimer = ownedWork.maxDurationTimer!;
       const tickTimer = ownedWork.tickTimer!;
-      const levelFrame = ownedWork.levelFrame!;
+      const initialLevelFrame = ownedWork.levelFrame!;
       expect(maxDurationTimer.owner === frameWindow).to.equal(true);
       expect(tickTimer.owner === frameWindow).to.equal(true);
-      expect(levelFrame.owner === frameWindow).to.equal(true);
+      expect(initialLevelFrame.owner === frameWindow).to.equal(true);
       expect(timeoutHandles.has(maxDurationTimer.handle)).to.be.true;
       expect(intervalHandles.has(tickTimer.handle)).to.be.true;
-      expect(frameHandles.has(levelFrame.handle)).to.be.true;
+      expect(frameHandles.has(initialLevelFrame.handle)).to.be.true;
+
+      const tickCallback = intervalHandles.get(tickTimer.handle)!;
+      if (typeof tickCallback === 'function') tickCallback();
+      expect((el as unknown as { elapsedMs: number }).elapsedMs).to.be.greaterThan(0);
+
+      const nextLevel = oneEvent(el, 'lr-level');
+      const initialLevelCallback = frameHandles.get(initialLevelFrame.handle)!;
+      frameHandles.delete(initialLevelFrame.handle);
+      initialLevelCallback(0);
+      await nextLevel;
+      const levelFrame = ownedWork.levelFrame!;
+      const staleLevelCallback = frameHandles.get(levelFrame.handle)!;
+      expect(levelFrame.owner === frameWindow).to.equal(true);
 
       const stopped = oneEvent(el, "lr-record-stop");
       el.stop();
       const stopEvent = await stopped;
       expect(stopEvent.detail.blob instanceof runtime.Blob).to.be.true;
-      expect(stopEvent.detail.durationMs).to.equal(125);
+      expect(stopEvent.detail.durationMs).to.equal(250);
       expect(clearedTimeouts).to.include(maxDurationTimer.handle);
       expect(clearedIntervals).to.include(tickTimer.handle);
       expect(canceledFrames).to.include(levelFrame.handle);
@@ -610,6 +623,11 @@ describe("owner-window capture runtime", () => {
       expect(timeoutHandles.has(maxDurationTimer.handle)).to.be.false;
       expect(intervalHandles.has(tickTimer.handle)).to.be.false;
       expect(frameHandles.has(levelFrame.handle)).to.be.false;
+      expect(() => {
+        if (typeof tickCallback === 'function') tickCallback();
+        staleLevelCallback(0);
+        (el as unknown as { sampleLevel(owner: Window): void }).sampleLevel(frameWindow);
+      }).to.not.throw();
     } finally {
       el.remove();
       frameWindow.navigator.mediaDevices.getUserMedia = originalGetUserMedia;

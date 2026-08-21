@@ -560,9 +560,14 @@ it('recreates its heading observer in the adopted owner realm', async () => {
   const originalMutationObserver = frameWindow.MutationObserver;
   let observations = 0;
   let disconnects = 0;
+  let ownerCallback: MutationCallback | undefined;
+  let ownerObserver: MutationObserver | undefined;
   class OwnerMutationObserver implements MutationObserver {
     private observesHeading = false;
-    constructor(_callback: MutationCallback) {}
+    constructor(callback: MutationCallback) {
+      ownerCallback = callback;
+      ownerObserver = this;
+    }
     observe(target: Node, options?: MutationObserverInit): void {
       if (target === el && options?.childList && options.characterData && options.subtree) {
         this.observesHeading = true;
@@ -579,6 +584,7 @@ it('recreates its heading observer in the adopted owner realm', async () => {
     expect(observations, 'the destination window observes dialog headings').to.equal(1);
     document.adoptNode(el);
     expect(disconnects, 'adoption disconnects the old owner observer').to.equal(1);
+    expect(() => ownerCallback?.([], ownerObserver!)).to.not.throw();
   } finally {
     frameWindow.MutationObserver = originalMutationObserver;
     if (el.ownerDocument !== document) document.adoptNode(el);
@@ -1843,4 +1849,36 @@ it('coalesces close calls and lets an opposite show request supersede lr-hide pr
   expect(hides).to.equal(1);
   expect(el.open).to.equal(true);
   await el.hide();
+});
+
+it('keeps the z-index fallback usable when browser top-layer methods reject', async () => {
+  const el = (await fixture(html`<lr-dialog label="Fallback"></lr-dialog>`)) as LyraDialog;
+  const topLayer = el as unknown as {
+    showPopover(): void;
+    hidePopover(): void;
+    matches(selector: string): boolean;
+  };
+
+  topLayer.showPopover = () => {
+    throw new DOMException('Top layer unavailable', 'NotSupportedError');
+  };
+  expect(() => {
+    (el as unknown as { enterTopLayer(): void }).enterTopLayer();
+  }).to.not.throw();
+  expect(el.getAttribute('popover')).to.equal('manual');
+
+  topLayer.matches = () => true;
+  topLayer.hidePopover = () => {
+    throw new DOMException('Already hidden', 'InvalidStateError');
+  };
+  expect(() => {
+    (el as unknown as { leaveTopLayer(): void }).leaveTopLayer();
+  }).to.not.throw();
+
+  topLayer.matches = () => {
+    throw new DOMException('Selector unsupported', 'SyntaxError');
+  };
+  expect(() => {
+    (el as unknown as { enterTopLayer(): void }).enterTopLayer();
+  }).to.not.throw();
 });

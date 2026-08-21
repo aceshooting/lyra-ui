@@ -292,6 +292,57 @@ it('announces only the rendered shadow branch and closed details summary', async
   el.remove();
 });
 
+it('recomputes live text when a direct child moves into and out of the icon slot', async () => {
+  const el = document.createElement('lr-callout') as LyraCallout;
+  const message = document.createElement('span');
+  message.textContent = 'Visible status';
+  el.append(message);
+  document.body.append(el);
+  await settleLiveRegion(el);
+  const polite = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+  const before = polite.childElementCount;
+
+  message.slot = 'icon';
+  await flushMutations();
+  expect(polite.childElementCount).to.equal(before);
+
+  message.removeAttribute('slot');
+  await flushMutations();
+  expect(polite.lastElementChild?.textContent).to.equal('Visible status');
+  expect(polite.childElementCount).to.equal(before + 1);
+  el.remove();
+});
+
+it('announces a changed accessible context even when there is no visible message', async () => {
+  const el = document.createElement('lr-callout') as LyraCallout;
+  el.setAttribute('aria-label', 'Initial context');
+  document.body.append(el);
+  await settleLiveRegion(el);
+  const polite = document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+  )!;
+
+  el.setAttribute('aria-label', 'Updated context');
+  await flushMutations();
+  expect(polite.lastElementChild?.textContent).to.equal('Updated context');
+  el.remove();
+});
+
+it('keeps live-content tracking silent without animation frames in an ownerless document', async () => {
+  const ownerless = document.implementation.createHTMLDocument('ownerless');
+  const el = (await fixture(html`<lr-callout>Ownerless status</lr-callout>`)) as LyraCallout;
+  el.remove();
+  ownerless.body.append(ownerless.adoptNode(el));
+
+  await el.updateComplete;
+  await Promise.resolve();
+  await Promise.resolve();
+  expect((el as unknown as { liveActive: boolean }).liveActive).to.equal(false);
+  el.remove();
+});
+
 it('extracts only rendered accessible message text and dedupes irrelevant mutations', async () => {
   const el = document.createElement('lr-callout') as LyraCallout;
   el.closable = true;

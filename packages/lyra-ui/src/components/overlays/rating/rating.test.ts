@@ -362,6 +362,38 @@ it("keeps a serialized generated fallback live across clone, reparse, and hydrat
   expect(hydrated.getAttribute("aria-label")).to.equal("Hydrated score");
 });
 
+it("treats a hydration marker mismatch as an authored accessible name", async () => {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const el = document.createElement("lr-rating") as LyraRating;
+  el.setAttribute("data-lr-rating-managed-label", "Rating");
+  el.setAttribute("aria-label", "Server-authored score");
+  el.attachShadow({ mode: "open" });
+  container.append(el);
+  await el.updateComplete;
+
+  expect(el.getAttribute("aria-label")).to.equal("Server-authored score");
+  expect(el.hasAttribute("data-lr-rating-managed-label")).to.equal(false);
+
+  el.label = "Updated fallback";
+  await el.updateComplete;
+  expect(el.getAttribute("aria-label")).to.equal("Server-authored score");
+});
+
+it("clears a nullable reset default and safely normalizes an unsupported size", async () => {
+  const el = (await fixture(
+    html`<lr-rating default-value="3" size="m"></lr-rating>`
+  )) as LyraRating;
+
+  (el as unknown as { defaultValue: number | null }).defaultValue = null;
+  (el as unknown as { size: string }).size = "huge";
+  await el.updateComplete;
+
+  expect(el.defaultValue).to.equal(0);
+  expect(el.value).to.equal(0);
+  expect(el.hasAttribute("default-value")).to.equal(false);
+  expect(el.dataset["effectiveSize"]).to.equal("m");
+});
+
 it("emits one native change Event before lr-change for a keyboard commit", async () => {
   const wrapper = await fixture<HTMLElement>(
     html`<div><lr-rating value="2"></lr-rating></div>`

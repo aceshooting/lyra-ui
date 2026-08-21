@@ -9,6 +9,16 @@ const columns = [
   { key: 'name', label: 'Name' },
 ];
 
+it('fails closed to frozen empty choices when formats is assigned a non-array value', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  (el as unknown as { formats: unknown }).formats = { formatId: 'csv' };
+  await el.updateComplete;
+
+  expect(el.formats).to.deep.equal([]);
+  expect(Object.isFrozen(el.formats)).to.equal(true);
+  expect(el.open).to.equal(false);
+});
+
 it('emits lr-export then lr-export-complete for a single format', async () => {
   const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.rows = rows;
