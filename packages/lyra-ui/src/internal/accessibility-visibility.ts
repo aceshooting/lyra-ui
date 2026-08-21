@@ -11,7 +11,7 @@ const DEFAULT_ACCESSIBILITY_TEXT_MAX_NODES = 4_096;
 const DEFAULT_ACCESSIBILITY_VISIBILITY_MAX_NODES = 512;
 const MAX_CONFIGURED_ACCESSIBILITY_TEXT_LIMIT = 100_000;
 
-export type AccessibilityTextTruncationReason = 'ancestors' | 'characters' | 'depth' | 'nodes';
+type AccessibilityTextTruncationReason = 'ancestors' | 'characters' | 'depth' | 'nodes';
 
 export interface ComposedAccessibilityTextOptions {
   /** Whether a top-level Text node starts visible. Element visibility is resolved from CSS. */

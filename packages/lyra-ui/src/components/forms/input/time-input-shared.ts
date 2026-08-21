@@ -1,7 +1,7 @@
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { isDateObject } from '../../../internal/dom-guards.js';
 
-export type TimePrecision = 'minute' | 'second' | 'millisecond';
+type TimePrecision = 'minute' | 'second' | 'millisecond';
 
 export interface ParsedTimeValue {
   hour: number;

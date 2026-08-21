@@ -118,7 +118,7 @@ const CSI_FINAL_BYTE = /[\x40-\x7e]/;
 /** ANSI control sequences are small; this generous ceiling prevents a truncated OSC/CSI from
  * retaining and repeatedly rescanning an unbounded streamed suffix, and prevents a terminated
  * sequence from allocating or interpreting an unbounded payload. */
-export const MAX_ANSI_SEQUENCE_LENGTH = 4_096;
+const MAX_ANSI_SEQUENCE_LENGTH = 4_096;
 /** SGR needs at most five adjacent parameters for one supported extended-color operation. A
  * generous total ceiling keeps parsing work and retained arrays constant without narrowing real
  * terminal styling. Sequences above the ceiling are ignored atomically. */

@@ -13,11 +13,11 @@ export interface CanvasCamera {
   y: number;
 }
 
-export interface CanvasHull {
+interface CanvasHull {
   d: string;
   fill: string;
 }
-export interface CanvasLink {
+interface CanvasLink {
   x1: number;
   y1: number;
   x2: number;
@@ -29,12 +29,12 @@ export interface CanvasLink {
   selected?: boolean;
   dimmed?: boolean;
 }
-export interface CanvasEdgeLabel {
+interface CanvasEdgeLabel {
   x: number;
   y: number;
   text: string;
 }
-export interface CanvasNode {
+interface CanvasNode {
   x: number;
   y: number;
   r: number;
@@ -43,24 +43,24 @@ export interface CanvasNode {
   selected?: boolean;
   dimmed?: boolean;
 }
-export interface CanvasNodeLabel {
+interface CanvasNodeLabel {
   x: number;
   y: number;
   text: string;
 }
-export interface CanvasRing {
+interface CanvasRing {
   x: number;
   y: number;
   r: number;
 }
-export interface CanvasFocusLink {
+interface CanvasFocusLink {
   x1: number;
   y1: number;
   x2: number;
   y2: number;
   width: number;
 }
-export interface CanvasFocusHull {
+interface CanvasFocusHull {
   d: string;
 }
 
@@ -68,7 +68,7 @@ export interface CanvasFocusHull {
  *  owning node's own world-space center and radius, mirroring `graph.class.ts`'s SVG
  *  `[part="expand-indicator"]` `<g transform="translate(x,y)">` placement so the badge lands at
  *  the identical offset in either renderer. */
-export interface CanvasExpandIndicator {
+interface CanvasExpandIndicator {
   x: number;
   y: number;
   r: number;

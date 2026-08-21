@@ -47,7 +47,7 @@ const MAX_FRACTION_DIGITS = 100;
 const MAX_SIGNIFICANT_DIGITS = 21;
 
 /** Runtime guard for public literal-union properties assigned through untyped JS or markup. */
-export function closedValue<T extends string>(value: unknown, values: readonly T[], fallback: T): T {
+function closedValue<T extends string>(value: unknown, values: readonly T[], fallback: T): T {
   return typeof value === 'string' && values.includes(value as T) ? (value as T) : fallback;
 }
 

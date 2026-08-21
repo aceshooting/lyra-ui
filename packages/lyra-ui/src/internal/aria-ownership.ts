@@ -8,7 +8,7 @@ import {
 } from './ascii-whitespace.js';
 import { highestReachableWindow } from './a11y.js';
 
-export type OwnedAriaAttributes = Readonly<Record<string, string | null | undefined>>;
+type OwnedAriaAttributes = Readonly<Record<string, string | null | undefined>>;
 
 export interface AriaOwnershipContribution {
   /** Whole-value ARIA attributes. A later owner wins; release reveals the previous owner/baseline. */

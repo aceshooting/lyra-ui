@@ -1,6 +1,6 @@
 import { css } from 'lit';
 
-export const buttonChromeStyles = css`
+const buttonChromeStyles = css`
   :host([data-lr-group-size]) {
     --lr-form-control-height: inherit;
     --lr-form-control-font-size: inherit;

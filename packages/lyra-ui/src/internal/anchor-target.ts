@@ -25,11 +25,10 @@ type MixedConstructor<Base extends PublicConstructor<object>, Added> = Base & (
   new (...args: ConstructorParameters<Base>) => InstanceType<Base> & Added
 );
 
-export const ANCHOR_RETRY_INTERVAL_MS = 250;
-export const ANCHOR_TIMEOUT_MS = 5000;
+const ANCHOR_RETRY_INTERVAL_MS = 250;
+const ANCHOR_TIMEOUT_MS = 5000;
 export {
   HIGHLIGHT_SNAPSHOT_LIMIT,
-  snapshotLyraHighlights,
 } from './highlight-collection.js';
 /** Maximum records a capped highlight renderer receives from one retained snapshot. */
 export const HIGHLIGHT_CANDIDATE_LIMIT = 1_000;

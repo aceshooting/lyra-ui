@@ -1,7 +1,5 @@
 import type { EmojiPickerGroup, EmojiPickerItem } from './emoji-types.js';
 
-export type EmojiDataApi = unknown;
-
 let cached: Promise<EmojiPickerGroup[] | null> | undefined;
 
 /**

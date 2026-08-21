@@ -145,16 +145,11 @@
   before trusting a `?attr=${false}` test setup at face value. The authoring-side fix is a custom
   converter — see the `true`-defaulting boolean rule in
   [coding-conventions.md](coding-conventions.md).
-- `@sinonjs/fake-timers` is a `devDependency` but **does not currently work in this test
-  environment** — it's CJS-only with no ESM build and no browser `exports` condition, so
-  importing it throws `ReferenceError: require is not defined` under `wtr`'s esbuild-based
-  pipeline (unlike `hammerjs`/`maplibre-gl`, no CJS-interop shim exists for it in
-  `web-test-runner.config.js`). Timer/interval-driven components (stall detection, coalescing,
-  elapsed-time ticks) use real timers with short, generously-margined thresholds instead — see
-  `stream-status.test.ts` for the pattern. Fixing this properly
-  (adding a shim, or swapping to an ESM-compatible fake-timer library) is open — do it if a
-  future test genuinely can't be written reliably with real timers, but don't reach for
-  `@sinonjs/fake-timers` assuming it already works.
+- `@sinonjs/fake-timers` is **not supported or installed** in this test environment. Its CJS-only
+  package fails under `wtr`'s browser-native ESM pipeline. Timer-driven tests use real timers with
+  short, generously-margined thresholds; see `stream-status.test.ts` for the pattern. Add an
+  ESM-compatible timer harness only when a future test genuinely cannot be reliable with real
+  timers.
 - **A test that stubs a browser global saves and restores it** — `window.matchMedia`,
   `window.ResizeObserver`, `window.IntersectionObserver`, `window.MediaRecorder`,
   `window.AudioContext`, `navigator.mediaDevices.getUserMedia`. There is no sinon/fake-timers

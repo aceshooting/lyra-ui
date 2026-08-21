@@ -3,9 +3,9 @@ import {
   createXmlComplexityInspectorFactory,
 } from '../archive-viewer/zip-resource-guard.js';
 
-export const DEFAULT_MAX_EPUB_ENTRIES = 10_000;
-export const DEFAULT_MAX_EPUB_UNCOMPRESSED_BYTES = 100 * 1024 * 1024;
-export const DEFAULT_MAX_EPUB_XML_NODES = 250_000;
+const DEFAULT_MAX_EPUB_ENTRIES = 10_000;
+const DEFAULT_MAX_EPUB_UNCOMPRESSED_BYTES = 100 * 1024 * 1024;
+const DEFAULT_MAX_EPUB_XML_NODES = 250_000;
 
 export interface EpubResourceGuardOptions {
   signal?: AbortSignal;

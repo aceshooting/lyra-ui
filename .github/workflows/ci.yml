@@ -76,9 +76,9 @@ jobs:
       # lyra-ui's own Chromium suite runs in the build-and-coverage job via test:coverage --
       # this only needs to cover the other workspace package(s), e.g. lyra-flags's own test script.
       - run: pnpm --filter '!@aceshooting/lyra-ui' -r test
-      # knip.jsonc's `entry` patterns model the wildcard `./components/*`/`./internal/*` package
-      # exports, so a failure here is a genuinely orphaned file/script or an unused/unlisted
-      # dependency -- not the whole library being flagged dead. See knip.jsonc's own header comment.
+      # Knip discovers the package's explicit exports and runs a production graph before the
+      # whole-workspace graph. A failure is therefore an orphaned file/export or an unused/unlisted
+      # dependency, not a broad source-tree exemption.
       - run: pnpm run check:dead-code
       - run: pnpm run check:secrets
       # Root component imports, the runtime registration allowlist, and sideEffects are generated

@@ -10,7 +10,7 @@ import type {
   LyraDashboardPlacementResult,
 } from './layout-types.js';
 
-export const DASHBOARD_MAX_CELLS = 1_000;
+const DASHBOARD_MAX_CELLS = 1_000;
 const DASHBOARD_MAX_COLUMNS = 48;
 const INVALID = Symbol('invalid-dashboard-value');
 const MISSING = Symbol('missing-dashboard-value');

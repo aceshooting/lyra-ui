@@ -20,8 +20,8 @@ export interface LyraAvTrack {
   readonly default?: boolean;
 }
 
-export const MAX_LYRA_AV_CUES = 10_000;
-export const MAX_LYRA_AV_TRACKS = 64;
+const MAX_LYRA_AV_CUES = 10_000;
+const MAX_LYRA_AV_TRACKS = 64;
 const MAX_CUE_ID_CHARS = 256;
 const MAX_CUE_TEXT_CHARS = 100_000;
 const MAX_CUE_SPEAKER_CHARS = 4_096;

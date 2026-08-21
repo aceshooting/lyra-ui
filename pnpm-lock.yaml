@@ -153,9 +153,6 @@ importers:
       '@sgratzl/chartjs-chart-boxplot':
         specifier: ^4.4.5
         version: 4.4.5(chart.js@4.5.1)
-      '@sinonjs/fake-timers':
-        specifier: ^15.4.0
-        version: 15.4.0
       '@types/d3-drag':
         specifier: ^3.0.7
         version: 3.0.7
@@ -180,9 +177,6 @@ importers:
       '@types/react':
         specifier: ^19.2.18
         version: 19.2.18
-      '@types/sinonjs__fake-timers':
-        specifier: ^15.0.1
-        version: 15.0.1
       '@web/dev-server-esbuild':
         specifier: ^2.0.0
         version: 2.0.0(supports-color@10.2.2)
@@ -2113,12 +2107,6 @@ packages:
   '@sindresorhus/is@4.6.0':
     resolution: {integrity: sha512-t09vSN3MdfsyCHoFcTRCH/iUtG7OJ0CsjzB8cjAmKc/va/kIgeDI/TxsigdncE/4be734m0cvIYwNaV4i2XqAw==}
     engines: {node: '>=10'}
-
-  '@sinonjs/commons@3.0.1':
-    resolution: {integrity: sha512-K3mCHKQ9sVh8o1C9cxkwxaOmXoAMlDxC1mYyHrjqOWEcBjYr76t96zL2zlj5dUGZ3HSw240X1qgH3Mjf1yJWpQ==}
-
-  '@sinonjs/fake-timers@15.4.0':
-    resolution: {integrity: sha512-DsG+8/LscQIQg68J6Ef3dv10u6nVyetYn923s3/sus5eaGfTo1of5WMZSLf0UJc9KDuKPilPH0UDJCjvNbDNCA==}
 
   '@storybook/addon-a11y@10.5.10':
     resolution: {integrity: sha512-RpRQV5xUbrl6hCiNrd5FSMIo6pnRZ0VZxWvEW/ASLcreGkKUW5jl2AeLCe5YROE2i80s/dU+6VPzOYKrwWNFbQ==}
@@ -4985,10 +4973,6 @@ packages:
     resolution: {integrity: sha512-1h/Lnq9yajKY2PEbBadPXj3VxsDDu844OnaAo52UVmIzIvwwtBPIuNvkjuzBlTWpfJyUbG3ez0KSBibQkj4ojg==}
     engines: {node: '>=0.6.11 <=0.7.0 || >=0.7.3'}
 
-  type-detect@4.0.8:
-    resolution: {integrity: sha512-0fr/mIH1dlO+x7TlcMy+bIDqKPsw/70tVyeHW787goQjhmqaZe10uwLujubK9q9Lg6Fiho1KUKDYz0Z7k7g5/g==}
-    engines: {node: '>=4'}
-
   type-fest@0.21.3:
     resolution: {integrity: sha512-t0rzBq87m3fVcduHDUFhKmyyX+9eo6WQjZvf51Ea/M0Q7+T374Jp1aUiyUl0GKxp8M/OETVHSDvmkyPgvX+X2w==}
     engines: {node: '>=10'}
@@ -6743,14 +6727,6 @@ snapshots:
   '@shikijs/vscode-textmate@10.0.2': {}
 
   '@sindresorhus/is@4.6.0': {}
-
-  '@sinonjs/commons@3.0.1':
-    dependencies:
-      type-detect: 4.0.8
-
-  '@sinonjs/fake-timers@15.4.0':
-    dependencies:
-      '@sinonjs/commons': 3.0.1
 
   '@storybook/addon-a11y@10.5.10(storybook@10.5.10(@types/react@19.2.18)(prettier@2.8.8)(react@19.2.8))':
     dependencies:
@@ -9876,8 +9852,6 @@ snapshots:
   tsscmp@1.0.6: {}
 
   tunnel@0.0.6: {}
-
-  type-detect@4.0.8: {}
 
   type-fest@0.21.3: {}
 

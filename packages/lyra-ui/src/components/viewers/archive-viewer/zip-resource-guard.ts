@@ -36,7 +36,7 @@ interface ParsedZipEntry extends ZipEntryInfo {
 }
 
 /** Immutable central-directory entry metadata safe to expose without an archive peer. */
-export interface ZipArchiveEntryMetadata extends ZipEntryInfo {
+interface ZipArchiveEntryMetadata extends ZipEntryInfo {
   readonly dir: boolean;
 }
 
