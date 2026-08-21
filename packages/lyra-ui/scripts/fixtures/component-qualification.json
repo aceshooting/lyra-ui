@@ -25917,14 +25917,14 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 1362,
+              "line": 1388,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 2242,
+              "line": 2268,
               "test": "adds a maplibregl.Marker per entry in markers",
               "target": "el",
               "state": "populated"
@@ -25938,7 +25938,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 2297,
+              "line": 2323,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -25949,7 +25949,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 3039,
+              "line": 3083,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -25966,7 +25966,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 3033,
+              "line": 3077,
               "kind": "320px allocation test signal"
             }
           ]
@@ -26034,7 +26034,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 112,
+              "line": 127,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -26046,7 +26046,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 1607,
+              "line": 1614,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
