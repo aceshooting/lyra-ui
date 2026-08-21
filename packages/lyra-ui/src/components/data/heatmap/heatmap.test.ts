@@ -270,8 +270,11 @@ describe("v9 canonical heatmap data and bounded projections", () => {
     );
   });
 
-  it("caps palette, legend and annotation projections and discloses the bounded result", async () => {
-    const entries = Array.from({ length: 1_000 }, (_, index) => index);
+  it("caps the palette projection and discloses the bounded result", async () => {
+    const entries = Array.from(
+      { length: MAX_HEATMAP_DECORATIONS + 1 },
+      (_, index) => index
+    );
     const el = await fixture<LyraHeatmap>(html`
       <lr-heatmap
         .data=${{
@@ -285,13 +288,41 @@ describe("v9 canonical heatmap data and bounded projections", () => {
             "Only the first {count} heatmap decorations are shown.",
         }}
         .colorSteps=${entries.map((index) => (index % 2 ? "#000" : "#fff"))}
+      ></lr-heatmap>
+    `);
+    expect(
+      (el as unknown as { cachedColorSteps: readonly string[] })
+        .cachedColorSteps
+    ).to.have.lengthOf(MAX_HEATMAP_DECORATIONS);
+    expect(
+      el
+        .shadowRoot!.querySelector('[part="base"]')!
+        .getAttribute("data-projection-truncated")
+    ).to.equal("true");
+    expect(
+      el.shadowRoot!.querySelector('[part="projection-limit"]')!.textContent
+    ).to.contain(String(MAX_HEATMAP_DECORATIONS));
+  });
+
+  it("caps the legend projection and discloses the bounded result", async () => {
+    const entries = Array.from(
+      { length: MAX_HEATMAP_DECORATIONS + 1 },
+      (_, index) => index
+    );
+    const el = await fixture<LyraHeatmap>(html`
+      <lr-heatmap
+        .data=${{
+          kind: "matrix",
+          rowLabels: ["r"],
+          colLabels: ["c"],
+          values: [[1]],
+        }}
+        .strings=${{
+          heatmapDecorationLimit:
+            "Only the first {count} heatmap decorations are shown.",
+        }}
         .legendStops=${entries.map((value) => ({
           value,
-          label: String(value),
-        }))}
-        .annotations=${entries.map((value) => ({
-          row: 0,
-          col: 0,
           label: String(value),
         }))}
       ></lr-heatmap>
@@ -300,11 +331,41 @@ describe("v9 canonical heatmap data and bounded projections", () => {
       el.shadowRoot!.querySelectorAll('[part="legend-stop"]')
     ).to.have.lengthOf(MAX_HEATMAP_DECORATIONS);
     expect(
-      el.shadowRoot!.querySelectorAll('[part="legend-annotation"]')
-    ).to.have.lengthOf(MAX_HEATMAP_DECORATIONS);
+      el
+        .shadowRoot!.querySelector('[part="base"]')!
+        .getAttribute("data-projection-truncated")
+    ).to.equal("true");
     expect(
-      (el as unknown as { cachedColorSteps: readonly string[] })
-        .cachedColorSteps
+      el.shadowRoot!.querySelector('[part="projection-limit"]')!.textContent
+    ).to.contain(String(MAX_HEATMAP_DECORATIONS));
+  });
+
+  it("caps the annotation projection and discloses the bounded result", async () => {
+    const entries = Array.from(
+      { length: MAX_HEATMAP_DECORATIONS + 1 },
+      (_, index) => index
+    );
+    const el = await fixture<LyraHeatmap>(html`
+      <lr-heatmap
+        .data=${{
+          kind: "matrix",
+          rowLabels: ["r"],
+          colLabels: ["c"],
+          values: [[1]],
+        }}
+        .strings=${{
+          heatmapDecorationLimit:
+            "Only the first {count} heatmap decorations are shown.",
+        }}
+        .annotations=${entries.map((value) => ({
+          row: 0,
+          col: 0,
+          label: String(value),
+        }))}
+      ></lr-heatmap>
+    `);
+    expect(
+      el.shadowRoot!.querySelectorAll('[part="legend-annotation"]')
     ).to.have.lengthOf(MAX_HEATMAP_DECORATIONS);
     expect(
       el
