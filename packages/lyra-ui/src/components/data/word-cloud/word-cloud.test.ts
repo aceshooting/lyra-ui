@@ -156,8 +156,14 @@ it('sizes the heaviest word larger than the lightest', async () => {
 });
 
 it('reads the font-family/font-weight tokens once per relayout, not once per word', async () => {
-  const el = (await fixture(html`<lr-word-cloud></lr-word-cloud>`)) as LyraWordCloud;
-  const words = Array.from({ length: 20 }, (_, i) => ({ text: `word${i}`, weight: i + 1 }));
+  const el = (await fixture(html`
+    <lr-word-cloud
+      style="inline-size: 80rem; block-size: 40rem"
+      min-font-size="4"
+      max-font-size="4"
+    ></lr-word-cloud>
+  `)) as LyraWordCloud;
+  const words = Array.from({ length: 20 }, (_, i) => ({ text: `w${i}`, weight: i + 1 }));
 
   const original = window.getComputedStyle;
   let calls = 0;
@@ -176,6 +182,7 @@ it('reads the font-family/font-weight tokens once per relayout, not once per wor
   // (up to 2 * 20 = 40 calls here); a fixed per-relayout cost stays a small
   // constant regardless of word count.
   expect(calls).to.be.lessThan(words.length);
+  expect(el.shadowRoot!.querySelectorAll('[part="word"]')).to.have.lengthOf(words.length);
 });
 
 it('bounds huge finite font-size attributes before rendering', async () => {
@@ -584,8 +591,14 @@ it('honors an explicit per-word color over the palette', async () => {
 });
 
 it('never sets a rotate transform with the default no-rotation mode', async () => {
-  const words = Array.from({ length: 15 }, (_, i) => ({ text: `w${i}`, weight: i + 1 }));
-  const el = (await fixture(html`<lr-word-cloud .words=${words}></lr-word-cloud>`)) as LyraWordCloud;
+  const words = Array.from({ length: 10 }, (_, i) => ({ text: `w${i}`, weight: i + 1 }));
+  const el = (await fixture(html`
+    <lr-word-cloud
+      min-font-size="4"
+      max-font-size="4"
+      .words=${words}
+    ></lr-word-cloud>
+  `)) as LyraWordCloud;
   await el.updateComplete;
   const rendered = el.shadowRoot!.querySelectorAll('[part="word"]');
   for (const node of rendered) {
@@ -652,9 +665,14 @@ it('retains valid partial data while rejecting malformed records and hostile get
   Object.defineProperty(hostileLegend, 'color', { get: () => { throw new Error('hostile color'); } });
   const el = await fixture<LyraWordCloud>(html`<lr-word-cloud show-legend></lr-word-cloud>`);
 
-  el.words = [null, 'not-a-record', hostileWord, { text: 'valid', weight: 2 }, { text: 'finite', weight: Infinity }] as never;
-  el.legend = [null, hostileLegend, { label: 'Valid legend', color: '#123456' }] as never;
-  await el.updateComplete;
+  const warnings = await captureWarnings(async () => {
+    el.words = [null, 'not-a-record', hostileWord, { text: 'valid', weight: 2 }, { text: 'finite', weight: Infinity }] as never;
+    el.legend = [null, hostileLegend, { label: 'Valid legend', color: '#123456' }] as never;
+    await el.updateComplete;
+  });
+  expect(warnings).to.deep.equal([
+    '<lr-word-cloud> could not place 3 word(s) (blank text, over the 150-word cap, or the layout search was exhausted) -- they were dropped, not rendered.',
+  ]);
 
   expect(el.words.map((word) => word.text)).to.deep.equal(['valid', 'finite']);
   expect(el.words.map((word) => word.weight)).to.deep.equal([2, 0]);
@@ -1028,8 +1046,13 @@ it('resets transient interaction state (focus/hover/press/live text) on disconne
 
 it('drops a word record whose text field is not a string, keeping valid neighbors', async () => {
   const el = await fixture<LyraWordCloud>(html`<lr-word-cloud></lr-word-cloud>`);
-  el.words = [{ text: 123, weight: 1 }, { text: 'valid', weight: 2 }] as never;
-  await el.updateComplete;
+  const warnings = await captureWarnings(async () => {
+    el.words = [{ text: 123, weight: 1 }, { text: 'valid', weight: 2 }] as never;
+    await el.updateComplete;
+  });
+  expect(warnings).to.deep.equal([
+    '<lr-word-cloud> could not place 1 word(s) (blank text, over the 150-word cap, or the layout search was exhausted) -- they were dropped, not rendered.',
+  ]);
   expect(el.words.map((w) => w.text)).to.deep.equal(['valid']);
 });
 
@@ -1116,11 +1139,16 @@ it('drops a legend entry whose label is blank/whitespace-only, keeping valid nei
 it('drops entirely any word once the aggregate word-text character budget is exhausted', async () => {
   const words = Array.from({ length: 100 }, (_, i) => ({ text: 'x'.repeat(256), weight: i + 1 }));
   const el = await fixture<LyraWordCloud>(html`<lr-word-cloud></lr-word-cloud>`);
-  el.words = words;
-  await el.updateComplete;
+  const warnings = await captureWarnings(async () => {
+    el.words = words;
+    await el.updateComplete;
+  });
   // MAX_TOTAL_WORD_TEXT (16,384) / 256 chars per word caps well below the 100 supplied.
   expect(el.words.length).to.be.lessThan(100);
   expect(el.words.length).to.be.at.most(64);
+  expect(warnings).to.deep.equal([
+    '<lr-word-cloud> could not place 36 word(s) (blank text, over the 150-word cap, or the layout search was exhausted) -- they were dropped, not rendered.',
+  ]);
 });
 
 it('drops (not truncates) an optional color field once the aggregate word-text budget hits exactly zero', async () => {

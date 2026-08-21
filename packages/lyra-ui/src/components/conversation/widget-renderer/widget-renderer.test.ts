@@ -526,25 +526,31 @@ describe("lr-widget-renderer", () => {
         },
       ],
     ]);
-    const el = await fixture<LyraWidgetRenderer>(
-      html`<lr-widget-renderer
-        .registry=${registry}
-        .bindingState=${{ name: "Ada" }}
-        .document=${documentFor({
-          type: "outer",
-          id: "outer",
-          actionId: "save",
-          children: [
-            "Save",
-            {
-              type: "bound-input",
-              id: "nested-name",
-              props: { value: { $bind: "/name" } },
-            },
-          ],
-        })}
-      ></lr-widget-renderer>`
-    );
+    let el!: LyraWidgetRenderer;
+    const warnings = await captureWarnings(async () => {
+      el = await fixture<LyraWidgetRenderer>(
+        html`<lr-widget-renderer
+          .registry=${registry}
+          .bindingState=${{ name: "Ada" }}
+          .document=${documentFor({
+            type: "outer",
+            id: "outer",
+            actionId: "save",
+            children: [
+              "Save",
+              {
+                type: "bound-input",
+                id: "nested-name",
+                props: { value: { $bind: "/name" } },
+              },
+            ],
+          })}
+        ></lr-widget-renderer>`
+      );
+    });
+    expect(warnings).to.deep.equal([
+      '[lr-widget-renderer] skipped a control descendant inside control type "outer"',
+    ]);
     expect(el.shadowRoot!.querySelector("lr-button")).to.exist;
     expect(el.shadowRoot!.querySelector("lr-input") === null).to.be.true;
     await expect(el).to.be.accessible();
@@ -557,18 +563,23 @@ describe("lr-widget-renderer", () => {
     const error = oneEvent(el, "lr-render-error");
     // Exercise the renderer's untyped property boundary directly; the public factory rejects this
     // malformed identity graph before it can become a document.
-    el.document = {
-      version: "2",
-      root: {
-        type: "row",
-        children: [
-          { type: "stat", id: "duplicate", props: { label: "One", value: "1" } },
-          { type: "stat", id: "duplicate", props: { label: "Two", value: "2" } },
-        ],
-      },
-    };
-    await el.updateComplete;
-    await error;
+    const warnings = await captureWarnings(async () => {
+      el.document = {
+        version: "2",
+        root: {
+          type: "row",
+          children: [
+            { type: "stat", id: "duplicate", props: { label: "One", value: "1" } },
+            { type: "stat", id: "duplicate", props: { label: "Two", value: "2" } },
+          ],
+        },
+      };
+      await el.updateComplete;
+      await error;
+    });
+    expect(warnings).to.deep.equal([
+      '[lr-widget-renderer] rejected duplicate widget id "duplicate"',
+    ]);
     expect(el.shadowRoot!.querySelectorAll("lr-stat")).to.have.lengthOf(0);
   });
 
