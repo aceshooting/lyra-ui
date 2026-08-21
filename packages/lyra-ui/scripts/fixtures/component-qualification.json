@@ -6762,14 +6762,14 @@
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 5121,
+              "line": 5155,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/chart.test.ts",
-              "line": 5121,
+              "line": 5155,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"

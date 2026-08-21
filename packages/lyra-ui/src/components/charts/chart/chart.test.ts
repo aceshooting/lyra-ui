@@ -1,4 +1,4 @@
-import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil, aTimeout, oneEvent } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '@web/test-runner-commands';
 import './chart.js';
 import './doughnut-chart.js';
@@ -2846,40 +2846,74 @@ it("row-samples every series' own data/color/pointRadius arrays to match the sam
 });
 
 it('maps a click on a row-sampled chart back to its original source row index/value in the emitted detail', async () => {
-  const rowCount = 2000;
+  const rowCount = 1001;
   const labels = Array.from({ length: rowCount }, (_, i) => String(i));
   const data = Array.from({ length: rowCount }, (_, i) => i);
-  const el = (await fixture(html`<lr-chart type="line"></lr-chart>`)) as LyraChart;
-  el.labels = labels;
-  el.datasets = [{ label: 'S', data }];
-  await el.updateComplete;
-  await waitUntil(() => (el as any).chart != null);
-  (el as any).buildConfig(); // populates visualRowSourceIndexes as a side effect, like a real draw()
-
-  const sourceIndexes = (el as any).visualRowSourceIndexes as number[];
-  expect(sourceIndexes, 'row sampling must have activated for a 2000-row single series').to.be.an(
-    'array',
+  const el = (await fixture(html`
+    <lr-chart
+      type="line"
+      without-animation
+      without-legend
+      .labels=${['0']}
+      .datasets=${[{ label: 'S', data: [0] }]}
+    ></lr-chart>
+  `)) as LyraChart;
+  await waitUntil(
+    () => {
+      const liveChart = (el as any).chart;
+      return liveChart?.getDatasetMeta(0).data.length === 1 && liveChart.chartArea?.width > 0;
+    },
+    'live chart never became ready',
   );
-  expect(sourceIndexes.length).to.equal(1000);
-  const originalRow = sourceIndexes[500]!;
-  expect(originalRow).to.not.equal(500);
 
   const chart = (el as any).chart;
-  const original = chart.getElementsAtEventForMode;
-  chart.getElementsAtEventForMode = () => [{ datasetIndex: 0, index: 500 }];
+  const canvas = el.shadowRoot!.querySelector('canvas')!;
+  const originalHitTest = chart.getElementsAtEventForMode;
   try {
-    const onClick = (el as any).buildConfig().options.onClick;
-    let event: CustomEvent | undefined;
-    el.addEventListener('lr-point-click', (e) => (event = e as CustomEvent), { once: true });
-    onClick({} as never, [], chart);
-    expect(event!.detail).to.deep.equal({
+    // Keep the live canvas small while exercising the real high-cardinality config and sampler.
+    // The sibling sampling tests cover the corresponding 1,000-row accessible DOM separately.
+    (el as any).requestUpdate = () => {};
+    el.labels = labels;
+    el.datasets = [{ label: 'S', data }];
+    (el as any).buildConfig();
+
+    const sourceIndexes = (el as any).visualRowSourceIndexes as number[];
+    expect(sourceIndexes, 'row sampling must have activated for a 1001-row single series').to.be.an(
+      'array',
+    );
+    expect(sourceIndexes.length).to.equal(1000);
+    const originalRow = sourceIndexes[500]!;
+    expect(originalRow).to.not.equal(500);
+
+    chart.getElementsAtEventForMode = (
+      event: unknown,
+      mode: string,
+      options: { intersect?: boolean },
+      useFinalPosition: boolean,
+    ) => {
+      if (mode === 'nearest' && options.intersect === true && useFinalPosition) {
+        return [{ datasetIndex: 0, index: 500 }];
+      }
+      return originalHitTest.call(chart, event, mode, options, useFinalPosition);
+    };
+    const eventPromise = oneEvent(el, 'lr-point-click');
+    const rect = canvas.getBoundingClientRect();
+    const area = chart.chartArea;
+    canvas.dispatchEvent(new MouseEvent('click', {
+      bubbles: true,
+      clientX: Math.round(rect.left + (area.left + area.right) / 2),
+      clientY: Math.round(rect.top + (area.top + area.bottom) / 2),
+    }));
+    const event = (await eventPromise) as CustomEvent;
+    expect(event.detail).to.deep.equal({
       datasetIndex: 0,
       index: originalRow,
       label: String(originalRow),
       value: originalRow,
     });
   } finally {
-    chart.getElementsAtEventForMode = original;
+    chart.getElementsAtEventForMode = originalHitTest;
+    delete (el as any).requestUpdate;
   }
 });
 
