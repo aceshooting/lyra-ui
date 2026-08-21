@@ -21742,63 +21742,63 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 675,
+              "line": 736,
               "test": "renders an opt-in native button overlay with persistent per-cell semantics",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 1192,
+              "line": 1253,
               "test": "calendar mode: is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 3429,
+              "line": 3490,
               "test": "is accessible with a selected cell",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 4778,
+              "line": 4839,
               "test": "stays accessible with legendStops set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 4939,
+              "line": 5000,
               "test": "stays accessible with a caption-only legend stop",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 5278,
+              "line": 5339,
               "test": "stays accessible with both clamps applied",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 5495,
+              "line": 5556,
               "test": "stays accessible with a date-driven cellText on the accessible-cell overlay",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 8014,
+              "line": 8075,
               "test": "scrolls the keyboard-focused cell into the scrollport, and stays axe-clean there",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 8104,
+              "line": 8165,
               "test": "hides the duplicated bands from assistive technology and stays axe-clean",
               "target": "el",
               "state": "populated"
@@ -21840,7 +21840,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 1106,
+              "line": 1167,
               "kind": "320px allocation test signal"
             }
           ]
