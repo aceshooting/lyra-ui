@@ -407,6 +407,17 @@ it('canonicalizes invalid closed kind and preload values without rejecting updat
   expect(mediaEl(el).preload).to.equal('metadata');
 });
 
+it('forwards both non-default preload modes without widening their closed vocabulary', async () => {
+  const el = await fixture<LyraAvPlayer>(html`<lr-av-player preload="none"></lr-av-player>`);
+  expect(el.preload).to.equal('none');
+  expect(mediaEl(el).preload).to.equal('none');
+
+  el.preload = 'auto';
+  await el.updateComplete;
+  expect(el.preload).to.equal('auto');
+  expect(mediaEl(el).preload).to.equal('auto');
+});
+
 it('clone-owns bounded AV collections and retains valid entries around hostile records', async () => {
   const el = (await fixture(html`<lr-av-player></lr-av-player>`)) as LyraAvPlayer;
   const hostileCue = new Proxy({}, {
@@ -416,6 +427,8 @@ it('clone-owns bounded AV collections and retains valid entries around hostile r
   });
   const cues = [
     { cueId: 'valid', start: 1, text: 'Valid' },
+    { cueId: 'implicit-start', text: 'Starts at zero' },
+    { cueId: 'missing-text', start: 2 },
     hostileCue,
     null,
     { cueId: '', start: 2, text: 'Missing identity' },
@@ -431,7 +444,8 @@ it('clone-owns bounded AV collections and retains valid entries around hostile r
 
   // Admission is synchronous: no caller-owned collection is observable between assignment and
   // the next Lit update.
-  expect(el.cues.map((cue) => cue.cueId)).to.deep.equal(['valid']);
+  expect(el.cues.map((cue) => cue.cueId)).to.deep.equal(['valid', 'implicit-start']);
+  expect(el.cues[1]!.start).to.equal(0);
   expect(el.rates).to.deep.equal([1, 2]);
   expect(el.peaks).to.deep.equal([0.25, 0, 1]);
   expect(el.tracks).to.have.length(1);
@@ -461,10 +475,12 @@ it('fails closed when hostile collection containers hide their length or an admi
     el.cues = unreadableLength as unknown as readonly LyraAvCue[];
     el.rates = unreadableLength as unknown as readonly number[];
     el.peaks = unreadableEntry;
+    el.tracks = null as unknown as typeof el.tracks;
   }).to.not.throw();
   expect(el.cues).to.deep.equal([]);
   expect(el.rates).to.deep.equal([]);
   expect(el.peaks).to.deep.equal([]);
+  expect(el.tracks).to.deep.equal([]);
 });
 
 it('skips renormalization when an already-owned normalized collection is reassigned to itself', async () => {

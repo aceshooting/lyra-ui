@@ -561,6 +561,26 @@ it("owns a bounded readonly threshold snapshot and retains only finite values fr
   expect(el.threshold).to.equal(0);
 });
 
+it('normalizes scalar and hostile threshold containers at the public assignment boundary', () => {
+  const el = document.createElement('lr-animation') as LyraAnimation;
+  el.threshold = 0.5;
+  expect(el.threshold).to.equal(0.5);
+
+  el.threshold = '0.5' as unknown as number;
+  expect(el.threshold).to.equal(0);
+
+  const hostile = new Proxy([] as number[], {
+    get(target, property, receiver) {
+      if (property === 'length') throw new Error('unreadable threshold length');
+      return Reflect.get(target, property, receiver);
+    },
+  });
+  expect(() => {
+    el.threshold = hostile;
+  }).not.to.throw();
+  expect(el.threshold).to.equal(0);
+});
+
 it("falls back to safe IntersectionObserver options when rootMargin is invalid and normalizes thresholds", async () => {
   const io = stubIntersectionObserver();
   try {
@@ -1120,6 +1140,52 @@ it("keeps hostile direct keyframe records inert without rejecting updateComplete
   try {
     await el.updateComplete;
     expect(el.querySelector("span")!.getAnimations().length).to.equal(1);
+  } finally {
+    el.remove();
+  }
+});
+
+it('keeps non-array, oversized, and null keyframe sequences inert', async () => {
+  const el = document.createElement('lr-animation') as LyraAnimation;
+  const target = document.createElement('span');
+  el.append(target);
+  document.body.append(el);
+  try {
+    for (const keyframes of [
+      'not-a-sequence',
+      Array.from({ length: 513 }, () => ({})),
+      [null],
+    ]) {
+      el.keyframes = keyframes as unknown as Keyframe[];
+      await el.updateComplete;
+      const frames = target.getAnimations()[0]?.effect?.getKeyframes() ?? [];
+      expect(frames.length).to.equal(2);
+    }
+  } finally {
+    el.remove();
+  }
+});
+
+it('stays inert when both the authored animation and sanitized fallback are rejected', async () => {
+  const el = document.createElement('lr-animation') as LyraAnimation;
+  const target = document.createElement('span');
+  let attempts = 0;
+  target.animate = (() => {
+    attempts += 1;
+    throw new DOMException('Animation unavailable', 'NotSupportedError');
+  }) as typeof target.animate;
+  el.keyframes = [{ opacity: 0 }, { opacity: 1 }];
+  el.play = true;
+  let starts = 0;
+  el.addEventListener('lr-start', () => starts += 1);
+  el.append(target);
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    expect(attempts).to.be.at.least(2);
+    expect(attempts % 2).to.equal(0);
+    expect(starts).to.equal(0);
+    expect(target.getAnimations().length).to.equal(0);
   } finally {
     el.remove();
   }

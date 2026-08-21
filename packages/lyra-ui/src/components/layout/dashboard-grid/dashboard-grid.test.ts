@@ -411,6 +411,27 @@ describe("grid placement", () => {
 });
 
 describe("default cell composition", () => {
+  it('seeds model-driven default cells when MutationObserver is unavailable', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'MutationObserver');
+    Object.defineProperty(window, 'MutationObserver', { configurable: true, value: undefined });
+    try {
+      const el = await fixture<LyraDashboardGrid>(html`
+        <lr-dashboard-grid .layout=${[
+          { cellId: 'a', x: 0, y: 0, w: 1, h: 1, label: 'Alpha' },
+          { cellId: 'b', x: 1, y: 0, w: 1, h: 1, label: 'Beta' },
+        ]}></lr-dashboard-grid>
+      `);
+      await settleChildReconciliation(el);
+
+      expect([...el.querySelectorAll('[data-cell-id]')].map((cell) => cell.getAttribute('data-cell-id')))
+        .to.deep.equal(['a', 'b']);
+      expect(el.shadowRoot!.querySelectorAll('[part="cell"]').length).to.equal(2);
+    } finally {
+      if (descriptor) Object.defineProperty(window, 'MutationObserver', descriptor);
+      else Reflect.deleteProperty(window, 'MutationObserver');
+    }
+  });
+
   it("adopts a default lr-widget/lr-widget-renderer pair for a layout entry with no matching child", async () => {
     const el = (await fixture(
       html`<lr-dashboard-grid></lr-dashboard-grid>`

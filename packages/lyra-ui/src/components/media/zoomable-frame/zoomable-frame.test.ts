@@ -638,6 +638,36 @@ describe('navigation lifecycle and theme sync', () => {
     }
   });
 
+  it('removes theme attributes and properties that were absent before opting in', async () => {
+    const root = document.documentElement;
+    const attribute = 'data-lr-theme';
+    const property = '--lr-theme-zoomable-frame-temporary-probe';
+    const previousTheme = root.getAttribute(attribute);
+    try {
+      root.setAttribute(attribute, 'temporary-host-theme');
+      const el = await fixture<LyraZoomableFrame>(html`
+        <lr-zoomable-frame .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
+      `);
+      el.style.setProperty(property, 'rgb(20, 40, 60)');
+      const childRoot = frameOf(el).contentDocument!.documentElement;
+      childRoot.removeAttribute(attribute);
+      childRoot.style.removeProperty(property);
+
+      el.withThemeSync = true;
+      await el.updateComplete;
+      expect(childRoot.getAttribute(attribute)).to.equal('temporary-host-theme');
+      expect(childRoot.style.getPropertyValue(property)).to.equal('rgb(20, 40, 60)');
+
+      el.withThemeSync = false;
+      await el.updateComplete;
+      expect(childRoot.hasAttribute(attribute)).to.equal(false);
+      expect(childRoot.style.getPropertyValue(property)).to.equal('');
+    } finally {
+      if (previousTheme === null) root.removeAttribute(attribute);
+      else root.setAttribute(attribute, previousTheme);
+    }
+  });
+
   it('restores iframe-owned theme state and ignores later host changes after theme sync is disabled', async () => {
     const root = document.documentElement;
     const restoredProperty = '--lr-theme-zoomable-frame-restored-probe';

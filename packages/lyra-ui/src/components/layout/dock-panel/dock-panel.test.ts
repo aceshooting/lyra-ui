@@ -415,6 +415,48 @@ it('does not swap ArrowUp/ArrowDown for a top/bottom edge under dir="rtl"', asyn
   expect(panel.extent).to.equal("166px");
 });
 
+it('grows bottom and start edges with their physical backward/forward keys', async () => {
+  const bottom = await dockedFixture(
+    'extent="150px" min-extent="80px" max-extent="300px"',
+    'bottom',
+  );
+  await elementUpdated(bottom);
+  bottom.shadowRoot!.querySelector<HTMLElement>('[part="handle"]')!.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }),
+  );
+  await elementUpdated(bottom);
+  expect(bottom.extent).to.equal('166px');
+
+  const start = await dockedFixture(
+    'extent="200px" min-extent="80px" max-extent="300px"',
+    'start',
+  );
+  await elementUpdated(start);
+  start.shadowRoot!.querySelector<HTMLElement>('[part="handle"]')!.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }),
+  );
+  await elementUpdated(start);
+  expect(start.extent).to.equal('216px');
+
+  const rtlWrapper = await fixture<HTMLElement>(html`
+    <div dir="rtl" style="position:relative;display:flex;inline-size:500px;block-size:200px">
+      <lr-dock-panel
+        edge="start"
+        extent="200px"
+        min-extent="80px"
+        max-extent="300px"
+      ></lr-dock-panel>
+    </div>
+  `);
+  const rtlStart = rtlWrapper.querySelector<LyraDockPanel>('lr-dock-panel')!;
+  await elementUpdated(rtlStart);
+  rtlStart.shadowRoot!.querySelector<HTMLElement>('[part="handle"]')!.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }),
+  );
+  await elementUpdated(rtlStart);
+  expect(rtlStart.extent).to.equal('216px');
+});
+
 it("clamps keyboard resizing to min-extent and max-extent", async () => {
   const el = await dockedFixture(
     'extent="110px" min-extent="100px" max-extent="200px"'

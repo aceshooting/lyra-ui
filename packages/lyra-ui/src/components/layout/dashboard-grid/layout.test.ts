@@ -547,3 +547,62 @@ describe("dashboard layout admission and public resolver", () => {
     expect(elapsedMs).to.be.lessThan(1_000);
   });
 });
+
+describe('dashboard layout hostile and sparse boundaries', () => {
+  it('returns a frozen empty snapshot for non-arrays and revoked array proxies', () => {
+    const plain = snapshotDashboardLayout({ length: 1 });
+    expect(plain).to.deep.equal([]);
+    expect(Object.isFrozen(plain)).to.equal(true);
+
+    const revoked = Proxy.revocable<unknown[]>([], {});
+    revoked.revoke();
+    const hostile = snapshotDashboardLayout(revoked.proxy);
+    expect(hostile).to.deep.equal([]);
+    expect(Object.isFrozen(hostile)).to.equal(true);
+  });
+
+  it('preserves an explicit null widget while normalizing non-numeric geometry', () => {
+    const snapshot = snapshotDashboardLayout([
+      { cellId: 'null-widget', x: '2', y: undefined, w: null, h: false, widget: null },
+    ]);
+    expect(snapshot).to.have.length(1);
+    expect(snapshot[0]).to.deep.include({
+      cellId: 'null-widget',
+      x: 0,
+      y: 0,
+      w: 1,
+      h: 1,
+      widget: null,
+    });
+  });
+
+  it('tolerates sparse spatial-index buckets outside an admitted projection', () => {
+    const sparse = {
+      columns: 2,
+      byId: new Map(),
+      orderById: new Map(),
+      columnBuckets: [],
+    } as unknown as ReturnType<typeof createDashboardSpatialIndex>;
+    expect(
+      findDashboardCollisions(sparse, { cellId: 'candidate', x: 0, y: 0, w: 2, h: 1 }),
+    ).to.deep.equal([]);
+  });
+
+  it('keeps a disjoint locked interval fixed while pushing an overlapping peer', () => {
+    const layout: LyraDashboardCell[] = [
+      { cellId: 'candidate', x: 0, y: 5, w: 1, h: 1 },
+      { cellId: 'overlap', x: 0, y: 0, w: 1, h: 1 },
+      { cellId: 'fixed', x: 0, y: 10, w: 1, h: 1, locked: true },
+    ];
+    const result = resolveDashboardPlacement(
+      layout,
+      'candidate',
+      { x: 0, y: 0, w: 1, h: 1 },
+      2,
+      'push',
+    );
+    expect(result.accepted).to.equal(true);
+    expect(result.layout.find((cell) => cell.cellId === 'overlap')?.y).to.equal(1);
+    expect(result.layout.find((cell) => cell.cellId === 'fixed')?.y).to.equal(10);
+  });
+});

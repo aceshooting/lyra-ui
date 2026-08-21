@@ -974,6 +974,15 @@ describe("pointer-driven annotation", () => {
     ).to.equal(1);
 
     wrapper.dispatchEvent(
+      primaryPointerEvent("pointercancel", { pointerId: 99, bubbles: true })
+    );
+    await el.updateComplete;
+    expect(
+      el.shadowRoot!.querySelectorAll('[part="annotation-box"]').length
+    ).to.equal(1);
+    expect(released).to.deep.equal([]);
+
+    wrapper.dispatchEvent(
       primaryPointerEvent("pointercancel", { pointerId: 12, bubbles: true })
     );
     await el.updateComplete;
@@ -1986,7 +1995,9 @@ it('omits malformed and blank region highlight identities before focus and activ
       src=${PNG_SRC}
       .highlights=${[
         null,
+        { id: 7, anchor: { kind: 'region', rect: { x: 1, y: 1, width: 10, height: 10 } } },
         { id: '   ', anchor: { kind: 'region', rect: { x: 1, y: 1, width: 10, height: 10 } } },
+        { id: 'quote', anchor: { kind: 'quote', quote: 'not a region' } },
         { id: 'valid', anchor: { kind: 'region', rect: { x: 2, y: 2, width: 10, height: 10 } } },
       ] as unknown as LyraHighlight[]}
     ></lr-image-viewer>
@@ -1997,6 +2008,31 @@ it('omits malformed and blank region highlight identities before focus and activ
   const buttons = el.shadowRoot!.querySelectorAll('[part="highlight"]');
   expect(buttons).to.have.lengthOf(1);
   expect((buttons[0] as HTMLElement).dataset['highlightId']).to.equal('valid');
+});
+
+it('keeps a single highlight focused when a roving-navigation key has nowhere to move', async () => {
+  const el = await fixture<LyraImageViewer>(html`
+    <lr-image-viewer
+      src=${PNG_SRC}
+      .highlights=${[
+        { id: 'only', anchor: { kind: 'region', rect: { x: 2, y: 2, width: 10, height: 10 } } },
+      ]}
+    ></lr-image-viewer>
+  `);
+  await stubImageLoad(el);
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="highlight"]')!;
+  button.focus();
+  const event = new KeyboardEvent('keydown', {
+    key: 'ArrowDown',
+    bubbles: true,
+    cancelable: true,
+  });
+  button.dispatchEvent(event);
+  await el.updateComplete;
+
+  expect(event.defaultPrevented).to.equal(false);
+  expect((el.shadowRoot!.activeElement as HTMLElement).dataset['highlightId']).to.equal('only');
+  expect(button.tabIndex).to.equal(0);
 });
 
 it('moves highlight roving focus with ArrowDown/ArrowUp (wrapping both ways) and End, keeping exactly one tab stop', async () => {

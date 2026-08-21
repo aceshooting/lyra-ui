@@ -321,6 +321,67 @@ describe('lr-video-playlist public contract', () => {
     ]);
   });
 
+  it('normalizes sparse source and track markup in change snapshots', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist>
+        <lr-video title="First"></lr-video>
+        <lr-video title="Second">
+          <source>
+          <source src=" https://example.test/second.mp4 ">
+          <track>
+          <track src="data:text/vtt,WEBVTT">
+        </lr-video>
+      </lr-video-playlist>
+    `);
+    await settle(el);
+
+    const pending = oneEvent(el, 'lr-video-change');
+    el.goTo(1);
+    const event = await pending as CustomEvent<LyraVideoPlaylistChangeDetail>;
+    expect(event.detail.video.sources).to.deep.equal([
+      { src: 'https://example.test/second.mp4', type: '', media: '' },
+    ]);
+    expect(event.detail.video.tracks).to.deep.equal([
+      { src: 'data:text/vtt,WEBVTT', kind: '', srclang: '', label: '', default: false },
+    ]);
+  });
+
+  it('ignores a click whose rendered row index was tampered to a non-integer', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist>
+        <lr-video title="First"></lr-video>
+        <lr-video title="Second"></lr-video>
+      </lr-video-playlist>
+    `);
+    await settle(el);
+    const changes: LyraVideoPlaylistChangeDetail[] = [];
+    el.addEventListener('lr-video-change', (event) => changes.push(event.detail));
+
+    const second = items(el)[1]!;
+    second.dataset['index'] = '1.5';
+    second.click();
+    await el.updateComplete;
+
+    expect(childVideos(el).map((video) => video.hidden)).to.deep.equal([false, true]);
+    expect(changes).to.deep.equal([]);
+  });
+
+  it('bounds malformed server-seeded items and preserves an explicit empty host label', async () => {
+    const el = await fixture<LyraVideoPlaylist>(html`
+      <lr-video-playlist aria-label=""></lr-video-playlist>
+    `);
+
+    el.items = 'not-an-array' as unknown as readonly LyraVideoPlaylistItem[];
+    await el.updateComplete;
+    expect(items(el).length).to.equal(0);
+    expect(el.shadowRoot!.querySelector('[part="playlist"]')?.getAttribute('aria-label')).to.equal('');
+
+    el.items = [null, 7, { title: 9 }] as unknown as readonly LyraVideoPlaylistItem[];
+    await el.updateComplete;
+    expect(items(el).length).to.equal(1);
+    expect(items(el)[0]!.textContent).to.contain('Video 1');
+  });
+
   it('synchronously pauses and unloads the outgoing player before activating the incoming one', async () => {
     const el = await fixture<LyraVideoPlaylist>(html`
       <lr-video-playlist>

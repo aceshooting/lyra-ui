@@ -208,6 +208,29 @@ describe("host aria-label precedence", () => {
   });
 });
 
+it('renders a stable initial tooltip label when MutationObserver is unavailable', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(window, 'MutationObserver');
+  Object.defineProperty(window, 'MutationObserver', {
+    configurable: true,
+    value: undefined,
+  });
+  try {
+    const el = await fixture<LyraAppRailItem>(html`
+      <lr-app-rail-item tooltip icon-only>Static dashboard</lr-app-rail-item>
+    `);
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    base.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('[part="tooltip"]')?.textContent?.trim()).to.equal(
+      'Static dashboard',
+    );
+  } finally {
+    if (descriptor) Object.defineProperty(window, 'MutationObserver', descriptor);
+    else Reflect.deleteProperty(window, 'MutationObserver');
+  }
+});
+
 describe("host click()", () => {
   for (const [name, markup] of [
     ["button", html`<lr-app-rail-item>Settings</lr-app-rail-item>`],

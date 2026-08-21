@@ -217,6 +217,29 @@ it('renders the upstream default rel on a same-tab link', async () => {
   expect(rendered).to.include('noopener');
 });
 
+it('omits rel when an author explicitly clears it on a same-tab link', async () => {
+  const el = (await fixture(html`
+    <lr-breadcrumb-item href="https://example.com" rel="">Example</lr-breadcrumb-item>
+  `)) as LyraBreadcrumbItem;
+  const anchor = el.shadowRoot!.querySelector('a')!;
+  expect(anchor.hasAttribute('rel')).to.equal(false);
+});
+
+it('does not steal focus when focus leaves during a semantic-owner replacement', async () => {
+  const wrapper = await fixture(html`<div>
+    <button id="outside">Outside</button>
+    <lr-breadcrumb-item href="/reports">Reports</lr-breadcrumb-item>
+  </div>`);
+  const el = wrapper.querySelector('lr-breadcrumb-item') as LyraBreadcrumbItem;
+  const outside = wrapper.querySelector<HTMLElement>('#outside')!;
+  el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.focus();
+  el.href = '';
+  outside.focus();
+  await el.updateComplete;
+  await Promise.resolve();
+  expect(el.ownerDocument.activeElement?.id).to.equal('outside');
+});
+
 it('shows a focus ring on the link via :focus-visible', async () => {
   const el = (await fixture(html`<lr-breadcrumb-item href="/">Home</lr-breadcrumb-item>`)) as LyraBreadcrumbItem;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLAnchorElement;

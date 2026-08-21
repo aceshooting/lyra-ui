@@ -154,6 +154,40 @@ it("updates shared separator clones in place when source content mutates", async
   expect(BreadcrumbSeparatorTestControl.disconnectedCount).to.equal(0);
 });
 
+it('patches separator attributes and child structure in place, then releases removed items', async () => {
+  const el = await fixture(html`<lr-breadcrumb>
+    <span slot="separator" data-tone="old"><b>One</b><i>Extra</i><!--old--></span>
+    <lr-breadcrumb-item href="/">Home</lr-breadcrumb-item>
+    <lr-breadcrumb-item current>Reports</lr-breadcrumb-item>
+  </lr-breadcrumb>`);
+  const source = el.querySelector<HTMLElement>(':scope > [slot="separator"]')!;
+  const second = el.querySelectorAll('lr-breadcrumb-item')[1]!;
+  await waitUntil(
+    () => second.querySelector<HTMLElement>('[slot="separator"]') !== null,
+    'initial generated separator missing',
+  );
+  const clone = second.querySelector<HTMLElement>('[slot="separator"]')!;
+
+  source.removeAttribute('data-tone');
+  source.replaceChildren(Object.assign(document.createElement('em'), { textContent: 'Two' }));
+  await waitUntil(
+    () => !clone.hasAttribute('data-tone') && clone.children.length === 1 && clone.firstElementChild?.localName === 'em',
+    'replacement and removal did not patch the generated separator',
+  );
+  expect(second.querySelector('[slot="separator"]') === clone).to.equal(true);
+
+  const added = document.createElement('strong');
+  added.textContent = 'Added';
+  source.append(added);
+  await waitUntil(
+    () => clone.children.length === 2 && clone.lastElementChild?.textContent === 'Added',
+    'new separator child was not appended to the existing clone',
+  );
+
+  second.remove();
+  await waitUntil(() => !clone.isConnected, 'removed breadcrumb item retained its generated separator');
+});
+
 it("keeps generated focusable shared separators decorative and strips cloned identities", async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div>
