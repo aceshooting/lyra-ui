@@ -48747,35 +48747,35 @@
           "evidence": [
             {
               "file": "src/components/media/video/video.test.ts",
-              "line": 616,
+              "line": 614,
               "test": "keeps interactive icon overrides inert and outside every native control button",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/video/video.test.ts",
-              "line": 616,
+              "line": 614,
               "test": "keeps interactive icon overrides inert and outside every native control button",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/video/video.test.ts",
-              "line": 1040,
+              "line": 1038,
               "test": "shows the active native caption even when custom controls are disabled",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/video/video.test.ts",
-              "line": 1346,
+              "line": 1344,
               "test": "lays out at a 320px allocation and remains accessible when populated",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/video/video.test.ts",
-              "line": 1460,
+              "line": 1458,
               "test": "is accessible with controls disabled",
               "target": "el",
               "state": "populated"
@@ -48800,7 +48800,7 @@
           "evidence": [
             {
               "file": "src/components/media/video/video.test.ts",
-              "line": 1430,
+              "line": 1428,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -48817,7 +48817,7 @@
           "evidence": [
             {
               "file": "src/components/media/video/video.test.ts",
-              "line": 1346,
+              "line": 1344,
               "kind": "320px allocation test signal"
             }
           ]
