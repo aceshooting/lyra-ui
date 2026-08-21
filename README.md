@@ -263,21 +263,21 @@ for the renderer setup, machine-readable matrix, diagnostics, and capability lim
 ### Verified release snapshot
 
 The dated snapshot below records the tests that qualified
-[`@aceshooting/lyra-ui@12.1.0`](https://github.com/aceshooting/lyra-ui/commit/7018675ec6bdb8271e2f3d6dd881dcbec2c85e83)
-on 2026-08-21. The workflow badges above remain the source of truth for newer commits.
+[`@aceshooting/lyra-ui@12.1.1`](https://github.com/aceshooting/lyra-ui/commit/2b56b7af6eec938f21fb4aee29f59361baca9265)
+on 2026-08-22. The workflow badges above remain the source of truth for newer commits.
 
 | Scope | Result |
 | --- | --- |
-| Complete local engine sweep | All 495 test files per engine: Chromium 20,346 passed / 14 skipped; Firefox 20,285 / 75; WebKit 20,347 / 13; zero failures |
-| Coverage | 99.41% statements, 96.16% branches, 99.82% functions, 99.41% lines (98.70% arithmetic mean) |
+| Four-shard Chromium coverage sweep | All 496 test files: 20,657 passed / 14 expected skips; zero failures |
+| Coverage | 99.61% statements, 96.97% branches, 99.91% functions, 99.61% lines (99.02% arithmetic mean) |
 | Visual and workspace contracts | 253 captures: 129 exact, 124 evidence-only, 0 mismatches; all 249 workspace flags verified |
-| [Push CI](https://github.com/aceshooting/lyra-ui/actions/runs/32515533999) | 41/41 jobs passed in 12m01s |
-| [Full browser-engine suite](https://github.com/aceshooting/lyra-ui/actions/runs/32515535347) | 16/16 complete Firefox/WebKit shards passed in 8m54s |
-| [Test All Browsers](https://github.com/aceshooting/lyra-ui/actions/runs/32515537763) | Plan, 20/20 Chromium/Chrome/Edge/Firefox/Safari shards, and 5/5 fail-closed aggregates passed in 13m02s |
+| [Push CI](https://github.com/aceshooting/lyra-ui/actions/runs/32534261216) | 41/41 jobs passed in 13m00s |
+| [Full browser-engine suite](https://github.com/aceshooting/lyra-ui/actions/runs/32534262485) | 16/16 complete Firefox/WebKit shards passed in 7m48s |
+| [Test All Browsers](https://github.com/aceshooting/lyra-ui/actions/runs/32534264180) | Plan, 20/20 Chromium/Chrome/Edge/Firefox/Safari shards, and 5/5 fail-closed aggregates passed in 12m12s |
 
-The post-release quality pass raises the current four-shard Chromium coverage gate to 99.61%
-statements, 96.97% branches, 99.90% functions, and 99.61% lines (99.02% arithmetic mean),
-with 496 test files and zero failures in the merged run.
+The optimized post-release code run completed the same 41-job push CI in
+[8m37s](https://github.com/aceshooting/lyra-ui/actions/runs/32531724224), 3m24s (28%) faster than
+the 12.1.0 qualification snapshot; release-run wall time can still vary with hosted-runner queues.
 
 ## Built with
 
