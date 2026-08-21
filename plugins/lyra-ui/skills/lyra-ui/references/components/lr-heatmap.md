@@ -259,7 +259,10 @@ color?: string; label?: string; partOfRamp?: boolean }`: a discrete legend key r
   are never consulted by the color ramp, the bucket math, the tooltip, or the generated accessible
   name, so adding them changes nothing a cell renders. Labeled `annotations` still render their
   `[part="legend-annotation"]` entries after the stops. Unset (the default) or an empty array
-  reproduces the exact gradient legend, unchanged. A dev-mode-only warning fires when a stop's
+  reproduces the exact gradient legend, unchanged. Reassigning stops whose `value`/`color`/`label`/
+  `partOfRamp` fields are unchanged does not schedule a canvas redraw. The assignment still takes
+  a fresh frozen ownership snapshot, so mutating and reassigning the same caller array is detected
+  while mutation without reassignment remains isolated. A dev-mode-only warning fires when a stop's
   `color` doesn't match the corresponding `colorSteps` entry — set `partOfRamp: false` on a stop
   that is a real, distinctly-colored swatch deliberately outside the sequential ramp (e.g. a fixed
   "no data" color next to an N-step ramp) to exclude just that stop from the comparison; defaults to
