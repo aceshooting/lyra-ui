@@ -15411,14 +15411,14 @@
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1016,
+              "line": 1036,
               "test": "is accessible, both closed and with its menu open",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1016,
+              "line": 1036,
               "test": "is accessible, both closed and with its menu open",
               "target": "el",
               "state": "populated"
@@ -15460,7 +15460,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1521,
+              "line": 1544,
               "kind": "320px allocation test signal"
             }
           ]
@@ -32440,35 +32440,35 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1124,
+              "line": 1144,
               "test": "promotes actionable tooltip content to a focus-persistent dialog surface",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 2205,
+              "line": 2220,
               "test": "is accessible as a disclosure navigation",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 2777,
+              "line": 2804,
               "test": "is accessible with an arrow rendered",
               "target": "popover",
               "state": "open"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 904,
+              "line": 924,
               "test": "opens a popover from its slotted trigger and wires dialog semantics",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1603,
+              "line": 1625,
               "test": "opens a popover anchored to an arbitrary rect via showAt(), with no slotted trigger",
               "target": "el",
               "state": "populated"
@@ -32510,7 +32510,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1521,
+              "line": 1544,
               "kind": "320px allocation test signal"
             }
           ]
@@ -32653,14 +32653,14 @@
           "evidence": [
             {
               "file": "src/components/overlays/popup/popup.test.ts",
-              "line": 18,
+              "line": 32,
               "test": "renders nothing visible until activated",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/popup/popup.test.ts",
-              "line": 541,
+              "line": 554,
               "test": "is accessible while active, with content rendered",
               "target": "el",
               "state": "populated"
@@ -32680,7 +32680,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/popup/popup.test.ts",
-              "line": 97,
+              "line": 112,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -47257,21 +47257,21 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1038,
+              "line": 1058,
               "test": "shows a tooltip after focus and describes the trigger",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1124,
+              "line": 1144,
               "test": "promotes actionable tooltip content to a focus-persistent dialog surface",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1707,
+              "line": 1724,
               "test": "opens a tooltip anchored to an arbitrary rect via showAt(), with no slotted trigger",
               "target": "el",
               "state": "populated"
@@ -47313,7 +47313,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/overlay.test.ts",
-              "line": 1521,
+              "line": 1544,
               "kind": "320px allocation test signal"
             }
           ]

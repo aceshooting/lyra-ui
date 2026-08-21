@@ -10,6 +10,30 @@ import './dropdown.js';
 import '../../forms/button/button.js';
 import '../../forms/icon-button/icon-button.js';
 
+type PositionedOverlay = LyraPopover | LyraTooltip;
+
+const positionedPopup = (el: PositionedOverlay): HTMLElement =>
+  el.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+
+const hasFinitePosition = (popup: HTMLElement): boolean =>
+  popup.style.left !== ''
+  && popup.style.top !== ''
+  && Number.isFinite(Number.parseFloat(popup.style.left))
+  && Number.isFinite(Number.parseFloat(popup.style.top));
+
+async function waitForOverlayPosition(
+  el: PositionedOverlay,
+  predicate: (popup: HTMLElement) => boolean = () => true,
+): Promise<void> {
+  await el.updateComplete;
+  const popup = positionedPopup(el);
+  await waitUntil(
+    () => !popup.hasAttribute('data-hidden') && hasFinitePosition(popup) && predicate(popup),
+    'overlay did not finish positioning',
+  );
+  await el.updateComplete;
+}
+
 const composedPopoverTriggerTag = 'test-composed-popover-trigger';
 if (!customElements.get(composedPopoverTriggerTag)) {
   customElements.define(
@@ -357,11 +381,7 @@ it('keeps an open popover on its direct anchor when its slotted trigger is remov
     </div>
   `);
   const el = wrapper.querySelector<LyraPopover>('lr-popover')!;
-  // Reassigning the direct anchor re-triggers Floating UI's async position computation, which
-  // resolves after this update cycle and schedules a follow-on update on the popover and its
-  // internally composed tooltip/dropdown primitives -- Lit's dev-mode "scheduled an update after
-  // an update completed" warning. Stub console.warn and flush a frame so that expected follow-on
-  // update settles inside this test instead of bleeding into whichever test runs next.
+  // Keep the stub installed until the deferred placement update has actually committed.
   const originalWarn = console.warn;
   console.warn = () => {};
   try {
@@ -370,7 +390,7 @@ it('keeps an open popover on its direct anchor when its slotted trigger is remov
 
     el.querySelector('[slot="trigger"]')!.remove();
     await el.updateComplete;
-    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+    await waitForOverlayPosition(el);
   } finally {
     console.warn = originalWarn;
   }
@@ -1157,11 +1177,14 @@ it('positions a tooltip that is open on first render against its slotted trigger
       <lr-tooltip open manual>Helpful text<button slot="trigger">Help</button></lr-tooltip>
     </div>
   `)).querySelector('lr-tooltip') as LyraTooltip;
-  await el.updateComplete;
-  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-
   const trigger = el.querySelector('button') as HTMLButtonElement;
   const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
+  await waitForOverlayPosition(el, () => {
+    const triggerRect = trigger.getBoundingClientRect();
+    const popupRect = popup.getBoundingClientRect();
+    return Math.abs(popupRect.x + popupRect.width / 2 - (triggerRect.x + triggerRect.width / 2)) < 2
+      && popupRect.bottom <= triggerRect.top;
+  });
   const triggerRect = trigger.getBoundingClientRect();
   const popupRect = popup.getBoundingClientRect();
 
@@ -1525,8 +1548,8 @@ it('contains long tooltip content within a 320px allocation', async () => {
     </div>
   `)) as HTMLElement;
   const el = wrapper.querySelector('lr-tooltip') as LyraTooltip;
-  await new Promise((resolve) => requestAnimationFrame(resolve));
   const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
+  await waitForOverlayPosition(el, () => popup.getBoundingClientRect().width > 0);
   expect(popup.getBoundingClientRect().width).to.be.at.most(320);
   expect(popup.scrollWidth).to.be.at.most(popup.clientWidth);
 });
@@ -1549,11 +1572,10 @@ it('does not poison popover/tooltip positioning with NaN when distance is invali
   const popover = (await fixture(
     html`<lr-popover open distance="not-a-number"><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
   )) as LyraPopover;
-  await popover.updateComplete;
-  // autoUpdate schedules an async computePosition; wait a frame for it to land.
-  await new Promise((r) => requestAnimationFrame(() => r(null)));
-  await new Promise((r) => requestAnimationFrame(() => r(null)));
   const popoverPopup = popover.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
+  await waitForOverlayPosition(popover);
+  expect(popoverPopup.style.left).to.not.be.empty;
+  expect(popoverPopup.style.top).to.not.be.empty;
   expect(popoverPopup.style.left).to.not.include('NaN');
   expect(popoverPopup.style.top).to.not.include('NaN');
 
@@ -1562,10 +1584,10 @@ it('does not poison popover/tooltip positioning with NaN when distance is invali
   )) as LyraTooltip;
   const trigger = tooltip.querySelector('button') as HTMLButtonElement;
   trigger.focus();
-  await tooltip.updateComplete;
-  await new Promise((r) => requestAnimationFrame(() => r(null)));
-  await new Promise((r) => requestAnimationFrame(() => r(null)));
   const tooltipPopup = tooltip.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
+  await waitForOverlayPosition(tooltip);
+  expect(tooltipPopup.style.left).to.not.be.empty;
+  expect(tooltipPopup.style.top).to.not.be.empty;
   expect(tooltipPopup.style.left).to.not.include('NaN');
   expect(tooltipPopup.style.top).to.not.include('NaN');
 });
@@ -1605,9 +1627,7 @@ it('opens a popover anchored to an arbitrary rect via showAt(), with no slotted 
   const afterShow = oneEvent(el, 'lr-after-show');
   el.showAt({ x: 120, y: 80 });
   await afterShow;
-  await el.updateComplete;
-  await new Promise((r) => requestAnimationFrame(() => r(null)));
-  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  await waitForOverlayPosition(el);
 
   expect(el.open).to.be.true;
   const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
@@ -1620,9 +1640,7 @@ it('opens a popover anchored to an arbitrary rect via showAt(), with no slotted 
 it('re-anchors an already-open showAt() popover when called again with fresh coordinates', async () => {
   const el = (await fixture(html`<lr-popover><p>Node details</p></lr-popover>`)) as LyraPopover;
   el.showAt({ x: 10, y: 10 });
-  await el.updateComplete;
-  await new Promise((r) => requestAnimationFrame(() => r(null)));
-  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  await waitForOverlayPosition(el);
   const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
   const firstTop = popup.style.top;
   const internals = el as unknown as { cleanup?: () => void };
@@ -1634,8 +1652,7 @@ it('re-anchors an already-open showAt() popover when called again with fresh coo
   };
 
   el.showAt({ x: 10, y: 400 });
-  await new Promise((r) => requestAnimationFrame(() => r(null)));
-  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  await waitForOverlayPosition(el, () => popup.style.top !== firstTop && cleanupCount === 1);
 
   expect(el.open, 'showAt() called again while open must stay open, not toggle').to.be.true;
   expect(cleanupCount, 're-anchoring must stop the previous auto-update subscription').to.equal(1);
@@ -1709,9 +1726,7 @@ it('opens a tooltip anchored to an arbitrary rect via showAt(), with no slotted 
   const afterShow = oneEvent(el, 'lr-after-show');
   el.showAt({ x: 200, y: 150 });
   await afterShow;
-  await el.updateComplete;
-  await new Promise((r) => requestAnimationFrame(() => r(null)));
-  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  await waitForOverlayPosition(el);
 
   expect(el.open).to.be.true;
   const popup = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
@@ -2678,9 +2693,11 @@ describe('anchored-overlay arrows and external anchoring', () => {
         ><button slot="trigger">Open</button><p>Details</p></lr-popover
       >`,
     )) as LyraPopover;
-    await popover.updateComplete;
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     const arrow = popover.shadowRoot!.querySelector('[part~="arrow"]') as HTMLElement;
+    await waitForOverlayPosition(popover, () => {
+      const parts = (arrow.getAttribute('part') ?? '').split(/\s+/);
+      return parts.some((token) => ['arrow-top', 'arrow-bottom', 'arrow-left', 'arrow-right'].includes(token));
+    });
     expect((arrow) != null).to.equal(true);
     const parts = (arrow.getAttribute('part') ?? '').split(/\s+/);
     expect(parts).to.include('arrow');
@@ -2695,10 +2712,13 @@ describe('anchored-overlay arrows and external anchoring', () => {
         ><button slot="trigger">Open</button><p>Some reasonably wide popover body text</p></lr-popover
       >`,
     )) as LyraPopover;
-    await popover.updateComplete;
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     const popup = popover.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
     const arrow = popover.shadowRoot!.querySelector('[part~="arrow"]') as HTMLElement;
+    await waitForOverlayPosition(popover, () => {
+      const popupBox = popup.getBoundingClientRect();
+      const arrowBox = arrow.getBoundingClientRect();
+      return Math.abs(arrowBox.left + arrowBox.width / 2 - (popupBox.left + popupBox.width / 2)) <= 1.5;
+    });
     const popupBox = popup.getBoundingClientRect();
     const arrowBox = arrow.getBoundingClientRect();
     expect(Math.abs(arrowBox.left + arrowBox.width / 2 - (popupBox.left + popupBox.width / 2))).to.be.at.most(1.5);
@@ -2710,10 +2730,12 @@ describe('anchored-overlay arrows and external anchoring', () => {
         ><button slot="trigger">Open</button><p>Some reasonably wide popover body text</p></lr-popover
       >`,
     )) as LyraPopover;
-    await popover.updateComplete;
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     const popup = popover.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
     const arrow = popover.shadowRoot!.querySelector('[part~="arrow"]') as HTMLElement;
+    await waitForOverlayPosition(
+      popover,
+      () => Math.abs(arrow.getBoundingClientRect().left - popup.getBoundingClientRect().left - 20) <= 1.5,
+    );
     expect(arrow.getBoundingClientRect().left - popup.getBoundingClientRect().left).to.be.closeTo(20, 1.5);
   });
 
@@ -2723,14 +2745,15 @@ describe('anchored-overlay arrows and external anchoring', () => {
         ><button slot="trigger">Open</button><p>Details</p></lr-popover
       >`,
     )) as LyraPopover;
-    await popover.updateComplete;
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     const popup = popover.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
+    await waitForOverlayPosition(popover);
     const before = popup.getBoundingClientRect().left;
 
     popover.skidding = 24;
-    await popover.updateComplete;
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await waitForOverlayPosition(
+      popover,
+      () => Math.abs(popup.getBoundingClientRect().left - before - 24) <= 1.5,
+    );
     expect(popup.getBoundingClientRect().left - before).to.be.closeTo(24, 1.5);
   });
 
@@ -2747,10 +2770,12 @@ describe('anchored-overlay arrows and external anchoring', () => {
       </div>
     `)) as HTMLElement;
     const popover = frame.querySelector('lr-popover') as LyraPopover;
-    await popover.updateComplete;
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     const popup = popover.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
     const far = frame.querySelector('#far') as HTMLElement;
+    await waitForOverlayPosition(
+      popover,
+      () => Math.abs(popup.getBoundingClientRect().left - far.getBoundingClientRect().left) <= 2,
+    );
     expect(popup.getBoundingClientRect().left).to.be.closeTo(far.getBoundingClientRect().left, 2);
   });
 
@@ -2766,10 +2791,12 @@ describe('anchored-overlay arrows and external anchoring', () => {
       </div>
     `)) as HTMLElement;
     const tooltip = frame.querySelector('lr-tooltip') as LyraTooltip;
-    await tooltip.updateComplete;
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     const popup = tooltip.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
     const anchor = frame.querySelector('#tip-anchor') as HTMLElement;
+    await waitForOverlayPosition(
+      tooltip,
+      () => Math.abs(popup.getBoundingClientRect().left - anchor.getBoundingClientRect().left) <= 2,
+    );
     expect(tooltip.shadowRoot!.querySelectorAll('[part~="arrow"]').length).to.equal(1);
     expect(popup.getBoundingClientRect().left).to.be.closeTo(anchor.getBoundingClientRect().left, 2);
   });
@@ -3035,8 +3062,10 @@ describe('mapped popover and tooltip compatibility', () => {
     const popover = frame.querySelector('lr-popover') as LyraPopover;
     const far = frame.querySelector('#far') as HTMLElement;
     popover.anchor = far;
-    await popover.updateComplete;
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await waitForOverlayPosition(
+      popover,
+      (popup) => Math.abs(popup.getBoundingClientRect().left - far.getBoundingClientRect().left) <= 2,
+    );
     expect(
       (popover.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement).getBoundingClientRect().left,
     ).to.be.closeTo(far.getBoundingClientRect().left, 2);
