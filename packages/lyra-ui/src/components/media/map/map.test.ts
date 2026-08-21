@@ -1,4 +1,12 @@
-import { aTimeout, fixture, fixtureCleanup, expect, html, waitUntil } from '@open-wc/testing';
+import {
+  aTimeout,
+  fixture,
+  fixtureCleanup,
+  expect,
+  html,
+  oneEvent,
+  waitUntil,
+} from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import './map.js';
 import { LyraMap } from './map.js';
@@ -6,6 +14,7 @@ import { buildGeoJsonPropertyDiff } from './map.class.js';
 import { loadMaplibre } from './map-loader.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { setMapCanvasReadyCallback } from '../../../internal/map-canvas-ready.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 
@@ -16,7 +25,14 @@ import { setForcedColors } from '../../../../test/wtr-media.js';
 // below, by forcing this same detection to report unsupported regardless of the real engine.
 const hasWebGL2 = (() => {
   try {
-    return document.createElement('canvas').getContext('webgl2') !== null;
+    const context = document.createElement('canvas').getContext('webgl2');
+    if (!context) return false;
+    try {
+      context.getExtension('WEBGL_lose_context')?.loseContext();
+    } catch {
+      // The probe succeeded; release is best-effort in incomplete headless implementations.
+    }
+    return true;
   } catch {
     return false;
   }
@@ -29,16 +45,15 @@ function assertiveAnnouncements(): string[] {
   return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
 }
 
-const RASTER_STYLE = {
+const LOCAL_STYLE = {
   version: 8,
   sources: {
     demo: {
-      type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-      tileSize: 256,
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
     },
   },
-  layers: [{ id: 'demo', type: 'raster', source: 'demo' }],
+  layers: [{ id: 'demo', type: 'fill', source: 'demo' }],
 };
 
 // MapLibre owns WebGL contexts and workers outside the fixture's DOM subtree. Clearing fixtures
@@ -93,7 +108,7 @@ it('shows a loading skeleton and aria-busy while maplibre-gl loads, then swaps t
       resolveLibrary = resolve;
     });
   el.strings = { loading: 'Chargement de la carte…' };
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   document.body.append(el);
   try {
     await el.updateComplete;
@@ -135,7 +150,7 @@ it('shows a loading skeleton and aria-busy while maplibre-gl loads, then swaps t
 it('constructs a maplibregl.Map and exposes it via the map getter', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   expect(el.map != null).to.be.true;
@@ -169,7 +184,7 @@ it('forwards renderWorldCopies only when explicitly authored, preserving the pee
     if (worldCopies !== undefined) {
       (el as unknown as { renderWorldCopies?: boolean }).renderWorldCopies = worldCopies;
     }
-    el.mapStyle = RASTER_STYLE;
+    el.mapStyle = LOCAL_STYLE;
     document.body.append(el);
     await waitUntil(() => el.map != null, 'fake map never initialized', { timeout: 2000 });
     return el;
@@ -283,7 +298,7 @@ it('does not construct the underlying maplibregl.Map (and its WebGL context) unt
 
   try {
     const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-    el.mapStyle = RASTER_STYLE;
+    el.mapStyle = LOCAL_STYLE;
     await el.updateComplete;
     expect(observedTargets).to.include(el);
 
@@ -436,6 +451,7 @@ it('probes WebGL2 in the concrete owner realm before and after adoption', async 
   const frameIntersectionObserver = Object.getOwnPropertyDescriptor(frameWindow, 'IntersectionObserver');
   let ambientProbes = 0;
   let frameProbes = 0;
+  let frameProbeReleases = 0;
   let removals = 0;
   let loadCalls = 0;
 
@@ -452,7 +468,16 @@ it('probes WebGL2 in the concrete owner realm before and after adoption', async 
   }).getContext = function (this: HTMLCanvasElement, contextId: string, ...rest: unknown[]) {
     if (contextId === 'webgl2') {
       frameProbes += 1;
-      return {};
+      return {
+        getExtension(name: string) {
+          if (name !== 'WEBGL_lose_context') return null;
+          return {
+            loseContext: () => {
+              frameProbeReleases += 1;
+            },
+          };
+        },
+      };
     }
     return frameGetContext.call(this, contextId as never, ...(rest as []));
   };
@@ -471,7 +496,7 @@ it('probes WebGL2 in the concrete owner realm before and after adoption', async 
     loadCalls += 1;
     return loadCalls === 1 ? new Promise(() => {}) : Promise.resolve(module);
   };
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   el.strings = { mapWebglUnavailable: 'Current document lacks WebGL2' };
 
   try {
@@ -482,6 +507,7 @@ it('probes WebGL2 in the concrete owner realm before and after adoption', async 
     frameDocument.body.append(frameDocument.adoptNode(el));
     await waitUntil(() => el.map != null, 'frame-owned map never initialized', { timeout: 2000 });
     expect(frameProbes).to.be.greaterThan(0);
+    expect(frameProbeReleases).to.equal(frameProbes);
     expect(ambientProbes).to.equal(0);
 
     el.remove();
@@ -650,7 +676,7 @@ for (const failureStage of ['constructor', 'setup'] as const) {
     (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
       Map: TransactionMap,
     });
-    el.mapStyle = RASTER_STYLE;
+    el.mapStyle = LOCAL_STYLE;
     el.strings = { mapInitializationFailed: 'Map setup could not finish' };
     document.body.append(el);
     try {
@@ -666,7 +692,7 @@ for (const failureStage of ['constructor', 'setup'] as const) {
       expect(removals).to.equal(failureStage === 'setup' ? 1 : 0);
       expect(unhandled).to.deep.equal([]);
 
-      el.mapStyle = { ...RASTER_STYLE, name: `retry-${failureStage}` };
+      el.mapStyle = { ...LOCAL_STYLE, name: `retry-${failureStage}` };
       await waitUntil(() => el.map != null, `${failureStage} retry never initialized`, {
         timeout: 2000,
       });
@@ -715,7 +741,7 @@ it('classifies an initial peer style error and disposes the published candidate 
   (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
     Map: StyleErrorMap,
   });
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   el.strings = { mapInitializationFailed: 'Initial style failed' };
   document.body.append(el);
   try {
@@ -760,7 +786,7 @@ it('logs a post-load runtime map error via console.error instead of failing an a
   (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
     Map: RuntimeErrorMap,
   });
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   document.body.append(el);
   const originalConsoleError = console.error;
   const calls: unknown[][] = [];
@@ -813,12 +839,12 @@ it('rolls back a synchronous dynamic style failure and retries with a fresh map'
   (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
     Map: DynamicStyleMap,
   });
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   el.strings = { mapInitializationFailed: 'Map style could not be applied' };
   document.body.append(el);
   try {
     await waitUntil(() => el.map != null, 'initial fake map never initialized');
-    el.mapStyle = { ...RASTER_STYLE, name: 'throws' };
+    el.mapStyle = { ...LOCAL_STYLE, name: 'throws' };
     await waitUntil(
       () => el.shadowRoot!.querySelector('[part="error"]') != null,
       'dynamic style failure never reached the localized error state',
@@ -829,7 +855,7 @@ it('rolls back a synchronous dynamic style failure and retries with a fresh map'
       'Map style could not be applied',
     );
 
-    el.mapStyle = { ...RASTER_STYLE, name: 'retry' };
+    el.mapStyle = { ...LOCAL_STYLE, name: 'retry' };
     await waitUntil(() => el.map != null, 'dynamic style retry never initialized');
     expect(constructions).to.equal(2);
   } finally {
@@ -858,7 +884,7 @@ it('renders a distinct accessible error state instead of crashing when WebGL2 is
       return originalGetContext.call(this, contextId as never, ...(rest as []));
     };
   const el = document.createElement('lr-map') as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   el.strings = { mapWebglUnavailable: 'Owner realm has no WebGL2' };
   document.body.append(el);
   try {
@@ -893,7 +919,7 @@ it('fails closed when the WebGL2 capability probe itself throws', async () => {
     };
   const el = document.createElement('lr-map') as LyraMap;
   (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({});
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   document.body.append(el);
   try {
     await waitUntil(
@@ -926,7 +952,7 @@ it('calls super.updated so a future LyraElement/mixin lifecycle hook stays wired
     original.call(this, changed);
   };
   try {
-    const el = (await fixture(html`<lr-map .mapStyle=${RASTER_STYLE}></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map .mapStyle=${LOCAL_STYLE}></lr-map>`)) as LyraMap;
     await el.updateComplete;
     expect(calledOnSelf).to.be.true;
   } finally {
@@ -937,7 +963,7 @@ it('calls super.updated so a future LyraElement/mixin lifecycle hook stays wired
 it('calls setCenter/setZoom on the underlying map when center/zoom change after mount', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
 
@@ -968,7 +994,7 @@ it('calls setCenter/setZoom on the underlying map when center/zoom change after 
 it('normalizes a non-finite initial zoom before constructing the underlying maplibregl.Map', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map zoom="NaN"></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   expect(Number.isFinite(el.map!.getZoom())).to.be.true;
@@ -977,7 +1003,7 @@ it('normalizes a non-finite initial zoom before constructing the underlying mapl
 it('clamps a non-finite/out-of-range zoom passed to setZoom on the live map after mount', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
 
@@ -1003,7 +1029,7 @@ it('clamps a non-finite/out-of-range zoom passed to setZoom on the live map afte
 it('normalizes malformed and out-of-range center values before live map updates', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   let centerArg: unknown;
@@ -1026,7 +1052,7 @@ it('normalizes malformed and out-of-range center values before live map updates'
 it('does not leak a second maplibregl.Map when disconnected and reconnected before the loader promise resolves', async function () {
   if (!hasWebGL2) this.skip();
   const el = document.createElement('lr-map') as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   // Disconnect + reconnect synchronously, in the same tick as the initial
   // connect — before the (cached) loadMaplibre() promise has any chance to
   // settle — to reproduce a fast remount racing the lazy-loaded peer dep.
@@ -1050,7 +1076,7 @@ it('does not leak a second maplibregl.Map when disconnected and reconnected befo
 it('fires lr-map-load once the underlying map loads', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   let fired = false;
@@ -1283,7 +1309,7 @@ it('renders the legend panel once entries are set, and removes it again once cle
 describe('aria-label forwarding', () => {
   it('falls back to the localized default when neither label nor a host aria-label is set', async function () {
     if (!hasWebGL2) this.skip();
-    const el = (await fixture(html`<lr-map .mapStyle=${RASTER_STYLE}></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map .mapStyle=${LOCAL_STYLE}></lr-map>`)) as LyraMap;
     await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('role')).to.equal(null);
@@ -1294,7 +1320,7 @@ describe('aria-label forwarding', () => {
   it('uses a .strings override for the localized default when neither label nor a host aria-label is set', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(html`
-      <lr-map .mapStyle=${RASTER_STYLE} .strings=${{ map: 'Carte' }}></lr-map>
+      <lr-map .mapStyle=${LOCAL_STYLE} .strings=${{ map: 'Carte' }}></lr-map>
     `)) as LyraMap;
     await el.updateComplete;
     await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -1304,7 +1330,7 @@ describe('aria-label forwarding', () => {
   it('uses the label prop when set', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(html`
-      <lr-map label="Delivery regions" .mapStyle=${RASTER_STYLE}></lr-map>
+      <lr-map label="Delivery regions" .mapStyle=${LOCAL_STYLE}></lr-map>
     `)) as LyraMap;
     await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
     expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('Delivery regions');
@@ -1313,7 +1339,7 @@ describe('aria-label forwarding', () => {
   it('keeps a nonempty host aria-label on the host and gives the canvas a purpose name', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(html`
-      <lr-map aria-label="Forwarded label" .mapStyle=${RASTER_STYLE}></lr-map>
+      <lr-map aria-label="Forwarded label" .mapStyle=${LOCAL_STYLE}></lr-map>
     `)) as LyraMap;
     await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
     expect(el.getAttribute('aria-label')).to.equal('Forwarded label');
@@ -1326,7 +1352,7 @@ describe('aria-label forwarding', () => {
       html`<lr-map
         label="Delivery regions"
         aria-label="Forwarded label"
-        .mapStyle=${RASTER_STYLE}
+        .mapStyle=${LOCAL_STYLE}
       ></lr-map>`,
     )) as LyraMap;
     await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -1340,7 +1366,7 @@ describe('aria-label forwarding', () => {
       html`<lr-map
         label="Delivery regions"
         aria-label=""
-        .mapStyle=${RASTER_STYLE}
+        .mapStyle=${LOCAL_STYLE}
       ></lr-map>`,
     )) as LyraMap;
     await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -1362,7 +1388,7 @@ describe('aria-label forwarding', () => {
 it('is accessible', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   el.legend = [
     { color: '#f00', label: 'High', pattern: 'diagonal' },
     { color: '#0f0', label: 'Low', pattern: 'dots' },
@@ -1375,7 +1401,7 @@ it('is accessible', async function () {
 it('adds a choropleth source + fill layer, and re-applies the color expression on update', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   await waitUntil(() => el.map!.isStyleLoaded(), 'style never loaded', { timeout: 2000 });
@@ -1668,7 +1694,7 @@ it('repaints applied layers once after an ancestor theme mutation without touchi
 it('does not mark an empty-stops choropleth as applied, so a later non-empty update for the same sourceId still creates the fill layer', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   await waitUntil(() => el.map!.isStyleLoaded(), 'style never loaded', { timeout: 2000 });
@@ -1706,7 +1732,7 @@ it('does not mark an empty-stops choropleth as applied, so a later non-empty upd
 it('adds the choropleth GeoJSON source without promoteId, so a top-level Feature.id is preserved instead of requiring a duplicate properties.id', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   await waitUntil(() => el.map!.isStyleLoaded(), 'style never loaded', { timeout: 2000 });
@@ -1733,7 +1759,7 @@ it('adds the choropleth GeoJSON source without promoteId, so a top-level Feature
 it('fires lr-map-click with the lngLat and no feature when there is no choropleth', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
 
@@ -1773,7 +1799,7 @@ it('detaches and freezes lr-map-click coordinates while retaining the feature id
 it('attaches the clicked choropleth feature to lr-map-click when one exists at the point', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   await waitUntil(() => el.map!.isStyleLoaded(), 'style never loaded', { timeout: 2000 });
@@ -1809,7 +1835,7 @@ it('attaches the clicked choropleth feature to lr-map-click when one exists at t
 it('does not query the choropleth fill layer on click before it has been added to the style', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   el.choropleth = choropleth('vanishing-choropleth', [
     [0, '#000000'],
     [10, '#ffffff'],
@@ -1852,7 +1878,7 @@ it('does not query the choropleth fill layer on click before it has been added t
 it('removes the choropleth layer and source when choropleth is cleared', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   await waitUntil(() => el.map!.isStyleLoaded(), 'style never loaded', { timeout: 2000 });
@@ -1879,7 +1905,7 @@ it('removes the choropleth layer and source when choropleth is cleared', async f
 it('removes the old choropleth layer/source when sourceId changes', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   await waitUntil(() => el.map!.isStyleLoaded(), 'style never loaded', { timeout: 2000 });
@@ -1908,7 +1934,7 @@ it('removes the old choropleth layer/source when sourceId changes', async functi
 it('calls setStyle when mapStyle changes after the map has mounted', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   await waitUntil(() => el.map!.isStyleLoaded(), 'style never loaded', { timeout: 2000 });
@@ -1919,8 +1945,8 @@ it('calls setStyle when mapStyle changes after the map has mounted', async funct
     return el.map;
   }) as typeof el.map.setStyle;
 
-  const NEXT_STYLE = { ...RASTER_STYLE, sources: { demo2: RASTER_STYLE.sources.demo } };
-  el.mapStyle = NEXT_STYLE as typeof RASTER_STYLE;
+  const NEXT_STYLE = { ...LOCAL_STYLE, sources: { demo2: LOCAL_STYLE.sources.demo } };
+  el.mapStyle = NEXT_STYLE as typeof LOCAL_STYLE;
   await el.updateComplete;
 
   expect(calledWith).to.deep.equal(NEXT_STYLE);
@@ -1934,7 +1960,7 @@ it('calls setStyle when mapStyle changes after the map has mounted', async funct
 it('accepts the string style-URL form of mapStyle and passes it through to setStyle, not just the StyleSpecification object form', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   await waitUntil(() => el.map!.isStyleLoaded(), 'style never loaded', { timeout: 2000 });
@@ -1965,7 +1991,7 @@ it('constructs the underlying maplibregl.Map with a string style-URL mapStyle se
     if (url.includes('lr-map-style.json')) {
       requestedUrls.push(url);
       return Promise.resolve(
-        new Response(JSON.stringify(RASTER_STYLE), {
+        new Response(JSON.stringify(LOCAL_STYLE), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         }),
@@ -1998,7 +2024,7 @@ it('constructs the underlying maplibregl.Map with a string style-URL mapStyle se
 it('re-applies the choropleth once the new style finishes loading after a mapStyle change', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   await waitUntil(() => el.map!.isStyleLoaded(), 'style never loaded', { timeout: 2000 });
@@ -2015,15 +2041,15 @@ it('re-applies the choropleth once the new style finishes loading after a mapSty
   // A real setStyle() call wipes every layer/source maplibre-gl knows about;
   // once its own 'style.load' fires, the previously-applied choropleth must
   // be re-added rather than left missing. (Keeps the same "demo" source id
-  // so the new style itself is valid — only the raster layer's paint
+  // so the new style itself is valid — only the base layer's paint
   // changes — unlike the sibling "calls setStyle..." test above, which
   // stubs setStyle() out entirely and so never actually applies its
   // mismatched source/layer ids.)
   const NEXT_STYLE = {
-    ...RASTER_STYLE,
-    layers: [{ id: 'demo', type: 'raster', source: 'demo', paint: { 'raster-opacity': 0.9 } }],
+    ...LOCAL_STYLE,
+    layers: [{ id: 'demo', type: 'fill', source: 'demo', paint: { 'fill-opacity': 0.9 } }],
   };
-  el.mapStyle = NEXT_STYLE as typeof RASTER_STYLE;
+  el.mapStyle = NEXT_STYLE as typeof LOCAL_STYLE;
   await el.updateComplete;
 
   await waitUntil(() => el.map!.getLayer('style-reload-fill') != null, 'choropleth never re-applied', {
@@ -2055,7 +2081,7 @@ describe('dataLayers', () => {
   it('retains the first unique nonempty data-layer sourceId before reconciliation', async function () {
     if (!hasWebGL2) this.skip();
     const el = await fixture<LyraMap>(html`<lr-map></lr-map>`);
-    el.mapStyle = RASTER_STYLE;
+    el.mapStyle = LOCAL_STYLE;
     el.dataLayers = [POLY_LAYER];
     await el.updateComplete;
     await waitUntilMapLoaded(el);
@@ -2090,7 +2116,7 @@ describe('dataLayers', () => {
   it('keeps a colliding base-style source owned by its style across add and removal', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-    el.mapStyle = RASTER_STYLE;
+    el.mapStyle = LOCAL_STYLE;
     el.dataLayers = [{ ...POLY_LAYER, sourceId: 'demo' }];
     await el.updateComplete;
     await waitUntilMapLoaded(el);
@@ -2114,7 +2140,7 @@ describe('dataLayers', () => {
   it('adds a source and fill/line/circle layers per entry once the style loads', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-    el.mapStyle = RASTER_STYLE;
+    el.mapStyle = LOCAL_STYLE;
     el.dataLayers = [POLY_LAYER];
     await el.updateComplete;
     await waitUntilMapLoaded(el);
@@ -2134,7 +2160,7 @@ describe('dataLayers', () => {
   it('removing an entry (dataLayers reassigned without it) removes its source/layers, leaking nothing', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-    el.mapStyle = RASTER_STYLE;
+    el.mapStyle = LOCAL_STYLE;
     el.dataLayers = [POLY_LAYER];
     await el.updateComplete;
     await waitUntilMapLoaded(el);
@@ -2158,7 +2184,7 @@ describe('dataLayers', () => {
   it('updates existing source data in place when the same sourceId is reassigned with new geojson', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-    el.mapStyle = RASTER_STYLE;
+    el.mapStyle = LOCAL_STYLE;
     el.dataLayers = [POLY_LAYER];
     await el.updateComplete;
     await waitUntilMapLoaded(el);
@@ -2186,7 +2212,7 @@ describe('dataLayers', () => {
   it('re-applies dataLayers after a mapStyle change (style.load handshake)', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-    el.mapStyle = RASTER_STYLE;
+    el.mapStyle = LOCAL_STYLE;
     el.dataLayers = [POLY_LAYER];
     await el.updateComplete;
     await waitUntilMapLoaded(el);
@@ -2197,14 +2223,14 @@ describe('dataLayers', () => {
       timeout: 2000,
     });
 
-    // Same "demo" source id as RASTER_STYLE so the new style itself stays valid --
-    // only the raster layer's paint changes -- mirroring the sibling choropleth
+    // Same "demo" source id as LOCAL_STYLE so the new style itself stays valid --
+    // only the base layer's paint changes -- mirroring the sibling choropleth
     // "re-applies the choropleth once the new style finishes loading" test above.
     const NEXT_STYLE = {
-      ...RASTER_STYLE,
-      layers: [{ id: 'demo', type: 'raster', source: 'demo', paint: { 'raster-opacity': 0.9 } }],
+      ...LOCAL_STYLE,
+      layers: [{ id: 'demo', type: 'fill', source: 'demo', paint: { 'fill-opacity': 0.9 } }],
     };
-    el.mapStyle = NEXT_STYLE as typeof RASTER_STYLE;
+    el.mapStyle = NEXT_STYLE as typeof LOCAL_STYLE;
     await el.updateComplete;
 
     await waitUntil(() => {
@@ -2219,7 +2245,7 @@ describe('dataLayers', () => {
   it('caps dataLayers at MAX_MAP_DATA_LAYERS, only applying the capped count of sources/layers', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-    el.mapStyle = RASTER_STYLE;
+    el.mapStyle = LOCAL_STYLE;
     const CAP = 100; // mirrors map.class.ts's private MAX_MAP_DATA_LAYERS
     el.dataLayers = Array.from({ length: CAP * 2 }, (_, index) => ({
       ...POLY_LAYER,
@@ -2242,7 +2268,7 @@ describe('dataLayers', () => {
 it('adds a maplibregl.Marker per entry in markers', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   el.map!.fire('load');
@@ -2349,7 +2375,7 @@ it('exposes every declarative marker as a named button and emits one immutable a
 it('caps markers at MAX_MAP_MARKERS, creating only the capped count of marker DOM elements', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   el.map!.fire('load');
@@ -2366,46 +2392,64 @@ it('caps markers at MAX_MAP_MARKERS, creating only the capped count of marker DO
 
 it('provides shadow-local layout for MapLibre canvas, markers, and popups without document CSS', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(
-    html`<lr-map style="inline-size: 20rem; block-size: 12rem"></lr-map>`,
-  )) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
-  await el.updateComplete;
-  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
-  el.map!.fire('load');
-  el.markers = [{ id: 'station', lngLat: [10, 20], label: 'Station A' }];
-  await el.updateComplete;
+  const module = await loadMaplibre();
+  if (!module) throw new Error('maplibre-gl test peer is unavailable');
+  const el = document.createElement('lr-map') as LyraMap;
+  (el as unknown as { loadLibrary: () => Promise<typeof module> }).loadLibrary = () =>
+    Promise.resolve(module);
+  el.style.cssText = 'inline-size: 20rem; block-size: 12rem';
+  el.mapStyle = LOCAL_STYLE;
+  let resolveCanvas!: (canvas: HTMLCanvasElement) => void;
+  const canvasReady = new Promise<HTMLCanvasElement>((resolve) => {
+    resolveCanvas = resolve;
+  });
+  setMapCanvasReadyCallback(el, resolveCanvas);
+  document.body.append(el);
+  (el as unknown as { visible: boolean }).visible = true;
 
-  const container = el.shadowRoot!.querySelector('[part="container"]') as HTMLElement;
-  const canvas = el.shadowRoot!.querySelector('.maplibregl-canvas') as HTMLCanvasElement;
-  const marker = el.shadowRoot!.querySelector('.maplibregl-marker') as HTMLElement;
-  const controlCorner = el.shadowRoot!.querySelector(
-    '.maplibregl-ctrl-bottom-right',
-  ) as HTMLElement;
+  try {
+    const canvas = await canvasReady;
+    expect(el.map != null).to.be.true;
+    el.map!.fire('load');
+    el.markers = [{ id: 'station', lngLat: [10, 20], label: 'Station A' }];
+    await el.updateComplete;
 
-  expect(container.clientWidth).to.be.greaterThan(0);
-  expect(container.clientHeight).to.be.greaterThan(0);
-  expect(canvas.clientWidth).to.equal(container.clientWidth);
-  expect(canvas.clientHeight).to.equal(container.clientHeight);
-  expect(getComputedStyle(canvas).position).to.equal('absolute');
-  expect(getComputedStyle(marker).position).to.equal('absolute');
-  expect(getComputedStyle(controlCorner).position).to.equal('absolute');
-  expect(getComputedStyle(controlCorner).pointerEvents).to.equal('none');
+    const container = el.shadowRoot!.querySelector('[part="container"]') as HTMLElement;
+    const marker = el.shadowRoot!.querySelector('.maplibregl-marker') as HTMLElement;
+    const controlCorner = el.shadowRoot!.querySelector(
+      '.maplibregl-ctrl-bottom-right',
+    ) as HTMLElement;
 
-  marker.click();
-  await waitUntil(() => el.shadowRoot!.querySelector('.maplibregl-popup') != null, 'popup never opened');
-  const popup = el.shadowRoot!.querySelector('.maplibregl-popup') as HTMLElement;
-  const popupContent = el.shadowRoot!.querySelector('.maplibregl-popup-content') as HTMLElement;
-  const popupClose = el.shadowRoot!.querySelector('.maplibregl-popup-close-button') as HTMLElement;
-  expect(marker.getAttribute('part')?.split(/\s+/).includes('marker')).to.be.true;
-  expect(popup.getAttribute('part')?.split(/\s+/).includes('popup')).to.be.true;
-  expect(popupContent.getAttribute('part')?.split(/\s+/).includes('popup-content')).to.be.true;
-  expect(popupClose.getAttribute('part')?.split(/\s+/).includes('popup-close-button')).to.be.true;
-  expect(getComputedStyle(popup).position).to.equal('absolute');
-  expect(getComputedStyle(popup).display).to.equal('flex');
-  expect(getComputedStyle(popup).pointerEvents).to.equal('none');
-  expect(getComputedStyle(popupContent).pointerEvents).to.equal('auto');
-  expect(getComputedStyle(popupClose).position).to.equal('absolute');
+    expect(container.clientWidth).to.be.greaterThan(0);
+    expect(container.clientHeight).to.be.greaterThan(0);
+    expect(canvas.clientWidth).to.equal(container.clientWidth);
+    expect(canvas.clientHeight).to.equal(container.clientHeight);
+    expect(getComputedStyle(canvas).position).to.equal('absolute');
+    expect(getComputedStyle(marker).position).to.equal('absolute');
+    expect(getComputedStyle(controlCorner).position).to.equal('absolute');
+    expect(getComputedStyle(controlCorner).pointerEvents).to.equal('none');
+
+    marker.click();
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('.maplibregl-popup') != null,
+      'popup never opened',
+    );
+    const popup = el.shadowRoot!.querySelector('.maplibregl-popup') as HTMLElement;
+    const popupContent = el.shadowRoot!.querySelector('.maplibregl-popup-content') as HTMLElement;
+    const popupClose = el.shadowRoot!.querySelector('.maplibregl-popup-close-button') as HTMLElement;
+    expect(marker.getAttribute('part')?.split(/\s+/).includes('marker')).to.be.true;
+    expect(popup.getAttribute('part')?.split(/\s+/).includes('popup')).to.be.true;
+    expect(popupContent.getAttribute('part')?.split(/\s+/).includes('popup-content')).to.be.true;
+    expect(popupClose.getAttribute('part')?.split(/\s+/).includes('popup-close-button')).to.be.true;
+    expect(getComputedStyle(popup).position).to.equal('absolute');
+    expect(getComputedStyle(popup).display).to.equal('flex');
+    expect(getComputedStyle(popup).pointerEvents).to.equal('none');
+    expect(getComputedStyle(popupContent).pointerEvents).to.equal('auto');
+    expect(getComputedStyle(popupClose).position).to.equal('absolute');
+  } finally {
+    setMapCanvasReadyCallback(el, null);
+    el.remove();
+  }
 });
 
 it('lets inherited CSS properties theme popup-close-button hover and active states without changing their defaults', async () => {
@@ -2509,7 +2553,7 @@ it('keeps popup anchor tip alignment tied to the physical MapLibre anchor class,
 it('keeps choropleth and data-layer sources distinct when their public sourceId collides', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   el.choropleth = choropleth('shared', [[0, '#000000'], [1, '#ffffff']]);
   el.dataLayers = [{
     sourceId: 'shared',
@@ -2539,7 +2583,7 @@ it('keeps choropleth and data-layer sources distinct when their public sourceId 
 it('keeps the choropleth source distinct from every colliding public data source id', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   el.choropleth = choropleth('shared', [[0, '#000000'], [1, '#ffffff']]);
   el.dataLayers = [
     { sourceId: 'shared', geojson: { type: 'FeatureCollection', features: [] } },
@@ -2574,7 +2618,7 @@ it('keeps the choropleth source distinct from every colliding public data source
 it('can replace a choropleth with a same-id data layer in one reactive update', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   el.choropleth = choropleth('shared', [[0, '#000000'], [1, '#ffffff']]);
   await el.updateComplete;
   await waitUntilMapLoaded(el);
@@ -2600,7 +2644,7 @@ it('can replace a choropleth with a same-id data layer in one reactive update', 
 it('preserves colliding choropleth and data-layer namespaces across clear and style reload', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   el.choropleth = choropleth('shared', [[0, '#000000'], [1, '#ffffff']]);
   el.dataLayers = [{
     sourceId: 'shared',
@@ -2610,9 +2654,9 @@ it('preserves colliding choropleth and data-layer namespaces across clear and st
   await waitUntilMapLoaded(el);
 
   el.mapStyle = {
-    ...RASTER_STYLE,
-    layers: [{ id: 'demo', type: 'raster', source: 'demo', paint: { 'raster-opacity': 0.8 } }],
-  } as typeof RASTER_STYLE;
+    ...LOCAL_STYLE,
+    layers: [{ id: 'demo', type: 'fill', source: 'demo', paint: { 'fill-opacity': 0.8 } }],
+  } as typeof LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(
     () => {
@@ -2639,7 +2683,7 @@ it('preserves colliding choropleth and data-layer namespaces across clear and st
 it('removes markers no longer present and reuses markers that persist', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   el.map!.fire('load');
@@ -2659,7 +2703,7 @@ it('removes markers no longer present and reuses markers that persist', async fu
 it('updates the reused marker popup when label changes for a persisting id', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   el.map!.fire('load');
@@ -2686,7 +2730,7 @@ it('updates the reused marker popup when label changes for a persisting id', asy
 it('updates the reused marker popup when unsafeHtml changes for a persisting id', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   el.map!.fire('load');
@@ -2709,7 +2753,7 @@ it('updates the reused marker popup when unsafeHtml changes for a persisting id'
 it('adds popup semantics when persisted plain markers later gain label or unsafeHtml content', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   el.map!.fire('load');
@@ -2775,7 +2819,7 @@ it('adds popup semantics when persisted plain markers later gain label or unsafe
 it('attaches an openable popup when label or html is provided', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   el.map!.fire('load');
@@ -2863,7 +2907,7 @@ it('keeps one keyboard popup toggle while marker activation prevents Space scrol
 it('removes all marker DOM on disconnect', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   el.map!.fire('load');
@@ -2880,7 +2924,7 @@ it('removes all marker DOM on disconnect', async function () {
 it('renders a colored marker and derives its accessible name from visible popup HTML', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   el.map!.fire('load');
@@ -2915,7 +2959,7 @@ it('keeps the host name on the host and a localized purpose name on the real Map
       .strings=${{ map: 'Carte', close: 'Fermer' }}
     ></lr-map>
   `)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
 
@@ -2939,7 +2983,7 @@ it('synchronizes popup-capable marker disclosure semantics and localized popup o
   const el = (await fixture(html`
     <lr-map lang="fr-FR" .strings=${{ close: 'Fermer' }}></lr-map>
   `)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   el.map!.fire('load');
@@ -2973,7 +3017,7 @@ it('synchronizes popup-capable marker disclosure semantics and localized popup o
 it('skips malformed/non-finite markers without aborting valid marker reconciliation', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   el.map!.fire('load');
@@ -2995,7 +3039,7 @@ it('skips malformed/non-finite markers without aborting valid marker reconciliat
 it('clears stale markers without throwing when a non-array runtime value is assigned', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   el.map!.fire('load');
@@ -3012,7 +3056,7 @@ it('clears stale markers without throwing when a non-array runtime value is assi
 it('keeps explicit marker ids separate from synthesized idless-coordinate identities', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   el.map!.fire('load');
@@ -3057,7 +3101,7 @@ it('contains long legend labels in paired 320px LTR and RTL allocations', async 
 it('does not throw or leave a dangling marker when the element disconnects while applyMarkers is running', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   el.map!.fire('load');
@@ -3083,7 +3127,7 @@ it('does not throw or leave a dangling marker when the element disconnects while
 it("updates an existing marker's color when it changes", async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   el.map!.fire('load');
@@ -3109,7 +3153,7 @@ it("updates an existing marker's color when it changes", async function () {
 it('rejects url paint servers from marker colors', async function () {
   if (!hasWebGL2) this.skip();
   const el = await fixture<LyraMap>(html`<lr-map></lr-map>`);
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   el.map!.fire('load');
@@ -3128,7 +3172,7 @@ it('rejects url paint servers from marker colors', async function () {
 it('does not collide two id-less markers placed at the same coordinates', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   el.map!.fire('load');
@@ -3145,7 +3189,7 @@ it('does not collide two id-less markers placed at the same coordinates', async 
 it('retains the first unique nonempty explicit marker id while preserving idless occurrences', async function () {
   if (!hasWebGL2) this.skip();
   const el = await fixture<LyraMap>(html`<lr-map></lr-map>`);
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
   el.map!.fire('load');
@@ -3166,8 +3210,11 @@ it('retains the first unique nonempty explicit marker id while preserving idless
 });
 
 async function waitUntilMapLoaded(el: LyraMap): Promise<void> {
-  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
-  await waitUntil(() => el.map!.isStyleLoaded(), 'style never loaded', { timeout: 2000 });
+  const internal = el as unknown as { _styleLoaded: boolean };
+  if (!internal._styleLoaded) await oneEvent(el, 'lr-map-load');
+  if (!el.map || !internal._styleLoaded) {
+    throw new Error('map load handshake completed without a map');
+  }
 }
 
 function choropleth(sourceId: string, stops: [number, string][]) {
@@ -3396,7 +3443,7 @@ describe('lr-map-click across choropleth and dataLayers', () => {
 
   async function readyMap(): Promise<LyraMap> {
     const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-    el.mapStyle = RASTER_STYLE;
+    el.mapStyle = LOCAL_STYLE;
     await el.updateComplete;
     await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
     await waitUntil(() => el.map!.isStyleLoaded(), 'style never loaded', { timeout: 2000 });
@@ -3704,7 +3751,7 @@ it('applies a declaratively-set maxBounds once the map exists, not only on a lat
     [-10, -10],
     [10, 10],
   ];
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
 
@@ -3716,7 +3763,7 @@ it('applies a declaratively-set maxBounds once the map exists, not only on a lat
 it('routes a throwing setMaxBounds into the same revert-and-warn path as a non-finite camera', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-  el.mapStyle = RASTER_STYLE;
+  el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
 
@@ -4123,7 +4170,7 @@ describe('dataLayers clustering and heatmap', () => {
   it('re-applies clustered and heatmap data layers after a mapStyle change', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-    el.mapStyle = RASTER_STYLE;
+    el.mapStyle = LOCAL_STYLE;
     el.dataLayers = [
       { sourceId: 'pins', geojson: POINTS, cluster: {} },
       { sourceId: 'density', geojson: POINTS, kind: 'heatmap' },
@@ -4137,10 +4184,10 @@ describe('dataLayers clustering and heatmap', () => {
     );
 
     const NEXT_STYLE = {
-      ...RASTER_STYLE,
-      layers: [{ id: 'demo', type: 'raster', source: 'demo', paint: { 'raster-opacity': 0.9 } }],
+      ...LOCAL_STYLE,
+      layers: [{ id: 'demo', type: 'fill', source: 'demo', paint: { 'fill-opacity': 0.9 } }],
     };
-    el.mapStyle = NEXT_STYLE as typeof RASTER_STYLE;
+    el.mapStyle = NEXT_STYLE as typeof LOCAL_STYLE;
     await el.updateComplete;
 
     await waitUntil(
@@ -4163,7 +4210,7 @@ describe('dataLayers clustering and heatmap', () => {
   it('hit-tests the cluster circle but never the heatmap layer MapLibre cannot query', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
-    el.mapStyle = RASTER_STYLE;
+    el.mapStyle = LOCAL_STYLE;
     el.dataLayers = [
       { sourceId: 'pins', geojson: POINTS, cluster: {} },
       { sourceId: 'density', geojson: POINTS, kind: 'heatmap' },

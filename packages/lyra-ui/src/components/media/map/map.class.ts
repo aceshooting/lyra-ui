@@ -32,7 +32,14 @@ import { LYRA_DEFAULT_close, LYRA_DEFAULT_items, LYRA_DEFAULT_loading, LYRA_DEFA
  *  path -- see the call site in `tryConstructMap()`. */
 function supportsWebGL2(host: Element): boolean {
   try {
-    return host.ownerDocument.createElement('canvas').getContext('webgl2') !== null;
+    const context = host.ownerDocument.createElement('canvas').getContext('webgl2');
+    if (!context) return false;
+    try {
+      context.getExtension('WEBGL_lose_context')?.loseContext();
+    } catch {
+      // Capability detection succeeded; explicit release is best-effort on partial implementations.
+    }
+    return true;
   } catch {
     return false;
   }
