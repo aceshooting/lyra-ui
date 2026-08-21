@@ -5,6 +5,7 @@ import type {
   LyraMapGeoJsonDataLayer,
   LyraMapLegendEntry,
   LyraMapMarker,
+  LyraMapMarkerActivationDetail,
 } from './map.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 import '../../../../../../.storybook/maplibre-worker.js';
@@ -297,9 +298,9 @@ export const ThemedFillOpacity: Story = {
 };
 
 /**
- * `markers` renders a pin per entry, each with an optional colored tint and
- * an openable popup built from `label` (plain text) or `unsafeHtml` (raw
- * markup -- only ever pass trusted content).
+ * `markers` renders a keyboard-focusable pin per entry. Pointer, Enter, and Space activation emit
+ * `lr-map-marker-activate` with its authored id and marker snapshot. `renderWorldCopies = false`
+ * is a construction-time option that keeps this story to one horizontal world.
  */
 export const Markers: Story = {
   render: () => {
@@ -317,8 +318,12 @@ export const Markers: Story = {
         style="height: 20rem"
         center="[2.3522, 48.8566]"
         zoom="12"
+        .renderWorldCopies=${false}
         .markers=${markers}
         .mapStyle=${RASTER_STYLE}
+        @lr-map-marker-activate=${(
+          event: CustomEvent<LyraMapMarkerActivationDetail>,
+        ) => console.log('marker activate', event.detail)}
       ></lr-map>
     `;
   },
@@ -412,7 +417,14 @@ export const HeatmapDensity: Story = {
       {
         sourceId: 'density',
         kind: 'heatmap',
-        heatmap: { weightField: 'intensity', weightRange: [0, 10], radius: 36, stops },
+        heatmap: {
+          weightField: 'intensity',
+          weightRange: [0, 10],
+          radius: [[7, 14], [13, 40]],
+          intensity: [[7, 1], [13, 3]],
+          opacity: 0.75,
+          stops,
+        },
         geojson: {
           type: 'FeatureCollection',
           features: Array.from({ length: 400 }, (_unused, index) => ({

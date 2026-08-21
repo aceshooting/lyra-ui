@@ -5823,12 +5823,14 @@ export type LyraMapVueProps = LyraVueCustomElement<
   | 'mapStyle'
   | 'markers'
   | 'maxBounds'
+  | 'renderWorldCopies'
   | 'strings'
   | 'zoom',
   {},
   LyraMapEventMap,
   | 'lr-map-click'
-  | 'lr-map-load',
+  | 'lr-map-load'
+  | 'lr-map-marker-activate',
   | '--lr-map-choropleth-fill-opacity'
   | '--lr-map-popup-close-button-active-bg'
   | '--lr-map-popup-close-button-active-color'

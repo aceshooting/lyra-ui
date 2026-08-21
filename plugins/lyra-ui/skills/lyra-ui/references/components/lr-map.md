@@ -18,12 +18,17 @@
 A `maplibre-gl` wrapper with a declarative legend, a single choropleth GeoJSON fill layer, markers,
 and additive `dataLayers` — plain GeoJSON, natively clustered points, or a heatmap density surface —
 plus a peer-neutral `map` getter for common imperative operations. Its runtime value is the
-underlying MapLibre map.
+underlying MapLibre map. The component observes its own map-container allocation and calls the
+peer's `resize()` when that allocation changes.
 
 **Properties:**
 
 - `center: [number, number] = [0, 0]`
 - `zoom: number = 2`
+- `renderWorldCopies?: boolean` (attribute: false) — forwarded to MapLibre when its map is
+  constructed. Leave it unset to preserve MapLibre's own current default; set `false` before
+  construction to stop repeating the world horizontally. This is a construction-time option, so a
+  later change takes effect after the component is disconnected and reconnected.
 - `mapStyle?: LyraMapStyleSpecification | string` (attribute: false) — required before a map is
   constructed. Object assignments are detached and recursively frozen; create and reassign a new
   style to update it. `LyraMapStyleSpecification` is the peer-neutral structural subset accepted from
@@ -98,6 +103,10 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
   gotchas. Entries with non-finite coordinates or latitude outside `[-90, 90]` are skipped without
   aborting valid siblings. `color` is used only when the browser accepts it as CSS `color`;
   declaration breaks and `url()` paint servers fall back to MapLibre's default marker color.
+  Every retained marker is a named `role="button"` tab stop, including one without a popup. Click,
+  Enter, and Space emit `lr-map-marker-activate`; Space suppresses its page-scroll default while
+  preserving MapLibre's popup toggle. A popup-bearing marker additionally exposes
+  `aria-haspopup="dialog"`, `aria-controls`, and explicit `aria-expanded`.
 - `dataLayers: LyraMapGeoJsonDataLayer[] = []` (attribute: false) —
   `LyraMapGeoJsonDataLayer { sourceId: string; geojson: GeoJSON.Feature |
 GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
@@ -156,7 +165,9 @@ number][]; colorSteps?: [number, string][]; countFont?: string[] }` turns the en
   renders the source as MapLibre's own first-class `heatmap` layer instead, which the geometry split
   cannot express at all: thousands of overlapping circles read as one opaque blob rather than as
   where the data is concentrated. `heatmap?: LyraMapHeatmapOptions { weightField?: string;
-weightRange?: [number, number]; stops?: [number, string][]; radius?: number; intensity?: number }`
+weightRange?: [number, number]; stops?: [number, string][]; radius?: LyraMapHeatmapZoomValue;
+intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZoomValue` is a
+  scalar number or bounded `[zoom, value][]` stops,
   configures it. `weightField` weights each point by a feature property, and `weightRange` maps that
   property's own units onto the 0–1 weight MapLibre expects — without it the raw value is passed
   through, which saturates the surface for any quantity above ~1; with neither, every point weighs 1.
@@ -170,10 +181,14 @@ weightRange?: [number, number]; stops?: [number, string][]; radius?: number; int
   describes a flat colour rather than a gradient; that one — like an unset or wholly unusable
   `stops` — falls back to the built-in ramp, which runs transparent → `--lr-color-brand` →
   `--lr-color-success` → `--lr-color-warning` → `--lr-color-danger`, so a retheme moves the density
-  surface with everything else. `radius`
-  (default 30) and `intensity` (default 1) are MapLibre's own. `cluster` is ignored on a heatmap
-  entry: a heatmap already aggregates density, and clustering its input would feed it one point per
-  cluster instead of the real distribution.
+  surface with everything else. Scalar `radius` (default 30) and `intensity` (default 1) preserve
+  their established behavior. Two or more usable `[zoom, value]` stops emit linear zoom
+  interpolation; stops are sorted, duplicate zooms removed, zoom clamped into `[0, 24]`, radius
+  into `[1, 200]`, and intensity into `[0, 100]`. One usable stop becomes a scalar and an unusable
+  array falls back to the existing default. `opacity` is clamped into `[0, 1]`; omission leaves the
+  peer's default untouched on construction, and dropping a previously-authored value restores 1.
+  `cluster` is ignored on a heatmap entry: a heatmap already aggregates density, and clustering its
+  input would feed it one point per cluster instead of the real distribution.
 - `maxBounds: LyraMapBounds | null = null` (attribute: false) — box the map may not pan outside,
   `[[west, south], [east, north]]`. Prefer it over calling `map.setMaxBounds()` through the `.map`
   escape hatch: constraining the camera can wedge maplibre-gl at a sub-1 fractional zoom in a wide
@@ -212,7 +227,8 @@ payload beside the map.
 
 **Authoring types:** `LyraMapLegendEntry`, `LyraMapLegendPattern`, `LyraMapLegendProjection`, `LyraMapChoroplethLayer`,
 `LyraMapGeoJsonDataLayer`, `LyraMapDataLayerKind`, `LyraMapClusterOptions`, `LyraMapHeatmapOptions`,
-`LyraMapMarker`, `LyraMapStyleSpecification`, and `LyraMapInstance`.
+`LyraMapHeatmapZoomValue`, `LyraMapMarker`, `LyraMapMarkerActivationDetail`,
+`LyraMapMarkerActivationSource`, `LyraMapStyleSpecification`, and `LyraMapInstance`.
 The former `LegendEntry`, `ChoroplethLayer`, `GeoJsonDataLayer`, and `MapMarker` names are removed
 in v9 rather than retained as aliases.
 
@@ -227,7 +243,10 @@ shared `maplibre-gl` import without constructing a map or allocating a WebGL con
 `false` when the peer is unavailable, allowing an application to choose a fallback before connecting
 an element.
 
-**Events:** `lr-map-load` (fired once, after the underlying map's own `'load'`), `lr-map-click`
+**Events:** `lr-map-load` (fired once, after the underlying map's own `'load'`),
+`lr-map-marker-activate` (non-cancelable; frozen `LyraMapMarkerActivationDetail { id, lngLat,
+marker, source }`; `id` is the trimmed explicit identity or `undefined`, `marker` is the accepted
+declarative snapshot, and `source` is `'pointer' | 'keyboard'`), and `lr-map-click`
 (frozen `detail: { readonly lngLat: readonly [lng, lat], readonly feature?, readonly origin?,
 readonly sourceId? }`; the tuple and any hit GeoJSON feature are detached and recursively frozen).
 `feature` resolves against the choropleth fill layer **and** every applied `dataLayers`
@@ -305,6 +324,10 @@ Vite with v6:
     { color: "#0969da", label: "High", pattern: "diagonal" },
   ];
   m.markers = [{ lngLat: [2.29, 48.86], label: "Eiffel Tower" }];
+  m.renderWorldCopies = false;
+  m.addEventListener("lr-map-marker-activate", (e) =>
+    console.log(e.detail.id, e.detail.lngLat)
+  );
   m.addEventListener("lr-map-click", (e) =>
     console.log(e.detail.feature?.properties)
   );
@@ -321,8 +344,9 @@ https://maplibre.org/maplibre-gl-js/docs/#esm.
   created peer instance, renders only the localized initialization failure, and can retry after a
   new style or reconnect without an unhandled promise rejection. Capability probes and error
   constructors come from the current owner document, including after same-origin adoption.
-- A marker with a popup handles Space at its focus boundary: one activation toggles the peer popup
-  and suppresses the page-scroll default. Markers without a popup do not consume Space.
+- Every marker handles Enter and Space as button activation. Space suppresses the page-scroll
+  default whether or not a popup exists; when one does, MapLibre still receives its own popup
+  toggle and the component emits exactly one `lr-map-marker-activate` notification.
 - clearing or swapping the choropleth no longer leaks the old layer: setting `choropleth =
 undefined`, or changing `choropleth.sourceId` to a different value, now calls `removeLayer`/
   `removeSource` on whatever was previously applied before adding the new one (or nothing, if
@@ -367,5 +391,9 @@ undefined`, or changing `choropleth.sourceId` to a different value, now calls `r
   `lr-map-load` never fires until the element is actually scrolled into view. Deliberate: caps
   concurrent WebGL contexts when many `<lr-map>`s sit in one dashboard/grid. Skipped entirely
   (constructs immediately once the peer loads) when `IntersectionObserver` itself is unavailable.
+- Once constructed, the owner realm's `ResizeObserver` watches the rendered map container and calls
+  the current peer's `resize()` on allocation changes. It is replaced on reconnect/adoption and
+  disconnected before peer teardown, so a stale delivery cannot resize a removed map. Browsers
+  without `ResizeObserver` retain MapLibre's own window-resize behavior.
 
 ---
