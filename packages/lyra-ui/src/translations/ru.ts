@@ -483,6 +483,7 @@ const strings: LyraLocaleStrings = {
   details: 'Подробности',
   breadcrumb: 'Навигационная цепочка',
   timeline: 'Хронология',
+  timelineClusterCount: 'Показать события хронологии ({count})',
   rating: 'Оценка',
   sliderLabel: 'Ползунок',
   feedbackPositive: 'Хороший ответ',

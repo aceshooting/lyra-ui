@@ -13330,6 +13330,27 @@
       }
     },
     {
+      "name": "--lr-timeline-cluster-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-timeline>`, `<lr-timeline-item>`** (default: `var(--lr-color-brand)`) — Cluster count pill background."
+      }
+    },
+    {
+      "name": "--lr-timeline-cluster-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-timeline>`, `<lr-timeline-item>`** (default: `var(--lr-color-on-brand)`) — Cluster count pill foreground."
+      }
+    },
+    {
+      "name": "--lr-timeline-cluster-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-timeline>`** (default: `var(--lr-size-2rem)`) — Minimum inline and block size of the painted count pill. Its containing button retains the shared 40px minimum action surface.\n\n**`<lr-timeline-item>`** (default: `var(--lr-size-2rem)`) — Minimum inline and block size of the painted cluster count pill. Its containing button retains the shared 40px minimum action surface."
+      }
+    },
+    {
       "name": "--lr-timeline-collision-offset",
       "description": {
         "kind": "markdown",

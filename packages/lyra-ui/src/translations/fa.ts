@@ -476,6 +476,7 @@ const strings: LyraLocaleStrings = {
   details: 'جزئیات',
   breadcrumb: 'مسیر راهنما',
   timeline: 'جدول زمانی',
+  timelineClusterCount: 'نمایش رویدادهای خط زمانی ({count})',
   rating: 'رتبه‌بندی',
   sliderLabel: 'لغزنده',
   feedbackPositive: 'پاسخ خوب',

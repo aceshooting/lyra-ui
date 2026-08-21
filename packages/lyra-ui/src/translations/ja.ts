@@ -475,6 +475,7 @@ const strings: LyraLocaleStrings = {
   details: '詳細',
   breadcrumb: 'パンくずリスト',
   timeline: 'タイムライン',
+  timelineClusterCount: 'タイムラインのイベントを表示（{count} 件）',
   rating: '評価',
   sliderLabel: 'スライダー',
   feedbackPositive: '良い回答',

@@ -8,7 +8,7 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 1 part, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 1 part, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-timeline-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -16,20 +16,21 @@
 
 ## `lr-timeline` and `lr-timeline-item`
 
-Read-only chronological sequence. `lr-timeline` is a `role="list"` flex container; each
+Read-only chronological sequence by default. `lr-timeline` is a `role="list"` flex container; each
 `lr-timeline-item` is a light-DOM child that sets `role="listitem"` on itself and renders its own
 marker plus the trailing rail segment reaching toward the next item's marker. The last item's rail is
 suppressed purely in CSS (`::slotted([role='listitem']:last-child)`) — no JS coordination anywhere.
-Neither element has events, keyboard navigation, or a selection model: a passive record display, by
-design (an item's `title`/`description` routinely hold focusable content, so wrapping the row in
-`role="button"` would trip `nested-interactive`).
+Items have no keyboard navigation or selection model: a passive record display, by design (an
+item's `title`/`description` routinely hold focusable content, so wrapping the row in `role="button"`
+would trip `nested-interactive`). The opt-in clustered time scale adds only native count-marker
+buttons; it does not make the individual rows interactive.
 
 **`lr-timeline` properties:** `orientation: 'vertical' | 'horizontal' = 'vertical'` — note the
 opposite default from `lr-stepper`; `horizontal` makes `[part='base']` a horizontally scrollable row.
 `accessibleLabel: string = ''` (attribute `aria-label`) overrides the localized `"Timeline"` name
 (the `role="list"` element is in the shadow root and never inherits a host attribute). Read-only
-`itemCount: number` is the live count of direct default-slot `<lr-timeline-item>` children;
-unrelated slotted elements and text nodes are ignored.
+`itemCount: number` is the live count of default-slot `<lr-timeline-item>` assignments (including
+flattened forwarding slots); unrelated slotted elements and text nodes are ignored.
 `scale: 'flow' | 'time' = 'flow'` (attribute `scale`, type `LyraTimelineScale`) chooses how items
 are distributed along the main axis. `'flow'` is the default even sequence, where `timestamp` is
 rendered as text but carries no positional meaning. `'time'` positions each item at its true
@@ -37,23 +38,34 @@ proportion of the range, so a gap of weeks and a gap of decades stop looking ide
 needs a definite extent to distribute along — `--lr-timeline-time-extent` (default
 `var(--lr-size-20rem)`), applied as `block-size` when vertical and `inline-size` when horizontal —
 because items are absolutely positioned and a percentage against an auto-sized track resolves to
-zero. `collision: 'overlap' | 'stack' = 'overlap'` (attribute `collision`, type `LyraTimelineCollision`)
-chooses what `scale="time"` does with items landing on nearly the same position: `'overlap'` leaves
-them stacked on one another, `'stack'` steps each colliding item one lane along the **cross** axis
-(indent per lane: `--lr-timeline-collision-offset`, default `var(--lr-space-l)`), which is what a
-dense chronology needs — items within 1.5% of the axis of each other count as colliding, and an
-isolated item returns to lane 0 rather than inheriting a preceding run's depth. There is
-deliberately no `'cluster'` mode: collapsing coincident items into one expandable marker needs a
-selection model and click events this passive component does not have.
+zero. `collision: 'overlap' | 'stack' | 'cluster' = 'overlap'` (attribute `collision`, type
+`LyraTimelineCollision`) chooses what `scale="time"` does with items landing on nearly the same
+position: `'overlap'` leaves them stacked on one another, `'stack'` steps each colliding item one
+lane along the **cross** axis (indent per lane: `--lr-timeline-collision-offset`, default
+`var(--lr-space-l)`), and `'cluster'` replaces every group of at least two colliding items with one
+count marker. The group's first member in author order becomes its representative and renders the
+button in that item's existing list/Tab position; the remaining members are hidden, so visual,
+semantic, and keyboard order do not diverge merely because clustering is enabled. Stack mode and
+the cluster floor treat items within 1.5% of the axis as colliding.
+Cluster mode widens that floor to the rendered count action's footprint on the currently allocated
+axis, then reclusters when the allocation or rendered action size changes, so interactive marker
+hit areas do not overlap.
+Cluster windows are bounded from their first sorted position rather than transitively chaining every
+dense neighbour, so a large history becomes a useful sequence of markers rather than one axis-wide
+cluster. An isolated item remains an ordinary timeline item. Activating a count marker is a
+notification only; it never expands or selects items internally.
 `rangeStart` / `rangeEnd` (`Date | string | number`, attribute: false) pin the axis instead of
 deriving it from the earliest/latest item; a reversed or non-finite pair falls back to the derived
 range. An item with no parseable `timestamp` (including one supplied only through the `timestamp`
 slot, which carries no machine-readable instant) keeps document order and is spread evenly, so a
-partially-timestamped list degrades rather than stacking at the origin. Items sharing an instant
-overlap rather than being fanned into lanes: lane assignment, brushing, zooming and per-event
-selection belong to a denser component than this deliberately passive one. Positions are written to
+partially-timestamped list degrades rather than stacking at the origin. Reassigning an item's
+`timestamp` reclusters without requiring a slot mutation. Positions are written to
 each child as a private `--_lr-timeline-item-offset` custom property and removed again on a switch
-back to `'flow'`, so the component still never alters its children's content or structure.
+back to `'flow'`. Cluster mode adds and removes a private visibility marker on non-representative
+members and temporarily changes only the representative item's shadow presentation; switching
+mode, shrinking the data, or disconnecting restores every ordinary row. If regrouping would remove
+the focused row content or count action, focus moves to the replacement cluster action, the first
+surviving item action, or the timeline list as a programmatic fallback.
 
 **`lr-timeline-item` properties:** `timestamp?: Date | string | number` (attribute: false — `Date`
 isn't attribute-serializable; invalid input normalizes to unset and renders no timestamp UI),
@@ -63,8 +75,16 @@ isn't attribute-serializable; invalid input normalizes to unset and renders no t
 optional pulse disabled under `prefers-reduced-motion: reduce`, with explicit `aria-current="true"`
 or `"false"` on the host).
 
-**Events:** none on either element. Read the reactive `itemCount` property after changing direct
-children; the internal slot's non-composed `slotchange` event is not a host-level public signal.
+**Events:** `lr-timeline` emits `lr-cluster-activate` when a `collision="cluster"` marker is
+activated by pointer, Enter, or Space. Its non-cancelable, bubbling, composed
+`detail: LyraTimelineClusterActivateDetail` is `{ items: readonly LyraTimelineItem[] }`: a fresh
+frozen snapshot of the cluster members in document order, preserving each element's identity.
+`LyraTimelineClusterActivateDetail {
+  items: unknown;
+}`
+Use it to open a consumer-owned popover, dialog, or detail view. `lr-timeline-item` emits no events.
+Read the reactive `itemCount` property after changing assigned items; the internal slot's
+non-composed `slotchange` event is not a host-level public signal.
 
 **Slots:** `lr-timeline`'s default slot holds the items, in display order. On an item the **default
 slot is the title** (there is no `title` slot), plus `marker-icon` (marker glyph override; an empty
@@ -73,7 +93,9 @@ slot falls back to a color-coded dot), `timestamp` (wins outright over the
 entirely when empty).
 
 **CSS parts:** timeline `base` — the `role="list"` flex container (no separate `list` part). Item:
-`base`, `track` (marker + rail spine, always the opposite axis from `base`), `marker`
+`cluster` — the native count button rendered while that item represents a cluster, with a 40px
+minimum action surface; `cluster-count` — its painted count pill; `base`, `track`
+(marker + rail spine, always the opposite axis from `base`), `marker`
 (`aria-hidden="true"`, decorative), `rail` (the connecting segment; `visibility: hidden` rather than
 removed on the last item, so marker alignment stays consistent), `content`, `header` (flex row
 wrapping `title` and `timestamp`; wraps at narrow widths rather than truncating), `title`,
@@ -81,8 +103,11 @@ wrapping `title` and `timestamp`; wraps at narrow widths rather than truncating)
 
 **Themeable custom properties:** `--lr-timeline-gap` (default `var(--lr-space-l)`) — declared on
 `lr-timeline` but consumed inside each item via inheritance across the slot boundary; it is both the
-inter-item spacing and the length each rail bridges. `--lr-scroll-fade-size` (default `2rem`) controls each
-horizontal-overflow edge fade; forced-colors mode removes the masks while retaining native
+inter-item spacing and the length each rail bridges. `--lr-timeline-cluster-size` (default
+`var(--lr-size-2rem)`) sizes the painted count pill, `--lr-timeline-cluster-bg` (default
+`var(--lr-color-brand)`) sets its background, and `--lr-timeline-cluster-color` (default
+`var(--lr-color-on-brand)`) sets its foreground. `--lr-scroll-fade-size` (default `2rem`) controls
+each horizontal-overflow edge fade; forced-colors mode removes the masks while retaining native
 scrolling. On the item: `--lr-timeline-marker-size`
 (default `var(--lr-size-1-25rem)`, both dimensions so the dot stays circular),
 `--lr-timeline-rail-width` (default `var(--lr-border-width-medium)`), `--lr-timeline-rail-color`

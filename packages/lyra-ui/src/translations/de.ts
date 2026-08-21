@@ -484,6 +484,7 @@ const strings: LyraLocaleStrings = {
   details: 'Details',
   breadcrumb: 'Navigationspfad',
   timeline: 'Zeitleiste',
+  timelineClusterCount: 'Ereignisse auf der Zeitleiste anzeigen ({count})',
   rating: 'Bewertung',
   sliderLabel: 'Schieberegler',
   feedbackPositive: 'Gute Antwort',

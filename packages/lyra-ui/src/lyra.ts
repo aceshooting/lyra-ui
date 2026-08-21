@@ -295,8 +295,12 @@ export type {
   LyraRandomContentEventMap,
 } from './components/utility/random-content/random-content.class.js';
 export { LyraTimeline } from './components/data/timeline/timeline.class.js';
-export type { LyraTimelineScale } from './components/data/timeline/timeline.class.js';
-export type { LyraTimelineCollision } from './components/data/timeline/timeline.class.js';
+export type {
+  LyraTimelineScale,
+  LyraTimelineCollision,
+  LyraTimelineClusterActivateDetail,
+  LyraTimelineEventMap,
+} from './components/data/timeline/timeline.class.js';
 export type {
   LyraSequenceStripActivateDetail,
   LyraSequenceStripEventMap,
