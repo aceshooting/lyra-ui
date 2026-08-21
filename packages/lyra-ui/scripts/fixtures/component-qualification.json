@@ -3244,21 +3244,21 @@
             },
             {
               "file": "src/components/media/av-player/av-player.test.ts",
-              "line": 2022,
+              "line": 2028,
               "test": "is accessible with cues and peaks set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/av-player/av-player.test.ts",
-              "line": 2227,
+              "line": 2233,
               "test": "renders an error region instead of a media element when src is unsafe",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/av-player/av-player.test.ts",
-              "line": 2547,
+              "line": 2553,
               "test": "is accessible with every active-state prop themed",
               "target": "el",
               "state": "populated"
@@ -3300,7 +3300,7 @@
           "evidence": [
             {
               "file": "src/components/media/av-player/av-player.test.ts",
-              "line": 1556,
+              "line": 1562,
               "kind": "320px allocation test signal"
             }
           ]
@@ -20907,21 +20907,21 @@
             },
             {
               "file": "src/components/retrieval/graph/graph.test.ts",
-              "line": 4058,
+              "line": 4057,
               "test": "is accessible with interactions and a selection applied in canvas mode",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/graph/graph.test.ts",
-              "line": 5117,
+              "line": 5116,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/graph/graph.test.ts",
-              "line": 5310,
+              "line": 5309,
               "test": "is accessible with dimming applied",
               "target": "el",
               "state": "populated"
@@ -20946,7 +20946,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/graph/graph.test.ts",
-              "line": 3900,
+              "line": 3899,
               "kind": "rendered RTL test signal"
             }
           ]

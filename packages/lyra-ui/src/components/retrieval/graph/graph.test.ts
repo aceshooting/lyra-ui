@@ -3520,11 +3520,11 @@ describe('canvas renderer — static draw', () => {
     expect(el.shadowRoot!.querySelector('canvas') == null).to.equal(true);
   });
 
-  it('feeds dimmedNodeIds/dimmedLinkIds into the drawn canvas scene', async function () {
-    this.timeout(ALPHA_SETTLE_TIMEOUT + 1000);
+  it('feeds dimmedNodeIds/dimmedLinkIds into the drawn canvas scene', async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
+        seed="7"
         width="400"
         height="300"
         style="width:400px;height:300px"
@@ -3538,13 +3538,12 @@ describe('canvas renderer — static draw', () => {
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    await aTimeout(50); // let the draw rAF fire
     await waitUntil(
       () =>
         (el as unknown as { canvasScene?: { nodes: unknown[] } }).canvasScene
           ?.nodes.length === 2,
       undefined,
-      { timeout: ALPHA_SETTLE_TIMEOUT }
+      { timeout: NODE_COUNT_TIMEOUT }
     );
     type Internals = {
       canvasScene?: { nodes: { dimmed?: boolean }[]; dimmedOpacity?: number };
