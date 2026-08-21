@@ -73,8 +73,6 @@ interface LoaderContext {
   observer?: MutationObserver;
   readonly observedRoots: Set<LyraDefinitionRoot>;
   discoveryTail: Promise<void>;
-  activeWork: number;
-  readonly workWaiters: Array<() => void>;
 }
 
 interface DiscoveryState extends RenderedTreeTraversalState {
@@ -276,17 +274,7 @@ async function runBounded<Item>(
 
 async function withWorkSlot<Result>(context: LoaderContext, task: () => Promise<Result>): Promise<Result | undefined> {
   if (!context.active) return undefined;
-  if (context.activeWork >= context.options.maxConcurrency) {
-    await new Promise<void>((resolve) => context.workWaiters.push(resolve));
-  }
-  if (!context.active) return undefined;
-  context.activeWork += 1;
-  try {
-    return await task();
-  } finally {
-    context.activeWork -= 1;
-    context.workWaiters.shift()?.();
-  }
+  return task();
 }
 
 async function defineTag(
@@ -708,8 +696,6 @@ function createContext(root: LyraDefinitionRoot, options: AutoloaderOptions | un
     loadedTags: new Set(),
     observedRoots: new Set(),
     discoveryTail: Promise.resolve(),
-    activeWork: 0,
-    workWaiters: [],
   };
 }
 
@@ -811,6 +797,5 @@ export function stop(): void {
   context.active = false;
   context.observer?.disconnect();
   context.observedRoots.clear();
-  for (const resolve of context.workWaiters.splice(0)) resolve();
   clearAllPending(context);
 }

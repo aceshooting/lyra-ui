@@ -280,6 +280,30 @@ it('correlates a nested grounding-summary citation selection with its example id
   expect((event as CustomEvent).detail).to.deep.equal({ exampleId: 'ex-1', citation });
 });
 
+it('correlates a nested grounding-summary claim selection with its example id', async () => {
+  const claim = {
+    id: 'claim-1',
+    text: 'Refunds are available.',
+    status: 'supported' as const,
+    citationIds: ['cite-1'],
+  };
+  const withClaim: EvalExampleResult[] = [{
+    ...examples[0]!,
+    grounding: { ...examples[0]!.grounding!, claims: [claim] },
+  }];
+  const el = await fixture<LyraEvalRun>(html`<lr-eval-run .examples=${withClaim}></lr-eval-run>`);
+  const row = await expandExample(el);
+  const grounding = row.querySelector('lr-grounding-summary')!;
+  const selected = oneEvent(el, 'lr-example-claim-select');
+  grounding.dispatchEvent(new CustomEvent('lr-claim-select', {
+    bubbles: true,
+    composed: true,
+    detail: { claim },
+  }));
+
+  expect((await selected).detail).to.deep.equal({ exampleId: 'ex-1', claim });
+});
+
 it('correlates a nested tool-approval decision with its example id via lr-example-tool-approval-decide', async () => {
   const withTrace: EvalExampleResult[] = [{ ...examples[0]!, toolTrace }];
   const el = (await fixture(html`<lr-eval-run .examples=${withTrace}></lr-eval-run>`)) as LyraEvalRun;

@@ -168,6 +168,13 @@ describe('lr-artifact-panel', () => {
     const event = (await listener) as CustomEvent<{ versionId: string }>;
     expect(event.detail.versionId).to.equal('v2');
     expect(el.activeVersionId).to.equal('v2');
+
+    await el.updateComplete;
+    const nextListener = oneEvent(el, 'lr-version-change');
+    (el.shadowRoot!.querySelector('[part="version-next"]') as HTMLButtonElement).click();
+    const nextEvent = (await nextListener) as CustomEvent<{ versionId: string }>;
+    expect(nextEvent.detail.versionId).to.equal('v3');
+    expect(el.activeVersionId, 'the latest version is represented by an unpinned selection').to.equal(null);
   });
 
   it('gives the version-previous/version-next buttons the shared minimum hit area', async () => {

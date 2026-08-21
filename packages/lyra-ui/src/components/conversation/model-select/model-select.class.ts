@@ -247,12 +247,10 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   @property({ reflect: true }) size: LyraSize = 'm';
 
   private get activeIndex(): number { return this.catalogPicker.activeIndex; }
-  private set activeIndex(next: number) { this.catalogPicker.setActiveIndex(next); }
   // Free-text mode's live input text. Only meaningful while `open` — the
   // input is otherwise controlled by the committed value's label (see
   // `renderFreeText`), so this never needs resetting on commit/hide.
   private get query(): string { return this.catalogPicker.query; }
-  private set query(next: string) { this.catalogPicker.setQuery(next); }
   // Set on first blur; gates the `data-invalid` reflection below so
   // validity styling never flashes on first render (matches lr-select).
   @state() private touched = false;

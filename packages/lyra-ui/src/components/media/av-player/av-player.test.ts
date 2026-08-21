@@ -417,6 +417,7 @@ it('clone-owns bounded AV collections and retains valid entries around hostile r
   const cues = [
     { cueId: 'valid', start: 1, text: 'Valid' },
     hostileCue,
+    null,
     { cueId: '', start: 2, text: 'Missing identity' },
   ];
   el.cues = cues as unknown as readonly LyraAvCue[];
@@ -424,6 +425,7 @@ it('clone-owns bounded AV collections and retains valid entries around hostile r
   el.peaks = [0.25, Number.NaN, 2];
   el.tracks = [
     { src: 'captions.vtt', kind: 'captions', srclang: 'en', label: 'English' },
+    null,
     { src: 'bad.vtt', kind: 'bogus', srclang: 'en', label: 'Bad' },
   ] as unknown as typeof el.tracks;
 
@@ -438,6 +440,31 @@ it('clone-owns bounded AV collections and retains valid entries around hostile r
   }
   expect(el.cues).not.to.equal(cues);
   await el.updateComplete;
+});
+
+it('fails closed when hostile collection containers hide their length or an admitted entry', async () => {
+  const el = (await fixture(html`<lr-av-player></lr-av-player>`)) as LyraAvPlayer;
+  const unreadableLength = new Proxy([], {
+    get(target, key, receiver) {
+      if (key === 'length') throw new Error('unreadable collection length');
+      return Reflect.get(target, key, receiver);
+    },
+  });
+  const unreadableEntry = new Proxy([0.5], {
+    get(target, key, receiver) {
+      if (key === '0') throw new Error('unreadable collection entry');
+      return Reflect.get(target, key, receiver);
+    },
+  });
+
+  expect(() => {
+    el.cues = unreadableLength as unknown as readonly LyraAvCue[];
+    el.rates = unreadableLength as unknown as readonly number[];
+    el.peaks = unreadableEntry;
+  }).to.not.throw();
+  expect(el.cues).to.deep.equal([]);
+  expect(el.rates).to.deep.equal([]);
+  expect(el.peaks).to.deep.equal([]);
 });
 
 it('skips renormalization when an already-owned normalized collection is reassigned to itself', async () => {
@@ -1024,6 +1051,23 @@ describe('search', () => {
     expect(rows[1].hasAttribute('data-active-match')).to.be.true;
   });
 
+  it('retains the active search result by cue id when matching cues are reordered', async () => {
+    const el = (await fixture(html`
+      <lr-av-player src=${MP3_SRC} .cues=${CUES}></lr-av-player>
+    `)) as LyraAvPlayer;
+    await el.search('host');
+    await el.searchNext();
+
+    el.cues = [CUES[1]!, CUES[0]!, CUES[2]!];
+    await el.updateComplete;
+
+    const active = cueRows(el).filter((row) => row.hasAttribute('data-active-match'));
+    expect(active).to.have.lengthOf(1);
+    expect(active[0]!.querySelector('[part="cue-text"]')!.textContent).to.equal(
+      'Today we discuss agents',
+    );
+  });
+
   it('search() with an empty/whitespace-only query clears matches instead of matching everything', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .cues=${CUES}></lr-av-player>`)) as LyraAvPlayer;
     await el.search('host');
@@ -1255,6 +1299,32 @@ describe('timeline click-to-seek', () => {
     timeline.dispatchEvent(new MouseEvent('click', { clientX: 10, bubbles: true }));
     expect(media.currentTime).to.equal(0);
   });
+
+  it('does not seek when the allocated timeline has no measurable width', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: 100, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
+    Object.defineProperty(timeline, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({
+        x: 10,
+        y: 0,
+        top: 0,
+        right: 10,
+        bottom: 10,
+        left: 10,
+        width: 0,
+        height: 10,
+        toJSON: () => ({}),
+      } satisfies DOMRect),
+    });
+
+    timeline.dispatchEvent(new MouseEvent('click', { clientX: 10, bubbles: true }));
+    expect(media.currentTime).to.equal(0);
+  });
 });
 
 it('removes an inactive zero-duration timeline from sequential focus and ignores shortcuts', async () => {
@@ -1341,10 +1411,15 @@ describe('timeline keyboard seeking', () => {
   it('an unhandled key is a no-op', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
     const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: 100, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
     const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
     el.currentTime = 50;
-    timeline.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', cancelable: true, bubbles: true }));
+    const event = new KeyboardEvent('keydown', { key: 'a', cancelable: true, bubbles: true });
+    timeline.dispatchEvent(event);
     expect(media.currentTime).to.equal(50);
+    expect(event.defaultPrevented).to.be.false;
   });
 });
 
@@ -1572,6 +1647,77 @@ describe('waveform', () => {
     expect((withoutPeaks.shadowRoot!.querySelector('canvas')) == null).to.equal(true);
     const withPeaks = (await fixture(html`<lr-av-player src=${MP3_SRC} .peaks=${[0.1, 0.5, 0.9, 0.3]}></lr-av-player>`)) as LyraAvPlayer;
     expect((withPeaks.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
+  });
+
+  it('draws eagerly when the owner window has no IntersectionObserver', async () => {
+    const original = Object.getOwnPropertyDescriptor(window, 'IntersectionObserver');
+    Object.defineProperty(window, 'IntersectionObserver', {
+      configurable: true,
+      value: undefined,
+    });
+    let el: LyraAvPlayer | undefined;
+    try {
+      el = (await fixture(html`<lr-av-player></lr-av-player>`)) as LyraAvPlayer;
+      const internals = el as unknown as { waveformVisible: boolean };
+      internals.waveformVisible = false;
+      el.peaks = [0.25, 0.75];
+      await el.updateComplete;
+
+      const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+      expect(internals.waveformVisible).to.be.true;
+      expect(canvas.width).to.be.greaterThan(0);
+    } finally {
+      el?.remove();
+      if (original) Object.defineProperty(window, 'IntersectionObserver', original);
+      else delete (window as unknown as { IntersectionObserver?: typeof IntersectionObserver })
+        .IntersectionObserver;
+    }
+  });
+
+  it('ignores a resize-observer delivery after the waveform host disconnects', async () => {
+    const original = Object.getOwnPropertyDescriptor(window, 'ResizeObserver');
+    const observations: Array<{
+      callback: ResizeObserverCallback;
+      target?: Element;
+    }> = [];
+    class TestResizeObserver {
+      private readonly observation: { callback: ResizeObserverCallback; target?: Element };
+      constructor(callback: ResizeObserverCallback) {
+        this.observation = { callback };
+        observations.push(this.observation);
+      }
+      observe(target: Element): void {
+        this.observation.target = target;
+      }
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+    Object.defineProperty(window, 'ResizeObserver', {
+      configurable: true,
+      value: TestResizeObserver,
+    });
+    let el: LyraAvPlayer | undefined;
+    try {
+      el = (await fixture(html`<lr-av-player .peaks=${[0.25, 0.75]}></lr-av-player>`)) as LyraAvPlayer;
+      const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+      const observation = observations.find((candidate) => candidate.target === canvas);
+      expect(observation === undefined).to.be.false;
+
+      el.remove();
+      let redraws = 0;
+      (el as unknown as { drawWaveform: () => void }).drawWaveform = () => {
+        redraws += 1;
+      };
+      observation!.callback(
+        [{ target: canvas } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      );
+      expect(redraws).to.equal(0);
+    } finally {
+      el?.remove();
+      if (original) Object.defineProperty(window, 'ResizeObserver', original);
+      else delete (window as unknown as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
+    }
   });
 
   it('still redraws on window resize after a disconnect/reconnect (regression)', async () => {
@@ -1902,6 +2048,14 @@ describe('accessibility', () => {
     expect(base.hasAttribute('role')).to.be.false;
     expect(base.hasAttribute('aria-label')).to.be.false;
     expect(mediaEl(el).getAttribute('aria-label')).to.equal('Audio/video player');
+  });
+
+  it('preserves an explicitly empty host aria-label on the native media control', async () => {
+    const el = (await fixture(html`
+      <lr-av-player src=${MP3_SRC} aria-label=""></lr-av-player>
+    `)) as LyraAvPlayer;
+    expect(el.getAttribute('aria-label')).to.equal('');
+    expect(mediaEl(el).getAttribute('aria-label')).to.equal('');
   });
 });
 

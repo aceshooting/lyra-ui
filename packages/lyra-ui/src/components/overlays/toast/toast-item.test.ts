@@ -1955,3 +1955,82 @@ describe('a slotted [hidden] action button', () => {
     expect(shown.getClientRects().length).to.equal(1);
   });
 });
+
+it('falls back to the medium rendering tier for an invalid size property write', async () => {
+  const el = await fixture<LyraToastItem>(html`
+    <lr-toast-item duration="0">Invalid size</lr-toast-item>
+  `);
+  el.size = 'unexpected' as LyraToastSize;
+  await el.updateComplete;
+
+  expect(el.getAttribute('data-effective-size')).to.equal('m');
+});
+
+it('keeps non-actionable tabindex=-1 message content in the contextual close name', async () => {
+  const el = await fixture<LyraToastItem>(html`
+    <lr-toast-item duration="0">
+      Saved <span tabindex="-1">draft</span>
+    </lr-toast-item>
+  `);
+  await el.updateComplete;
+
+  expect(
+    el.shadowRoot!
+      .querySelector<HTMLElement>('[part="close-button"]')!
+      .getAttribute('aria-label'),
+  ).to.equal('Close: Saved draft');
+});
+
+it('does not resurrect a show request whose lifecycle listener disconnects the item', async () => {
+  for (const veto of [false, true]) {
+    const el = document.createElement('lr-toast-item') as LyraToastItem;
+    el.duration = 0;
+    el.textContent = veto ? 'Removed and vetoed' : 'Removed during request';
+    let afterShows = 0;
+    el.addEventListener('lr-show', (event) => {
+      el.remove();
+      if (veto) event.preventDefault();
+    });
+    el.addEventListener('lr-after-show', () => afterShows++);
+
+    document.body.append(el);
+    await aTimeout(40);
+
+    expect(el.isConnected, `veto=${veto}`).to.be.false;
+    expect(el.hasAttribute('data-visible'), `veto=${veto}`).to.be.false;
+    expect(afterShows, `veto=${veto}`).to.equal(0);
+  }
+});
+
+it('parses millisecond and second CSS timing lists before transition completion', async () => {
+  const el = await fixture<LyraToastItem>(html`
+    <lr-toast-item duration="0">Timed dismissal</lr-toast-item>
+  `);
+  await oneEvent(el, 'lr-after-show');
+  const surface = el.shadowRoot!.querySelector<HTMLElement>('[part="toast-item"]')!;
+  const nativeGetComputedStyle = window.getComputedStyle;
+  window.getComputedStyle = ((element: Element, pseudo?: string | null) => {
+    const computed = nativeGetComputedStyle.call(window, element, pseudo);
+    if (element !== surface) return computed;
+    return new Proxy(computed, {
+      get(target, property, receiver) {
+        if (property === 'transitionDuration') return '2ms, 0.003s';
+        if (property === 'transitionDelay') return '0ms, 0s';
+        if (property === 'animationDuration') return '0ms';
+        if (property === 'animationDelay') return '0s';
+        const value = Reflect.get(target, property, receiver);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+  }) as typeof window.getComputedStyle;
+
+  try {
+    const hidden = el.hide();
+    surface.dispatchEvent(new Event('transitionend'));
+    await hidden;
+    expect(el.isConnected).to.be.false;
+  } finally {
+    window.getComputedStyle = nativeGetComputedStyle;
+    el.remove();
+  }
+});

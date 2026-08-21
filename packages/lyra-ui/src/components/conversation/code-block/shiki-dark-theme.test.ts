@@ -1,6 +1,15 @@
 import { expect, fixture, html } from "@open-wc/testing";
 import { resolveIsDarkTheme, watchDarkTheme } from "./shiki-dark-theme.js";
 
+it("returns an inert reusable cleanup for a disconnected host", () => {
+  const host = document.createElement("div");
+  let changes = 0;
+  const cleanup = watchDarkTheme(host, () => changes++);
+  cleanup();
+  cleanup();
+  expect(changes).to.equal(0);
+});
+
 it("resolves computed colors and color grammar through the adopted owner realm", async () => {
   const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
   const frameDocument = frame.contentDocument;

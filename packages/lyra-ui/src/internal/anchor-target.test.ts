@@ -44,9 +44,12 @@ class ThrowingStubAnchorTarget extends DocumentAnchorTarget(StubAnchorTargetBase
   }
 }
 
+class DefaultStubAnchorTarget extends DocumentAnchorTarget(StubAnchorTargetBase) {}
+
 defineElement('anchor-target-test-stub', StubAnchorTarget);
 defineElement('anchor-target-test-declining', DecliningStubAnchorTarget);
 defineElement('anchor-target-test-throwing', ThrowingStubAnchorTarget);
+defineElement('anchor-target-test-default', DefaultStubAnchorTarget);
 
 function installComposedSelection(range: Range, shadowRoot: ShadowRoot): () => void {
   const view = shadowRoot.ownerDocument.defaultView!;
@@ -83,6 +86,7 @@ declare global {
     'lr-anchor-target-test-stub': StubAnchorTarget;
     'lr-anchor-target-test-declining': DecliningStubAnchorTarget;
     'lr-anchor-target-test-throwing': ThrowingStubAnchorTarget;
+    'lr-anchor-target-test-default': DefaultStubAnchorTarget;
   }
 }
 
@@ -170,6 +174,17 @@ describe('DocumentAnchorTarget mixin', () => {
     const ok = await el.scrollToAnchor({ kind: 'page', page: 1 });
     expect(ok).to.be.true;
     expect(el.applyCallCount).to.be.greaterThan(2);
+  });
+
+  it('declines anchors through the mixin default when a consumer has no resolver', async () => {
+    const el = await fixture<DefaultStubAnchorTarget>(
+      litHtml`<lr-anchor-target-test-default></lr-anchor-target-test-default>`,
+    );
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 0;
+    const eventPromise = oneEvent(el, 'lr-anchor-result');
+
+    expect(await el.scrollToAnchor({ kind: 'page', page: 1 })).to.be.false;
+    expect((await eventPromise).detail).to.deep.equal({ found: false });
   });
 
   it('scrollToAnchor times out to false and announces anchorNotFound', async () => {

@@ -1041,3 +1041,87 @@ it('keeps run status and error recovery coherent for every non-error transition'
   } as AgentStreamEvent);
   expect(statusError.error).to.deep.equal({ message: 'status failed' });
 });
+
+it('rejects every malformed optional message, tool, document, and part field', () => {
+  const invalidMessages: unknown[] = [
+    { id: 'm', role: 'assistant', status: 'unknown' },
+    { id: 'm', role: 'assistant', timestamp: 42 },
+    { id: 'm', role: 'assistant', text: 42 },
+    { id: 'm', role: 'assistant', metadata: [] },
+    { id: 'm', role: 'assistant', attachments: {} },
+    { id: 'm', role: 'assistant', attachments: [{ id: 'd', name: 'doc', uri: 42 }] },
+    { id: 'm', role: 'assistant', parts: {} },
+    { id: 'm', role: 'assistant', parts: [{ id: 'p', type: 'text', text: 'ok', state: 'unknown' }] },
+    { id: 'm', role: 'assistant', parts: [{ id: 'p', type: 'text', text: 'ok', metadata: [] }] },
+  ];
+  for (const message of invalidMessages) {
+    const result = reduceAgentStream(createAgentStreamState(), {
+      type: 'message-start',
+      generation: 0,
+      sequence: 1,
+      message,
+    } as unknown as AgentStreamEvent);
+    expect(result.error?.code, JSON.stringify(message)).to.equal('invalid_stream_event');
+  }
+
+  const invalidTools: unknown[] = [
+    null,
+    { id: '', name: 'search', args: {}, status: 'running' },
+    { id: 'call', name: '', args: {}, status: 'running' },
+    { id: 'call', name: 'search', args: [], status: 'running' },
+    { id: 'call', name: 'search', args: {}, status: 'running', error: 42 },
+  ];
+  for (const invocation of invalidTools) {
+    const result = reduceAgentStream(createAgentStreamState(), {
+      type: 'tool-upsert',
+      generation: 0,
+      sequence: 1,
+      invocation,
+    } as unknown as AgentStreamEvent);
+    expect(result.error?.code, JSON.stringify(invocation)).to.equal('invalid_stream_event');
+  }
+
+  const invalidParts: unknown[] = [
+    null,
+    { id: '', type: 'text', text: 'ok' },
+    { id: 'p', text: 'ok' },
+    { id: 'p', type: 'tool-result', invocationId: 'call', name: 42, result: {} },
+    { id: 'p', type: 'tool-result', invocationId: 'call', error: 42 },
+    { id: 'p', type: 'error', message: 'failed', retryable: 'yes' },
+    { id: 'p', type: 'error', message: 'failed', code: 42 },
+  ];
+  for (const part of invalidParts) {
+    const result = reduceAgentStream(createAgentStreamState(), {
+      type: 'message-part-upsert',
+      generation: 0,
+      sequence: 1,
+      messageId: 'm',
+      part,
+    } as unknown as AgentStreamEvent);
+    expect(result.error?.code, JSON.stringify(part)).to.equal('invalid_stream_event');
+  }
+});
+
+it('handles valid no-op patch and message-completion boundaries', () => {
+  expect(applySharedStatePatch(() => 'unsafe', [])).to.equal(null);
+  expect(applySharedStatePatch(7, [{ op: 'add', path: '/value', value: 1 }])).to.equal(7);
+  expect(
+    applySharedStatePatch({ list: ['first'] }, [
+      { op: 'replace', path: '/list/9007199254740992', value: 'changed' },
+    ]),
+  ).to.deep.equal({ list: ['first'] });
+  for (const path of ['/value~2bad', '/__proto__/polluted', '/constructor/polluted']) {
+    expect(applySharedStatePatch({ value: 1 }, [{ op: 'replace', path, value: 2 }]))
+      .to.deep.equal({ value: 1 });
+  }
+
+  const state = createAgentStreamState();
+  const completed = reduceAgentStream(state, {
+    type: 'message-complete',
+    generation: 0,
+    sequence: 1,
+    messageId: 'missing',
+  } as AgentStreamEvent);
+  expect(completed.messages).to.deep.equal([]);
+  expect(completed.cursor).to.equal(1);
+});

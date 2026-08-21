@@ -43,8 +43,8 @@ it('prefixes the id through the shared tag() helper, not a hard-coded literal', 
 });
 
 it('coordinates generated ids across separately evaluated package copies', async () => {
-  const firstCopy = await import('./a11y.js?generated-id-copy=first');
-  const secondCopy = await import('./a11y.js?generated-id-copy=second');
+  const firstCopy = await import('../../dist/internal/a11y.js?generated-id-copy=first');
+  const secondCopy = await import('../../dist/internal/a11y.js?generated-id-copy=second');
 
   const first = firstCopy.nextId('cross-copy');
   const second = secondCopy.nextId('cross-copy');

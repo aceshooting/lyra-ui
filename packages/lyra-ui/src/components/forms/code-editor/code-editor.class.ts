@@ -230,7 +230,6 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   @property({
     converter: {
       fromAttribute: (value: string | null) => value === '' || value === 'true',
-      toAttribute: (value: boolean) => (value ? 'true' : 'false'),
     },
     useDefault: true,
   })

@@ -417,3 +417,145 @@ describe('isAccessibilityVisible', () => {
     ).to.equal(true);
   });
 });
+
+describe('adversarial accessibility visibility boundaries', () => {
+  it('falls back to authored state when owner-realm computed style throws', () => {
+    const el = document.createElement('div');
+    const original = window.getComputedStyle;
+    window.getComputedStyle = ((target: Element, pseudo?: string | null) => {
+      if (target === el) throw new Error('style unavailable');
+      return original.call(window, target, pseudo);
+    }) as typeof window.getComputedStyle;
+    try {
+      expect(isAccessibilitySubtreeExcluded(el)).to.equal(false);
+      el.hidden = true;
+      expect(isAccessibilitySubtreeExcluded(el)).to.equal(true);
+    } finally {
+      window.getComputedStyle = original;
+    }
+  });
+
+  it('rejects a hostile node without invoking beyond the guarded identity probe', () => {
+    const revoked = Proxy.revocable({}, {});
+    revoked.revoke();
+    const result = composedAccessibilityTextResult([revoked.proxy as unknown as Node]);
+    expect(result.text).to.equal('');
+    expect(result.visitedNodes).to.equal(0);
+  });
+
+  it('reports ancestor and descendant depth ceilings independently', async () => {
+    const root = await fixture<HTMLElement>(html`
+      <div><div><div><span id="deep-accessible-text">deep</span></div></div></div>
+    `);
+    const target = root.querySelector('#deep-accessible-text') as HTMLElement;
+    const ancestors = composedAccessibilityTextResult(target, { maxDepth: 1 });
+    expect(ancestors.truncationReasons).to.include('ancestors');
+
+    const descendants = composedAccessibilityTextResult(root, {
+      maxDepth: 1,
+      skipRootAncestorValidation: true,
+    });
+    expect(descendants.truncationReasons).to.include('depth');
+  });
+
+  it('returns no text for closed details that has no summary', async () => {
+    const details = await fixture<HTMLElement>(html`<details><p>hidden body</p></details>`);
+    expect(composedAccessibilityText(details)).to.equal('');
+    expect(isAccessibilityVisible(details.querySelector('p')!)).to.equal(false);
+  });
+
+  it('uses an empty serialized reflected aria-labelledby relationship and contains getter failures', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div><span id="reflected-label">Reflected label</span><button aria-labelledby="">Button</button></div>
+    `);
+    const label = wrapper.querySelector('#reflected-label')!;
+    const button = wrapper.querySelector('button')!;
+    const prototype = window.Element.prototype as Element & {
+      ariaLabelledByElements?: readonly Element[];
+    };
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, 'ariaLabelledByElements');
+    Object.defineProperty(prototype, 'ariaLabelledByElements', {
+      configurable: true,
+      get() {
+        return this === button ? [label] : descriptor?.get?.call(this);
+      },
+    });
+    try {
+      expect(composedAccessibilityText(button)).to.equal('Reflected label');
+      Object.defineProperty(prototype, 'ariaLabelledByElements', {
+        configurable: true,
+        get() {
+          throw new Error('relationship unavailable');
+        },
+      });
+      expect(composedAccessibilityText(button)).to.equal('Button');
+    } finally {
+      if (descriptor) Object.defineProperty(prototype, 'ariaLabelledByElements', descriptor);
+      else Reflect.deleteProperty(prototype, 'ariaLabelledByElements');
+    }
+  });
+
+  it('fails closed when the final rendered visibility probe throws', async () => {
+    const el = await fixture<HTMLElement>(html`<div>content</div>`);
+    const original = el.checkVisibility;
+    el.checkVisibility = () => {
+      throw new Error('visibility unavailable');
+    };
+    try {
+      expect(isAccessibilityVisible(el)).to.equal(false);
+      expect(composedAccessibilityText(el)).to.equal('');
+    } finally {
+      if (original) el.checkVisibility = original;
+      else Reflect.deleteProperty(el, 'checkVisibility');
+    }
+  });
+
+  it('reports depth before scheduling a closed-details summary or assigned slot node', async () => {
+    const details = await fixture<HTMLElement>(html`
+      <details><summary>Summary</summary><p>Body</p></details>
+    `);
+    const detailsResult = composedAccessibilityTextResult(details, {
+      maxDepth: 0,
+      skipRootAncestorValidation: true,
+    });
+    expect(detailsResult.truncationReasons).to.include('depth');
+
+    const tagName = 'test-a11y-depth-slot-host';
+    if (!customElements.get(tagName)) {
+      customElements.define(tagName, class extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' }).innerHTML = '<slot></slot>';
+        }
+      });
+    }
+    const host = await fixture<HTMLElement>(`<${tagName}>Assigned</${tagName}>`);
+    const slot = host.shadowRoot!.querySelector('slot')!;
+    const slotResult = composedAccessibilityTextResult(slot, {
+      maxDepth: 0,
+      skipRootAncestorValidation: true,
+    });
+    expect(slotResult.truncationReasons).to.include('depth');
+  });
+
+  it('rejects a referenced branch inside closed details without a summary', async () => {
+    const details = await fixture<HTMLElement>(html`<details><p>Hidden</p></details>`);
+    const body = details.querySelector('p')!;
+    expect(composedAccessibilityText(body)).to.equal('');
+  });
+
+  it('accepts a connected box when checkVisibility is unavailable', async () => {
+    const el = await fixture<HTMLElement>(html`<div>Visible</div>`);
+    const own = Object.getOwnPropertyDescriptor(el, 'checkVisibility');
+    Object.defineProperty(el, 'checkVisibility', {
+      configurable: true,
+      value: undefined,
+    });
+    try {
+      expect(isAccessibilityVisible(el)).to.equal(true);
+    } finally {
+      if (own) Object.defineProperty(el, 'checkVisibility', own);
+      else Reflect.deleteProperty(el, 'checkVisibility');
+    }
+  });
+});

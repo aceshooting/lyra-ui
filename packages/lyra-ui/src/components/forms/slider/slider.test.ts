@@ -1157,6 +1157,57 @@ it("does not arm a drag while disconnected in an ownerless document", async () =
   }
 });
 
+it("ignores a detached track gesture after its rendered base becomes stale", async () => {
+  const el = await fixture<LyraSlider>(html`
+    <lr-slider min="0" max="100" value="20"></lr-slider>
+  `);
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const thumb = el.shadowRoot!.querySelector('[part~="thumb"]') as HTMLElement;
+  let captures = 0;
+  thumb.setPointerCapture = () => {
+    captures += 1;
+  };
+  mockTrackWidth(el, 200);
+  el.remove();
+
+  base.dispatchEvent(
+    new PointerEvent("pointerdown", {
+      bubbles: true,
+      pointerId: 860,
+      clientX: 160,
+    })
+  );
+
+  expect(captures).to.equal(0);
+  expect(el.valueAsNumber).to.equal(20);
+});
+
+it("ignores unrelated pointer traffic while another pointer owns the drag", async () => {
+  const el = await fixture<LyraSlider>(html`
+    <lr-slider min="0" max="100" value="20"></lr-slider>
+  `);
+  const thumb = el.shadowRoot!.querySelector('[part~="thumb"]') as HTMLElement;
+  thumb.setPointerCapture = () => {};
+  thumb.releasePointerCapture = () => {};
+  mockTrackWidth(el, 200);
+  thumb.dispatchEvent(
+    new PointerEvent("pointerdown", {
+      bubbles: true,
+      pointerId: 861,
+      clientX: 40,
+    })
+  );
+  const before = el.valueAsNumber;
+
+  window.dispatchEvent(
+    new PointerEvent("pointermove", { pointerId: 999, clientX: 180 })
+  );
+  window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 999 }));
+
+  expect(el.valueAsNumber).to.equal(before);
+  window.dispatchEvent(new PointerEvent("pointercancel", { pointerId: 861 }));
+});
+
 it("retains one iframe owner listener until both concurrent range drags end", async () => {
   const frame = document.createElement("iframe");
   document.body.append(frame);
@@ -3942,4 +3993,47 @@ it("does not turn disabled focusout into user interaction after re-enabling", as
     el.matches(":state(user-valid)"),
     "a disable-forced focusout leaves the control pristine"
   ).to.be.false;
+});
+
+it("normalizes a nullish custom-validity message to an empty string", async () => {
+  const el = await fixture<LyraSlider>(html`
+    <lr-slider aria-label="Volume"></lr-slider>
+  `);
+  el.setCustomValidity("Blocked");
+  expect(el.checkValidity()).to.be.false;
+
+  el.setCustomValidity(null as unknown as string);
+
+  expect(el.checkValidity()).to.be.true;
+  expect(el.validationMessage).to.equal("");
+});
+
+it("falls back to its default when ownerless FormData restore state cannot be read", async () => {
+  const inertDocument = document.implementation.createHTMLDocument("ownerless");
+  const el = await fixture<LyraSlider>(html`
+    <lr-slider value="25"></lr-slider>
+  `);
+  el.remove();
+  inertDocument.adoptNode(el);
+
+  el.formStateRestoreCallback(new FormData(), "restore");
+
+  expect(el.valueAsNumber).to.equal(25);
+});
+
+it("saturates when a finite step overflows only after it is added to the current value", async () => {
+  const el = await fixture<LyraSlider>(html`
+    <lr-slider></lr-slider>
+  `);
+  el.min = -Number.MAX_VALUE;
+  el.max = Number.MAX_VALUE;
+  el.step = Number.MAX_VALUE;
+
+  el.valueAsNumber = Number.MAX_VALUE;
+  el.stepUp();
+  expect(el.valueAsNumber).to.equal(Number.MAX_VALUE);
+
+  el.valueAsNumber = -Number.MAX_VALUE;
+  el.stepDown();
+  expect(el.valueAsNumber).to.equal(-Number.MAX_VALUE);
 });

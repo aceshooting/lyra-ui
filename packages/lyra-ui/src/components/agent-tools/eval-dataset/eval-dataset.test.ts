@@ -241,6 +241,22 @@ it('makes every built-in column sortable and bubbles a real header sort commit',
   });
 });
 
+it('sorts through the optional-output and multi-tag column accessors', async () => {
+  const el = await fixture<LyraEvalDataset>(html`
+    <lr-eval-dataset .examples=${examples()}></lr-eval-dataset>
+  `);
+  const table = el.shadowRoot!.querySelector('lr-table')!;
+  const headers = table.shadowRoot!.querySelectorAll<HTMLElement>('th[data-sortable]');
+
+  headers[1]!.click();
+  await table.updateComplete;
+  headers[2]!.click();
+  await table.updateComplete;
+
+  expect(headers).to.have.length(3);
+  expect(table.shadowRoot!.querySelectorAll('tbody tr[part="row"]')).to.have.length(3);
+});
+
 it('automatically pages catalogs larger than the component rendering ceiling', async () => {
   const many = Array.from({ length: 250 }, (_, index) => ({
     id: `ex-${index}`,

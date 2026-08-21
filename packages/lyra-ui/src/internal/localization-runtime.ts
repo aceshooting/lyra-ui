@@ -255,9 +255,6 @@ function localeCandidates(locale: string): string[] {
     if (separator > 0) candidates.push(normalized.slice(0, separator));
   }
   if (!candidates.includes('en')) candidates.push('en');
-  if (candidates.length > MAX_LOCALE_CANDIDATES) {
-    candidates.splice(MAX_LOCALE_CANDIDATES - 1, candidates.length, 'en');
-  }
   const frozen = Object.freeze([...candidates]);
   if (normalized.length <= MAX_CACHEABLE_LOCALE_LENGTH) {
     cacheBounded(localeCandidateCache, normalized, frozen);
@@ -945,27 +942,21 @@ function pluralSelector(
  * exception. Walking `localeCandidates()` reuses the exact chain message
  * lookup already uses — the full BCP-47 truncation walk, then any registered
  * catalog sharing the base language, then `'en'` — so plural selection and
- * message selection can never disagree about which locale is in force.
- * Memoized because a rejected tag throws on every construction;
- * `registerLyraLocale()` clears the memo, since registering a catalog can
- * lengthen the chain.
+ * message selection can never disagree about which locale is in force. The
+ * shared formatter cache canonicalizes malformed candidates before constructing
+ * `Intl.PluralRules`. `registerLyraLocale()` clears this memo because registering
+ * a catalog can lengthen the lookup chain.
  */
-const pluralLocaleCache = new Map<string, string | undefined>();
+const pluralLocaleCache = new Map<string, string>();
 const MAX_PLURAL_LOCALE_ENTRIES = 64;
 
-function pluralLocale(locale: string): string | undefined {
+function pluralLocale(locale: string): string {
   const cached = pluralLocaleCache.get(locale);
-  if (cached !== undefined || pluralLocaleCache.has(locale)) return cached;
-  let resolved: string | undefined;
-  for (const candidate of localeCandidates(locale)) {
-    try {
-      getPluralRules(candidate);
-      resolved = candidate;
-      break;
-    } catch {
-      // Structurally invalid tag — try the next, less specific candidate.
-    }
-  }
+  if (cached !== undefined) return cached;
+  // The formatter cache canonicalizes malformed candidates to English, so the first message
+  // lookup candidate is always safe at the Intl boundary. `localeCandidates()` always ends in
+  // English and therefore cannot return an empty list.
+  const resolved = localeCandidates(locale)[0]!;
   if (pluralLocaleCache.size >= MAX_PLURAL_LOCALE_ENTRIES)
     pluralLocaleCache.clear();
   pluralLocaleCache.set(locale, resolved);
@@ -985,7 +976,6 @@ function selectPluralMessage(
 ): string {
   if (count === undefined) return message.other;
   const tag = pluralLocale(locale);
-  if (tag === undefined) return message.other;
   const category = getPluralRules(tag).select(count) as LyraPluralCategory;
   for (const candidate of PLURAL_CATEGORY_FALLBACKS[category] ??
     PLURAL_CATEGORY_FALLBACKS.other) {

@@ -199,6 +199,147 @@ it("uses bounded immutable realm-neutral snapshots and skips hostile structured 
   ).to.include("300");
 });
 
+it('fails closed on hostile collection descriptors and malformed nested records', async () => {
+  const el = await fixture<LyraDrilldownPanel>(html`
+    <lr-drilldown-panel></lr-drilldown-panel>
+  `);
+  const lengthTrap = new Proxy([{}], {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === 'length') throw new Error('hostile path length');
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  expect(() => {
+    el.path = lengthTrap as unknown as LyraDrilldownNode[];
+  }).not.to.throw();
+  expect(el.path).to.deep.equal([]);
+
+  const indexTrap = new Proxy([{ nodeId: 'unsafe', label: 'Unsafe' }], {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === '0') throw new Error('hostile path entry');
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  el.path = indexTrap;
+  expect(el.path).to.deep.equal([]);
+
+  let accessorReads = 0;
+  const accessorPath: unknown[] = [];
+  Object.defineProperty(accessorPath, '0', {
+    configurable: true,
+    enumerable: true,
+    get() {
+      accessorReads += 1;
+      return { nodeId: 'unsafe-accessor', label: 'Unsafe accessor' };
+    },
+  });
+  Object.defineProperty(accessorPath, 'length', { value: 1 });
+  el.path = accessorPath as LyraDrilldownNode[];
+  expect(el.path).to.deep.equal([]);
+  expect(accessorReads).to.equal(0);
+
+  const prototypeTrap = new Proxy({}, {
+    getPrototypeOf(): never {
+      throw new Error('hostile node prototype');
+    },
+  });
+  const identityTrap = new Proxy(
+    { nodeId: 'unsafe-id', label: 'Unsafe id' },
+    {
+      getOwnPropertyDescriptor(target, key) {
+        if (key === 'nodeId') throw new Error('hostile node identity');
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    }
+  );
+  const propertyKeysTrap = new Proxy(
+    { score: 1 },
+    {
+      ownKeys(): never {
+        throw new Error('hostile property keys');
+      },
+    }
+  );
+  const propertyDescriptorTrap = new Proxy(
+    { safe: 'kept', unsafe: 'dropped' },
+    {
+      getOwnPropertyDescriptor(target, key) {
+        if (key === 'unsafe') throw new Error('hostile property descriptor');
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    }
+  );
+  const mixedProperties: Record<string, unknown> = {
+    '': 'empty key',
+    ['x'.repeat(257)]: 'oversized key',
+    finite: 2,
+    infinite: Number.POSITIVE_INFINITY,
+    text: 'kept',
+    oversized: 'x'.repeat(65_537),
+  };
+  Object.defineProperty(mixedProperties, 'hidden', {
+    enumerable: false,
+    value: 'hidden',
+  });
+  Object.defineProperty(mixedProperties, 'accessor', {
+    enumerable: true,
+    get() {
+      accessorReads += 1;
+      return 'unsafe';
+    },
+  });
+  const validNode = {
+    nodeId: 'safe-node',
+    label: 'Safe node',
+    evidence: [
+      new Date(),
+      { evidenceId: '', title: 'Missing id' },
+      { evidenceId: 'page-omitted', title: 'Page omitted', page: Number.NaN },
+      { evidenceId: 'kept-evidence', title: 'Kept evidence', page: 3 },
+    ],
+    documents: [
+      new Date(),
+      { documentId: ' ', name: 'Bad document id' },
+      { documentId: 'kept-document', name: 'Kept document' },
+    ],
+    entities: [
+      new Date(),
+      { entityId: '', label: 'Missing id' },
+      { entityId: 'keys-trap', label: 'Keys trap', properties: propertyKeysTrap },
+      { entityId: 'descriptor-trap', label: 'Descriptor trap', properties: propertyDescriptorTrap },
+      { entityId: 'mixed', label: 'Mixed', degree: Number.NaN, properties: mixedProperties },
+      { entityId: 'empty-properties', label: 'Empty properties', properties: { infinite: Number.NaN } },
+    ],
+  };
+
+  el.path = [prototypeTrap, identityTrap, validNode] as unknown as LyraDrilldownNode[];
+  el.types = [
+    new Date(),
+    { id: '', label: 'Missing id' },
+    { id: 'circle', label: 'Circle', shape: 'circle' },
+    { id: 'square', label: 'Square', shape: 'square', color: 'red' },
+    { id: 'diamond', label: 'Diamond', shape: 'diamond' },
+    { id: 'other', label: 'Other', shape: 'triangle' },
+  ] as unknown as typeof el.types;
+  await el.updateComplete;
+
+  expect(el.path).to.have.length(1);
+  expect(el.path[0]!.evidence).to.have.length(2);
+  expect(Object.hasOwn(el.path[0]!.evidence![0]!, 'page')).to.be.false;
+  expect(el.path[0]!.documents).to.have.length(1);
+  expect(el.path[0]!.entities).to.have.length(4);
+  expect(el.path[0]!.entities![0]!.properties).to.equal(undefined);
+  expect(el.path[0]!.entities![1]!.properties).to.deep.equal({ safe: 'kept' });
+  expect(el.path[0]!.entities![2]!.properties).to.deep.equal({ finite: 2, text: 'kept' });
+  expect(el.path[0]!.entities![3]!.properties).to.equal(undefined);
+  expect(accessorReads).to.equal(0);
+  expect(el.types.map((type) => type.id)).to.deep.equal(['circle', 'square', 'diamond', 'other']);
+  expect(el.types.map((type) => type.shape)).to.deep.equal(['circle', 'square', 'diamond', undefined]);
+
+  el.path = {} as unknown as LyraDrilldownNode[];
+  expect(el.path).to.deep.equal([]);
+});
+
 it("enforces first-valid domain identity uniqueness at every keyed level", async () => {
   const el = (await fixture(
     html`<lr-drilldown-panel></lr-drilldown-panel>`
@@ -851,6 +992,42 @@ it('detects a slot="runs" attribute toggled on an already-connected child, not j
   expect(tabLabels(tabs)).to.include("Agent runs");
 });
 
+it('renders the runs-only category when the controlled category selects projected content', async () => {
+  const el = await fixture<LyraDrilldownPanel>(html`
+    <lr-drilldown-panel active-category="runs">
+      <div slot="runs">Run details</div>
+    </lr-drilldown-panel>
+  `);
+  el.path = [{ nodeId: 'runs-node', label: 'Runs node' }];
+  await waitUntil(
+    () => el.shadowRoot!.querySelector('slot[name="runs"]') !== null,
+    'the runs-only slot was not rendered'
+  );
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelectorAll('lr-tab-group')).to.have.length(0);
+  expect(el.shadowRoot!.querySelectorAll('slot[name="runs"]')).to.have.length(1);
+  expect(el.shadowRoot!.querySelector('[part="category"]')?.getAttribute('role')).to.equal('region');
+});
+
+it('operates without a MutationObserver in a detached owner document', async () => {
+  const el = await fixture<LyraDrilldownPanel>(html`
+    <lr-drilldown-panel></lr-drilldown-panel>
+  `);
+  el.remove();
+  const detachedDocument = document.implementation.createHTMLDocument('drilldown-without-observer');
+
+  try {
+    detachedDocument.body.append(detachedDocument.adoptNode(el));
+    expect(detachedDocument.defaultView).to.equal(null);
+    expect(el.ownerDocument === detachedDocument).to.equal(true);
+    expect(el.path).to.deep.equal([]);
+  } finally {
+    el.remove();
+    document.adoptNode(el);
+  }
+});
+
 it("forwards a host aria-label to the internal lr-tab-group strip by presence", async () => {
   const el = (await fixture(
     html`<lr-drilldown-panel aria-label="Related content"></lr-drilldown-panel>`
@@ -928,9 +1105,14 @@ it("recreates its slot observer in the adopted owner realm and disconnects it on
   const originalMutationObserver = frameWindow.MutationObserver;
   let observations = 0;
   let disconnects = 0;
+  const callbacks: MutationCallback[] = [];
+  const observers: MutationObserver[] = [];
   class OwnerMutationObserver implements MutationObserver {
     private observesPanel = false;
-    constructor(_callback: MutationCallback) {}
+    constructor(callback: MutationCallback) {
+      callbacks.push(callback);
+      observers.push(this);
+    }
     observe(target: Node, options?: MutationObserverInit): void {
       if (target === el && options?.attributeFilter?.includes("slot")) {
         this.observesPanel = true;
@@ -955,6 +1137,8 @@ it("recreates its slot observer in the adopted owner realm and disconnects it on
     expect(disconnects, "adoption disconnects the previous observer").to.equal(
       1
     );
+    callbacks[0]!([], observers[0]!);
+    expect(observations, 'a stale owner-realm callback is ignored').to.equal(1);
   } finally {
     frameWindow.MutationObserver = originalMutationObserver;
     if (el.ownerDocument !== document) document.adoptNode(el);

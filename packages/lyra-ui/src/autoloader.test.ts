@@ -341,12 +341,16 @@ describe('autoloader', () => {
     const updateComplete = new Promise<void>((resolve) => {
       resolveUpdate = resolve;
     });
+    let updateRead = false;
     const element = document.createElement(tag) as HTMLElement & {
       readonly updateComplete: Promise<void>;
     };
     Object.defineProperty(element, 'updateComplete', {
       configurable: true,
-      value: updateComplete,
+      get() {
+        updateRead = true;
+        return updateComplete;
+      },
     });
     Object.defineProperty(shadow, 'customElementRegistry', {
       configurable: true,
@@ -358,6 +362,8 @@ describe('autoloader', () => {
     try {
       const started = start(host);
       expect(element.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(true);
+      for (let attempts = 0; attempts < 10 && !updateRead; attempts += 1) await aTimeout(0);
+      expect(updateRead).to.equal(true);
 
       stop();
       expect(element.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
@@ -1174,6 +1180,239 @@ describe('autoloader', () => {
     root.append(hostile, cyclicParent, document.createElement(tag));
     await customElements.whenDefined(tag);
     expect(loads).to.equal(1);
+  });
+
+  it('fails soft for hostile observer records and drops queued work invalidated by stop()', async () => {
+    const loadedTag = 'lr-animation';
+    const stoppedTag = 'lr-format-bytes';
+    let loadedCalls = 0;
+    let stoppedCalls = 0;
+    override(loadedTag, async () => {
+      loadedCalls += 1;
+      return constructorForTag();
+    });
+    override(stoppedTag, async () => {
+      stoppedCalls += 1;
+      return constructorForTag();
+    });
+    const root = await fixture<HTMLElement>(html`<div><section></section></div>`);
+    const host = root.querySelector('section')!;
+    const shadow = host.attachShadow({ mode: 'open' });
+    const originalMutationObserver = window.MutationObserver;
+    let callback!: MutationCallback;
+    let observer!: MutationObserver;
+    class ControlledMutationObserver implements MutationObserver {
+      constructor(next: MutationCallback) {
+        callback = next;
+        observer = this;
+      }
+      observe(): void {}
+      disconnect(): void {}
+      takeRecords(): MutationRecord[] {
+        return [];
+      }
+    }
+    window.MutationObserver = ControlledMutationObserver;
+
+    const record = (target: Node, addedNodes: readonly Node[]): MutationRecord => ({
+      type: 'childList',
+      target,
+      addedNodes: addedNodes as unknown as NodeList,
+      removedNodes: [] as unknown as NodeList,
+      previousSibling: null,
+      nextSibling: null,
+      attributeName: null,
+      attributeNamespace: null,
+      oldValue: null,
+    });
+
+    try {
+      await start(root);
+      callback([record(host, [shadow])], observer);
+      await aTimeout(0);
+
+      const hostDescriptor = Object.getOwnPropertyDescriptor(ShadowRoot.prototype, 'host')!;
+      try {
+        Object.defineProperty(ShadowRoot.prototype, 'host', {
+          configurable: true,
+          get(): never {
+            throw new Error('hostile shadow host');
+          },
+        });
+        callback([record(host, [shadow])], observer);
+      } finally {
+        Object.defineProperty(ShadowRoot.prototype, 'host', hostDescriptor);
+      }
+
+      const loaded = document.createElement(loadedTag);
+      root.append(loaded);
+      const detached = document.createElement('div');
+      const hostileTarget = new Proxy(root, {}) as Node;
+      const revokedAdded = Proxy.revocable<Node>(loaded, {});
+      revokedAdded.revoke();
+      callback(
+        [
+          record(hostileTarget, []),
+          record(root, [revokedAdded.proxy, detached, loaded]),
+        ],
+        observer
+      );
+      await customElements.whenDefined(loadedTag);
+      expect(loadedCalls).to.equal(1);
+
+      const stopped = document.createElement(stoppedTag);
+      root.append(stopped);
+      callback([record(root, [stopped])], observer);
+      expect(stopped.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(true);
+      stop();
+      callback([record(root, [document.createElement(stoppedTag)])], observer);
+      await aTimeout(0);
+      expect(stoppedCalls).to.equal(0);
+      expect(stopped.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+    } finally {
+      stop();
+      window.MutationObserver = originalMutationObserver;
+    }
+  });
+
+  it('preserves a caller-owned pending marker', async () => {
+    const tag = 'lr-format-bytes';
+    override(tag, async () => constructorForTag());
+    const root = await fixture<HTMLElement>(html`<div><lr-format-bytes></lr-format-bytes></div>`);
+    const element = root.querySelector(tag)!;
+    element.setAttribute(AUTOLOADER_PENDING_ATTRIBUTE, 'caller');
+
+    await discover(root);
+
+    expect(element.getAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal('caller');
+  });
+
+  it('waits for every bounded worker before propagating a hostile marker cleanup failure', async () => {
+    const tag = 'lr-qr-code';
+    const failure = new Error('hostile removeAttribute');
+    override(
+      tag,
+      async () => class extends HTMLElement {
+        override removeAttribute(name: string): void {
+          if (name === AUTOLOADER_PENDING_ATTRIBUTE) throw failure;
+          super.removeAttribute(name);
+        }
+      }
+    );
+    const root = await fixture<HTMLElement>(html`<div><lr-qr-code></lr-qr-code></div>`);
+    let error: unknown;
+
+    try {
+      await discover(root, { optionalPeers: 'all' });
+    } catch (caught) {
+      error = caught;
+    }
+
+    expect(error).to.equal(failure);
+    expect(root.querySelector(tag)!.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(true);
+  });
+
+  it('handles an element whose owner-document accessor becomes hostile during upgrade', async () => {
+    const tag = 'lr-animated-image';
+    override(
+      tag,
+      async () => class extends HTMLElement {
+        constructor() {
+          super();
+          Object.defineProperty(this, 'ownerDocument', {
+            configurable: true,
+            get(): never {
+              throw new Error('hostile ownerDocument');
+            },
+          });
+        }
+      }
+    );
+    const root = await fixture<HTMLElement>(html`<div><lr-animated-image></lr-animated-image></div>`);
+
+    expect(await discover(root)).to.deep.equal([tag]);
+    expect(root.querySelector(tag)!.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+  });
+
+  it('skips observer additions with a missing or hostile scoped registry', async () => {
+    const missingTag = 'lr-format-bytes';
+    const hostileTag = 'lr-animation';
+    let loads = 0;
+    override(missingTag, async () => {
+      loads += 1;
+      return constructorForTag();
+    });
+    override(hostileTag, async () => {
+      loads += 1;
+      return constructorForTag();
+    });
+    const detachedDocument = document.implementation.createHTMLDocument('autoloader-missing-registry');
+    await start(detachedDocument);
+    detachedDocument.body.append(detachedDocument.createElement(missingTag));
+    await aTimeout(0);
+    expect(loads).to.equal(0);
+
+    const host = await fixture<HTMLElement>(html`<section></section>`);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const hostileRegistry = {
+      get(): never {
+        throw new Error('hostile registry.get');
+      },
+      define() {},
+      whenDefined() {
+        return new Promise<CustomElementConstructor>(() => {});
+      },
+    } as unknown as CustomElementRegistry;
+    Object.defineProperty(shadow, 'customElementRegistry', {
+      configurable: true,
+      value: hostileRegistry,
+    });
+    try {
+      await start(host);
+      shadow.append(document.createElement(hostileTag));
+      await aTimeout(0);
+      expect(loads).to.equal(0);
+    } finally {
+      delete (shadow as unknown as Record<string, unknown>)['customElementRegistry'];
+    }
+  });
+
+  it('skips an observer-inserted optional-peer tag until its peer is allowed', async () => {
+    const tag = 'lr-chart';
+    let loads = 0;
+    override(tag, async () => {
+      loads += 1;
+      return constructorForTag();
+    });
+    const root = await fixture<HTMLElement>(html`<div></div>`);
+    await start(root);
+
+    const element = document.createElement(tag);
+    root.append(element);
+    await aTimeout(0);
+
+    expect(loads).to.equal(0);
+    expect(element.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+  });
+
+  it('stops the active observer when initial start discovery rejects', async () => {
+    const root = await fixture<HTMLElement>(html`<div><section><span></span></section></div>`);
+    let error: unknown;
+    try {
+      await start(root, { maxDepth: 0 });
+    } catch (caught) {
+      error = caught;
+    }
+
+    expect(error instanceof Error).to.equal(true);
+    expect((error as Error).message).to.include('maxDepth');
+    expect(root.querySelectorAll(`[${AUTOLOADER_PENDING_ATTRIBUTE}]`)).to.have.length(0);
+  });
+
+  it('rejects roots whose querySelectorAll member is not callable', async () => {
+    const invalidRoot = { querySelectorAll: true } as unknown as DocumentFragment;
+    expect(await discover(invalidRoot)).to.deep.equal([]);
+    expect(await start(invalidRoot)).to.deep.equal([]);
   });
 });
 

@@ -110,6 +110,49 @@ it('preserves the requested fixed-to-computed gap near the supported numeric cei
   expect(childTop - fixedBottom).to.be.at.least(100);
 });
 
+it('rounds a fractional gap upward near the safe-integer ceiling', () => {
+  const fixedX = Number.MAX_SAFE_INTEGER - 4;
+  const { positions } = layeredLayout({
+    nodes: [
+      { id: 'fixed', width: 0, height: 0 },
+      { id: 'computed', width: 0.5, height: 0 },
+    ],
+    edges: [],
+    options: {
+      fixedPositions: new Map([['fixed', { x: fixedX, y: 0 }]]),
+      gapX: 0.25,
+    },
+  });
+
+  const computed = positions.get('computed')!;
+  expect(computed.x - 0.25 - fixedX).to.be.at.least(0.25);
+  expect(Number.isFinite(computed.x)).to.equal(true);
+});
+
+it('rounds a sub-ULP half-width upward and rejects gap correction beyond the ceiling', () => {
+  const nodes = [
+    { id: 'fixed', width: 0, height: 0 },
+    { id: 'computed', width: 0, height: 0 },
+  ];
+  const fixedPositions = new Map([['fixed', { x: Number.MAX_SAFE_INTEGER, y: 0 }]]);
+
+  expect(() => layeredLayout({
+    nodes,
+    edges: [],
+    options: { fixedPositions, gapX: 0.25 },
+  })).to.throw(RangeError, 'inline gap');
+
+  const corrected = layeredLayout({
+    nodes: [nodes[0]!, { ...nodes[1]!, width: 1.1146639167236572e-16 }],
+    edges: [],
+    options: {
+      fixedPositions: new Map([['fixed', { x: 1, y: 0 }]]),
+      gapX: 0,
+    },
+  });
+  expect(corrected.positions.get('computed')!.x).to.be.greaterThan(1);
+});
+
 it('advances later layer lanes past a fixed predecessor block extent', () => {
   const forty = (id: string) => ({ id, width: 40, height: 40 });
   const { positions } = layeredLayout({

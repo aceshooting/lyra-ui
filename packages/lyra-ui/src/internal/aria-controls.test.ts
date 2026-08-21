@@ -340,8 +340,8 @@ it('does not preserve a generated description when its source detaches before re
 });
 
 it('composes description leases acquired through separate module instances', async () => {
-  const firstCopy = await import('./aria-controls.js?description-owner-copy=first');
-  const secondCopy = await import('./aria-controls.js?description-owner-copy=second');
+  const firstCopy = await import('../../dist/internal/aria-controls.js?description-owner-copy=first');
+  const secondCopy = await import('../../dist/internal/aria-controls.js?description-owner-copy=second');
   const root = await fixture<HTMLElement>(html`
     <div><button></button><span id="copy-first">First</span><span id="copy-second">Second</span></div>
   `);
@@ -399,4 +399,88 @@ it('recreates description observation in the target realm after adoption', async
   expect(target.getAttribute('aria-describedby')).to.equal('adopted-author-description');
   wrapper.remove();
   author.remove();
+});
+
+it('falls back to serialized ownership when reflected description reads throw', async () => {
+  const root = document.createElement('div');
+  const target = document.createElement('button');
+  const description = document.createElement('span');
+  description.id = 'throwing-reflection-description';
+  root.append(target, description);
+  document.body.append(root);
+  Object.defineProperty(target, 'ariaDescribedByElements', {
+    configurable: true,
+    get() {
+      throw new Error('reflection read failed');
+    },
+    set() {},
+  });
+  try {
+    const lease = describeElement(target, description);
+    expect(target.getAttribute('aria-describedby')).to.equal(description.id);
+    expect(lease.assigned).to.equal(false);
+    undescribeElement(lease);
+    expect(target.hasAttribute('aria-describedby')).to.equal(false);
+  } finally {
+    root.remove();
+  }
+});
+
+it('preserves empty serialized baselines on platforms without reflected element references', async function () {
+  const findOwner = (key: PropertyKey): object | null => {
+    let current: object | null = HTMLElement.prototype;
+    while (current) {
+      if (Object.prototype.hasOwnProperty.call(current, key)) return current;
+      current = Object.getPrototypeOf(current) as object | null;
+    }
+    return null;
+  };
+  const controlsOwner = findOwner('ariaControlsElements');
+  const describedByOwner = findOwner('ariaDescribedByElements');
+  const controlsDescriptor = controlsOwner
+    ? Object.getOwnPropertyDescriptor(controlsOwner, 'ariaControlsElements')
+    : undefined;
+  const describedByDescriptor = describedByOwner
+    ? Object.getOwnPropertyDescriptor(describedByOwner, 'ariaDescribedByElements')
+    : undefined;
+  if (
+    (controlsDescriptor && !controlsDescriptor.configurable) ||
+    (describedByDescriptor && !describedByDescriptor.configurable)
+  ) this.skip();
+
+  if (controlsOwner) Reflect.deleteProperty(controlsOwner, 'ariaControlsElements');
+  if (describedByOwner) Reflect.deleteProperty(describedByOwner, 'ariaDescribedByElements');
+  try {
+    const moduleCopy = await import('../../dist/internal/aria-controls.js?description-owner-copy=without-reflection');
+    const root = document.createElement('div');
+    const withBaseline = document.createElement('button');
+    const withoutBaseline = document.createElement('button');
+    const description = document.createElement('span');
+    withBaseline.setAttribute('aria-describedby', '');
+    root.append(withBaseline, withoutBaseline, description);
+    document.body.append(root);
+    try {
+      expect(moduleCopy.syncAriaDescribedByElements(root, withBaseline, 'missing')).to.equal(false);
+      expect(() => moduleCopy.syncAriaControlsElements(root, withBaseline, 'missing')).to.not.throw();
+
+      const baselineLease = moduleCopy.acquireAriaDescription(withBaseline, [description]);
+      expect(withBaseline.getAttribute('aria-describedby')).to.equal('');
+      baselineLease.release();
+      expect(withBaseline.getAttribute('aria-describedby')).to.equal('');
+
+      const emptyLease = moduleCopy.acquireAriaDescription(withoutBaseline, [description]);
+      expect(withoutBaseline.hasAttribute('aria-describedby')).to.equal(false);
+      emptyLease.release();
+      expect(withoutBaseline.hasAttribute('aria-describedby')).to.equal(false);
+    } finally {
+      root.remove();
+    }
+  } finally {
+    if (controlsOwner && controlsDescriptor) {
+      Object.defineProperty(controlsOwner, 'ariaControlsElements', controlsDescriptor);
+    }
+    if (describedByOwner && describedByDescriptor) {
+      Object.defineProperty(describedByOwner, 'ariaDescribedByElements', describedByDescriptor);
+    }
+  }
 });

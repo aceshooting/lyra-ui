@@ -1936,6 +1936,24 @@ it("provides date-group context to the unified string label callback", async () 
   ).to.be.true;
 });
 
+it("provides the first day of an older month to date-group label callbacks", async () => {
+  const old = new Date(now.getFullYear(), now.getMonth() - 3, 12);
+  const contexts: Array<{ id: string; date?: Date }> = [];
+  const el = await fixture<LyraThreadList>(html`
+    <lr-thread-list
+      .threads=${[{ id: 'old', title: 'Older thread', timestamp: old }]}
+      .getGroupLabel=${(context: { id: string; date?: Date }) => {
+        contexts.push(context);
+        return context.id;
+      }}
+    ></lr-thread-list>
+  `);
+  await el.updateComplete;
+  const month = contexts.find((context) => context.id.startsWith('month:'));
+  expect(month?.date?.getDate()).to.equal(1);
+  expect(month?.date?.getMonth()).to.equal(old.getMonth());
+});
+
 // 60 rows: comfortably more than any viewport under test can show at once, so the internal
 // virtual list always has something to scroll regardless of which container height is applied.
 const manyThreads = Array.from({ length: 60 }, (_, i) => ({

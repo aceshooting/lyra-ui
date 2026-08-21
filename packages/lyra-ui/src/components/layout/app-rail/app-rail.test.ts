@@ -621,6 +621,14 @@ it("ignores a queued old-owner media-query callback after adoption while current
     } as MediaQueryListEvent);
     await el.updateComplete;
     expect(el.mode).to.equal("icon-only");
+
+    const currentMobile = [...destination.records[1]!.listeners][0]!;
+    currentMobile({
+      matches: true,
+      media: destination.records[1]!.query,
+    } as MediaQueryListEvent);
+    await el.updateComplete;
+    expect(el.mode).to.equal("mobile");
   } finally {
     el?.remove();
     destination.restore();

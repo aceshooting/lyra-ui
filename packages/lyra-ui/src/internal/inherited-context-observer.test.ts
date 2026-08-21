@@ -100,3 +100,131 @@ it('shares one pagehide listener across hosts in the same owner document and onl
     frame.remove();
   }
 });
+
+it('rolls back document and prospective-slot observations when shadow-root setup fails', () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const foreignWindow = frame.contentWindow!;
+  const foreignDocument = frame.contentDocument!;
+  const originalObserver = foreignWindow.MutationObserver;
+  const shell = foreignDocument.body.appendChild(foreignDocument.createElement('div'));
+  const root = shell.attachShadow({ mode: 'open' });
+  const host = foreignHost(foreignDocument);
+  shell.append(host);
+  const originalAdd = root.addEventListener;
+  const originalRemove = root.removeEventListener;
+  let disconnects = 0;
+
+  class HostileMutationObserver implements MutationObserver {
+    disconnect(): void {
+      disconnects += 1;
+      throw new Error('disconnect unavailable');
+    }
+    observe(): void {}
+    takeRecords(): MutationRecord[] {
+      return [];
+    }
+  }
+
+  try {
+    Object.defineProperty(foreignWindow, 'MutationObserver', {
+      configurable: true,
+      value: HostileMutationObserver,
+    });
+    root.addEventListener = (() => {
+      throw new Error('listener unavailable');
+    }) as typeof root.addEventListener;
+    root.removeEventListener = (() => {
+      throw new Error('listener cleanup unavailable');
+    }) as typeof root.removeEventListener;
+
+    const stop = observeInheritedContext(host);
+    expect(() => recordInheritedDirectionRead(host, 'ltr')).not.to.throw();
+    expect(disconnects).to.equal(2);
+    stop();
+  } finally {
+    root.addEventListener = originalAdd;
+    root.removeEventListener = originalRemove;
+    Object.defineProperty(foreignWindow, 'MutationObserver', {
+      configurable: true,
+      value: originalObserver,
+    });
+    frame.remove();
+  }
+});
+
+it('contains owner pagehide listener installation and removal failures', () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const foreignWindow = frame.contentWindow!;
+  const foreignDocument = frame.contentDocument!;
+  const originalAdd = foreignWindow.addEventListener;
+  const originalRemove = foreignWindow.removeEventListener;
+  try {
+    foreignWindow.addEventListener = ((type: string, ...rest: unknown[]) => {
+      if (type === 'pagehide') throw new Error('pagehide install unavailable');
+      return (originalAdd as (...args: unknown[]) => void).call(foreignWindow, type, ...rest);
+    }) as typeof foreignWindow.addEventListener;
+    const installHost = foreignHost(foreignDocument);
+    const stopInstall = observeInheritedContext(installHost);
+    expect(() => recordInheritedDirectionRead(installHost, 'ltr')).not.to.throw();
+    stopInstall();
+
+    foreignWindow.addEventListener = originalAdd;
+    const removalHost = foreignHost(foreignDocument);
+    const stopRemoval = observeInheritedContext(removalHost);
+    recordInheritedDirectionRead(removalHost, 'ltr');
+    foreignWindow.removeEventListener = ((type: string, ...rest: unknown[]) => {
+      if (type === 'pagehide') throw new Error('pagehide cleanup unavailable');
+      return (originalRemove as (...args: unknown[]) => void).call(foreignWindow, type, ...rest);
+    }) as typeof foreignWindow.removeEventListener;
+    expect(() => stopRemoval()).not.to.throw();
+  } finally {
+    foreignWindow.addEventListener = originalAdd;
+    foreignWindow.removeEventListener = originalRemove;
+    frame.remove();
+  }
+});
+
+it('contains hostile locale and direction resolution during observer delivery', async () => {
+  const wrapper = document.body.appendChild(document.createElement('div'));
+  const host = foreignHost(document);
+  wrapper.append(host);
+  let updates = 0;
+  host.requestUpdate = () => updates++;
+  const stop = observeInheritedContext(host);
+  recordInheritedLocaleRead(host, 'en');
+  recordInheritedDirectionRead(host, 'ltr');
+  const originalGetAttribute = host.getAttribute;
+  try {
+    wrapper.setAttribute('lang', 'fr');
+    host.getAttribute = () => {
+      throw new Error('attribute unavailable');
+    };
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(updates).to.equal(0);
+  } finally {
+    host.getAttribute = originalGetAttribute;
+    stop();
+    wrapper.remove();
+  }
+});
+
+it('rebinds direction observation when an unassigned light child gains a slot', async () => {
+  const shell = document.body.appendChild(document.createElement('div'));
+  const root = shell.attachShadow({ mode: 'open' });
+  const host = foreignHost(document);
+  shell.append(host);
+  const stop = observeInheritedContext(host);
+  try {
+    recordInheritedDirectionRead(host, 'ltr');
+    root.append(document.createElement('slot'));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(host.assignedSlot).to.equal(root.querySelector('slot'));
+  } finally {
+    stop();
+    shell.remove();
+  }
+});

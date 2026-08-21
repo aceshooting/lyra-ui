@@ -2607,3 +2607,197 @@ describe("styling", () => {
     expect(css).to.match(/\[part=["']next-button["']\]:hover/);
   });
 });
+
+describe("adversarial rendition boundaries", () => {
+  it("keeps absent and stale rendition operations as defensive no-ops", async () => {
+    const el = await fixture<LyraEbookViewer>(html`<lr-ebook-viewer></lr-ebook-viewer>`);
+    const current = {
+      display: () => Promise.resolve(),
+      prev: () => Promise.resolve(),
+      next: () => Promise.resolve(),
+      on: () => {},
+      annotations: { highlight: () => {}, remove: () => {} },
+    };
+    const stale = { ...current };
+    const target = el as unknown as {
+      generation: number;
+      rendition?: typeof current;
+      displayLocation(location: string): void;
+      runRenditionNavigation(action: "previous" | "next"): void;
+      reportRenditionFailure(error: unknown, rendition: typeof current, generation: number): void;
+    };
+    target.displayLocation("epubcfi(/6/2!)");
+    target.runRenditionNavigation("previous");
+    target.rendition = current;
+    target.reportRenditionFailure(new Error("stale peer"), stale, target.generation);
+    target.reportRenditionFailure(new Error("stale generation"), current, target.generation - 1);
+    expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.be.true;
+  });
+
+  it("emits a search reset from teardown only when connected state actually changed", async () => {
+    const el = await fixture<LyraEbookViewer>(html`<lr-ebook-viewer></lr-ebook-viewer>`);
+    const target = el as unknown as { searchQuery: string; teardown(): void };
+    let changes = 0;
+    el.addEventListener("lr-search-change", () => { changes++; });
+    target.teardown();
+    expect(changes).to.equal(0);
+    target.searchQuery = "active";
+    target.teardown();
+    expect(changes).to.equal(1);
+  });
+
+  it("drops a TOC whose book identity changes while readiness is pending", async () => {
+    const el = await fixture<LyraEbookViewer>(html`<lr-ebook-viewer></lr-ebook-viewer>`);
+    const ready = deferred<void>();
+    const first = {
+      ready: ready.promise,
+      navigation: { toc: [{ label: "stale", href: "stale.xhtml" }] },
+      destroy: () => {},
+    };
+    const target = el as unknown as { book?: typeof first };
+    target.book = first;
+    const toc = el.getToc();
+    target.book = undefined;
+    ready.resolve();
+    expect(await toc).to.deep.equal([]);
+  });
+
+  it("uses the rect's left/top aliases with a minimal Window-shaped peer seam", async () => {
+    const el = await fixture<LyraEbookViewer>(html`<lr-ebook-viewer></lr-ebook-viewer>`);
+    const translated = (el as unknown as {
+      translateSelectionRects(rects: readonly unknown[], sourceWindow?: Window): Array<{ x: number; y: number }>;
+    }).translateSelectionRects([{
+      left: 7, top: 9, width: 3, height: 4, right: 10, bottom: 13,
+    }], {} as Window);
+    expect(translated[0]).to.deep.include({ x: 7, y: 9 });
+    expect((el as unknown as {
+      translateSelectionRects(rects: readonly unknown[], sourceWindow?: Window): unknown[];
+    }).translateSelectionRects([], undefined)).to.deep.equal([]);
+  });
+
+  it("destroys a book superseded while its initial display is still pending", async () => {
+    const display = deferred<void>();
+    let displayCalls = 0;
+    let destroyCalls = 0;
+    const rendition = {
+      display: () => {
+        displayCalls++;
+        return display.promise;
+      },
+      next: () => Promise.resolve(),
+      prev: () => Promise.resolve(),
+      on: () => {},
+      annotations: { highlight: () => {}, remove: () => {} },
+    };
+    const book = {
+      ready: Promise.resolve(),
+      renderTo: () => rendition,
+      destroy: () => { destroyCalls++; },
+    };
+    __setEpubJsForTesting((() => book) as never);
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraEbookViewer>(html`
+        <lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>
+      `);
+      await waitUntil(() => displayCalls === 1);
+      el.src = "";
+      await (el as unknown as { load(): Promise<void> }).load();
+      display.resolve();
+      await waitUntil(() => destroyCalls === 1);
+    } finally {
+      restore();
+    }
+  });
+
+  it("contains synchronous display, previous, next, and annotation failures", async () => {
+    const el = await fixture<LyraEbookViewer>(html`
+      <lr-ebook-viewer
+        .strings=${{ ebookViewerLoadError: "Localized synchronous failure." }}
+      ></lr-ebook-viewer>
+    `);
+    let errors = 0;
+    el.addEventListener("lr-render-error", () => { errors++; });
+    const rendition = {
+      display: () => { throw new Error("display threw"); },
+      prev: () => { throw new Error("previous threw"); },
+      next: () => { throw new Error("next threw"); },
+      on: () => {},
+      annotations: {
+        remove: () => { throw new Error("annotation threw"); },
+        highlight: () => {},
+      },
+    };
+    const target = el as unknown as {
+      rendition: typeof rendition;
+      paintedHighlightCfis: string[];
+      displayLocation(location: string): void;
+      runRenditionNavigation(action: "previous" | "next"): void;
+      repaintAnnotations(): void;
+    };
+    target.rendition = rendition;
+    target.displayLocation("epubcfi(/6/2!)");
+    target.runRenditionNavigation("previous");
+    target.runRenditionNavigation("next");
+    target.paintedHighlightCfis = ["epubcfi(/6/4!)"];
+    target.repaintAnnotations();
+
+    expect(errors).to.equal(4);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent)
+      .to.equal("Localized synchronous failure.");
+  });
+
+  it("rejects a selection frame that is not an HTML element", async () => {
+    const el = await fixture<LyraEbookViewer>(html`<lr-ebook-viewer></lr-ebook-viewer>`);
+    const sourceWindow = {
+      frameElement: document.createElementNS("http://www.w3.org/2000/svg", "svg"),
+    } as unknown as Window;
+    const translated = (el as unknown as {
+      translateSelectionRects(rects: readonly unknown[], sourceWindow?: Window): unknown[];
+    }).translateSelectionRects([{
+      x: 1, y: 2, width: 3, height: 4,
+      top: 2, right: 4, bottom: 6, left: 1,
+    }], sourceWindow);
+    expect(translated).to.deep.equal([]);
+  });
+
+  it("bounds peer search work before retaining attacker-sized CFI fields", async () => {
+    const el = await fixture<LyraEbookViewer>(html`<lr-ebook-viewer></lr-ebook-viewer>`);
+    const annotations = { highlight: () => {}, remove: () => {} };
+    const rendition = {
+      display: () => Promise.resolve(),
+      prev: () => Promise.resolve(),
+      next: () => Promise.resolve(),
+      on: () => {},
+      annotations,
+    };
+    let results: unknown[] = [];
+    const item = {
+      load: () => Promise.resolve(),
+      unload: () => {},
+      find: () => results,
+    };
+    const book = { spine: { spineItems: [item] }, destroy: () => {} };
+    const target = el as unknown as { book: typeof book; rendition: typeof rendition };
+    target.book = book;
+    target.rendition = rendition;
+
+    results = [
+      { cfi: "c".repeat(3_999_997), excerpt: "" },
+      { cfi: "unreachable", excerpt: "" },
+    ];
+    expect(await el.search("needle")).to.equal(1);
+
+    results = [{ cfi: "c".repeat(4_000_000), excerpt: "" }];
+    expect(await el.search("needle")).to.equal(0);
+
+    results = [{ cfi: "c".repeat(3_999_997), excerpt: "" }];
+    book.spine.spineItems.push({
+      load: () => Promise.resolve(),
+      unload: () => {},
+      find: () => [],
+    });
+    expect(await el.search("needle")).to.equal(1);
+  });
+});

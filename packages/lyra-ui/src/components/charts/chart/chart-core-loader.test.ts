@@ -58,7 +58,7 @@ async function captureWarnings<T>(operation: () => Promise<T>): Promise<{
 }
 
 it('resolves the Chart.js module', async () => {
-  const mod = await loadChartJs();
+  const mod = await loadChartModule();
   expect(mod).to.not.be.null;
   expect(mod!.Chart).to.exist;
 });
@@ -70,6 +70,11 @@ it('caches the module — a second call returns the same promise result', async 
 });
 
 describe('loadChartModule (independent Chart.js core loading)', () => {
+  it('loads the installed peer through the default registration path', async () => {
+    const mod = await loadAndRegisterChartModule();
+    expect(mod?.Chart).to.exist;
+  });
+
   it('normalizes a valid Chart.js default export', async () => {
     const fallback = fakeChartModule();
     expect(
@@ -100,5 +105,26 @@ describe('loadChartModule (independent Chart.js core loading)', () => {
     expect(result).to.equal(null);
     expect(warnings.flat()).to.contain(registrationError);
     expect(warnings.flat().join(' ')).to.contain('could not register');
+  });
+
+  it('fails closed before registration when the core loader resolves null', async () => {
+    let registrations = 0;
+    const { result, warnings } = await captureWarnings(() =>
+      loadAndRegisterChartModule(
+        () => Promise.resolve(null),
+        () => { registrations += 1; },
+      ),
+    );
+    expect(result).to.equal(null);
+    expect(registrations).to.equal(0);
+    expect(warnings).to.have.length(1);
+  });
+
+  it('rejects a primitive module namespace with the capability diagnostic', async () => {
+    const { result, warnings } = await captureWarnings(() =>
+      loadChartModule(() => Promise.resolve(42)),
+    );
+    expect(result).to.equal(null);
+    expect(warnings.flat().map(String).join(' ')).to.contain('module namespace');
   });
 });

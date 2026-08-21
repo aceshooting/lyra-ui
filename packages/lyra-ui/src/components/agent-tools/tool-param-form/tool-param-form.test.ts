@@ -1,6 +1,11 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './tool-param-form.js';
-import type { LyraToolParamForm, FlatToolParamSchema } from './tool-param-form.js';
+import type {
+  LyraToolParamForm,
+  FlatToolParamSchema,
+  ToolParamFormProperty,
+  ToolParamFormValue,
+} from './tool-param-form.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
@@ -1774,5 +1779,221 @@ describe('setCustomValidity()', () => {
     expect(host.matches(':state(valid)')).to.be.true;
     expect(host.matches(':state(user-valid)')).to.be.true;
     expect(host.matches(':state(user-invalid)')).to.be.false;
+  });
+});
+
+describe('bounded hostile input snapshots', () => {
+  it('fails closed for revoked value and schema proxies', async () => {
+    const el = await fixture<LyraToolParamForm>(html`<lr-tool-param-form></lr-tool-param-form>`);
+    const valueProxy = Proxy.revocable({}, {});
+    valueProxy.revoke();
+    el.value = valueProxy.proxy as ToolParamFormValue;
+    expect(el.value).to.deep.equal({});
+    expect(el.validity.customError).to.equal(true);
+
+    const schemaProxy = Proxy.revocable({}, {});
+    schemaProxy.revoke();
+    el.schema = schemaProxy.proxy as FlatToolParamSchema;
+    await el.updateComplete;
+    expect(Object.keys(el.schema.properties)).to.deep.equal([]);
+    expect(el.validity.customError).to.equal(true);
+  });
+
+  it('contains revoked and prototype-hostile nested values without invoking traps', () => {
+    const el = document.createElement('lr-tool-param-form') as LyraToolParamForm;
+    const revoked = Proxy.revocable({}, {});
+    revoked.revoke();
+    let prototypeReads = 0;
+    const prototypeHostile = new Proxy({}, {
+      getPrototypeOf() {
+        prototypeReads += 1;
+        throw new Error('prototype denied');
+      },
+    });
+
+    el.value = { revoked: revoked.proxy, prototypeHostile };
+
+    expect(el.validity.customError).to.equal(true);
+    expect(prototypeReads).to.equal(1);
+    expect(el.value).to.have.property('prototypeHostile', prototypeHostile);
+  });
+
+  it('rejects array and primitive root values and descriptor-hostile schema roots', async () => {
+    const el = await fixture<LyraToolParamForm>(html`<lr-tool-param-form></lr-tool-param-form>`);
+    el.value = [] as unknown as ToolParamFormValue;
+    expect(el.value).to.deep.equal({});
+    expect(el.validity.customError).to.equal(true);
+
+    el.value = 'invalid' as unknown as ToolParamFormValue;
+    expect(el.value).to.deep.equal({});
+
+    el.schema = [] as unknown as FlatToolParamSchema;
+    expect(el.schema).to.deep.equal({ type: 'object', properties: {} });
+
+    const hostileRoot = new Proxy({ type: 'object', properties: {} }, {
+      ownKeys() {
+        throw new Error('schema descriptors denied');
+      },
+    });
+    el.schema = hostileRoot as FlatToolParamSchema;
+    await el.updateComplete;
+    expect(Object.keys(el.schema.properties)).to.deep.equal([]);
+    expect(el.validity.customError).to.equal(true);
+  });
+
+  it('rejects hostile required descriptors and malformed property snapshots without getters', () => {
+    const el = document.createElement('lr-tool-param-form') as LyraToolParamForm;
+    const revokedRequired = Proxy.revocable([] as string[], {});
+    revokedRequired.revoke();
+    el.schema = {
+      type: 'object',
+      properties: { field: { type: 'string' } },
+      required: revokedRequired.proxy,
+    };
+    expect(el.validity.customError).to.equal(true);
+
+    const lengthHostile = new Proxy(['field'], {
+      getOwnPropertyDescriptor(target, key) {
+        if (key === 'length') throw new Error('required length denied');
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+    el.schema = {
+      type: 'object',
+      properties: { field: { type: 'string' } },
+      required: lengthHostile,
+    };
+    expect(el.schema.required).to.deep.equal([]);
+
+    let requiredGetterCalls = 0;
+    const accessorSchema = {
+      type: 'object' as const,
+      properties: { field: { type: 'string' as const } },
+    } as FlatToolParamSchema;
+    Object.defineProperty(accessorSchema, 'required', {
+      enumerable: true,
+      get() {
+        requiredGetterCalls += 1;
+        return ['field'];
+      },
+    });
+    el.schema = accessorSchema;
+    expect(requiredGetterCalls).to.equal(0);
+    expect(el.validity.customError).to.equal(true);
+
+    const revokedNested = Proxy.revocable({}, {});
+    revokedNested.revoke();
+    el.schema = {
+      type: 'object',
+      properties: {
+        field: { type: 'string', nested: revokedNested.proxy } as ToolParamFormProperty,
+      },
+    };
+    expect(el.validity.customError).to.equal(true);
+  });
+
+  it('bounds an object with more enumerable fields than the retained-entry ceiling', () => {
+    const el = document.createElement('lr-tool-param-form') as LyraToolParamForm;
+    const oversized = Object.fromEntries(
+      Array.from({ length: 10_001 }, (_, index) => [`field-${index}`, index]),
+    );
+
+    el.value = { oversized };
+
+    expect(el.validity.customError).to.equal(true);
+    expect(Object.keys(el.value.oversized as object)).to.have.length(10_000);
+  });
+
+  it('bounds deeply nested and oversized array values without retaining live input', () => {
+    const el = document.createElement('lr-tool-param-form') as LyraToolParamForm;
+    let nested: unknown = 'leaf';
+    for (let depth = 0; depth < 20; depth += 1) nested = { next: nested };
+    el.value = { nested, oversized: new Array(10_001) };
+    expect(Object.isFrozen(el.value)).to.equal(true);
+    expect(el.validity.customError).to.equal(true);
+  });
+
+  it('rejects accessor and throwing array descriptors without invoking consumer getters', () => {
+    const el = document.createElement('lr-tool-param-form') as LyraToolParamForm;
+    let getterCalls = 0;
+    const accessorArray: unknown[] = [];
+    Object.defineProperty(accessorArray, '0', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return 'unsafe';
+      },
+    });
+    Object.defineProperty(accessorArray, 'length', { value: 1 });
+
+    const indexTrap = new Proxy(['unsafe'], {
+      getOwnPropertyDescriptor(target, key) {
+        if (key === '0') throw new Error('index descriptor denied');
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+    const lengthTrap = new Proxy(['unsafe'], {
+      getOwnPropertyDescriptor(target, key) {
+        if (key === 'length') throw new Error('length descriptor denied');
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+
+    el.value = { accessorArray, indexTrap, lengthTrap };
+    expect(getterCalls).to.equal(0);
+    expect(el.validity.customError).to.equal(true);
+  });
+
+  it('fails closed when record or schema descriptor enumeration throws', async () => {
+    const el = await fixture<LyraToolParamForm>(html`<lr-tool-param-form></lr-tool-param-form>`);
+    const descriptorsDenied = new Proxy({}, {
+      ownKeys() {
+        throw new Error('descriptor enumeration denied');
+      },
+    });
+    el.value = { nested: descriptorsDenied };
+    expect(el.validity.customError).to.equal(true);
+
+    el.schema = {
+      type: 'object',
+      properties: descriptorsDenied,
+    } as FlatToolParamSchema;
+    await el.updateComplete;
+    expect(Object.keys(el.schema.properties)).to.deep.equal([]);
+    expect(el.validity.customError).to.equal(true);
+  });
+
+  it('reads required arrays through data descriptors only', () => {
+    const el = document.createElement('lr-tool-param-form') as LyraToolParamForm;
+    let getterCalls = 0;
+    const accessorRequired: string[] = [];
+    Object.defineProperty(accessorRequired, '0', {
+      enumerable: true,
+      get() {
+        getterCalls += 1;
+        return 'field';
+      },
+    });
+    Object.defineProperty(accessorRequired, 'length', { value: 1 });
+    el.schema = {
+      type: 'object',
+      properties: { field: { type: 'string' } },
+      required: accessorRequired,
+    };
+    expect(getterCalls).to.equal(0);
+    expect(el.schema.required).to.deep.equal([]);
+
+    const requiredWithIndexTrap = new Proxy(['field'], {
+      getOwnPropertyDescriptor(target, key) {
+        if (key === '0') throw new Error('required index denied');
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+    el.schema = {
+      type: 'object',
+      properties: { field: { type: 'string' } },
+      required: requiredWithIndexTrap,
+    };
+    expect(el.schema.required).to.deep.equal([]);
   });
 });

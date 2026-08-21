@@ -130,18 +130,20 @@ export function bridgeLyraLocale(options: LyraLocaleBridgeOptions = {}): LyraLoc
   };
   let state = localeBridgeStates.get(target);
   if (!state) {
-    state = {
+    let nextState: LocaleBridgeState;
+    const unsubscribe = subscribeLyraLocale(() => applyLocaleBridge(nextState));
+    nextState = {
       target,
       previousLang: target.getAttribute('lang'),
       previousDir: target.getAttribute('dir'),
       registrations: new Map(),
-      unsubscribe: () => {},
+      unsubscribe,
     };
+    state = nextState;
     localeBridgeStates.set(target, state);
     // A registration reachable from the active locale also notifies: a declared `dir` arrives
     // with its catalog, so direction can only resolve correctly once that import has landed.
     // Unrelated registrations are filtered, and every handle shares this one subscription.
-    state.unsubscribe = subscribeLyraLocale(() => applyLocaleBridge(state!));
   }
   state.registrations.set(registration.id, registration);
   applyLocaleBridge(state);

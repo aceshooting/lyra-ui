@@ -43,6 +43,15 @@ it('reports whether the host generates a layout box, including through a hidden 
   expect(hasRenderedLayoutBox(host)).to.be.false;
 });
 
+it('reads the current target synchronously before observation starts', () => {
+  const { host } = createRenderedHost();
+  const direct = new RenderedStateController(host, () => undefined);
+  expect(direct.rendered).to.equal(true);
+
+  const missing = new RenderedStateController(host, () => null, () => undefined);
+  expect(missing.rendered).to.equal(false);
+});
+
 it('reports initial, hidden, and restored rendered states exactly once per transition', async () => {
   const { wrapper, host } = createRenderedHost();
   const states: boolean[] = [];

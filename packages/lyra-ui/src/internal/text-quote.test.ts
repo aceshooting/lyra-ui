@@ -1010,6 +1010,33 @@ describe('scopeFromItems + resolveTextQuote (simulated pdf text-layer items)', (
       container.remove();
     }
   });
+
+  it('fails closed when an explicit item node belongs to a different element', () => {
+    const first = document.createElement('span');
+    const second = document.createElement('span');
+    first.textContent = 'first';
+    second.textContent = 'second';
+    const scope = scopeFromItems([
+      { text: 'second', element: first, node: second.firstChild as Text },
+    ]);
+    expect(scope.text).to.equal('');
+    expect(scope.truncated).to.equal(true);
+  });
+
+  it('distinguishes an exact corpus boundary from omitted later items', () => {
+    const first = document.createElement('span');
+    const second = document.createElement('span');
+    first.textContent = 'a';
+    second.textContent = 'b';
+    expect(scopeFromItems([{ text: 'a', element: first }], { maxCorpusCodeUnits: 1 }).truncated)
+      .to.equal(false);
+    const truncated = scopeFromItems([
+      { text: 'a', element: first },
+      { text: 'b', element: second },
+    ], { maxCorpusCodeUnits: 1 });
+    expect(truncated.text).to.equal('a');
+    expect(truncated.truncated).to.equal(true);
+  });
 });
 
 describe('buildQuoteAnchor boundary resolution edge cases', () => {
@@ -1193,6 +1220,11 @@ describe('segmenter and case-fold defensive fallbacks', () => {
       const ranges = findTextQuoteRanges(scopeFromElement(root), 'foo', 'en');
       expect(ranges).to.have.length(1);
       expect(ranges[0]!.toString()).to.equal('Foo');
+      const decomposedRoot = document.createElement('div');
+      decomposedRoot.textContent = 'e\u0301b';
+      const decomposedScope = scopeFromElement(decomposedRoot);
+      expect(decomposedScope.text).to.equal('éb');
+      expect(resolveTextQuote(decomposedScope, { quote: 'éb' })?.toString()).to.equal('e\u0301b');
       const hangulScope = scopeFromItems([
         { text: '\u1100', element: leadingConsonant },
         { text: '\u1161', element: vowel },
@@ -1568,6 +1600,243 @@ describe('grapheme-continuation joining across item boundaries', () => {
         { text: 'b', element: after },
       ]);
       expect(scope.text).to.equal('a b');
+    } finally {
+      root.remove();
+    }
+  });
+});
+
+describe('normalization and materialization failure boundaries', () => {
+  it('fails closed at each independent corpus-construction ceiling', () => {
+    const plain = document.createElement('div');
+    plain.textContent = 'abc';
+    const plainScope = scopeFromElement(plain, { maxCorpusCodeUnits: 1 });
+    expect(plainScope.text).to.equal('a');
+    expect(plainScope.truncated).to.equal(true);
+
+    const special = document.createElement('div');
+    special.textContent = 'a b';
+    const specialScope = scopeFromElement(special, { maxCorpusCodeUnits: 1 });
+    expect(specialScope.text).to.equal('a');
+    expect(specialScope.truncated).to.equal(true);
+
+    const unchangedThenComposed = document.createElement('div');
+    unchangedThenComposed.textContent = 'ae\u0301';
+    const unchangedScope = scopeFromElement(unchangedThenComposed, { maxCorpusCodeUnits: 0 });
+    expect(unchangedScope.text).to.equal('');
+    expect(unchangedScope.truncated).to.equal(true);
+
+    const composed = document.createElement('div');
+    composed.textContent = 'e\u0301';
+    const composedScope = scopeFromElement(composed, { maxCorpusCodeUnits: 0 });
+    expect(composedScope.text).to.equal('');
+    expect(composedScope.truncated).to.equal(true);
+
+    const longCluster = document.createElement('div');
+    longCluster.textContent = `a${'\u0301'.repeat(4_096)}`;
+    const longClusterScope = scopeFromElement(longCluster);
+    expect(longClusterScope.text).to.have.lengthOf(4_096);
+    expect(longClusterScope.truncated).to.equal(false);
+
+    const emptyTruncated = document.createElement('div');
+    emptyTruncated.textContent = '\u00adX';
+    const emptyTruncatedScope = scopeFromElement(emptyTruncated, { maxNodeCodeUnits: 1 });
+    expect(emptyTruncatedScope.text).to.equal('');
+    expect(emptyTruncatedScope.truncated).to.equal(true);
+
+    const exhausted = document.createElement('div');
+    exhausted.append(document.createTextNode('a'), document.createTextNode('b'));
+    const exhaustedScope = scopeFromElement(exhausted, { maxNormalizationWorkCodeUnits: 1 });
+    expect(exhaustedScope.text).to.equal('a');
+    expect(exhaustedScope.truncated).to.equal(true);
+
+    const exactBoundary = document.createElement('div');
+    exactBoundary.append(document.createTextNode('a'), document.createElement('span'));
+    const exactBoundaryScope = scopeFromElement(exactBoundary, { maxCorpusCodeUnits: 1 });
+    expect(exactBoundaryScope.text).to.equal('a');
+    expect(exactBoundaryScope.truncated).to.equal(true);
+  });
+
+  it('bounds hostile and empty item collections before inspecting later values', () => {
+    const empty = document.createElement('span');
+    const zeroNodes = scopeFromItems([{ text: '', element: empty }], { maxNodes: 0 });
+    expect(zeroNodes.text).to.equal('');
+    expect(zeroNodes.truncated).to.equal(true);
+
+    const skippedEmpty = scopeFromItems([{ text: '', element: empty }]);
+    expect(skippedEmpty.text).to.equal('');
+    expect(skippedEmpty.truncated).to.equal(false);
+
+    const first = document.createElement('span');
+    const second = document.createElement('span');
+    first.textContent = 'a';
+    second.textContent = 'b';
+    const exhausted = scopeFromItems([
+      { text: 'a', element: first },
+      { text: 'b', element: second },
+    ], { maxNormalizationWorkCodeUnits: 1 });
+    expect(exhausted.text).to.equal('a');
+    expect(exhausted.truncated).to.equal(true);
+
+    const softHyphen = document.createElement('span');
+    softHyphen.textContent = '\u00adX';
+    const emptyTruncated = scopeFromItems([
+      { text: '\u00adX', element: softHyphen },
+    ], { maxNodeCodeUnits: 1 });
+    expect(emptyTruncated.text).to.equal('');
+    expect(emptyTruncated.truncated).to.equal(true);
+
+    const partlyRetained = document.createElement('span');
+    partlyRetained.textContent = 'ab';
+    const partlyRetainedScope = scopeFromItems([
+      { text: 'ab', element: partlyRetained },
+    ], { maxNodeCodeUnits: 1 });
+    expect(partlyRetainedScope.text).to.equal('a');
+    expect(partlyRetainedScope.truncated).to.equal(true);
+  });
+
+  it('marks item scopes spanning unrelated documents as structurally unmappable', () => {
+    const first = document.createElement('span');
+    first.textContent = 'first';
+    const foreignDocument = document.implementation.createHTMLDocument('foreign');
+    const second = foreignDocument.createElement('span');
+    second.textContent = 'second';
+
+    const scope = scopeFromItems([
+      { text: 'first', element: first },
+      { text: 'second', element: second },
+    ]);
+    expect(scope.text).to.equal('first second');
+    expect(scope.truncated).to.equal(true);
+    expect(resolveTextQuote(scope, { quote: 'first second' })).to.equal(null);
+  });
+
+  it('maps selection boundaries inside a canonically composed raw cluster', () => {
+    const root = document.createElement('div');
+    root.textContent = 'e\u0301x';
+    document.body.append(root);
+    try {
+      const scope = scopeFromElement(root);
+      const text = root.firstChild as Text;
+      const range = document.createRange();
+      range.setStart(text, 0);
+      range.setEnd(text, 1);
+      const anchor = buildQuoteAnchor(range, scope);
+      expect(anchor.kind).to.equal('text-quote');
+      if (anchor.kind !== 'text-quote') throw new Error('unreachable');
+      expect(anchor.quote).to.equal('é');
+
+      root.textContent = 'ae\u0301';
+      const prefixedScope = scopeFromElement(root);
+      const prefixedText = root.firstChild as Text;
+      const prefixRange = document.createRange();
+      prefixRange.setStart(prefixedText, 0);
+      prefixRange.setEnd(prefixedText, 1);
+      const prefixAnchor = buildQuoteAnchor(prefixRange, prefixedScope);
+      expect(prefixAnchor.kind).to.equal('text-quote');
+      if (prefixAnchor.kind !== 'text-quote') throw new Error('unreachable');
+      expect(prefixAnchor.quote).to.equal('a');
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('maps a selection through whole-scope normalization across item nodes', () => {
+    const root = document.createElement('div');
+    const first = document.createElement('span');
+    const second = document.createElement('span');
+    first.textContent = 'e';
+    second.textContent = '\u0301';
+    root.append(first, second);
+    document.body.append(root);
+    try {
+      const scope = scopeFromItems([
+        { text: 'e', element: first },
+        { text: '\u0301', element: second },
+      ]);
+      const range = document.createRange();
+      range.setStart(first.firstChild as Text, 0);
+      range.setEnd(second.firstChild as Text, 1);
+      const anchor = buildQuoteAnchor(range, scope);
+      expect(anchor.kind).to.equal('text-quote');
+      if (anchor.kind !== 'text-quote') throw new Error('unreachable');
+      expect(anchor.quote).to.equal('é');
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('rejects cross-document ranges and hostile platform materialization', () => {
+    const firstDocument = document.implementation.createHTMLDocument('first');
+    const secondDocument = document.implementation.createHTMLDocument('second');
+    const first = firstDocument.createTextNode('a');
+    const second = secondDocument.createTextNode('b');
+    const crossDocumentScope: TextQuoteScope = {
+      text: 'ab',
+      segments: [
+        { node: first, normalizedStart: 0, normalizedLength: 1, rawOffsetRuns: new Uint32Array() },
+        { node: second, normalizedStart: 1, normalizedLength: 1, rawOffsetRuns: new Uint32Array() },
+      ],
+      truncated: false,
+    };
+    expect(rangeFromTextQuoteMatch(crossDocumentScope, { start: 0, end: 2 })).to.equal(null);
+
+    const node = document.createTextNode('a');
+    const scope: TextQuoteScope = {
+      text: 'a',
+      segments: [{ node, normalizedStart: 0, normalizedLength: 1, rawOffsetRuns: new Uint32Array() }],
+      truncated: false,
+    };
+    const originalDescriptor = Object.getOwnPropertyDescriptor(document, 'createRange');
+    Object.defineProperty(document, 'createRange', {
+      configurable: true,
+      value() {
+        throw new Error('range allocation failed');
+      },
+    });
+    try {
+      expect(rangeFromTextQuoteMatch(scope, { start: 0, end: 1 })).to.equal(null);
+    } finally {
+      if (originalDescriptor) Object.defineProperty(document, 'createRange', originalDescriptor);
+      else delete (document as Document & { createRange?: () => Range }).createRange;
+    }
+
+    const hostileMatch = {
+      get start(): number {
+        throw new Error('hostile start getter');
+      },
+      end: 1,
+    };
+    expect(rangeFromTextQuoteMatch(scope, hostileMatch)).to.equal(null);
+  });
+
+  it('isolates hostile batch entries and fails a stale batch atomically', () => {
+    const root = document.createElement('div');
+    root.textContent = 'needle';
+    document.body.append(root);
+    try {
+      const scope = scopeFromElement(root);
+      const hostileEntries = new Proxy([{ start: 0, end: 6 }], {
+        get(target, key, receiver) {
+          if (key === '0') throw new Error('hostile item getter');
+          return Reflect.get(target, key, receiver);
+        },
+      });
+      expect(rangesFromTextQuoteMatches(scope, hostileEntries)).to.deep.equal([null]);
+
+      const throwingSegments = new Proxy(scope.segments, {
+        get(target, key, receiver) {
+          if (key === Symbol.iterator) throw new Error('hostile segment iterator');
+          return Reflect.get(target, key, receiver);
+        },
+      });
+      const hostileScope: TextQuoteScope = { ...scope, segments: throwingSegments };
+      expect(rangesFromTextQuoteMatches(hostileScope, [{ start: 0, end: 6 }])).to.deep.equal([null]);
+      expect(findTextQuoteRanges(hostileScope, 'needle')).to.deep.equal([]);
+
+      const range = document.createRange();
+      range.selectNodeContents(root);
+      expect(boundedSelectionText(range, Infinity)).to.equal('needle');
     } finally {
       root.remove();
     }

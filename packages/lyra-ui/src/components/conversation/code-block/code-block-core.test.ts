@@ -193,6 +193,29 @@ describe("lr-code-block-core", () => {
     expect(el.shadowRoot!.querySelector(".shiki")).to.exist;
   });
 
+  it("localizes Shiki gutter labels and number text through the core tokenizer", async () => {
+    const el = await fixture<LyraCodeBlockCore>(html`
+      <lr-code-block-core
+        lang="ar-EG"
+        language="json"
+        line-numbers
+        activatable-lines
+        .languages=${sharedJsonLanguages}
+        .code=${'{\n  "answer": 42\n}'}
+      ></lr-code-block-core>
+    `);
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('.shiki') !== null,
+      undefined,
+      { timeout: 8000 },
+    );
+    const second = el.shadowRoot!.querySelector<HTMLElement>(
+      '[part~="line-button"][data-line="2"]',
+    )!;
+    expect(second.textContent?.trim()).to.equal('٢');
+    expect(second.getAttribute('aria-label')).to.equal('Line ٢');
+  });
+
   it("extends a shiki-themed background across a long line's full horizontal scroll width", async () => {
     const longValue = `{"url":"https://example.test/${"unbroken-path-segment-".repeat(
       30

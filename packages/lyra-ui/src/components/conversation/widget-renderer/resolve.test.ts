@@ -82,7 +82,21 @@ describe("createWidgetDocument", () => {
       { children: [] },
       { type: "row", props: [] },
       { type: "row", children: [null] },
+      { type: "row", children: { type: "text" } },
       { type: "text", id: "" },
+      {
+        type: "text",
+        get id(): never {
+          throw new Error("hostile id");
+        },
+      },
+      {
+        type: "button",
+        actionId: "open",
+        get payload(): never {
+          throw new Error("hostile payload");
+        },
+      },
       cyclic,
       hostile,
       {
@@ -108,6 +122,32 @@ describe("createWidgetDocument", () => {
     expect(() =>
       createWidgetDocument({ type: "row", actionId: "" } as LyraWidgetNode)
     ).to.throw(TypeError);
+  });
+
+  it("rejects deceptive child arrays with an invalid length or a sparse admitted entry", () => {
+    const invalidLength = new Proxy([], {
+      get(target, key, receiver) {
+        if (key === "length") return -1;
+        return Reflect.get(target, key, receiver);
+      },
+    });
+    const sparse = new Array(1);
+
+    expect(() =>
+      createWidgetDocument({ type: "row", children: invalidLength })
+    ).to.throw(TypeError);
+    expect(() =>
+      createWidgetDocument({ type: "row", children: sparse })
+    ).to.throw(TypeError);
+  });
+
+  it("copies only own enumerable document props", () => {
+    const props = Object.assign(Object.create({ inherited: "ignored" }), {
+      own: "retained",
+    }) as Record<string, unknown>;
+    const document = createWidgetDocument({ type: "row", props });
+
+    expect(document.root.props).to.deep.equal({ own: "retained" });
   });
 
   it("caps admitted document props and fails closed on a throwing prop getter", () => {
@@ -265,6 +305,34 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
     for (const input of malformed) {
       expect(resolveTree(input as LyraWidgetNode, ctx())).to.be.null;
     }
+  });
+
+  it("rejects malformed slot and action identifiers during resolution", () => {
+    for (const input of [
+      { type: "row", slot: " bad " },
+      { type: "row", actionId: "" },
+    ]) {
+      expect(resolveTree(input as LyraWidgetNode, ctx())).to.be.null;
+    }
+  });
+
+  it("skips inherited enumerable props before allowlist filtering", () => {
+    const props = Object.assign(Object.create({ appearance: "inherited" }), {
+      disabled: false,
+    }) as Record<string, unknown>;
+    const registry = createWidgetTypeRegistry([
+      [
+        "card",
+        {
+          tag: "lr-card",
+          interaction: "none",
+          props: { appearance: "string", disabled: "boolean" },
+        },
+      ],
+    ]);
+    const resolved = resolveTree({ type: "card", props }, ctx(registry));
+
+    expect(resolved?.props).to.deep.equal({ disabled: false });
   });
 
   it("bounds depth and node count", () => {
@@ -486,6 +554,28 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
     expect(
       warnings.some((warning) => warning.includes("control descendant"))
     ).to.equal(true);
+
+    const nested = resolveTree(
+      {
+        type: "outer",
+        id: "outer-nested",
+        actionId: "save",
+        children: [
+          {
+            type: "row",
+            children: [
+              {
+                type: "bound-input",
+                id: "nested-name",
+                props: { value: { $bind: "/name", fallback: "" } },
+              },
+            ],
+          },
+        ],
+      },
+      ctx(registry, [], { name: "Ada" })
+    );
+    expect(nested?.children).to.have.lengthOf(0);
   });
 
   it("wires action metadata only when actionId is authored", () => {

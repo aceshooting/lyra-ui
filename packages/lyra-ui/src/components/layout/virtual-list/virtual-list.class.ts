@@ -63,9 +63,6 @@ const rowHeightConverter = {
   fromAttribute(value: string | null): LyraVirtualListRowHeight {
     return value === null ? 'auto' : normalizeRowHeight(value);
   },
-  toAttribute(value: LyraVirtualListRowHeight): string {
-    return String(normalizeRowHeight(value));
-  },
 };
 
 type VirtualListKey = string | number;

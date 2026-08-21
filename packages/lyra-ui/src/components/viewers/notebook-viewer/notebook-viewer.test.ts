@@ -2,7 +2,7 @@ import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/t
 import './notebook-viewer.js';
 import type { LyraNotebookViewer } from './notebook-viewer.js';
 import { __setNotebookSanitizerForTesting } from './dompurify-loader.js';
-import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
+import { DEFAULT_MAX_RESOURCE_BYTES, LyraUserFacingError } from '../../../internal/resource-loader.js';
 import type { LyraTextViewerTarget } from '../../../internal/text-viewer-target.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { styles } from './notebook-viewer.styles.js';
@@ -1642,4 +1642,154 @@ it('registers a application/x-ipynb+json renderer whose matches() and render() b
     name: 'Analysis.IPYNB', mimeType: 'application/x-ipynb+json', src: 'https://example.test/f',
   })}</div>`)) as HTMLElement;
   expect(host.querySelector('lr-notebook-viewer'), 'render() produces the viewer element').to.exist;
+});
+
+describe('hostile notebook snapshot boundaries', () => {
+  it('preserves an explicitly user-facing fetch failure message', async () => {
+    const originalFetch = window.fetch;
+    window.fetch = (() => Promise.reject(
+      new LyraUserFacingError('Localized policy rejection.'),
+    )) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraNotebookViewer>(html`
+        <lr-notebook-viewer></lr-notebook-viewer>
+      `);
+      const event = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/notebook.ipynb';
+      await event;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent)
+        .to.equal('Localized policy rejection.');
+    } finally {
+      window.fetch = originalFetch;
+    }
+  });
+
+  it('rejects nested proxies whose prototype, array identity, length, keys, or descriptors become unreadable', () => {
+    const el = document.createElement('lr-notebook-viewer') as LyraNotebookViewer;
+    const rejected: unknown[] = [];
+
+    rejected.push(new Proxy({}, {
+      getPrototypeOf: () => { throw new Error('prototype denied'); },
+    }));
+
+    const revoked = Proxy.revocable([], {});
+    revoked.revoke();
+    rejected.push(revoked.proxy);
+
+    rejected.push(new Proxy([], {
+      getOwnPropertyDescriptor(target, key) {
+        if (key === 'length') throw new Error('length denied');
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    }));
+
+    rejected.push(new Proxy({}, {
+      ownKeys: () => { throw new Error('keys denied'); },
+    }));
+
+    let descriptorReads = 0;
+    rejected.push(new Proxy({ retained: true }, {
+      getOwnPropertyDescriptor(target, key) {
+        descriptorReads++;
+        if (descriptorReads > 1) throw new Error('descriptor denied');
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    }));
+
+    let disappearingReads = 0;
+    rejected.push(new Proxy({ retained: true }, {
+      getOwnPropertyDescriptor(target, key) {
+        disappearingReads++;
+        return disappearingReads > 1
+          ? undefined
+          : Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    }));
+
+    for (const hostile of rejected) {
+      el.notebook = {
+        nbformat: 4,
+        nbformat_minor: 5,
+        cells: [],
+        metadata: hostile,
+      } as typeof el.notebook;
+      expect(el.notebook).to.deep.equal({});
+    }
+  });
+
+  it('validates JSON arrays iteratively and searches only their string fragments', async () => {
+    const el = document.createElement('lr-notebook-viewer') as LyraNotebookViewer;
+    el.notebook = JSON.stringify({
+      nbformat: 4,
+      nbformat_minor: 5,
+      cells: [{
+        cell_type: 'code',
+        source: '',
+        outputs: [{
+          output_type: 'display_data',
+          data: { 'application/json': [1, true, 'hidden needle', null] },
+        }],
+      }],
+    });
+
+    expect(await el.search('needle')).to.equal(1);
+
+    el.notebook = JSON.stringify({
+      nbformat: 4,
+      nbformat_minor: 5,
+      cells: [{
+        cell_type: 'code',
+        source: '',
+        outputs: [{
+          output_type: 'display_data',
+          data: { 'application/json': new Array(100_000).fill(null) },
+        }],
+      }],
+    });
+    expect(el.notebook).to.be.a('string');
+  });
+
+  it('reports a lower-bound search result when one admitted cell exhausts the work budget', async () => {
+    const el = document.createElement('lr-notebook-viewer') as LyraNotebookViewer;
+    el.notebook = {
+      nbformat: 4,
+      nbformat_minor: 5,
+      cells: [{ cell_type: 'raw', source: 'x'.repeat(4_000_000) }],
+    } as typeof el.notebook;
+
+    const events: CustomEvent[] = [];
+    el.addEventListener('lr-search-change', (event) => events.push(event));
+    expect(await el.search('absent')).to.equal(0);
+    expect(events.at(-1)?.detail).to.deep.include({
+      matchCount: 0,
+      matchCountExact: false,
+      activeIndex: -1,
+    });
+  });
+
+  it('keeps stale, duplicate, and unloaded private transitions inert', async () => {
+    const el = document.createElement('lr-notebook-viewer') as LyraNotebookViewer;
+    const target = el as unknown as {
+      generation: number;
+      loadState: unknown;
+      highlightedCells: Map<number, unknown>;
+      parseInline(): void;
+      loadFromSrc(): Promise<void>;
+      setDoc(raw: unknown, generation: number): void;
+      repaintHighlights(): void;
+    };
+    target.parseInline();
+    await target.loadFromSrc();
+    target.setDoc(NOTEBOOK, target.generation - 1);
+    target.highlightedCells = new Map([[1, {}]]);
+    target.loadState = { kind: 'idle' };
+    target.repaintHighlights();
+    expect(target.highlightedCells.size).to.equal(0);
+
+    el.notebook = JSON.stringify(NOTEBOOK);
+    const first = el.notebook;
+    el.notebook = first;
+    expect(el.notebook).to.equal(first);
+  });
 });

@@ -6,6 +6,28 @@ import type {
 } from "./responsive-panel.js";
 import { resolveResponsivePanelEffectiveMode } from "./responsive-panel.js";
 
+it("falls back to the owner window resize signal when ResizeObserver is unavailable", async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(window, "ResizeObserver");
+  Object.defineProperty(window, "ResizeObserver", {
+    configurable: true,
+    value: undefined,
+  });
+  let el: LyraResponsivePanel | undefined;
+  try {
+    el = await fixture<LyraResponsivePanel>(html`
+      <lr-responsive-panel open>body</lr-responsive-panel>
+    `);
+    el.getBoundingClientRect = () => ({ width: 320 }) as DOMRect;
+    window.dispatchEvent(new Event("resize"));
+    await el.updateComplete;
+    expect(el.effectiveMode).to.equal("overlay");
+  } finally {
+    el?.remove();
+    if (descriptor) Object.defineProperty(window, "ResizeObserver", descriptor);
+    else Reflect.deleteProperty(window, "ResizeObserver");
+  }
+});
+
 it("pads an open bottom sheet with the --lr-safe-area-bottom token, not a hardcoded value", async () => {
   // Reads the real rendered/computed padding instead of substring-matching the exported
   // stylesheet source, which would still pass even if the declaration lived on a selector that

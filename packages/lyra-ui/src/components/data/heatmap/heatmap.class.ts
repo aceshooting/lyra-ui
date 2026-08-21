@@ -411,9 +411,6 @@ const optionalCellSizeConverter = {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : undefined;
   },
-  toAttribute(value: number | undefined): string | null {
-    return value == null ? null : String(value);
-  },
 };
 
 const DEFAULT_MATRIX_DATA: HeatmapMatrixData = Object.freeze({
@@ -441,9 +438,6 @@ const bucketCountConverter = {
     return value === null
       ? DEFAULT_BUCKET_COUNT
       : normalizeBucketCount(Number(value));
-  },
-  toAttribute(value: number): string {
-    return String(normalizeBucketCount(value));
   },
 };
 
