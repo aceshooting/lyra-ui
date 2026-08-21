@@ -66739,7 +66739,7 @@
           {
             "name": "max-labels",
             "property": "maxLabels",
-            "type": "number | undefined",
+            "type": "number | 'auto' | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -66827,7 +66827,7 @@
           {
             "name": "value-axis-gutter",
             "property": "valueAxisGutter",
-            "type": "number | undefined",
+            "type": "number | 'auto' | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -67032,7 +67032,7 @@
           {
             "name": "maxLabels",
             "attribute": "max-labels",
-            "type": "number | undefined",
+            "type": "number | 'auto' | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -67157,7 +67157,7 @@
           {
             "name": "valueAxisGutter",
             "attribute": "value-axis-gutter",
-            "type": "number | undefined",
+            "type": "number | 'auto' | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
