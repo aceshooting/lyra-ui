@@ -94,6 +94,12 @@ jobs:
             --workflow ci.yml \
             --timeout-seconds 3600 \
             --poll-seconds 20
+          node scripts/release-integrity.mjs wait-test-all-browsers \
+            --repository "$GITHUB_REPOSITORY" \
+            --sha "$SHA" \
+            --workflow test-all-browsers.yml \
+            --timeout-seconds 7200 \
+            --poll-seconds 20
           node scripts/release-integrity.mjs wait-full-engine \
             --repository "$GITHUB_REPOSITORY" \
             --sha "$SHA" \

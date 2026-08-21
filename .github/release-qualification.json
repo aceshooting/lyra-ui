@@ -49,6 +49,19 @@
         "webkit / shard 7/8",
         "webkit / shard 8/8"
       ]
+    },
+    "testAllBrowsers": {
+      "name": "Test All Browsers",
+      "path": ".github/workflows/test-all-browsers.yml",
+      "event": "workflow_dispatch",
+      "headBranch": "main",
+      "requiredJobs": [
+        "chrome",
+        "chromium",
+        "edge",
+        "firefox",
+        "safari"
+      ]
     }
   }
 }

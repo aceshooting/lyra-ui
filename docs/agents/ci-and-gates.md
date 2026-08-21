@@ -221,6 +221,20 @@ WTR_BROWSER=firefox WTR_STRICT_CONSOLE=1 \
 Run `pnpm build` first when the selected shard includes package-entrypoint tests. The deterministic
 discovery and sharding logic is covered by the package's blocking `test:tooling` suite.
 
+## Manually dispatched five-browser suite
+
+`.github/workflows/test-all-browsers.yml` runs the complete non-coverage suite in Chromium,
+Firefox, Chrome, Edge, and Safari (WebKit). Each browser gets an isolated runner and executes four
+deterministic shards sequentially through `scripts/test_all_browsers.sh`; that four-shard shape is
+deliberately distinct from `full-engine.yml`'s eight independently-hosted shards per Firefox/WebKit
+engine. Manual diagnostic runs may select a subset through the workflow input, but release
+qualification always dispatches the complete five-browser list.
+
+For a release, the generated qualification manifest requires all five named browser jobs from one
+successful `workflow_dispatch` run whose `head_branch` is `main` and whose `head_sha` is the exact
+release commit. A subset run therefore cannot qualify a release even when every job it did create
+succeeds.
+
 ## Local aggregate: `scripts/ci.sh`
 
 `./scripts/ci.sh` consolidates the six primary jobs into one Node 22/Chromium run. It requires the
@@ -317,25 +331,26 @@ plugin set; any other unstaged tracked output aborts for review. A flags-only re
 the lyra-ui plugin.
 
 The release commit is pushed alone to `origin/main`, which starts CI. The script dispatches
-`full-engine.yml` from `main`, requires an exact-SHA `push`/`main` CI run and an exact-SHA
-`workflow_dispatch`/`main` full-engine run, and creates no tag if either fails. Only after both
-qualify does it create annotated tags, push the multi-package tag set atomically, and create the
-GitHub Releases that trigger `publish.yml`. Recovery output is phase-aware and never suggests a
-release after failed qualification.
+`test-all-browsers.yml` and `full-engine.yml` from `main`, then requires the exact-SHA `push`/`main`
+CI run plus exact-SHA `workflow_dispatch`/`main` runs for both browser workflows. It creates no tag
+unless all three runs qualify. Only then does it create annotated tags, push the multi-package tag
+set atomically, and create the GitHub Releases that trigger `publish.yml`. Recovery output is
+phase-aware and never suggests a release after failed qualification.
 
 The read-only publish verification job rejects a lightweight tag, verifies the annotated tag's
 peeled commit is both the exact checkout and the workflow invocation ref/SHA, then waits for one
-successful `push`/`main` `ci.yml` run and one successful `workflow_dispatch`/`main`
-`full-engine.yml` run whose `head_sha` is that commit. A manual invocation must therefore be
-dispatched on the tag itself (for example, `gh workflow run publish.yml --ref <tag> -f tag=<tag>`),
-not on the default branch. The CI run must contain
+successful `push`/`main` `ci.yml` run and successful `workflow_dispatch`/`main` runs for
+`test-all-browsers.yml` and `full-engine.yml`, all with that commit as `head_sha`. A manual
+invocation must therefore be dispatched on the tag itself (for example,
+`gh workflow run publish.yml --ref <tag> -f tag=<tag>`), not on the default branch. Each run must
+contain
 successful results for every job marked `release-qualification: required` or
-`release-qualification: matrix` in the workflow, and every job present in that CI run must succeed
+`release-qualification: matrix` in the workflow, and every job present in its run must succeed
 so a future gate cannot be added without becoming release-blocking. The exact expanded job names
 live in `.github/release-qualification.json`; `generate-release-qualification.mjs --check` derives
-them from `ci.yml`/`full-engine.yml` and makes matrix or display-name drift a freshness failure. The
-full-engine run must contain all eight Firefox and all eight WebKit shards, with every job
-successful.
+them from all three workflow files and makes matrix or display-name drift a freshness failure. The
+Test All Browsers run must contain Chromium, Firefox, Chrome, Edge, and Safari; the full-engine run
+must contain all eight Firefox and all eight WebKit shards, with every job successful.
 The helper deliberately reads the named workflow runs and their jobs, not every check on the commit:
 the latter set includes the currently-running publish job and would deadlock on itself. Its pure
 state-machine, tag, and

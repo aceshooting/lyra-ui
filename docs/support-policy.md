@@ -65,8 +65,10 @@ This table is the support window.
   type, style, tree-shaking, and framework-recipe matrix at the supported Node floor.
 
 Every named browser therefore has blocking per-push contract coverage; Playwright Chromium also
-runs the complete suite per push. Firefox and WebKit run the complete non-coverage suite weekly and
-before release through `.github/workflows/full-engine.yml`. One known, deliberate gap remains:
+runs the complete suite per push. Firefox and WebKit run the complete non-coverage suite weekly
+through `.github/workflows/full-engine.yml`; before release, that workflow and the manually
+dispatched `.github/workflows/test-all-browsers.yml` must pass for the exact release commit, with
+the latter running the complete suite in all five named browsers. One known, deliberate gap remains:
 WebKit silently drops a programmatic `addRange()` into a shadow tree, so cross-shadow text
 selection is unverified there. A selection-dependent test added to `test:platform` needs the
 documented WebKit guard first.
