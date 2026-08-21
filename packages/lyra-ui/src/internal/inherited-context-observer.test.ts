@@ -1,5 +1,7 @@
 import { expect } from '@open-wc/testing';
 import {
+  beginInheritedContextUpdate,
+  finishInheritedContextUpdate,
   observeInheritedContext,
   queueInheritedDirectionChange,
   recordInheritedDirectionRead,
@@ -226,5 +228,73 @@ it('rebinds direction observation when an unassigned light child gains a slot', 
   } finally {
     stop();
     shell.remove();
+  }
+});
+
+it('replaces an active subscription and leaves both stop callbacks idempotent', () => {
+  const host = foreignHost(document);
+  const firstStop = observeInheritedContext(host);
+  recordInheritedLocaleRead(host, 'en');
+  recordInheritedDirectionRead(host, 'ltr');
+  const secondStop = observeInheritedContext(host);
+
+  expect(() => {
+    firstStop();
+    recordInheritedLocaleRead(host, 'en');
+    recordInheritedDirectionRead(host, 'ltr');
+    secondStop();
+    secondStop();
+  }).not.to.throw();
+  host.remove();
+});
+
+it('contains slot-listener cleanup failures and handles a detached element root', () => {
+  const detachedRoot = document.createElement('section');
+  const detached = document.createElement('div') as unknown as TestHost;
+  detached.requestUpdate = () => {};
+  detachedRoot.append(detached);
+  const stopDetached = observeInheritedContext(detached);
+  expect(() => recordInheritedDirectionRead(detached, 'ltr')).not.to.throw();
+  stopDetached();
+
+  const shell = document.body.appendChild(document.createElement('div'));
+  const root = shell.attachShadow({ mode: 'open' });
+  const host = foreignHost(document);
+  shell.append(host);
+  const originalRemove = root.removeEventListener;
+  const stop = observeInheritedContext(host);
+  recordInheritedDirectionRead(host, 'ltr');
+  root.removeEventListener = (() => {
+    throw new Error('slot listener cleanup unavailable');
+  }) as typeof root.removeEventListener;
+  try {
+    expect(() => stop()).not.to.throw();
+  } finally {
+    root.removeEventListener = originalRemove;
+    shell.remove();
+  }
+});
+
+it('uses the live inherited baseline after a render is aborted', async () => {
+  const wrapper = document.body.appendChild(document.createElement('div'));
+  const host = foreignHost(document);
+  wrapper.append(host);
+  let updates = 0;
+  host.requestUpdate = () => updates++;
+  const stop = observeInheritedContext(host);
+  try {
+    beginInheritedContextUpdate(host);
+    recordInheritedLocaleRead(host, 'en');
+    recordInheritedDirectionRead(host, 'ltr');
+    finishInheritedContextUpdate(host);
+
+    wrapper.setAttribute('lang', 'fr');
+    wrapper.setAttribute('dir', 'rtl');
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(updates).to.equal(0);
+  } finally {
+    stop();
+    wrapper.remove();
   }
 });

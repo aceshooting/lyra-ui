@@ -903,3 +903,57 @@ it('reports depth truncation before scheduling an included root', async () => {
   expect(result.elements).to.deep.equal([]);
   expect(result.truncationReasons).to.include('depth');
 });
+
+it('rejects forged focus objects and an area without a link target', () => {
+  const forged = { localName: 'button' } as unknown as Element;
+  const area = document.createElement('area');
+
+  expect(isComposedFocusAvailable(forged)).to.equal(false);
+  expect(isSemanticActionElement(area)).to.equal(false);
+});
+
+it('repairs focus through a candidate whose focus method delegates into its shadow tree', async () => {
+  const root = await fixture<HTMLDivElement>(html`
+    <div><section id="owner"><button id="inside">Inside</button></section></div>
+  `);
+  const owner = root.querySelector<HTMLElement>('#owner')!;
+  const inside = root.querySelector<HTMLButtonElement>('#inside')!;
+  const candidate = document.createElement('div');
+  candidate.tabIndex = 0;
+  const shadow = candidate.attachShadow({ mode: 'open' });
+  const delegated = document.createElement('button');
+  shadow.append(delegated);
+  candidate.focus = () => delegated.focus();
+  root.append(candidate);
+
+  inside.focus();
+  const repair = captureComposedFocusRepair(owner, candidate)!;
+  expect(applyComposedFocusRepair(repair, null)).to.equal(false);
+  owner.remove();
+  expect(applyComposedFocusRepair(repair)).to.equal(true);
+  expect(shadow.activeElement === delegated).to.equal(true);
+});
+
+it('fails closed for a negative authored tab stop in an ownerless document', () => {
+  const ownerless = document.implementation.createHTMLDocument('ownerless-focus');
+  const candidate = ownerless.createElement('div');
+  candidate.tabIndex = -1;
+  candidate.checkVisibility = () => true;
+  ownerless.body.append(candidate);
+
+  expect(ownerless.defaultView).to.equal(null);
+  expect(collectComposedFocusTargets(candidate).elements).to.deep.equal([]);
+});
+
+it('retains the first already-checked radio as its group tab stop', async () => {
+  const root = await fixture<HTMLDivElement>(html`
+    <div>
+      <input id="first-checked" type="radio" name="first-checked-group" checked />
+      <input id="later-unchecked" type="radio" name="first-checked-group" />
+    </div>
+  `);
+
+  expect(collectComposedFocusTargets(root).elements.map((element) => element.id)).to.deep.equal([
+    'first-checked',
+  ]);
+});

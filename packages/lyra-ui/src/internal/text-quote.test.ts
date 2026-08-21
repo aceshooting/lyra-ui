@@ -677,6 +677,29 @@ describe('locale-aware search ranges', () => {
 });
 
 describe('resolveTextQuote defensive edge cases against hand-built scopes', () => {
+  it('rejects retained offsets after adjacent text siblings are inserted', () => {
+    const root = document.createElement('div');
+    const before = document.createTextNode('before ');
+    const target = document.createTextNode('needle');
+    const after = document.createTextNode(' after');
+    root.append(before, target, after);
+    document.body.append(root);
+    try {
+      const previousSiblingScope = scopeFromElement(root);
+      const previousSiblingMatch = findTextQuoteMatches(previousSiblingScope, 'needle').at(0)!;
+      target.before(document.createTextNode('inserted '));
+      expect(rangeFromTextQuoteMatch(previousSiblingScope, previousSiblingMatch)).to.equal(null);
+
+      root.replaceChildren(before, target, after);
+      const nextSiblingScope = scopeFromElement(root);
+      const nextSiblingMatch = findTextQuoteMatches(nextSiblingScope, 'needle').at(0)!;
+      target.after(document.createTextNode(' inserted'));
+      expect(rangeFromTextQuoteMatch(nextSiblingScope, nextSiblingMatch)).to.equal(null);
+    } finally {
+      root.remove();
+    }
+  });
+
   it('fails closed when a hand-built match ends in an unmapped segment gap', () => {
     // A hand-built scope whose `text` has an unmapped character ('X' at index 2) between two
     // segments -- exactly the shape produced by `scopeFromItems`' synthetic joining space, which no

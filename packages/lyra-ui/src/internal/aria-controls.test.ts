@@ -216,6 +216,23 @@ it('keeps overlapping description handles independent when they release out of o
   expect(target.hasAttribute('aria-describedby')).to.equal(false);
 });
 
+it('deduplicates repeated descriptions across leases and makes release idempotent', async () => {
+  const root = await fixture<HTMLElement>(html`
+    <div><button></button><span id="shared-description">Shared</span></div>
+  `);
+  const target = root.querySelector<HTMLButtonElement>('button')!;
+  const description = root.querySelector<HTMLElement>('#shared-description')!;
+  const first = acquireAriaDescription(target, [description, description]);
+  const second = acquireAriaDescription(target, [description]);
+
+  expect(target.getAttribute('aria-describedby')).to.equal('shared-description');
+  first.release();
+  first.release();
+  expect(target.getAttribute('aria-describedby')).to.equal('shared-description');
+  second.release();
+  expect(target.hasAttribute('aria-describedby')).to.equal(false);
+});
+
 it('preserves a late external aria-describedby write after the owned description releases', async () => {
   const el = await fixture<HTMLElement>(html`
     <div>
@@ -463,6 +480,9 @@ it('preserves empty serialized baselines on platforms without reflected element 
       expect(moduleCopy.syncAriaDescribedByElements(root, withBaseline, 'missing')).to.equal(false);
       expect(() => moduleCopy.syncAriaControlsElements(root, withBaseline, 'missing')).to.not.throw();
 
+      expect(syncAriaDescribedByElements(root, withBaseline, 'missing')).to.equal(false);
+      expect(() => syncAriaControlsElements(root, withBaseline, 'missing')).to.not.throw();
+
       const baselineLease = moduleCopy.acquireAriaDescription(withBaseline, [description]);
       expect(withBaseline.getAttribute('aria-describedby')).to.equal('');
       baselineLease.release();
@@ -471,6 +491,16 @@ it('preserves empty serialized baselines on platforms without reflected element 
       const emptyLease = moduleCopy.acquireAriaDescription(withoutBaseline, [description]);
       expect(withoutBaseline.hasAttribute('aria-describedby')).to.equal(false);
       emptyLease.release();
+      expect(withoutBaseline.hasAttribute('aria-describedby')).to.equal(false);
+
+      const sourceBaselineLease = acquireAriaDescription(withBaseline, [description]);
+      expect(withBaseline.getAttribute('aria-describedby')).to.equal('');
+      sourceBaselineLease.release();
+      expect(withBaseline.getAttribute('aria-describedby')).to.equal('');
+
+      const sourceEmptyLease = acquireAriaDescription(withoutBaseline, [description]);
+      expect(withoutBaseline.hasAttribute('aria-describedby')).to.equal(false);
+      sourceEmptyLease.release();
       expect(withoutBaseline.hasAttribute('aria-describedby')).to.equal(false);
     } finally {
       root.remove();

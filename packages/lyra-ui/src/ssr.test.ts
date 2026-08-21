@@ -269,6 +269,24 @@ describe('diagnoseLyraHydration', () => {
     }
   });
 
+  it('visits a redundantly exposed open root once', async () => {
+    const { container, cleanup } = withContainer();
+    const sharedRoot = document.createDocumentFragment();
+    sharedRoot.append(document.createElement('lr-badge'));
+    const first = document.createElement('div');
+    const second = document.createElement('div');
+    Object.defineProperty(first, 'shadowRoot', { configurable: true, value: sharedRoot });
+    Object.defineProperty(second, 'shadowRoot', { configurable: true, value: sharedRoot });
+    container.append(first, second);
+
+    try {
+      const diagnostics = await diagnoseLyraHydration(container);
+      expect(diagnostics.map(({ tag }) => tag)).to.deep.equal(['lr-badge']);
+    } finally {
+      cleanup();
+    }
+  });
+
   it('accepts a detached DocumentFragment root, which has no localName of its own', async () => {
     const fragment = document.createDocumentFragment();
     fragment.append(document.createElement('lr-badge'));
