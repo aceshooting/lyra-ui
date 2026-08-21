@@ -70,10 +70,20 @@ it('bounds a registered catalog to the maximum retained message count', () => {
   const locale = 'zz-catalog-message-cap';
   const strings: Record<string, string> = {};
   for (let index = 0; index < 4_100; index += 1) strings[`key${index}`] = `value${index}`;
-  registerLyraLocale(locale, strings);
+  const ignoredSymbol = Symbol('ignored');
+  Object.defineProperty(strings, 'hidden', { enumerable: false, value: 'hidden' });
+  const reordered = new Proxy(strings, {
+    ownKeys(target) {
+      return [ignoredSymbol, 'hidden', ...Reflect.ownKeys(target).filter(
+        (key) => key !== ignoredSymbol && key !== 'hidden',
+      )];
+    },
+  });
+  registerLyraLocale(locale, reordered);
 
   const host = localeHost(locale);
   expect(resolveLyraString(host, 'key0')).to.equal('value0');
+  expect(resolveLyraString(host, 'key4095')).to.equal('value4095');
   // Well past the 4,096-entry cap: never copied into the snapshot, so lookup falls through to the
   // raw key (no fallback/defaults were supplied).
   expect(resolveLyraString(host, 'key4099')).to.equal('key4099');
@@ -172,6 +182,7 @@ it('rejects missing and unbounded registered locale identifiers', () => {
 it('snapshots hostile catalogs without invoking accessors or retaining live traps', () => {
   let getterCalls = 0;
   const accessorCatalog = Object.create(null) as Record<string, string>;
+  accessorCatalog.retained = 'yes';
   Object.defineProperty(accessorCatalog, 'unsafe', {
     enumerable: true,
     get() {
@@ -180,6 +191,8 @@ it('snapshots hostile catalogs without invoking accessors or retaining live trap
     },
   });
   registerLyraLocale('x-accessor-catalog', accessorCatalog);
+  accessorCatalog.retained = 'mutated';
+  expect(resolveLyraString(localeHost('x-accessor-catalog'), 'retained')).to.equal('yes');
   expect(resolveLyraString(localeHost('x-accessor-catalog'), 'unsafe')).to.equal('unsafe');
   expect(getterCalls).to.equal(0);
 
@@ -200,6 +213,14 @@ it('snapshots hostile catalogs without invoking accessors or retaining live trap
   registerLyraLocale('x-enumeration-trap', enumerationTrap);
   expect(resolveLyraString(localeHost('x-enumeration-trap'), 'retained')).to.equal('yes');
   expect(resolveLyraString(localeHost('x-enumeration-trap'), 'unread')).to.equal('unread');
+
+  const ownKeysTrap = new Proxy({ unread: 'no' }, {
+    ownKeys() {
+      throw new Error('enumeration unavailable');
+    },
+  });
+  registerLyraLocale('x-own-keys-trap', ownKeysTrap);
+  expect(resolveLyraString(localeHost('x-own-keys-trap'), 'unread')).to.equal('unread');
 });
 
 it('follows an assigned-slot direction context and exposes the cached resolution', () => {
@@ -249,7 +270,8 @@ it('contains descriptor and enumeration failures inside catalog snapshots', () =
     },
   });
   registerLyraLocale('x-descriptor-trap', descriptorTrap);
-  expect(resolveLyraString(localeHost('x-descriptor-trap'), 'retained')).to.equal('retained');
+  expect(resolveLyraString(localeHost('x-descriptor-trap'), 'retained')).to.equal('yes');
+  expect(descriptorReads).to.equal(1);
 
   const pluralTrap = new Proxy({ other: 'many' }, {
     ownKeys() {
