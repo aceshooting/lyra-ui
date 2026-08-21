@@ -7,7 +7,7 @@ export const VALIDITY_ANCHOR = Symbol('lr-validity-anchor');
 export const SET_ANCHORED_VALIDITY = Symbol('lr-set-anchored-validity');
 
 /** @internal */
-export interface ValidityAnchorProvider {
+interface ValidityAnchorProvider {
   [VALIDITY_ANCHOR](): HTMLElement | null | undefined;
 }
 

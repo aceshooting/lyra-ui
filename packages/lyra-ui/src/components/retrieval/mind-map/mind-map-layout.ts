@@ -47,7 +47,7 @@ export interface MindMapLayoutResult {
 /** Returns the first occurrence of each nonblank topic identity across the complete hierarchy.
  * Invalid/duplicate roots drop their subtree; duplicate descendants are omitted from the later
  * parent. Retained ids and labels are never trimmed or rewritten. */
-export function normalizeMindMapTopics(
+function normalizeMindMapTopics(
   topics: readonly LyraTopic[]
 ): readonly LyraTopic[] {
   const seen = new Set<string>();

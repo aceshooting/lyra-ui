@@ -30,7 +30,7 @@ export type ExternalLabelActivation = 'focus' | 'activate';
 export const EXTERNAL_LABEL_ACTIVATION = Symbol('lr-external-label-activation');
 
 /** A control that declares its own {@linkcode ExternalLabelActivation}. */
-export interface ExternalLabelActivationHost {
+interface ExternalLabelActivationHost {
   /** @internal */
   [EXTERNAL_LABEL_ACTIVATION](): ExternalLabelActivation;
 }

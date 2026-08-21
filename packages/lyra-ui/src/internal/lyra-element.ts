@@ -57,7 +57,7 @@ export function registerFormControlLabelSupport(
  * API as a mistake, while leaving it armed for everything else -- do not use it to silence a
  * warning about an attribute a consumer really did get wrong, which is the diagnostic's whole job.
  */
-export interface KnownUnobservedAttributeHost {
+interface KnownUnobservedAttributeHost {
   knownUnobservedAttributes: readonly string[];
 }import {
   observeInheritedContext,

@@ -48,14 +48,14 @@ import { resolveIsDarkTheme } from './shiki-dark-theme.js';
 
 /** Matches `LyraElement.localize()`'s signature so either component's bound
  *  method can be passed straight through. */
-export type LyraLocalizeFn = (
+type LyraLocalizeFn = (
   key: string,
   fallback?: string,
   values?: Record<string, string | number>
 ) => string;
 
 /** The collapse/expand header toggle button's `aria-label`. */
-export function codeBlockToggleLabel(
+function codeBlockToggleLabel(
   localize: LyraLocalizeFn,
   collapsed: boolean
 ): string {
@@ -63,7 +63,7 @@ export function codeBlockToggleLabel(
 }
 
 /** The copy-to-clipboard header button's `aria-label`. */
-export function codeBlockCopyLabel(
+function codeBlockCopyLabel(
   localize: LyraLocalizeFn,
   justCopied: boolean,
   copyFailed: boolean
@@ -74,7 +74,7 @@ export function codeBlockCopyLabel(
 
 /** The `[part="body"]` region's `aria-label`: the filename when set, else a
  *  language-aware "Code" region label. */
-export function codeBlockBodyLabel(
+function codeBlockBodyLabel(
   localize: LyraLocalizeFn,
   filename: string,
   language: string
@@ -94,7 +94,7 @@ export function codeBlockBodyLabel(
  * normalized to ascending order. An invalid segment is skipped (with a `console.warn`) rather
  * than throwing or discarding the otherwise-valid segments around it.
  */
-export function addBoundedLineRange(
+function addBoundedLineRange(
   lines: Set<number>,
   start: number,
   end: number,
@@ -110,7 +110,7 @@ export function addBoundedLineRange(
 }
 
 /** How long the copy button's confirmation state lasts before reverting. */
-export const CODE_BLOCK_COPY_CONFIRM_MS = 1500;
+const CODE_BLOCK_COPY_CONFIRM_MS = 1500;
 
 /** One-based line count of `code`, the upper bound every line-addressing helper below clamps to.
  *  A trailing newline still yields the (empty) line after it, matching the rendered line count. */
@@ -271,13 +271,13 @@ export function codeBlockEventLine(e: Event): number | null {
 /** What a keystroke on a gutter line button means. `null` covers both an unhandled key and a
  *  movement key that would land on the line already focused -- neither of which may
  *  `preventDefault()`, so the caller must not treat them differently. */
-export type CodeBlockLineKeyAction =
+type CodeBlockLineKeyAction =
   | { kind: 'activate' }
   | { kind: 'move'; line: number }
   | null;
 
 /** The roving-tabindex keyboard contract for the (`line-numbers`-gated) gutter. */
-export function codeBlockLineKeyAction(
+function codeBlockLineKeyAction(
   key: string,
   line: number,
   total: number
@@ -293,7 +293,7 @@ export function codeBlockLineKeyAction(
 }
 
 /** An `lr-text-select` payload for a selection ending inside `[part="body"]`. */
-export interface CodeBlockSelection {
+interface CodeBlockSelection {
   readonly text: string;
   readonly anchor: LyraAnchor;
   readonly rects: readonly TextSelectRect[];
@@ -301,7 +301,7 @@ export interface CodeBlockSelection {
 
 /** Anchors the current selection to the `line-range` it spans. `null` whenever there's nothing to
  *  report: no selection, a collapsed/whitespace-only one, or endpoints outside any `[data-line]`. */
-export function codeBlockSelectionAnchor(
+function codeBlockSelectionAnchor(
   shadowRoot: ShadowRoot | null
 ): CodeBlockSelection | null {
   if (!shadowRoot) return null;
@@ -640,7 +640,7 @@ export function renderCodeBlockPlainCode(
   >`;
 }
 
-export interface CodeBlockHeaderOptions {
+interface CodeBlockHeaderOptions {
   collapsible: boolean;
   collapsed: boolean;
   /** `id` of `[part="body"]`, for the toggle's `aria-controls`. */
@@ -660,7 +660,7 @@ export interface CodeBlockHeaderOptions {
  * `<lr-code-block-core>`. `aria-expanded` renders both `"true"` and `"false"` rather than being
  * conditionally omitted -- the collapse toggle's state is meaningless to assistive tech otherwise.
  */
-export function renderCodeBlockHeader(
+function renderCodeBlockHeader(
   options: CodeBlockHeaderOptions
 ): TemplateResult {
   // Indented two levels deeper than this function body on purpose: the literal text between these
@@ -814,7 +814,7 @@ export function renderCodeBlockShell(
 /** The element surface {@linkcode CodeBlockInteractionController} reads. Every member is either
  *  native to `HTMLElement` or already public on both code-block variants, so routing through the
  *  controller widens neither component's own API. */
-export interface CodeBlockInteractionHost extends HTMLElement {
+interface CodeBlockInteractionHost extends HTMLElement {
   readonly renderRoot: HTMLElement | DocumentFragment;
   readonly updateComplete: Promise<boolean>;
   readonly code: string;

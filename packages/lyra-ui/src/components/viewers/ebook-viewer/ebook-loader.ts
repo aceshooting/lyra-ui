@@ -26,7 +26,7 @@ export interface EpubLocation {
   start?: { cfi?: string; href?: string };
 }
 
-export interface EpubAnnotations {
+interface EpubAnnotations {
   highlight(
     cfi: string,
     data: Record<string, unknown>,

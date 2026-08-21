@@ -1,7 +1,7 @@
 import { assertZipArchiveWithinLimits } from '../archive-viewer/zip-resource-guard.js';
 
-export const DEFAULT_MAX_PPTX_ENTRIES = 4_000;
-export const DEFAULT_MAX_PPTX_UNCOMPRESSED_BYTES = 256 * 1024 * 1024;
+const DEFAULT_MAX_PPTX_ENTRIES = 4_000;
+const DEFAULT_MAX_PPTX_UNCOMPRESSED_BYTES = 256 * 1024 * 1024;
 
 export interface PptxResourceGuardOptions {
   maxEntries?: number;

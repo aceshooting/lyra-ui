@@ -21,16 +21,8 @@ async function fixture(...args: Parameters<typeof renderFixture>): Promise<Eleme
   return root;
 }
 
-// `@sinonjs/fake-timers` is a devDependency intended for exactly this kind of
-// timer-driven component, but it's CJS-only (no ESM build, no "exports"
-// field) and fails to import under @web/test-runner's browser-native ESM
-// pipeline: `FakeTimers.install()` throws `ReferenceError: require is not
-// defined` as soon as the module's top-level `require("@sinonjs/commons")`
-// runs, since nothing in this project's web-test-runner.config.js shims CJS
-// interop for it the way the hammerjs/maplibre-gl plugins do for those two
-// packages. Falling back to real timers with short, generously-margined
-// thresholds instead, the same way lr-toast-item's own duration/pause
-// timer tests already do.
+// The browser runner has no compatible fake-timer harness, so these tests use short real timers
+// with generous margins, matching lr-toast-item's duration and pause tests.
 
 function liveRegionText(el: LyraStreamStatus): string {
   const region = el.shadowRoot!.querySelector('lr-live-region') as LyraLiveRegion;

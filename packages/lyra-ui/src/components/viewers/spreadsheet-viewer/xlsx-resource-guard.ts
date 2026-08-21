@@ -3,11 +3,11 @@ import {
   createXmlComplexityInspectorFactory,
 } from '../archive-viewer/zip-resource-guard.js';
 
-export const DEFAULT_MAX_XLSX_ENTRIES = 10_000;
-export const DEFAULT_MAX_XLSX_UNCOMPRESSED_BYTES = 100 * 1024 * 1024;
-export const DEFAULT_MAX_XLSX_XML_NODES = 1_000_000;
-export const DEFAULT_MAX_XLSX_ROWS = 10_000;
-export const DEFAULT_MAX_XLSX_CELLS = 1_000_000;
+const DEFAULT_MAX_XLSX_ENTRIES = 10_000;
+const DEFAULT_MAX_XLSX_UNCOMPRESSED_BYTES = 100 * 1024 * 1024;
+const DEFAULT_MAX_XLSX_XML_NODES = 1_000_000;
+const DEFAULT_MAX_XLSX_ROWS = 10_000;
+const DEFAULT_MAX_XLSX_CELLS = 1_000_000;
 
 export interface XlsxResourceGuardOptions {
   signal?: AbortSignal;

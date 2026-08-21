@@ -23,7 +23,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteRange } from '../../../internal/numbers.js';
 
 /** Fallback `max` for both progress components, and the value a non-positive `max` falls back to. */
-export const PROGRESS_DEFAULT_MAX = 100;
+const PROGRESS_DEFAULT_MAX = 100;
 
 /** `max`, normalized to a finite number and guarded against `<= 0` -- which would otherwise
  *  divide-by-zero in `progressPercent()` -- falling back to `PROGRESS_DEFAULT_MAX`. */

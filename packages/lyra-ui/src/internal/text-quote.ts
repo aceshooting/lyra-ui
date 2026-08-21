@@ -103,7 +103,7 @@ function collapseWhitespaceAndSoftHyphen(s: string): string {
 /** One DOM text node's contribution to a `TextQuoteScope`. `rawOffsetRuns` stores sparse pairs of
  *  `[normalizedOffset, rawOffset]` only where the otherwise-identity mapping changes (collapsed
  *  whitespace or removed soft hyphens). Ordinary text therefore retains no per-character map. */
-export interface TextQuoteSegment {
+interface TextQuoteSegment {
   node: Text;
   normalizedStart: number;
   normalizedLength: number;

@@ -7,9 +7,6 @@ import type {
 export type {
   AccordionItemOwnerContext,
   AccordionItemTransitionSource,
-  LyraAccordionAppearance,
-  LyraAccordionHeadingLevel,
-  LyraAccordionIconPlacement,
 } from './accordion-types.js';
 
 const owners = new WeakMap<object, unknown>();

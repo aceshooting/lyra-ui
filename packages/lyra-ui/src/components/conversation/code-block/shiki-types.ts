@@ -48,7 +48,7 @@ export interface ShikiLanguageInput {
 }
 
 /** The subset of a Shiki/HAST element node that Lyra's transformers mutate. */
-export interface ShikiTransformerNode {
+interface ShikiTransformerNode {
   properties: Record<string, unknown> & {
     part?: unknown;
     role?: unknown;

@@ -1,6 +1,6 @@
 import { unwrapOptionalPeerDefault } from '../../../internal/optional-peer-capabilities.js';
 
-export interface PdfRenderTaskApi {
+interface PdfRenderTaskApi {
   promise: Promise<void>;
   cancel(): void;
 }
@@ -32,7 +32,7 @@ export interface PdfDocumentApi {
   destroy?(): Promise<void> | void;
 }
 
-export interface PdfTextLayerApi {
+interface PdfTextLayerApi {
   render(): Promise<void>;
   cancel(): void;
 }

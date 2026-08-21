@@ -10,7 +10,7 @@ import { loadIconSanitizer } from './dompurify-loader.js';
 export type IconResourceErrorReason = 'load' | 'too-large' | 'sanitizer';
 
 /** Icons are small documents; this cap is applied before parsing or sanitizing the response. */
-export const MAX_ICON_BYTES = 1024 * 1024;
+const MAX_ICON_BYTES = 1024 * 1024;
 
 const ICON_CACHE_ENTRIES = 128;
 const SANITIZE_PROFILE = 'svg-filters-v1';

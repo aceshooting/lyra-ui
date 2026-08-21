@@ -6,7 +6,7 @@ export interface HistogramBucket {
   count: number;
 }
 
-export const MAX_HISTOGRAM_BINS = 1_000;
+const MAX_HISTOGRAM_BINS = 1_000;
 const LEFT_TO_RIGHT_ISOLATE = '\u2066';
 const POP_DIRECTIONAL_ISOLATE = '\u2069';
 

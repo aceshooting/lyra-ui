@@ -20363,7 +20363,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/generation-metrics/generation-metrics.test.ts",
-              "line": 660,
+              "line": 658,
               "test": "is accessible while running with tokens, throughput, and the stop button all showing",
               "target": "el",
               "state": "populated"
@@ -20395,7 +20395,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/generation-metrics/generation-metrics.test.ts",
-              "line": 694,
+              "line": 692,
               "kind": "320px allocation test signal"
             }
           ]
@@ -41451,14 +41451,14 @@
           "evidence": [
             {
               "file": "src/components/conversation/stream-status/stream-status.test.ts",
-              "line": 610,
+              "line": 602,
               "test": "is accessible while stalled with slotted message and actions",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/stream-status/stream-status.test.ts",
-              "line": 633,
+              "line": 625,
               "test": "inherits dot color and opacity from an ancestor in a phase with its own defaults",
               "target": "el",
               "state": "populated"
@@ -41490,7 +41490,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/stream-status/stream-status.test.ts",
-              "line": 730,
+              "line": 722,
               "kind": "320px allocation test signal"
             }
           ]
@@ -41617,7 +41617,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/streaming-text/streaming-text.test.ts",
-              "line": 636,
+              "line": 634,
               "test": "is accessible while streaming, populated with Markdown content and a visible cursor",
               "target": "el",
               "state": "populated"
@@ -41643,7 +41643,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/streaming-text/streaming-text.test.ts",
-              "line": 568,
+              "line": 566,
               "kind": "reduced-motion test signal"
             }
           ]

@@ -105,8 +105,8 @@ const ARIA_NON_WIDGET_ROLES = new Set([
 
 type BrowserFocusElement = HTMLElement | SVGElement;
 
-export type ComposedFocusMode = 'programmatic' | 'tabbable';
-export type FocusTraversalTruncationReason = 'depth' | 'nodes';
+type ComposedFocusMode = 'programmatic' | 'tabbable';
+type FocusTraversalTruncationReason = 'depth' | 'nodes';
 
 export interface ComposedFocusCollectionOptions {
   /** Includes managed/native actions at `tabindex=-1`, or only sequential Tab stops. */

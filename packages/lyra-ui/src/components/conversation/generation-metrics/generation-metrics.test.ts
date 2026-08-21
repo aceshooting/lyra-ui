@@ -2,10 +2,8 @@ import { fixture, expect, html, oneEvent, aTimeout } from "@open-wc/testing";
 import "./generation-metrics.js";
 import type { LyraGenerationMetrics } from "./generation-metrics.js";
 
-// `@sinonjs/fake-timers` doesn't work in this test environment (CJS-only,
-// no shim configured -- see `<lr-stream-status>`'s test file for the full
-// explanation), so timer-driven behavior here uses real `setInterval` ticks
-// with generous margins, same as that file. Most assertions below sidestep
+// The browser runner has no compatible fake-timer harness, so timer-driven behavior here uses
+// real `setInterval` ticks with generous margins. Most assertions below sidestep
 // waiting on the ~1s ticker entirely by seeding `started-at` with an
 // already-elapsed epoch-ms timestamp before setting `status="running"` -- since the
 // elapsed display is recomputed synchronously when the run begins (not just on the next tick),

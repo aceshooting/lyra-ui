@@ -5,10 +5,8 @@ import { looksLikeMarkdown } from "./streaming-text.js";
 import type { LyraStreamingText } from "./streaming-text.js";
 import { setReducedMotion } from "../../../../test/wtr-media.js";
 
-// `@sinonjs/fake-timers` doesn't work in this test environment (CJS-only,
-// no shim configured) -- real timers with short, generously-margined
-// thresholds are used instead, the same way lr-stream-status's own
-// timer-driven tests do.
+// The browser runner has no compatible fake-timer harness; use short real timers with generous
+// margins, matching lr-stream-status's timer-driven tests.
 
 type Internals = {
   displayedContent: string;

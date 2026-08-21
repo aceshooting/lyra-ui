@@ -7,7 +7,4 @@
 export {
   composedAccessibilityText,
   composedAccessibilityTextResult,
-  type AccessibilityTextTruncationReason,
-  type ComposedAccessibilityTextOptions,
-  type ComposedAccessibilityTextResult,
 } from './accessibility-visibility.js';
