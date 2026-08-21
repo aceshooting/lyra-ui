@@ -250,30 +250,40 @@ describe("lr-code-block-core", () => {
     );
   });
 
-  it("does not set shikiReady when the element disconnects before loadShikiHighlighterCore() resolves in connectedCallback()", async function () {
+  it("does not set shikiReady when the element disconnects before loadShikiHighlighterCore() resolves in connectedCallback()", async () => {
     // `languages` must be non-empty *before* the element ever connects, so
     // connectedCallback() itself takes the loadShikiHighlighterCore().then()
     // branch under test (the other call site, inside syncHighlight(), is
-    // already guarded by its own highlightToken staleness check). A fresh
-    // object literal never hits the per-languages-object WeakMap cache, so
-    // this is a genuine, non-instant dynamic import -- give it real time to
-    // settle before asserting the disconnected instance was never mutated.
-    this.timeout(20_000);
+    // already guarded by its own highlightToken staleness check).
+    let resolveCore!: (value: null) => void;
+    const pending = new Promise<null>((resolve) => {
+      resolveCore = resolve;
+    });
+    __setShikiHighlighterCoreLoaderForTesting(() => pending);
     const el = document.createElement(
       "lr-code-block-core"
     ) as LyraCodeBlockCore;
-    el.language = "json";
-    el.languages = { json: jsonGrammar };
-    document.body.appendChild(el);
-    el.remove();
-    await aTimeout(8000);
+    try {
+      el.language = "json";
+      el.languages = { json: jsonGrammar };
+      document.body.appendChild(el);
+      el.remove();
+      resolveCore(null);
+      await pending;
+      await aTimeout(0);
+      await el.updateComplete;
+      await aTimeout(0);
 
-    type Internals = { shikiReady: boolean };
-    const internals = el as unknown as Internals;
-    expect(
-      internals.shikiReady,
-      "must not become true on a disconnected instance"
-    ).to.be.false;
+      type Internals = { shikiReady: boolean };
+      const internals = el as unknown as Internals;
+      expect(
+        internals.shikiReady,
+        "must not become true on a disconnected instance"
+      ).to.be.false;
+    } finally {
+      el.remove();
+      __setShikiHighlighterCoreLoaderForTesting(undefined);
+    }
   });
 
   it("re-arms the current highlighter generation after disconnect and reconnect", async () => {
