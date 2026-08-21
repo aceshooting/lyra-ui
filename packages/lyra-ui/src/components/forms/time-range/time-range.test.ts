@@ -1252,8 +1252,8 @@ it("moves a drag handle’s painted fill on hover, and further again while it is
     const hovered = fill();
     await sendMouse({ type: "down" });
     await waitUntil(
-      () => fill() !== hovered,
-      "pressed must be visibly stronger than hover, not identical to it"
+      () => fill() !== hovered && fill() !== rest,
+      "pressed must be visibly stronger than both hover and rest"
     );
     const pressed = fill();
     const grabbedCursor = getComputedStyle(handle).cursor;
