@@ -82,22 +82,13 @@ the PR checks list tells you which of these to reproduce locally:
 1. **`lint`** — `pnpm install --frozen-lockfile`; `pnpm lint`. No Playwright and no build:
    `contract-policy` + `tsc --noEmit` + `test:types` are pure static analysis.
 2. **`static-checks`** — everything needing neither a library build nor a docs build. Its inputs are
-   already-committed files except for one read-only, content-addressed npm fetch. After `pnpm install
---frozen-lockfile`, its exact command order is: the checksum-pinned `pnpm check:workflows`
-   actionlint gate; the pure release-integrity, public-API and pinned-upstream helper tests; the
-   networked `check:pinned-upstream-manifests`, which downloads the exact
-   package versions without lifecycle scripts, validates both tarball and manifest digests, and runs
-   the strict inventory comparison; `pnpm --filter
-'!@aceshooting/lyra-ui' -r test`; `pnpm run check:dead-code`; `pnpm run check:secrets`; `pnpm
-registrations` then a targeted diff of the generated `src/all.ts`, `src/ssr/all.ts`, root
-   `src/components/lr-*.ts` aliases, root-registration allowlist, and `package.json`; `pnpm
-manifest` then a targeted diff of `custom-elements.json`; `pnpm --filter
-@aceshooting/lyra-ui run generate-editor-data` then a targeted diff of the two VS Code data
-   files and `web-types.json`; `pnpm readme:check`; `./package.sh` then a targeted diff of the
-   generated plugin references and both tracked skill archives; `pnpm skill:check`
-   (tested Claude/Codex version synchronization plus plugin, marketplace, and repo-discovery
-   consistency, not archive freshness); `pnpm
-storybook:check-theme`.
+   already-committed files except for one read-only, content-addressed npm fetch. It validates
+   workflow syntax and the generated release-qualification manifest; runs the release-integrity,
+   public-API, pinned-upstream, other-workspace-package, dead-code, and secret checks; then
+   regenerates and diffs registrations, the custom-elements manifest, editor data, README status,
+   plugin references, skill archives, and Storybook theme contracts. The exact commands and their
+   order live only in `.github/workflows/ci.yml`; copy the failing job's steps from there when
+   reproducing it.
 
    `pnpm readme:check` covers two intentionally different files: root `README.md` (monorepo
    overview) and `packages/lyra-ui/README.md` (what npm actually renders on the registry page).
@@ -126,10 +117,8 @@ storybook:check-theme`.
    free the long path from unrelated dist-dependent work. This is the one time lyra-ui's own Chromium
    suite runs; a separate `pnpm test` would repeat the same files without coverage. `build_and_coverage_build`'s
    `pnpm build` step still runs `check:build-artifacts`, which is chained inside the package's
-   `build` script. The coverage lane's timeout must budget its unconditional fresh-runner
-   `playwright install-deps` step as well as the complete deterministic sweep: a 20-minute ceiling
-   once cancelled a zero-failure run at 284/456 files after apt setup alone consumed more than ten
-   minutes, so the measured end-to-end allowance is 30 minutes.
+   `build` script. Browser-dependent lanes use the Playwright image pinned in the workflow, so they
+   do not install browser binaries or OS packages on each run.
 
 4. **`packed-consumer`** — needs `dist/` (the tarball's `files` list includes it) but nothing
    else `build-and-coverage` needs, so it gets its own `pnpm build` rather than waiting on that
@@ -149,20 +138,19 @@ check:packed-consumer`, the packed-size budget, and the networked public-API sem
 
 5. **`docs-and-storybook`** — `docs_build` (`docs:build` only needs the already-committed
    `custom-elements.json` via its internal `manifest:check`, not `dist/`, so it's independent of
-   the two build jobs above) runs `pnpm docs:build` once (with `CODECOV_TOKEN`) and uploads
-   `storybook-static/` as an artifact, the same "build once, fan out" shape
+   the two build jobs above) runs `pnpm docs:build` once (with `CODECOV_TOKEN`), verifies the
+   generated sitemap is fresh, and uploads `storybook-static/` as an artifact, the same
+   "build once, fan out" shape
    `build_and_coverage_build`/`dist` already uses. `docs-and-storybook` itself and every
    `visual-regression` shard (point 6) both depend on `docs_build` and download that artifact
    instead of independently rebuilding Storybook from source — three fewer redundant rebuilds per
-   run than the previous design. `docs-and-storybook`'s own steps (after installing Playwright and
-   downloading the artifact) are: targeted sitemap diff; `pnpm docs:check`; `pnpm
-storybook:check`; `pnpm docs:check-show-code` (drives Chromium against the downloaded
-   `storybook-static/`, hence still installing Playwright here too).
+   run than the previous design. Against the downloaded artifact, `docs-and-storybook` runs the
+   docs, Storybook, and Show Code checks; the last drives Chromium from the pinned Playwright image.
 6. **`visual-regression`** — blocking as of the 2026-07-20 font-substitution determinism fix (see
    `packages/lyra-ui/visual-baselines/README.md`). The 253 axis-level captures are lexically sorted
    and round-robin partitioned across a three-leg matrix (85/84/84 captures), so the historical
-   ~3.5min sweep no longer sits on one runner's critical path. Each leg installs Chromium,
-   downloads the `storybook-static/` artifact `docs_build` (point 5) already built, runs
+   ~3.5min sweep no longer sits on one runner's critical path. Each leg downloads the
+   `storybook-static/` artifact `docs_build` (point 5) already built, runs
    `test:visual` with its one-based shard coordinates, and unconditionally uploads a uniquely
    named diff artifact. A lightweight `visual-regression` aggregate preserves the stable
    branch-protection/release-check name and fails unless all three legs succeed.
@@ -179,14 +167,10 @@ granularity. The unit test proves every capture is selected exactly once and sha
 at most one; an ordinary unsharded local run still exercises all 253 captures.
 
 A separate `platform-contracts` matrix job runs the platform contract suite (`test:platform`) for
-Firefox, Chromium, Safari (WebKit), Chrome, and Edge on Node 20 and Node 22. Every leg sets
-`npm_config_manage_package_manager_versions=false`, installs with `--frozen-lockfile`, restores a
-`~/.cache/ms-playwright` cache keyed on browser + OS + `pnpm-lock.yaml` hash (system deps still
-install unconditionally via `playwright install-deps`, since that's apt-level and the cache only
-covers the downloaded browser binary), and therefore carries a 30-minute end-to-end timeout: a
-degraded mirror once kept Firefox shard 2/4 inside `install-deps` for 14m48s and exhausted the
-former 15-minute ceiling before any test ran. Each leg then sets `WTR_BROWSER` and
-`WTR_STRICT_CONSOLE=1` and runs
+Firefox, Chromium, Safari (WebKit), Chrome, and Edge on Node 20 and Node 22. Nine legs use the
+pinned Playwright image; only the branded Chrome and Edge legs stay on the runner VM, where browser
+setup is cached and apt work is bounded and retried. Every leg installs with `--frozen-lockfile`,
+then sets `WTR_BROWSER` and `WTR_STRICT_CONSOLE=1` and runs
 `pnpm --filter @aceshooting/lyra-ui test:platform-shard`. Chrome and Edge each run as
 Chromium-channel jobs (`WTR_BROWSER=chrome` uses `channel: chrome`; `WTR_BROWSER=edge` uses
 `channel: msedge`). Firefox Node 22 is split into four deterministic round-robin shards
@@ -224,13 +208,13 @@ targets. The package's `pretest` lifecycle provides the same build-first guarant
 `pnpm test`. Each shard then runs with strict browser-console handling. The smaller `test:platform`
 matrix in `ci.yml` remains the blocking Node 20/22 pull-request contract and does not substitute
 for this complete sweep; releases require a manual-dispatch run from `main` with all eight shards
-successful for the exact release commit before any tag is created.
+for both browsers successful for the exact release commit before any tag is created.
 
 To reproduce one shard locally after installing the requested Playwright browser:
 
 ```bash
 WTR_BROWSER=firefox WTR_STRICT_CONSOLE=1 \
-  WTR_SHARD_INDEX=1 WTR_SHARD_TOTAL=4 \
+  WTR_SHARD_INDEX=1 WTR_SHARD_TOTAL=8 \
   pnpm --filter @aceshooting/lyra-ui test:full-engine-shard
 ```
 
@@ -317,17 +301,20 @@ to start from a dirty tree, requires one canonical fetch URL and one canonical p
 the maintainer GitHub token out of dependency and package lifecycle processes. Changesets may
 auto-expand the release to publishable dependents; every actual package-version delta is therefore
 generated, tested, reviewed, packed, tagged, and released. Only stable core `major.minor.patch`
-versions are accepted.
+versions are accepted. Package ownership is derived from `pnpm changeset status --output`, so the
+release script accepts every frontmatter spelling that Changesets itself accepts, including
+single-quoted package names.
 
-After regenerating package metadata → manifest → component metadata → manifest, it runs lint →
-build → test and every prepack generator. It updates the narrowly anchored README source-version
-line (which deliberately makes no pre-publish registry claim). For a lyra-ui release it also
-synchronizes the Claude and Codex plugin manifests plus the version-bearing Claude marketplace
-entry, regenerates the plugin references and standalone skill archives, and verifies the complete
-plugin contract. It then shows the complete clean-start worktree and diff stat before confirmation.
-Packing reruns the same deterministic lifecycle. The script stages the full version-derived CEM,
-inventory, editor, framework, token, LLM, and plugin set; any other unstaged tracked output aborts
-for review. A flags-only release does not touch the lyra-ui plugin.
+For each released package it regenerates package, component, manifest, default-string, framework,
+design-token, editor, and LLM artifacts, then runs lint → build → component-quality → test. It
+updates the narrowly anchored README source-version line (which deliberately makes no pre-publish
+registry claim). For a lyra-ui release it also synchronizes the Claude and Codex plugin manifests
+plus the version-bearing Claude marketplace entry, regenerates the plugin references and standalone
+skill archives, and verifies the complete plugin contract. It then shows the complete clean-start
+worktree and diff stat before confirmation. Packing reruns the same deterministic lifecycle. The
+script stages the full version-derived CEM, inventory, quality, editor, framework, token, LLM, and
+plugin set; any other unstaged tracked output aborts for review. A flags-only release does not touch
+the lyra-ui plugin.
 
 The release commit is pushed alone to `origin/main`, which starts CI. The script dispatches
 `full-engine.yml` from `main`, requires an exact-SHA `push`/`main` CI run and an exact-SHA
@@ -347,7 +334,8 @@ successful results for every job marked `release-qualification: required` or
 so a future gate cannot be added without becoming release-blocking. The exact expanded job names
 live in `.github/release-qualification.json`; `generate-release-qualification.mjs --check` derives
 them from `ci.yml`/`full-engine.yml` and makes matrix or display-name drift a freshness failure. The
-full-engine run must contain all four Firefox and all four WebKit shards, with every job successful.
+full-engine run must contain all eight Firefox and all eight WebKit shards, with every job
+successful.
 The helper deliberately reads the named workflow runs and their jobs, not every check on the commit:
 the latter set includes the currently-running publish job and would deadlock on itself. Its pure
 state-machine, tag, and
@@ -387,31 +375,14 @@ least a minor bump. Pending Changesets must meet that minimum unless an exact, r
 in `scripts/public-api-semver-exceptions.json` matches the before/after values. Parser and semver
 logic remain network-free under `test:public-api`.
 
-Three release-integrity quirks worth knowing before trusting a release round's mechanics, none yet
-fixed at the source:
+Current release-integrity caveats and operational rules:
 
-- `scripts/publish.sh`'s changeset-package parser (`changeset_packages()`) only matches
-  double-quoted frontmatter (`^"@aceshooting/lyra-ui": (major|minor|patch)$`) — a single-quoted
-  package name is valid YAML and `pnpm changeset status` parses it fine, but the script concludes
-  there are no pending changesets for any publishable package and bails. Recurred multiple times;
-  always double-quote package names in `.changeset/*.md` frontmatter (matches what the `changeset`
-  CLI itself emits).
 - `.changeset/config.json`'s `"updateInternalDependencies": "patch"` only governs regular
   `dependencies`/`devDependencies`. `@aceshooting/lyra-ui`'s `peerDependency` on
   `@aceshooting/lyra-flags` (`workspace:^x.y.z`) escalates to a **major** bump the moment that
   peer's own version changes in the same `pnpm changeset version` run, regardless of what severity
   the pending changesets actually declare for lyra-ui. Only fires when lyra-flags' own version
   changes in that round; an all-lyra-ui round bumps cleanly.
-- The per-package generation loop (package-metadata → manifest → component-metadata → manifest →
-  lint → build → test → default-string-slices → framework-types → design-tokens → editor-data →
-  llms) never regenerates `docs/component-integration.md`/
-  `scripts/fixtures/component-integration.json`, but every version bump shifts every component's
-  _built_ gzip size regardless (the regenerated `package-metadata.ts`, embedding the new version
-  plus release history, is imported by the shared base every component bundles) — so CI's
-  `build-and-coverage / quality` job (`check:component-quality:built`) reliably fails on the pushed
-  release commit. Fix: rebuild, `node scripts/generate-component-quality.mjs --write
---measure-gzip`, `check:bundle-size`, then a follow-up commit on top of the already-pushed release
-  commit, re-qualified through `wait-ci`/`wait-full-engine` like any other commit before tagging.
 - **The same regeneration is owed by ANY change under `src/`, not just a version bump — and not just
   changes to shipped code.** `generate-component-quality.mjs` measures two things a source diff does
   not obviously touch: the _built_ per-component gzip size (so it reads `dist/`, and needs a fresh
@@ -507,16 +478,13 @@ runtime version constants. `generate-editor-data` regenerates
 `vscode-html-data.json`, `vscode-css-data.json`, and `web-types.json` from
 `custom-elements.json`.
 
-The generated public-surface outputs are CI-gated across the lint and static jobs. The
-`static-checks` job runs `pnpm manifest` →
-`git diff --exit-code -- packages/lyra-ui/custom-elements.json` →
-`pnpm --filter @aceshooting/lyra-ui run generate-editor-data` →
-`git diff --exit-code -- packages/lyra-ui/vscode-html-data.json packages/lyra-ui/vscode-css-data.json packages/lyra-ui/web-types.json`
-(`.github/workflows/ci.yml`, and that file remains the authority). Note the ordering dependency:
-the editor data is derived _from_ `custom-elements.json`, so a stale manifest reddens the first
-`git diff` and the editor-data regeneration then runs against the fixed manifest. Framework type
-and LLM freshness are enforced inside `pnpm lint`. Locally, regenerate in dependency order and
-commit the complete set whenever you touch the public surface (JSDoc, attributes, parts, or CSS
+The generated public-surface outputs are CI-gated across the lint and static jobs. In
+`static-checks`, the manifest is regenerated and diffed before editor data is regenerated and
+diffed; `.github/workflows/ci.yml` remains the authority for the exact commands. The ordering
+matters because editor data is derived _from_ `custom-elements.json`: a stale manifest reddens the
+first diff and editor-data generation then runs against the corrected manifest. Framework type and
+LLM freshness are enforced inside `pnpm lint`. Locally, regenerate in dependency order and commit
+the complete set whenever you touch the public surface (JSDoc, attributes, parts, or CSS
 properties); running only one generator leaves downstream outputs stale.
 
 ## Other package-local gates

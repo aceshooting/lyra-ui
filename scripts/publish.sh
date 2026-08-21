@@ -552,7 +552,7 @@ publish_recovery_trap() {
     echo "    Inspect git status and git log before either restoring that local state or resuming manually; do not blindly re-run the script." >&2
   elif [[ "$QUALIFICATION_PASSED" -eq 0 ]]; then
     echo "    The release commit is already on origin/main, but exact-commit qualification did not pass." >&2
-    echo "    No release tag or GitHub Release was created. Do NOT tag or release this commit unless both its push CI and all eight dispatched full-engine shards succeed." >&2
+    echo "    No release tag or GitHub Release was created. Do NOT tag or release this commit unless both its push CI and every dispatched full-engine shard succeed." >&2
     echo "    Fix the failing qualification on main and rebuild/revalidate release artifacts from the eventual exact green commit." >&2
   elif [[ "$TAGS_PUSHED" -eq 0 ]]; then
     echo "    The release commit passed exact-commit qualification, but the atomic tag push did not complete." >&2

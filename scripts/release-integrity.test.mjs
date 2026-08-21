@@ -361,7 +361,7 @@ test('requires one successful CI workflow run for the exact release commit and e
   );
 });
 
-test('requires one successful full-engine run for the exact release commit and all eight shards', () => {
+test('requires one successful full-engine run for the exact release commit and every required shard', () => {
   const run = {
     id: 84,
     name: 'Full browser-engine suite',

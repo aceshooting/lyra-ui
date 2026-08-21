@@ -292,10 +292,6 @@ jobs:
       # the whole job keeps the pnpm store and setup-node cache on one path.
       HOME: /root
     needs: build_and_coverage_build
-    # This lane includes fresh-VM apt setup before the deterministic one-file-at-a-time sweep.
-    # A degraded mirror made install-deps take 10.5+ minutes, then the former 20-minute ceiling
-    # cancelled an otherwise clean run at 284/456 files. Thirty minutes preserves hang detection
-    # while budgeting the observed end-to-end path rather than only the test command itself.
     timeout-minutes: 30
     steps:
       - name: Match the runner's default font resolution
