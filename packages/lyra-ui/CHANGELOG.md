@@ -1,5 +1,24 @@
 # Changelog
 
+## 12.1.0
+
+### Minor Changes
+
+- 6504adc: Expand `lr-map` with zoom-responsive heatmap radius and intensity, heatmap opacity,
+  construction-time world-copy control, allocation-aware resizing, and accessible declarative marker
+  activation events.
+- 81dbb6a: Add opt-in automatic value-axis gutter sizing and category-label density to `lr-lite-chart`.
+- acf4c5f: Avoid redundant `lr-heatmap` redraws for unchanged legend snapshots, and keep stable-ID `lr-map`
+  GeoJSON additions, removals, and order changes on MapLibre's incremental update path.
+- 5e801f9: Add an opt-in `scroll-mode="auto"` to `lr-table` that keeps page flow while content fits and contains horizontal overflow when the table narrows.
+- 12b4791: Add opt-in collision clustering to time-scaled timelines, with allocation-aware accessible count markers and a typed member activation event.
+
+### Patch Changes
+
+- b36d915: Defer anchored-positioning and form-label runtime paths until they are needed, keeping granular
+  popover and combobox registrations lighter and documenting first-interaction progressive loading
+  for strict initial-JavaScript budgets.
+
 ## 12.0.0
 
 ### Major Changes
