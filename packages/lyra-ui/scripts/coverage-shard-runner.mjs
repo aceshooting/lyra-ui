@@ -66,7 +66,7 @@ function loadShardCoverage(shardIndex) {
   return JSON.parse(readFileSync(file, 'utf8'));
 }
 
-/** Shards are disjoint (round-robin split, see shardTestFiles), so this is a plain union. */
+/** Shards are disjoint (deterministic cost-balanced split), so this is a plain union. */
 function mergeCoverageMap(shardIndices) {
   const map = libCoverage.createCoverageMap({});
   for (const shardIndex of shardIndices) map.merge(loadShardCoverage(shardIndex));

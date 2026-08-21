@@ -10,7 +10,7 @@ package contract they enforce.
 | --- | --- |
 | `./scripts/ci.sh` | Reproduce the aggregate CI gate on Node 22. |
 | `./scripts/test.sh` | Run the complete Chromium, Firefox and WebKit test sweep plus SSR, hydration, visual and workspace checks. |
-| `./scripts/test_all_browsers.sh` | Run the workflow-specific five-browser sweep in four sequential shards per browser. |
+| `./scripts/test_all_browsers.sh` | Run all four five-browser workflow shards locally, or a selected shard subset. |
 | `./scripts/regen.sh` | Regenerate checked-in derived artifacts. |
 | `./scripts/publish.sh` | Run the release and publish workflow. |
 
