@@ -507,10 +507,8 @@ describe('lr-time-input popup and actions', () => {
     // land at a half-second offset, forcing the wholeSecond check's second OR operand (closeness to
     // the *next* whole second, evaluated only once the first operand is false) to actually run
     // instead of always short-circuiting on the first.
-    const coarse = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="24" step="1.5"></lr-time-input>`);
-    await coarse.show();
-    await coarse.updateComplete;
-    const coarseSeconds = optionValues(coarse, 'second');
+    const el = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="24" step="1.5"></lr-time-input>`);
+    const coarseSeconds = optionValues(el, 'second');
     expect(coarseSeconds.every((value) => value % 3 === 0), 'only every third whole second lands on a 1.5s grid').to
       .equal(true);
     expect(coarseSeconds).to.include(0);
@@ -518,10 +516,9 @@ describe('lr-time-input popup and actions', () => {
 
     // stepMilliseconds < 1000 (300ms) walks the day one whole second at a time instead, still
     // finding only the whole seconds that happen to fall exactly on the sub-second step.
-    const fine = await fixture<LyraTimeInput>(html`<lr-time-input hour-format="24" step="0.3"></lr-time-input>`);
-    await fine.show();
-    await fine.updateComplete;
-    const fineSeconds = optionValues(fine, 'second');
+    el.step = 0.3;
+    await el.updateComplete;
+    const fineSeconds = optionValues(el, 'second');
     expect(fineSeconds.every((value) => value % 3 === 0), 'only every third whole second lands on a 300ms grid').to
       .equal(true);
     expect(fineSeconds).to.include(0);
