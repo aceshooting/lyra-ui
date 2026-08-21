@@ -1,5 +1,15 @@
 # Changelog
 
+## 12.1.1
+
+### Patch Changes
+
+- 50754fa: Keep clone-owned collection properties referentially stable when a declarative renderer rebinds
+  the same unchanged input, avoiding redundant work such as resetting an unchanged map style while
+  preserving explicit change detectors and updates made by assigning a new collection.
+- 92cdb49: Correct the first-release annotations for the 12.1 date preset, filter-bar, and map-layer APIs in
+  the packaged LLM reference.
+
 ## 12.1.0
 
 ### Minor Changes
