@@ -74,6 +74,30 @@ describe('loadPdfJsDeps()', () => {
     }
   });
 
+  it('fails closed on a malformed consumer worker URL', async () => {
+    const fake = fakePdfJsModule();
+    await loadPdfJsDeps(() => Promise.resolve(fake), () => null, 'http://[::1');
+    expect(fake.GlobalWorkerOptions.workerSrc).to.equal('');
+  });
+
+  it('accepts a callable PDF.js namespace with the required capabilities', async () => {
+    const callable = Object.assign(() => undefined, fakePdfJsModule());
+
+    expect(await loadPdfJsDeps(
+      () => Promise.resolve(callable),
+      () => 'https://cdn.example.test/pdf.worker.min.mjs',
+    )).to.equal(callable);
+    expect(callable.GlobalWorkerOptions.workerSrc)
+      .to.equal('https://cdn.example.test/pdf.worker.min.mjs');
+  });
+
+  it('rejects a module whose namespace and default export lack the PDF.js capability', async () => {
+    expect(await loadPdfJsDeps(
+      () => Promise.resolve({ default: { getDocument: () => undefined } }),
+      () => 'https://cdn.example.test/pdf.worker.min.mjs',
+    )).to.equal(null);
+  });
+
   it('never lets a consumer-supplied URL overwrite an already-configured worker', async () => {
     const fake = fakePdfJsModule();
     fake.GlobalWorkerOptions.workerSrc = 'https://app.example.test/pdf.worker.mjs';

@@ -111,6 +111,83 @@ describe('lr-contact-viewer', () => {
       expect(renderErrors).to.equal(0);
     } finally { window.fetch = original; }
   });
+  it('surfaces malformed fetched vCards through the generic visible failure state', async () => {
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve(response('not a vCard'))) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraContactViewer>(html`<lr-contact-viewer></lr-contact-viewer>`);
+      const failure = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/malformed.vcf';
+      await failure;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent)
+        .to.equal('Failed to load document.');
+      expect(el.shadowRoot!.querySelectorAll('[part="contact"]')).to.have.lengthOf(0);
+    } finally {
+      window.fetch = original;
+    }
+  });
+  it('ignores a stale response body after a newer contact file has loaded', async () => {
+    const original = window.fetch;
+    const fresh = CARD.replace('John Q. Public', 'Fresh Contact');
+    const stale = CARD.replace('John Q. Public', 'Stale Contact');
+    let staleReadStarted = false;
+    let resolveStale!: (value: string) => void;
+    window.fetch = ((url: RequestInfo | URL) => {
+      const body = String(url).includes('stale')
+        ? new Promise<string>((resolve) => {
+            staleReadStarted = true;
+            resolveStale = resolve;
+          })
+        : Promise.resolve(fresh);
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: () => body,
+      } as Response);
+    }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraContactViewer>(html`<lr-contact-viewer></lr-contact-viewer>`);
+      el.src = 'https://example.test/stale.vcf';
+      await waitUntil(() => staleReadStarted);
+      el.src = 'https://example.test/fresh.vcf';
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="contact-name"]')?.textContent === 'Fresh Contact',
+      );
+
+      resolveStale(stale);
+      await aTimeout(0);
+
+      expect(el.shadowRoot!.querySelector('[part="contact-name"]')!.textContent)
+        .to.equal('Fresh Contact');
+    } finally {
+      window.fetch = original;
+    }
+  });
+  it('renders an unnamed contact and omits a signal when AbortController is unavailable', async () => {
+    const originalAbortController = globalThis.AbortController;
+    const originalFetch = window.fetch;
+    let observedSignal: AbortSignal | null | undefined = null;
+    globalThis.AbortController = undefined as unknown as typeof AbortController;
+    window.fetch = ((_url: RequestInfo | URL, init?: RequestInit) => {
+      observedSignal = init?.signal;
+      return Promise.resolve(response('BEGIN:VCARD\nVERSION:4.0\nEND:VCARD'));
+    }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraContactViewer>(html`<lr-contact-viewer></lr-contact-viewer>`);
+      el.src = 'https://example.test/unnamed.vcf';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="contact"]') !== null);
+
+      expect(observedSignal).to.equal(undefined);
+      expect(el.shadowRoot!.querySelector('[part="contact-name"]')!.textContent)
+        .to.equal('Unnamed contact');
+    } finally {
+      window.fetch = originalFetch;
+      globalThis.AbortController = originalAbortController;
+    }
+  });
   it('is accessible', async () => { const el = await fixture(html`<lr-contact-viewer></lr-contact-viewer>`); await expect(el).to.be.accessible(); });
   it('is accessible with contact cards populated, not only the bare empty default', async () => {
     // The default-render axe check above only ever mounts the bare idle state -- a regression in

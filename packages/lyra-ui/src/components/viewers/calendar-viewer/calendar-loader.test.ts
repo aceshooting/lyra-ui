@@ -17,6 +17,16 @@ describe('calendar loader', () => {
     expect(first).to.equal(second);
   });
 
+  it('accepts a callable namespace carrying the complete parser capability', async () => {
+    const callable = Object.assign(() => undefined, {
+      parse: () => ({}),
+      Component: class {},
+      Event: class {},
+    });
+
+    expect(await loadIcalDeps(() => Promise.resolve(callable))).to.equal(callable);
+  });
+
   it('returns null and logs the real error when loading fails', async () => {
     const error = new Error('ical boom');
     const originalWarn = console.warn;

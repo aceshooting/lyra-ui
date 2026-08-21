@@ -69,6 +69,21 @@ describe('lr-calendar-viewer', () => {
       expect(el.shadowRoot!.querySelector('[part="event-time"]')!.textContent).to.equal(expected);
     } finally { restore(); }
   });
+  it('formats an all-day event without DTEND as one date', async () => {
+    const allDay = [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT',
+      'DTSTART;VALUE=DATE:20260714', 'SUMMARY:Open-ended holiday',
+      'END:VEVENT', 'END:VCALENDAR', '',
+    ].join('\r\n');
+    const { el, restore } = await loaded(allDay);
+    try {
+      const expected = new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeZone: 'UTC' })
+        .format(new Date(Date.UTC(2026, 6, 14)));
+      expect(el.shadowRoot!.querySelector('[part="event-time"]')!.textContent).to.equal(expected);
+    } finally {
+      restore();
+    }
+  });
   it('renders sparse valid events with a localizable fallback summary and no empty optional chrome', async () => {
     const restore = stubFetch(SPARSE_ICS);
     try {
@@ -121,6 +136,31 @@ describe('lr-calendar-viewer', () => {
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This document is too large to preview.');
     } finally { restore(); }
   });
+  it('rejects bounded input whose retained event text exceeds the rendering ceiling', async () => {
+    const oversized = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'BEGIN:VEVENT',
+      'UID:large@example.test',
+      'DTSTART:20260714T140000Z',
+      `SUMMARY:${'x'.repeat(2 * 1024 * 1024 + 1)}`,
+      'END:VEVENT',
+      'END:VCALENDAR',
+      '',
+    ].join('\r\n');
+    const restore = stubFetch(oversized);
+    try {
+      const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer></lr-calendar-viewer>`);
+      const failure = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/text-heavy.ics';
+      await failure;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent)
+        .to.equal('This document is too large to preview.');
+    } finally {
+      restore();
+    }
+  });
   it('renders multiple events in source order', async () => { const { el, restore } = await loaded(TWO_EVENTS); try { expect(Array.from(el.shadowRoot!.querySelectorAll('[part="event-summary"]')).map((node) => node.textContent)).to.deep.equal(['Quarterly planning', 'Design review']); } finally { restore(); } });
   it('renders a non-error empty-note for a well-formed calendar with zero events, not assertively-announced error chrome', async () => {
     // Regression test: a well-formed .ics with no VEVENTs used to throw the same
@@ -165,6 +205,66 @@ describe('lr-calendar-viewer', () => {
       await waitUntil(() => calls === 2);
       expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('region');
     } finally { window.fetch = original; }
+  });
+  it('ignores a stale response body after a newer source has loaded', async () => {
+    const original = window.fetch;
+    const fresh = SAMPLE_ICS.replace('Quarterly planning', 'Fresh calendar');
+    const stale = SAMPLE_ICS.replace('Quarterly planning', 'Stale calendar');
+    let staleReadStarted = false;
+    let resolveStale!: (value: string) => void;
+    let fetches = 0;
+    window.fetch = ((url: RequestInfo | URL) => {
+      fetches++;
+      const body = String(url).includes('stale')
+        ? new Promise<string>((resolve) => {
+            staleReadStarted = true;
+            resolveStale = resolve;
+          })
+        : Promise.resolve(fresh);
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: () => body,
+      } as Response);
+    }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer></lr-calendar-viewer>`);
+      el.src = 'https://example.test/stale.ics';
+      await waitUntil(() => staleReadStarted);
+      el.src = 'https://example.test/fresh.ics';
+      await waitUntil(() => fetches === 2);
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="event-summary"]')?.textContent === 'Fresh calendar',
+      );
+
+      resolveStale(stale);
+      await aTimeout(0);
+
+      expect(el.shadowRoot!.querySelector('[part="event-summary"]')!.textContent)
+        .to.equal('Fresh calendar');
+    } finally {
+      window.fetch = original;
+    }
+  });
+  it('loads without passing a signal when AbortController is unavailable', async () => {
+    const originalAbortController = globalThis.AbortController;
+    const originalFetch = window.fetch;
+    let observedSignal: AbortSignal | null | undefined = null;
+    globalThis.AbortController = undefined as unknown as typeof AbortController;
+    window.fetch = ((_url: RequestInfo | URL, init?: RequestInit) => {
+      observedSignal = init?.signal;
+      return Promise.resolve(response(SAMPLE_ICS));
+    }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer></lr-calendar-viewer>`);
+      el.src = 'https://example.test/no-abort-controller.ics';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="event"]') !== null);
+      expect(observedSignal).to.equal(undefined);
+    } finally {
+      window.fetch = originalFetch;
+      globalThis.AbortController = originalAbortController;
+    }
   });
   it('supports localized empty-state strings', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer .strings=${{ documentPreviewEmpty: 'Aucun {type} à afficher.', documentPreviewTypeCalendar: 'calendrier' }}></lr-calendar-viewer>`); expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('Aucun calendrier à afficher.'); });
   it('is accessible', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer></lr-calendar-viewer>`); await expect(el).to.be.accessible(); });

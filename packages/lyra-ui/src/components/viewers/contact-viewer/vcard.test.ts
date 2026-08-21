@@ -18,6 +18,10 @@ describe('parseVCards', () => {
     expect(parseVCards(text).map((contact) => contact.fn)).to.deep.equal(['Folded', 'Second']);
     expect(parseVCards('BEGIN:VCARD\nVERSION:4.0\nFN:A\\, B\\; C\\nD\nEND:VCARD')[0].fn).to.equal('A, B; C\nD');
   });
+  it('ignores an empty physical line inside a framed card', () => {
+    expect(parseVCards('BEGIN:VCARD\nVERSION:4.0\n\nFN:Blank tolerant\nEND:VCARD')[0].fn)
+      .to.equal('Blank tolerant');
+  });
   it('returns an empty array only for an actually empty document', () => {
     expect(parseVCards(' \r\n\t')).to.deep.equal([]);
     expect(() => parseVCards('plain text')).to.throw(/data outside/);
@@ -45,6 +49,20 @@ describe('parseVCards', () => {
     expect(contact.fn).to.equal('Jörg Müller');
     expect(contact.tel[0].types).to.deep.equal(['home', 'voice']);
     expect(contact.email[0].types).to.deep.equal(['internet', 'work']);
+  });
+  it('honors escaped backslashes in parameters and unindented quoted-printable soft lines', () => {
+    const source = [
+      'BEGIN:VCARD',
+      'VERSION:2.1',
+      'FN;CHARSET=ISO-8859-1;ENCODING=QUOTED-PRINTABLE:J=F6rg=',
+      'M=FCller',
+      'TEL;TYPE="work\\\\phone":+352',
+      'END:VCARD',
+    ].join('\r\n');
+    const [contact] = parseVCards(source);
+
+    expect(contact.fn).to.equal('JörgMüller');
+    expect(contact.tel).to.deep.equal([{ value: '+352', types: ['work\\phone'] }]);
   });
   it('rejects malformed blocks, profiles, parameters, encodings and quoted-printable input', () => {
     for (const source of [
@@ -102,6 +120,12 @@ describe('parseVCards', () => {
   it('rejects a property name that is not a valid token', () => {
     const source = ['BEGIN:VCARD', 'VERSION:4.0', '1FN:value', 'END:VCARD'].join('\r\n');
     expect(() => parseVCards(source)).to.throw(/invalid property name/);
+  });
+  it('rejects NUL input and a property without a value delimiter', () => {
+    expect(() => parseVCards(`BEGIN:VCARD\nVERSION:4.0\nFN:A\0B\nEND:VCARD`))
+      .to.throw(/NUL byte/);
+    expect(() => parseVCards('BEGIN:VCARD\nVERSION:4.0\nFN\nEND:VCARD'))
+      .to.throw(/missing its value delimiter/);
   });
   it('strips a leading group label from a grouped property name', () => {
     const source = ['BEGIN:VCARD', 'VERSION:3.0', 'item1.TEL:+1-555-0100', 'item1.X-ABLabel:Mobile', 'END:VCARD'].join('\r\n');

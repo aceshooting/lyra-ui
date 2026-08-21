@@ -147,6 +147,35 @@ describe('lr-docx-viewer', () => {
     }
   });
 
+  it('fails closed when the sanitizer peer throws during converted-markup processing', async () => {
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+    const sanitizerError = new Error('sanitizer rejected converted markup');
+    useLibrary(el, {
+      mammoth: {
+        convertToHtml: () => Promise.resolve({ value: '<p>Unsafe</p>', messages: [] }),
+      },
+      DOMPurify: {
+        sanitize: () => {
+          throw sanitizerError;
+        },
+      },
+    });
+    const restore = stubFetch(BUFFER);
+    try {
+      const failure = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/report.docx';
+      const event = await failure;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+
+      expect(event.detail.error).to.equal(sanitizerError);
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent)
+        .to.equal('Failed to load document.');
+      expect(el.shadowRoot!.querySelectorAll('[part="content"]')).to.have.lengthOf(0);
+    } finally {
+      restore();
+    }
+  });
+
   it('emits non-fatal Mammoth messages after rendering', async () => {
     const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
     useLibrary(el, {

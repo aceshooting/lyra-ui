@@ -310,9 +310,11 @@ describe('lr-highlight-layer', () => {
   it('emits lr-highlight-activate on Enter/Space when a rect is focused', async () => {
     const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>`);
     const rect = itemActions(el)[0]!;
-    const eventPromise = oneEvent(el, 'lr-highlight-activate');
-    rect.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    expect((await eventPromise).detail).to.deep.equal({ highlightId: 'a' });
+    for (const key of ['Enter', ' ']) {
+      const eventPromise = oneEvent(el, 'lr-highlight-activate');
+      rect.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+      expect((await eventPromise).detail).to.deep.equal({ highlightId: 'a' });
+    }
   });
 
   it('is one roving tab stop: only one rect has tabindex="0"', async () => {
@@ -331,6 +333,18 @@ describe('lr-highlight-layer', () => {
     const rects = itemActions(el);
     expect(rects[1].getAttribute('tabindex')).to.equal('0');
     expect(rects[0].getAttribute('tabindex')).to.equal('-1');
+  });
+
+  it('ArrowUp moves the roving tab stop back to the previous rect', async () => {
+    const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>`);
+    const second = itemActions(el)[1]!;
+    second.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
+    second.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    await el.updateComplete;
+
+    const rects = itemActions(el);
+    expect(rects[0].getAttribute('tabindex')).to.equal('0');
+    expect(rects[1].getAttribute('tabindex')).to.equal('-1');
   });
 
   it('Home/End jump the roving tab stop to the first/last rendered rect', async () => {

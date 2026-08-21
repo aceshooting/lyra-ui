@@ -79,4 +79,28 @@ describe('sanitizePassiveMarkup', () => {
     expect(template.content.querySelectorAll('form,button')).to.have.lengthOf(0);
     expect(template.content.textContent).to.contain('submit');
   });
+
+  it('remains fail-closed when a sanitizer leaves custom and foreign SVG markup intact', () => {
+    const clean = sanitizePassiveMarkup(
+      { sanitize: (value: string) => value },
+      `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+        <defs><path id="shape" /></defs>
+        <use id="local-use" xlink:href="#shape"></use>
+        <image id="inline-image" src="data:image/png;base64,AA=="></image>
+        <foreignObject>
+          <div xmlns="http://www.w3.org/1999/xhtml"><x-active>preserved text</x-active></div>
+        </foreignObject>
+      </svg>`,
+      document,
+      'passive-svg',
+    );
+    const template = document.createElement('template');
+    template.innerHTML = clean;
+
+    expect(template.content.querySelectorAll('x-active, div')).to.have.lengthOf(0);
+    expect(template.content.textContent).to.contain('preserved text');
+    expect(template.content.querySelector('#local-use')?.getAttribute('xlink:href')).to.equal('#shape');
+    expect(template.content.querySelector('#inline-image')?.getAttribute('src'))
+      .to.equal('data:image/png;base64,AA==');
+  });
 });
