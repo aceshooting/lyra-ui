@@ -21791,14 +21791,14 @@
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 8075,
+              "line": 8078,
               "test": "scrolls the keyboard-focused cell into the scrollport, and stays axe-clean there",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 8165,
+              "line": 8168,
               "test": "hides the duplicated bands from assistive technology and stays axe-clean",
               "target": "el",
               "state": "populated"

@@ -3063,17 +3063,18 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const padTop = this.matrixPadTop;
     const cellSize = this.matrixCellSize(cols);
     const previous = this.lastPaintedMatrixGeometry;
-    const geometry = Object.freeze({ padLeft, padTop, cellSize });
-    // Recorded on EVERY draw, not just a changed one: this is what `matrixGeometry` returns, so it
-    // has to describe the latest paint even when that paint matched the one before it. The event
-    // is what is conditional, not the record.
+    const geometry =
+      previous &&
+      previous.padLeft === padLeft &&
+      previous.padTop === padTop &&
+      previous.cellSize === cellSize
+        ? previous
+        : Object.freeze({ padLeft, padTop, cellSize });
+    // Reuse the frozen value when a redundant draw paints identical geometry. Besides avoiding
+    // per-frame object churn, this preserves the public guarantee that the last geometry-change
+    // event detail is the same object `matrixGeometry` returns until geometry actually changes.
     this.lastPaintedMatrixGeometry = geometry;
-    if (
-      !previous ||
-      previous.padLeft !== padLeft ||
-      previous.padTop !== padTop ||
-      previous.cellSize !== cellSize
-    ) {
+    if (geometry !== previous) {
       this.emit('lr-matrix-geometry-change', geometry);
     }
     const w = padLeft + cols * cellSize;

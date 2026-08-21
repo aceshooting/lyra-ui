@@ -7599,6 +7599,9 @@ describe("matrixGeometry / lr-matrix-geometry-change", () => {
     el.setAttribute("cell-size", "30");
     await el.updateComplete;
     await aTimeout(0);
+    // ResizeObserver and other paint invalidations may redraw identical geometry after the event.
+    // Exercise that path deterministically: it must not replace the shared frozen detail object.
+    (el as unknown as { draw(): void }).draw();
     expect(detail).to.equal(el.matrixGeometry);
     expect(Object.isFrozen(el.matrixGeometry), "the shared object must not be mutable").to.be.true;
   });
