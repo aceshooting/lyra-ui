@@ -41,7 +41,7 @@ test('publish and recovery signing share one credential-free verification workfl
   );
   assert.match(
     reusable,
-    /wait-ci[\s\S]*wait-full-engine[\s\S]*compare-rebuild/
+    /wait-ci[\s\S]*wait-test-all-browsers[\s\S]*wait-full-engine[\s\S]*compare-rebuild/
   );
   assert.match(reusable, /actions\/upload-artifact@/);
 });

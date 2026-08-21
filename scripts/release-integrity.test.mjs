@@ -11,8 +11,10 @@ import {
   collectGitHubPages,
   REQUIRED_CI_JOBS,
   REQUIRED_FULL_ENGINE_JOBS,
+  REQUIRED_TEST_ALL_BROWSER_JOBS,
   evaluateCiRun,
   evaluateFullEngineRun,
+  evaluateTestAllBrowsersRun,
   parseReleaseTag,
   selectReleaseTarball,
   validateAnnotatedTag,
@@ -21,6 +23,7 @@ import {
   validateWorkflowSource,
   waitForSuccessfulCi,
   waitForSuccessfulFullEngine,
+  waitForSuccessfulTestAllBrowsers,
   evaluateSiteFreshness,
 } from './release-integrity.mjs';
 import {
@@ -41,6 +44,13 @@ const successfulJobs = () =>
   }));
 const successfulFullEngineJobs = () =>
   REQUIRED_FULL_ENGINE_JOBS.map((name, index) => ({
+    id: index + 1,
+    name,
+    status: 'completed',
+    conclusion: 'success',
+  }));
+const successfulTestAllBrowserJobs = () =>
+  REQUIRED_TEST_ALL_BROWSER_JOBS.map((name, index) => ({
     id: index + 1,
     name,
     status: 'completed',
@@ -408,6 +418,69 @@ test('requires one successful full-engine run for the exact release commit and e
   );
 });
 
+test('requires the exact main-branch Test All Browsers run and all five browser jobs', () => {
+  assert.deepEqual(REQUIRED_TEST_ALL_BROWSER_JOBS, [
+    'chrome',
+    'chromium',
+    'edge',
+    'firefox',
+    'safari',
+  ]);
+  const run = {
+    id: 126,
+    name: 'Test All Browsers',
+    path: '.github/workflows/test-all-browsers.yml',
+    event: 'workflow_dispatch',
+    head_branch: 'main',
+    head_sha: sha,
+    status: 'completed',
+    conclusion: 'success',
+  };
+
+  assert.deepEqual(
+    evaluateTestAllBrowsersRun({
+      run,
+      jobs: successfulTestAllBrowserJobs(),
+      sha,
+    }),
+    {
+      state: 'success',
+      message: `Test All Browsers run 126 passed all ${REQUIRED_TEST_ALL_BROWSER_JOBS.length} required jobs for ${sha}.`,
+    }
+  );
+
+  const missingBrowser = successfulTestAllBrowserJobs().slice(0, -1);
+  assert.deepEqual(
+    evaluateTestAllBrowsersRun({ run, jobs: missingBrowser, sha }),
+    {
+      state: 'failed',
+      message: "Test All Browsers run 126 is missing required job 'safari'.",
+    }
+  );
+  const skippedBrowser = successfulTestAllBrowserJobs();
+  skippedBrowser.at(-1).conclusion = 'skipped';
+  assert.equal(
+    evaluateTestAllBrowsersRun({ run, jobs: skippedBrowser, sha }).state,
+    'failed'
+  );
+  for (const mismatchedRun of [
+    { ...run, head_sha: 'f'.repeat(40) },
+    { ...run, head_branch: 'feature' },
+    { ...run, event: 'schedule' },
+    { ...run, name: 'Another workflow' },
+    { ...run, path: '.github/workflows/another.yml' },
+  ]) {
+    assert.equal(
+      evaluateTestAllBrowsersRun({
+        run: mismatchedRun,
+        jobs: successfulTestAllBrowserJobs(),
+        sha,
+      }).state,
+      'failed'
+    );
+  }
+});
+
 test('waits for a pending exact-SHA CI run without treating the publish check as a dependency', async () => {
   let calls = 0;
   const pendingRun = {
@@ -492,6 +565,26 @@ test('waits for a successful exact-SHA full-engine run', async () => {
     delay: async () => {},
   });
   assert.equal(result.run.id, 84);
+});
+
+test('waits for a successful exact-SHA Test All Browsers run', async () => {
+  const run = {
+    id: 126,
+    name: 'Test All Browsers',
+    path: '.github/workflows/test-all-browsers.yml',
+    event: 'workflow_dispatch',
+    head_branch: 'main',
+    head_sha: sha,
+    status: 'completed',
+    conclusion: 'success',
+  };
+  const result = await waitForSuccessfulTestAllBrowsers({
+    sha,
+    listRuns: async () => [run],
+    listJobs: async () => successfulTestAllBrowserJobs(),
+    delay: async () => {},
+  });
+  assert.equal(result.run.id, 126);
 });
 
 test('resolves only supported release tags', () => {
@@ -739,6 +832,7 @@ test('release workflows verify tagged-source bytes without exposing protected cr
     assert.match(workflow, /persist-credentials: false/);
     assert.match(workflow, /validate-workflow-source/);
     assert.match(workflow, /wait-ci/);
+    assert.match(workflow, /wait-test-all-browsers/);
     assert.match(workflow, /wait-full-engine/);
     assert.match(workflow, /validate-tarball/);
     assert.match(workflow, /compare-rebuild/);
@@ -853,7 +947,12 @@ test('release script pins its repository and pushes release refs atomically', ()
   assert.match(publishScript, /skills\/compose-lyra-interfaces\.skill/);
   assert.match(publishScript, /git --no-pager diff --stat/);
   assert.match(publishScript, /gh workflow run full-engine\.yml/);
+  assert.match(
+    publishScript,
+    /gh workflow run test-all-browsers\.yml[\s\S]*--ref main[\s\S]*-f browsers=chromium,firefox,chrome,edge,safari/
+  );
   assert.match(publishScript, /wait-ci/);
+  assert.match(publishScript, /wait-test-all-browsers/);
   assert.match(publishScript, /wait-full-engine/);
   assert.match(publishScript, /not a stable core semver/);
   assert.match(publishScript, /QUALIFICATION_PASSED/);
@@ -939,8 +1038,16 @@ test('release script pins its repository and pushes release refs atomically', ()
     'git push origin "$release_sha:refs/heads/main"'
   );
   const dispatch = publishScript.indexOf('gh workflow run full-engine.yml');
-  const waitCi = publishScript.indexOf('wait-ci', dispatch);
-  const waitFullEngine = publishScript.indexOf('wait-full-engine', waitCi);
+  const dispatchTestAll = publishScript.indexOf(
+    'gh workflow run test-all-browsers.yml',
+    dispatch
+  );
+  const waitCi = publishScript.indexOf('wait-ci', dispatchTestAll);
+  const waitTestAll = publishScript.indexOf(
+    'wait-test-all-browsers',
+    waitCi
+  );
+  const waitFullEngine = publishScript.indexOf('wait-full-engine', waitTestAll);
   const qualificationDriftGuard = publishScript.indexOf(
     'current_head="$(git rev-parse HEAD^{commit})"',
     waitFullEngine
@@ -957,8 +1064,10 @@ test('release script pins its repository and pushes release refs atomically', ()
   const pushTags = publishScript.indexOf('git push --atomic origin', tag);
   const release = publishScript.lastIndexOf('gh release create');
   assert.ok(pushMain < dispatch);
-  assert.ok(dispatch < waitCi);
-  assert.ok(waitCi < waitFullEngine);
+  assert.ok(dispatch < dispatchTestAll);
+  assert.ok(dispatchTestAll < waitCi);
+  assert.ok(waitCi < waitTestAll);
+  assert.ok(waitTestAll < waitFullEngine);
   assert.ok(waitFullEngine < qualificationDriftGuard);
   assert.ok(qualificationDriftGuard < qualificationStatus);
   assert.ok(qualificationStatus < qualificationPassed);

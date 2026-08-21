@@ -44,8 +44,30 @@ jobs:
         browser: [firefox, webkit]
         shard: [1, 2]
   `;
+  const testAllBrowsersSource = `
+name: Test All Browsers
+on:
+  workflow_dispatch:
+    inputs:
+      browsers:
+        default: chromium,firefox,chrome,edge,safari
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+  # release-qualification: matrix
+  test:
+    name: \${{ matrix.browser }}
+    strategy:
+      matrix:
+        browser: \${{ fromJSON(needs.plan.outputs.browsers) }}
+  `;
 
-  assert.deepEqual(deriveReleaseQualification({ ciSource, fullEngineSource }), {
+  const qualification = deriveReleaseQualification({
+    ciSource,
+    fullEngineSource,
+    testAllBrowsersSource,
+  });
+  assert.deepEqual(qualification, {
     schemaVersion: 1,
     workflows: {
       ci: {
@@ -73,6 +95,13 @@ jobs:
           'webkit / shard 2/2',
         ],
       },
+      testAllBrowsers: {
+        name: 'Test All Browsers',
+        path: '.github/workflows/test-all-browsers.yml',
+        event: 'workflow_dispatch',
+        headBranch: 'main',
+        requiredJobs: ['chrome', 'chromium', 'edge', 'firefox', 'safari'],
+      },
     },
   });
 });
@@ -83,6 +112,7 @@ test('fails closed on an unmarked workflow or unresolved matrix interpolation', 
       deriveReleaseQualification({
         ciSource: 'name: CI\njobs:\n  lint:\n    runs-on: ubuntu-latest',
         fullEngineSource: 'name: Full\njobs: {}',
+        testAllBrowsersSource: `name: Browsers\non:\n  workflow_dispatch:\n    inputs:\n      browsers:\n        default: chromium\njobs:\n  # release-qualification: required\n  test:\n    runs-on: ubuntu-latest`,
       }),
     /no release-qualification jobs/
   );
@@ -91,7 +121,38 @@ test('fails closed on an unmarked workflow or unresolved matrix interpolation', 
       deriveReleaseQualification({
         ciSource: `name: CI\njobs:\n  # release-qualification: matrix\n  platform:\n    name: \${{ matrix.missing }}\n    strategy:\n      matrix:\n        browser: [firefox]`,
         fullEngineSource: `name: Full\njobs:\n  # release-qualification: required\n  full:\n    runs-on: ubuntu-latest`,
+        testAllBrowsersSource: `name: Browsers\non:\n  workflow_dispatch:\n    inputs:\n      browsers:\n        default: chromium\njobs:\n  # release-qualification: required\n  test:\n    runs-on: ubuntu-latest`,
       }),
     /unresolved matrix expression/
+  );
+});
+
+test('fails closed when a dynamic browser matrix is not bound to a finite dispatch default', () => {
+  const ciSource = `name: CI\njobs:\n  # release-qualification: required\n  lint:\n    runs-on: ubuntu-latest`;
+  const fullEngineSource = `name: Full\njobs:\n  # release-qualification: required\n  full:\n    runs-on: ubuntu-latest`;
+  const testAllBrowsersSource = `
+name: Browsers
+on:
+  workflow_dispatch:
+    inputs:
+      browsers:
+        description: Missing finite default
+jobs:
+  # release-qualification: matrix
+  test:
+    name: \${{ matrix.browser }}
+    strategy:
+      matrix:
+        browser: \${{ fromJSON(needs.plan.outputs.browsers) }}
+  `;
+
+  assert.throws(
+    () =>
+      deriveReleaseQualification({
+        ciSource,
+        fullEngineSource,
+        testAllBrowsersSource,
+      }),
+    /browsers.*default/iu
   );
 });

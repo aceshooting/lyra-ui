@@ -154,12 +154,13 @@ declare -Ar WTR_LANE_PORTS=(
   [safari]=18094
 )
 
-# Matches .github/workflows/full-engine.yml's own matrix: every browser runs the complete
-# non-coverage suite across 4 deterministic shards, not as one single ~480-file run. Beyond
-# mirroring CI faithfully, this matters locally too -- a handful of tests (see
+# Test All Browsers deliberately runs each browser's complete non-coverage suite as four
+# sequential shards on one browser-specific runner. This is distinct from full-engine.yml's eight
+# independently-hosted shards per Firefox/WebKit engine. The smaller sequential split matters here
+# because a handful of tests (see
 # src/performance.test.ts's own large-graph/large-flow benchmarks) have been observed to time out
-# only when accumulated load from hundreds of preceding files in one giant shard pushes them past
-# their deadline, never when run in a CI-sized ~120-file shard or standalone.
+# only when accumulated load from hundreds of preceding files in one giant run pushes them past
+# their deadline, never when run in a ~120-file shard or standalone.
 SHARD_TOTAL=4
 
 run_browser_lane() {

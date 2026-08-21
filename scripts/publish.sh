@@ -12,8 +12,8 @@
 # for just those packages -> regenerate version-derived metadata, then per-package
 # lint/build/test -> print a
 # full review (versions, bump kind, tags, artifacts) and confirm -> pack ->
-# commit and push main -> qualify the exact commit in CI and the complete Firefox/WebKit
-# suite -> tag each as "<name>@<version>" -> GitHub Release per
+# commit and push main -> qualify the exact commit in CI, the five-browser sweep, and the
+# complete Firefox/WebKit suite -> tag each as "<name>@<version>" -> GitHub Release per
 # package with its artifacts. Creating that GitHub Release is what triggers
 # the actual `npm publish` -- it runs in .github/workflows/publish.yml, not
 # in this script, so it gets npm provenance (only possible from CI).
@@ -552,7 +552,7 @@ publish_recovery_trap() {
     echo "    Inspect git status and git log before either restoring that local state or resuming manually; do not blindly re-run the script." >&2
   elif [[ "$QUALIFICATION_PASSED" -eq 0 ]]; then
     echo "    The release commit is already on origin/main, but exact-commit qualification did not pass." >&2
-    echo "    No release tag or GitHub Release was created. Do NOT tag or release this commit unless both its push CI and every dispatched full-engine shard succeed." >&2
+    echo "    No release tag or GitHub Release was created. Do NOT tag or release this commit unless its push CI, all five Test All Browsers jobs, and every dispatched full-engine shard succeed." >&2
     echo "    Fix the failing qualification on main and rebuild/revalidate release artifacts from the eventual exact green commit." >&2
   elif [[ "$TAGS_PUSHED" -eq 0 ]]; then
     echo "    The release commit passed exact-commit qualification, but the atomic tag push did not complete." >&2
@@ -689,16 +689,27 @@ if [[ "$remote_main_sha" != "$release_sha" ]]; then
 fi
 
 # Qualify the exact release commit before creating any release ref. The push above starts CI;
-# dispatch full-engine from main while it still resolves to the same SHA, then require the exact
-# push/main CI run and the exact workflow_dispatch/main full-engine run to pass in full.
+# dispatch both manually-triggered suites from main while it still resolves to the same SHA, then
+# require exact push/main CI and workflow_dispatch/main runs for all three workflows to pass.
 echo
 echo "==> Dispatching full browser-engine suite for $release_sha from main"
 GH_TOKEN="$GH_TOKEN" gh workflow run full-engine.yml --repo "$GH_REPOSITORY" --ref main
+echo "==> Dispatching Test All Browsers for $release_sha from main"
+GH_TOKEN="$GH_TOKEN" gh workflow run test-all-browsers.yml \
+  --repo "$GH_REPOSITORY" \
+  --ref main \
+  -f browsers=chromium,firefox,chrome,edge,safari
 GH_TOKEN="$GH_TOKEN" node scripts/release-integrity.mjs wait-ci \
   --repository "$GH_REPOSITORY" \
   --sha "$release_sha" \
   --workflow ci.yml \
   --timeout-seconds 3600 \
+  --poll-seconds 20
+GH_TOKEN="$GH_TOKEN" node scripts/release-integrity.mjs wait-test-all-browsers \
+  --repository "$GH_REPOSITORY" \
+  --sha "$release_sha" \
+  --workflow test-all-browsers.yml \
+  --timeout-seconds 7200 \
   --poll-seconds 20
 GH_TOKEN="$GH_TOKEN" node scripts/release-integrity.mjs wait-full-engine \
   --repository "$GH_REPOSITORY" \

@@ -13,15 +13,19 @@ const qualificationManifest = JSON.parse(
 if (
   qualificationManifest?.schemaVersion !== 1 ||
   !qualificationManifest.workflows?.ci ||
-  !qualificationManifest.workflows?.fullEngine
+  !qualificationManifest.workflows?.fullEngine ||
+  !qualificationManifest.workflows?.testAllBrowsers
 ) {
   throw new Error('.github/release-qualification.json has an unsupported schema');
 }
 const ciQualification = qualificationManifest.workflows.ci;
 const fullEngineQualification = qualificationManifest.workflows.fullEngine;
+const testAllBrowsersQualification =
+  qualificationManifest.workflows.testAllBrowsers;
 for (const [label, workflow] of [
   ['CI', ciQualification],
   ['full-engine', fullEngineQualification],
+  ['Test All Browsers', testAllBrowsersQualification],
 ]) {
   if (
     typeof workflow.name !== 'string' ||
@@ -40,6 +44,9 @@ for (const [label, workflow] of [
 export const REQUIRED_CI_JOBS = Object.freeze([...ciQualification.requiredJobs]);
 export const REQUIRED_FULL_ENGINE_JOBS = Object.freeze([
   ...fullEngineQualification.requiredJobs,
+]);
+export const REQUIRED_TEST_ALL_BROWSER_JOBS = Object.freeze([
+  ...testAllBrowsersQualification.requiredJobs,
 ]);
 
 const RELEASE_PACKAGES = Object.freeze({
@@ -177,6 +184,22 @@ export function evaluateFullEngineRun({ run, jobs, sha }) {
   });
 }
 
+export function evaluateTestAllBrowsersRun({ run, jobs, sha }) {
+  return evaluateRequiredWorkflowRun({
+    run,
+    jobs,
+    sha,
+    workflowName: testAllBrowsersQualification.name,
+    workflowPath: testAllBrowsersQualification.path,
+    requiredJobs: REQUIRED_TEST_ALL_BROWSER_JOBS,
+    runLabel: 'Test All Browsers',
+    requiredJobLabel: 'browser',
+    workflowDescription: 'Test All Browsers workflow',
+    requiredEvent: testAllBrowsersQualification.event,
+    requiredHeadBranch: testAllBrowsersQualification.headBranch,
+  });
+}
+
 const defaultDelay = (milliseconds) =>
   new Promise((resolve) => {
     setTimeout(resolve, milliseconds);
@@ -233,6 +256,14 @@ export function waitForSuccessfulFullEngine(options) {
     ...options,
     evaluateRun: evaluateFullEngineRun,
     workflowLabel: 'full-engine',
+  });
+}
+
+export function waitForSuccessfulTestAllBrowsers(options) {
+  return waitForSuccessfulWorkflow({
+    ...options,
+    evaluateRun: evaluateTestAllBrowsersRun,
+    workflowLabel: 'Test All Browsers',
   });
 }
 
@@ -477,6 +508,14 @@ function waitFullEngineCli(options) {
   });
 }
 
+function waitTestAllBrowsersCli(options) {
+  return waitWorkflowCli(options, {
+    defaultWorkflow: 'test-all-browsers.yml',
+    waiter: waitForSuccessfulTestAllBrowsers,
+    workflowLabel: 'Test All Browsers',
+  });
+}
+
 function resolveTagCli(options) {
   const expected = parseReleaseTag(requireOption(options, 'tag'));
   const packageFile = path.join(repoRoot, expected.directory, 'package.json');
@@ -693,6 +732,9 @@ export async function runCli(argv = process.argv.slice(2)) {
   const options = parseOptions(argv);
   if (options.command === 'wait-ci') return waitCiCli(options);
   if (options.command === 'wait-full-engine') return waitFullEngineCli(options);
+  if (options.command === 'wait-test-all-browsers') {
+    return waitTestAllBrowsersCli(options);
+  }
   if (options.command === 'resolve-tag') return resolveTagCli(options);
   if (options.command === 'validate-git-tag') return validateGitTagCli(options);
   if (options.command === 'validate-workflow-source') return validateWorkflowSourceCli(options);
@@ -700,7 +742,7 @@ export async function runCli(argv = process.argv.slice(2)) {
   if (options.command === 'compare-rebuild') return compareRebuildCli(options);
   if (options.command === 'verify-site-freshness') return verifySiteFreshnessCli(options);
   throw new Error(
-    'Usage: release-integrity.mjs wait-ci|wait-full-engine|resolve-tag|validate-git-tag|validate-workflow-source|validate-tarball|compare-rebuild|verify-site-freshness [options]',
+    'Usage: release-integrity.mjs wait-ci|wait-full-engine|wait-test-all-browsers|resolve-tag|validate-git-tag|validate-workflow-source|validate-tarball|compare-rebuild|verify-site-freshness [options]',
   );
 }
 

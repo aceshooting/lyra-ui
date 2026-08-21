@@ -71,7 +71,7 @@ function parseInlineArray(value, label) {
   return match[1].split(',').map((entry) => scalar(entry));
 }
 
-function matrixRows(job, label) {
+function matrixRows(job, label, dynamicAxes = {}) {
   const matrixLine = job.lines.findIndex((line) =>
     /^\s{6}matrix:\s*$/.test(line)
   );
@@ -106,9 +106,24 @@ function matrixRows(job, label) {
   const axes = [];
   for (const line of matrix) {
     const axis = line.match(/^\s{8}([A-Za-z0-9_-]+):\s*(\[.*\])\s*$/);
-    if (axis)
+    if (axis) {
       axes.push([axis[1], parseInlineArray(axis[2], `${label}/${job.id}`)]);
-    else if (/^\s{8}[A-Za-z0-9_-]+:/.test(line)) break;
+      continue;
+    }
+    const dynamicAxis = line.match(
+      /^\s{8}([A-Za-z0-9_-]+):\s*(.+?)\s*$/
+    );
+    if (dynamicAxis && Object.hasOwn(dynamicAxes, dynamicAxis[1])) {
+      const binding = dynamicAxes[dynamicAxis[1]];
+      if (dynamicAxis[2] !== binding.expression) {
+        throw new Error(
+          `${label}/${job.id}: dynamic matrix axis '${dynamicAxis[1]}' is not bound to ${binding.expression}`
+        );
+      }
+      axes.push([dynamicAxis[1], binding.values]);
+      continue;
+    }
+    if (/^\s{8}[A-Za-z0-9_-]+:/.test(line)) break;
   }
   if (axes.length === 0)
     throw new Error(`${label}/${job.id}: matrix has no finite axes`);
@@ -134,13 +149,13 @@ function interpolateMatrix(template, row, label) {
   return result;
 }
 
-function requiredJobNames(source, label) {
+function requiredJobNames(source, label, dynamicAxes) {
   const names = [];
   for (const job of markedJobs(source, label)) {
     const name = jobName(job);
     if (job.kind === 'required') names.push(name);
     else {
-      for (const row of matrixRows(job, label))
+      for (const row of matrixRows(job, label, dynamicAxes))
         names.push(interpolateMatrix(name, row, `${label}/${job.id}`));
     }
   }
@@ -149,7 +164,71 @@ function requiredJobNames(source, label) {
   return names.sort((a, b) => a.localeCompare(b));
 }
 
-export function deriveReleaseQualification({ ciSource, fullEngineSource }) {
+function workflowDispatchCsvDefault(source, inputName, label) {
+  const lines = source.split(/\r?\n/);
+  const dispatchLine = lines.findIndex((line) =>
+    /^\s{2}workflow_dispatch:\s*$/.test(line)
+  );
+  if (dispatchLine < 0) {
+    throw new Error(`${label}: workflow has no workflow_dispatch mapping`);
+  }
+  let dispatchEnd = dispatchLine + 1;
+  while (
+    dispatchEnd < lines.length &&
+    !/^(?:\S|\s{2}\S)/.test(lines[dispatchEnd])
+  ) {
+    dispatchEnd += 1;
+  }
+  const inputsLine = lines.findIndex(
+    (line, index) =>
+      index > dispatchLine &&
+      index < dispatchEnd &&
+      /^\s{4}inputs:\s*$/.test(line)
+  );
+  if (inputsLine < 0) {
+    throw new Error(`${label}: workflow_dispatch has no inputs mapping`);
+  }
+  const inputLine = lines.findIndex(
+    (line, index) =>
+      index > inputsLine &&
+      index < dispatchEnd &&
+      line === `      ${inputName}:`
+  );
+  if (inputLine < 0) {
+    throw new Error(`${label}: workflow_dispatch has no ${inputName} input`);
+  }
+  let end = inputLine + 1;
+  while (end < lines.length && !/^\s{0,6}\S/.test(lines[end])) end += 1;
+  const defaultLine = lines
+    .slice(inputLine + 1, end)
+    .find((line) => /^\s{8}default:\s*/.test(line));
+  if (!defaultLine) {
+    throw new Error(`${label}: ${inputName} input has no finite default`);
+  }
+  const value = scalar(defaultLine.replace(/^\s{8}default:\s*/, ''));
+  const values = value.split(',').map((entry) => entry.trim());
+  if (
+    values.length === 0 ||
+    values.some((entry) => !/^[A-Za-z0-9_-]+$/.test(entry)) ||
+    new Set(values).size !== values.length
+  ) {
+    throw new Error(
+      `${label}: ${inputName} input default is not a unique finite list`
+    );
+  }
+  return values;
+}
+
+export function deriveReleaseQualification({
+  ciSource,
+  fullEngineSource,
+  testAllBrowsersSource,
+}) {
+  const testBrowsers = workflowDispatchCsvDefault(
+    testAllBrowsersSource,
+    'browsers',
+    'test-all-browsers'
+  );
   return {
     schemaVersion: 1,
     workflows: {
@@ -167,6 +246,22 @@ export function deriveReleaseQualification({ ciSource, fullEngineSource }) {
         headBranch: 'main',
         requiredJobs: requiredJobNames(fullEngineSource, 'full-engine'),
       },
+      testAllBrowsers: {
+        name: workflowName(testAllBrowsersSource, 'test-all-browsers'),
+        path: '.github/workflows/test-all-browsers.yml',
+        event: 'workflow_dispatch',
+        headBranch: 'main',
+        requiredJobs: requiredJobNames(
+          testAllBrowsersSource,
+          'test-all-browsers',
+          {
+            browser: {
+              expression: '${{ fromJSON(needs.plan.outputs.browsers) }}',
+              values: testBrowsers,
+            },
+          }
+        ),
+      },
     },
   };
 }
@@ -179,6 +274,10 @@ export function generateReleaseQualification() {
     ),
     fullEngineSource: readFileSync(
       path.join(repoRoot, '.github', 'workflows', 'full-engine.yml'),
+      'utf8'
+    ),
+    testAllBrowsersSource: readFileSync(
+      path.join(repoRoot, '.github', 'workflows', 'test-all-browsers.yml'),
       'utf8'
     ),
   });

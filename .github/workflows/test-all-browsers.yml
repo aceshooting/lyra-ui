@@ -28,6 +28,7 @@ jobs:
           BROWSERS_INPUT: ${{ inputs.browsers }}
         run: node scripts/plan-test-browsers.mjs >> "$GITHUB_OUTPUT"
 
+  # release-qualification: matrix
   test:
     needs: plan
     name: ${{ matrix.browser }}
