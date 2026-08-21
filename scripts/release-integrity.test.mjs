@@ -133,6 +133,77 @@ test('budgets the platform matrix for degraded fresh-runner OS dependency setup'
   );
 });
 
+test('requires exhaustive fail-closed lint shards behind the stable lint gate', () => {
+  const workflow = readFileSync(
+    path.join(repoRoot, '.github/workflows/ci.yml'),
+    'utf8'
+  );
+  const lyraPackage = JSON.parse(
+    readFileSync(path.join(repoRoot, 'packages/lyra-ui/package.json'), 'utf8')
+  );
+  const shardStart = workflow.indexOf('\n  lint_shard:');
+  const aggregateStart = workflow.indexOf('\n  lint:');
+  const staticStart = workflow.indexOf('\n  static-checks:');
+  assert.ok(
+    shardStart > 0 &&
+      aggregateStart > shardStart &&
+      staticStart > aggregateStart,
+    'CI must retain separate lint shard and stable aggregate jobs'
+  );
+
+  const shardJob = workflow.slice(shardStart, aggregateStart);
+  const aggregateJob = workflow.slice(aggregateStart, staticStart);
+  assert.match(
+    shardJob,
+    /name: lint \/ shard \$\{\{ matrix\.shard \}\}\/3/u
+  );
+  assert.match(shardJob, /fail-fast: false/u);
+  assert.match(shardJob, /max-parallel: 3/u);
+  assert.match(shardJob, /shard: \[1, 2, 3\]/u);
+  assert.match(shardJob, /fetch-depth: 0/u);
+  assert.match(shardJob, /node-version: 22/u);
+  assert.match(shardJob, /pnpm install --frozen-lockfile/u);
+  assert.match(
+    shardJob,
+    /pnpm --filter @aceshooting\/lyra-ui lint:ci-shard -- --shard "\$\{\{ matrix\.shard \}\}\/3"/u
+  );
+  assert.equal(
+    [...shardJob.matchAll(/lint:ci-shard/gu)].length,
+    1,
+    'each lint matrix worker must invoke exactly one selected shard'
+  );
+  assert.doesNotMatch(shardJob, /- run: pnpm lint(?:\s|$)/u);
+
+  assert.match(
+    workflow.slice(
+      workflow.lastIndexOf('\n  # release-qualification:', aggregateStart),
+      staticStart
+    ),
+    /# release-qualification: required\n  lint:\n/u
+  );
+  assert.match(aggregateJob, /name: lint/u);
+  assert.match(aggregateJob, /if: \$\{\{ always\(\) \}\}/u);
+  assert.match(aggregateJob, /- lint_shard\b/u);
+  assert.match(
+    aggregateJob,
+    /LINT_SHARD_RESULT: \$\{\{ needs\.lint_shard\.result \}\}/u
+  );
+  assert.match(
+    aggregateJob,
+    /if \[\[ "\$LINT_SHARD_RESULT" != "success" \]\]/u
+  );
+  assert.match(aggregateJob, /exit 1/u);
+
+  assert.equal(
+    lyraPackage.scripts.lint,
+    'pnpm run contract-policy && tsc --noEmit -p tsconfig.json && pnpm run test:types'
+  );
+  assert.equal(
+    lyraPackage.scripts['lint:ci-shard'],
+    'node scripts/lint-ci-shard.mjs'
+  );
+});
+
 test('requires the exhaustive packed ATTW matrix in the stable release gate', () => {
   const workflow = readFileSync(
     path.join(repoRoot, '.github/workflows/ci.yml'),
@@ -1269,11 +1340,11 @@ test('release script pins its repository and pushes release refs atomically', ()
     path.join(repoRoot, '.github/workflows/ci.yml'),
     'utf8'
   );
-  const lintJob = ciWorkflow.slice(
-    ciWorkflow.indexOf('  lint:'),
-    ciWorkflow.indexOf('\n  static-checks:')
+  const lintShardJob = ciWorkflow.slice(
+    ciWorkflow.indexOf('  lint_shard:'),
+    ciWorkflow.indexOf('\n  lint:')
   );
-  assert.match(lintJob, /fetch-depth: 0/);
+  assert.match(lintShardJob, /fetch-depth: 0/);
 });
 
 test('package lifecycle and root custom-elements metadata are clean-checkout safe', () => {

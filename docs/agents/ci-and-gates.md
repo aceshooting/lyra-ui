@@ -14,7 +14,8 @@ prose. It covers script/package metadata, source/style/part/provenance policies,
 migration coverage, manifest/framework/LLM freshness, component inventory and metadata,
 autoloader/registration/side-effect architecture, form/event/cycle/interaction/token/numeric/
 translation contracts, and every associated tooling self-test. When adding, removing, or moving a
-gate, edit that package script first; `pnpm lint` and the CI `lint` job pick it up automatically.
+gate, edit that package script first; local `pnpm lint` and the CI lint sharder both derive their
+inventory from it automatically.
 
 **Toolchain constraint: `typescript@7` is the native Go port and exposes no JS compiler API.**
 `ts.version` works, but `ts.SyntaxKind` and `ts.createProgram` are `undefined` — any tool that
@@ -79,8 +80,21 @@ along real data dependencies (verified against the actual scripts, not assumed) 
 gates run in parallel instead of queueing behind each other. If a check goes red, the job name in
 the PR checks list tells you which of these to reproduce locally:
 
-1. **`lint`** — `pnpm install --frozen-lockfile`; `pnpm lint`. No Playwright and no build:
-   `contract-policy` + `tsc --noEmit` + `test:types` are pure static analysis.
+1. **`lint`** — three `lint_shard` workers independently install, then run a deterministic weighted
+   partition of the package's `contract-policy` commands plus `tsc --noEmit -p tsconfig.json` and
+   `test:types`. The runner reads those commands directly from `package.json`; there is no second
+   gate list to drift. Occurrence ordinals make the split disjoint and exhaustive even if a command
+   is deliberately repeated, source-controlled observations weight the expensive checks, and a new
+   valid command receives unit cost rather than disappearing. Every worker restores original policy
+   order within its own lane and uses a full-history checkout because the component-metadata gate may
+   move when the inventory changes. A stable `lint` aggregate runs with `always()` and fails unless
+   the entire matrix concluded `success`.
+
+   The reference run's sequential `pnpm lint` step took 8m22s. Its three estimated lane weights are
+   167/166/166, bounded by the 163-unit component-inventory test, so a fourth worker would add setup
+   and concurrency pressure without shortening the critical path. Local `pnpm lint`, `scripts/ci.sh`,
+   and release generation remain complete and sequential; the shard entry is CI-only. No lint lane
+   needs Playwright or a build because every command is static analysis.
 2. **`static-checks`** — everything needing neither a library build nor a docs build. Its inputs are
    already-committed files except for one read-only, content-addressed npm fetch. It validates
    workflow syntax and the generated release-qualification manifest; runs the release-integrity,
@@ -417,7 +431,7 @@ The recovery path retains the same
 14-day artifact handoff, protected minimal signer, post-approval tag check, and release-asset
 round-trip. Dispatch it on the requested tag, never on `main`.
 
-Component release history checks require a non-shallow clone with tags; the CI lint checkout uses
+Component release history checks require a non-shallow clone with tags; every CI lint worker uses
 `fetch-depth: 0`. `history.taggedCurrent` preserves the immutable current-version tag record while
 mutable worktree `history.current` evolves. APIs added after that tag are marked `unreleased`, then
 receive the bumped version when the exact tag snapshot rolls into `history.releases`.
