@@ -171,6 +171,34 @@ it("routes opt-in announcements through a light-DOM sink while keeping the meani
   expect(sinkElement("assertive") === null).to.be.true;
 });
 
+it("announces slot additions when MutationObserver is unavailable", async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(window, "MutationObserver");
+  Object.defineProperty(window, "MutationObserver", {
+    configurable: true,
+    value: undefined,
+  });
+  try {
+    const el = (await fixture(
+      html`<lr-chat-viewport live="polite"></lr-chat-viewport>`
+    )) as LyraChatViewport;
+    const message = document.createElement("div");
+    message.textContent = "Slot fallback announcement";
+    el.append(message);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+
+    expect(sinkTexts("polite")).to.deep.equal([
+      "Slot fallback announcement",
+    ]);
+  } finally {
+    if (descriptor) Object.defineProperty(window, "MutationObserver", descriptor);
+    else
+      delete (window as Window & {
+        MutationObserver?: typeof MutationObserver;
+      }).MutationObserver;
+  }
+});
+
 it("does not re-announce an existing node when it is moved, but announces a new node with repeated text", async () => {
   const el = (await fixture(html`
     <lr-chat-viewport live="polite"

@@ -371,6 +371,52 @@ describe("data mode", () => {
     ]);
   });
 
+  it("falls back safely for an invalid timestamp and formats an older month without a callback", async () => {
+    const older = new Date(now.getFullYear(), now.getMonth() - 3, 12);
+    const el = (await fixture(html`
+      <lr-thread-list
+        .threads=${[
+          { id: "invalid-date", title: "Invalid date", timestamp: new Date(Number.NaN) },
+          { id: "older", title: "Older thread", timestamp: older },
+        ]}
+      ></lr-thread-list>
+    `)) as LyraThreadList;
+    await el.updateComplete;
+
+    const effectiveLocale = (el as unknown as { effectiveLocale: string }).effectiveLocale;
+    const expectedMonth = new Intl.DateTimeFormat(effectiveLocale, {
+      month: "long",
+      year: "numeric",
+    }).format(new Date(older.getFullYear(), older.getMonth(), 1));
+    expect(renderedGroupLabels(el)).to.deep.equal([
+      "Previous 30 days",
+      expectedMonth,
+    ]);
+    expect(renderedThreadIds(el)).to.deep.equal(["invalid-date", "older"]);
+  });
+
+  it("falls back safely when a timestamp-like object's getTime throws", async () => {
+    const el = (await fixture(html`
+      <lr-thread-list
+        .threads=${[
+          {
+            id: "throwing-date",
+            title: "Throwing date",
+            timestamp: {
+              getTime: () => {
+                throw new Error("unreadable date");
+              },
+            } as unknown as Date,
+          },
+        ]}
+      ></lr-thread-list>
+    `)) as LyraThreadList;
+    await el.updateComplete;
+
+    expect(renderedGroupLabels(el)).to.deep.equal(["Previous 30 days"]);
+    expect(renderedThreadIds(el)).to.deep.equal(["throwing-date"]);
+  });
+
   it("contains long data rows inside an exact 320px RTL flex allocation", async () => {
     const long = "ConversationIdentifierWithoutNaturalBreaks".repeat(12);
     const container = (await fixture(html`

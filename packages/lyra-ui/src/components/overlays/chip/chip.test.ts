@@ -638,6 +638,25 @@ describe('remove affordance', () => {
     expect(btn.getAttribute('aria-label')).to.equal('Remove research');
   });
 
+  it('uses only a closed details summary for its derived action name', async () => {
+    const el = (await fixture(html`
+      <lr-chip removable>
+        <details>
+          <summary>Visible summary</summary>
+          <span>Hidden details</span>
+        </details>
+      </lr-chip>
+    `)) as LyraChip;
+    const details = el.querySelector('details')!;
+    const remove = el.shadowRoot!.querySelector<HTMLElement>('[part="remove-button"]')!;
+    expect(remove.getAttribute('aria-label')).to.equal('Remove Visible summary');
+
+    details.open = true;
+    await Promise.resolve();
+    await el.updateComplete;
+    expect(remove.getAttribute('aria-label')).to.equal('Remove Visible summary Hidden details');
+  });
+
   it('emits lr-remove with { value: undefined } when value was never set', async () => {
     const el = (await fixture(html`<lr-chip removable>Tag</lr-chip>`)) as LyraChip;
     const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLButtonElement;

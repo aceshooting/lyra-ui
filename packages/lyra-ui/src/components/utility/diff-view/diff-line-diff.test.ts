@@ -36,6 +36,24 @@ describe('computeLineDiff', () => {
       { type: 'remove', text: 'b' },
     ]);
   });
+
+  it('finds a lone new-side line inside a longer old document', () => {
+    const ops = computeLineDiff(['before', 'keep', 'after'], ['keep']);
+    expect(ops).to.deep.equal([
+      { type: 'remove', text: 'before' },
+      { type: 'equal', text: 'keep' },
+      { type: 'remove', text: 'after' },
+    ]);
+  });
+
+  it('keeps a lone unmatched new-side line as an addition', () => {
+    const ops = computeLineDiff(['before', 'after'], ['new']);
+    expect(ops).to.deep.equal([
+      { type: 'remove', text: 'before' },
+      { type: 'remove', text: 'after' },
+      { type: 'add', text: 'new' },
+    ]);
+  });
 });
 
 describe('pairOpsForSplit', () => {

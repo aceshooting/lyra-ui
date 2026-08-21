@@ -3,6 +3,7 @@ import './span-waterfall.js';
 import type { LyraSpanWaterfall } from './span-waterfall.js';
 import type { LyraSpan } from '../trace-tree/span.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 const SPANS: LyraSpan[] = [
   { id: 'root', name: 'Plan trip', kind: 'agent', startMs: 0, endMs: 400, status: 'success' },
@@ -94,6 +95,11 @@ describe('lr-span-waterfall', () => {
     setTimeout(() => bar.click());
     const ev = await oneEvent(el, 'lr-span-select');
     expect(ev.detail).to.deep.equal({ spanId: 'llm' });
+
+    const keyboardSelection = oneEvent(el, 'lr-span-select');
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }));
+    expect((await keyboardSelection).detail).to.deep.equal({ spanId: 'llm' });
   });
 
   it('tints bar on hover, and further again while pressed', async () => {
@@ -137,6 +143,37 @@ describe('lr-span-waterfall', () => {
     const second = el.shadowRoot!.querySelector('[data-id="search"]') as HTMLElement;
     expect(second.getAttribute('tabindex')).to.equal('0');
     expect(first.getAttribute('tabindex')).to.equal('-1');
+
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(first.getAttribute('tabindex')).to.equal('0');
+    expect(second.getAttribute('tabindex')).to.equal('-1');
+
+    const unrelated = new KeyboardEvent('keydown', {
+      key: 'F2',
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    });
+    base.dispatchEvent(unrelated);
+    expect(unrelated.defaultPrevented).to.equal(false);
+  });
+
+  it('repairs roving focus when a changed view hides the first sorted span', async () => {
+    const spans: LyraSpan[] = [
+      { id: 'early', name: 'Early', kind: 'tool', startMs: 0, endMs: 10, status: 'success' },
+      { id: 'visible', name: 'Visible', kind: 'tool', startMs: 100, endMs: 120, status: 'success' },
+    ];
+    const el = (await fixture(html`
+      <lr-span-waterfall .spans=${spans} .viewStartMs=${0} .viewEndMs=${120}></lr-span-waterfall>
+    `)) as LyraSpanWaterfall;
+    expect(el.shadowRoot!.querySelector('[data-id="early"]')!.getAttribute('tabindex')).to.equal('0');
+
+    el.viewStartMs = 100;
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('[data-id="visible"]')!.getAttribute('tabindex')).to.equal('0');
+    expect(el.shadowRoot!.querySelector('[data-id="early"]')!.getAttribute('tabindex')).to.equal('-1');
   });
 
   it('keeps even a tiny-duration bar at or above the 24px WCAG 2.5.8 floor in both axes', async () => {
@@ -459,6 +496,30 @@ it('deduplicates provider ids first-wins and bounds the shared projection with a
   `);
   expect(bounded.shadowRoot!.querySelectorAll('[part="row"]')).to.have.length(500);
   expect(bounded.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.equal('Showing at most 500 spans');
+});
+
+it('announces when a live trace first crosses the bounded projection limit', async () => {
+  const spans: LyraSpan[] = Array.from({ length: 501 }, (_, index) => ({
+    id: `span-${index}`,
+    name: `Span ${index}`,
+    kind: 'tool',
+    status: 'success',
+    startMs: index,
+    endMs: index + 1,
+  }));
+  const el = await fixture<LyraSpanWaterfall>(html`
+    <lr-span-waterfall
+      .spans=${spans.slice(0, 500)}
+      .strings=${{ spanProjectionLimit: 'Limited to {count} trace spans' }}
+    ></lr-span-waterfall>
+  `);
+  const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
+  expect(sink.childElementCount).to.equal(0);
+
+  el.spans = spans;
+  await el.updateComplete;
+
+  expect(sink.lastElementChild?.textContent).to.equal('Limited to 500 trace spans');
 });
 
 it('reserves an active span beyond the shared 500-row projection boundary', async () => {

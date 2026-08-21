@@ -6,7 +6,6 @@ import {
   oneEvent,
   waitUntil,
 } from "@open-wc/testing";
-import jsonGrammar from "shiki/langs/json.mjs";
 import "./diff-view.js";
 import type { LyraDiffView } from "./diff-view.js";
 import type { LyraDiffOp } from "./diff-line-diff.js";
@@ -1039,6 +1038,94 @@ describe("syntax highlighting", () => {
     expect(el.shadowRoot!.querySelector(".shiki") == null).to.be.true;
   });
 
+  it("keeps the plain diff when the optional highlighter cannot be created", async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${"old"} .newText=${"new"}></lr-diff-view>`
+    )) as LyraDiffView;
+    const seam = el as unknown as {
+      languages: unknown;
+      language: string;
+      loadHighlighterCore: () => Promise<unknown>;
+      highlightedOldLines: string[] | null;
+      highlightedNewLines: string[] | null;
+    };
+    seam.loadHighlighterCore = () => Promise.resolve(null);
+    seam.languages = { text: {} };
+    seam.language = "text";
+    await el.updateComplete;
+    await Promise.resolve();
+
+    expect(seam.highlightedOldLines).to.equal(null);
+    expect(seam.highlightedNewLines).to.equal(null);
+    expect(el.shadowRoot!.textContent).to.include("old");
+    expect(el.shadowRoot!.textContent).to.include("new");
+  });
+
+  it("drops a superseded highlighter result after newer source text wins", async () => {
+    let resolveFirst!: (highlighter: unknown) => void;
+    const first = new Promise<unknown>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const freshHighlighter = {
+      codeToHtml: (text: string) =>
+        `<pre><code><span class="line">fresh:${text}</span></code></pre>`,
+    };
+    const staleHighlighter = {
+      codeToHtml: (text: string) =>
+        `<pre><code><span class="line">stale:${text}</span></code></pre>`,
+    };
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${"old"} .newText=${"first"}></lr-diff-view>`
+    )) as LyraDiffView;
+    const seam = el as unknown as {
+      languages: unknown;
+      language: string;
+      loadHighlighterCore: () => Promise<unknown>;
+      highlightedNewLines: string[] | null;
+    };
+    let loads = 0;
+    seam.loadHighlighterCore = () =>
+      loads++ === 0 ? first : Promise.resolve(freshHighlighter);
+    seam.languages = { text: {} };
+    seam.language = "text";
+    await el.updateComplete;
+
+    el.newText = "second";
+    await el.updateComplete;
+    await waitUntil(() => seam.highlightedNewLines?.[0]?.includes("fresh:second") === true);
+    resolveFirst(staleHighlighter);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(seam.highlightedNewLines?.[0]).to.include("fresh:second");
+    expect(seam.highlightedNewLines?.[0]).to.not.include("stale:");
+  });
+
+  it("falls back to plain text when a grammar throws during tokenization", async () => {
+    const el = (await fixture(html`<lr-diff-view></lr-diff-view>`)) as LyraDiffView;
+    const tokenize = (
+      el as unknown as {
+        tokenizeLines(
+          highlighter: { codeToHtml(): string },
+          text: string,
+          language: string
+        ): string[] | null;
+      }
+    ).tokenizeLines.bind(el);
+
+    expect(
+      tokenize(
+        {
+          codeToHtml: () => {
+            throw new Error("invalid grammar input");
+          },
+        },
+        "source",
+        "text"
+      )
+    ).to.equal(null);
+  });
+
   it("parses highlighted markup with the adopted owner DOMParser", async () => {
     const frame = document.createElement("iframe");
     document.body.append(frame);
@@ -1156,17 +1243,34 @@ describe("syntax highlighting", () => {
     expect(addLine.textContent!.trim()).to.equal("+ HL:x");
   });
 
-  it("paints a Shiki-highlighted changed line through its full horizontal overflow width", async () => {
+  it("paints a highlighted changed line through its full horizontal overflow width", async () => {
     const longValue = `{"value":"${"highlighted".repeat(160)}"}`;
     const el = (await fixture(html`
       <lr-diff-view
         style="inline-size: 20rem;"
-        language="json"
-        .languages=${{ json: jsonGrammar }}
         .oldText=${'{"value":"before"}'}
         .newText=${longValue}
       ></lr-diff-view>
     `)) as LyraDiffView;
+    const seam = el as unknown as {
+      languages: unknown;
+      language: string;
+      loadHighlighterCore: () => Promise<unknown>;
+    };
+    seam.loadHighlighterCore = () =>
+      Promise.resolve({
+        codeToHtml: (text: string) =>
+          `<pre class="shiki"><code>${text
+            .split("\n")
+            .map(
+              (line) =>
+                `<span class="line"><span style="color:rgb(1, 2, 3)">${line}</span></span>`
+            )
+            .join("\n")}</code></pre>`,
+      });
+    seam.languages = { json: {} };
+    seam.language = "json";
+    await el.updateComplete;
     await waitUntil(
       () =>
         el.shadowRoot!.querySelector(
@@ -1341,6 +1445,33 @@ describe("contextLines", () => {
     expect(lines[lines.length - 1]!.textContent!.trim()).to.equal(
       "3 unchanged lines"
     );
+  });
+
+  it("renders a trailing fold marker in both split columns", async () => {
+    const oldText = ["a", "y1", "y2", "y3", "y4", "y5"].join("\n");
+    const newText = ["A", "y1", "y2", "y3", "y4", "y5"].join("\n");
+    const el = (await fixture(
+      html`<lr-diff-view
+        layout="split"
+        .oldText=${oldText}
+        .newText=${newText}
+        .contextLines=${2}
+      ></lr-diff-view>`
+    )) as LyraDiffView;
+
+    for (const side of ["old", "new"]) {
+      const lines = [
+        ...el.shadowRoot!.querySelectorAll(
+          `[part="side"][data-side="${side}"] [part="line"]`
+        ),
+      ];
+      expect(lines[lines.length - 1]!.getAttribute("data-type")).to.equal(
+        "fold"
+      );
+      expect(lines[lines.length - 1]!.textContent!.trim()).to.equal(
+        "3 unchanged lines"
+      );
+    }
   });
 
   it("does not fold a run no longer than 2x contextLines", async () => {

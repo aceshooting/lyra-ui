@@ -22,6 +22,19 @@ it('is closed by default with the exact Shoelace-compatible property defaults', 
   expect(el.variant).to.equal('primary');
   expect(el.hasAttribute('open')).to.be.false;
   expect(getComputedStyle(el).display).to.equal('none');
+
+  el.open = false;
+  expect(el.open).to.be.false;
+});
+
+it('settles hide() safely when invoked before the first connection', async () => {
+  const el = document.createElement('lr-alert') as LyraAlert;
+  const hidden = el.hide();
+  document.body.append(el);
+  await hidden;
+
+  expect(el.open).to.be.false;
+  expect(el.hasAttribute('open')).to.be.false;
 });
 
 it('serializes the default host role while preserving an authored alternate role across reconnect', async () => {
@@ -531,6 +544,7 @@ it('toast() moves the same alert into the shared Lyra toast stack and removes it
     <lr-alert closable style=${motionless}>Toast message</lr-alert>
   `)) as LyraAlert;
   const completion = el.toast();
+  expect(el.toast() === completion).to.be.true;
   await waitUntil(() => el.parentElement?.localName === 'lr-toast');
   expect(el.open).to.be.true;
   expect(document.querySelectorAll('lr-toast').length).to.equal(1);

@@ -2014,7 +2014,7 @@ it('parses millisecond and second CSS timing lists before transition completion'
     if (element !== surface) return computed;
     return new Proxy(computed, {
       get(target, property, receiver) {
-        if (property === 'transitionDuration') return '2ms, 0.003s';
+        if (property === 'transitionDuration') return 'invalid, 2ms, 0.003s';
         if (property === 'transitionDelay') return '0ms, 0s';
         if (property === 'animationDuration') return '0ms';
         if (property === 'animationDelay') return '0s';
