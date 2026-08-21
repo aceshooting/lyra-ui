@@ -113,8 +113,11 @@ its baseline in all three engines; see
   it directly; reproduce failures locally in the same order. The gates expose six stable check
   families split along real data dependencies (`lint`, `static-checks`, `build-and-coverage`,
   `packed-consumer`, `docs-and-storybook`, `visual-regression`) rather than one linear job, so a
-  red check names the specific phase to reproduce instead of "build-test". Within
-  `build-and-coverage`, four independently hosted coverage shards consume the shared `dist/`
+  red check names the specific phase to reproduce instead of "build-test". The `lint` family
+  derives the authoritative `contract-policy` commands plus the two `lint` type-check suffixes and
+  balances them across three hosted workers; a fail-closed aggregate retains the stable check name.
+  Local `pnpm lint` remains the complete sequential command. Within `build-and-coverage`, four
+  independently hosted coverage shards consume the shared `dist/`
   artifact; a fail-closed merge job requires every raw coverage, JUnit, and test-manifest artifact
   before it enforces whole-suite floors and reports to Codecov. Local `test:coverage` deliberately
   retains the complete four-shard sequential run. A separate

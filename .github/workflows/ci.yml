@@ -30,13 +30,22 @@ permissions:
 # artifact upload/download round trip would cost, and it keeps every job independently
 # reproducible from a clean checkout.
 jobs:
-  # release-qualification: required
-  lint:
+  # The package's ordinary lint command stays sequential for local development and release
+  # generation. Hosted CI derives the same authoritative command inventory and balances it across
+  # three runners; no second policy list is maintained here.
+  lint_shard:
+    name: lint / shard ${{ matrix.shard }}/3
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        shard: [1, 2, 3]
+    timeout-minutes: 10
     steps:
       # contract-policy's component-metadata gate reproduces immutable release-tag evidence and
-      # intentionally fails closed in shallow clones.
+      # intentionally fails closed in shallow clones. Every worker uses full history because the
+      # weighted assignment is source-derived and can move that gate when the policy changes.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -46,7 +55,28 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
+      - run: pnpm --filter @aceshooting/lyra-ui lint:ci-shard -- --shard "${{ matrix.shard }}/3"
+
+  # Preserve the stable branch-protection/release check while requiring every matrix worker.
+  # `always()` makes a failed or cancelled shard an explicit red result rather than a skipped job.
+  # release-qualification: required
+  lint:
+    name: lint
+    if: ${{ always() }}
+    needs:
+      - lint_shard
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Aggregate lint shards
+        env:
+          LINT_SHARD_RESULT: ${{ needs.lint_shard.result }}
+        run: |
+          set -euo pipefail
+          if [[ "$LINT_SHARD_RESULT" != "success" ]]; then
+            echo "::error::lint shard matrix concluded: $LINT_SHARD_RESULT"
+            exit 1
+          fi
 
   # Static/config consistency checks: none of these need a library build, a docs build, or a
   # browser. They read already-committed files (custom-elements.json, llms/, plugin manifests,
