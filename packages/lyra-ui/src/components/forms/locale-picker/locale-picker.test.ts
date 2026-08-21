@@ -274,6 +274,35 @@ it('owns a bounded readonly snapshot of an explicit locale catalog', async () =>
   expect(rows(el)[0]!.textContent).to.contain('Français');
 });
 
+it('rejects malformed and hostile locale rows while retaining valid siblings', async () => {
+  const hostile = Object.create(null) as Record<string, unknown>;
+  Object.defineProperty(hostile, 'tag', {
+    get(): never {
+      throw new Error('hostile locale row');
+    },
+  });
+  const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker></lr-locale-picker>`);
+  el.locales = [
+    null,
+    42,
+    { tag: '' },
+    { tag: 'fr', label: 42 },
+    hostile,
+    { tag: 'de', label: 'Deutsch', country: 'de' },
+  ] as unknown as LyraLocalePicker['locales'];
+  el.open = true;
+  await el.updateComplete;
+
+  expect(el.locales).to.deep.equal([{ tag: 'de', label: 'Deutsch', country: 'de' }]);
+  expect(rows(el)).to.have.length(1);
+  expect(rows(el)[0]!.dataset.value).to.equal('de');
+
+  el.locales = 'not-an-array' as unknown as LyraLocalePicker['locales'];
+  await el.updateComplete;
+  expect(el.locales).to.deep.equal([]);
+  expect(rows(el)).to.have.length(0);
+});
+
 it('locales set as {tag,label}[] overrides the auto-discovered list and honors a custom label', async () => {
   const el = (await fixture(
     html`<lr-locale-picker
@@ -799,6 +828,16 @@ it('value setter tolerates a null assignment, normalizing to an empty string', a
   expect(el.value).to.equal('');
 });
 
+it('defaultValue normalizes a null assignment and removes its reflected value attribute', async () => {
+  const el = (await fixture(html`<lr-locale-picker></lr-locale-picker>`)) as LyraLocalePicker;
+  el.defaultValue = 'fr';
+  expect(el.getAttribute('value')).to.equal('fr');
+  (el as unknown as { defaultValue: string | null }).defaultValue = null;
+  expect(el.defaultValue).to.equal('');
+  expect(el.hasAttribute('value')).to.equal(false);
+  expect(el.value).to.equal('');
+});
+
 it('formStateRestoreCallback restores a string state and clears on a non-string state', async () => {
   const el = (await fixture(
     html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`,
@@ -910,6 +949,18 @@ it('the trigger-click handler no-ops while disabled even when invoked directly',
   (el as unknown as { onTriggerClick(): void }).onTriggerClick();
   await el.updateComplete;
   expect(el.open).to.be.false;
+});
+
+it('contains a synthetic trigger focus delivered during same-task disablement', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  let relayed = 0;
+  el.addEventListener('focus', () => relayed++);
+  el.disabled = true;
+  trigger(el).dispatchEvent(new FocusEvent('focus'));
+  expect(relayed).to.equal(0);
+  expect(el.open).to.equal(false);
 });
 
 it('ignores listbox row clicks while disabled', async () => {
@@ -1272,6 +1323,13 @@ describe('touched state', () => {
 });
 
 describe('lr-locale-picker setCustomValidity()', () => {
+  it('normalizes a nullish custom validity message to an empty string', async () => {
+    const el = (await fixture(html`<lr-locale-picker></lr-locale-picker>`)) as LyraLocalePicker;
+    el.setCustomValidity(undefined as unknown as string);
+    expect(el.validationMessage).to.equal('');
+    expect(el.validity.customError).to.equal(false);
+  });
+
   it('blocks form submission and becomes the validationMessage', async () => {
     const form = (await fixture(html`
       <form><lr-locale-picker name="locale"></lr-locale-picker></form>

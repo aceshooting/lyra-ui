@@ -134,6 +134,48 @@ it('anchors aggregate validity to the first enabled checkbox semantic owner', as
   expect(anchor?.getAttribute('part')?.split(' ')).to.include('checkbox');
 });
 
+it('releases inherited disablement when an option moves outside every checkbox group', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <lr-checkbox-group disabled>
+        <lr-checkbox value="a">Alpha</lr-checkbox>
+      </lr-checkbox-group>
+      <div data-outside></div>
+    </div>
+  `);
+  const group = wrapper.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+  const option = wrapper.querySelector('lr-checkbox') as LyraCheckbox;
+  const outside = wrapper.querySelector('[data-outside]')!;
+  await Promise.all([group.updateComplete, option.updateComplete]);
+  expect(option.effectiveDisabled).to.equal(true);
+
+  outside.append(option);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await Promise.all([group.updateComplete, option.updateComplete]);
+  expect(option.effectiveDisabled).to.equal(false);
+  option.click();
+  expect(option.checked).to.equal(true);
+});
+
+it('keeps host focus and click inert while the checkbox group itself is disabled', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div>
+      <button type="button">Elsewhere</button>
+      <lr-checkbox-group disabled>
+        <lr-checkbox value="a">Alpha</lr-checkbox>
+      </lr-checkbox-group>
+    </div>
+  `);
+  const button = wrapper.querySelector('button')!;
+  const group = wrapper.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+  const option = wrapper.querySelector('lr-checkbox') as LyraCheckbox;
+  button.focus();
+  group.focus();
+  group.click();
+  expect(document.activeElement === button).to.equal(true);
+  expect(option.checked).to.equal(false);
+});
+
 it('reports required validity when no box is checked', async () => {
   const el = (await fixture(html`<lr-checkbox-group required><lr-checkbox>A</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
   expect(el.checkValidity()).to.be.false;

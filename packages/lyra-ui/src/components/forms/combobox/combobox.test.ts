@@ -2309,8 +2309,10 @@ it("renders structured async-row adornments and preserves selected opaque data",
       value: "lux",
       label: "Luxembourg",
       sub: "Lëtzebuerg",
+      start: html`<span id="async-row-start">LU</span>`,
       icon: html`<button id="nested-async-row-icon" type="button">⌖</button>`,
       badge: "City",
+      end: html`<span id="async-row-end">EU</span>`,
       accessibleLabel: "Luxembourg, city in Luxembourg",
       data: payload,
     },
@@ -2331,6 +2333,14 @@ it("renders structured async-row adornments and preserves selected opaque data",
   expect(icon.getAttribute("aria-hidden")).to.equal("true");
   expect(icon.hasAttribute("inert")).to.equal(true);
   expect(nestedIconButton.getBoundingClientRect().width).to.be.greaterThan(0);
+  const start = row.querySelector<HTMLElement>('[part="option-start"]')!;
+  const end = row.querySelector<HTMLElement>('[part="option-end"]')!;
+  expect(start.getAttribute("aria-hidden")).to.equal("true");
+  expect(start.hasAttribute("inert")).to.equal(true);
+  expect(start.querySelector("#async-row-start")?.textContent).to.equal("LU");
+  expect(end.getAttribute("aria-hidden")).to.equal("true");
+  expect(end.hasAttribute("inert")).to.equal(true);
+  expect(end.querySelector("#async-row-end")?.textContent).to.equal("EU");
   const input = el.shadowRoot!.querySelector<HTMLInputElement>(
     '[part="combobox-input"]'
   )!;

@@ -772,15 +772,22 @@ describe('lr-input', () => {
     it('returns null / no-ops instead of throwing when called before the native input has rendered', () => {
       const el = document.createElement('lr-input') as LyraInput;
       expect((el.input) === (null)).to.equal(true);
+      expect(el.valueAsDate).to.equal(null);
+      expect(Number.isNaN(el.valueAsNumber)).to.equal(true);
       expect(el.selectionStart).to.equal(null);
       expect(el.selectionEnd).to.equal(null);
       expect(() => {
+        el.valueAsDate = new Date(Date.UTC(2026, 0, 1));
+        el.valueAsNumber = 42;
         el.selectionStart = 2;
       }).to.not.throw();
       expect(() => {
         el.selectionEnd = 4;
       }).to.not.throw();
       expect(() => el.setRangeText('x')).to.not.throw();
+      expect(() => el.showPicker()).to.not.throw();
+      expect(() => el.stepUp()).to.not.throw();
+      expect(() => el.stepDown()).to.not.throw();
       expect(el.value).to.equal('');
     });
 
@@ -1237,6 +1244,28 @@ describe('lr-input showPicker() / stepUp() / stepDown()', () => {
     expect(calls).to.equal(0);
   });
 
+  it('tolerates a missing picker API and a platform picker rejection', async () => {
+    const el = (await fixture(html`<lr-input type="time" aria-label="Start"></lr-input>`)) as LyraInput;
+    const native = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+    const prototype = HTMLInputElement.prototype as HTMLInputElement & { showPicker?: () => void };
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, 'showPicker');
+
+    if (descriptor?.configurable) {
+      try {
+        delete prototype.showPicker;
+        expect(() => el.showPicker()).to.not.throw();
+      } finally {
+        Object.defineProperty(prototype, 'showPicker', descriptor);
+      }
+    }
+
+    Object.defineProperty(native, 'showPicker', {
+      configurable: true,
+      value: () => { throw new DOMException('Picker blocked', 'NotAllowedError'); },
+    });
+    expect(() => el.showPicker()).to.not.throw();
+  });
+
   it('steps the value by `step` and keeps the component value in sync', async () => {
     const el = (await fixture(
       html`<lr-input type="number" value="4" min="0" max="10" step="2" aria-label="Qty"></lr-input>`,
@@ -1246,6 +1275,8 @@ describe('lr-input showPicker() / stepUp() / stepDown()', () => {
     el.stepUp(2);
     expect(el.value).to.equal('10');
     el.stepDown();
+    expect(el.value).to.equal('8');
+    el.stepUp(0);
     expect(el.value).to.equal('8');
     expect((el.shadowRoot!.querySelector('input') as HTMLInputElement).value).to.equal('8');
   });
@@ -1584,6 +1615,12 @@ describe('lr-input mapped Input parity surface', () => {
     expect(el.inputmode).to.equal('url');
     expect(el.enterkeyhint).to.equal('go');
 
+    el.inputmode = null as unknown as string;
+    el.enterkeyhint = null as unknown as string;
+    await el.updateComplete;
+    expect(el.inputMode).to.equal('');
+    expect(el.enterKeyHint).to.equal('');
+
     const shoelaceWrite = el as unknown as { autocorrect: boolean | 'off' | 'on' };
     shoelaceWrite.autocorrect = 'off';
     await el.updateComplete;
@@ -1670,6 +1707,10 @@ describe('lr-input mapped Input parity surface', () => {
     form.reset();
     await el.updateComplete;
     expect(el.value).to.equal('seed');
+
+    el.removeAttribute('default-value');
+    await el.updateComplete;
+    expect(el.defaultValue).to.equal('');
   });
 });
 

@@ -714,6 +714,46 @@ it("rehomes an active option when it becomes disabled while open", async () => {
   expect(el.value).to.equal("b");
 });
 
+it("prefers the following option on an equal-distance rehome and clears the cursor when none remain", async () => {
+  const el = (await fixture(basic())) as LyraSelect;
+  const btn = trigger(el);
+  el.open = true;
+  await el.updateComplete;
+  for (let index = 0; index < 2; index += 1) {
+    btn.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowDown",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await el.updateComplete;
+  }
+  const [apple, banana, cherry] = [
+    ...el.querySelectorAll("lr-option"),
+  ] as LyraOption[];
+
+  banana.disabled = true;
+  await banana.updateComplete;
+  await aTimeout(0);
+  await el.updateComplete;
+  let active = el.shadowRoot!.querySelector<HTMLElement>(
+    '[part="option"][data-active]'
+  );
+  expect(active?.textContent?.trim()).to.equal("Cherry");
+
+  apple.disabled = true;
+  cherry.disabled = true;
+  await Promise.all([apple.updateComplete, cherry.updateComplete]);
+  await aTimeout(0);
+  await el.updateComplete;
+  active = el.shadowRoot!.querySelector<HTMLElement>(
+    '[part="option"][data-active]'
+  );
+  expect(active === null).to.equal(true);
+  expect(trigger(el).getAttribute("aria-activedescendant")).to.equal("");
+});
+
 it("selects the active option with Space, same as Enter", async () => {
   const el = (await fixture(basic())) as LyraSelect;
   const btn = trigger(el);
@@ -4096,6 +4136,21 @@ describe("multiple", () => {
     expect(el.shadowRoot!.activeElement?.getAttribute("part")).to.contain(
       "trigger"
     );
+  });
+
+  it("ignores a stale remove action after the selected values change", async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.value = ["a", "b"];
+    await el.updateComplete;
+    const stale = el.shadowRoot!.querySelector(
+      '[part~="tag__remove-button"]'
+    ) as HTMLButtonElement;
+
+    el.value = ["b"];
+    stale.click();
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal(["b"]);
   });
 
   it("never removes an already-selected option through closed-state type-ahead", async () => {

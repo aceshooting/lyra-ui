@@ -315,6 +315,30 @@ it("selects a range across two clicks", async () => {
   ).to.equal(4);
 });
 
+it("normalizes a hand-picked range when its second endpoint is earlier", async () => {
+  const el = (await fixture(
+    html`<lr-date-picker mode="range"></lr-date-picker>`
+  )) as LyraDatePicker;
+  el.goToDate("2026-07-01");
+  await el.updateComplete;
+
+  (
+    el.shadowRoot!.querySelector(
+      '[data-date="2026-07-10"]'
+    ) as HTMLButtonElement
+  ).click();
+  await el.updateComplete;
+  const changed = oneEvent(el, "change");
+  (
+    el.shadowRoot!.querySelector(
+      '[data-date="2026-07-05"]'
+    ) as HTMLButtonElement
+  ).click();
+  await changed;
+
+  expect(el.value).to.equal("2026-07-05/2026-07-10");
+});
+
 it("keeps viewing the month the user navigated to after completing a cross-month range pick", async () => {
   // Regression test: willUpdate() used to unconditionally resync viewDate to
   // selection.from's month on every `value` change, including the component's
@@ -393,6 +417,26 @@ it("honors min/max by disabling out-of-range days", async () => {
   ) as HTMLButtonElement;
   expect(before.disabled).to.be.true;
   expect(inside.disabled).to.be.false;
+});
+
+it("defensively ignores a synthetic click dispatched directly on a disabled day", async () => {
+  const el = (await fixture(
+    html`<lr-date-picker min="2026-07-10"></lr-date-picker>`
+  )) as LyraDatePicker;
+  el.goToDate("2026-07-10");
+  await el.updateComplete;
+  const disabledDay = el.shadowRoot!.querySelector(
+    '[data-date="2026-07-05"]'
+  ) as HTMLButtonElement;
+  let changes = 0;
+  el.addEventListener("change", () => changes++);
+
+  disabledDay.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  await el.updateComplete;
+
+  expect(disabledDay.disabled).to.equal(true);
+  expect(el.value).to.equal("");
+  expect(changes).to.equal(0);
 });
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -2444,10 +2488,20 @@ describe("date-picker coverage gaps", () => {
     expect(activeViewItemIndex(el)).to.equal(6);
     expect(focusedViewItemIndex(el)).to.equal(6);
 
+    dispatchViewGridKey(el, "ArrowLeft");
+    await el.updateComplete;
+    expect(activeViewItemIndex(el)).to.equal(5);
+    expect(focusedViewItemIndex(el)).to.equal(5);
+
+    dispatchViewGridKey(el, "ArrowUp");
+    await el.updateComplete;
+    expect(activeViewItemIndex(el)).to.equal(1);
+    expect(focusedViewItemIndex(el)).to.equal(1);
+
     dispatchViewGridKey(el, "ArrowDown");
     await el.updateComplete;
-    expect(activeViewItemIndex(el)).to.equal(10);
-    expect(focusedViewItemIndex(el)).to.equal(10);
+    expect(activeViewItemIndex(el)).to.equal(5);
+    expect(focusedViewItemIndex(el)).to.equal(5);
 
     dispatchViewGridKey(el, "Home");
     await el.updateComplete;
@@ -2455,6 +2509,11 @@ describe("date-picker coverage gaps", () => {
 
     dispatchViewGridKey(el, "End");
     await el.updateComplete;
+    expect(activeViewItemIndex(el)).to.equal(11);
+
+    const unrelated = dispatchViewGridKey(el, "Tab");
+    await el.updateComplete;
+    expect(unrelated.defaultPrevented).to.equal(false);
     expect(activeViewItemIndex(el)).to.equal(11);
 
     const rtl = (await fixture(html`
@@ -2694,6 +2753,9 @@ describe("date-picker coverage gaps", () => {
       expect(item.disabled).to.be.true;
       expect(item.getAttribute("part")).to.include("view-item-disabled");
     }
+    items[0]!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await el.updateComplete;
+    expect(el.view).to.equal("months");
   });
 
   it("disables only the out-of-range months in the month-selection view when min applies", async () => {

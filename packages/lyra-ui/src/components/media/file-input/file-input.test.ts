@@ -85,6 +85,19 @@ function dropFolderWith(el: HTMLElement, folderName: string): void {
   el.dispatchEvent(ev);
 }
 
+function dropEntriesWith(el: HTMLElement, entries: readonly unknown[]): void {
+  const fakeDataTransfer = {
+    files: [] as unknown as FileList,
+    items: entries.map((entry) => ({
+      kind: "file",
+      webkitGetAsEntry: () => entry,
+    })),
+  };
+  const event = new DragEvent("drop", { bubbles: true, cancelable: true });
+  Object.defineProperty(event, "dataTransfer", { value: fakeDataTransfer });
+  el.dispatchEvent(event);
+}
+
 it("renders the label text by default", async () => {
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
@@ -1971,6 +1984,106 @@ describe("reviewed Web Awesome Pro file-input surface", () => {
   });
 });
 
+it("reports synchronous directory and file-reader failures without accepting a partial folder", async () => {
+  const cases = [
+    {
+      name: "directory-reader",
+      entry: {
+        isDirectory: true,
+        isFile: false,
+        name: "unreadable-directory",
+        createReader: () => ({
+          readEntries: () => { throw new Error("directory read failed"); },
+        }),
+      },
+    },
+    {
+      name: "file-reader",
+      entry: (() => {
+        let batch = 0;
+        const child = {
+          isDirectory: false,
+          isFile: true,
+          name: "unreadable-file.txt",
+          file: () => { throw new Error("file read failed"); },
+        };
+        return {
+          isDirectory: true,
+          isFile: false,
+          name: "folder-with-unreadable-file",
+          createReader: () => ({
+            readEntries: (success: (entries: unknown[]) => void) => {
+              success(batch++ === 0 ? [child] : []);
+            },
+          }),
+        };
+      })(),
+    },
+  ] as const;
+
+  for (const candidate of cases) {
+    const el = await fixture<LyraFileInput>(html`<lr-file-input multiple></lr-file-input>`);
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    const result = oneEvent(el, "lr-files");
+    dropEntriesWith(base, [candidate.entry]);
+    const event = await result;
+    expect(event.detail.files, candidate.name).to.deep.equal([]);
+    expect(event.detail.rejected, candidate.name).to.have.length(1);
+    expect(event.detail.rejected[0].reason, candidate.name).to.equal("read");
+  }
+});
+
+it("rejects an over-budget root item list atomically even when it contains no readable folder name", async () => {
+  const el = await fixture<LyraFileInput>(html`<lr-file-input multiple></lr-file-input>`);
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const result = oneEvent(el, "lr-files");
+  dropEntriesWith(base, Array.from({ length: 10_001 }, () => null));
+  const event = await result;
+
+  expect(event.detail.files).to.deep.equal([]);
+  expect(event.detail.rejected).to.have.length(1);
+  expect(event.detail.rejected[0].reason).to.equal("limit");
+  expect(event.detail.rejected[0].file.name).to.equal("");
+});
+
+it("cancels an in-flight folder traversal when the control becomes disabled", async () => {
+  const el = await fixture<LyraFileInput>(html`<lr-file-input multiple></lr-file-input>`);
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  let finishBatch: ((entries: unknown[]) => void) | undefined;
+  const directory = {
+    isDirectory: true,
+    isFile: false,
+    name: "pending-folder",
+    createReader: () => ({
+      readEntries: (success: (entries: unknown[]) => void) => {
+        finishBatch = success;
+      },
+    }),
+  };
+  let emitted = 0;
+  el.addEventListener("lr-files", () => emitted++);
+  dropEntriesWith(base, [directory]);
+  await waitUntil(() => finishBatch !== undefined, "folder reader was not started");
+
+  el.disabled = true;
+  finishBatch!([]);
+  await el.updateComplete;
+  await Promise.resolve();
+
+  expect(el.files).to.deep.equal([]);
+  expect(emitted).to.equal(0);
+});
+
+it("contains a synthetic dropzone focus delivered during same-task disablement", async () => {
+  const el = await fixture<LyraFileInput>(html`<lr-file-input></lr-file-input>`);
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  let relayed = 0;
+  el.addEventListener("focus", () => relayed++);
+  el.disabled = true;
+  base.dispatchEvent(new FocusEvent("focus"));
+  expect(relayed).to.equal(0);
+});
+
 it("exposes the native form-association surface", async () => {
   const form = await fixture<HTMLFormElement>(html`
     <form>
@@ -2718,6 +2831,13 @@ it("falls back to globalThis.URL when its owner document has no defaultView", as
   detachedDocument.body.append(detachedDocument.adoptNode(el));
   try {
     expect(el.ownerDocument.defaultView).to.equal(null);
+    const restored = makeFile("restored.txt", "text/plain");
+    const state = new FormData();
+    state.append("file", restored);
+    el.formStateRestoreCallback(state, "restore");
+    await el.updateComplete;
+    expect(el.files).to.deep.equal([restored]);
+
     el.files = [makeFile("a.png", "image/png")];
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('img[part="file-image"]')).to.exist;

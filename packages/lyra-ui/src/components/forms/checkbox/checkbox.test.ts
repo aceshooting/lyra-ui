@@ -117,6 +117,17 @@ it("toggles on Space but not Enter, matching the native checkbox keyboard contra
   expect(changes).to.equal(0);
   expect(enterEvent.defaultPrevented).to.be.false;
   expect(el.checked).to.be.true;
+
+  const repeatedSpace = new KeyboardEvent("keydown", {
+    key: " ",
+    bubbles: true,
+    cancelable: true,
+    repeat: true,
+  });
+  base.dispatchEvent(repeatedSpace);
+  expect(changes).to.equal(0);
+  expect(repeatedSpace.defaultPrevented).to.be.false;
+  expect(el.checked).to.be.true;
 });
 
 it("accepts WA hint and Shoelace help-text spellings on one accessible hint surface", async () => {
