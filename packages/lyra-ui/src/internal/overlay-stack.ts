@@ -16,9 +16,9 @@ const STACK_STEP = 2;
 
 type OverlayResourceRelease = () => void;
 
-export type OverlayStackRestoreFocusTarget = HTMLElement | null | (() => HTMLElement | null);
+type OverlayStackRestoreFocusTarget = HTMLElement | null | (() => HTMLElement | null);
 
-export interface OverlayStackDeactivateOptions {
+interface OverlayStackDeactivateOptions {
   restoreFocus?: boolean;
   deferScrollLockRelease?: boolean;
 }

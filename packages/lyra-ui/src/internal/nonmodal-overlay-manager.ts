@@ -30,8 +30,6 @@ export function activateNonmodalOverlay(options: NonmodalOverlayActivationOption
 }
 
 export {
-  collectAutofocusElements,
-  collectFocusableElements,
   composedContains,
   deepActiveElement,
 } from './overlay-stack.js';
