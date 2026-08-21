@@ -15390,21 +15390,21 @@
             },
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 534,
+              "line": 536,
               "test": "mirrors submenu arrows and preserves the safe pointer corridor under RTL",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 655,
+              "line": 657,
               "test": "is accessible populated and open with mapped items",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 655,
+              "line": 657,
               "test": "is accessible populated and open with mapped items",
               "target": "el",
               "state": "populated"
@@ -15443,7 +15443,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 535,
+              "line": 537,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -15635,7 +15635,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 318,
+              "line": 333,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -15652,7 +15652,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 1632,
+              "line": 1647,
               "kind": "320px allocation test signal"
             }
           ]
@@ -27168,42 +27168,42 @@
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 388,
+              "line": 403,
               "test": "keeps every display slot decorative while the host retains the sole menuitem action",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 789,
+              "line": 804,
               "test": "is accessible with type=\"checkbox\", both unchecked and checked",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 801,
+              "line": 816,
               "test": "is accessible in the default state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 808,
+              "line": 823,
               "test": "is accessible with an icon, disabled and variant=\"danger\" states",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 905,
+              "line": 920,
               "test": "is accessible at the smallest and largest tiers",
               "target": "smallest",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 905,
+              "line": 920,
               "test": "is accessible at the smallest and largest tiers",
               "target": "largest",
               "state": "populated"
@@ -27263,7 +27263,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 318,
+              "line": 333,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -27280,7 +27280,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 1632,
+              "line": 1647,
               "kind": "320px allocation test signal"
             }
           ]
@@ -27415,42 +27415,42 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 388,
+              "line": 403,
               "test": "keeps every display slot decorative while the host retains the sole menuitem action",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 789,
+              "line": 804,
               "test": "is accessible with type=\"checkbox\", both unchecked and checked",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 801,
+              "line": 816,
               "test": "is accessible in the default state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 808,
+              "line": 823,
               "test": "is accessible with an icon, disabled and variant=\"danger\" states",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 905,
+              "line": 920,
               "test": "is accessible at the smallest and largest tiers",
               "target": "smallest",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 905,
+              "line": 920,
               "test": "is accessible at the smallest and largest tiers",
               "target": "largest",
               "state": "populated"
@@ -27510,7 +27510,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 318,
+              "line": 333,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -27527,7 +27527,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 1632,
+              "line": 1647,
               "kind": "320px allocation test signal"
             }
           ]
@@ -27675,7 +27675,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 318,
+              "line": 333,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -27692,7 +27692,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 1632,
+              "line": 1647,
               "kind": "320px allocation test signal"
             }
           ]
@@ -32493,7 +32493,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 535,
+              "line": 537,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -47296,7 +47296,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
-              "line": 535,
+              "line": 537,
               "kind": "rendered RTL test signal"
             }
           ]

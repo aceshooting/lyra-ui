@@ -409,6 +409,7 @@ it('preserves a consumer menu header/list/footer, live regions, focus order, and
   expect(getComputedStyle(footer).display).to.not.equal('none');
 
   const item = supplied.querySelector('lr-dropdown-item') as LyraDropdownItem;
+  expect(item.getAttribute('aria-label')).to.equal('Rename');
   item.focus();
   expect(document.activeElement?.getAttribute('value')).to.equal('rename');
   const tab = new KeyboardEvent('keydown', {
@@ -432,6 +433,7 @@ it('preserves a consumer menu header/list/footer, live regions, focus order, and
   supplied.append(replacement);
   await new Promise<void>((resolve) => queueMicrotask(resolve));
   await supplied.updateComplete;
+  expect(item.getAttribute('aria-label')).to.equal('Rename');
   expect(replacement.assignedSlot?.name).to.equal('header');
   expect(filter.assignedSlot?.name ?? null).to.equal(null);
   await expect(el).to.be.accessible();

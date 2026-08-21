@@ -69,6 +69,21 @@ it('sets role="menuitem" on the host', async () => {
   expect(el.getAttribute('role')).to.equal('menuitem');
 });
 
+it('seeds its computed name synchronously before the visual label slot renders', () => {
+  const wrapper = document.createElement('div');
+  wrapper.setAttribute('role', 'menu');
+  wrapper.setAttribute('aria-label', 'Actions');
+  const item = document.createElement('lr-menu-item') as LyraMenuItem;
+  item.textContent = 'Rename';
+  wrapper.append(item);
+  document.body.append(wrapper);
+  try {
+    expect(item.getAttribute('aria-label')).to.equal('Rename');
+  } finally {
+    wrapper.remove();
+  }
+});
+
 it('reflects disabled and the danger variant to attributes', async () => {
   const el = (await fixture(
     html`<lr-menu-item disabled variant="danger">Delete</lr-menu-item>`
