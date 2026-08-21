@@ -515,6 +515,51 @@ describe('lr-graph-query-builder', () => {
     expect(Object.isFrozen(el.savedQueries[0]!.query)).to.equal(true);
   });
 
+  it('normalizes malformed option and saved-query collections while retaining unlabeled values', async () => {
+    const el = (await fixture(html`
+      <lr-graph-query-builder></lr-graph-query-builder>
+    `)) as LyraGraphQueryBuilder;
+    el.relationshipTypeOptions = [
+      null,
+      ['nested'],
+      { value: 'works_for' },
+    ] as unknown as readonly GraphQueryTypeOption[];
+    el.savedQueries = [
+      null,
+      ['nested'],
+      { id: 'valid', name: 'Valid query', query: query({ startId: 'node-1' }) },
+    ] as unknown as readonly GraphQuerySavedItem[];
+    await el.updateComplete;
+
+    expect(el.relationshipTypeOptions).to.deep.equal([{ value: 'works_for' }]);
+    expect(el.savedQueries.map((item) => item.id)).to.deep.equal(['valid']);
+    expect(
+      el.shadowRoot!.querySelector('[part="relationship-picker"] lr-option')!.textContent
+    ).to.equal('works_for');
+
+    el.relationshipTypeOptions = null as unknown as readonly GraphQueryTypeOption[];
+    el.savedQueries = null as unknown as readonly GraphQuerySavedItem[];
+    await el.updateComplete;
+    expect(el.relationshipTypeOptions).to.deep.equal([]);
+    expect(el.savedQueries).to.deep.equal([]);
+  });
+
+  it('ignores an empty array-shaped selection from the single-value type picker', async () => {
+    const el = (await fixture(html`
+      <lr-graph-query-builder
+        .relationshipTypeOptions=${RELATIONSHIP_OPTIONS}
+      ></lr-graph-query-builder>
+    `)) as LyraGraphQueryBuilder;
+    const picker = el.shadowRoot!.querySelector('[part="relationship-picker"]') as HTMLElement & {
+      value: string | string[];
+    };
+    picker.value = [];
+    picker.dispatchEvent(new Event('change'));
+    await el.updateComplete;
+    expect(el.value.relationshipTypes).to.deep.equal([]);
+    expect(picker.value).to.equal('');
+  });
+
   it('renders saved queries and loads one on click, replacing the current value', async () => {
     const saved: GraphQuerySavedItem[] = [
       {

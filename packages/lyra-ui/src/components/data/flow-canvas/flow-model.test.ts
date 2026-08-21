@@ -153,6 +153,35 @@ describe('snapshotFlowNodes', () => {
     expect('data' in node!).to.be.false;
   });
 
+  it('ignores node data whose prototype cannot be inspected', () => {
+    const proxy = new Proxy(
+      {},
+      {
+        getPrototypeOf() {
+          throw new Error('hostile prototype');
+        },
+      }
+    );
+    const [node] = snapshotFlowNodes([
+      { id: 'hostile-prototype', data: proxy as Record<string, unknown> },
+    ]);
+    expect('data' in node!).to.be.false;
+  });
+
+  it('keeps a safe empty data snapshot when descriptor enumeration fails', () => {
+    const data = new Proxy(
+      {},
+      {
+        ownKeys() {
+          throw new Error('hostile data keys');
+        },
+      }
+    );
+    const [node] = snapshotFlowNodes([{ id: 'hostile-data', data }]);
+    expect(node!.data).to.deep.equal({});
+    expect(Object.isFrozen(node!.data)).to.be.true;
+  });
+
   it('skips a node whose id accessor throws instead of aborting the whole collection', () => {
     const poisoned = {
       get id(): string {

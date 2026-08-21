@@ -1063,6 +1063,44 @@ it('normalizes an omitted runtime weight to zero', async () => {
   expect(el.words[0]!.weight).to.equal(0);
 });
 
+it('normalizes non-array runtime collections without retaining stale words or legend entries', async () => {
+  const el = await fixture<LyraWordCloud>(html`
+    <lr-word-cloud show-legend .words=${WORDS}></lr-word-cloud>
+  `);
+  el.legend = [{ label: 'Existing', color: '#123456' }];
+  el.palette = ['#654321'];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="svg"]')).to.exist;
+
+  el.words = null as never;
+  el.legend = { stale: true } as never;
+  el.palette = 'not-a-palette' as never;
+  await el.updateComplete;
+
+  expect(el.words).to.deep.equal([]);
+  expect(el.legend).to.deep.equal([]);
+  expect(el.palette).to.deep.equal([]);
+  expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
+});
+
+it('bounds oversized optional word metadata and reports the truncated record', async () => {
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud></lr-word-cloud>`);
+  el.words = [
+    {
+      text: 'bounded',
+      weight: 1,
+      color: 'x'.repeat(300),
+      group: 'y'.repeat(300),
+    },
+  ];
+  await el.updateComplete;
+
+  expect(el.words[0]!.color!.length).to.equal(256);
+  expect(el.words[0]!.group!.length).to.equal(256);
+  expect(el.words[0]!.color!.endsWith('…')).to.equal(true);
+  expect(el.shadowRoot!.querySelector('[part="limit"]')).to.exist;
+});
+
 it('fails closed when collection length accessors throw after passing the array check', async () => {
   const hostileWords = new Proxy([], {
     get(target, key, receiver) {

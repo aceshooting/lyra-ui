@@ -92,6 +92,21 @@ describe('loadD3Modules (uncached, dependency-injectable)', () => {
     expect((modules!.select) === (direct.selection.select)).to.equal(true);
   });
 
+  it('accepts a callable peer namespace when it also exposes the required APIs', async () => {
+    const peers = createD3PeerApis();
+    const callableForce = Object.assign(() => undefined, peers.force);
+
+    const modules = await loadD3Modules(
+      () => Promise.resolve(callableForce),
+      () => Promise.resolve(peers.drag),
+      () => Promise.resolve(peers.zoom),
+      () => Promise.resolve(peers.selection),
+    );
+
+    expect(modules).to.not.equal(null);
+    expect(modules!.forceSimulation === peers.force.forceSimulation).to.equal(true);
+  });
+
   it('fails closed when a default-wrapped D3 peer lacks a required API', async () => {
     const peers = createD3PeerApis();
     const originalWarn = console.warn;
@@ -105,6 +120,27 @@ describe('loadD3Modules (uncached, dependency-injectable)', () => {
       );
 
       expect(modules).to.equal(null);
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+
+  it('reports the exact missing callable capability', async () => {
+    const peers = createD3PeerApis();
+    const warnings: unknown[][] = [];
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => warnings.push(args);
+    try {
+      const modules = await loadD3Modules(
+        () => Promise.resolve(peers.force),
+        () => Promise.resolve(peers.drag),
+        () => Promise.resolve(peers.zoom),
+        () => Promise.resolve({}),
+      );
+
+      expect(modules).to.equal(null);
+      const error = warnings.flat().find((value) => value instanceof TypeError);
+      expect((error as TypeError).message).to.include('select()');
     } finally {
       console.warn = originalWarn;
     }

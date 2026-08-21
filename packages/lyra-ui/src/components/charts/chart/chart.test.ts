@@ -5378,6 +5378,17 @@ describe('bounded chart fallback paths', () => {
     expect(el.config.data!.labels).to.deep.equal(['A', 'B']);
   });
 
+  it('applies a positive stream bound to generated series behind an explicit labels-only config', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.datasets = [{ label: 'bounded', data: [1, 2] }];
+    el.config = { data: { labels: ['A', 'B'] } };
+    el.appendData('C', [3], 2);
+
+    expect(el.labels).to.deep.equal([]);
+    expect(el.datasets[0]!.data).to.deep.equal([2, 3]);
+    expect(el.config.data!.labels).to.deep.equal(['B', 'C']);
+  });
+
   it('exports blank x/y cells for a missing point without optional point columns', () => {
     const el = document.createElement('lr-chart') as LyraChart;
     el.type = 'scatter';
@@ -5566,6 +5577,8 @@ describe('bounded chart fallback paths', () => {
     el.legendPosition = 'auto';
     (el as any).autoLegendPosition = 'bottom';
     expect((el as any).legendGridPlacement()).to.equal('bottom');
+    (el as any).autoLegendPosition = 'right';
+    expect((el as any).legendGridPlacement()).to.equal('inline-end');
   });
 
   it('retains caller plugins without optional data labels and repairs malformed config plugins', () => {
@@ -5576,6 +5589,10 @@ describe('bounded chart fallback paths', () => {
 
     el.config = { plugins: 'not-an-array' as unknown as never[] };
     expect((el as any).buildConfig().plugins).to.deep.equal([plugin]);
+
+    const configured = { id: 'configured-plugin' };
+    el.config = { plugins: [configured] };
+    expect((el as any).buildConfig().plugins).to.deep.equal([configured, plugin]);
   });
 
   it('announces an explicit zoom discard and rejects an out-of-range legend toggle', () => {

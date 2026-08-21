@@ -54,6 +54,29 @@ it('fails closed for malformed/circular input and is accessible', async () => {
   await expect(el).shadowDom.to.be.accessible();
 });
 
+it('normalizes a non-record schema assignment to the empty state', async () => {
+  const el = (await fixture(html`
+    <lr-json-schema-viewer .schema=${42 as unknown as JsonSchemaNode}></lr-json-schema-viewer>
+  `)) as LyraJsonSchemaViewer;
+  expect(el.schema).to.equal(null);
+  expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
+});
+
+it('bounds a pathological schema snapshot before it is ever mounted or rendered', () => {
+  const el = document.createElement('lr-json-schema-viewer') as LyraJsonSchemaViewer;
+  const properties = Object.fromEntries(
+    Array.from({ length: 50_001 }, (_, index) => [
+      `property-${index}`,
+      { type: 'string' },
+    ])
+  );
+  el.schema = { type: 'object', properties };
+
+  expect(Object.keys(el.schema!.properties!).length).to.equal(49_999);
+  expect(Object.isFrozen(el.schema)).to.equal(true);
+  expect(el.isConnected).to.equal(false);
+});
+
 it('renders supported composition and item branches while safely ignoring malformed caller entries', async () => {
   const composite: JsonSchemaNode = {
     type: 'array',

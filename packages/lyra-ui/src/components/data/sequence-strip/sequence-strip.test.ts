@@ -1,6 +1,10 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './sequence-strip.js';
-import type { LyraSequenceStrip } from './sequence-strip.js';
+import type {
+  LyraSequenceStrip,
+  SequenceStripCategory,
+  SequenceStripItem,
+} from './sequence-strip.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 
@@ -139,6 +143,45 @@ it('snapshots readonly models and enforces first-wins unique item/category ids',
   expect(Object.isFrozen(el.items[0]!)).to.equal(true);
   expect(el.shadowRoot!.querySelector('[part="cell"]')!.getAttribute('aria-label')).to.equal('First item');
   expect(el.shadowRoot!.querySelector('[part="legend-label"]')!.textContent?.trim()).to.equal('First category');
+});
+
+it('retains later valid records after hostile and malformed collection entries', async () => {
+  const hostileItem = new Proxy(
+    {},
+    {
+      get(_target, property) {
+        if (property === 'id') throw new Error('hostile item');
+        return undefined;
+      },
+    }
+  );
+  const hostileCategory = new Proxy(
+    {},
+    {
+      get(_target, property) {
+        if (property === 'id') throw new Error('hostile category');
+        return undefined;
+      },
+    }
+  );
+  const el = (await fixture(html`
+    <lr-sequence-strip show-legend></lr-sequence-strip>
+  `)) as LyraSequenceStrip;
+  el.items = [
+    hostileItem,
+    { id: 'valid', categoryId: 7, label: 'Valid item' },
+  ] as unknown as readonly SequenceStripItem[];
+  el.categories = [
+    hostileCategory,
+    { id: 'valid-category', color: 7, label: 'Valid category' },
+  ] as unknown as readonly SequenceStripCategory[];
+  await el.updateComplete;
+
+  expect(el.items).to.deep.equal([{ id: 'valid', categoryId: '', label: 'Valid item' }]);
+  expect(el.categories).to.deep.equal([
+    { id: 'valid-category', color: '', label: 'Valid category' },
+  ]);
+  expect(el.shadowRoot!.querySelectorAll('[part="cell"]').length).to.equal(1);
 });
 
 it('renders a marker on cells whose item sets marker: true, and none otherwise', async () => {
@@ -427,6 +470,29 @@ describe('hover tooltip', () => {
     expect((el.shadowRoot!.activeElement) === (cells[0])).to.equal(true);
   });
 
+  it('uses logical forward and backward arrow keys in RTL', async () => {
+    const el = (await fixture(html`
+      <lr-sequence-strip dir="rtl"></lr-sequence-strip>
+    `)) as LyraSequenceStrip;
+    el.items = labeledItems;
+    el.categories = categories;
+    await el.updateComplete;
+    const cells = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')];
+    cells[0]!.focus();
+
+    cells[0]!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true })
+    );
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement === cells[1]).to.equal(true);
+
+    cells[1]!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })
+    );
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement === cells[0]).to.equal(true);
+  });
+
   it('preserves real focus and the sole roving stop by item id across a controlled refresh', async () => {
     const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
     el.items = labeledItems;
@@ -627,6 +693,23 @@ describe('category legend', () => {
     const cells = [...el.shadowRoot!.querySelectorAll('[part="cell"]')] as HTMLElement[];
     expect(swatches[0]!.style.backgroundColor).to.equal(cells[0]!.style.backgroundColor);
     expect(swatches[1]!.style.backgroundColor).to.equal(cells[1]!.style.backgroundColor);
+  });
+
+  it('bounds a large legend and discloses the rendered and total category counts', async () => {
+    const el = (await fixture(html`
+      <lr-sequence-strip show-legend></lr-sequence-strip>
+    `)) as LyraSequenceStrip;
+    el.categories = Array.from({ length: 205 }, (_, index) => ({
+      id: `category-${index}`,
+      color: '#123456',
+      label: `Category ${index}`,
+    }));
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelectorAll('[part="legend-item"]').length).to.equal(200);
+    expect(el.shadowRoot!.querySelector('[part="legend-limit"]')!.textContent!.trim()).to.equal(
+      '200 / 205'
+    );
   });
 
   it('keys the whole scheme: an unused category still renders, an uncategorized item adds nothing', async () => {
@@ -831,6 +914,28 @@ describe('item activation and selection', () => {
     expect(event.detail.index).to.equal(1);
     expect(event.detail.id).to.equal('b');
     expect(event.detail.item.categoryId).to.equal('tool');
+  });
+
+  it('ignores callbacks retained by a stale cell after a controlled shrink', async () => {
+    const el = await build();
+    const staleCell = cellAt(el, 2);
+    const activations: CustomEvent[] = [];
+    el.addEventListener('lr-item-activate', ((event: CustomEvent) => {
+      activations.push(event);
+    }) as EventListener);
+
+    el.items = [];
+    await el.updateComplete;
+    staleCell.click();
+    const keydown = new KeyboardEvent('keydown', {
+      key: 'ArrowRight',
+      bubbles: true,
+      cancelable: true,
+    });
+    staleCell.dispatchEvent(keydown);
+
+    expect(activations).to.deep.equal([]);
+    expect(keydown.defaultPrevented).to.equal(false);
   });
 
   it('activates a focused cell from the keyboard, not only the pointer', async () => {
