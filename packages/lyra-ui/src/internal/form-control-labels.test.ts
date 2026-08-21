@@ -648,6 +648,24 @@ describe('external FACE label contract', () => {
           firstTaskReads: 256,
           finalReads: 500,
         });
+
+        reads.reset();
+        const observerCheckpoint = new Promise<void>((resolve) => {
+          const checkpoint = new MutationObserver(() => {
+            checkpoint.disconnect();
+            resolve();
+          });
+          checkpoint.observe(container, { childList: true });
+        });
+        const secondLarge = document.createElement('div');
+        secondLarge.append(...Array.from({ length: 2_049 }, () => document.createElement('span')));
+        container.append(secondLarge);
+        await observerCheckpoint;
+        expect(reads.count).to.equal(256);
+
+        container.remove();
+        await nextTask();
+        expect(reads.count, 'disconnecting the final controls stops the queued continuation').to.equal(256);
       });
     } finally {
       laterObserver?.disconnect();
@@ -1156,6 +1174,32 @@ describe('external FACE label contract', () => {
       expect(semantic?.getAttribute('aria-label') ?? null).to.equal('Text');
     } finally {
       container.remove();
+    }
+  });
+
+  it('tracks when an implicit label predecessor changes between hidden and labelable', async () => {
+    const label = document.createElement('label');
+    const predecessor = document.createElement('input');
+    predecessor.type = 'hidden';
+    const control = document.createElement(tag('input')) as TestControl;
+    label.append('Mutable wrapper label ', predecessor, control);
+    document.body.append(label);
+    try {
+      await settle(control);
+      const semantic = composedElements(control).find(
+        (element) => element !== control && element.tagName === 'INPUT',
+      );
+      expect(semantic?.getAttribute('aria-label') ?? null).to.equal('Mutable wrapper label');
+
+      predecessor.type = 'text';
+      await nextTask();
+      expect(semantic?.getAttribute('aria-label') ?? null).to.equal('Text');
+
+      predecessor.type = 'hidden';
+      await nextTask();
+      expect(semantic?.getAttribute('aria-label') ?? null).to.equal('Mutable wrapper label');
+    } finally {
+      label.remove();
     }
   });
 

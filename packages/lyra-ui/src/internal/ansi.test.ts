@@ -259,4 +259,52 @@ describe('createAnsiParser', () => {
     const segments = createAnsiParser().push('\x1b[48;2;1;2;3mbg');
     expect(segments[0].styles.bg).to.equal('rgb(1, 2, 3)');
   });
+
+  it('treats an empty SGR parameter list as the standard reset', () => {
+    const parser = createAnsiParser();
+    parser.push('\x1b[1;31m');
+
+    const segments = parser.push('\x1b[mplain');
+
+    expect(segments[0].styles).to.deep.equal({
+      bold: false,
+      dim: false,
+      italic: false,
+      underline: false,
+      inverse: false,
+    });
+  });
+
+  it('contains malformed and overflowing SGR parameters without losing later valid styling', () => {
+    const parser = createAnsiParser();
+    const segments = parser.push(
+      '\x1b[38:2;31mred\x1b[38;2;999999999999999999999999;300;20mclamped',
+    );
+
+    expect(segments[0].styles.fg).to.equal('var(--lr-terminal-color-red)');
+    expect(segments[1].styles.fg).to.equal('rgb(0, 255, 20)');
+  });
+
+  it('fails an out-of-range 256-color index closed to the role-matching default token', () => {
+    const foreground = createAnsiParser().push('\x1b[38;5;256mtext');
+    const background = createAnsiParser().push('\x1b[48;5;256mtext');
+
+    expect(foreground[0].styles.fg).to.equal('var(--lr-terminal-color-black)');
+    expect(background[0].styles.bg).to.equal('var(--lr-terminal-bg-black)');
+  });
+
+  it('resumes after an overlong OSC terminated by ST in a later chunk', () => {
+    const parser = createAnsiParser();
+    expect(parser.push(`\x1b]0;${'x'.repeat(5_000)}`)).to.deep.equal([]);
+
+    const segments = parser.push('discarded\x1b\\visible');
+
+    expect(segments.map((segment) => segment.text).join('')).to.equal('visible');
+  });
+
+  it('drops only an unrecognized ESC byte and preserves the following plain text', () => {
+    const segments = createAnsiParser().push('before\x1bXafter');
+
+    expect(segments.map((segment) => segment.text).join('')).to.equal('beforeXafter');
+  });
 });

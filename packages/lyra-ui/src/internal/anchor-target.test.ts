@@ -46,10 +46,17 @@ class ThrowingStubAnchorTarget extends DocumentAnchorTarget(StubAnchorTargetBase
 
 class DefaultStubAnchorTarget extends DocumentAnchorTarget(StubAnchorTargetBase) {}
 
+class LightDomStubAnchorTarget extends StubAnchorTarget {
+  protected override createRenderRoot(): HTMLElement {
+    return this;
+  }
+}
+
 defineElement('anchor-target-test-stub', StubAnchorTarget);
 defineElement('anchor-target-test-declining', DecliningStubAnchorTarget);
 defineElement('anchor-target-test-throwing', ThrowingStubAnchorTarget);
 defineElement('anchor-target-test-default', DefaultStubAnchorTarget);
+defineElement('anchor-target-test-light-dom', LightDomStubAnchorTarget);
 
 function installComposedSelection(range: Range, shadowRoot: ShadowRoot): () => void {
   const view = shadowRoot.ownerDocument.defaultView!;
@@ -81,9 +88,71 @@ function installComposedSelection(range: Range, shadowRoot: ShadowRoot): () => v
   };
 }
 
+function installLegacySelection(range: Range, shadowRoot: ShadowRoot): () => void {
+  const view = shadowRoot.ownerDocument.defaultView!;
+  const viewDescriptor = Object.getOwnPropertyDescriptor(view, 'getSelection');
+  const shadowDescriptor = Object.getOwnPropertyDescriptor(shadowRoot, 'getSelection');
+  const selection = {
+    isCollapsed: false,
+    rangeCount: 1,
+    getRangeAt: () => range,
+  } as unknown as Selection;
+
+  Object.defineProperty(view, 'getSelection', {
+    configurable: true,
+    value: () => selection,
+  });
+  Object.defineProperty(shadowRoot, 'getSelection', {
+    configurable: true,
+    value: () => selection,
+  });
+  return () => {
+    if (viewDescriptor) Object.defineProperty(view, 'getSelection', viewDescriptor);
+    else delete (view as unknown as { getSelection?: unknown }).getSelection;
+    if (shadowDescriptor) Object.defineProperty(shadowRoot, 'getSelection', shadowDescriptor);
+    else delete (shadowRoot as unknown as { getSelection?: unknown }).getSelection;
+  };
+}
+
+function installMissingComposedSelection(shadowRoot: ShadowRoot): () => void {
+  const view = shadowRoot.ownerDocument.defaultView!;
+  const descriptor = Object.getOwnPropertyDescriptor(view, 'getSelection');
+  const selection = {
+    isCollapsed: true,
+    rangeCount: 0,
+    getComposedRanges: () => [],
+  } as unknown as Selection & { getComposedRanges(): StaticRange[] };
+  Object.defineProperty(view, 'getSelection', {
+    configurable: true,
+    value: () => selection,
+  });
+  return () => {
+    if (descriptor) Object.defineProperty(view, 'getSelection', descriptor);
+    else delete (view as unknown as { getSelection?: unknown }).getSelection;
+  };
+}
+
+function installGlobalSelection(range: Range): () => void {
+  const descriptor = Object.getOwnPropertyDescriptor(window, 'getSelection');
+  const selection = {
+    isCollapsed: false,
+    rangeCount: 1,
+    getRangeAt: () => range,
+  } as unknown as Selection;
+  Object.defineProperty(window, 'getSelection', {
+    configurable: true,
+    value: () => selection,
+  });
+  return () => {
+    if (descriptor) Object.defineProperty(window, 'getSelection', descriptor);
+    else delete (window as unknown as { getSelection?: unknown }).getSelection;
+  };
+}
+
 declare global {
   interface HTMLElementTagNameMap {
     'lr-anchor-target-test-stub': StubAnchorTarget;
+    'lr-anchor-target-test-light-dom': LightDomStubAnchorTarget;
     'lr-anchor-target-test-declining': DecliningStubAnchorTarget;
     'lr-anchor-target-test-throwing': ThrowingStubAnchorTarget;
     'lr-anchor-target-test-default': DefaultStubAnchorTarget;
@@ -465,6 +534,83 @@ describe('DocumentAnchorTarget mixin', () => {
       expect((await eventPromise).detail.anchor).to.be.null;
     } finally {
       restoreSelection();
+    }
+  });
+
+  it('bindTextSelection falls back to ShadowRoot.getSelection when composed ranges are unavailable', async () => {
+    const el = await fixture<StubAnchorTarget>(litHtml`
+      <lr-anchor-target-test-stub></lr-anchor-target-test-stub>
+    `);
+    const content = el.shadowRoot!.querySelector('[part="content"]')!;
+    (el as unknown as { bindTextSelection: (root: Element) => void }).bindTextSelection(content);
+    const range = document.createRange();
+    range.selectNodeContents(content.firstChild!);
+    const restoreSelection = installLegacySelection(range, el.shadowRoot!);
+    try {
+      const eventPromise = oneEvent(el, 'lr-text-select');
+      content.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+      expect((await eventPromise).detail.text).to.equal('stub content for selection tests');
+    } finally {
+      restoreSelection();
+    }
+  });
+
+  it('bindTextSelection uses the document selection for a light-DOM renderer', async () => {
+    const el = await fixture<LightDomStubAnchorTarget>(litHtml`
+      <lr-anchor-target-test-light-dom></lr-anchor-target-test-light-dom>
+    `);
+    const content = el.querySelector('[part="content"]')!;
+    (el as unknown as { bindTextSelection: (root: Element) => void }).bindTextSelection(content);
+    const range = document.createRange();
+    range.selectNodeContents(content.firstChild!);
+    const restoreSelection = installGlobalSelection(range);
+    try {
+      const eventPromise = oneEvent(el, 'lr-text-select');
+      content.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      expect((await eventPromise).detail.text).to.equal('stub content for selection tests');
+    } finally {
+      restoreSelection();
+    }
+  });
+
+  it('bindTextSelection ignores a composed selection API that returns no range', async () => {
+    const el = await fixture<StubAnchorTarget>(litHtml`
+      <lr-anchor-target-test-stub></lr-anchor-target-test-stub>
+    `);
+    const content = el.shadowRoot!.querySelector('[part="content"]')!;
+    (el as unknown as { bindTextSelection: (root: Element) => void }).bindTextSelection(content);
+    const restoreSelection = installMissingComposedSelection(el.shadowRoot!);
+    let events = 0;
+    el.addEventListener('lr-text-select', () => events++);
+    try {
+      content.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      expect(events).to.equal(0);
+    } finally {
+      restoreSelection();
+    }
+  });
+
+  it('handles selectionchange synchronously in an owner document without a browsing context', async () => {
+    const el = await fixture<StubAnchorTarget>(litHtml`
+      <lr-anchor-target-test-stub></lr-anchor-target-test-stub>
+    `);
+    const ownerlessDocument = document.implementation.createHTMLDocument('ownerless selection');
+    el.remove();
+    ownerlessDocument.body.append(ownerlessDocument.adoptNode(el));
+    const content = el.shadowRoot!.querySelector('[part="content"]')!;
+    const selectionBinding = el as unknown as {
+      bindTextSelection: (root: Element) => void;
+      unbindTextSelection: () => void;
+    };
+    selectionBinding.bindTextSelection(content);
+    let events = 0;
+    el.addEventListener('lr-text-select', () => events++);
+    try {
+      ownerlessDocument.dispatchEvent(new Event('selectionchange'));
+      expect(events).to.equal(0);
+    } finally {
+      selectionBinding.unbindTextSelection();
+      el.remove();
     }
   });
 

@@ -70,14 +70,19 @@ class DemoIdentityCollection extends DemoOwnedCollection {
   protected static override readonly ownedCollectionProperties = [
     "items",
     "registry",
+    'registrySet',
   ];
   protected static override readonly identityCollectionProperties = [
     "items",
     "registry",
+    'registrySet',
   ];
 
   @property({ attribute: false })
   registry: ReadonlyMap<string, object> = new Map();
+
+  @property({ attribute: false })
+  registrySet: ReadonlySet<object> = new Set();
 }
 customElements.define(tag("demo-identity-collection"), DemoIdentityCollection);
 
@@ -638,6 +643,31 @@ it("owns a bounded frozen readonly-map facade while retaining value identity", a
   expect(el.registry.has("later")).to.be.false;
   expect(Object.isFrozen(el.registry)).to.be.true;
   expect("set" in el.registry).to.be.false;
+});
+
+it('owns a bounded frozen readonly-set facade while retaining value identity', async () => {
+  const el = await fixture<DemoIdentityCollection>(
+    `<lr-demo-identity-collection></lr-demo-identity-collection>`,
+  );
+  const definition = { render: () => 'first' };
+  const source = new Set<object>([definition]);
+
+  el.registrySet = source;
+  source.add({ render: () => 'later' });
+
+  expect(el.registrySet.size).to.equal(1);
+  expect(el.registrySet.has(definition)).to.be.true;
+  expect([...el.registrySet][0] === definition).to.be.true;
+  expect([...el.registrySet.keys()][0] === definition).to.be.true;
+  expect([...el.registrySet.values()][0] === definition).to.be.true;
+  expect([...el.registrySet.entries()].map(([key, value]) => key === value)).to.deep.equal([true]);
+  const callbacks: boolean[] = [];
+  el.registrySet.forEach((value, key, set) => {
+    callbacks.push(value === definition && key === definition && set === el.registrySet);
+  });
+  expect(callbacks).to.deep.equal([true]);
+  expect(Object.isFrozen(el.registrySet)).to.be.true;
+  expect('add' in el.registrySet).to.be.false;
 });
 
 it("emit() normalizes an omitted no-payload detail to null", async () => {
