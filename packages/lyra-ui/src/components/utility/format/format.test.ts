@@ -726,3 +726,18 @@ it('reflects the locale property back to the locale attribute (inherited LyraEle
   expect(bytesEl.getAttribute('locale')).to.equal('de-DE');
   expect(relativeEl.getAttribute('locale')).to.equal('de-DE');
 });
+
+it('treats an untyped null date assignment as the current instant', async () => {
+  const before = Date.now();
+  const el = document.createElement('lr-format-date') as LyraFormatDate;
+  el.locale = 'en-US';
+  el.date = null as unknown as Date;
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    const rendered = new Date(el.shadowRoot!.querySelector('time')!.dateTime).getTime();
+    expect(rendered).to.be.within(before, Date.now());
+  } finally {
+    el.remove();
+  }
+});

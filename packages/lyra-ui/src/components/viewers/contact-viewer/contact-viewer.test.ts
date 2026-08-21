@@ -219,3 +219,42 @@ it('registers a text/vcard renderer whose matches() and render() behave as decla
   })}</div>`)) as HTMLElement;
   expect(host.querySelector('lr-contact-viewer'), 'render() produces the viewer element').to.exist;
 });
+
+it('emits a localized render error for an unsuccessful HTTP response', async () => {
+  const original = window.fetch;
+  window.fetch = (() => Promise.resolve({
+    ok: false,
+    status: 503,
+    statusText: 'Unavailable',
+  } as Response)) as typeof window.fetch;
+  try {
+    const el = await fixture<LyraContactViewer>(html`<lr-contact-viewer></lr-contact-viewer>`);
+    const failed = oneEvent(el, 'lr-render-error');
+    el.src = 'https://example.test/unavailable.vcf';
+    await failed;
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent)
+      .to.equal('Failed to load document.');
+  } finally {
+    window.fetch = original;
+  }
+});
+
+it('renders the localized unnamed fallback for a card without FN', async () => {
+  const original = window.fetch;
+  window.fetch = (() => Promise.resolve(response(
+    ['BEGIN:VCARD', 'VERSION:4.0', 'END:VCARD'].join('\r\n'),
+  ))) as typeof window.fetch;
+  try {
+    const el = await fixture<LyraContactViewer>(html`
+      <lr-contact-viewer src="https://example.test/unnamed.vcf"></lr-contact-viewer>
+    `);
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="contact-name"]') !== null);
+
+    expect(el.shadowRoot!.querySelector('[part="contact-name"]')!.textContent)
+      .to.equal('Unnamed contact');
+  } finally {
+    window.fetch = original;
+  }
+});

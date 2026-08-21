@@ -152,3 +152,33 @@ describe('parseVCards', () => {
     expect(() => parseVCards(source)).to.throw(LyraResourceLimitError);
   });
 });
+
+describe('parseVCards delimiter and framing edge cases', () => {
+  it('keeps escaped parameter delimiters inside one parameter value', () => {
+    const source = [
+      'BEGIN:VCARD',
+      'VERSION:4.0',
+      'FN;X-NOTE=alpha\\;beta:Escaped parameter',
+      'END:VCARD',
+    ].join('\r\n');
+
+    expect(parseVCards(source)[0]!.fn).to.equal('Escaped parameter');
+  });
+
+  it('joins a quoted-printable soft line even when the continuation has no leading whitespace', () => {
+    const source = [
+      'BEGIN:VCARD',
+      'VERSION:2.1',
+      'FN;ENCODING=QUOTED-PRINTABLE:A=20=',
+      'B',
+      'END:VCARD',
+    ].join('\r\n');
+
+    expect(parseVCards(source)[0]!.fn).to.equal('A B');
+  });
+
+  it('rejects NUL bytes before attempting block parsing', () => {
+    expect(() => parseVCards(`BEGIN:VCARD\r\nVERSION:4.0\r\nFN:A\0B\r\nEND:VCARD`))
+      .to.throw(/NUL byte/);
+  });
+});

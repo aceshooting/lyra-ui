@@ -527,3 +527,49 @@ it('does not throw when the caller options object itself has hostile property ge
     cleanup();
   }
 });
+
+it('snapshots hostile animation records inertly and resolves the caller fallback', () => {
+  const el = document.createElement('div');
+  const fallback = animation(0.61, { duration: 73 });
+  const hostileRecord = new Proxy({}, {
+    getPrototypeOf(): never {
+      throw new Error('hostile keyframe prototype');
+    },
+  });
+  const hostileKeyframes = new Proxy([] as Keyframe[], {
+    getOwnPropertyDescriptor(target, property): PropertyDescriptor | undefined {
+      if (property === 'length') throw new Error('hostile keyframe descriptor');
+      return Reflect.getOwnPropertyDescriptor(target, property);
+    },
+  });
+  const hostileAnimation = new Proxy({ keyframes: [] } as LyraElementAnimation, {
+    getOwnPropertyDescriptor(): never {
+      throw new Error('hostile animation descriptor');
+    },
+  });
+  const candidates: readonly LyraElementAnimation[] = [
+    { keyframes: [null as unknown as Keyframe] },
+    { keyframes: [hostileRecord as Keyframe] },
+    { keyframes: hostileKeyframes },
+    hostileAnimation,
+  ];
+
+  candidates.forEach((candidate, index) => {
+    const name = `test.hostile-snapshot.${index}`;
+    let cleanup: ReturnType<typeof setDefaultAnimation> | undefined;
+    expect(() => {
+      cleanup = setDefaultAnimation(name, candidate);
+    }).not.to.throw();
+    try {
+      const resolved = getAnimation(el, name, {
+        dir: 'ltr',
+        fallback,
+        respectReducedMotion: false,
+      });
+      expect(resolved.keyframes[1]?.opacity).to.equal(0.61);
+      expect(resolved.options.duration).to.equal(73);
+    } finally {
+      cleanup?.();
+    }
+  });
+});

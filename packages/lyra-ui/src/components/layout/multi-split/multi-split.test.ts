@@ -5148,3 +5148,29 @@ describe("effective collapse availability", () => {
     window.dispatchEvent(new PointerEvent("pointerup", { pointerId }));
   });
 });
+
+it('rejects non-object, wrong-version, and non-record persisted panel layouts', async () => {
+  const invalidLayouts: readonly unknown[] = [
+    null,
+    { version: 2, panels: [] },
+    { version: 1, panels: [null] },
+  ];
+
+  for (const [index, layout] of invalidLayouts.entries()) {
+    const storageKey = `test-split-invalid-layout-shape-${index}`;
+    const fullKey = `lr-multi-split:${storageKey}:panels`;
+    localStorage.setItem(fullKey, JSON.stringify(layout));
+    try {
+      const el = await fixture<LyraMultiSplit>(html`
+        <lr-multi-split storage-key=${storageKey}>
+          <div panel-id="first">A</div>
+          <div panel-id="second">B</div>
+        </lr-multi-split>
+      `);
+      await elementUpdated(el);
+      expect(el.sizes).to.deep.equal([50, 50]);
+    } finally {
+      localStorage.removeItem(fullKey);
+    }
+  }
+});

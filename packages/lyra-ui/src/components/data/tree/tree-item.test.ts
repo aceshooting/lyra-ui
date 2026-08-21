@@ -1013,6 +1013,43 @@ it('shows a pressed fill on a selected row, and none on a disabled one', async f
   expect(disabled.pressed, 'a disabled row must stay inert under the pointer').to.equal(disabled.resting);
 });
 
+it('settles a pending lazy expansion when lazy loading is disabled', async () => {
+  const el = await fixture<LyraTreeItem>(html`
+    <lr-tree-item label="Lazy branch" lazy></lr-tree-item>
+  `);
+  const states: boolean[] = [];
+  el.addEventListener('lr-lazy-change', (event) => {
+    states.push((event as CustomEvent<{ loading: boolean }>).detail.loading);
+  });
+  el.expand();
+  await el.updateComplete;
+  expect(el.loading).to.equal(true);
+
+  el.lazy = false;
+  await el.updateComplete;
+
+  expect(el.loading).to.equal(false);
+  expect(el.expanded).to.equal(false);
+  expect(states).to.deep.equal([true, false]);
+});
+
+it('contains checkbox clicks while selecting through the item contract', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div><lr-tree-item .item=${item}></lr-tree-item></div>
+  `);
+  const el = wrapper.querySelector('lr-tree-item') as LyraTreeItem;
+  configureOwnedItem(el, { selection: 'multiple' });
+  await el.updateComplete;
+  let leakedClicks = 0;
+  wrapper.addEventListener('click', () => leakedClicks++);
+  const selected = oneEvent(el, 'lr-node-select');
+
+  el.shadowRoot!.querySelector<HTMLElement>('[part="checkbox"]')!.click();
+
+  expect((await selected).detail).to.deep.equal({ nodeId: '1' });
+  expect(leakedClicks).to.equal(0);
+});
+
 // `:host([aria-selected='true']) [part='row']` is (0,3,0), which a bare `[part='row']:hover`
 // ((0,2,0)) cannot reach -- the same specificity gap the pressed-fill fix above already solves for
 // :active. Without a matching :host()-matched arm on the hover rule, hovering an already-selected
