@@ -410,6 +410,26 @@ it('restores the scroll lock and keydown trap when reparented while still open',
   otherContainer.remove();
 });
 
+it('activates the overlay when opened while detached and then reconnected', async () => {
+  const el = await fixture<LyraToolResultDialog>(html`
+    <lr-tool-result-dialog tool-name="run_python"></lr-tool-result-dialog>
+  `);
+  el.remove();
+  el.open = true;
+  const container = document.createElement('div');
+  document.body.append(container);
+  container.append(el);
+  await el.updateComplete;
+
+  expect(document.documentElement.style.overflow).to.equal('hidden');
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+  await el.updateComplete;
+  expect(el.open).to.equal(false);
+  expect(document.documentElement.style.overflow).to.equal('');
+
+  container.remove();
+});
+
 it('closes only the topmost dialog on Escape when two instances are open at once', async () => {
   const back = (await fixture(
     html`<lr-tool-result-dialog tool-name="first" open></lr-tool-result-dialog>`,

@@ -28,6 +28,25 @@ it('sorts explicit ranks, reports overlap, and shows score breakdowns', async ()
   expect(el.shadowRoot!.textContent).to.contain('Sparse');
 });
 
+it('uses the chunk score as the final breakdown when optional score details are absent', async () => {
+  const bareChunk: RetrievalChunk = {
+    id: 'bare',
+    text: 'No provider breakdown',
+    score: 0.75,
+    source: { id: 'source-bare', name: 'Bare source' },
+  };
+  const el = await fixture<LyraRetrievalCompare>(html`
+    <lr-retrieval-compare
+      .sets=${[{ id: 'bare-set', label: 'Bare results', chunks: [bareChunk] }]}
+    ></lr-retrieval-compare>
+  `);
+  const scores = el.shadowRoot!.querySelector('[part="scores"]')!;
+
+  expect(scores.querySelectorAll('[part="score"]')).to.have.lengthOf(1);
+  expect(scores.textContent).to.contain('Final');
+  expect(scores.textContent).to.contain('75%');
+});
+
 it('honors top-k and emits the full selected set/chunk pair', async () => {
   const el = (await fixture(html`<lr-retrieval-compare .sets=${sets} top-k="1"></lr-retrieval-compare>`)) as LyraRetrievalCompare;
   expect(el.shadowRoot!.querySelectorAll('[part="chunk"]').length).to.equal(2);

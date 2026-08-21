@@ -3,6 +3,7 @@ import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './trace-tree.js';
 import type { LyraTraceTree } from './trace-tree.js';
 import type { LyraSpan } from './span.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 const SPANS: LyraSpan[] = [
   { id: 'root', name: 'Plan trip', kind: 'agent', startMs: 0, endMs: 400, status: 'success' },
@@ -290,6 +291,41 @@ describe('lr-trace-tree', () => {
     (el.shadowRoot!.querySelector('[data-id="root"] [part="toggle"]') as HTMLButtonElement).click();
     await el.updateComplete;
     expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[data-id="root"]'))).to.equal(true);
+  });
+
+  it('moves the roving cursor to the visible ancestor when the controlled active span is collapsed', async () => {
+    const el = await fixture<LyraTraceTree>(html`
+      <lr-trace-tree .spans=${SPANS} active-span-id="search"></lr-trace-tree>
+    `);
+    expect(el.shadowRoot!.querySelector('[data-id="search"]')?.getAttribute('tabindex')).to.equal('0');
+
+    (el.shadowRoot!.querySelector('[data-id="root"] [part="toggle"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelectorAll('[part="row"]')).to.have.lengthOf(1);
+    expect(el.shadowRoot!.querySelector('[data-id="root"]')?.getAttribute('tabindex')).to.equal('0');
+  });
+
+  it('announces when a later controlled update first crosses the span projection limit', async () => {
+    const el = await fixture<LyraTraceTree>(html`
+      <lr-trace-tree
+        .spans=${SPANS.slice(0, 1)}
+        .strings=${{ spanProjectionLimit: 'Limited to {count} spans' }}
+      ></lr-trace-tree>
+    `);
+    el.spans = Array.from({ length: 501 }, (_, index) => ({
+      id: `span-${index}`,
+      name: `Span ${index}`,
+      kind: 'tool' as const,
+      status: 'success' as const,
+      startMs: index,
+    }));
+    await el.updateComplete;
+
+    const sink = document.querySelector<HTMLElement>(
+      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,
+    );
+    expect(sink?.lastElementChild?.textContent).to.equal('Limited to 500 spans');
   });
 
   it('normalizes duplicate/cyclic/non-finite data and bounds deep rendering', async () => {

@@ -604,6 +604,8 @@ it('rebinds content observation and animation frames to its owner realm across a
     document.adoptNode(el);
     expect(observerDisconnects, 'adoption disconnects the old observer').to.equal(1);
     expect(cancelledFrames, 'adoption cancels the old owner frame').to.deep.equal([71]);
+    contentMutationCallback!([], {} as MutationObserver);
+    expect(frames.size, 'a stale old-realm observer callback cannot schedule new work').to.equal(0);
     let scrollCalls = 0;
     el.scrollToBottom = () => { scrollCalls += 1; };
     staleFrame!(0);

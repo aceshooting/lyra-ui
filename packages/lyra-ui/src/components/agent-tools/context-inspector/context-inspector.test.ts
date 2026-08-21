@@ -24,6 +24,15 @@ it('renders the empty state when segments is empty (the default), with no meter/
   expect((el.shadowRoot!.querySelector('[part="toolbar"]')) == null).to.be.true;
 });
 
+it('fails a non-array runtime segment collection closed', async () => {
+  const el = await fixture<LyraContextInspector>(html`<lr-context-inspector></lr-context-inspector>`);
+  el.segments = { 0: segments[0], length: 1 } as unknown as ContextInspectorSegment[];
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelectorAll('[part="segment"]')).to.have.lengthOf(0);
+  expect(el.shadowRoot!.querySelectorAll('lr-empty')).to.have.lengthOf(1);
+});
+
 it('maps segments/total/label onto the embedded lr-context-meter', async () => {
   const el = (await fixture(html`<lr-context-inspector></lr-context-inspector>`)) as LyraContextInspector;
   el.segments = segments;

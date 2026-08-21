@@ -1,7 +1,104 @@
 import { expect } from '@open-wc/testing';
 import { layoutMindMap, type LyraTopic } from './mind-map-layout.js';
+import { formatBoundedRetrievalValue } from '../retrieval-value-format.js';
+import {
+  canonicalIdentityList,
+  firstByRetrievalIdentity,
+  isNonBlankIdentity,
+} from '../retrieval-identity.js';
 
 const alwaysExpanded = () => true;
+
+const valueFormatOptions = {
+  locale: 'en',
+  invalid: '[invalid]',
+  truncated: '[truncated]',
+};
+
+describe('retrieval identity helpers', () => {
+  it('retains the first byte-exact nonblank identity and contains identity readers that throw', () => {
+    const values = [
+      { id: ' alpha ' },
+      { id: ' alpha ' },
+      { id: 'alpha' },
+      { id: '   ' },
+      { id: 'unsafe' },
+    ];
+    const retained = firstByRetrievalIdentity(values, (value) => {
+      if (value.id === 'unsafe') throw new Error('identity denied');
+      return value.id;
+    });
+
+    expect(retained.map((value) => value.id)).to.deep.equal([' alpha ', 'alpha']);
+    expect(isNonBlankIdentity(42)).to.equal(false);
+  });
+
+  it('fails non-array runtime collections closed', () => {
+    const invalid = { 0: 'kept?', length: 1 } as unknown as readonly string[];
+
+    expect(firstByRetrievalIdentity(invalid, (value) => value)).to.deep.equal([]);
+    expect(canonicalIdentityList(invalid)).to.deep.equal([]);
+  });
+
+  it('returns one frozen canonical projection for repeated reads of the same list', () => {
+    const source = ['one', '', 'one', 'two'];
+    const first = canonicalIdentityList(source);
+
+    expect(first).to.deep.equal(['one', 'two']);
+    expect(Object.isFrozen(first)).to.equal(true);
+    expect(canonicalIdentityList(source) === first).to.equal(true);
+  });
+});
+
+describe('formatBoundedRetrievalValue', () => {
+  it('bounds object entries and string lengths while ignoring inherited fields', () => {
+    const inherited = { inherited: 'not rendered' };
+    const value = Object.assign(Object.create(inherited) as Record<string, unknown>, {
+      first: 'abcdef',
+      second: 2,
+      third: 3,
+    });
+
+    expect(formatBoundedRetrievalValue(value, {
+      ...valueFormatOptions,
+      maxEntries: 2,
+      maxStringLength: 3,
+    })).to.equal('{fir[truncated]: abc[truncated], sec[truncated]: 2, [truncated]}');
+  });
+
+  it('rejects a runtime array whose length is not a safe non-negative integer', () => {
+    const value = new Proxy([], {
+      get(target, key, receiver) {
+        return key === 'length' ? -1 : Reflect.get(target, key, receiver);
+      },
+    });
+
+    expect(formatBoundedRetrievalValue(value, valueFormatOptions)).to.equal('[invalid]');
+  });
+
+  it('contains hostile collection traps and releases path-local cycle tracking', () => {
+    const hostile = new Proxy({}, {
+      ownKeys() {
+        throw new Error('keys denied');
+      },
+    });
+    const shared = { ok: true };
+
+    expect(formatBoundedRetrievalValue(hostile, valueFormatOptions)).to.equal('[invalid]');
+    expect(formatBoundedRetrievalValue([shared, shared], valueFormatOptions)).to.equal(
+      '{ok: true} and {ok: true}',
+    );
+  });
+
+  it('distinguishes nullish, unsupported primitive, and traversal-limit sentinels', () => {
+    expect(formatBoundedRetrievalValue(null, valueFormatOptions)).to.equal('');
+    expect(formatBoundedRetrievalValue(Symbol('unsupported'), valueFormatOptions)).to.equal('[invalid]');
+    expect(formatBoundedRetrievalValue({ nested: { value: 'too deep' } }, {
+      ...valueFormatOptions,
+      maxDepth: 1,
+    })).to.equal('{nested: {value: [truncated]}}');
+  });
+});
 
 it('returns an empty result for an empty topics array', () => {
   const result = layoutMindMap([], 'Hub', { ringGap: 96, rtl: false, isExpanded: alwaysExpanded });
@@ -45,6 +142,51 @@ it('keeps the synthetic hub distinct when a caller owns the usual hub spelling',
   expect(new Set(result.placed.map((topic) => topic.id)).size).to.equal(
     result.placed.length
   );
+});
+
+it('drops invalid and later duplicate identities across the complete hierarchy', () => {
+  const topics = [
+    null,
+    { id: '   ', label: 'Blank' },
+    {
+      id: 'root',
+      label: 'Root',
+      children: [
+        { id: 'shared', label: 'First shared topic' },
+        { id: 'shared', label: 'Later duplicate' },
+      ],
+    },
+    { id: 'shared', label: 'Duplicate in another branch' },
+  ] as unknown as LyraTopic[];
+
+  const result = layoutMindMap(topics, 'Hub', {
+    ringGap: 96,
+    rtl: false,
+    isExpanded: alwaysExpanded,
+  });
+
+  expect(result.placed.map((topic) => topic.label)).to.deep.equal([
+    'Root',
+    'First shared topic',
+  ]);
+  expect(result.links).to.deep.equal([{ fromId: 'root', toId: 'shared' }]);
+});
+
+it('treats a non-array runtime children collection as an empty branch', () => {
+  const topics = [{
+    id: 'root',
+    label: 'Root',
+    children: { 0: { id: 'hidden', label: 'Hidden' }, length: 1 },
+  }] as unknown as LyraTopic[];
+
+  const result = layoutMindMap(topics, 'Hub', {
+    ringGap: 96,
+    rtl: false,
+    isExpanded: alwaysExpanded,
+  });
+
+  expect(result.placed.map((topic) => topic.id)).to.deep.equal(['root']);
+  expect(result.placed[0]!.hasChildren).to.equal(false);
 });
 
 it("subdivides a parent arc proportionally to each child subtree's visible leaf count", () => {

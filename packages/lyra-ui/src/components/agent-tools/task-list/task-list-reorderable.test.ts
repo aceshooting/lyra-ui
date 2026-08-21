@@ -326,6 +326,27 @@ describe('reorderable', () => {
     expect((await liveRegionText(el)).trim()).to.equal('');
   });
 
+  it('clears a child reorder request when its parent disappears before the host responds', async () => {
+    const el = await fixture<LyraTaskList>(html`
+      <lr-task-list reorderable .items=${clone()}></lr-task-list>
+    `);
+    modifiedArrow(itemRow(el, 'prepare-a'), 'ArrowDown');
+
+    el.items = clone().slice(1);
+    await el.updateComplete;
+    expect((await liveRegionText(el)).trim()).to.equal('');
+
+    const restored = clone();
+    const children = restored[0]!.children!;
+    restored[0] = {
+      ...restored[0]!,
+      children: [children[1]!, children[0]!, ...children.slice(2)],
+    };
+    el.items = restored;
+    await el.updateComplete;
+    expect((await liveRegionText(el)).trim()).to.equal('');
+  });
+
   it('does not swap the vertical reorder keys under dir="rtl"', async () => {
     const el = (await fixture(html`<lr-task-list dir="rtl" reorderable .items=${clone()}></lr-task-list>`)) as LyraTaskList;
     const row = itemRow(el, 'prepare');

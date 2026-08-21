@@ -70,6 +70,50 @@ describe("lr-knowledge-base-admin", () => {
     expect(el.shadowRoot!.querySelector("lr-ingestion-queue")).to.exist;
   });
 
+  it('mirrors previous and next tab navigation under RTL', async () => {
+    const el = await fixture<LyraKnowledgeBaseAdmin>(html`
+      <lr-knowledge-base-admin dir="rtl"></lr-knowledge-base-admin>
+    `);
+    let tabs = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+    tabs[0]!.focus();
+    tabs[0]!.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'ArrowLeft',
+      bubbles: true,
+      cancelable: true,
+    }));
+    await el.updateComplete;
+    expect(el.activeTab).to.equal('ingestion');
+
+    tabs = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+    tabs[1]!.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'ArrowRight',
+      bubbles: true,
+      cancelable: true,
+    }));
+    await el.updateComplete;
+    expect(el.activeTab).to.equal('sources');
+
+    el.hideIngestion = true;
+    await el.updateComplete;
+    const onlyTab = el.shadowRoot!.querySelector<HTMLButtonElement>('[role="tab"]')!;
+    const wrapped = new KeyboardEvent('keydown', {
+      key: 'ArrowLeft',
+      bubbles: true,
+      cancelable: true,
+    });
+    onlyTab.dispatchEvent(wrapped);
+    expect(wrapped.defaultPrevented).to.equal(true);
+    expect(el.activeTab).to.equal('sources');
+
+    const unrelated = new KeyboardEvent('keydown', {
+      key: 'PageDown',
+      bubbles: true,
+      cancelable: true,
+    });
+    onlyTab.dispatchEvent(unrelated);
+    expect(unrelated.defaultPrevented).to.equal(false);
+  });
+
   it("suppresses lr-tab-change when the already-selected tab is activated again", async () => {
     const el = (await fixture(
       html`<lr-knowledge-base-admin></lr-knowledge-base-admin>`
@@ -217,6 +261,37 @@ describe("lr-knowledge-base-admin", () => {
       "LR-KNOWLEDGE-BASE-ADMIN",
     ]);
     expect(details).to.deep.equal([{ sourceId: "s1" }]);
+  });
+
+  it('contains and re-emits ingestion retry and cancellation actions from the admin host', async () => {
+    const el = await fixture<LyraKnowledgeBaseAdmin>(html`
+      <lr-knowledge-base-admin active-tab="ingestion"></lr-knowledge-base-admin>
+    `);
+    const queue = el.shadowRoot!.querySelector('lr-ingestion-queue')!;
+    const received: Array<{ type: string; origin: string; detail: unknown }> = [];
+    for (const type of ['lr-ingestion-retry', 'lr-ingestion-cancel']) {
+      el.addEventListener(type, (event) => received.push({
+        type,
+        origin: (event.composedPath()[0] as Element).tagName,
+        detail: (event as CustomEvent).detail,
+      }));
+    }
+
+    queue.dispatchEvent(new CustomEvent('lr-retry', {
+      bubbles: true,
+      composed: true,
+      detail: { itemId: 'job-1' },
+    }));
+    queue.dispatchEvent(new CustomEvent('lr-cancel', {
+      bubbles: true,
+      composed: true,
+      detail: { itemId: 'job-2' },
+    }));
+
+    expect(received).to.deep.equal([
+      { type: 'lr-ingestion-retry', origin: 'LR-KNOWLEDGE-BASE-ADMIN', detail: { itemId: 'job-1' } },
+      { type: 'lr-ingestion-cancel', origin: 'LR-KNOWLEDGE-BASE-ADMIN', detail: { itemId: 'job-2' } },
+    ]);
   });
 
   it("is accessible in both tabs", async () => {

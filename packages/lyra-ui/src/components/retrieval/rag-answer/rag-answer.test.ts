@@ -13,7 +13,7 @@ describe("lr-rag-answer", () => {
         .strings=${{ ragAnswerLabel: "Answer" }}
         answer="Answer"
         .citations=${[{ id: "c1", sourceId: "d1" }]}
-        .sources=${[{ id: "d1", name: "guide.md" }]}
+        .sources=${[{ id: "d1", name: "guide.md", mimeType: "text/markdown" }]}
         .assessment=${{ supportedClaims: 1, unsupportedClaims: 0, coverage: 1 }}
       ></lr-rag-answer>`
     )) as LyraRagAnswer;
@@ -43,6 +43,7 @@ describe("lr-rag-answer", () => {
       sourceCard.shadowRoot!.querySelector('[part="base"]') as HTMLElement
     );
     expect(sourceCard.frame).to.equal("plain");
+    expect(sourceCard.textContent).to.contain("text/markdown");
     expect(chrome.borderTopWidth).to.equal("0px");
     expect(chrome.backgroundColor).to.equal("rgba(0, 0, 0, 0)");
     expect(chrome.paddingTop).to.equal("0px");
@@ -204,6 +205,19 @@ describe("lr-rag-answer", () => {
 
     expect(Boolean(el.shadowRoot!.querySelector('[part="sources"]'))).to.be
       .true;
+  });
+
+  it('detects a direct child retargeted into the sources slot', async () => {
+    const el = await fixture<LyraRagAnswer>(html`
+      <lr-rag-answer answer="Answer"><div data-source>Retargeted source</div></lr-rag-answer>
+    `);
+    expect(Boolean(el.shadowRoot!.querySelector('[part="sources"]'))).to.equal(false);
+
+    (el.querySelector('[data-source]') as HTMLElement).slot = 'sources';
+    await Promise.resolve();
+    await el.updateComplete;
+
+    expect(Boolean(el.shadowRoot!.querySelector('[part="sources"]'))).to.equal(true);
   });
 
   it("settles generated and incremental sources across reconnect without a child change-in-update", async () => {

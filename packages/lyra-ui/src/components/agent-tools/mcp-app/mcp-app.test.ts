@@ -44,6 +44,38 @@ it('renders executable app HTML only inside a uniquely-origin sandbox with CSP m
   expect(iframe.srcdoc).to.contain('https://api.example.com');
 });
 
+it('filters malformed and non-web CSP origins while enabling each requested frame permission', async () => {
+  const el = await fixture<LyraMcpApp>(html`
+    <lr-mcp-app
+      .resource=${{
+        uri: 'ui://permissions/all',
+        html: '<p>Permission probe</p>',
+        csp: {
+          resourceDomains: ['not a URL', 'ftp://files.example.test', 'https://cdn.example.test/path'],
+          connectDomains: [],
+          frameDomains: ['http://frames.example.test/embed'],
+        },
+        permissions: {
+          camera: true,
+          microphone: true,
+          geolocation: true,
+          clipboardRead: true,
+          clipboardWrite: true,
+        },
+      }}
+    ></lr-mcp-app>
+  `);
+  const iframe = el.shadowRoot!.querySelector('iframe')!;
+
+  expect(iframe.srcdoc).to.contain('https://cdn.example.test');
+  expect(iframe.srcdoc).to.contain('http://frames.example.test');
+  expect(iframe.srcdoc).to.not.contain('ftp://files.example.test');
+  expect(iframe.srcdoc).to.not.contain('not a URL');
+  expect(iframe.getAttribute('allow')).to.equal(
+    'camera *; microphone *; geolocation *; clipboard-read *; clipboard-write *',
+  );
+});
+
 it('enforces CSP before attacker-controlled comment or script-text head decoys', async () => {
   for (const [name, prefix] of [
     ['comment', '<!-- <head> -->'],

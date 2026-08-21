@@ -182,19 +182,33 @@ describe('lr-approval-queue', () => {
   it('keeps resolved requests visible but non-actionable', async () => {
     const resolved: ToolApprovalRequest[] = [
       { ...requests[0]!, status: 'approved' },
+      { id: 'call-2', toolName: 'delete_file', args: {}, status: 'denied' },
     ];
     const el = await fixture<LyraApprovalQueue>(html`
       <lr-approval-queue selected-invocation-id="call-1" open .requests=${resolved}></lr-approval-queue>
     `);
     let selections = 0;
     el.addEventListener('lr-approval-select', () => selections += 1);
-    const row = el.shadowRoot!.querySelector('[part="request"]') as HTMLButtonElement;
+    const rows = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="request"]')];
+    const row = rows[0]!;
     expect(row.disabled).to.be.true;
+    expect(
+      rows.map((candidate) => candidate.querySelector('lr-badge')?.textContent?.trim()),
+    ).to.deep.equal(['Approved', 'Denied']);
     row.click();
     await el.updateComplete;
     expect(selections).to.equal(0);
     expect(el.selectedInvocationId).to.equal(null);
     expect(el.open).to.be.false;
+  });
+
+  it('fails a non-array runtime request collection closed', async () => {
+    const el = await fixture<LyraApprovalQueue>(html`<lr-approval-queue></lr-approval-queue>`);
+    el.requests = { 0: requests[0], length: 1 } as unknown as ToolApprovalRequest[];
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelectorAll('[part="request"]')).to.have.lengthOf(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="empty"]')).to.have.lengthOf(1);
   });
 
   it('paints and de-affords a resolved row while a pending sibling keeps its hover and press feedback', async () => {
