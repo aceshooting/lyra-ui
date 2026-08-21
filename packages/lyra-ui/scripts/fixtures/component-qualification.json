@@ -18742,7 +18742,7 @@
           "evidence": [
             {
               "file": "src/components/data/flow-canvas/flow-canvas.test.ts",
-              "line": 1378,
+              "line": 1381,
               "test": "is accessible with nodes, edges, and a selection",
               "target": "el",
               "state": "populated"
@@ -18778,7 +18778,7 @@
           "evidence": [
             {
               "file": "src/components/data/flow-canvas/flow-canvas.test.ts",
-              "line": 2421,
+              "line": 2424,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -49865,14 +49865,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/widget-renderer/widget-renderer.test.ts",
-              "line": 509,
-              "test": "rejects a bound native-control descendant beneath an actionable mapped control",
-              "target": "el",
-              "state": "populated"
-            },
-            {
-              "file": "src/components/conversation/widget-renderer/widget-renderer.test.ts",
-              "line": 599,
+              "line": 610,
               "test": "renders a mixed document accessibly",
               "target": "el",
               "state": "populated"
@@ -49892,7 +49885,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/widget-renderer/widget-renderer.test.ts",
-              "line": 576,
+              "line": 587,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -49909,7 +49902,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/widget-renderer/widget-renderer.test.ts",
-              "line": 575,
+              "line": 586,
               "kind": "320px allocation test signal"
             }
           ]
@@ -50032,7 +50025,7 @@
           "evidence": [
             {
               "file": "src/components/data/word-cloud/word-cloud.test.ts",
-              "line": 699,
+              "line": 717,
               "test": "is accessible with words rendered",
               "target": "el",
               "state": "populated"
@@ -50057,7 +50050,7 @@
           "evidence": [
             {
               "file": "src/components/data/word-cloud/word-cloud.test.ts",
-              "line": 426,
+              "line": 433,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -50074,7 +50067,7 @@
           "evidence": [
             {
               "file": "src/components/data/word-cloud/word-cloud.test.ts",
-              "line": 500,
+              "line": 507,
               "kind": "320px allocation test signal"
             }
           ]

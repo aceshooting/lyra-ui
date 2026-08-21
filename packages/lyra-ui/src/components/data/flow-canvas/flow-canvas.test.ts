@@ -707,8 +707,11 @@ describe('static rendering', () => {
   });
 
   it('skips pushing props for a node whose card was removed independently of nodes', async () => {
-    const el = (await fixture(html`<lr-flow-canvas><lr-flow-node node-id="b"></lr-flow-node></lr-flow-canvas>`)) as LyraFlowCanvas;
-    el.nodes = [{ id: 'a' }, { id: 'b' }];
+    const el = (await fixture(html`
+      <lr-flow-canvas .nodes=${[{ id: 'a' }, { id: 'b' }]}>
+        <lr-flow-node node-id="b"></lr-flow-node>
+      </lr-flow-canvas>
+    `)) as LyraFlowCanvas;
     await el.updateComplete;
     // Removed directly (not via `nodes`), so `pushCardPropsAll()` finds no adopted card for 'b'
     // on its next pass -- must skip that node rather than throwing on the missing element.
@@ -3226,11 +3229,13 @@ describe('flow layout truth and parity', () => {
 
   it('reflows and notifies cards/companions when orientation or layout gaps change', async () => {
     const el = (await fixture(html`
-      <lr-flow-canvas style="width:600px;height:400px">
+      <lr-flow-canvas
+        style="width:600px;height:400px"
+        .nodes=${[{ id: 'a' }, { id: 'b' }]}
+      >
         <lr-flow-node node-id="a"></lr-flow-node>
       </lr-flow-canvas>
     `)) as LyraFlowCanvas;
-    el.nodes = [{ id: 'a' }, { id: 'b' }];
     el.edges = [{ id: 'a-b', source: 'a', target: 'b' }];
     await el.updateComplete;
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -3311,12 +3316,15 @@ describe('flow schema and consumer-reachable type state', () => {
 
   it('refreshes same-id declarative card content without touching authored slotted content', async () => {
     const el = (await fixture(html`
-      <lr-flow-canvas><div node-id="custom">Authored content</div></lr-flow-canvas>
+      <lr-flow-canvas
+        .nodes=${[
+          { id: 'a', data: { label: 'Before', description: 'First description' } },
+          { id: 'custom', data: { label: 'Ignored by authored card' } },
+        ]}
+      >
+        <div node-id="custom">Authored content</div>
+      </lr-flow-canvas>
     `)) as LyraFlowCanvas;
-    el.nodes = [
-      { id: 'a', data: { label: 'Before', description: 'First description' } },
-      { id: 'custom', data: { label: 'Ignored by authored card' } },
-    ];
     await el.updateComplete;
     const first = defaultCard(el, 'a');
     el.nodes = [
@@ -3333,12 +3341,15 @@ describe('flow schema and consumer-reachable type state', () => {
 
   it('forwards type to authored cards and exposes a normalized part on declarative cards', async () => {
     const el = (await fixture(html`
-      <lr-flow-canvas><lr-flow-node node-id="authored"></lr-flow-node></lr-flow-canvas>
+      <lr-flow-canvas
+        .nodes=${[
+          { id: 'authored', type: 'HTTP Request' },
+          { id: 'default', type: 'Vector/Search' },
+        ]}
+      >
+        <lr-flow-node node-id="authored"></lr-flow-node>
+      </lr-flow-canvas>
     `)) as LyraFlowCanvas;
-    el.nodes = [
-      { id: 'authored', type: 'HTTP Request' },
-      { id: 'default', type: 'Vector/Search' },
-    ];
     await el.updateComplete;
     const authored = el.querySelector('lr-flow-node')!;
     const fallback = defaultCard(el, 'default');
@@ -3423,11 +3434,12 @@ it('floors a consumer-authored node card to the WCAG 2.5.8 tap-target minimum', 
   // it is a keyboard proxy that no pointer can reach. A small authored card therefore produced a
   // real, unfloored pointer target that shrank further under zoom-out.
   const el = (await fixture(html`
-    <lr-flow-canvas>
+    <lr-flow-canvas
+      .nodes=${[{ id: 'tiny', position: { x: 0, y: 0 }, data: { label: 'Tiny' } }]}
+    >
       <div node-id="tiny" style="inline-size: 8px; block-size: 8px">.</div>
     </lr-flow-canvas>
   `)) as LyraFlowCanvas;
-  el.nodes = [{ id: 'tiny', position: { x: 0, y: 0 }, data: { label: 'Tiny' } }];
   await el.updateComplete;
   await new Promise((resolve) => requestAnimationFrame(resolve));
 
