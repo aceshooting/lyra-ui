@@ -395,15 +395,18 @@ jobs:
 
   # Needs dist/ (the tarball's `files` list includes it) but not the Chromium test suite or the
   # docs build -- independent of build-and-coverage other than both running `pnpm build`.
-  # release-qualification: required
-  packed-consumer:
+  # The networked public-API comparison is independent of the long packed fixture/ATTW sweep, so
+  # it consumes the shared dist artifact in its own lane rather than waiting ~16 minutes before
+  # it starts. A stable aggregate below keeps branch protection and release qualification strict.
+  packed_consumer_contract:
+    name: packed-consumer / contract
     runs-on: ubuntu-latest
     # check:packed-consumer alone (attw across every packed entry point, plus the
     # React/Vue/Svelte framework recipes) has been observed taking ~13-14 minutes on a normal
     # runner, consistently exceeding the previous 15-minute ceiling right as it finished and
-    # getting cancelled -- not failed -- so the job silently never reached check:package-size or
-    # check:public-api. The platform-contracts matrix's Node-20 leg runs this same check (plus a
-    # full platform test suite) under its existing 30-minute budget without issue.
+    # getting cancelled -- not failed -- so the job silently never reached check:package-size.
+    # The platform-contracts matrix's Node-20 leg runs this same check (plus a full platform test
+    # suite) under its existing 30-minute budget without issue.
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -438,10 +441,54 @@ jobs:
       # Hard tarball budgets (packed/unpacked bytes and file count). Runs here rather than in
       # contract-policy because it shells out to `npm pack --dry-run`, which needs a built dist/.
       - run: pnpm --filter @aceshooting/lyra-ui check:package-size
+
+  packed_consumer_public_api:
+    name: packed-consumer / public-api
+    runs-on: ubuntu-latest
+    needs: build_and_coverage_build
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: lyra-ui-dist
+          path: packages/lyra-ui/dist
       # Downloads the latest published package into an isolated temporary directory and compares
       # its normalized CEM/exports/declarations with this built tree. The pure parser/semver tests
       # run in static-checks; this is the networked release gate.
       - run: pnpm --filter @aceshooting/lyra-ui check:public-api
+
+  # release-qualification: required
+  packed-consumer:
+    if: ${{ always() }}
+    needs:
+      - packed_consumer_contract
+      - packed_consumer_public_api
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Aggregate packed-consumer lanes
+        env:
+          CONTRACT_RESULT: ${{ needs.packed_consumer_contract.result }}
+          PUBLIC_API_RESULT: ${{ needs.packed_consumer_public_api.result }}
+        run: |
+          set -euo pipefail
+          failed=0
+          if [[ "$CONTRACT_RESULT" != "success" ]]; then
+            echo "::error::packed_consumer_contract failed with status: $CONTRACT_RESULT"
+            failed=1
+          fi
+          if [[ "$PUBLIC_API_RESULT" != "success" ]]; then
+            echo "::error::packed_consumer_public_api failed with status: $PUBLIC_API_RESULT"
+            failed=1
+          fi
+          exit "$failed"
 
   # Builds storybook-static/ exactly once and shares it via artifact with every downstream
   # consumer (docs-and-storybook's own checks below, all 3 visual-regression shards) instead of
@@ -473,8 +520,8 @@ jobs:
           path: storybook-static
           retention-days: 1
 
-  # release-qualification: required
-  docs-and-storybook:
+  docs_storybook_contract:
+    name: docs-and-storybook / storybook
     runs-on: ubuntu-latest
     # Runs in the official Playwright image: every OS-level browser dependency and the matching
     # browser binaries ship inside it, so this job runs no apt transaction and downloads no
@@ -497,11 +544,9 @@ jobs:
       # the whole job keeps the pnpm store and setup-node cache on one path.
       HOME: /root
     needs: docs_build
-    # docs:check-show-code drives a full Playwright sweep clicking every "Show code" control
-    # across the entire Storybook -- observed real-world duration varies 10.5-15+ minutes run to
-    # run. The original 15 got this wrong (added without empirically checking worst-case
-    # duration first) and force-cancelled a genuinely still-running job; 30 gives real headroom
-    # over the observed variance while still catching a truly hung job well under the 360m default.
+    # storybook:check drives a full Playwright crawl. Keep the established hang-detection budget;
+    # splitting the independent Show Code crawl below shortens wall time without tightening either
+    # browser process's timing envelope.
     timeout-minutes: 30
     steps:
       - name: Match the runner's default font resolution
@@ -531,11 +576,79 @@ jobs:
           path: storybook-static
       - run: pnpm docs:check
       - run: pnpm storybook:check
+
+  docs_show_code:
+    name: docs-and-storybook / show-code
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --shm-size=2g -v /usr/share/fonts:/usr/share/host-fonts:ro
+    env:
+      HOME: /root
+    needs: docs_build
+    # Observed real-world duration varies substantially. The original 15-minute ceiling once
+    # force-cancelled a genuinely still-running crawl, so retain its measured 30-minute envelope.
+    timeout-minutes: 30
+    steps:
+      - name: Match the runner's default font resolution
+        run: |
+          cat > /etc/fonts/local.conf <<'CONF'
+          <?xml version="1.0"?>
+          <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+          <fontconfig><dir>/usr/share/host-fonts</dir></fontconfig>
+          CONF
+          fc-cache -f >/dev/null 2>&1 || true
+          resolved="$(fc-match sans-serif)"
+          echo "sans-serif -> $resolved"
+          case "$resolved" in
+            *DejaVu*) ;;
+            *) echo "::error::sans-serif resolved to '$resolved', not DejaVu -- text-metric tests would measure the wrong typeface"; exit 1 ;;
+          esac
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: storybook-static
+          path: storybook-static
       # Clicks every `Show code` control across every `type: "docs"` entry in the built Storybook
       # and fails on navigation/click/unexpanded-control regressions, console errors, page errors,
       # or failed requests. It used to run only at release time (driven by hand from the /publish
       # flow), so a broken `Show code` could sit on main until someone cut a release.
       - run: pnpm docs:check-show-code
+
+  # Keep the stable required-check name while the two independent browser crawls fan out. Both
+  # still consume the exact storybook-static artifact produced above, and either failure makes
+  # this aggregate red rather than silently skipping it.
+  # release-qualification: required
+  docs-and-storybook:
+    if: ${{ always() }}
+    needs:
+      - docs_storybook_contract
+      - docs_show_code
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Aggregate docs-and-storybook lanes
+        env:
+          STORYBOOK_RESULT: ${{ needs.docs_storybook_contract.result }}
+          SHOW_CODE_RESULT: ${{ needs.docs_show_code.result }}
+        run: |
+          set -euo pipefail
+          failed=0
+          if [[ "$STORYBOOK_RESULT" != "success" ]]; then
+            echo "::error::docs_storybook_contract failed with status: $STORYBOOK_RESULT"
+            failed=1
+          fi
+          if [[ "$SHOW_CODE_RESULT" != "success" ]]; then
+            echo "::error::docs_show_code failed with status: $SHOW_CODE_RESULT"
+            failed=1
+          fi
+          exit "$failed"
 
   # Blocking as of the 2026-07-20 font-substitution determinism fix (see
   # packages/lyra-ui/visual-baselines/README.md): the manifest's 83 stories now produce 253

@@ -120,12 +120,16 @@ the PR checks list tells you which of these to reproduce locally:
    `build` script. Browser-dependent lanes use the Playwright image pinned in the workflow, so they
    do not install browser binaries or OS packages on each run.
 
-4. **`packed-consumer`** — needs `dist/` (the tarball's `files` list includes it) but nothing
-   else `build-and-coverage` needs, so it gets its own `pnpm build` rather than waiting on that
-   job. It then runs `pnpm --filter @aceshooting/lyra-ui pack --dry-run`, verifies
-   `dist/ssr-loader.js`, `custom-elements.json`, `llms.txt`, `llms-full.txt`, and the required
-   `llms/` index/shared/tokens/peers/migration/component files, then runs `pnpm
-check:packed-consumer`, the packed-size budget, and the networked public-API semver gate.
+4. **`packed-consumer`** — a stable aggregate over two independent lanes. The contract lane needs
+   `dist/` (the tarball's `files` list includes it) but nothing else `build-and-coverage` needs, so
+   it gets its own `pnpm build` rather than waiting on that job. It then runs `pnpm --filter
+   @aceshooting/lyra-ui pack --dry-run`, verifies `dist/ssr-loader.js`,
+   `custom-elements.json`, `llms.txt`, `llms-full.txt`, and the required `llms/`
+   index/shared/tokens/peers/migration/component files, then runs `pnpm check:packed-consumer` and
+   the packed-size budget. In parallel, the public-API lane consumes the shared dist artifact from
+   `build_and_coverage_build` and runs the networked public-API semver gate. The split preserves
+   one required `packed-consumer` result while keeping the 2.5-minute public-API comparison off the
+   end of the workflow's longest serial lane.
 
    `packages/lyra-ui/tsconfig.json` sets `"stripInternal": true` — a declaration whose JSDoc
    carries `@internal` is erased from the emitted `.d.ts` even if a _public_ property's type
@@ -144,8 +148,10 @@ check:packed-consumer`, the packed-size budget, and the networked public-API sem
    `build_and_coverage_build`/`dist` already uses. `docs-and-storybook` itself and every
    `visual-regression` shard (point 6) both depend on `docs_build` and download that artifact
    instead of independently rebuilding Storybook from source — three fewer redundant rebuilds per
-   run than the previous design. Against the downloaded artifact, `docs-and-storybook` runs the
-   docs, Storybook, and Show Code checks; the last drives Chromium from the pinned Playwright image.
+   run than the previous design. Two independent lanes then run the Storybook contract crawl and
+   the Show Code crawl against that same downloaded artifact in parallel; a stable
+   `docs-and-storybook` aggregate requires both. The split retains the complete Chromium checks
+   while removing their former 214-second + 248-second serial chain from one runner.
 6. **`visual-regression`** — blocking as of the 2026-07-20 font-substitution determinism fix (see
    `packages/lyra-ui/visual-baselines/README.md`). The 253 axis-level captures are lexically sorted
    and round-robin partitioned across a three-leg matrix (85/84/84 captures), so the historical
