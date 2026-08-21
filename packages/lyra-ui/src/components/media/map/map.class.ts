@@ -319,6 +319,11 @@ export interface LyraMapClusterOptions {
   readonly countFont?: readonly string[];
 }
 
+/** A heatmap paint value expressed either as one constant or bounded `[zoom, value]` stops. */
+export type LyraMapHeatmapZoomValue =
+  | number
+  | readonly (readonly [zoom: number, value: number])[];
+
 /** Paint configuration for a `kind: 'heatmap'` data layer. */
 export interface LyraMapHeatmapOptions {
   /** Feature property weighting each point. Omitted, every point weighs 1 (MapLibre's default). */
@@ -340,10 +345,14 @@ export interface LyraMapHeatmapOptions {
    * default ramp.
    */
   readonly stops?: readonly (readonly [number, string])[];
-  /** Kernel radius in pixels. Defaults to 30, MapLibre's own default. */
-  readonly radius?: number;
-  /** Global intensity multiplier. Defaults to 1, MapLibre's own default. */
-  readonly intensity?: number;
+  /** Kernel radius in pixels, or linear `[zoom, radius]` stops. Zooms clamp to `[0, 24]`, radii
+   * to `[1, 200]`, and a scalar/default remains 30. */
+  readonly radius?: LyraMapHeatmapZoomValue;
+  /** Global intensity multiplier, or linear `[zoom, intensity]` stops. Zooms clamp to `[0, 24]`,
+   * intensity to `[0, 100]`, and a scalar/default remains 1. */
+  readonly intensity?: LyraMapHeatmapZoomValue;
+  /** Whole-layer opacity in `[0, 1]`. Omitted, MapLibre's own default remains in force. */
+  readonly opacity?: number;
 }
 
 /** One GeoJSON source rendered as three layers (`${sourceId}-fill` for polygons, `${sourceId}-line`
@@ -395,11 +404,11 @@ export interface LyraMapGeoJsonDataLayer {
   readonly cluster?: LyraMapClusterOptions;
 }
 
-/** Each entry becomes one real, individually-focusable DOM marker element (with its own aria
- *  attributes and, when it carries a popup, a keydown listener) -- unbounded input would let a
- *  hostile/oversized `markers` assignment synchronously mint an unbounded number of them. First-N
- *  deterministic truncation, matching lightbox.class.ts's `MAX_LIGHTBOX_IMAGES` and
- *  image-viewer.class.ts's `IMAGE_VIEWER_HIGHLIGHT_LIMIT`. */
+/** Each entry becomes one real, individually-focusable DOM marker button with activation
+ *  listeners -- unbounded input would let a hostile/oversized `markers` assignment synchronously
+ *  mint an unbounded number of them. First-N deterministic truncation, matching
+ *  lightbox.class.ts's `MAX_LIGHTBOX_IMAGES` and image-viewer.class.ts's
+ *  `IMAGE_VIEWER_HIGHLIGHT_LIMIT`. */
 const MAX_MAP_MARKERS = 2_000;
 
 export interface LyraMapMarker {
@@ -420,6 +429,21 @@ export interface LyraMapMarker {
    * `Popup.setText()`) whenever the content is plain text.
    */
   readonly unsafeHtml?: string;
+}
+
+/** Input path that activated a declarative map marker. */
+export type LyraMapMarkerActivationSource = 'pointer' | 'keyboard';
+
+/** Immutable payload emitted when a declarative marker is activated. */
+export interface LyraMapMarkerActivationDetail {
+  /** Trimmed explicit marker identity, or `undefined` for an idless marker. */
+  readonly id: string | undefined;
+  /** Validated marker position as `[longitude, latitude]`. */
+  readonly lngLat: readonly [number, number];
+  /** The accepted declarative marker snapshot. */
+  readonly marker: LyraMapMarker;
+  /** Whether activation came through click/pointer semantics or the keyboard contract. */
+  readonly source: LyraMapMarkerActivationSource;
 }
 
 /** Extracts a marker name from trusted popup markup without attaching or executing it. Elements
@@ -636,6 +660,32 @@ function heatmapWeightExpression(options: LyraMapHeatmapOptions | undefined): un
   // silently saturate or flatten the whole surface. Passing the raw value through is honest.
   if (!Number.isFinite(min) || !Number.isFinite(max) || min >= max) return ['get', field];
   return ['interpolate', ['linear'], ['get', field], min, 0, max, 1];
+}
+
+/**
+ * Normalizes a heatmap's scalar-or-zoom-stop paint value without leaking MapLibre expression
+ * types into the public API. A single usable stop is a constant; two or more become a linear zoom
+ * interpolation. Invalid arrays fall back to the established scalar default.
+ */
+function heatmapZoomValue(
+  value: unknown,
+  fallback: number,
+  min: number,
+  max: number,
+): number | unknown[] {
+  if (!Array.isArray(value)) return finiteRange(Number(value), fallback, min, max);
+  const stops = normalizedSteps(
+    value,
+    isFiniteOutput,
+    (zoom) => finiteRange(zoom, 0, 0, 24),
+  ).map(
+    ([zoom, output]) => [zoom, finiteRange(output, fallback, min, max)] as const,
+  );
+  if (stops.length === 0) return fallback;
+  if (stops.length === 1) return stops[0]![1];
+  const expression: unknown[] = ['interpolate', ['linear'], ['zoom']];
+  for (const [zoom, output] of stops) expression.push(zoom, output);
+  return expression;
 }
 
 /** Peer-neutral subset of a MapLibre style accepted by `mapStyle`. */
@@ -887,6 +937,7 @@ export function buildGeoJsonPropertyDiff(
 
 export interface LyraMapEventMap {
   'lr-map-load': CustomEvent<null>;
+  'lr-map-marker-activate': CustomEvent<LyraMapMarkerActivationDetail>;
   'lr-map-click': CustomEvent<{
     readonly lngLat: readonly [number, number];
     readonly feature: Feature | undefined;
@@ -932,6 +983,9 @@ export interface LyraMapEventMap {
  *
  * @customElement lr-map
  * @event lr-map-load - Fired once the underlying maplibregl.Map loads.
+ * @event lr-map-marker-activate - Fired once when an accepted declarative marker is activated by
+ *   pointer/click or by Enter/Space. The immutable detail carries its normalized `id`, validated
+ *   `lngLat`, accepted marker snapshot, and activation `source`.
  * @event lr-map-click - `detail: { lngLat, feature?, origin?, sourceId? }`. `feature` resolves
  *   against the choropleth fill *and* every applied `dataLayers` fill/line/circle/cluster layer,
  *   topmost first; `origin`/`sourceId` name where it came from. A hit on a clustered entry's
@@ -996,6 +1050,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-map-click',
+    'lr-map-marker-activate',
   ]);
   /** `feature` is a maplibre-gl `queryRenderedFeatures()` result -- not a plain object the generic
    *  event-detail snapshotter can structurally clone, so its identity is preserved instead of being
@@ -1031,6 +1086,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   @property({ type: Array }) center: readonly [number, number] = [0, 0];
   /** Initial and controlled map zoom level. */
   @property({ type: Number }) zoom = 2;
+  /** Whether the constructed peer repeats the world horizontally. `undefined` leaves MapLibre's
+   * own default in force. Construction-only; set before the map is created. */
+  @property({ attribute: false }) renderWorldCopies?: boolean;
 
   /**
    * Box the map may not pan outside, `[[west, south], [east, north]]`, or `null` for unconstrained.
@@ -1204,10 +1262,16 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private _markerInstances = new Map<string, MapLibreMarkerCapability>();
   private _markerLabels = new Map<string, string | undefined>();
   private _markerPopupIds = new Map<string, string>();
+  private readonly markerActivationDetails = new WeakMap<
+    HTMLElement,
+    Omit<LyraMapMarkerActivationDetail, 'source'>
+  >();
   private _configuredPopups = new WeakSet<object>();
   private _nextPopupId = 0;
   private peerChromeObserver?: MutationObserver;
   private observedPeerContainer?: HTMLElement;
+  private mapResizeObserver?: ResizeObserver;
+  private observedMapContainer?: HTMLElement;
   // The installed maplibre-gl's `Marker` class has no `setColor()` (verified
   // against its shipped `.d.ts` -- `color` is only ever consumed by the
   // constructor), so an id-matched marker whose `color` changes can't be
@@ -1421,7 +1485,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.disposeMap();
     this.intersectionObserver?.disconnect();
     this.intersectionObserver = undefined;
-    for (const marker of this._markerInstances.values()) marker.remove();
+    for (const marker of this._markerInstances.values()) {
+      const markerElement = marker.getElement?.();
+      if (markerElement) this.markerActivationDetails.delete(markerElement);
+      marker.remove();
+    }
     this._markerInstances.clear();
     this._markerColors.clear();
     this._markerLabels.clear();
@@ -1450,6 +1518,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   private disposeMap(): void {
+    this.stopObservingMapAllocation();
     this.stopObservingPeerChrome();
     try {
       this._map?.remove();
@@ -1467,9 +1536,13 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.stopObservingMapAllocation();
     this.stopObservingPeerChrome();
     this.releaseErrorAnnouncementSink();
     this.syncErrorAnnouncementSink();
+    if (this._map && this.containerEl && this.isConnected) {
+      this.observeMapAllocation(this._map, this.containerEl);
+    }
   }
 
   private syncErrorAnnouncementSink(): void {
@@ -1522,6 +1595,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         style: this.mapStyle as never,
         center: this.safeCenter,
         zoom: this.safeZoom,
+        ...(typeof this.renderWorldCopies === 'boolean'
+          ? { renderWorldCopies: this.renderWorldCopies }
+          : {}),
         locale: {
           'Map.Title': this.effectiveMapLabel,
           'Marker.Title': this.localize('map'),
@@ -1600,6 +1676,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       const canvas = candidate.getCanvas?.() as HTMLCanvasElement | undefined;
       if (canvas) notifyMapCanvasReady(this, canvas);
       this._map = candidate;
+      this.observeMapAllocation(candidate, this.containerEl);
       this.observePeerChrome();
       this.failure = undefined;
     } catch {
@@ -2099,8 +2176,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const options = layer.heatmap;
     const weight = heatmapWeightExpression(options);
     const color = this.heatmapColorExpression(layer);
-    const radius = finiteRange(Number(options?.radius), DEFAULT_HEATMAP_RADIUS, 1, 200);
-    const intensity = finiteRange(Number(options?.intensity), DEFAULT_HEATMAP_INTENSITY, 0, 100);
+    const radius = heatmapZoomValue(options?.radius, DEFAULT_HEATMAP_RADIUS, 1, 200);
+    const intensity = heatmapZoomValue(options?.intensity, DEFAULT_HEATMAP_INTENSITY, 0, 100);
+    const opacity = finiteRange(Number(options?.opacity), 1, 0, 1);
     if (!this._map.getLayer(heatmapId)) {
       this._map.addLayer({
         id: heatmapId,
@@ -2111,6 +2189,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           'heatmap-intensity': intensity,
           'heatmap-color': color,
           'heatmap-radius': radius,
+          ...(options?.opacity === undefined ? {} : { 'heatmap-opacity': opacity }),
         },
       });
       return;
@@ -2133,13 +2212,18 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this._map.setPaintProperty(
       heatmapId,
       'heatmap-intensity',
-      finiteRange(Number(layer.heatmap?.intensity), DEFAULT_HEATMAP_INTENSITY, 0, 100),
+      heatmapZoomValue(layer.heatmap?.intensity, DEFAULT_HEATMAP_INTENSITY, 0, 100),
     );
     this._map.setPaintProperty(heatmapId, 'heatmap-color', this.heatmapColorExpression(layer));
     this._map.setPaintProperty(
       heatmapId,
       'heatmap-radius',
-      finiteRange(Number(layer.heatmap?.radius), DEFAULT_HEATMAP_RADIUS, 1, 200),
+      heatmapZoomValue(layer.heatmap?.radius, DEFAULT_HEATMAP_RADIUS, 1, 200),
+    );
+    this._map.setPaintProperty(
+      heatmapId,
+      'heatmap-opacity',
+      finiteRange(Number(layer.heatmap?.opacity), 1, 0, 1),
     );
   }
 
@@ -2249,9 +2333,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       const m = candidate as LyraMapMarker;
       const rawId: unknown = m.id;
       let key: string;
+      let id: string | undefined;
       if (rawId !== undefined) {
         if (typeof rawId !== 'string') continue;
-        const id = rawId.trim();
+        id = rawId.trim();
         if (id.length === 0 || explicitIds.has(id)) continue;
         explicitIds.add(id);
         key = `id:${id}`;
@@ -2271,6 +2356,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         // any popup the user currently has open on this marker (a fresh,
         // closed Popup is built for the new instance) -- an accepted, narrow
         // side effect of the reconstruction fallback, not a bug.
+        const existingElement = existing.getElement?.();
+        if (existingElement) this.markerActivationDetails.delete(existingElement);
         existing.remove();
         this._markerInstances.delete(key);
         this._markerColors.delete(key);
@@ -2318,19 +2405,26 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         markerElement.setAttribute('aria-label', markerLabel || this.localize('map'));
         markerElement.setAttribute('lang', this.effectiveLocale);
         const currentMarker = this._markerInstances.get(key);
+        this.configureMarkerInteraction(markerElement, {
+          id,
+          lngLat,
+          marker: m,
+        });
         const popup = currentMarker?.getPopup();
         if (popup && currentMarker) {
           this.configurePopupSemantics(key, currentMarker, popup);
           this.syncPopupSemantics(key, currentMarker, popup);
-          this.configureMarkerKeyboard(markerElement, currentMarker);
         } else {
           markerElement.removeAttribute('aria-controls');
           markerElement.removeAttribute('aria-expanded');
+          markerElement.removeAttribute('aria-haspopup');
         }
       }
     }
     for (const [key, marker] of this._markerInstances) {
       if (!visible.has(key)) {
+        const markerElement = marker.getElement?.();
+        if (markerElement) this.markerActivationDetails.delete(markerElement);
         marker.remove();
         this._markerInstances.delete(key);
         this._markerColors.delete(key);
@@ -2342,18 +2436,44 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   private readonly configuredMarkerElements = new WeakSet<HTMLElement>();
 
-  private configureMarkerKeyboard(
+  private configureMarkerInteraction(
     markerElement: HTMLElement,
-    marker: MapLibreMarkerCapability,
+    activation: Omit<LyraMapMarkerActivationDetail, 'source'>,
   ): void {
+    this.markerActivationDetails.set(markerElement, activation);
+    markerElement.setAttribute('role', 'button');
+    markerElement.tabIndex = 0;
+    const markerLabel = activation.marker.label?.trim()
+      || (activation.marker.unsafeHtml ? popupText(this, activation.marker.unsafeHtml) : '');
+    markerElement.setAttribute('aria-label', markerLabel || this.localize('map'));
+    markerElement.setAttribute('lang', this.effectiveLocale);
     if (this.configuredMarkerElements.has(markerElement)) return;
     this.configuredMarkerElements.add(markerElement);
+    markerElement.addEventListener('click', (event) => {
+      if (event.defaultPrevented) return;
+      this.emitMarkerActivation(markerElement, 'pointer');
+    });
     markerElement.addEventListener('keydown', (event) => {
-      if (event.key !== ' ' || !marker.getPopup?.() || event.defaultPrevented) return;
-      // MapLibre owns the actual popup toggle. Preventing the Space default in capture/boundary
-      // handling keeps that one activation while suppressing the page-scroll side effect.
-      event.preventDefault();
+      if (
+        (event.key !== ' ' && event.key !== 'Enter') ||
+        event.repeat ||
+        event.defaultPrevented
+      ) return;
+      // MapLibre owns any popup toggle on its later keypress handler. Suppress only Space's page
+      // scroll here while preserving propagation, then publish the same activation as Enter.
+      if (event.key === ' ') event.preventDefault();
+      this.emitMarkerActivation(markerElement, 'keyboard');
     }, { capture: true });
+  }
+
+  private emitMarkerActivation(
+    markerElement: HTMLElement,
+    source: LyraMapMarkerActivationSource,
+  ): void {
+    if (!this.isConnected) return;
+    const activation = this.markerActivationDetails.get(markerElement);
+    if (!activation) return;
+    this.emit('lr-map-marker-activate', { ...activation, source });
   }
 
   private get effectiveMapLabel(): string {
@@ -2398,6 +2518,44 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     popup.on?.('close', () => {
       marker.getElement?.()?.setAttribute('aria-expanded', 'false');
     });
+  }
+
+  private stopObservingMapAllocation(): void {
+    this.mapResizeObserver?.disconnect();
+    this.mapResizeObserver = undefined;
+    this.observedMapContainer = undefined;
+  }
+
+  /** Keeps MapLibre's canvas allocation synchronized with this component's live container. */
+  private observeMapAllocation(
+    map: MapLibreMapCapability,
+    container: HTMLElement,
+  ): void {
+    this.stopObservingMapAllocation();
+    const ResizeObserverCtor = container.ownerDocument.defaultView?.ResizeObserver;
+    if (!ResizeObserverCtor) return;
+    let observer: ResizeObserver;
+    observer = new ResizeObserverCtor(() => {
+      if (
+        this.mapResizeObserver !== observer ||
+        this.observedMapContainer !== container ||
+        this.containerEl !== container ||
+        this._map !== map ||
+        !this.isConnected
+      ) return;
+      try {
+        map.resize();
+      } catch {
+        // A peer can be disposing in the same delivery turn; the next live allocation retries.
+      }
+    });
+    this.mapResizeObserver = observer;
+    this.observedMapContainer = container;
+    try {
+      observer.observe(container);
+    } catch {
+      this.stopObservingMapAllocation();
+    }
   }
 
   private stopObservingPeerChrome(): void {
@@ -2452,6 +2610,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (!markerElement) return;
     const id = this.popupId(key);
     markerElement.setAttribute('aria-controls', id);
+    markerElement.setAttribute('aria-haspopup', 'dialog');
     markerElement.setAttribute('aria-expanded', popup?.isOpen?.() ? 'true' : 'false');
     const popupElement = popup?.getElement?.() as HTMLElement | undefined;
     if (!popupElement) return;
@@ -2485,6 +2644,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       const markerElement = marker.getElement?.() as HTMLElement | undefined;
       if (!markerElement) continue;
       addPartToken(markerElement, 'marker');
+      markerElement.setAttribute('role', 'button');
+      markerElement.tabIndex = 0;
       markerElement.setAttribute(
         'aria-label',
         this._markerLabels.get(key) || this.localize('map'),
@@ -2492,6 +2653,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       markerElement.setAttribute('lang', this.effectiveLocale);
       const popup = marker.getPopup?.();
       if (popup) this.syncPopupSemantics(key, marker, popup);
+      else {
+        markerElement.removeAttribute('aria-controls');
+        markerElement.removeAttribute('aria-expanded');
+        markerElement.removeAttribute('aria-haspopup');
+      }
     }
     this.syncPeerChromeParts();
   }

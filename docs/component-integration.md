@@ -1411,7 +1411,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `maplibre-gl`
 - Direct Lyra dependencies: `lr-geojson-viewer`, `lr-json-viewer`, `lr-map`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 58.8 KiB (60238 bytes; bundle SHA-256 `5374ec972d0348d5af7ca4e3a17bdc5778c991d9c6309b400f783a97f4b8015f`)
+- Standalone gzip: 59.4 KiB (60815 bytes; bundle SHA-256 `431bb3df147267d453f2220adba592122d4a3917a992a789ef29feb026745ec7`)
 
 </details>
 
@@ -1423,7 +1423,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `maplibre-gl`
 - Direct Lyra dependencies: `lr-json-viewer`, `lr-map`, `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 58.8 KiB (60195 bytes; bundle SHA-256 `50cd61dac4ed2ef02aa40c7f177ee3933067014268da596bfc459fd3f3e9c010`)
+- Standalone gzip: 59.3 KiB (60773 bytes; bundle SHA-256 `000296e1dfefdb9554b932b9cd0718ad4c66a538469669c0f063c3c340e7fba3`)
 
 </details>
 
@@ -1783,7 +1783,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 - Optional peers: `maplibre-gl`
 - Direct Lyra dependencies: `lr-skeleton`
 - Transitive Lyra dependencies: none
-- Standalone gzip: 37.2 KiB (38067 bytes; bundle SHA-256 `71f4b8e79b88018d6041034fcb36ca71b8e025e2af1f2e6ffcd0e7dee97ff090`)
+- Standalone gzip: 37.7 KiB (38629 bytes; bundle SHA-256 `c20f972ae96ea0cbd1c77ffbc9a016c0b1dcf1b740d9b0192eff5800021db232`)
 
 </details>
 

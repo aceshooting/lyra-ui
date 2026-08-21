@@ -9603,7 +9603,7 @@
       "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapGeoJsonDataLayer",
       "kind": "interface",
-      "fingerprint": "8bc1a2c7f3b08de803fa",
+      "fingerprint": "e241ad77a67d952ceb46",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -9626,7 +9626,7 @@
       "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapHeatmapOptions",
       "kind": "interface",
-      "fingerprint": "269adfed333a84b16090",
+      "fingerprint": "ec98f97e8efa9c1dd9d8",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -9735,6 +9735,29 @@
         "kind": "utility",
         "name": "components-media-map-map-contracts",
         "declaration": "LyraMapMarker"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapMarkerActivationDetail",
+      "kind": "interface",
+      "fingerprint": "36be967d9d8064be6db8",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-map-contracts",
+        "declaration": "LyraMapMarkerActivationDetail"
       }
     },
     {
@@ -13618,7 +13641,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "cd203339e4582324a945",
+      "fingerprint": "e044d11ded02a9a91b4b",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15219,7 +15242,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "1248d3c8579af7c9907b",
+      "fingerprint": "1ad8a14425f2ea26fca1",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15654,7 +15677,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "ff70338226281499ae46",
+      "fingerprint": "80fe3c166b5a2f1fa983",
       "routes": [
         "src/vue.ts"
       ],

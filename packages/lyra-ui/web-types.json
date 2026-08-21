@@ -30260,6 +30260,11 @@
                 "default": "null"
               },
               {
+                "name": "renderWorldCopies",
+                "description": "Whether the constructed peer repeats the world horizontally. `undefined` leaves MapLibre's\nown default in force. Construction-only; set before the map is created.",
+                "type": "boolean | undefined"
+              },
+              {
                 "name": "strings",
                 "description": "Immutable, bounded per-instance message overrides, useful for application-specific wording.\nAssignment snapshots own data-string/plural entries; malformed/accessor entries are omitted\nand later caller mutation cannot alter rendered copy without a new assignment.",
                 "type": "LyraLocaleStrings"
@@ -30281,6 +30286,11 @@
                 "name": "lr-map-load",
                 "description": "Fired once the underlying maplibregl.Map loads.",
                 "type": "CustomEvent<null>"
+              },
+              {
+                "name": "lr-map-marker-activate",
+                "description": "Fired once when an accepted declarative marker is activated by pointer/click or by Enter/Space. The immutable detail carries its normalized `id`, validated `lngLat`, accepted marker snapshot, and activation `source`.",
+                "type": "CustomEvent<LyraMapMarkerActivationDetail>"
               }
             ]
           }

@@ -141,6 +141,115 @@ it('constructs a maplibregl.Map and exposes it via the map getter', async functi
   expect(el.map != null).to.be.true;
 });
 
+it('forwards renderWorldCopies only when explicitly authored, preserving the peer default', async () => {
+  const OriginalIntersectionObserver = window.IntersectionObserver;
+  const originalGetContext = HTMLCanvasElement.prototype.getContext;
+  Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: undefined });
+  (HTMLCanvasElement.prototype as unknown as { getContext: (...args: unknown[]) => unknown }).getContext =
+    function (this: HTMLCanvasElement, contextId: string, ...rest: unknown[]) {
+      if (contextId === 'webgl2') return {};
+      return originalGetContext.call(this, contextId as never, ...(rest as []));
+    };
+
+  const constructed: Record<string, unknown>[] = [];
+  class ConstructionMap {
+    private readonly canvas = document.createElement('canvas');
+    constructor(options: Record<string, unknown>) { constructed.push(options); }
+    on(): this { return this; }
+    getCanvas(): HTMLCanvasElement { return this.canvas; }
+    resize(): void {}
+    remove(): void {}
+  }
+
+  const connect = async (worldCopies: boolean | undefined): Promise<LyraMap> => {
+    const el = document.createElement('lr-map') as LyraMap;
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
+      Map: ConstructionMap,
+    });
+    if (worldCopies !== undefined) {
+      (el as unknown as { renderWorldCopies?: boolean }).renderWorldCopies = worldCopies;
+    }
+    el.mapStyle = RASTER_STYLE;
+    document.body.append(el);
+    await waitUntil(() => el.map != null, 'fake map never initialized', { timeout: 2000 });
+    return el;
+  };
+
+  const elements: LyraMap[] = [];
+  try {
+    elements.push(await connect(undefined), await connect(false), await connect(true));
+    expect(Object.prototype.hasOwnProperty.call(constructed[0], 'renderWorldCopies')).to.be.false;
+    expect(constructed[1]!['renderWorldCopies']).to.equal(false);
+    expect(constructed[2]!['renderWorldCopies']).to.equal(true);
+  } finally {
+    for (const el of elements) el.remove();
+    HTMLCanvasElement.prototype.getContext = originalGetContext;
+    Object.defineProperty(window, 'IntersectionObserver', {
+      configurable: true,
+      value: OriginalIntersectionObserver,
+    });
+  }
+});
+
+it('resizes only the current connected map when its allocated container changes', async () => {
+  const OriginalResizeObserver = window.ResizeObserver;
+  const callbacks: ResizeObserverCallback[] = [];
+  const observed: Element[] = [];
+  let disconnects = 0;
+  class FakeResizeObserver {
+    constructor(callback: ResizeObserverCallback) { callbacks.push(callback); }
+    observe(target: Element): void { observed.push(target); }
+    unobserve(): void {}
+    disconnect(): void { disconnects += 1; }
+  }
+  Object.defineProperty(window, 'ResizeObserver', {
+    configurable: true,
+    value: FakeResizeObserver,
+  });
+
+  const { el } = await connectedMapWithoutMaplibre();
+  const container = document.createElement('div');
+  container.setAttribute('part', 'container');
+  el.shadowRoot!.append(container);
+  let firstResizes = 0;
+  let secondResizes = 0;
+  const firstMap = { resize: () => { firstResizes += 1; }, remove(): void {} };
+  const secondMap = { resize: () => { secondResizes += 1; }, remove(): void {} };
+  const privateMap = el as unknown as {
+    _map?: unknown;
+    observeMapAllocation(map: unknown, container: HTMLElement): void;
+  };
+
+  try {
+    privateMap._map = firstMap;
+    privateMap.observeMapAllocation(firstMap, container);
+    expect(observed[0] === container).to.be.true;
+    callbacks[0]([], {} as ResizeObserver);
+    expect(firstResizes).to.equal(1);
+
+    el.remove();
+    callbacks[0]([], {} as ResizeObserver);
+    expect(firstResizes, 'a stale callback cannot resize a disconnected map').to.equal(1);
+    expect(disconnects).to.equal(1);
+
+    document.body.append(el);
+    await el.updateComplete;
+    privateMap._map = secondMap;
+    privateMap.observeMapAllocation(secondMap, container);
+    callbacks[1]([], {} as ResizeObserver);
+    expect(secondResizes).to.equal(1);
+    callbacks[0]([], {} as ResizeObserver);
+    expect(firstResizes, 'the replaced observer remains inert after reconnect').to.equal(1);
+  } finally {
+    privateMap._map = undefined;
+    el.remove();
+    Object.defineProperty(window, 'ResizeObserver', {
+      configurable: true,
+      value: OriginalResizeObserver,
+    });
+  }
+});
+
 it('does not construct the underlying maplibregl.Map (and its WebGL context) until the element is observed intersecting the viewport', async function () {
   if (!hasWebGL2) this.skip();
   // A real IntersectionObserver already reports this test's fixture-mounted
@@ -2149,6 +2258,92 @@ it('adds a maplibregl.Marker per entry in markers', async function () {
     (marker) => marker.getAttribute('aria-label'),
   );
   expect(labels).to.deep.equal(['Station A', 'Station B']);
+  await expect(el).to.be.accessible();
+});
+
+it('exposes every declarative marker as a named button and emits one immutable activation per pointer, Enter, or Space action', async () => {
+  const { el } = await connectedMapWithoutMaplibre();
+  const markerElement = document.createElement('div');
+  const authoredMarker = {
+    id: ' station-a ',
+    lngLat: [6.13, 49.61] as const,
+    label: 'Station A',
+    color: '#123456',
+  };
+  const details: Array<Record<string, unknown>> = [];
+  const events: CustomEvent<Record<string, unknown>>[] = [];
+  el.addEventListener('lr-map-marker-activate', (event) => {
+    const activationEvent = event as CustomEvent<Record<string, unknown>>;
+    events.push(activationEvent);
+    details.push(activationEvent.detail);
+  });
+  const privateMap = el as unknown as {
+    configureMarkerInteraction(
+      element: HTMLElement,
+      activation: { id?: string; lngLat: readonly [number, number]; marker: unknown },
+    ): void;
+  };
+  privateMap.configureMarkerInteraction(markerElement, {
+    id: 'station-a',
+    lngLat: [6.13, 49.61],
+    marker: authoredMarker,
+  });
+
+  expect(markerElement.getAttribute('role')).to.equal('button');
+  expect(markerElement.getAttribute('tabindex')).to.equal('0');
+  expect(markerElement.getAttribute('aria-label')).to.equal('Station A');
+
+  markerElement.click();
+  markerElement.dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'Enter', bubbles: true, composed: true, cancelable: true,
+  }));
+  const space = new KeyboardEvent('keydown', {
+    key: ' ', bubbles: true, composed: true, cancelable: true,
+  });
+  markerElement.dispatchEvent(space);
+
+  expect(space.defaultPrevented, 'Space activates without scrolling the page').to.be.true;
+  expect(details.map((detail) => detail['source'])).to.deep.equal([
+    'pointer',
+    'keyboard',
+    'keyboard',
+  ]);
+  expect(details.every((detail) => detail['id'] === 'station-a')).to.be.true;
+  expect(details[0]!['lngLat']).to.deep.equal([6.13, 49.61]);
+  expect((details[0]!['marker'] as { label?: string }).label).to.equal('Station A');
+  expect(Object.isFrozen(details[0])).to.be.true;
+  expect(Object.isFrozen(details[0]!['lngLat'])).to.be.true;
+  expect(Object.isFrozen(details[0]!['marker'])).to.be.true;
+  expect(events.every((event) => event.bubbles && event.composed)).to.be.true;
+  expect(events.every((event) => !event.cancelable)).to.be.true;
+
+  const repeated = new KeyboardEvent('keydown', {
+    key: 'Enter', repeat: true, bubbles: true, cancelable: true,
+  });
+  markerElement.dispatchEvent(repeated);
+  const vetoed = new KeyboardEvent('keydown', {
+    key: ' ', bubbles: true, cancelable: true,
+  });
+  vetoed.preventDefault();
+  markerElement.dispatchEvent(vetoed);
+  const canceledClick = new MouseEvent('click', { bubbles: true, cancelable: true });
+  canceledClick.preventDefault();
+  markerElement.dispatchEvent(canceledClick);
+  markerElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  expect(
+    details.length,
+    'repeat, already-consumed, canceled pointer, and unrelated keys do not activate',
+  ).to.equal(3);
+
+  privateMap.configureMarkerInteraction(markerElement, {
+    id: undefined,
+    lngLat: [2.35, 48.86],
+    marker: { lngLat: [2.35, 48.86], label: 'Updated marker' },
+  });
+  markerElement.click();
+  expect(details[3]!['id']).to.equal(undefined);
+  expect(details[3]!['lngLat']).to.deep.equal([2.35, 48.86]);
+  expect((details[3]!['marker'] as { label?: string }).label).to.equal('Updated marker');
 });
 
 it('caps markers at MAX_MAP_MARKERS, creating only the capped count of marker DOM elements', async function () {
@@ -2545,6 +2740,8 @@ it('adds popup semantics when persisted plain markers later gain label or unsafe
   expect(htmlMarker === initialHtmlMarker).to.be.true;
   expect(textMarker!.getAttribute('aria-controls')).to.be.a('string').and.not.equal('');
   expect(htmlMarker!.getAttribute('aria-controls')).to.be.a('string').and.not.equal('');
+  expect(textMarker!.getAttribute('aria-haspopup')).to.equal('dialog');
+  expect(htmlMarker!.getAttribute('aria-haspopup')).to.equal('dialog');
   expect(textMarker!.getAttribute('aria-expanded')).to.equal('false');
   expect(htmlMarker!.getAttribute('aria-expanded')).to.equal('false');
 
@@ -2569,7 +2766,10 @@ it('adds popup semantics when persisted plain markers later gain label or unsafe
   ];
   await el.updateComplete;
   expect(htmlMarker!.getAttribute('aria-controls')).to.equal(null);
+  expect(htmlMarker!.getAttribute('aria-haspopup')).to.equal(null);
   expect(htmlMarker!.getAttribute('aria-expanded')).to.equal(null);
+  expect(htmlMarker!.getAttribute('role')).to.equal('button');
+  expect(htmlMarker!.getAttribute('tabindex')).to.equal('0');
 });
 
 it('attaches an openable popup when label or html is provided', async function () {
@@ -2600,7 +2800,7 @@ it('attaches an openable popup when label or html is provided', async function (
   expect(el.shadowRoot!.querySelector('.maplibregl-popup-content')!.textContent).to.contain('Station A');
 });
 
-it('keeps one keyboard popup toggle while preventing only valid Space scroll defaults', async () => {
+it('keeps one keyboard popup toggle while marker activation prevents Space scroll', async () => {
   const { el } = await connectedMapWithoutMaplibre();
   const markerElement = document.createElement('button');
   let hasPopup = true;
@@ -2621,8 +2821,15 @@ it('keeps one keyboard popup toggle while preventing only valid Space scroll def
     }
   });
   (el as unknown as {
-    configureMarkerKeyboard: (element: HTMLElement, marker: unknown) => void;
-  }).configureMarkerKeyboard(markerElement, marker);
+    configureMarkerInteraction: (
+      element: HTMLElement,
+      activation: { id?: string; lngLat: readonly [number, number]; marker: unknown },
+    ) => void;
+  }).configureMarkerInteraction(markerElement, {
+    id: 'keyboard-marker',
+    lngLat: [0, 0],
+    marker: { id: 'keyboard-marker', lngLat: [0, 0], label: 'Keyboard marker' },
+  });
 
   const space = new KeyboardEvent('keydown', {
     key: ' ',
@@ -2649,7 +2856,7 @@ it('keeps one keyboard popup toggle while preventing only valid Space scroll def
   hasPopup = false;
   const plainSpace = new KeyboardEvent('keydown', { key: ' ', cancelable: true });
   markerElement.dispatchEvent(plainSpace);
-  expect(plainSpace.defaultPrevented).to.be.false;
+  expect(plainSpace.defaultPrevented).to.be.true;
   expect(toggles).to.equal(2);
 });
 
@@ -3620,6 +3827,7 @@ describe('dataLayers clustering and heatmap', () => {
         weightRange: [0, 10],
         radius: 40,
         intensity: 2,
+        opacity: 0.75,
         stops: [[0, 'rgba(0, 0, 0, 0)'], [1, '#ff0000']],
       },
     });
@@ -3641,6 +3849,7 @@ describe('dataLayers clustering and heatmap', () => {
     ]);
     expect(heatmap.paint!['heatmap-radius']).to.equal(40);
     expect(heatmap.paint!['heatmap-intensity']).to.equal(2);
+    expect(heatmap.paint!['heatmap-opacity']).to.equal(0.75);
     expect(heatmap.paint!['heatmap-color']).to.deep.equal([
       'interpolate',
       ['linear'],
@@ -3665,6 +3874,78 @@ describe('dataLayers clustering and heatmap', () => {
     expect(ramp[4], 'and paints nothing there').to.equal('rgba(0, 0, 0, 0)');
     expect(ramp.length, 'a real multi-stop ramp').to.be.greaterThan(6);
     expect(paint['heatmap-weight'], 'no weight field means the peer default of 1').to.equal(undefined);
+    expect(paint['heatmap-radius'], 'the existing scalar default remains').to.equal(30);
+    expect(paint['heatmap-intensity'], 'the existing scalar default remains').to.equal(1);
+    expect(
+      Object.prototype.hasOwnProperty.call(paint, 'heatmap-opacity'),
+      'unset opacity leaves MapLibre\'s established default untouched',
+    ).to.be.false;
+  });
+
+  it('emits bounded zoom interpolation for heatmap radius and intensity', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el);
+    el.dataLayers = entry({
+      kind: 'heatmap',
+      heatmap: {
+        radius: [[13, 40], [7, 14]],
+        intensity: [[13, 3], [7, 1]],
+      },
+    });
+    await el.updateComplete;
+
+    const sourceId = dataLayerResourceId(el, 'pins');
+    const paint = layers.get(`${sourceId}-heatmap`)!.paint!;
+    expect(paint['heatmap-radius']).to.deep.equal([
+      'interpolate', ['linear'], ['zoom'], 7, 14, 13, 40,
+    ]);
+    expect(paint['heatmap-intensity']).to.deep.equal([
+      'interpolate', ['linear'], ['zoom'], 7, 1, 13, 3,
+    ]);
+  });
+
+  it('collapses one usable heatmap zoom stop to its bounded scalar value', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el);
+    el.dataLayers = entry({
+      kind: 'heatmap',
+      heatmap: { radius: [[7, 250]], intensity: [[12, -1]] },
+    });
+    await el.updateComplete;
+
+    const sourceId = dataLayerResourceId(el, 'pins');
+    const paint = layers.get(`${sourceId}-heatmap`)!.paint!;
+    expect(paint['heatmap-radius']).to.equal(200);
+    expect(paint['heatmap-intensity']).to.equal(0);
+  });
+
+  it('normalizes hostile heatmap zoom stops and resets dropped opacity to the peer default', async () => {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const { layers } = stubMaplibreMap(el);
+    el.dataLayers = entry({
+      kind: 'heatmap',
+      heatmap: {
+        radius: [[Number.NaN, 20], [7, Number.POSITIVE_INFINITY]],
+        intensity: [[25, 200], [-5, -4], [7, 2], [7, 5]],
+        opacity: 9,
+      },
+    });
+    await el.updateComplete;
+
+    const sourceId = dataLayerResourceId(el, 'pins');
+    const paint = layers.get(`${sourceId}-heatmap`)!.paint!;
+    expect(paint['heatmap-radius'], 'no usable stops use the established scalar default').to.equal(30);
+    expect(paint['heatmap-intensity']).to.deep.equal([
+      'interpolate', ['linear'], ['zoom'], 0, 0, 7, 2, 24, 100,
+    ]);
+    expect(paint['heatmap-opacity']).to.equal(1);
+
+    el.dataLayers = entry({ kind: 'heatmap' });
+    await el.updateComplete;
+    expect(
+      layers.get(`${sourceId}-heatmap`)!.paint!['heatmap-opacity'],
+      'dropping an authored value restores MapLibre\'s opacity default',
+    ).to.equal(1);
   });
 
   it('ignores cluster on a heatmap entry rather than aggregating the density input', async () => {

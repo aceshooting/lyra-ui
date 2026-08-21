@@ -603,6 +603,9 @@ export type {
   LyraMapDataLayerKind,
   LyraMapClusterOptions,
   LyraMapHeatmapOptions,
+  LyraMapHeatmapZoomValue,
+  LyraMapMarkerActivationDetail,
+  LyraMapMarkerActivationSource,
   LyraMapStyleSpecification,
   LyraMapInstance,
 } from './components/media/map/map.class.js';

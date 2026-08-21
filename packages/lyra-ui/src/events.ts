@@ -1780,6 +1780,13 @@ export type LyraMapClickEvent = LyraMapEventMap['lr-map-click'];
 export type LyraMapLoadEvent = LyraMapEventMap['lr-map-load'];
 
 /**
+ * `lr-map-marker-activate` — dispatched by `<lr-map>`.
+ *
+ * Detail type: `LyraMapEventMap['lr-map-marker-activate']`.
+ */
+export type LyraMapMarkerActivateEvent = LyraMapEventMap['lr-map-marker-activate'];
+
+/**
  * `lr-matrix-geometry-change` — dispatched by `<lr-heatmap>`.
  *
  * Detail type: `LyraHeatmapEventMap['lr-matrix-geometry-change']`.
@@ -3616,6 +3623,7 @@ export interface LyraGlobalEventMap {
   'lr-location-change': LyraLocationChangeEvent;
   'lr-map-click': LyraMapClickEvent;
   'lr-map-load': LyraMapLoadEvent;
+  'lr-map-marker-activate': LyraMapMarkerActivateEvent;
   'lr-matrix-geometry-change': LyraMatrixGeometryChangeEvent;
   'lr-maximize-change': LyraMaximizeChangeEvent;
   'lr-mcp-log': LyraMcpLogEvent;

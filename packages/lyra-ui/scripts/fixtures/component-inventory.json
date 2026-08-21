@@ -68565,6 +68565,15 @@
             "default": null
           },
           {
+            "name": "renderWorldCopies",
+            "attribute": null,
+            "type": "boolean | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "zoom",
             "attribute": "zoom",
             "type": "number",
@@ -68591,6 +68600,12 @@
           {
             "name": "lr-map-load",
             "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-marker-activate",
+            "type": "CustomEvent<LyraMapMarkerActivationDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
