@@ -287,6 +287,34 @@ const bundleEntries = {
     fixture: 'core',
     maxGzipBytes: buttonGranularBudgetKilobytes * 1024,
   },
+  // Production retention canary for the opt-in form-label bridge. This entry is deliberately a
+  // non-overlay form control: its graph must retain the label installer without inheriting modal
+  // stack, inerting, focus-trap, rendered-state, or scroll-lock infrastructure.
+  formControlLabel: {
+    fixture: 'core',
+  },
+  // Splitting-aware packed canaries: the component shell stays in the initial graph while the
+  // shared Floating UI runtime remains a real first-open chunk. Both graphs must use the lean
+  // nonmodal stack adapter and never retain modal inerting/scroll-lock machinery.
+  anchoredPopover: {
+    fixture: 'core',
+  },
+  anchoredCombobox: {
+    fixture: 'core',
+  },
+  // A performance-sensitive shell can render a native disclosure before JavaScript and import the
+  // richer enhancer only on first interaction. These canaries prove that adoption shape adds zero
+  // Lyra modules to the initial graph; the reviewed 3.7 KiB shell ceiling remains available in full.
+  firstInteractionPopover: {
+    fixture: 'core',
+    maxInitialGzipBytes: 3_700,
+    includeStaticFallback: true,
+  },
+  firstInteractionCombobox: {
+    fixture: 'core',
+    maxInitialGzipBytes: 3_700,
+    includeStaticFallback: true,
+  },
   // Retention canaries rather than size budgets: these entries are imported only for side effects,
   // so the assertions in runBundle prove a production tree-shaker kept the shipped CSS asset and
   // locale registration module from the packed tarball.
@@ -889,6 +917,7 @@ import { resolve } from 'node:path';
 const optionalPeers = ${JSON.stringify(optionalPeers)};
 const noOptionalPeers = process.env.LYRA_NO_OPTIONAL_PEERS === '1';
 const entry = process.env.LYRA_BUNDLE_ENTRY;
+const hasStaticFallback = entry.startsWith('firstInteraction');
 
 export default defineConfig({
   plugins: [
@@ -927,7 +956,7 @@ export default defineConfig({
     outDir: resolve(process.cwd(), 'bundle', entry),
     emptyOutDir: true,
     rollupOptions: {
-      input: resolve(process.cwd(), 'src', \`bundle-\${entry}.ts\`),
+      input: resolve(process.cwd(), 'src', \`bundle-\${entry}.\${hasStaticFallback ? 'html' : 'ts'}\`),
       external: noOptionalPeers
         ? (id) => optionalPeers.some((peer) => id === peer || id.startsWith(\`\${peer}/\`))
         : [],
@@ -946,6 +975,9 @@ export default defineConfig({
     core: `import '@aceshooting/lyra-ui/all.js';\nexport const loaded = true;\n`,
     rootBarrel: `import '@aceshooting/lyra-ui';\nexport const loaded = true;\n`,
     button: `import '@aceshooting/lyra-ui/components/forms/button/button.js';\nexport const loaded = true;\n`,
+    formControlLabel: `import '@aceshooting/lyra-ui/components/forms/input/input.js';\nexport const loaded = true;\n`,
+    anchoredPopover: `import '@aceshooting/lyra-ui/components/overlays/overlay/popover.js';\nexport const loaded = true;\n`,
+    anchoredCombobox: `import '@aceshooting/lyra-ui/components/forms/combobox/combobox.js';\nexport const loaded = true;\n`,
     theme: `import '@aceshooting/lyra-ui/theme.css';\nexport const loaded = true;\n`,
     nativeStyles: `import '@aceshooting/lyra-ui/native.css';\nexport const loaded = true;\n`,
     utilitiesStyles: `import '@aceshooting/lyra-ui/utilities.css';\nexport const loaded = true;\n`,
@@ -989,6 +1021,67 @@ export const loaded = true;
   };
   await Promise.all(
     Object.entries(bundleSources).map(([name, source]) => writeFile(join(fixtureDir, 'src', `bundle-${name}.ts`), source)),
+  );
+  const firstInteractionSources = {
+    firstInteractionPopover: `<!doctype html>
+<meta charset="utf-8">
+<details id="fallback-popover">
+  <summary>Account</summary>
+  <nav aria-label="Account"><a href="/profile">Profile</a></nav>
+</details>
+<lr-popover id="enhanced-popover" popup-role="none" hidden>
+  <button slot="trigger" type="button">Account</button>
+  <nav aria-label="Account"><a href="/profile">Profile</a></nav>
+</lr-popover>
+<script type="module">
+  const fallback = document.querySelector('#fallback-popover');
+  const enhanced = document.querySelector('#enhanced-popover');
+  let registration;
+  fallback.addEventListener('toggle', async () => {
+    if (!fallback.open || !enhanced.hidden) return;
+    registration ??= import('@aceshooting/lyra-ui/components/overlays/overlay/popover.js')
+      .catch((error) => { registration = undefined; throw error; });
+    await registration;
+    await customElements.whenDefined('lr-popover');
+    fallback.hidden = true;
+    enhanced.hidden = false;
+    await enhanced.show();
+  });
+</script>
+`,
+    firstInteractionCombobox: `<!doctype html>
+<meta charset="utf-8">
+<div id="fallback-combobox">
+  <label for="fallback-country">Country</label>
+  <input id="fallback-country" name="country" list="country-options">
+  <datalist id="country-options"><option value="France"></option></datalist>
+</div>
+<lr-combobox id="enhanced-combobox" name="country" label="Country" hidden>
+  <lr-option value="France">France</lr-option>
+</lr-combobox>
+<script type="module">
+  const fallback = document.querySelector('#fallback-combobox');
+  const input = document.querySelector('#fallback-country');
+  const enhanced = document.querySelector('#enhanced-combobox');
+  let registration;
+  input.addEventListener('focus', async () => {
+    if (!enhanced.hidden) return;
+    registration ??= import('@aceshooting/lyra-ui/components/forms/combobox/combobox.js')
+      .catch((error) => { registration = undefined; throw error; });
+    await registration;
+    await customElements.whenDefined('lr-combobox');
+    enhanced.value = input.value;
+    fallback.hidden = true;
+    enhanced.hidden = false;
+    enhanced.focus();
+  });
+</script>
+`,
+  };
+  await Promise.all(
+    Object.entries(firstInteractionSources).map(([name, source]) =>
+      writeFile(join(fixtureDir, 'src', `bundle-${name}.html`), source),
+    ),
   );
 }
 
@@ -1103,6 +1196,30 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
   const violations = [];
   const javascriptFiles = output.files.filter((file) => file.endsWith('.js'));
   const javascript = (await Promise.all(javascriptFiles.map((file) => readFile(file, 'utf8')))).join('\n');
+  const bundledModuleIds = graph.chunks.flatMap((chunk) =>
+    chunk.modules.map((moduleId) => moduleId.replaceAll('\\\\', '/')),
+  );
+  const chunksByName = new Map(graph.chunks.map((chunk) => [chunk.fileName, chunk]));
+  const pendingInitialChunks = graph.chunks.filter((chunk) => chunk.isEntry).map((chunk) => chunk.fileName);
+  const initialChunkNames = new Set();
+  while (pendingInitialChunks.length > 0) {
+    const fileName = pendingInitialChunks.pop();
+    if (initialChunkNames.has(fileName)) continue;
+    initialChunkNames.add(fileName);
+    const chunk = chunksByName.get(fileName);
+    if (chunk) pendingInitialChunks.push(...chunk.imports);
+  }
+  const initialModuleIds = graph.chunks
+    .filter((chunk) => initialChunkNames.has(chunk.fileName))
+    .flatMap((chunk) => chunk.modules.map((moduleId) => moduleId.replaceAll('\\\\', '/')));
+  const bundleDir = join(fixtureDir, 'bundle', entry);
+  const initialFiles = output.files.filter((file) =>
+    initialChunkNames.has(relative(bundleDir, file).replaceAll('\\\\', '/')) ||
+      (config.includeStaticFallback === true && file.endsWith('.html')),
+  );
+  const initialGzipBytes = (await Promise.all(
+    initialFiles.map(async (file) => gzipSync(await readFile(file)).byteLength),
+  )).reduce((total, size) => total + size, 0);
   if (entry === 'autoloaderTreeShaken') {
     if (javascriptFiles.length !== 1 || javascript.includes('data-lr-autoload-pending')) {
       violations.push('the side-effect-free manual autoloader import was not tree-shaken');
@@ -1116,6 +1233,99 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
   }
   if (entry === 'button' && javascript.includes('data-lr-autoload-pending')) {
     violations.push('a granular component import unexpectedly pulled in the optional autoloader');
+  }
+  if (entry === 'formControlLabel') {
+    if (!bundledModuleIds.some((id) => id.endsWith('/internal/form-control-labels.js'))) {
+      violations.push('the packed form-control label installer was tree-shaken');
+    }
+    const forbiddenModules = [
+      '/internal/overlay-manager.js',
+      '/internal/overlay-stack.js',
+      '/internal/nonmodal-overlay-manager.js',
+      '/internal/rendered-state.js',
+      '/internal/scroll-lock.js',
+    ];
+    const retainedForbidden = forbiddenModules.filter((suffix) =>
+      bundledModuleIds.some((id) => id.endsWith(suffix)),
+    );
+    if (retainedForbidden.length > 0) {
+      violations.push(
+        `the form-control label graph retained modal overlay modules: ${retainedForbidden.join(', ')}`,
+      );
+    }
+  }
+  if (entry === 'anchoredPopover' || entry === 'anchoredCombobox') {
+    const componentName = entry === 'anchoredPopover' ? 'popover' : 'combobox';
+    const requiredInitialModules = [
+      '/internal/anchored-overlay-runtime.js',
+      '/internal/nonmodal-overlay-manager.js',
+      '/internal/overlay-stack.js',
+    ];
+    const missingInitial = requiredInitialModules.filter((suffix) =>
+      !initialModuleIds.some((id) => id.endsWith(suffix)),
+    );
+    if (missingInitial.length > 0) {
+      violations.push(
+        `the ${componentName} initial graph lost its deferred nonmodal shell: ${missingInitial.join(', ')}`,
+      );
+    }
+    if (
+      initialModuleIds.some((id) =>
+        id.endsWith('/internal/positioner.js') || id.includes('/node_modules/@floating-ui/'),
+      )
+    ) {
+      violations.push(`the ${componentName} initial graph eagerly retained the positioning runtime`);
+    }
+    if (!bundledModuleIds.some((id) => id.endsWith('/internal/positioner.js'))) {
+      violations.push(`the ${componentName} bundle lost its first-open positioning chunk`);
+    }
+    const forbiddenModalModules = [
+      '/internal/overlay-manager.js',
+      '/internal/rendered-state.js',
+      '/internal/scroll-lock.js',
+    ];
+    const retainedModal = forbiddenModalModules.filter((suffix) =>
+      bundledModuleIds.some((id) => id.endsWith(suffix)),
+    );
+    if (retainedModal.length > 0) {
+      violations.push(
+        `the ${componentName} graph retained modal overlay modules: ${retainedModal.join(', ')}`,
+      );
+    }
+    if (!graph.chunks.some((chunk) => chunk.dynamicImports.length > 0)) {
+      violations.push(`the ${componentName} graph emitted no dynamic first-open chunk edge`);
+    }
+  }
+  if (entry === 'firstInteractionPopover' || entry === 'firstInteractionCombobox') {
+    const componentName = entry === 'firstInteractionPopover' ? 'popover' : 'combobox';
+    const htmlFiles = output.files.filter((file) => file.endsWith('.html'));
+    const html = (await Promise.all(htmlFiles.map((file) => readFile(file, 'utf8')))).join('\n');
+    const hasFallback = componentName === 'popover'
+      ? html.includes('<details') && html.includes('<summary>Account</summary>')
+      : html.includes('<input') && html.includes('list="country-options"') && html.includes('<datalist');
+    if (!hasFallback) {
+      violations.push(
+        `the first-interaction ${componentName} entry lost its functional native fallback markup`,
+      );
+    }
+    if (initialModuleIds.some((id) => id.includes('/node_modules/@aceshooting/lyra-ui/'))) {
+      violations.push(
+        `the first-interaction ${componentName} entry pulled Lyra into the initial shell`,
+      );
+    }
+    const registrationSuffix = componentName === 'popover'
+      ? '/components/overlays/overlay/popover.js'
+      : '/components/forms/combobox/combobox.js';
+    if (!bundledModuleIds.some((id) => id.endsWith(registrationSuffix))) {
+      violations.push(
+        `the first-interaction ${componentName} entry lost its deferred registration`,
+      );
+    }
+    if (!graph.chunks.some((chunk) => chunk.dynamicImports.length > 0)) {
+      violations.push(
+        `the first-interaction ${componentName} entry emitted no dynamic registration edge`,
+      );
+    }
   }
   if (entry === 'rootBarrel' && /customElements\s*\.\s*define/.test(javascript)) {
     violations.push(
@@ -1151,6 +1361,11 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
   if (config.maxGzipBytes != null && output.gzipBytes > config.maxGzipBytes) {
     violations.push(`gzip ${formatBytes(output.gzipBytes)} exceeds budget ${formatBytes(config.maxGzipBytes)}`);
   }
+  if (config.maxInitialGzipBytes != null && initialGzipBytes > config.maxInitialGzipBytes) {
+    violations.push(
+      `initial gzip ${formatBytes(initialGzipBytes)} exceeds budget ${formatBytes(config.maxInitialGzipBytes)}`,
+    );
+  }
   if (peerGraph.staticallyReachableModuleCount === 0) {
     violations.push('the Vite graph diagnostic recorded no entry module');
   }
@@ -1182,7 +1397,8 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
   }
   console.log(
     `${entry} bundle: ${formatBytes(output.rawBytes)} raw, ${formatBytes(output.gzipBytes)} gzip ` +
-      `(${output.files.length} files; ${peerGraph.staticallyReachableModuleCount} eager modules; ` +
+      `(initial ${formatBytes(initialGzipBytes)} gzip; ` +
+      `${output.files.length} files; ${peerGraph.staticallyReachableModuleCount} eager modules; ` +
       `${peerGraph.eagerPeers.length} eager/${peerGraph.lazyPeers.length} lazy/` +
       `${peerGraph.bundledPeers.length} bundled optional peers)`,
   );

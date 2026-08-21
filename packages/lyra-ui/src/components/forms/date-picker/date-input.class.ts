@@ -23,11 +23,11 @@ import {
   chevronIcon,
 } from '../../../internal/icons.js';
 import {
-  activateOverlay,
+  activateNonmodalOverlay,
   composedContains,
   deepActiveElement,
   type OverlayHandle,
-} from '../../../internal/overlay-manager.js';
+} from '../../../internal/nonmodal-overlay-manager.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
 import { isDateObject } from '../../../internal/dom-guards.js';
@@ -1253,15 +1253,13 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       offset: finiteNumber(this.distance, 0),
     });
     this.overlayHandle?.deactivate({ restoreFocus: false });
-    this.overlayHandle = activateOverlay({
+    this.overlayHandle = activateNonmodalOverlay({
       host: this,
       panel: () =>
         this.renderRoot.querySelector('[part="popup"]') as HTMLElement | null,
       onEscape: () => {
         void this.hide(true);
       },
-      modal: false,
-      trapFocus: false,
     });
   }
 
@@ -1512,7 +1510,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
           '[part="popup"]'
         ) as HTMLElement | null;
         if (popup) {
-          this.overlayHandle = activateOverlay({
+          this.overlayHandle = activateNonmodalOverlay({
             host: this,
             panel: () =>
               this.renderRoot.querySelector(
@@ -1521,8 +1519,6 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
             onEscape: () => {
               void this.hide(true);
             },
-            modal: false,
-            trapFocus: false,
           });
         }
       } else if (!this.open) {

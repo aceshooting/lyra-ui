@@ -67,6 +67,11 @@
 //       could have happened in the shared implementation.
 //       The rule is off unless the caller passes a `handRolledAllowlist`, because the allowlist is
 //       a repo-wide census and is meaningless for an isolated source fixture; `main()` passes it.
+//   (g) a component declaring `static formAssociated = true` without the shared mixin must
+//       value-import and call `installFormControlLabelSupport()`. A bare import is not enough:
+//       production bundlers legitimately erase it when package metadata classifies the internal
+//       module as side-effect-free. The shared mixin performs the call once for all of its users.
+//       This rule is enabled by the repo scan and optional for isolated fixtures.
 // A component that extends the shared `FormAssociated` mixin directly and never redeclares
 // name/required/disabled gets all of the above for free and is not flagged.
 // Self-test: `node scripts/check-form-associated.test.mjs`.
@@ -460,7 +465,7 @@ const FORM_CRITICAL_FIELDS = ['name', 'required', 'disabled'];
  *
  * @param {string} source raw file text (comments included -- rule (c) strips them itself).
  * @param {{ file?: string, component?: string, validityProviders?: Set<string>,
- *          handRolledAllowlist?: Set<string> | null }} [options]
+ *          handRolledAllowlist?: Set<string> | null, requireLabelSupport?: boolean }} [options]
  * @returns {{ formAssociated: boolean, handRolledFormValue: boolean, violations: Array<{ component: string, file: string, rule: string, message: string }> }}
  */
 export function findFormAssociatedViolations(source, options = {}) {
@@ -473,6 +478,7 @@ export function findFormAssociatedViolations(source, options = {}) {
     // `null` (the default) turns rule (f) off: the allowlist is a repo-wide census and says nothing
     // about an isolated source fixture. `main()` passes `HAND_ROLLED_FORM_VALUE`.
     handRolledAllowlist = null,
+    requireLabelSupport = false,
   } = options;
 
   const code = stripComments(source);
@@ -602,6 +608,22 @@ export function findFormAssociatedViolations(source, options = {}) {
     );
   }
 
+  if (requireLabelSupport && isDirectFormAssociated && !isMixinConsumer) {
+    const importsInstaller =
+      /import\s*\{[^}]*\binstallFormControlLabelSupport\b[^}]*\}\s*from\s*['"][^'"]*\/form-control-labels\.js['"]\s*;/s.test(
+        code,
+      );
+    const callsInstaller = /\binstallFormControlLabelSupport\s*\(\s*\)\s*;/.test(code);
+    if (!importsInstaller || !callsInstaller) {
+      add(
+        'g',
+        'declares form association directly but does not value-import and call ' +
+          '`installFormControlLabelSupport()` -- a side-effect-only import can be removed from a ' +
+          'production bundle, silently losing external-label activation and internals capture.',
+      );
+    }
+  }
+
   return { formAssociated: true, handRolledFormValue, violations };
 }
 
@@ -678,6 +700,7 @@ export function main() {
       formResetProviders,
       styleSources,
       handRolledAllowlist: HAND_ROLLED_FORM_VALUE,
+      requireLabelSupport: true,
     });
     if (!result.formAssociated) continue;
     scannedFormAssociated += 1;
@@ -747,4 +770,3 @@ export function main() {
 }
 
 if (process.argv[1] && process.argv[1].endsWith('check-form-associated.mjs')) main();
-

@@ -29,13 +29,12 @@ import {
   VALIDITY_ANCHOR,
 } from '../../../internal/anchored-validity.js';
 import { setCustomState } from '../../../internal/custom-states.js';
-// This import also registers form-control-label support with LyraElement as a side effect (see
-// registerFormControlLabelSupport()'s doc in internal/lyra-element.ts) -- do not remove it even if
-// EXTERNAL_LABEL_ACTIVATION/ExternalLabelActivation stop being referenced directly.
 import {
   EXTERNAL_LABEL_ACTIVATION,
+  installFormControlLabelSupport,
   type ExternalLabelActivation,
 } from '../../../internal/form-control-labels.js';
+installFormControlLabelSupport();
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 import {
   currentValidityValidator,

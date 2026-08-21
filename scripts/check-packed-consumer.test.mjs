@@ -86,3 +86,86 @@ test('keeps the packed button canary aligned with the authoritative granular har
     'the packed canary must fail closed when its authoritative ceiling is missing or invalid',
   );
 });
+
+test('gates packed form-label retention without modal overlay infrastructure', () => {
+  assert.match(
+    checkerSource,
+    /formControlLabel:\s*\{\s*fixture:\s*'core',\s*\}/u,
+    'a dedicated packed form-label graph must be built',
+  );
+  assert.match(
+    checkerSource,
+    /the packed form-control label installer was tree-shaken/u,
+    'the packed graph must fail if the installer disappears',
+  );
+  assert.match(
+    checkerSource,
+    /the form-control label graph retained modal overlay modules/u,
+    'the packed graph must reject modal overlay dependencies',
+  );
+});
+
+test('gates packed anchored surfaces on a lean initial graph and a real first-open chunk', () => {
+  for (const entry of ['anchoredPopover', 'anchoredCombobox']) {
+    assert.match(
+      checkerSource,
+      new RegExp(`${entry}:\\s*\\{\\s*fixture:\\s*'core',\\s*\\}`, 'u'),
+      `${entry} must have a dedicated packed graph`,
+    );
+  }
+  assert.match(
+    checkerSource,
+    /initial graph eagerly retained the positioning runtime/u,
+    'the packed graph must reject Floating UI in an anchored surface entry closure',
+  );
+  assert.match(
+    checkerSource,
+    /bundle lost its first-open positioning chunk/u,
+    'the packed graph must require the deferred runtime chunk to remain reachable',
+  );
+  assert.match(
+    checkerSource,
+    /graph retained modal overlay modules/u,
+    'the packed anchored graph must reject modal machinery',
+  );
+});
+
+test('gates first-interaction registration without charging Lyra to the static shell', () => {
+  for (const entry of ['firstInteractionPopover', 'firstInteractionCombobox']) {
+    assert.match(
+      checkerSource,
+      new RegExp(`${entry}:\\s*\\{[\\s\\S]*?maxInitialGzipBytes:\\s*3_700,`, 'u'),
+      `${entry} must preserve the reviewed 3.7 KiB shell ceiling`,
+    );
+  }
+  assert.match(
+    checkerSource,
+    /pulled Lyra into the initial shell/u,
+    'the packed graph must reject any eager Lyra module in this adoption shape',
+  );
+  assert.match(
+    checkerSource,
+    /lost its deferred registration/u,
+    'the packed graph must still contain the requested component registration',
+  );
+  assert.match(
+    checkerSource,
+    /emitted no dynamic registration edge/u,
+    'the packed graph must prove the registration stays behind first interaction',
+  );
+  assert.match(
+    checkerSource,
+    /lost its functional native fallback markup/u,
+    'the packed fixture must retain a real pre-JavaScript disclosure or form control',
+  );
+  assert.match(
+    checkerSource,
+    /<details id="fallback-popover">/u,
+    'the popover fixture must use a native disclosure fallback',
+  );
+  assert.match(
+    checkerSource,
+    /<datalist id="country-options">/u,
+    'the combobox fixture must use a native datalist fallback',
+  );
+});

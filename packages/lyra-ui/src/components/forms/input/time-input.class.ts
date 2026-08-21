@@ -21,10 +21,10 @@ import { finiteNumber } from '../../../internal/numbers.js';
 import { place } from '../../../internal/positioner.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import {
-  activateOverlay,
+  activateNonmodalOverlay,
   composedContains,
   type OverlayHandle,
-} from '../../../internal/overlay-manager.js';
+} from '../../../internal/nonmodal-overlay-manager.js';
 import {
   dispatchNativeEvent,
   dispatchNativeInputEvent,
@@ -956,13 +956,11 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   private activatePopup(): void {
     if (!this.isConnected) return;
     this.positionPopup();
-    this.overlayHandle = activateOverlay({
+    this.overlayHandle = activateNonmodalOverlay({
       host: this,
       panel: () => this.renderRoot.querySelector('[part="popup"]') as HTMLElement | null,
       onEscape: () => void this.hide(),
       restoreFocusTo: this.segmentElement(this.activeSegment),
-      modal: false,
-      trapFocus: false,
     });
     this.lightDismissDocument = this.ownerDocument;
     this.lightDismissDocument.addEventListener('pointerdown', this.onDocumentPointerDown, true);

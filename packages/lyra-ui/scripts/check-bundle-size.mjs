@@ -31,9 +31,15 @@ import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
+import { positiveInitialMarginalGzipBytes } from "./bundle-metrics.mjs";
 
 const packageDir = fileURLToPath(new URL("..", import.meta.url));
 const budgetsPath = join(packageDir, "scripts", "bundle-budgets.json");
+const initialBudgetsPath = join(
+  packageDir,
+  "scripts",
+  "bundle-initial-budgets.json"
+);
 const exclusionClaimsPath = join(
   packageDir,
   "scripts",
@@ -81,6 +87,26 @@ const requireFromLoaderHost = createRequire(
 const esbuild = requireFromLoaderHost("esbuild");
 
 const budgets = JSON.parse(readFileSync(budgetsPath, "utf8"));
+const initialBudgets = JSON.parse(readFileSync(initialBudgetsPath, "utf8"));
+const initialBaselineEntries = initialBudgets.$baseline;
+const initialMarginalBudgets = initialBudgets.$marginalGzipKb;
+if (
+  !Array.isArray(initialBaselineEntries) ||
+  initialBaselineEntries.length === 0 ||
+  initialBaselineEntries.some((entry) => typeof entry !== "string") ||
+  typeof initialMarginalBudgets !== "object" ||
+  initialMarginalBudgets === null ||
+  Array.isArray(initialMarginalBudgets)
+) {
+  throw new TypeError(
+    "scripts/bundle-initial-budgets.json must define a non-empty $baseline array and a $marginalGzipKb object"
+  );
+}
+for (const [entry, budget] of Object.entries(initialMarginalBudgets)) {
+  if (!Number.isSafeInteger(budget) || budget <= 0) {
+    throw new TypeError(`${entry}: initial marginal budget must be a positive integer KiB ceiling`);
+  }
+}
 const exclusionClaims = JSON.parse(readFileSync(exclusionClaimsPath, "utf8"));
 const entries = Object.keys(budgets)
   .filter((entry) => !entry.startsWith("$"))
@@ -249,7 +275,64 @@ const bundleEntry = async (entry) => {
   return result.outputFiles[0].contents;
 };
 
-// level 9 approximates the static-hosting gzip a consumer actually ships.
+// Measures only the entry chunk and its transitively static imports. A first-open dynamic import
+// remains in the separately guarded no-splitting total above, but is deliberately absent from this
+// initial-route number -- exactly how a production code-splitting consumer pays for it.
+const bundleInitialRoute = async (name, imports) => {
+  const sourceFile = `bundle-initial-${name}.js`;
+  const result = await esbuild.build({
+    stdin: {
+      contents: imports.map((entry) => `import ${JSON.stringify(`./${entry}`)};`).join("\n"),
+      resolveDir: packageDir,
+      sourcefile: sourceFile,
+    },
+    bundle: true,
+    splitting: true,
+    format: "esm",
+    minify: true,
+    write: false,
+    outdir: ".bundle-initial",
+    metafile: true,
+    external,
+    absWorkingDir: packageDir,
+    logLevel: "silent",
+  });
+  const entryOutput = Object.entries(result.metafile.outputs).find(
+    ([, output]) => output.entryPoint === sourceFile
+  )?.[0];
+  if (!entryOutput) throw new Error(`${name}: splitting-aware bundle emitted no entry output`);
+
+  const pending = [entryOutput];
+  const initialOutputs = new Set();
+  while (pending.length > 0) {
+    const outputPath = pending.pop();
+    if (!outputPath || initialOutputs.has(outputPath)) continue;
+    initialOutputs.add(outputPath);
+    const output = result.metafile.outputs[outputPath];
+    if (!output) throw new Error(`${name}: missing metafile output ${outputPath}`);
+    for (const imported of output.imports) {
+      if (imported.external || imported.kind === "dynamic-import") continue;
+      pending.push(imported.path);
+    }
+  }
+
+  const filesByPath = new Map(
+    result.outputFiles.map((file) => [resolve(file.path), file.contents])
+  );
+  let gzipBytes = 0;
+  for (const outputPath of initialOutputs) {
+    const contents = filesByPath.get(resolve(packageDir, outputPath));
+    if (!contents) throw new Error(`${name}: no emitted bytes for ${outputPath}`);
+    gzipBytes += gzipBytesOf(contents);
+  }
+  return { gzipBytes, outputCount: initialOutputs.size };
+};
+
+// Level 9 approximates the static-hosting gzip a consumer actually ships. zlib patch releases can
+// vary these live counts slightly even when esbuild emits identical bytes, so reviewed ceilings
+// intentionally use integer KiB rather than exact snapshots. Published aggregate stats below use a
+// wider 5% drift band; exact per-component evidence is separately anchored to the emitted bundle
+// SHA-256 by component-integration.mjs.
 const gzipBytesOf = (contents) => gzipSync(contents, { level: 9 }).length;
 
 const toKb = (bytes) => (bytes / 1024).toFixed(1);
@@ -267,7 +350,11 @@ if (exclusionClaimsOnly) {
     );
   }
 } else {
-  const missingEntries = entries.filter(
+  const missingEntries = [...new Set([
+    ...entries,
+    ...initialBaselineEntries,
+    ...Object.keys(initialMarginalBudgets),
+  ])].filter(
     (entry) => !existsSync(join(packageDir, entry))
   );
   if (missingEntries.length) {
@@ -278,6 +365,25 @@ if (exclusionClaimsOnly) {
     );
     process.exitCode = 1;
   } else {
+    const initialBaseline = await bundleInitialRoute("baseline", initialBaselineEntries);
+    const initialMeasurements = [];
+    for (const entry of Object.keys(initialMarginalBudgets).sort()) {
+      const route = await bundleInitialRoute(
+        entry.replaceAll(/[^a-z0-9]+/giu, "-"),
+        [...initialBaselineEntries, entry]
+      );
+      initialMeasurements.push({
+        entry,
+        baselineGzipBytes: initialBaseline.gzipBytes,
+        routeGzipBytes: route.gzipBytes,
+        marginalGzipBytes: positiveInitialMarginalGzipBytes(
+          route.gzipBytes,
+          initialBaseline.gzipBytes,
+          entry
+        ),
+        outputCount: route.outputCount,
+      });
+    }
     const measured = [];
     for (const entry of entries) {
       const contents = await bundleEntry(entry);
@@ -411,6 +517,23 @@ if (exclusionClaimsOnly) {
         console.log(`${line} ok`);
       }
     }
+    for (const measurement of initialMeasurements) {
+      const budgetKb = initialMarginalBudgets[measurement.entry];
+      const line =
+        `${measurement.entry}: initial marginal gzip ${toKb(measurement.marginalGzipBytes)} KB ` +
+        `(route ${toKb(measurement.routeGzipBytes)} KB - baseline ` +
+        `${toKb(measurement.baselineGzipBytes)} KB; ${measurement.outputCount} initial chunk(s); ` +
+        `budget ${budgetKb} KB)`;
+      if (measurement.marginalGzipBytes > budgetKb * 1024) {
+        errors.push(
+          `${line} -- OVER BUDGET by ${toKb(
+            measurement.marginalGzipBytes - budgetKb * 1024
+          )} KB gzip`
+        );
+      } else {
+        console.log(`${line} ok`);
+      }
+    }
     for (const [label, actualBytes, budgetKey] of [
       ["component p95", p95ComponentGzipBytes, "$componentP95GzipKb"],
       ["component max", maxComponentGzipBytes, "$componentMaxGzipKb"],
@@ -492,6 +615,7 @@ if (exclusionClaimsOnly) {
     } else {
       console.log(
         `bundle-size budgets verified: ${measured.length} entries within scripts/bundle-budgets.json ` +
+          `and ${initialMeasurements.length} splitting-aware initial routes ` +
           `(${optionalPeers.length} optional peers externalized)`
       );
     }

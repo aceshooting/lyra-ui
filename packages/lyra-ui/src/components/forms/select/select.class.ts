@@ -6,15 +6,15 @@ import {
   LyraElement,
   type LyraEventDetailSnapshot,
 } from '../../../internal/lyra-element.js';
-// Side-effect only: registers this component's form-control-label support (external-label bridge + form-internals capture) with LyraElement, since the base class no longer imports it unconditionally. See registerFormControlLabelSupport()'s own doc in internal/lyra-element.ts.
-import '../../../internal/form-control-labels.js';
+import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
+installFormControlLabelSupport();
 import { place } from '../../../internal/positioner.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import {
-  activateOverlay,
+  activateNonmodalOverlay,
   type OverlayHandle,
-} from '../../../internal/overlay-manager.js';
+} from '../../../internal/nonmodal-overlay-manager.js';
 import { chevronIcon, closeIcon } from '../../../internal/icons.js';
 import {
   AnchoredValidityController,
@@ -1416,7 +1416,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     this.cleanup = undefined;
     this.overlayHandle?.deactivate({ restoreFocus: false });
     this.restoreFocusOnClose = true;
-    this.overlayHandle = activateOverlay({
+    this.overlayHandle = activateNonmodalOverlay({
       host: this,
       panel: () =>
         this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null,
@@ -1426,8 +1426,6 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
         void this.hide();
       },
       restoreFocusTo: this.triggerElement ?? null,
-      modal: false,
-      trapFocus: false,
     });
     this.bindDocumentPointer();
     this.positionListbox();

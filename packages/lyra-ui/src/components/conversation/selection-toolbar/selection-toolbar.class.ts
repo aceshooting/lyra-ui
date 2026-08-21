@@ -23,10 +23,10 @@ import {
   type LyraClipboardWriteSuccess,
 } from '../../../internal/clipboard.js';
 import {
-  activateOverlay,
+  activateNonmodalOverlay,
   composedContains,
   type OverlayHandle,
-} from '../../../internal/overlay-manager.js';
+} from '../../../internal/nonmodal-overlay-manager.js';
 import { styles } from './selection-toolbar.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -284,12 +284,10 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     if (this.overlay?.isActive()) {
       this.overlay.resume();
     } else {
-      this.overlay = activateOverlay({
+      this.overlay = activateNonmodalOverlay({
         host: this,
         panel: () => this.toolbar ?? null,
         onEscape: () => this.dismiss(),
-        modal: false,
-        trapFocus: false,
       });
     }
     this.startPositioning();

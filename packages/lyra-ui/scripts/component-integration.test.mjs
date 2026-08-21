@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   buildComponentIntegration,
+  canonicalizeGzipEvidence,
   renderIntegrationCards,
   validateComponentIntegration,
 } from './component-integration.mjs';
@@ -45,6 +46,38 @@ const graph = {
     },
   ],
 };
+
+const measuredGzip = (bytes, bundleSha256) => ({
+  status: 'measured',
+  bytes,
+  kib: Number((bytes / 1024).toFixed(1)),
+  bundleSha256,
+  limitation: 'fixture',
+});
+
+test('canonicalizes zlib-only gzip drift by byte-identical bundle digest', () => {
+  const digest = 'a'.repeat(64);
+  const live = measuredGzip(980, digest);
+  const previous = measuredGzip(1024, digest);
+  assert.deepEqual(canonicalizeGzipEvidence(live, previous), {
+    ...live,
+    bytes: 1024,
+    kib: 1,
+  });
+});
+
+test('adopts live gzip evidence when emitted bundle bytes change', () => {
+  const live = measuredGzip(980, 'b'.repeat(64));
+  const previous = measuredGzip(1024, 'a'.repeat(64));
+  assert.equal(canonicalizeGzipEvidence(live, previous), live);
+});
+
+test('does not preserve malformed prior gzip evidence', () => {
+  const digest = 'a'.repeat(64);
+  const live = measuredGzip(980, digest);
+  const previous = { ...measuredGzip(1024, digest), kib: 99 };
+  assert.equal(canonicalizeGzipEvidence(live, previous), live);
+});
 
 test('builds one deterministic card per public tag with honest missing gzip evidence', async () => {
   const ledger = await buildComponentIntegration({

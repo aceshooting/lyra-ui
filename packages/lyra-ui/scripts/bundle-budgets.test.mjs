@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { positiveInitialMarginalGzipBytes } from './bundle-metrics.mjs';
 
 const scriptsDir = path.dirname(fileURLToPath(import.meta.url));
 const budgets = JSON.parse(
@@ -10,12 +11,36 @@ const budgets = JSON.parse(
 const exclusions = JSON.parse(
   readFileSync(path.join(scriptsDir, 'bundle-exclusion-claims.json'), 'utf8'),
 );
+const initialBudgets = JSON.parse(
+  readFileSync(path.join(scriptsDir, 'bundle-initial-budgets.json'), 'utf8'),
+);
 const checker = readFileSync(
   path.join(scriptsDir, 'check-bundle-size.mjs'),
   'utf8',
 );
 
 assert.equal(typeof budgets.$comment, 'string');
+assert.equal(typeof initialBudgets.$comment, 'string');
+assert.deepEqual(initialBudgets.$baseline, [
+  'dist/components/data/stat/stat.js',
+  'dist/components/overlays/callout/callout.js',
+  'dist/components/layout/card/card.js',
+  'dist/components/overlays/skeleton/skeleton.js',
+  'dist/components/utility/icon/icon.js',
+]);
+assert.deepEqual(initialBudgets.$marginalGzipKb, {
+  'dist/components/forms/combobox/combobox.js': 24,
+  'dist/components/overlays/overlay/popover.js': 12,
+});
+assert.equal(positiveInitialMarginalGzipBytes(2048, 1024, 'fixture'), 1024);
+assert.throws(
+  () => positiveInitialMarginalGzipBytes(1024, 1024, 'fixture'),
+  /fixture: initial-route gzip must exceed its baseline/,
+);
+assert.throws(
+  () => positiveInitialMarginalGzipBytes(1023, 1024, 'fixture'),
+  /measured 1023 - 1024 = -1 bytes/,
+);
 const reviewedCeilings = { ...budgets };
 delete reviewedCeilings.$comment;
 assert.deepEqual(reviewedCeilings, {
@@ -42,7 +67,9 @@ assert.deepEqual(reviewedCeilings, {
   'dist/components/utility/index.js': 120,
   'dist/components/viewers/index.js': 237,
   'dist/components/forms/button/button.js': 44,
+  'dist/components/forms/combobox/combobox.js': 62,
   'dist/components/forms/select/select.js': 67,
+  'dist/components/overlays/overlay/popover.js': 46,
   'dist/components/data/gauge/gauge.js': 39,
   'dist/components/viewers/pdf-viewer/pdf-viewer.js': 71,
   'dist/components/data/flow-canvas/flow-canvas.js': 60,
@@ -109,6 +136,31 @@ assert.match(
   checker,
   /metafile:\s*true/,
   'bundle exclusion claims must inspect a real esbuild dependency graph',
+);
+assert.match(
+  checker,
+  /splitting:\s*true/,
+  'initial-route budgets must measure a splitting-aware production graph',
+);
+assert.match(
+  checker,
+  /dynamic-import/,
+  'initial-route traversal must exclude first-open dynamic chunks',
+);
+assert.match(
+  checker,
+  /bundle-initial-budgets\.json/,
+  'initial marginal budgets must have a dedicated reviewed authority',
+);
+assert.match(
+  checker,
+  /zlib patch releases can\s*\/\/ vary these live counts/,
+  'live gzip ceilings must document why they are not exact cross-zlib evidence',
+);
+assert.match(
+  checker,
+  /recorded \* 0\.05/,
+  'published aggregate gzip claims need a portability-tolerant drift band',
 );
 const widgetRendererLean =
   exclusions['dist/components/conversation/widget-renderer/widget-renderer.class.js'];

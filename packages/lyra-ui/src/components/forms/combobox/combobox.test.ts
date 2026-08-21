@@ -24,6 +24,20 @@ import {
   RESET_OPTION_SELECTED_FROM_OWNER,
   SET_OPTION_SELECTED_FROM_OWNER,
 } from "../../../internal/option-selection.js";
+import {
+  __setAnchoredOverlayRuntimeLoaderForTesting,
+  type AnchoredOverlayRuntime,
+} from '../../../internal/anchored-overlay-runtime.js';
+
+function positionedRuntime(onPlace?: () => void): AnchoredOverlayRuntime {
+  return {
+    place: (_anchor, _popup, options = {}) => {
+      onPlace?.();
+      queueMicrotask(() => options.onPlaced?.({ placement: options.placement ?? 'bottom-start' }));
+      return () => undefined;
+    },
+  } as AnchoredOverlayRuntime;
+}
 
 it("rejects direct open writes while disabled or synchronously fieldset-disabled", async () => {
   const fieldset = await fixture<HTMLFieldSetElement>(html`
@@ -43,6 +57,57 @@ it("rejects direct open writes while disabled or synchronously fieldset-disabled
   await el.updateComplete;
   expect(el.open).to.be.false;
   expect(el.hasAttribute("open")).to.be.false;
+});
+
+it('keeps the first-open listbox hidden and defers after-show until positioning is ready', async () => {
+  let resolveRuntime!: (runtime: AnchoredOverlayRuntime) => void;
+  const pendingRuntime = new Promise<AnchoredOverlayRuntime>((resolve) => {
+    resolveRuntime = resolve;
+  });
+  __setAnchoredOverlayRuntimeLoaderForTesting(() => pendingRuntime);
+  try {
+    const el = await fixture<LyraCombobox>(basic());
+    el.style.setProperty('--show-duration', '0ms');
+    let afterShow = false;
+    el.addEventListener('lr-after-show', () => {
+      afterShow = true;
+    });
+    const shown = el.show();
+    await el.updateComplete;
+    const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+
+    expect(getComputedStyle(listbox).visibility).to.equal('hidden');
+    expect(afterShow).to.equal(false);
+    resolveRuntime(positionedRuntime());
+    await shown;
+
+    expect(getComputedStyle(listbox).visibility).to.equal('visible');
+    expect(afterShow).to.equal(true);
+  } finally {
+    __setAnchoredOverlayRuntimeLoaderForTesting(undefined);
+  }
+});
+
+it('invalidates a deferred listbox generation when disconnected before the runtime loads', async () => {
+  let resolveRuntime!: (runtime: AnchoredOverlayRuntime) => void;
+  const pendingRuntime = new Promise<AnchoredOverlayRuntime>((resolve) => {
+    resolveRuntime = resolve;
+  });
+  let placeCalls = 0;
+  __setAnchoredOverlayRuntimeLoaderForTesting(() => pendingRuntime);
+  try {
+    const el = await fixture<LyraCombobox>(basic());
+    void el.show();
+    await el.updateComplete;
+    el.remove();
+    resolveRuntime(positionedRuntime(() => placeCalls++));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(placeCalls).to.equal(0);
+  } finally {
+    __setAnchoredOverlayRuntimeLoaderForTesting(undefined);
+  }
 });
 
 function assertiveAnnouncements(): string[] {

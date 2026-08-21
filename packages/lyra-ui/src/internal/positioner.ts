@@ -492,17 +492,6 @@ function validatePlaceNumericOptions(opts: PlaceOptions): void {
   }
 }
 
-function validateAnchorBeforeSetup(anchor: Element | VirtualAnchor): void {
-  try {
-    validatedClientRect(anchor.getBoundingClientRect(), 'place() anchor rect');
-  } catch (error) {
-    // A hostile getter/revoked proxy already follows the established async fail-closed path once
-    // Floating UI begins. Only a rect that was actually returned with invalid numeric geometry is
-    // a synchronous caller contract error.
-    if (error instanceof PositionerGeometryError) throw error;
-  }
-}
-
 /**
  * Builds a `VirtualAnchor` from a plain rect, for `showAt()`-style APIs that anchor a popup to an
  * arbitrary point or box instead of a real DOM element. `width`/`height` default to `0` (a point).
@@ -523,6 +512,17 @@ export function virtualAnchorFromRect(rect: {
   const height = finiteGeometry(rect.height ?? 0, 'virtualAnchorFromRect() height', true);
   const domRect = new DOMRect(x, y, width, height);
   return { getBoundingClientRect: () => domRect, contextElement: rect.contextElement };
+}
+
+function validateAnchorBeforeSetup(anchor: Element | VirtualAnchor): void {
+  try {
+    validatedClientRect(anchor.getBoundingClientRect(), 'place() anchor rect');
+  } catch (error) {
+    // A hostile getter/revoked proxy already follows the established async fail-closed path once
+    // Floating UI begins. Only a rect that was actually returned with invalid numeric geometry is
+    // a synchronous caller contract error.
+    if (error instanceof PositionerGeometryError) throw error;
+  }
 }
 
 /**

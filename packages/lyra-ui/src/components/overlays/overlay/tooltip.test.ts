@@ -281,7 +281,18 @@ it('recreates content and generated-description observers from the current owner
     frameDocument.body.append(el);
     await el.updateComplete;
     expect(el.ownerDocument === frameDocument).to.be.true;
-    // LyraElement itself creates one owner-realm observer. Requiring three proves Tooltip also
+    // Adoption can connect before the new realm has redistributed the trigger slot. Wait for the
+    // actual relationship instead of letting an unrelated overlay observer satisfy this count.
+    await waitUntil(() => {
+      const adoptedTrigger = el.querySelector<HTMLElement>('[slot="trigger"]');
+      const reflected = (adoptedTrigger as (HTMLElement & { ariaDescribedByElements?: Element[] }) | null)
+        ?.ariaDescribedByElements;
+      return (
+        adoptedTrigger?.getAttribute('aria-describedby')?.includes(descriptionProxy(el).id) === true ||
+        reflected?.includes(descriptionProxy(el)) === true
+      );
+    });
+    // LyraElement itself creates one owner-realm observer. Requiring three then proves Tooltip also
     // recreated its content observer and the active shared description-ownership observer.
     expect(constructions).to.be.at.least(3);
   } finally {
