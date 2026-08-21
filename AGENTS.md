@@ -110,10 +110,14 @@ its baseline in all three engines; see
 - `pnpm lint`'s `contract-policy` chains the package's static contract checks; the authoritative
   list is `packages/lyra-ui/package.json`'s `contract-policy` script entry — restatements drift.
 - `.github/workflows/ci.yml` is the authoritative CI gate list and reproduction sequence — read
-  it directly; reproduce failures locally in the same order. The gates run as six parallel jobs
-  split along real data dependencies (`lint`, `static-checks`, `build-and-coverage`,
+  it directly; reproduce failures locally in the same order. The gates expose six stable check
+  families split along real data dependencies (`lint`, `static-checks`, `build-and-coverage`,
   `packed-consumer`, `docs-and-storybook`, `visual-regression`) rather than one linear job, so a
-  red check names the specific job to reproduce instead of "build-test". A separate
+  red check names the specific phase to reproduce instead of "build-test". Within
+  `build-and-coverage`, four independently hosted coverage shards consume the shared `dist/`
+  artifact; a fail-closed merge job requires every raw coverage, JUnit, and test-manifest artifact
+  before it enforces whole-suite floors and reports to Codecov. Local `test:coverage` deliberately
+  retains the complete four-shard sequential run. A separate
   `platform-contracts` matrix job runs the fast `test:platform` subset on Firefox and Safari
   (WebKit) under Node 20/22, with Chromium, Chrome, and Edge also covered under Node 22.
   `.github/workflows/full-engine.yml` runs the complete non-coverage suite in eight
@@ -140,8 +144,8 @@ its baseline in all three engines; see
   `ls packages/lyra-ui/scripts/check-*.mjs` remains the real check inventory.
 - Two gates sit outside `contract-policy` because they read build/test output, not source:
   `check:build-artifacts` (chained inside `build`; no `.map` or `sourceMappingURL` may reach
-  `dist`) and `check:coverage-floors` (CI, right after `test:coverage`; regenerate
-  `scripts/coverage-floors.json` with `--write-floors`).
+  `dist`) and `check:coverage-floors` (CI, after the four coverage artifacts merge; locally, right
+  after `test:coverage`; regenerate `scripts/coverage-floors.json` with `--write-floors`).
 
 ## Coding conventions — digest
 

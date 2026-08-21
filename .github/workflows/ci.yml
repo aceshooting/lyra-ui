@@ -99,7 +99,8 @@ jobs:
   # Lyra's own Chromium suite and associated dist checks are now split into independent,
   # dependency-aware jobs to saturate GitHub-hosted runner parallelism:
   # - build publishes dist once for all other phases
-  # - component-quality, ssr, hydration, and coverage all consume that dist independently
+  # - component-quality, ssr, hydration, and four coverage shards consume that dist independently
+  # - coverage reports merge and enforce their whole-suite floors only after every shard finishes
   # - a final aggregator reports a single `build-and-coverage` check status
   #   for branch protection while preserving all current coverage gating behavior.
   build_and_coverage_build:
@@ -268,9 +269,14 @@ jobs:
       # matrix assumptions as `test:ssr`.
       - run: pnpm --filter @aceshooting/lyra-ui test:hydration
 
-  build_and_coverage_coverage:
-    name: build-and-coverage / coverage
+  build_and_coverage_coverage_shard:
+    name: build-and-coverage / coverage / shard ${{ matrix.shard }}/4
     runs-on: ubuntu-latest
+    needs: build_and_coverage_build
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     # Runs in the official Playwright image: every OS-level browser dependency and the matching
     # browser binaries ship inside it, so this job runs no apt transaction and downloads no
     # browser. Measured on a green run, `playwright install-deps` was 70-90% of each job's wall
@@ -291,8 +297,7 @@ jobs:
       # so this surfaces as a Firefox-only failure. /root is root-owned, and staying constant for
       # the whole job keeps the pnpm store and setup-node cache on one path.
       HOME: /root
-    needs: build_and_coverage_build
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - name: Match the runner's default font resolution
         run: |
@@ -319,19 +324,84 @@ jobs:
         with:
           name: lyra-ui-dist
           path: packages/lyra-ui/dist
-      # Keep coverage + floor + report uploads in one runner to preserve current gate semantics.
-      # Coverage uses a complete browser sweep over the same file list as today.
-      - run: pnpm --filter @aceshooting/lyra-ui test:coverage
+      # Each runner preserves coverage's concurrency=1 browser shape while independently owning
+      # one deterministic quarter of the complete discovered test inventory.
+      - name: Run coverage shard
+        working-directory: packages/lyra-ui
+        run: node scripts/coverage-shard-runner.mjs --shard ${{ matrix.shard }}
+      # Upload even after a red test result: WTR normally still writes its complete raw reports,
+      # which lets the merge job report floors and test results before it rejects the matrix.
+      # The path is deliberately non-hidden because upload-artifact excludes hidden files unless
+      # explicitly configured otherwise.
+      - name: Upload coverage shard
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: lyra-ui-coverage-shard-${{ matrix.shard }}
+          path: packages/lyra-ui/coverage/shards/coverage-shard-${{ matrix.shard }}
+          if-no-files-found: error
+          retention-days: 1
+
+  build_and_coverage_coverage:
+    name: build-and-coverage / coverage
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs:
+      - build_and_coverage_coverage_shard
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Explicit artifact names and destinations make a missing or misrouted shard fail before
+      # floors or reporting can accidentally consume a partial aggregate.
+      - name: Download coverage shard 1
+        if: ${{ !cancelled() }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: lyra-ui-coverage-shard-1
+          path: packages/lyra-ui/coverage/shards/coverage-shard-1
+      - name: Download coverage shard 2
+        if: ${{ !cancelled() }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: lyra-ui-coverage-shard-2
+          path: packages/lyra-ui/coverage/shards/coverage-shard-2
+      - name: Download coverage shard 3
+        if: ${{ !cancelled() }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: lyra-ui-coverage-shard-3
+          path: packages/lyra-ui/coverage/shards/coverage-shard-3
+      - name: Download coverage shard 4
+        if: ${{ !cancelled() }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: lyra-ui-coverage-shard-4
+          path: packages/lyra-ui/coverage/shards/coverage-shard-4
+      # --merge requires all four coverage-final.json, junit.xml, and test-files.json inputs,
+      # then proves their manifests are disjoint, exhaustive, and deterministically assigned.
+      - name: Merge coverage shards
+        id: merge_coverage
+        if: ${{ !cancelled() }}
+        working-directory: packages/lyra-ui
+        run: node scripts/coverage-shard-runner.mjs --merge
       # The per-metric floors in packages/lyra-ui/scripts/coverage-floors.json are what
-      # web-test-runner.config.js enforces on the run above. They only gate anything while they
-      # sit just under the measurement, so this reads the report the previous step just wrote and
+      # gate the merged whole-suite report. They only protect anything while they sit just under
+      # the measurement, so this reads the report the previous step just wrote and
       # fails when a floor drifted far below it (a floor 5+ points low has stopped being a gate)
       # or above it. Refresh with `--write-floors`; lowering one needs `--allow-lower` and shows up
       # in the diff. Deliberately its own step so the failure names itself instead of surfacing as
-      # a mystery inside the long coverage step.
-      - run: pnpm --filter @aceshooting/lyra-ui check:coverage-floors
+      # a mystery inside a browser shard.
+      - name: Check merged coverage floors
+        if: ${{ !cancelled() && steps.merge_coverage.outcome == 'success' }}
+        run: pnpm --filter @aceshooting/lyra-ui check:coverage-floors
       - name: Upload coverage to Codecov
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.merge_coverage.outcome == 'success' }}
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           files: packages/lyra-ui/coverage/lcov.info
@@ -344,7 +414,7 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       - name: Upload test results to Codecov
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.merge_coverage.outcome == 'success' }}
         uses: codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3 # v1.2.1
         with:
           file: packages/lyra-ui/coverage/junit.xml
@@ -352,6 +422,17 @@ jobs:
           fail_ci_if_error: false
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      # A failed test shard can still produce complete mergeable reports. Keep those diagnostics,
+      # but never let a green merge or non-fatal Codecov upload mask the matrix conclusion.
+      - name: Require successful coverage shards
+        if: ${{ always() }}
+        env:
+          COVERAGE_SHARD_RESULT: ${{ needs.build_and_coverage_coverage_shard.result }}
+        run: |
+          if [[ "$COVERAGE_SHARD_RESULT" != "success" ]]; then
+            echo "::error::build_and_coverage_coverage_shard failed with status: $COVERAGE_SHARD_RESULT"
+            exit 1
+          fi
 
   # release-qualification: required
   build-and-coverage:
@@ -363,6 +444,7 @@ jobs:
       - build_and_coverage_quality
       - build_and_coverage_ssr
       - build_and_coverage_hydration
+      - build_and_coverage_coverage_shard
       - build_and_coverage_coverage
     steps:
       - name: Aggregate build-and-coverage lanes
@@ -383,6 +465,10 @@ jobs:
           fi
           if [[ "${{ needs.build_and_coverage_hydration.result }}" != "success" ]]; then
             echo "::error::build_and_coverage_hydration failed with status: ${{ needs.build_and_coverage_hydration.result }}"
+            failed=1
+          fi
+          if [[ "${{ needs.build_and_coverage_coverage_shard.result }}" != "success" ]]; then
+            echo "::error::build_and_coverage_coverage_shard failed with status: ${{ needs.build_and_coverage_coverage_shard.result }}"
             failed=1
           fi
           if [[ "${{ needs.build_and_coverage_coverage.result }}" != "success" ]]; then
