@@ -219,6 +219,54 @@ function genericTypeParts(text) {
   return { name, args };
 }
 
+const FRAMEWORK_ELEMENT_HELPERS = new Set([
+  'LyraReactElementProps',
+  'LyraSvelteElementProps',
+  'LyraVueCustomElement',
+]);
+
+/**
+ * The generated framework declarations represent a component with no events as the paired
+ * arguments `{}, never`. Its first event changes both arguments to `EventMap, 'lr-event'`.
+ * Inside the helpers that pair is consumed together to create optional listener props/emits, so
+ * the transition is additive even though `{}` -> `EventMap` is not a generally safe generic
+ * widening. Keep this exception bound to the three generated helpers and to the complete pair.
+ */
+function frameworkEventIntroduction(before, after) {
+  if (
+    before.name !== after.name ||
+    !FRAMEWORK_ELEMENT_HELPERS.has(before.name) ||
+    before.args.length !== 7 ||
+    after.args.length !== 7
+  ) {
+    return false;
+  }
+  return before.args[3] === '{}'
+    && after.args[3] !== '{}'
+    && before.args[4] === 'never'
+    && after.args[4] !== 'never';
+}
+
+function uniqueAliasDefinition(typeTextValue, snapshot) {
+  const normalized = normalizeType(typeTextValue);
+  if (!/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/.test(normalized)) return undefined;
+  const definitions = snapshot?.typeAliases?.[normalized];
+  return Array.isArray(definitions) && definitions.length === 1
+    ? definitions[0]
+    : undefined;
+}
+
+function resolveUniqueAliases(typeTextValue, snapshot, seen = new Set()) {
+  let value = normalizeType(typeTextValue);
+  while (!seen.has(value)) {
+    const definition = uniqueAliasDefinition(value, snapshot);
+    if (definition === undefined) break;
+    seen.add(value);
+    value = normalizeType(definition);
+  }
+  return value;
+}
+
 /**
  * Whether `after` only widens `before`.
  *
@@ -284,7 +332,12 @@ function isObjectTypeWidening(before, after) {
   return true;
 }
 
-function isTypeWidening(before, after) {
+function isTypeWidening(before, after, baseline, current) {
+  const resolvedBefore = resolveUniqueAliases(before, baseline);
+  const resolvedAfter = resolveUniqueAliases(after, current);
+  if (resolvedBefore !== normalizeType(before) || resolvedAfter !== normalizeType(after)) {
+    return isTypeWidening(resolvedBefore, resolvedAfter, baseline, current);
+  }
   if (isObjectTypeWidening(before, after)) return true;
   const oldAtoms = typeAtoms(before);
   const newAtoms = typeAtoms(after);
@@ -317,7 +370,7 @@ function isTypeWidening(before, after) {
       const unclaimed = new Set(added);
       const everyDroppedAtomWidened = dropped.every((oldAtom) => {
         for (const candidate of unclaimed) {
-          if (isTypeWidening(oldAtom, candidate)) {
+          if (isTypeWidening(oldAtom, candidate, baseline, current)) {
             unclaimed.delete(candidate);
             return true;
           }
@@ -338,11 +391,16 @@ function isTypeWidening(before, after) {
   ) {
     return false;
   }
+  const firstFrameworkEvent = frameworkEventIntroduction(beforeGeneric, afterGeneric);
   let widened = false;
   for (const [index, beforeArg] of beforeGeneric.args.entries()) {
     const afterArg = afterGeneric.args[index];
     if (beforeArg === afterArg) continue;
-    if (!isTypeWidening(beforeArg, afterArg)) return false;
+    if (firstFrameworkEvent && (index === 3 || index === 4)) {
+      widened = true;
+      continue;
+    }
+    if (!isTypeWidening(beforeArg, afterArg, baseline, current)) return false;
     widened = true;
   }
   return widened;
@@ -1332,6 +1390,7 @@ function declarationGraph(filesValue) {
   };
   const graph = {
     files,
+    modules: moduleCache,
     getModule,
     getExports,
     declarationSurfaceCache: new Map(),
@@ -1349,6 +1408,45 @@ function declarationGraph(filesValue) {
     directDependencyCache: new Map(),
   };
   return graph;
+}
+
+/**
+ * Retain unique, non-generic alias definitions as semantic comparison aids. Public members often
+ * adopt a newly named union while preserving their old atom (`number` -> `ZoomValue`, where
+ * `ZoomValue = number | Stops`). Comparing only printed text calls that breaking. Duplicate names
+ * with different definitions remain as multiple candidates and deliberately cannot be resolved.
+ */
+function normalizedTypeAliases(graph) {
+  const aliases = new Map();
+  for (const module of graph?.modules?.values() ?? []) {
+    for (const records of module.symbols.values()) {
+      for (const record of records) {
+        const node = record.node;
+        if (
+          node.type !== 'TSTypeAliasDeclaration' ||
+          (node.typeParameters?.params?.length ?? 0) > 0
+        ) {
+          continue;
+        }
+        const definition = typeNodeText(module, node.typeAnnotation);
+        const names = new Set([
+          record.name,
+          ...(record.path?.length > 1 ? [record.path.join('.')] : []),
+        ]);
+        for (const name of names) {
+          if (!name || name.includes(MODULE_NAMESPACE_SEGMENT)) continue;
+          const definitions = aliases.get(name) ?? new Set();
+          definitions.add(definition);
+          aliases.set(name, definitions);
+        }
+      }
+    }
+  }
+  return Object.fromEntries(
+    [...aliases]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([name, definitions]) => [name, [...definitions].sort()]),
+  );
 }
 
 function resolveLocalDeclaration(module, pathParts) {
@@ -2563,6 +2661,7 @@ export function normalizePublicApi({ packageJson, manifest, declarations = {} })
       [...(graph?.reachableDefinitions ?? [])].sort(([left], [right]) =>
         left.localeCompare(right)),
     ),
+    typeAliases: normalizedTypeAliases(graph),
   };
 }
 
@@ -2570,7 +2669,7 @@ function sameValue(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-function declarationContractBump(before, after) {
+function declarationContractBump(before, after, baseline, current) {
   let bump = 'none';
   const ids = new Set([...Object.keys(before ?? {}), ...Object.keys(after ?? {})]);
   for (const id of ids) {
@@ -2581,7 +2680,7 @@ function declarationContractBump(before, after) {
     else if (!sameValue(beforeEntry.value, afterEntry.value)) {
       bump = maxBump(
         bump,
-        changedBump(afterEntry, beforeEntry.value, afterEntry.value),
+        changedBump(afterEntry, beforeEntry.value, afterEntry.value, baseline, current),
       );
     }
   }
@@ -2685,7 +2784,12 @@ function dependencyContractBump(before, after, baseline, current) {
     // own in the diff, so this is the only place it can surface.
     bump = maxBump(
       bump,
-      declarationContractBump(baseline?.contracts?.[beforeContract], current?.contracts?.[afterContract]),
+      declarationContractBump(
+        baseline?.contracts?.[beforeContract],
+        current?.contracts?.[afterContract],
+        baseline,
+        current,
+      ),
     );
   }
   return bump;
@@ -2696,12 +2800,12 @@ function changedBump(entry, before, after, baseline, current) {
     const beforeContract = baseline?.contracts?.[before];
     const afterContract = current?.contracts?.[after];
     if (!beforeContract || !afterContract) return 'major';
-    return declarationContractBump(beforeContract, afterContract);
+    return declarationContractBump(beforeContract, afterContract, baseline, current);
   }
   if (entry.semantic === 'dependency-contract-ref') {
     return dependencyContractBump(before, after, baseline, current);
   }
-  if (entry.semantic === 'type' && isTypeWidening(before, after)) return 'minor';
+  if (entry.semantic === 'type' && isTypeWidening(before, after, baseline, current)) return 'minor';
   if (entry.semantic === 'heritage' && isHeritageSpecialization(before, after)) return 'minor';
   if (entry.semantic === 'optional' && before === false && after === true) return 'minor';
   if (entry.semantic === 'readonly' && before === true && after === false) return 'minor';

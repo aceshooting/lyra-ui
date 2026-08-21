@@ -1804,6 +1804,62 @@ test('treats a real multi-argument generated framework prop type gaining one eve
   assert.equal(changes[0].bump, 'minor');
 });
 
+test('treats the generated framework prop type gaining its first event as minor', () => {
+  const changes = diffPublicApi(
+    typeSnapshot(
+      "LyraReactElementProps<LyraTimeline,'items',{}, {},never,'--lr-timeline-gap',{}>",
+    ),
+    typeSnapshot(
+      "LyraReactElementProps<LyraTimeline,'collision'|'items',{},LyraTimelineEventMap,'lr-cluster-activate','--lr-timeline-cluster-size'|'--lr-timeline-gap',{}>",
+    ),
+  );
+
+  assert.equal(changes[0].bump, 'minor');
+});
+
+test('keeps an arbitrary generic changing from an empty object to a named type breaking', () => {
+  const changes = diffPublicApi(
+    typeSnapshot('Arbitrary<{},never>'),
+    typeSnapshot("Arbitrary<RequiredMap,'event'>"),
+  );
+
+  assert.equal(changes[0].bump, 'major');
+});
+
+test('resolves a unique type alias before classifying a public member widening', () => {
+  const fixture = (memberType, aliasType) => ({
+    packageJson: {
+      name: '@aceshooting/lyra-ui',
+      version: '1.0.0',
+      exports: { '.': { types: './dist/lyra.d.ts', default: './dist/lyra.js' } },
+    },
+    manifest: { modules: [] },
+    declarations: {
+      named: `${aliasType ? `export type ZoomValue = ${aliasType};\n` : ''}` +
+        `export interface HeatmapOptions { radius?: ${memberType}; }\n`,
+    },
+  });
+  const changes = diffPublicApi(
+    normalizePublicApi(fixture('number')),
+    normalizePublicApi(fixture('ZoomValue', 'number | readonly (readonly [number, number])[]')),
+  );
+
+  assert.equal(minimumRequiredBump(changes), 'minor');
+  assert.equal(
+    changes.some((change) =>
+      change.id.includes('HeatmapOptions') && change.bump === 'major'),
+    false,
+  );
+});
+
+test('keeps an ambiguous type alias replacement breaking', () => {
+  const before = typeSnapshot('number');
+  const after = typeSnapshot('Value');
+  after.typeAliases = { Value: ['number|string', 'number|boolean'] };
+
+  assert.equal(diffPublicApi(before, after)[0].bump, 'major');
+});
+
 test('normalizeType strips a leading bar from a single-member union', () => {
   assert.equal(normalizeType("| 'lr-cell-click'"), normalizeType("'lr-cell-click'"));
 });
