@@ -263,6 +263,13 @@ describe('composedAccessibilityText / composedAccessibilityTextResult', () => {
     expect(composedAccessibilityText(el)).to.include('Fallback text');
   });
 
+  it('uses fallback children for a standalone slot outside a shadow root', () => {
+    const slot = document.createElement('slot');
+    slot.textContent = 'Standalone fallback';
+
+    expect(composedAccessibilityText(slot)).to.equal('Standalone fallback');
+  });
+
   it('exposes only the summary of a closed <details> element', async () => {
     const el = await fixture<HTMLElement>(html`<details><summary>Summary text</summary><p>Body text</p></details>`);
     const text = composedAccessibilityText(el);
@@ -294,6 +301,17 @@ describe('composedAccessibilityText / composedAccessibilityTextResult', () => {
     expect(result.truncated).to.equal(true);
     expect(result.truncationReasons).to.include('characters');
     expect(result.text).to.equal('Hello');
+  });
+
+  it('stops before a later root when the inter-root separator exhausts maxCharacters', () => {
+    const first = document.createTextNode('A');
+    const second = document.createTextNode('B');
+
+    const result = composedAccessibilityTextResult([first, second], { maxCharacters: 1 });
+
+    expect(result.text).to.equal('A');
+    expect(result.truncationReasons).to.include('characters');
+    expect(result.visitedNodes).to.equal(1);
   });
 
   it('truncates at maxNodes and reports the reason', async () => {
@@ -493,6 +511,16 @@ describe('adversarial accessibility visibility boundaries', () => {
       if (descriptor) Object.defineProperty(prototype, 'ariaLabelledByElements', descriptor);
       else Reflect.deleteProperty(prototype, 'ariaLabelledByElements');
     }
+  });
+
+  it('falls back to element text for an empty reflected relationship in an ownerless document', () => {
+    const ownerlessDocument = document.implementation.createHTMLDocument('ownerless relation');
+    const button = ownerlessDocument.createElement('button');
+    button.setAttribute('aria-labelledby', '');
+    button.textContent = 'Ownerless button';
+    ownerlessDocument.body.append(button);
+
+    expect(composedAccessibilityText(button, { requireRendered: false })).to.equal('Ownerless button');
   });
 
   it('fails closed when the final rendered visibility probe throws', async () => {

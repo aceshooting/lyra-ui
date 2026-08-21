@@ -613,6 +613,49 @@ it('schedules and cancels message sweeps with the sink document timer realm', as
   }
 });
 
+it('reschedules a shared sweep when a newly announced message expires sooner', async () => {
+  const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const ownerDocument = iframe.contentDocument!;
+  const ownerWindow = iframe.contentWindow!;
+  const originalSetTimeout = ownerWindow.setTimeout;
+  const originalClearTimeout = ownerWindow.clearTimeout;
+  const callbacks = new Map<number, () => void>();
+  const clears: number[] = [];
+  let nextHandle = 200;
+  ownerWindow.setTimeout = ((handler: TimerHandler) => {
+    const handle = ++nextHandle;
+    if (typeof handler === 'function') callbacks.set(handle, handler);
+    return handle;
+  }) as typeof ownerWindow.setTimeout;
+  ownerWindow.clearTimeout = ((handle?: number) => {
+    if (handle !== undefined) {
+      clears.push(handle);
+      callbacks.delete(handle);
+    }
+  }) as typeof ownerWindow.clearTimeout;
+
+  let sink: ReturnType<typeof acquireAnnouncementSink> | undefined;
+  try {
+    sink = acquireAnnouncementSink('polite', {
+      document: ownerDocument,
+      messageTtlMs: 5_000,
+    });
+    sink.announce('later');
+    expect(callbacks.has(201)).to.be.true;
+
+    sink.messageTtlMs = 100;
+    sink.announce('sooner');
+
+    expect(clears).to.deep.equal([201]);
+    expect(callbacks.has(202)).to.be.true;
+  } finally {
+    sink?.release();
+    ownerWindow.setTimeout = originalSetTimeout;
+    ownerWindow.clearTimeout = originalClearTimeout;
+    iframe.remove();
+  }
+});
+
 it('ignores an empty announcement instead of appending a silent node', () => {
   const sink = acquireAnnouncementSink('polite');
   try {

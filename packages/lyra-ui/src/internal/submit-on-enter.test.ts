@@ -1,5 +1,10 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { isImplicitSubmission, findImplicitSubmitter, submitOnEnter } from './submit-on-enter.js';
+import {
+  isImplicitSubmission,
+  isNativeSubmitter,
+  findImplicitSubmitter,
+  submitOnEnter,
+} from './submit-on-enter.js';
 import '../components/forms/button/button.js';
 import type { LyraButton } from '../components/forms/button/button.class.js';
 
@@ -114,6 +119,25 @@ it('classifies native controls structurally when ambient element constructors ar
   }
 });
 
+it('rejects a button-shaped element outside the HTML namespace', () => {
+  const foreignButton = document.createElementNS('http://www.w3.org/2000/svg', 'button');
+  Object.defineProperty(foreignButton, 'type', { configurable: true, value: 'submit' });
+
+  expect(isNativeSubmitter(foreignButton)).to.be.false;
+});
+
+it('treats a submitter as enabled when the DOM cannot evaluate :disabled', async () => {
+  const form = (await fixture(html`
+    <form><button id="go" type="submit">Go</button></form>
+  `)) as HTMLFormElement;
+  const button = form.querySelector('button')!;
+  button.matches = () => {
+    throw new DOMException('Selector unsupported', 'NotSupportedError');
+  };
+
+  expect(findImplicitSubmitter(form)?.id).to.equal('go');
+});
+
 // -- submitOnEnter() ------------------------------------------------------
 
 it('submits through the native submit button, naming it as SubmitEvent.submitter', async () => {
@@ -150,6 +174,45 @@ it('submits the platform form owner even when it is not an ancestor', async () =
   expect(field.form?.id).to.equal('external-owner');
   expect(submitOnEnter(field, enterEvent())).to.be.true;
   expect(submits()).to.equal(1);
+});
+
+it('falls back to a custom host ancestor when no form-owner API exists', async () => {
+  const form = (await fixture(html`
+    <form><implicit-submit-host id="field"></implicit-submit-host><button type="submit">Go</button></form>
+  `)) as HTMLFormElement;
+  const host = form.querySelector('implicit-submit-host') as HTMLElement;
+  const submits = countSubmits(form);
+
+  expect(submitOnEnter(host, enterEvent())).to.be.true;
+  expect(submits()).to.equal(1);
+});
+
+it('contains throwing form-owner APIs and hostile returned owners', () => {
+  const throwingMethod = document.createElement('div') as HTMLElement & { getForm: () => unknown };
+  throwingMethod.getForm = () => {
+    throw new Error('form owner unavailable');
+  };
+
+  const throwingProperty = document.createElement('div');
+  Object.defineProperty(throwingProperty, 'form', {
+    configurable: true,
+    get() {
+      throw new Error('form property unavailable');
+    },
+  });
+
+  const hostileOwner = new Proxy({}, {
+    get(_target, property) {
+      if (property === 'namespaceURI') throw new Error('owner identity unavailable');
+      return undefined;
+    },
+  });
+  const hostileMethod = document.createElement('div') as HTMLElement & { getForm: () => unknown };
+  hostileMethod.getForm = () => hostileOwner;
+
+  expect(submitOnEnter(throwingMethod, enterEvent())).to.be.false;
+  expect(submitOnEnter(throwingProperty, enterEvent())).to.be.false;
+  expect(submitOnEnter(hostileMethod, enterEvent())).to.be.false;
 });
 
 it('does not fall back to an ancestor when an explicit form owner is unresolved', async () => {
@@ -213,6 +276,16 @@ it('submits a submit-button-less form only while the pressed control is its one 
   const crowdedSubmits = countSubmits(crowded);
   expect(submitOnEnter(crowded.querySelector('#a') as HTMLInputElement, enterEvent())).to.be.false;
   expect(crowdedSubmits(), 'two blocking fields and no submit button never submits, as native does').to.equal(0);
+});
+
+it('does not count a non-input native control as an implicit-submission blocker', async () => {
+  const form = (await fixture(html`
+    <form><input id="field" name="q" /><select name="scope"><option>All</option></select></form>
+  `)) as HTMLFormElement;
+  const submits = countSubmits(form);
+
+  expect(submitOnEnter(form.querySelector('#field') as HTMLInputElement, enterEvent())).to.be.true;
+  expect(submits()).to.equal(1);
 });
 
 it('preserves submitter and blocking-field semantics for foreign-created controls after adoption', () => {

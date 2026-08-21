@@ -4,6 +4,7 @@ import {
   enableLyraLocaleCache,
   getLyraLocale,
   getLyraLocaleDirection,
+  registerLyraExactLocale,
   registerLyraLocale,
   peekLyraDirection,
   resolveLyraDirection,
@@ -179,6 +180,21 @@ it('rejects missing and unbounded registered locale identifiers', () => {
   expect(() => registerLyraLocale(`x-${'a'.repeat(300)}`, {})).to.throw(TypeError, 'BCP-47');
 });
 
+it('contains non-string locale inputs at the public runtime boundary', () => {
+  expect(canonicalizeLyraLocale(null as never)).to.equal('en');
+  expect(() => registerLyraLocale(null as never, {})).to.throw(TypeError, 'string');
+});
+
+it('removes reverse regional fallback when an existing catalog becomes exact-only', () => {
+  registerLyraLocale('qaa-AA', { topologyProbe: 'regional' });
+  expect(resolveLyraString(localeHost('qaa'), 'topologyProbe')).to.equal('regional');
+
+  registerLyraExactLocale('qaa-AA', { topologyProbe: 'exact' });
+
+  expect(resolveLyraString(localeHost('qaa-AA'), 'topologyProbe')).to.equal('exact');
+  expect(resolveLyraString(localeHost('qaa'), 'topologyProbe')).to.equal('topologyProbe');
+});
+
 it('snapshots hostile catalogs without invoking accessors or retaining live traps', () => {
   let getterCalls = 0;
   const accessorCatalog = Object.create(null) as Record<string, string>;
@@ -292,6 +308,24 @@ it('contains descriptor and enumeration failures inside catalog snapshots', () =
     items: pluralDescriptorTrap,
   } as unknown as Parameters<typeof registerLyraLocale>[1]);
   expect(resolveLyraString(localeHost('x-plural-descriptor-trap'), 'items')).to.equal('items');
+});
+
+it('contains a plural data-descriptor failure after safe enumeration', () => {
+  const plural = { other: 'many' };
+  const original = Object.getOwnPropertyDescriptor;
+  Object.getOwnPropertyDescriptor = ((target: object, key: PropertyKey) => {
+    if (target === plural) throw new Error('plural data unavailable');
+    return original(target, key);
+  }) as typeof Object.getOwnPropertyDescriptor;
+  try {
+    registerLyraLocale('x-plural-data-trap', {
+      items: plural,
+    } as unknown as Parameters<typeof registerLyraLocale>[1]);
+  } finally {
+    Object.getOwnPropertyDescriptor = original;
+  }
+
+  expect(resolveLyraString(localeHost('x-plural-data-trap'), 'items')).to.equal('items');
 });
 
 it('falls through malformed plural locale candidates and bounds their cache', () => {

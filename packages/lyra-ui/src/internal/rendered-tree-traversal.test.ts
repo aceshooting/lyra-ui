@@ -8,6 +8,23 @@ import {
   renderedTreeTraversalLimits,
 } from './rendered-tree-traversal.js';
 
+function withThrowingNativeDescriptor<T>(
+  target: object,
+  property: PropertyKey,
+  run: () => T,
+): T {
+  const original = Object.getOwnPropertyDescriptor;
+  Object.getOwnPropertyDescriptor = ((candidate: object, key: PropertyKey) => {
+    if (candidate === target && key === property) throw new Error(`unavailable ${String(key)}`);
+    return original(candidate, key);
+  }) as typeof Object.getOwnPropertyDescriptor;
+  try {
+    return run();
+  } finally {
+    Object.getOwnPropertyDescriptor = original;
+  }
+}
+
 describe('RenderedTreeTraversalError', () => {
   it('carries operation/limit/maximum fields and a formatted message', () => {
     const error = new RenderedTreeTraversalError('some-op', 'maxDepth', 42);
@@ -90,6 +107,24 @@ describe('nativeElementLocalName', () => {
     });
     expect(nativeElementLocalName(el)).to.equal(tagName);
   });
+
+  it('fails soft when owner-document or local-name native accessors are unavailable', () => {
+    const el = document.createElement('span');
+
+    const withoutOwner = withThrowingNativeDescriptor(
+      Node.prototype,
+      'ownerDocument',
+      () => nativeElementLocalName(el),
+    );
+    const withoutLocalName = withThrowingNativeDescriptor(
+      Element.prototype,
+      'localName',
+      () => nativeElementLocalName(el),
+    );
+
+    expect(withoutOwner).to.equal('span');
+    expect(withoutLocalName).to.equal(undefined);
+  });
 });
 
 describe('collectRenderedTree', () => {
@@ -113,6 +148,36 @@ describe('collectRenderedTree', () => {
     expect(result.elementDepths.get(child1)).to.equal(1);
     expect(result.elementDepths.get(child2)).to.equal(1);
     expect(result.elementDepths.get(grandchild)).to.equal(2);
+  });
+
+  it('fails soft when native node, child, or shadow-root accessors are unavailable', () => {
+    const root = document.createElement('div');
+    root.append(document.createElement('span'));
+    const limits = DEFAULT_RENDERED_TREE_TRAVERSAL_LIMITS;
+
+    const withoutNodeType = withThrowingNativeDescriptor(
+      Node.prototype,
+      'nodeType',
+      () => collectRenderedTree(root, limits, { work: 0 }, 'node-type-unavailable'),
+    );
+    const withoutChildren = withThrowingNativeDescriptor(
+      Node.prototype,
+      'childNodes',
+      () => collectRenderedTree(root, limits, { work: 0 }, 'children-unavailable'),
+    );
+
+    const shadowHost = document.createElement('div');
+    shadowHost.attachShadow({ mode: 'open' }).append(document.createElement('span'));
+    const withoutShadow = withThrowingNativeDescriptor(
+      Element.prototype,
+      'shadowRoot',
+      () => collectRenderedTree(shadowHost, limits, { work: 0 }, 'shadow-unavailable'),
+    );
+
+    expect(withoutNodeType.elements.length).to.equal(0);
+    expect(withoutChildren.elements.length).to.equal(1);
+    expect(withoutShadow.elements.length).to.equal(1);
+    expect(withoutShadow.roots.length).to.equal(1);
   });
 
   it('includes the root itself as both a root entry and an element entry when root is an Element', () => {
