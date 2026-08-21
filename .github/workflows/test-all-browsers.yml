@@ -28,16 +28,19 @@ jobs:
           BROWSERS_INPUT: ${{ inputs.browsers }}
         run: node scripts/plan-test-browsers.mjs >> "$GITHUB_OUTPUT"
 
-  # release-qualification: matrix
+  # Preserve each shard's exact process/concurrency shape while running the existing four shards
+  # on independent runners. This changes scheduling only: the same deterministic shard commands
+  # and complete five-browser surface still run, without raising per-process browser concurrency.
   test:
     needs: plan
-    name: ${{ matrix.browser }}
+    name: ${{ matrix.browser }} / shard ${{ matrix.shard }}/4
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         browser: ${{ fromJSON(needs.plan.outputs.browsers) }}
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
@@ -53,4 +56,25 @@ jobs:
       - name: Run browser test sweep
         env:
           TEST_BROWSER: ${{ matrix.browser }}
-        run: ./scripts/test_all_browsers.sh --browsers "$TEST_BROWSER"
+          TEST_SHARD: ${{ matrix.shard }}
+        run: ./scripts/test_all_browsers.sh --browsers "$TEST_BROWSER" --shards "$TEST_SHARD"
+
+  # Preserve the five stable browser-named release checks while the actual work fans out above.
+  # A matrix-wide failure makes every aggregate fail; the individual worker still names the exact
+  # browser and shard to reproduce.
+  # release-qualification: matrix
+  qualification:
+    needs: [plan, test]
+    if: always() && needs.plan.result == 'success'
+    name: ${{ matrix.browser }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: ${{ fromJSON(needs.plan.outputs.browsers) }}
+    steps:
+      - name: Require every browser shard
+        env:
+          TEST_MATRIX_RESULT: ${{ needs.test.result }}
+        run: test "$TEST_MATRIX_RESULT" = success

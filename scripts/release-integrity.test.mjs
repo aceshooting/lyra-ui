@@ -175,8 +175,12 @@ test('keeps workflow-dispatch browser input out of shell source after allowlist 
   );
   assert.doesNotMatch(planJob, /<<<\s*"\$\{\{ inputs\.browsers \}\}"/u);
   assert.match(testJob, /TEST_BROWSER: \$\{\{ matrix\.browser \}\}/u);
+  assert.match(testJob, /shard: \[1, 2, 3, 4\]/u);
+  assert.match(testJob, /TEST_SHARD: \$\{\{ matrix\.shard \}\}/u);
   assert.match(testJob, /--browsers "\$TEST_BROWSER"/u);
+  assert.match(testJob, /--shards "\$TEST_SHARD"/u);
   assert.doesNotMatch(testJob, /--browsers\s+"\$\{\{ matrix\.browser \}\}"/u);
+  assert.match(testJob, /# release-qualification: matrix[\s\S]*\n  qualification:/u);
 });
 
 test('deploys docs from the committed manifest with scoped Pages credentials', () => {
