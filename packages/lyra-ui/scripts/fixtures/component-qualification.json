@@ -9010,7 +9010,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.test.ts",
-              "line": 864,
+              "line": 874,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -9184,7 +9184,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.test.ts",
-              "line": 374,
+              "line": 384,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -9198,7 +9198,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.test.ts",
-              "line": 864,
+              "line": 874,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -40777,7 +40777,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.test.ts",
-              "line": 1870,
+              "line": 1871,
               "test": "is accessible with a highlighted cell rendered",
               "target": "el",
               "state": "populated"

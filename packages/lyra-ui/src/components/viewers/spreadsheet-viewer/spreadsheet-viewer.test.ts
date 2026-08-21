@@ -1323,6 +1323,7 @@ describe('lr-spreadsheet-viewer', () => {
       const el = (await fixture(
         html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`
       )) as LyraSpreadsheetViewer;
+      shrinkAnchorRetry(el);
       const restore = fetchBuffer(buffer(GRID_WORKBOOK)); // only 2 rendered columns (Name, Role)
       try {
         el.src = 'https://example.test/book.xlsx';
