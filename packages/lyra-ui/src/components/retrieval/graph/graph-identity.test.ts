@@ -10,6 +10,10 @@ import '../mind-map/mind-map.js';
 import '../graph-legend/graph-legend.js';
 import type { LyraGraph } from './graph.js';
 import { normalizeGraphModel } from './graph-model.js';
+import type {
+  LyraGraphCommunity,
+  LyraGraphLink,
+} from './graph-model.js';
 import type { LyraKnowledgeGraphExplorer } from '../knowledge-graph-explorer/knowledge-graph-explorer.js';
 import type { LyraNeighborList } from '../neighbor-list/neighbor-list.js';
 import type { LyraCommunityCard } from '../community-card/community-card.js';
@@ -73,6 +77,29 @@ it('normalizes every keyed graph collection with nonblank first-wins identities'
       label: 'First community',
       memberIds: ['node-a', 'node-b'],
     },
+  ]);
+});
+
+it('normalizes malformed runtime links and missing community membership', () => {
+  const malformedLinks = normalizeGraphModel(
+    [],
+    null as unknown as readonly LyraGraphLink[],
+    [],
+    []
+  );
+  expect(malformedLinks.links).to.deep.equal([]);
+
+  const mixedLinks = normalizeGraphModel(
+    [],
+    [null, 42, { source: 'node-a', target: 'node-b' }] as unknown as readonly LyraGraphLink[],
+    [],
+    [{ id: 'empty-members' } as LyraGraphCommunity]
+  );
+  expect(mixedLinks.links).to.deep.equal([
+    { source: 'node-a', target: 'node-b' },
+  ]);
+  expect(mixedLinks.communities).to.deep.equal([
+    { id: 'empty-members', memberIds: [] },
   ]);
 });
 

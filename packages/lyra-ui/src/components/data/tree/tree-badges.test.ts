@@ -34,6 +34,22 @@ describe('tree-item badges', () => {
     expect('badge' in el.data[0]!).to.be.false;
   });
 
+  it('drops malformed badge records and badges without string text', async () => {
+    const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+    el.data = [
+      {
+        id: 'a',
+        label: 'Mixed badges',
+        badges: [null, ['nested'], { text: 7 }, { text: 'Valid' }],
+      } as unknown as LyraTreeNodeData,
+    ];
+    await el.updateComplete;
+    const node = el.querySelector('lr-tree-item') as LyraTreeItem;
+    const badges = [...node.shadowRoot!.querySelectorAll<HTMLElement>('[part="badge"]')];
+    expect(badges.map((badge) => badge.textContent!.trim())).to.deep.equal(['Valid']);
+    expect(el.data[0]!.badges).to.deep.equal([{ text: 'Valid', tone: 'neutral' }]);
+  });
+
   it('renders badge chips in array order with a normalized tone', async () => {
     const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
     el.data = dataWithBadges;

@@ -388,3 +388,48 @@ it('omits blank and later duplicate source ids before summary, table rows, and a
   activate(menuItems(menuFor(el, 0)).find((entry) => entry.value === 'sync')!);
   expect((await selected).detail).to.deep.equal({ sourceId: first.id });
 });
+
+it('renders every remaining status vocabulary and safely normalizes timestamps and collections', async () => {
+  const variants: KnowledgeSource[] = [
+    {
+      id: 'idle',
+      name: 'Idle source',
+      syncStatus: 'idle',
+      permission: 'viewer',
+      lastSyncedAt: '2026-02-03T04:05:00Z',
+    },
+    {
+      id: 'paused',
+      name: 'Paused source',
+      syncStatus: 'paused',
+      indexingHealth: 'unknown',
+      permission: 'restricted',
+      lastSyncedAt: 'not-a-date',
+    },
+  ];
+  const el = (await fixture(html`
+    <lr-knowledge-base .sources=${variants}></lr-knowledge-base>
+  `)) as LyraKnowledgeBase;
+  await tableEl(el).updateComplete;
+
+  expect(rowCells(el, 'sync-badge').map((badge) => badge.textContent!.trim())).to.deep.equal([
+    'Idle',
+    'Paused',
+  ]);
+  expect(rowCells(el, 'health-badge').map((badge) => badge.textContent!.trim())).to.deep.equal([
+    'Unknown',
+    'Unknown',
+  ]);
+  expect(rowCells(el, 'permission-badge').map((badge) => badge.textContent!.trim())).to.deep.equal([
+    'Viewer',
+    'Restricted',
+  ]);
+  expect(rowCells(el, 'sync-timestamp').map((timestamp) => timestamp.textContent!.trim())).to.satisfy(
+    (timestamps: string[]) => timestamps[0] !== 'Never synced' && timestamps[1] === 'Never synced'
+  );
+
+  el.sources = null as unknown as readonly KnowledgeSource[];
+  await el.updateComplete;
+  expect(tableEl(el).rows).to.deep.equal([]);
+  expect(el.shadowRoot!.querySelector('[part="summary"]') === null).to.equal(true);
+});

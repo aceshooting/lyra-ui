@@ -397,6 +397,41 @@ describe("drawGraphScene", () => {
     ).to.be.greaterThan(0);
   });
 
+  it("draws dashed links and expand badges with omitted optional badge colors", () => {
+    const ctx = make2dContext();
+    expect(() =>
+      drawGraphScene(
+        ctx,
+        { k: 1, x: 0, y: 0 },
+        {
+          hulls: [],
+          links: [
+            {
+              x1: 10,
+              y1: 50,
+              x2: 90,
+              y2: 50,
+              color: "#000",
+              width: 2,
+              dash: [4, 2],
+            },
+          ],
+          edgeLabels: [],
+          nodes: [],
+          nodeLabels: [],
+          expandIndicators: [{ x: 50, y: 50, r: 20 }],
+          showNodeLabels: false,
+          haloColor: "#000",
+          selectedColor: "#000",
+          labelColor: "#000",
+          labelHaloColor: "#fff",
+          font: "10px sans-serif",
+        }
+      )
+    ).to.not.throw();
+    expect(ctx.getImageData(64, 36, 1, 1).data[3]).to.be.greaterThan(0);
+  });
+
   it("keeps node labels physically after their anchor under inherited RTL", () => {
     const ctx = make2dContext();
     ctx.direction = "rtl";
@@ -545,5 +580,21 @@ describe("drawPickingScene", () => {
     );
     const edge = ctx.getImageData(50, 9, 1, 1).data;
     expect(pickColorToIndex(edge[0]!, edge[1]!, edge[2]!)).to.equal(0);
+  });
+
+  it("uses a finite fallback scale when the camera scale is invalid", () => {
+    for (const scale of [0, Number.NaN]) {
+      const ctx = make2dContext();
+      drawPickingScene(
+        ctx,
+        { k: scale, x: 0, y: 0 },
+        {
+          hulls: [],
+          links: [{ x1: 10, y1: 50, x2: 90, y2: 50, width: 1 }],
+          nodes: [],
+        }
+      );
+      expect(ctx.lineWidth).to.be.finite;
+    }
   });
 });

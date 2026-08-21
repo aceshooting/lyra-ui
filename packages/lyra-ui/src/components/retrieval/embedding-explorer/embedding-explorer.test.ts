@@ -225,6 +225,33 @@ describe("lr-embedding-explorer", () => {
     ).to.deep.equal(["-1", "0"]);
   });
 
+  it("supports bounded vertical arrow aliases", async () => {
+    const el = (await fixture(
+      html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`
+    )) as LyraEmbeddingExplorer;
+    const rendered = () => [
+      ...el.shadowRoot!.querySelectorAll<SVGGElement>('[part="point"]'),
+    ];
+
+    rendered()[0]!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true })
+    );
+    await el.updateComplete;
+    expect(rendered()[0]!.getAttribute("tabindex")).to.equal("0");
+
+    rendered()[0]!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
+    );
+    await el.updateComplete;
+    expect(rendered()[1]!.getAttribute("tabindex")).to.equal("0");
+
+    rendered()[1]!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
+    );
+    await el.updateComplete;
+    expect(rendered()[1]!.getAttribute("tabindex")).to.equal("0");
+  });
+
   it("exposes selectable points as listbox options with explicit selected state", async () => {
     const el = (await fixture(
       html`<lr-embedding-explorer
@@ -506,6 +533,57 @@ describe("lr-embedding-explorer", () => {
       new MouseEvent('click', { bubbles: true, composed: true })
     );
     expect((await selected).detail).to.deep.equal({ point: first });
+  });
+
+  it('normalizes invalid collection and height inputs without retaining stale output', async () => {
+    const el = (await fixture(html`
+      <lr-embedding-explorer .points=${points}></lr-embedding-explorer>
+    `)) as LyraEmbeddingExplorer;
+    expect(el.shadowRoot!.querySelectorAll('[part="point"]').length).to.equal(2);
+
+    el.points = null as unknown as readonly EmbeddingPoint[];
+    el.height = 'definitely-not-a-css-length';
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelectorAll('[part="point"]').length).to.equal(0);
+    expect(el.style.getPropertyValue('--lr-embedding-explorer-height')).to.equal('');
+    expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
+  });
+
+  it('keeps the focused identity and logical RTL navigation across an unsorted replacement', async () => {
+    const el = (await fixture(html`
+      <lr-embedding-explorer dir="rtl" .points=${points}></lr-embedding-explorer>
+    `)) as LyraEmbeddingExplorer;
+    const rendered = () => [
+      ...el.shadowRoot!.querySelectorAll<SVGGElement>('[part="point"]'),
+    ];
+    rendered()[1]!.focus();
+
+    el.points = [
+      { ...points[1]!, x: -4, y: 8 },
+      { ...points[0]!, x: 9, y: -2 },
+    ];
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement?.getAttribute('data-id')).to.equal('b');
+
+    const focused = el.shadowRoot!.activeElement as SVGGElement;
+    focused.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true })
+    );
+    await el.updateComplete;
+    expect(rendered().map((point) => point.getAttribute('tabindex'))).to.deep.equal([
+      '-1',
+      '0',
+    ]);
+
+    rendered()[1]!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })
+    );
+    await el.updateComplete;
+    expect(rendered().map((point) => point.getAttribute('tabindex'))).to.deep.equal([
+      '0',
+      '-1',
+    ]);
   });
 });
 

@@ -146,6 +146,53 @@ describe('box-plot family-contract regressions', () => {
       label({ dataset: { label: 'Series' }, raw: { min: 5, q1: 4, median: 3, q3: 2, max: 1 } }),
     ).to.equal(undefined);
   });
+
+  it('uses the legacy value formatter when the structured formatter is absent', () => {
+    const el = document.createElement('lr-box-plot') as LyraBoxPlot;
+    el.valueFormatter = (value, context) => `${context}:${value}`;
+    el.labels = ['A'];
+    el.datasets = [{ label: 'Series', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+
+    expect(el.exportData('csv')).to.contain('table:3');
+    const callback = (el as any).buildConfig().options.plugins.tooltip.callbacks.label;
+    expect(callback({ raw: { min: 1, q1: 2, median: 3, q3: 4, max: 5 } })).to.equal(
+      'tooltip:3'
+    );
+  });
+});
+
+it('handles empty and stale visibility-observer deliveries deterministically', () => {
+  const original = window.IntersectionObserver;
+  let callback: IntersectionObserverCallback | undefined;
+  class ControlledIntersectionObserver implements IntersectionObserver {
+    readonly root = null;
+    readonly rootMargin = '0px';
+    readonly thresholds = [0];
+    constructor(next: IntersectionObserverCallback) {
+      callback = next;
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+    takeRecords(): IntersectionObserverEntry[] { return []; }
+  }
+  window.IntersectionObserver = ControlledIntersectionObserver;
+  const el = document.createElement('lr-box-plot') as LyraBoxPlot;
+  try {
+    document.body.append(el);
+    expect(callback).to.be.a('function');
+    (el as any).visible = false;
+    callback!([], {} as IntersectionObserver);
+    expect((el as any).visible).to.equal(true);
+
+    el.remove();
+    (el as any).visible = false;
+    callback!([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+    expect((el as any).visible).to.equal(false);
+  } finally {
+    el.remove();
+    window.IntersectionObserver = original;
+  }
 });
 
 it('normalizes and validates box-plot constructors before registering them', async () => {
@@ -1701,6 +1748,21 @@ describe('bounded box-plot fallback paths', () => {
       .throw();
     expect(() => (el as unknown as { toggleDataset(index: number): void }).toggleDataset(1)).to.not
       .throw();
+
+    const invalid = document.createElement('lr-box-plot') as LyraBoxPlot;
+    invalid.datasets = [
+      { label: 'Broken', data: [{ min: 5, q1: 4, median: 3, q3: 2, max: 1 }] },
+    ];
+    const invalidEvents: unknown[] = [];
+    invalid.addEventListener('lr-point-click', (event) => {
+      invalidEvents.push((event as CustomEvent).detail);
+    });
+    (invalid as unknown as {
+      handlePointClick(event: unknown, chart: unknown): void;
+    }).handlePointClick({}, hit([{ datasetIndex: 0, index: 0 }]));
+    expect(invalidEvents).to.deep.equal([
+      { datasetIndex: 0, index: 0, label: undefined, value: null },
+    ]);
   });
 
   it('handles missing Chart.js metadata and source-index fallbacks when applying visibility', () => {

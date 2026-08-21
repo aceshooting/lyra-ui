@@ -6534,6 +6534,37 @@ describe("data-grid processing helpers", () => {
       "",
       "",
     ]);
+
+    const undefinedJson = {
+      toJSON(): undefined {
+        return undefined;
+      },
+    };
+    expect(
+      rowsAsDelimited([{ v: undefinedJson }], [{ field: "v" }], {
+        includeHeaders: false,
+      })
+    ).to.equal("");
+  });
+
+  it("treats nullish filters and non-finite numeric dates as empty or unmatched", () => {
+    const setColumn: DataGridColumn<{ v: unknown }> = {
+      field: "v",
+      filterType: "set",
+    };
+    for (const filter of [null, undefined, ""]) {
+      expect(matchesFilter({ v: "kept" }, setColumn, filter, locale)).to.equal(
+        true
+      );
+    }
+
+    const dateColumn: DataGridColumn<{ v: unknown }> = {
+      field: "v",
+      filterType: "date-range",
+    };
+    expect(matchesFilter({ v: Infinity }, dateColumn, [0, 1], locale)).to.equal(
+      false
+    );
   });
 
   it("ranks missing values by the sortUndefined policy", () => {
@@ -6564,6 +6595,8 @@ describe("data-grid processing helpers", () => {
         locale
       )
     ).to.deep.equal(withHoles);
+
+    expect(ids(undefined, false)).to.deep.equal([1, 2, null]);
   });
 
   it("honors every sort algorithm and a custom comparator", () => {

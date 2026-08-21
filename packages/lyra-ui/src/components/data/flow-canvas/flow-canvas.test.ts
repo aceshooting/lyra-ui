@@ -84,6 +84,24 @@ it('keeps the first unique nonempty node and edge ids before render, focus, coun
   expect(detail).to.deep.equal({ edgeId: 'connection', source: 'source', target: 'target' });
 });
 
+it('clears stale controlled selection when non-array ids are assigned', async () => {
+  const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+  el.nodes = [{ id: 'a' }, { id: 'b' }];
+  el.edges = [{ id: 'a-b', source: 'a', target: 'b' }];
+  el.selectedNodeIds = ['a'];
+  el.selectedEdgeIds = ['a-b'];
+  await el.updateComplete;
+  expect(el.selectedNodeIds).to.deep.equal(['a']);
+  expect(el.selectedEdgeIds).to.deep.equal(['a-b']);
+
+  el.selectedNodeIds = null as unknown as readonly string[];
+  el.selectedEdgeIds = { stale: true } as unknown as readonly string[];
+  await el.updateComplete;
+  expect(el.selectedNodeIds).to.deep.equal([]);
+  expect(el.selectedEdgeIds).to.deep.equal([]);
+  expect(el.shadowRoot!.querySelectorAll('[part="node"][data-selected="true"]')).to.have.length(0);
+});
+
 it('renders decorated edges without an owner document during SSR', () => {
   const el = document.createElement('lr-flow-canvas') as LyraFlowCanvas;
   el.nodes = [{ id: 'source' }];
@@ -694,6 +712,13 @@ describe('static rendering', () => {
     await el.updateComplete;
     const card = defaultCard(el, 'a');
     expect(card.textContent).to.equal('Grabs the payload');
+  });
+
+  it('leaves the default card body empty when a node has no description', async () => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [{ id: 'a', data: { label: 'Fetch' } }];
+    await el.updateComplete;
+    expect(defaultCard(el, 'a').textContent).to.equal('');
   });
 
   it('removes a default card once its node id disappears from nodes', async () => {
@@ -2329,6 +2354,29 @@ describe('registerCompanion & decorations', () => {
     await el.updateComplete;
     const card = defaultCard(el, 'a');
     expect(card.durationMs).to.equal(812);
+  });
+
+  it('clears every optional decoration field when a controlled run snapshot shrinks', async () => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [{ id: 'a' }];
+    el.decorations = {
+      a: {
+        status: 'running',
+        progress: 60,
+        detail: 'three of five',
+        durationMs: 900,
+      },
+    };
+    await el.updateComplete;
+    const card = defaultCard(el, 'a');
+    expect(card.status).to.equal('running');
+
+    el.decorations = {};
+    await el.updateComplete;
+    expect(card.status).to.equal(null);
+    expect(card.progress).to.equal(null);
+    expect(card.statusDetail).to.equal('');
+    expect(card.durationMs).to.equal(null);
   });
 
   it('a decorated edge takes its status tone, overriding FlowEdge.tone', async () => {

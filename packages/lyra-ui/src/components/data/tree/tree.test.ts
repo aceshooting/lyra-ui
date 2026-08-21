@@ -174,6 +174,28 @@ it('bounds a 10,000-level declarative traversal without recursive stack growth',
   expect(el.selectedItems.length, 'only levels 0 through 64 enter controller work').to.equal(65);
 });
 
+it('bounds an oversized root collection before mounting any generated items', () => {
+  const el = document.createElement('lr-tree') as LyraTree;
+  el.data = Array.from({ length: 1_001 }, (_, index) => ({
+    id: `root-${index}`,
+    label: `Root ${index}`,
+  }));
+
+  expect(el.data).to.have.length(1_000);
+  expect(el.dataTruncated).to.be.true;
+  expect(el.childElementCount).to.equal(0);
+});
+
+it('terminates a disconnected authored traversal when a malformed child API creates a cycle', () => {
+  const el = document.createElement('lr-tree') as LyraTree;
+  const item = document.createElement('lr-tree-item') as LyraTreeItem;
+  item.selected = true;
+  item.childItems = () => [item];
+  el.append(item);
+
+  expect(el.selectedItems).to.deep.equal([item]);
+});
+
 it('installs a recursively frozen snapshot and never invokes caller accessors', async () => {
   const child = { id: 'child', label: 'Original child' };
   const badges = [{ text: '1', label: 'One' }];
