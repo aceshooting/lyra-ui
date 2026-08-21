@@ -25,6 +25,18 @@ describe('localeNativeName', () => {
     expect(localeNativeName('zz')).to.equal('zz');
   });
 
+  it('degrades to the tag when a formatter returns no display name', () => {
+    const original = Intl.DisplayNames.prototype.of;
+    Intl.DisplayNames.prototype.of = function (this: Intl.DisplayNames, tag: string) {
+      return tag === 'qaa' ? (undefined as unknown as string) : original.call(this, tag);
+    };
+    try {
+      expect(localeNativeName('qaa')).to.equal('qaa');
+    } finally {
+      Intl.DisplayNames.prototype.of = original;
+    }
+  });
+
   it('degrades to the tag itself for a structurally invalid tag instead of throwing', () => {
     // `Intl.DisplayNames` throws a RangeError on these rather than returning a fallback.
     expect(localeNativeName('not a locale')).to.equal('not a locale');
@@ -69,6 +81,25 @@ describe('localeNativeName', () => {
     expect(languageToCountry('zh-Hant-u-nu-hanidec')).to.equal('cn');
     expect(languageToCountry('en-x-ca')).to.equal('gb');
     expect(languageToCountry('x-ca')).to.equal(undefined);
+  });
+
+  it('keeps extension tokens out of the structural fallback when Intl.Locale is unavailable', () => {
+    const descriptor = Object.getOwnPropertyDescriptor(Intl, 'Locale');
+    Object.defineProperty(Intl, 'Locale', {
+      configurable: true,
+      value: function UnsupportedLocale(): never {
+        throw new RangeError('Intl.Locale unavailable');
+      },
+    });
+    try {
+      expect(languageToCountry('en-u-ca-gregory')).to.equal('gb');
+      expect(languageToCountry('en-x-ca')).to.equal('gb');
+      expect(languageToCountry('x-ca')).to.equal(undefined);
+      expect(languageToCountry(42 as never)).to.equal(undefined);
+    } finally {
+      if (descriptor) Object.defineProperty(Intl, 'Locale', descriptor);
+      else delete (Intl as { Locale?: typeof Intl.Locale }).Locale;
+    }
   });
 
   it('supports script, explicit region, underscore, and malformed inputs deterministically', () => {

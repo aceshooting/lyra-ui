@@ -39,6 +39,47 @@ it('normalizes invalid orientation attributes and property assignments to vertic
   expect(el.getAttribute('orientation')).to.equal('vertical');
 });
 
+it('uses the stable collision threshold before a hidden timeline has an axis allocation', async () => {
+  const el = await fixture<LyraTimeline>(html`
+    <lr-timeline style="display: none" scale="time" collision="cluster">
+      <lr-timeline-item .timestamp=${new Date('2026-01-01T00:00:00Z')}>A</lr-timeline-item>
+      <lr-timeline-item .timestamp=${new Date('2026-01-01T00:00:00Z')}>B</lr-timeline-item>
+    </lr-timeline>
+  `);
+  const threshold = (el as unknown as { clusterCollisionThreshold(): number })
+    .clusterCollisionThreshold();
+  expect(threshold).to.equal(0.015);
+});
+
+it('coalesces repeated cluster measurements into one owner-realm animation frame', () => {
+  const originalRequest = window.requestAnimationFrame;
+  const originalCancel = window.cancelAnimationFrame;
+  let scheduled = 0;
+  const cancelled: number[] = [];
+  window.requestAnimationFrame = () => {
+    scheduled += 1;
+    return 321;
+  };
+  window.cancelAnimationFrame = (handle) => {
+    cancelled.push(handle);
+  };
+  try {
+    const el = document.createElement('lr-timeline') as LyraTimeline;
+    const internals = el as unknown as {
+      scheduleClusterMeasurement(): void;
+      cancelClusterMeasurement(): void;
+    };
+    internals.scheduleClusterMeasurement();
+    internals.scheduleClusterMeasurement();
+    expect(scheduled).to.equal(1);
+    internals.cancelClusterMeasurement();
+    expect(cancelled).to.deep.equal([321]);
+  } finally {
+    window.requestAnimationFrame = originalRequest;
+    window.cancelAnimationFrame = originalCancel;
+  }
+});
+
 it('reflects orientation and item variant when assigned as properties so CSS state follows', async () => {
   const el = (await fixture(
     html`<lr-timeline><lr-timeline-item>Only</lr-timeline-item></lr-timeline>`,

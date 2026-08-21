@@ -69,6 +69,11 @@ it('normalizes a default-wrapped MapLibre module and prefers a valid named names
   expect((await loadMaplibreModule(() => Promise.resolve(mixed))) === named).to.be.true;
 });
 
+it('accepts a callable module namespace when it exposes the complete constructor surface', async () => {
+  const callable = Object.assign(function MaplibreNamespace() {}, fakeMaplibreModule());
+  expect((await loadMaplibreModule(() => Promise.resolve(callable))) === callable).to.be.true;
+});
+
 it('fails closed with a clear Error for every consumed MapLibre constructor/method', async () => {
   const MapWithoutPrototype = function () {} as unknown as new (...args: never[]) => object;
   Object.defineProperty(MapWithoutPrototype, 'prototype', { value: null });

@@ -105,6 +105,10 @@ it('degrades a midpoint outside the domain to plain normalization', () => {
   expect(midpointRatio(5, 0, 10, 20)).to.equal(finiteRatio(5, 0, 10));
   expect(midpointRatio(5, 0, 10, -5)).to.equal(finiteRatio(5, 0, 10));
   expect(midpointRatio(5, 0, 10, Number.NaN)).to.equal(finiteRatio(5, 0, 10));
+  expect(midpointRatio(5, Number.NaN, 10, 5)).to.equal(finiteRatio(5, Number.NaN, 10));
+  expect(midpointRatio(5, 0, Number.POSITIVE_INFINITY, 5)).to.equal(
+    finiteRatio(5, 0, Number.POSITIVE_INFINITY),
+  );
 });
 
 it('keeps midpointAlpha on the same 0.1-1.0 floor as linearAlpha', () => {

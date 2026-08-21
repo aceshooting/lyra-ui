@@ -374,6 +374,22 @@ it('uses a human-readable region name as the default alt text', async () => {
   );
 });
 
+it('falls back to the uppercase region code when Intl.DisplayNames rejects the code', async () => {
+  const original = Intl.DisplayNames.prototype.of;
+  Intl.DisplayNames.prototype.of = function (this: Intl.DisplayNames, code: string) {
+    if (code === 'FR') throw new RangeError('region data unavailable');
+    return original.call(this, code);
+  };
+  try {
+    const el = (await fixture(html`
+      <lr-flag country="fr" src=${TEST_FLAG_SRC}></lr-flag>
+    `)) as LyraFlag;
+    expect((await img(el)).getAttribute('alt')).to.equal('FR');
+  } finally {
+    Intl.DisplayNames.prototype.of = original;
+  }
+});
+
 it('still prefers an explicit label over the derived display name', async () => {
   const el = (await fixture(html`<lr-flag country="fr" label="French flag"></lr-flag>`)) as LyraFlag;
   const image = await img(el);
@@ -455,6 +471,7 @@ describe('loadFlagUrl (uncached, dependency-injectable)', () => {
       console.warn = originalWarn;
     }
   });
+
 });
 
 describe('loadBulkFlagUrl (uncached, dependency-injectable)', () => {
@@ -524,6 +541,24 @@ describe('loadBulkFlagUrl (uncached, dependency-injectable)', () => {
     console.warn = () => {};
     try {
       expect(await loadBulkFlagUrl(() => Promise.resolve(hostile))).to.equal(null);
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+
+  it('fails closed when a validated peer resolver factory throws during initialization', async () => {
+    const originalWarn = console.warn;
+    const warnings: string[] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '));
+    try {
+      const resolved = await loadBulkFlagUrl(() => Promise.resolve({
+        createFlagUrlResolver(): never {
+          throw new Error('resolver table failed to initialize');
+        },
+      }));
+      expect(resolved).to.equal(null);
+      expect(warnings.join(' ')).to.contain('createFlagUrlResolver');
+      expect(warnings.join(' ')).to.contain('version mismatch');
     } finally {
       console.warn = originalWarn;
     }

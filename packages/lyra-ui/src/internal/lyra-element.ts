@@ -1070,20 +1070,42 @@ function installOwnedCollectionAccessors(ctor: typeof LyraElement): void {
     const installed = ownershipBoundarySetters.get(inheritedSet);
     if (installed && samePolicy(installed.policy, policy)) continue;
     const originalSet = installed?.originalSet ?? inheritedSet;
+    const lastAssignments = new WeakMap<
+      LyraElement,
+      { readonly source: unknown; readonly retained: unknown }
+    >();
     const set = function (this: LyraElement, value: unknown): void {
+      const previous = lastAssignments.get(this);
+      // Declarative renderers commonly rebind stable inputs on every parent render. Once the
+      // boundary owns a source, repeating that exact source or round-tripping the getter's snapshot
+      // is a no-op unless the property deliberately supplied a domain-specific change detector.
+      // Identity-preserving collections remain explicit render requests because their live items
+      // may have changed even while the array itself did not.
+      if (
+        previous &&
+        declaration.hasChanged === undefined &&
+        !policy.preservesItemIdentity &&
+        !policy.preservesObjectIdentity &&
+        (Object.is(value, previous.source) || Object.is(value, previous.retained))
+      ) {
+        return;
+      }
       const ownerView = (this as unknown as { ownerDocument?: Document })
         .ownerDocument?.defaultView;
-      originalSet.call(
-        this,
+      const snapshot =
         policy.preservesObjectIdentity &&
-          value !== null &&
-          typeof value === 'object' &&
-          !isArrayValue(value)
+        value !== null &&
+        typeof value === 'object' &&
+        !isArrayValue(value)
           ? value
           : policy.preservesItemIdentity
           ? snapshotIdentityCollection(value, ownerView)
-          : snapshotPublicCollection(value, ownerView)
-      );
+          : snapshotPublicCollection(value, ownerView);
+      originalSet.call(this, snapshot);
+      lastAssignments.set(this, {
+        source: value,
+        retained: descriptor.get?.call(this) ?? snapshot,
+      });
     };
     ownershipBoundarySetters.set(set, { policy, originalSet });
     Object.defineProperty(prototype, name, { ...descriptor, set });

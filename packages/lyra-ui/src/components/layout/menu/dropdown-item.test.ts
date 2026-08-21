@@ -234,6 +234,11 @@ describe('<lr-dropdown-item>', () => {
     const item = await submenuParent();
     expectSubmenuReflection(item, false);
 
+    // Repeating the default is an idempotent close request and must also clear both aliases.
+    item.submenuOpen = false;
+    await item.updateComplete;
+    expectSubmenuReflection(item, false);
+
     item.submenuOpen = true;
     await waitForSubmenuState(item, true);
     expectSubmenuReflection(item, true);
