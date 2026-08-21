@@ -83,6 +83,9 @@ it('shows a loading skeleton and aria-busy while chart.js/the boxplot plugin loa
   expect(sink!.getRootNode() === document, 'the alert sink must live in document light DOM').to.be
     .true;
   expect(assertiveTexts(), 'a successful initial mount must not announce an error').to.deep.equal([]);
+  expect(() => (
+    el as unknown as { syncAnnouncementSinks(): void }
+  ).syncAnnouncementSinks()).to.not.throw();
 });
 
 describe('box-plot family-contract regressions', () => {
@@ -1633,6 +1636,114 @@ describe('per-box interactivity', () => {
       (details[0] as { index: number }).index,
       'the invalid middle point must be skipped entirely, landing on the third data point',
     ).to.equal(2);
+  });
+});
+
+describe('bounded box-plot fallback paths', () => {
+  const point = { min: 1, q1: 2, median: 3, q3: 4, max: 5 };
+
+  it('exports both absent and present PNG snapshots and skips invalid CSV summaries', () => {
+    const el = document.createElement('lr-box-plot') as LyraBoxPlot;
+    el.labels = [];
+    el.datasets = [
+      {
+        label: 'Series, quoted',
+        data: [point, { min: 5, q1: 4, median: 3, q3: 2, max: 1 }],
+      },
+    ];
+    expect(el.exportData('png')).to.equal('');
+    expect(el.exportData('csv').split('\r\n')).to.have.length(2);
+    expect(el.exportData('csv')).to.contain('"Series, quoted"');
+
+    (el as unknown as { chart: { toBase64Image(): string } }).chart = {
+      toBase64Image: () => 'data:image/png;base64,box',
+    };
+    expect(el.exportData('png')).to.equal('data:image/png;base64,box');
+  });
+
+  it('covers empty palettes, absent summaries, misses, and invalid legend indexes', () => {
+    const el = document.createElement('lr-box-plot') as LyraBoxPlot;
+    el.datasets = [{ label: '', data: [point] }];
+    expect((el as unknown as {
+      seriesColor(index: number, palette: string[]): string;
+    }).seriesColor(0, [])).to.equal('transparent');
+
+    const spoken = (el as unknown as {
+      boxAnnouncement(
+        datum: { datasetIndex: number; index: number; value: null },
+        position: number,
+        total: number,
+      ): string;
+    }).boxAnnouncement({ datasetIndex: 99, index: 4, value: null }, 0, 1);
+    expect(spoken).to.contain('Series');
+
+    const events: unknown[] = [];
+    el.addEventListener('lr-point-click', (event) => events.push((event as CustomEvent).detail));
+    const hit = (indexes: unknown[]) => ({
+      getElementsAtEventForMode: () => indexes,
+    });
+    (el as unknown as {
+      handlePointClick(event: unknown, chart: unknown): void;
+    }).handlePointClick({}, hit([]));
+    (el as unknown as {
+      handlePointClick(event: unknown, chart: unknown): void;
+    }).handlePointClick({}, hit([{ datasetIndex: 99, index: 99 }]));
+    expect(events).to.have.length(0);
+
+    expect(() => (el as unknown as { toggleDataset(index: number): void }).toggleDataset(0)).to.not
+      .throw();
+    (el as unknown as { chart: unknown }).chart = {
+      data: { datasets: [{}] },
+      update: () => undefined,
+      setDatasetVisibility: () => undefined,
+    };
+    expect(() => (el as unknown as { toggleDataset(index: number): void }).toggleDataset(-1)).to.not
+      .throw();
+    expect(() => (el as unknown as { toggleDataset(index: number): void }).toggleDataset(1)).to.not
+      .throw();
+  });
+
+  it('handles missing Chart.js metadata and source-index fallbacks when applying visibility', () => {
+    const el = document.createElement('lr-box-plot') as LyraBoxPlot;
+    expect((el as unknown as { applyDatasetVisibility(): boolean }).applyDatasetVisibility()).to.be
+      .false;
+
+    let visibility: [number, boolean] | undefined;
+    (el as unknown as { chart: unknown }).chart = {
+      data: { datasets: [{}] },
+      getDatasetMeta: () => undefined,
+      setDatasetVisibility: (index: number, visible: boolean) => {
+        visibility = [index, visible];
+      },
+    };
+    expect((el as unknown as { applyDatasetVisibility(): boolean }).applyDatasetVisibility()).to.be
+      .true;
+    el.datasets = [{ label: 'A', data: [point] }];
+    el.hiddenDatasets = [0];
+    expect((el as unknown as { applyDatasetVisibility(): boolean }).applyDatasetVisibility()).to.be
+      .true;
+    expect(visibility).to.deep.equal([0, false]);
+  });
+
+  it('reports peer registration failures without retaining a malformed load', async () => {
+    const registrationError = new Error('box registration failed');
+    const chart = fakeChartModule(() => {
+      throw registrationError;
+    });
+    const originalWarn = console.warn;
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args);
+    try {
+      expect(
+        await loadBoxPlotAndRegister(
+          () => Promise.resolve(chart),
+          () => Promise.resolve(fakeBoxPlotModule()),
+        ),
+      ).to.equal(null);
+      expect(warnings.flat()).to.contain(registrationError);
+    } finally {
+      console.warn = originalWarn;
+    }
   });
 });
 

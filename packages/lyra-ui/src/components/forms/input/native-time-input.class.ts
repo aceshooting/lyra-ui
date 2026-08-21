@@ -9,7 +9,6 @@ import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.ge
 
 const timeBoundConverter = {
   fromAttribute: (value: string | null): string | undefined => value ?? undefined,
-  toAttribute: (value: string | number | undefined): string | null => (value == null ? null : String(value)),
 };
 
 /**

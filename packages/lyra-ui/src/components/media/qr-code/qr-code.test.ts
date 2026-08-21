@@ -434,6 +434,9 @@ describe('lr-qr-code', () => {
     expect(el.canvas.getAttribute('role')).to.equal(null);
     expect(el.canvas.getAttribute('aria-label')).to.equal(null);
     expect(el.canvas.getAttribute('aria-hidden')).to.equal('true');
+    expect(() => (
+      el as unknown as { syncAnnouncementSinks(): void }
+    ).syncAnnouncementSinks()).to.not.throw();
   });
 
   it('`label` overrides `value` for the accessible name', async () => {
@@ -1151,6 +1154,122 @@ describe('lr-qr-code', () => {
     const lightCenter = Math.round(10 * backingScale);
     const lightPixel = ctx.getImageData(lightCenter, lightCenter, 1, 1).data;
     expect([...lightPixel.slice(0, 3)]).to.deep.equal([255, 255, 255]);
+  });
+
+  it('falls back to canvas semantics when attachInternals is unavailable', async () => {
+    const prototype = LyraQrCode.prototype as unknown as {
+      attachInternals(): ElementInternals;
+    };
+    const ownDescriptor = Object.getOwnPropertyDescriptor(prototype, 'attachInternals');
+    Object.defineProperty(prototype, 'attachInternals', {
+      configurable: true,
+      value: () => {
+        throw new Error('ElementInternals unavailable');
+      },
+    });
+    let el: LyraQrCode;
+    try {
+      el = document.createElement('lr-qr-code') as LyraQrCode;
+    } finally {
+      if (ownDescriptor) Object.defineProperty(prototype, 'attachInternals', ownDescriptor);
+      else delete (prototype as { attachInternals?: unknown }).attachInternals;
+    }
+
+    installFakeLoader(el!, fakeApi(() => ({ modules: fakeModules(true) })));
+    el!.label = 'Property fallback';
+    el!.setAttribute('aria-label', 'Author label');
+    document.body.append(el!);
+    try {
+      el!.value = 'encoded value';
+      await waitForPart(el!, 'canvas');
+      expect(el!.canvas.getAttribute('role')).to.equal('img');
+      expect(el!.canvas.getAttribute('aria-label')).to.equal('Author label');
+      expect(el!.canvas.hasAttribute('aria-hidden')).to.be.false;
+    } finally {
+      el!.remove();
+    }
+  });
+
+  it('bounds cloned matrix reads outside the validated module square', async () => {
+    const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
+    installFakeLoader(el, fakeApi(() => ({ modules: mixedModules() })));
+    el.value = 'bounds';
+    await waitForPart(el, 'canvas');
+    const modules = (el as unknown as {
+      loadState: { modules: { get(row: number, col: number): number } };
+    }).loadState.modules;
+    expect(modules.get(1.5, 0)).to.equal(0);
+    expect(modules.get(-1, 0)).to.equal(0);
+    expect(modules.get(0, 2)).to.equal(0);
+    expect(modules.get(1, 1)).to.equal(1);
+  });
+
+  it('fails closed when the owner realm has no Image constructor or an image load fails', async () => {
+    const el = document.createElement('lr-qr-code') as LyraQrCode;
+    const imageDescriptor = Object.getOwnPropertyDescriptor(window, 'Image');
+    const loadImage = (src: string) => (
+      el as unknown as {
+        loadEmbeddedImage(value: string): Promise<HTMLImageElement | undefined>;
+      }
+    ).loadEmbeddedImage(src);
+    try {
+      Object.defineProperty(window, 'Image', { configurable: true, value: undefined });
+      expect((await loadImage('missing-constructor')) === undefined).to.be.true;
+
+      class FakeImage extends EventTarget {
+        decoding = '';
+        naturalWidth = 10;
+        naturalHeight = 10;
+
+        set src(value: string) {
+          if (value === 'zero-width') this.naturalWidth = 0;
+          queueMicrotask(() => this.dispatchEvent(new Event(value === 'error' ? 'error' : 'load')));
+        }
+      }
+      Object.defineProperty(window, 'Image', { configurable: true, value: FakeImage });
+      expect((await loadImage('error')) === undefined).to.be.true;
+      expect((await loadImage('zero-width')) === undefined).to.be.true;
+      expect(await loadImage('success')).to.be.instanceOf(FakeImage);
+    } finally {
+      if (imageDescriptor) Object.defineProperty(window, 'Image', imageDescriptor);
+      else delete (window as unknown as { Image?: typeof Image }).Image;
+    }
+  });
+
+  it('returns before drawing an absent canvas or zero-area embedded image', async () => {
+    const el = (await fixture(html`<lr-qr-code size="100"></lr-qr-code>`)) as LyraQrCode;
+    installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(true) })));
+    el.value = 'draw guards';
+    await waitForPart(el, 'canvas');
+
+    const canvas = el.canvas;
+    const context = canvas.getContext('2d')!;
+    const fakeImage = { naturalWidth: 10, naturalHeight: 10 } as HTMLImageElement;
+    el.imageCoverage = 0;
+    expect(() => (
+      el as unknown as {
+        drawEmbeddedImage(
+          ctx: CanvasRenderingContext2D,
+          image: HTMLImageElement,
+          size: number,
+        ): void;
+      }
+    ).drawEmbeddedImage(context, fakeImage, 100)).to.not.throw();
+
+    el.imageCoverage = 0.5;
+    el.imagePadding = 25;
+    expect(() => (
+      el as unknown as {
+        drawEmbeddedImage(
+          ctx: CanvasRenderingContext2D,
+          image: HTMLImageElement,
+          size: number,
+        ): void;
+      }
+    ).drawEmbeddedImage(context, fakeImage, 100)).to.not.throw();
+
+    canvas.remove();
+    expect(() => (el as unknown as { draw(): void }).draw()).to.not.throw();
   });
 
   it('fits comfortably inside a 320px-narrow container at the default size', async () => {

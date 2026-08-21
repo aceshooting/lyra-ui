@@ -258,6 +258,60 @@ it('renders object-catalog rows with a language/description second line', async 
   expect(meta.textContent).to.equal('en-US · Warm, narrative');
 });
 
+it('fails closed when a hostile catalog container hides its length', async () => {
+  const catalog = new Proxy([], {
+    get(target, key, receiver) {
+      if (key === 'length') throw new Error('unreadable catalog length');
+      return Reflect.get(target, key, receiver);
+    },
+  });
+  const el = (await fixture(html`
+    <lr-voice-picker .catalog=${catalog}></lr-voice-picker>
+  `)) as LyraVoicePicker;
+
+  expect(el.catalog).to.deep.equal([]);
+  expect(Object.isFrozen(el.catalog)).to.be.true;
+  expect(input(el).getAttribute('role')).to.equal('combobox');
+});
+
+it('retains valid mixed catalog rows around descriptor traps and accessor-only fields', async () => {
+  const hostileEntry = new Proxy({}, {
+    getOwnPropertyDescriptor(): never {
+      throw new Error('unreadable entry descriptor');
+    },
+  });
+  const accessorEntry = {};
+  Object.defineProperties(accessorEntry, {
+    id: { configurable: true, enumerable: true, get: () => 'accessor-id' },
+    label: { configurable: true, enumerable: true, value: 'Accessor label' },
+  });
+  const source = [
+    'alloy',
+    { id: 'skipped', label: 'Skipped' },
+    { id: 'aria', label: 'Aria' },
+    'verse',
+    42,
+    hostileEntry,
+    accessorEntry,
+  ];
+  const catalog = new Proxy(source, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === '1') throw new Error('unreadable catalog entry');
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const el = (await fixture(html`
+    <lr-voice-picker .catalog=${catalog as never}></lr-voice-picker>
+  `)) as LyraVoicePicker;
+
+  expect(el.catalog?.map((entry) => typeof entry === 'string' ? entry : entry.id)).to.deep.equal([
+    'alloy',
+    'aria',
+    'verse',
+  ]);
+  expect(Object.isFrozen(el.catalog)).to.be.true;
+});
+
 it('a value not present in catalog renders as a synthetic stale row with the not-in-catalog badge', async () => {
   const el = (await fixture(
     html`<lr-voice-picker .catalog=${CATALOG} value="retired-voice"></lr-voice-picker>`
@@ -792,6 +846,27 @@ it('keeps a rejected pending play silent and never exposes a false playing state
     expect(changes).to.deep.equal([]);
     expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
     expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
+  } finally {
+    restore();
+  }
+});
+
+it('contains a synchronous media play failure without publishing a preview state', async () => {
+  const restore = stubMediaPlay(() => {
+    throw new Error('play threw synchronously');
+  });
+  try {
+    const el = (await fixture(
+      html`<lr-voice-picker .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    const changes: Array<string | null> = [];
+    el.addEventListener('lr-preview-change', (event) => changes.push(event.detail.voiceId));
+
+    expect(() => previewButton(el).click()).to.not.throw();
+    await el.updateComplete;
+    expect(changes).to.deep.equal([]);
+    expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
+    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
   } finally {
     restore();
   }

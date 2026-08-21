@@ -851,3 +851,55 @@ it('groups many independent radios without repeated linear Array.find scans', ()
   }
   expect(findCalls).to.equal(0);
 });
+
+it('walks nested image-map ancestry and rejects a closed details branch with no summary', async () => {
+  const map = document.createElement('map');
+  const wrapper = document.createElement('span');
+  const area = document.createElement('area');
+  area.href = '#target';
+  wrapper.append(area);
+  map.append(wrapper);
+  expect(isSemanticActionElement(area)).to.equal(true);
+
+  const details = await fixture<HTMLDetailsElement>(html`
+    <details><span><button id="hidden-action">Hidden action</button></span></details>
+  `);
+  const button = details.querySelector<HTMLButtonElement>('#hidden-action')!;
+  expect(isComposedFocusAvailable(button)).to.equal(false);
+  expect(collectComposedFocusTargets(details).elements).to.deep.equal([]);
+});
+
+it('collects fallback actions from a light-DOM slot and a closed details summary', async () => {
+  const root = await fixture<HTMLDivElement>(html`
+    <div>
+      <slot><button id="fallback-action">Fallback</button></slot>
+      <details><summary id="summary-action">Summary</summary><button>Hidden</button></details>
+    </div>
+  `);
+
+  expect(collectComposedFocusTargets(root).elements.map((element) => element.id)).to.deep.equal([
+    'fallback-action',
+    'summary-action',
+  ]);
+});
+
+it('falls back to authored state while the owner realm cannot compute styles', async () => {
+  const button = await fixture<HTMLButtonElement>(html`<button>Action</button>`);
+  const view = button.ownerDocument.defaultView!;
+  const getComputedStyle = view.getComputedStyle;
+  view.getComputedStyle = () => {
+    throw new Error('style realm temporarily unavailable');
+  };
+  try {
+    expect(isComposedFocusAvailable(button)).to.equal(true);
+  } finally {
+    view.getComputedStyle = getComputedStyle;
+  }
+});
+
+it('reports depth truncation before scheduling an included root', async () => {
+  const button = await fixture<HTMLButtonElement>(html`<button>Action</button>`);
+  const result = collectComposedFocusTargets(button, { maxDepth: -1 });
+  expect(result.elements).to.deep.equal([]);
+  expect(result.truncationReasons).to.include('depth');
+});

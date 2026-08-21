@@ -341,8 +341,8 @@ it('retargets after detachment without replacing late authored relationship base
 
 it('composes attribute and control owners acquired through separate module instances', async function () {
   if (!('ariaControlsElements' in HTMLElement.prototype)) this.skip();
-  const firstCopy = await import('./aria-ownership.js?aria-owner-copy=first');
-  const secondCopy = await import('./aria-ownership.js?aria-owner-copy=second');
+  const firstCopy = await import('../../dist/internal/aria-ownership.js?aria-owner-copy=first');
+  const secondCopy = await import('../../dist/internal/aria-ownership.js?aria-owner-copy=second');
   const root = await fixture<HTMLElement>(html`
     <div><button></button><section id="copy-control-first"></section><section id="copy-control-second"></section></div>
   `);
@@ -447,4 +447,115 @@ it('preserves whole-value owner order when an older lease updates after adoption
   older.release();
   expect(target.hasAttribute('aria-label')).to.equal(false);
   target.remove();
+});
+
+it('uses serialized relationships in a defaultView-less document with hostile reflection', async () => {
+  const detachedDocument = document.implementation.createHTMLDocument('detached ownership');
+  const target = detachedDocument.createElement('button');
+  const control = detachedDocument.createElement('section');
+  const description = detachedDocument.createElement('span');
+  control.id = 'detached-control';
+  description.id = 'detached-description';
+  detachedDocument.body.append(target, control, description);
+  Object.defineProperty(target, 'ariaControlsElements', {
+    configurable: true,
+    get() {
+      throw new Error('reflection read failed');
+    },
+    set() {},
+  });
+
+  const contribution = {
+    attributes: { 'aria-expanded': 'true' },
+    controls: [control],
+    descriptions: [description],
+  } as const;
+  const lease = acquireAriaOwnership(target, contribution);
+  expect(lease.target?.localName).to.equal('button');
+  expect(target.getAttribute('aria-expanded')).to.equal('true');
+  expect(target.getAttribute('aria-controls')).to.equal(control.id);
+  expect(target.getAttribute('aria-describedby')).to.equal(description.id);
+
+  lease.update(target, contribution);
+  expect(target.getAttribute('aria-controls')).to.equal(control.id);
+  lease.release();
+  lease.release();
+  lease.update(target, contribution);
+  expect(lease.target).to.equal(null);
+  expect(target.hasAttribute('aria-expanded')).to.equal(false);
+  expect(target.hasAttribute('aria-controls')).to.equal(false);
+  expect(target.hasAttribute('aria-describedby')).to.equal(false);
+});
+
+it('deduplicates and restores an explicit aria-controls element baseline', async function () {
+  if (!('ariaControlsElements' in HTMLElement.prototype)) this.skip();
+  const root = document.createElement('div');
+  const target = document.createElement('button');
+  const baseline = document.createElement('section');
+  const owned = document.createElement('section');
+  baseline.id = 'explicit-baseline-control';
+  owned.id = 'explicit-owned-control';
+  root.append(target, baseline, owned);
+  document.body.append(root);
+  try {
+    target.ariaControlsElements = [baseline];
+    const lease = acquireAriaOwnership(target, { controls: [baseline, owned, owned] });
+    expect((target.ariaControlsElements ?? []).map((element) => element.id)).to.deep.equal([
+      baseline.id,
+      owned.id,
+    ]);
+    lease.release();
+    expect((target.ariaControlsElements ?? []).map((element) => element.id)).to.deep.equal([
+      baseline.id,
+    ]);
+  } finally {
+    root.remove();
+  }
+});
+
+it('fails closed when a detached target root cannot resolve its authored control ids', async function () {
+  if (!('ariaControlsElements' in HTMLElement.prototype)) this.skip();
+  const detachedRoot = document.createElement('div');
+  const target = document.createElement('button');
+  const authored = document.createElement('section');
+  const owned = document.createElement('section');
+  authored.id = 'detached-authored-control';
+  owned.id = 'document-owned-control';
+  target.setAttribute('aria-controls', authored.id);
+  detachedRoot.append(target, authored);
+  document.body.append(owned);
+  try {
+    expect(detachedRoot.getRootNode() === detachedRoot).to.equal(true);
+    const lease = acquireAriaOwnership(target, { controls: [owned] });
+    expect((target.ariaControlsElements ?? []).map((element) => element.id)).to.deep.equal([]);
+    expect(target.getAttribute('aria-controls')).to.equal('');
+    lease.release();
+    expect(target.getAttribute('aria-controls')).to.equal(authored.id);
+  } finally {
+    owned.remove();
+  }
+});
+
+it('keeps a surviving control owner active when a peer releases', async function () {
+  if (!('ariaControlsElements' in HTMLElement.prototype)) this.skip();
+  const root = document.createElement('div');
+  const target = document.createElement('button');
+  const firstControl = document.createElement('section');
+  const secondControl = document.createElement('section');
+  firstControl.id = 'surviving-first-control';
+  secondControl.id = 'surviving-second-control';
+  root.append(target, firstControl, secondControl);
+  document.body.append(root);
+  try {
+    const first = acquireAriaOwnership(target, { controls: [firstControl] });
+    const second = acquireAriaOwnership(target, { controls: [secondControl] });
+    first.release();
+    expect((target.ariaControlsElements ?? []).map((element) => element.id)).to.deep.equal([
+      secondControl.id,
+    ]);
+    second.release();
+    expect(target.hasAttribute('aria-controls')).to.equal(false);
+  } finally {
+    root.remove();
+  }
 });

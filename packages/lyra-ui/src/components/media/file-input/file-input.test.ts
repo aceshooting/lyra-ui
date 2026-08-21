@@ -200,6 +200,25 @@ it("owns bounded immutable MIME policy snapshots and skips malformed or hostile 
   expect(el.allowedMimeTypes).to.deep.equal([]);
 });
 
+it("treats non-array MIME and validator policies as empty, and forwards a property-only accessible label", async () => {
+  const el = await fixture<LyraFileInput>(
+    html`<lr-file-input></lr-file-input>`
+  );
+
+  el.allowedMimeTypes = "text/csv" as unknown as readonly string[];
+  el.forbiddenMimeTypes = [];
+  el.validators = null as unknown as LyraFileInput["validators"];
+  el.accessibleLabel = "Private upload";
+  await el.updateComplete;
+
+  expect(el.allowedMimeTypes).to.deep.equal([]);
+  expect(el.forbiddenMimeTypes).to.deep.equal([]);
+  expect(el.checkValidity()).to.be.true;
+  expect(
+    el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute("aria-label")
+  ).to.equal("Private upload");
+});
+
 it("rejects a multi-file drop when multiple is false", async () => {
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
@@ -3989,4 +4008,117 @@ it("leaves an ordinary auto-height host content-sized, so the fill chain is a no
     dropzone.getBoundingClientRect().height,
     "still the intrinsic band, not stretched to the viewport"
   ).to.be.lessThan(300);
+});
+
+it("fails a folder drop atomically when a legacy file-system API throws synchronously", async () => {
+  const cases = [
+    {
+      name: "file callback",
+      entry: {
+        isDirectory: true,
+        isFile: false,
+        name: "file-callback-folder",
+        createReader: () => {
+          let batch = 0;
+          return {
+            readEntries: (success: (entries: unknown[]) => void) =>
+              success(
+                batch++ === 0
+                  ? [
+                      {
+                        isDirectory: false,
+                        isFile: true,
+                        name: "unreadable.txt",
+                        file: (): never => {
+                          throw new Error("synchronous file() failure");
+                        },
+                      },
+                    ]
+                  : []
+              ),
+          };
+        },
+      },
+    },
+    {
+      name: "directory batch",
+      entry: {
+        isDirectory: true,
+        isFile: false,
+        name: "batch-folder",
+        createReader: () => ({
+          readEntries: (): never => {
+            throw new Error("synchronous readEntries() failure");
+          },
+        }),
+      },
+    },
+    {
+      name: "reader construction",
+      entry: {
+        isDirectory: true,
+        isFile: false,
+        name: "reader-folder",
+        createReader: (): never => {
+          throw new Error("synchronous createReader() failure");
+        },
+      },
+    },
+  ] as const;
+
+  for (const testCase of cases) {
+    const el = await fixture<LyraFileInput>(
+      html`<lr-file-input multiple></lr-file-input>`
+    );
+    const dropzone = el.shadowRoot!.querySelector(
+      '[part~="dropzone"]'
+    ) as HTMLElement;
+    const transfer = {
+      files: [] as unknown as FileList,
+      items: [
+        {
+          kind: "file",
+          webkitGetAsEntry: () => testCase.entry,
+        },
+      ],
+    };
+    const event = new DragEvent("drop", { bubbles: true, cancelable: true });
+    Object.defineProperty(event, "dataTransfer", { value: transfer });
+    const result = oneEvent(el, "lr-files");
+
+    dropzone.dispatchEvent(event);
+    const emitted = await result;
+
+    expect(event.defaultPrevented, testCase.name).to.be.true;
+    expect(emitted.detail.files.length, testCase.name).to.equal(0);
+    expect(
+      emitted.detail.rejected.map((item: { reason: string }) => item.reason),
+      testCase.name
+    ).to.deep.equal(["read"]);
+    expect(el.files.length, testCase.name).to.equal(0);
+  }
+});
+
+it("maps a malformed object-validator result to the localized generic failure", async () => {
+  const el = await fixture<LyraFileInput>(html`
+    <lr-file-input
+      .strings=${{ valueInvalid: "Upload policy unavailable." }}
+    ></lr-file-input>
+  `);
+  el.validators = [
+    {
+      checkValidity: () => ({
+        isValid: false,
+        invalidKeys: null as unknown as Exclude<
+          keyof ValidityState,
+          "valid"
+        >[],
+        message: 42 as unknown as string,
+      }),
+    },
+  ];
+
+  expect(el.checkValidity()).to.be.false;
+  expect(el.validity.customError).to.be.true;
+  expect(el.validationMessage).to.equal("Upload policy unavailable.");
 });

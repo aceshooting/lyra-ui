@@ -26,6 +26,14 @@ describe("defaults", () => {
     expect(el.payload).to.equal(undefined);
   });
 
+  it("rebinds its announcement owner during adoption", async () => {
+    const el = await fixture<LyraDocumentViewer>(html`
+      <lr-document-viewer></lr-document-viewer>
+    `);
+    expect(() => el.adoptedCallback()).to.not.throw();
+    await el.updateComplete;
+  });
+
   it("honors an inherited max-height hook while a direct-host value remains authoritative", async () => {
     const wrapper = await fixture<HTMLElement>(html`
       <div style="--lr-document-viewer-max-height: 123px">

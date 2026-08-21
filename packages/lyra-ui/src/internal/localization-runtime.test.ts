@@ -1,9 +1,12 @@
 import { expect } from '@open-wc/testing';
 import {
   canonicalizeLyraLocale,
+  enableLyraLocaleCache,
   getLyraLocale,
   getLyraLocaleDirection,
   registerLyraLocale,
+  peekLyraDirection,
+  resolveLyraDirection,
   resolveLocalizedParts,
   resolveLyraLocale,
   resolveLyraString,
@@ -159,4 +162,127 @@ it('treats an empty `locale` as unset, so that element lang and its ancestors st
     setLyraLocale(previous);
     outer.remove();
   }
+});
+
+it('rejects missing and unbounded registered locale identifiers', () => {
+  expect(() => registerLyraLocale('', {})).to.throw(TypeError, 'required');
+  expect(() => registerLyraLocale(`x-${'a'.repeat(300)}`, {})).to.throw(TypeError, 'BCP-47');
+});
+
+it('snapshots hostile catalogs without invoking accessors or retaining live traps', () => {
+  let getterCalls = 0;
+  const accessorCatalog = Object.create(null) as Record<string, string>;
+  Object.defineProperty(accessorCatalog, 'unsafe', {
+    enumerable: true,
+    get() {
+      getterCalls += 1;
+      return 'unsafe';
+    },
+  });
+  registerLyraLocale('x-accessor-catalog', accessorCatalog);
+  expect(resolveLyraString(localeHost('x-accessor-catalog'), 'unsafe')).to.equal('unsafe');
+  expect(getterCalls).to.equal(0);
+
+  const prototypeTrap = new Proxy({}, {
+    getPrototypeOf() {
+      throw new Error('prototype unavailable');
+    },
+  });
+  registerLyraLocale('x-prototype-trap', prototypeTrap as Record<string, string>);
+  expect(resolveLyraString(localeHost('x-prototype-trap'), 'missing')).to.equal('missing');
+
+  const enumerationTrap = new Proxy({ retained: 'yes', unread: 'no' }, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === 'unread') throw new Error('descriptor unavailable');
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  registerLyraLocale('x-enumeration-trap', enumerationTrap);
+  expect(resolveLyraString(localeHost('x-enumeration-trap'), 'retained')).to.equal('yes');
+  expect(resolveLyraString(localeHost('x-enumeration-trap'), 'unread')).to.equal('unread');
+});
+
+it('follows an assigned-slot direction context and exposes the cached resolution', () => {
+  const host = document.createElement('span');
+  const slot = document.createElement('slot');
+  slot.setAttribute('dir', 'rtl');
+  Object.defineProperty(host, 'assignedSlot', { configurable: true, value: slot });
+  expect(resolveLyraDirection(host)).to.equal('rtl');
+
+  const directed = document.createElement('div');
+  directed.setAttribute('dir', 'rtl');
+  enableLyraLocaleCache(directed);
+  document.body.append(directed);
+  try {
+    expect(peekLyraDirection(directed)).to.equal(undefined);
+    expect(resolveLyraDirection(directed)).to.equal('rtl');
+    expect(peekLyraDirection(directed)).to.equal('rtl');
+  } finally {
+    directed.remove();
+  }
+});
+
+it('contains hostile plural and interpolation value lookups', () => {
+  const host = localeHost('x-invalid-plural-locale');
+  const values = new Proxy({} as Record<string, string | number>, {
+    get() {
+      throw new Error('value unavailable');
+    },
+  });
+  const result = resolveLyraString(
+    host,
+    'items',
+    { items: { one: 'one {count}', other: 'many {count}' } },
+    undefined,
+    values,
+  );
+  expect(result).to.equal('many {count}');
+});
+
+it('contains descriptor and enumeration failures inside catalog snapshots', () => {
+  let descriptorReads = 0;
+  const descriptorTrap = new Proxy({ retained: 'yes' }, {
+    getOwnPropertyDescriptor(target, key) {
+      descriptorReads += 1;
+      if (descriptorReads > 1) throw new Error('second descriptor read unavailable');
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  registerLyraLocale('x-descriptor-trap', descriptorTrap);
+  expect(resolveLyraString(localeHost('x-descriptor-trap'), 'retained')).to.equal('retained');
+
+  const pluralTrap = new Proxy({ other: 'many' }, {
+    ownKeys() {
+      throw new Error('plural enumeration unavailable');
+    },
+  });
+  registerLyraLocale('x-plural-enumeration-trap', {
+    items: pluralTrap,
+  } as unknown as Parameters<typeof registerLyraLocale>[1]);
+  expect(resolveLyraString(localeHost('x-plural-enumeration-trap'), 'items')).to.equal('items');
+
+  const pluralDescriptorTrap = new Proxy({ other: 'many' }, {
+    getOwnPropertyDescriptor() {
+      throw new Error('plural descriptor unavailable');
+    },
+  });
+  registerLyraLocale('x-plural-descriptor-trap', {
+    items: pluralDescriptorTrap,
+  } as unknown as Parameters<typeof registerLyraLocale>[1]);
+  expect(resolveLyraString(localeHost('x-plural-descriptor-trap'), 'items')).to.equal('items');
+});
+
+it('falls through malformed plural locale candidates and bounds their cache', () => {
+  const message = { items: { other: 'many {count}' } };
+  for (let index = 0; index < 70; index += 1) {
+    const host = localeHost(`zz-plural-cache-${index}`);
+    expect(resolveLyraString(host, 'items', message, undefined, { count: index }))
+      .to.equal(`many ${index}`);
+  }
+});
+
+it('does not retain candidate-cache state for an unbounded inherited locale', () => {
+  const unbounded = `x-${'a'.repeat(600)}`;
+  expect(getLyraLocaleDirection(unbounded)).to.equal('ltr');
+  expect(getLyraLocaleDirection(unbounded)).to.equal('ltr');
 });

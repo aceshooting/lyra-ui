@@ -8,6 +8,24 @@ function abortError(): Error {
 }
 
 describe('BoundedResourceCache', () => {
+  it('normalizes an invalid bound and works without an AbortController realm', async () => {
+    const cache = new BoundedResourceCache<string>(Number.NaN, null);
+    cache.invalidate('missing');
+    let receivedSignal: AbortSignal | undefined;
+    const first = cache.acquire('first', async (signal) => {
+      receivedSignal = signal;
+      return 'first';
+    });
+
+    expect(await first.promise).to.equal('first');
+    expect(receivedSignal).to.equal(undefined);
+    first.release();
+    const second = cache.acquire('second', async () => 'second');
+    expect(await second.promise).to.equal('second');
+    second.release();
+    expect(cache.size).to.equal(1);
+  });
+
   it('deduplicates concurrent loads and retains successful values', async () => {
     const cache = new BoundedResourceCache<string>(2);
     let calls = 0;

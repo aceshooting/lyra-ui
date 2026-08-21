@@ -358,9 +358,9 @@ function snapshotFilterDefinitions(
     { remaining: MAX_FILTER_COLLECTION_NODES, seen: new WeakMap() },
     0,
   );
-  return Array.isArray(snapshot)
-    ? snapshot as readonly LyraFilterBarFilterDefinition[]
-    : EMPTY_FILTERS;
+  // `value` was synchronously proven to be an array above. Snapshotting an array always returns
+  // its frozen array clone; the non-array fallback was unreachable through this private path.
+  return snapshot as readonly LyraFilterBarFilterDefinition[];
 }
 
 function snapshotFilterFieldValue(value: unknown): LyraFilterBarFieldValue {
@@ -468,14 +468,9 @@ function isBuiltInSet(value: LyraFilterBarFieldValue): boolean {
 }
 
 /** Clones the controlled value at its object and string-array boundaries. */
-function cloneFilterValue(value: LyraFilterBarValue | null | undefined): LyraFilterBarValue {
+function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
   const clone: Record<string, LyraFilterBarFieldValue> = {};
-  let descriptors: PropertyDescriptorMap;
-  try {
-    descriptors = Object.getOwnPropertyDescriptors(value ?? {});
-  } catch {
-    return EMPTY_VALUE;
-  }
+  const descriptors: PropertyDescriptorMap = Object.getOwnPropertyDescriptors(value);
   let retained = 0;
   for (const key of Reflect.ownKeys(descriptors)) {
     if (retained >= MAX_FILTER_COLLECTION_ENTRIES) break;

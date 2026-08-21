@@ -1051,3 +1051,92 @@ it('exposes the live stack surface across placement updates and reconnects', asy
   await region.updateComplete;
   expect(region.stack === stack).to.equal(true);
 });
+
+it('rejects create() after adoption when the owner registry has no toast-item definition', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
+  region.remove();
+
+  try {
+    frame.contentDocument!.body.append(frame.contentDocument!.adoptNode(region));
+    await region.updateComplete;
+    const outcome = await region.create('Unavailable item').then(
+      () => 'resolved',
+      (error) => String(error),
+    );
+
+    expect(outcome).to.include('is not registered');
+  } finally {
+    region.remove();
+    frame.remove();
+  }
+});
+
+it('rejects and removes an owner-realm toast-item that lacks the component contract', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const foreignWindow = frame.contentWindow!;
+  const ForeignHTMLElement = (
+    foreignWindow as unknown as { HTMLElement: typeof HTMLElement }
+  ).HTMLElement;
+  class IncompleteToastItem extends ForeignHTMLElement {}
+  foreignWindow.customElements.define('lr-toast-item', IncompleteToastItem);
+  const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
+  region.remove();
+
+  try {
+    frame.contentDocument!.body.append(frame.contentDocument!.adoptNode(region));
+    await region.updateComplete;
+    const outcome = await region.create('Incomplete item').then(
+      () => 'resolved',
+      (error) => String(error),
+    );
+    expect(outcome).to.include('does not expose the Lyra toast-item contract');
+
+    const invalidChild = frame.contentDocument!.createElement('lr-toast-item');
+    region.append(invalidChild);
+    await waitUntil(
+      () => !invalidChild.isConnected,
+      'the region did not remove its unmanageable toast-item child',
+    );
+    expect(region.children.length).to.equal(0);
+  } finally {
+    region.remove();
+    frame.remove();
+  }
+});
+
+it('rejects an owner-realm item that has the public methods but lacks bounded-region coordination', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const foreignWindow = frame.contentWindow!;
+  const ForeignHTMLElement = (
+    foreignWindow as unknown as { HTMLElement: typeof HTMLElement }
+  ).HTMLElement;
+  class UnmanagedToastItem extends ForeignHTMLElement {
+    variant = 'neutral';
+    duration = 5000;
+    size = 'm';
+    withIcon = false;
+    readonly updateComplete = Promise.resolve(true);
+    async hide(): Promise<void> {}
+  }
+  foreignWindow.customElements.define('lr-toast-item', UnmanagedToastItem);
+  const region = (await fixture(html`<lr-toast></lr-toast>`)) as LyraToast;
+  region.remove();
+
+  try {
+    frame.contentDocument!.body.append(frame.contentDocument!.adoptNode(region));
+    await region.updateComplete;
+    const outcome = await region.create('Unmanaged item').then(
+      () => 'resolved',
+      (error) => String(error),
+    );
+
+    expect(outcome).to.include('does not expose the bounded toast-region protocol');
+  } finally {
+    region.remove();
+    frame.remove();
+  }
+});

@@ -81,6 +81,27 @@ describe('lr-avatar', () => {
     await expect(namedAvatar).to.be.accessible();
   });
 
+  it('contains a synthetic focusin from a decorative slotted glyph', async () => {
+    const root = await fixture<HTMLElement>(html`
+      <div>
+        <button id="previous">Previous</button>
+        <lr-avatar label="Named glyph">
+          <button id="glyph" slot="icon">Glyph</button>
+        </lr-avatar>
+      </div>
+    `);
+    const avatar = root.querySelector<LyraAvatar>('lr-avatar')!;
+    const previous = root.querySelector<HTMLButtonElement>('#previous')!;
+    const glyph = root.querySelector<HTMLButtonElement>('#glyph')!;
+    previous.focus();
+    glyph.dispatchEvent(new FocusEvent('focusin', {
+      bubbles: true,
+      composed: true,
+      relatedTarget: previous,
+    }));
+    expect(document.activeElement?.id).to.equal(previous.id);
+  });
+
   it('retries a previously failed source after a successful semantic source transition', async () => {
     const sourceA = 'https://example.test/avatar-a.png';
     const sourceB = 'https://example.test/avatar-b.png';

@@ -16,6 +16,17 @@ it('defaults to empty suggestions, wrap false, and renders nothing when empty', 
   expect((el.shadowRoot!.querySelector('[part="base"]')) == null).to.be.true;
 });
 
+it('resets pending focus repair when the custom element is adopted', async () => {
+  const el = await fixture<LyraSuggestionChips>(html`
+    <lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>
+  `);
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[data-suggestion-id="b"]')!.focus();
+  el.suggestions = [suggestions[1]!, suggestions[0]!];
+  el.adoptedCallback();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part~="chip"]')).to.have.length(2);
+});
+
 it('renders one chip per suggestion inside a scroller when not wrap', async () => {
   const el = (await fixture(
     html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,

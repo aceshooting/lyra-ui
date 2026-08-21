@@ -151,6 +151,15 @@ it('appends streamed samples through the purpose-specific appendSamples contract
   expect(el.values).to.deep.equal([1, 2, 3, 4]);
 });
 
+it('keeps the inherited appendData contract as an alias for streamed samples', () => {
+  const el = document.createElement('lr-histogram') as LyraHistogram;
+  el.values = [1, 2];
+
+  el.appendData('ignored category', [3, null, Number.POSITIVE_INFINITY, 4], 3);
+
+  expect(el.values).to.deep.equal([2, 3, 4]);
+});
+
 it('keeps raw config options but strips type/data keys that contradict derived histogram data', () => {
   const el = document.createElement('lr-histogram') as LyraHistogram;
   el.values = [1, 2, 3];

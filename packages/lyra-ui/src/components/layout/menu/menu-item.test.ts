@@ -1017,6 +1017,19 @@ describe('submenu parent', () => {
     expect(item.hasAttribute('submenu-open')).to.equal(false);
   });
 
+  it('routes direct submenuOpen writes through the async submenu lifecycle', async () => {
+    const item = await parentOf();
+    item.submenuOpen = true;
+    await item.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(item.submenuOpen).to.equal(true);
+
+    item.submenuOpen = false;
+    await item.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(item.submenuOpen).to.equal(false);
+  });
+
   it('retires an open replaced submenu and attaches the replacement closed', async () => {
     const wrapper = (await fixture(html`
       <div role="menu" aria-label="Actions">

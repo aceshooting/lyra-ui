@@ -30,6 +30,23 @@ describe('lr-test-results', () => {
     expect(el.autoExpandFailures).to.be.false;
   });
 
+  it('rebinds its bounded-result announcement sink after adoption', async () => {
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+    const frameDocument = frame.contentDocument!;
+    const el = await fixture<LyraTestResults>(html`
+      <lr-test-results .suites=${suites}></lr-test-results>
+    `);
+    try {
+      frameDocument.adoptNode(el);
+      frameDocument.body.append(el);
+      await el.updateComplete;
+      expect(el.ownerDocument === frameDocument).to.be.true;
+    } finally {
+      el.remove();
+      frame.remove();
+    }
+  });
+
   it('names the overall wrapper only when the host does not already own a non-empty name', async () => {
     const el = (await fixture(html`<lr-test-results .suites=${suites}></lr-test-results>`)) as LyraTestResults;
     await el.updateComplete;

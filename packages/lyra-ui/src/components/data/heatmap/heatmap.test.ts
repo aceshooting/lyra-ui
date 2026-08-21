@@ -8112,3 +8112,201 @@ describe('matrix frozen label bands (sticky-labels)', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe('bounded heatmap fallback paths', () => {
+  it('normalizes discrete midpoint, gutter, label, and sparse-cell boundaries', () => {
+    const el = document.createElement('lr-heatmap') as LyraHeatmap;
+    el.midpoint = 0;
+    expect((el as unknown as {
+      rampBucket(value: number, lo: number, hi: number, steps: number): number;
+    }).rampBucket(0, -10, 10, 7)).to.equal(3);
+
+    el.rowLabelWidth = -1;
+    el.colLabelHeight = -1;
+    expect((el as unknown as { matrixPadLeft: number }).matrixPadLeft).to.equal(60);
+    expect((el as unknown as { matrixPadTop: number }).matrixPadTop).to.equal(20);
+    expect((el as unknown as { rowYFor(index: number): number }).rowYFor(99)).to.equal(16);
+    expect((el as unknown as { valueAt(pos: MatrixCellPos): number }).valueAt({ row: 99, col: 99 }))
+      .to.equal(-1);
+
+    const context = document.createElement('canvas').getContext('2d')!;
+    const ellipsize = (label: string, width: number) => (
+      el as unknown as {
+        ellipsize(ctx: CanvasRenderingContext2D, value: string, maxWidth: number): string;
+      }
+    ).ellipsize(context, label, width);
+    expect(ellipsize('label', 0)).to.equal('');
+    const ellipsisWidth = context.measureText('…').width;
+    expect(ellipsize('WW', ellipsisWidth)).to.equal('…');
+    expect(ellipsize('WW', 0.1)).to.equal('');
+
+    let detail: unknown;
+    el.addEventListener('lr-cell-click', (event) => {
+      detail = (event as CustomEvent).detail;
+    });
+    (el as unknown as { emitCellClick(pos: MatrixCellPos): void }).emitCellClick({
+      row: 99,
+      col: 99,
+    });
+    expect(detail).to.deep.equal({ row: 99, col: 99, value: -1 });
+  });
+
+  it('paints signed negative sqrt cells in matrix and calendar modes', async () => {
+    const matrix = (await fixture(html`<lr-heatmap scale="sqrt"></lr-heatmap>`)) as LyraHeatmap;
+    matrix.domain = [-1, 1];
+    matrix.data = {
+      kind: 'matrix',
+      rowLabels: ['row'],
+      colLabels: ['column'],
+      values: [[-1]],
+    };
+    await matrix.updateComplete;
+    await aTimeout(20);
+    (matrix as unknown as { focusedCell: MatrixCellPos | null }).focusedCell = { row: 0, col: 0 };
+    await matrix.updateComplete;
+    await aTimeout(20);
+    expect((matrix as unknown as { isNoData(value: number): boolean }).isNoData(-1)).to.be.false;
+
+    const calendar = (await fixture(html`<lr-heatmap scale="sqrt"></lr-heatmap>`)) as LyraHeatmap;
+    calendar.domain = [-1, 1];
+    calendar.data = {
+      kind: 'calendar',
+      days: [{ date: '2026-08-21', value: -1 }],
+    };
+    await calendar.updateComplete;
+    await aTimeout(20);
+    const position = (calendar as unknown as {
+      cachedCalendarGrid: { cells: CalendarCellPos[] };
+    }).cachedCalendarGrid.cells[0]!;
+    (calendar as unknown as { focusedCell: CalendarCellPos | null }).focusedCell = position;
+    await calendar.updateComplete;
+    await aTimeout(20);
+    expect((calendar as unknown as { isNoData(value: number): boolean }).isNoData(-1)).to.be.false;
+  });
+
+  it('restores accessible focus when identity disappears or a stored cell leaves the grid', async () => {
+    const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+    el.data = {
+      kind: 'matrix',
+      rowLabels: ['row'],
+      colLabels: ['column'],
+      values: [[1]],
+    };
+    el.accessibleCells = true;
+    await el.updateComplete;
+    const cell = el.shadowRoot!.querySelector<HTMLElement>('[part="cell"]')!;
+    cell.focus();
+    delete cell.dataset['cellIdentity'];
+    el.data = {
+      kind: 'matrix',
+      rowLabels: ['row'],
+      colLabels: ['column'],
+      values: [[2]],
+    };
+    await el.updateComplete;
+    await aTimeout(0);
+
+    el.accessibleCells = false;
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector<HTMLCanvasElement>('[part="canvas"]')!;
+    (el as unknown as { focusedCell: MatrixCellPos | null }).focusedCell = { row: 99, col: 99 };
+    canvas.focus();
+    el.accessibleCells = true;
+    await el.updateComplete;
+    await aTimeout(0);
+    expect((el as unknown as { focusedCell: MatrixCellPos | null }).focusedCell).to.deep.equal({
+      row: 0,
+      col: 0,
+    });
+  });
+
+  it('measures a rendered tooltip without an owner window and tolerates a missing band context', async () => {
+    const el = (await fixture(html`<lr-heatmap sticky-labels="both"></lr-heatmap>`)) as LyraHeatmap;
+    el.data = {
+      kind: 'matrix',
+      rowLabels: ['row'],
+      colLabels: ['column'],
+      values: [[1]],
+    };
+    (el as unknown as { hoverCell: MatrixCellPos | null }).hoverCell = { row: 0, col: 0 };
+    await el.updateComplete;
+
+    const canvas = document.createElement('canvas');
+    const originalGetContext = canvas.getContext.bind(canvas);
+    canvas.getContext = (() => null) as typeof canvas.getContext;
+    expect(() => (
+      el as unknown as {
+        paintFrozenBand(
+          target: HTMLCanvasElement,
+          width: number,
+          height: number,
+          dpr: number,
+          backdrop: string,
+          paint: (context: CanvasRenderingContext2D) => void,
+        ): void;
+      }
+    ).paintFrozenBand(canvas, 10, 10, 1, '#fff', () => undefined)).to.not.throw();
+    canvas.getContext = originalGetContext as typeof canvas.getContext;
+
+    const detachedDocument = document.implementation.createHTMLDocument('heatmap-ownerless');
+    detachedDocument.adoptNode(el);
+    expect(detachedDocument.defaultView).to.equal(null);
+    const root = el.shadowRoot!;
+    if (!root.querySelector('[part="grid"]')) {
+      const grid = detachedDocument.createElement('div');
+      grid.setAttribute('part', 'grid');
+      root.append(grid);
+    }
+    let tooltip = root.querySelector<HTMLElement>('[part="tooltip"]');
+    if (!tooltip) {
+      tooltip = detachedDocument.createElement('div');
+      tooltip.setAttribute('part', 'tooltip');
+      root.append(tooltip);
+    }
+    tooltip.hidden = false;
+    expect(() => (el as unknown as { measureTooltip(): void }).measureTooltip()).to.not.throw();
+    document.adoptNode(el);
+    el.remove();
+  });
+
+  it('falls back once when a fresh owner document cannot create a canvas context', () => {
+    const owner = document.implementation.createHTMLDocument('heatmap-no-canvas');
+    const createElement = owner.createElement.bind(owner);
+    owner.createElement = ((name: string, options?: ElementCreationOptions) => {
+      const element = createElement(name, options);
+      if (name === 'canvas') {
+        (element as HTMLCanvasElement).getContext = (() => null) as typeof HTMLCanvasElement.prototype.getContext;
+      }
+      return element;
+    }) as typeof owner.createElement;
+    const originalWarn = console.warn;
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args);
+    try {
+      expect(resolveRgb('red', '#123456', owner)).to.deep.equal([18, 52, 86, 1]);
+      expect(resolveRgb('blue', '#123456', owner)).to.deep.equal([18, 52, 86, 1]);
+      expect(warnings).to.have.length(1);
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+
+  it('falls back to the base focus target when the accessible grid becomes empty', async () => {
+    const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+    el.data = {
+      kind: 'matrix',
+      rowLabels: [],
+      colLabels: [],
+      values: [],
+    };
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector<HTMLCanvasElement>('[part="canvas"]')!;
+    (el as unknown as { focusedCell: MatrixCellPos | null }).focusedCell = { row: 5, col: 5 };
+    canvas.focus();
+    el.accessibleCells = true;
+    await el.updateComplete;
+    await aTimeout(0);
+    expect((el as unknown as { focusedCell: MatrixCellPos | null }).focusedCell).to.equal(null);
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.contain('base');
+  });
+});

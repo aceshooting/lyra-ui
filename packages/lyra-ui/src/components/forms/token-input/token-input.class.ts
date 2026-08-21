@@ -75,8 +75,6 @@ const delimiterConverter = {
     if (value === null) return ',';
     return value === '' || value === 'none' ? null : value;
   },
-  toAttribute: (value: string | null): string =>
-    value === null ? 'none' : value,
 };
 
 function normalizeStringArray(value: unknown): readonly string[] {

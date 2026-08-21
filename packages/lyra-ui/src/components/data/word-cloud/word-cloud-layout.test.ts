@@ -150,6 +150,24 @@ it('caps placement at MAX_WORDS by weight, dropping the lightest words as skippe
   expect(result.placed.some((w) => w.text === `w${MAX_WORDS + 4}`)).to.be.true;
 });
 
+it('keeps the first MAX_WORDS survivors when every later word is strictly lighter', () => {
+  const words = Array.from({ length: MAX_WORDS + 5 }, (_, index) => ({
+    text: `descending-${index}`,
+    weight: MAX_WORDS + 5 - index,
+  }));
+  const result = layoutWordCloud(words, baseOptions);
+
+  expect(result.placed).to.have.length(MAX_WORDS);
+  expect(result.skippedCount).to.equal(5);
+  expect(result.skipped.map((word) => word.text)).to.deep.equal([
+    `descending-${MAX_WORDS}`,
+    `descending-${MAX_WORDS + 1}`,
+    `descending-${MAX_WORDS + 2}`,
+    `descending-${MAX_WORDS + 3}`,
+    `descending-${MAX_WORDS + 4}`,
+  ]);
+});
+
 it('filters out blank/whitespace-only word text as skipped, not placed', () => {
   const result = layoutWordCloud(
     [

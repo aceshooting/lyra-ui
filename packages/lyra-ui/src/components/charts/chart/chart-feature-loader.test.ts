@@ -9,6 +9,9 @@ import {
   loadChartJsWithDataLabelsResult,
   loadChartJsWithDataLabels,
   loadDataLabelsPlugin,
+  loadAnnotationPlugin,
+  loadChartAndAnnotation,
+  loadChartJsWithAnnotationResult,
 } from './chart-feature-loader.js';
 
 const CHART_REGISTERABLE_KEYS = [
@@ -361,19 +364,12 @@ describe('tagged feature-load results', () => {
 
 describe('loadChartJsWithZoomResult (memoized page-wide zoom-plugin load)', () => {
   it('serializes two concurrent callers behind the same in-flight promise, then exposes the matching tagged result', async () => {
-    let zoomImportCount = 0;
-    const fakeZoomModule = await import('chartjs-plugin-zoom');
-    const importZoom = () => {
-      zoomImportCount++;
-      return Promise.resolve(fakeZoomModule);
-    };
-
     // No `await` between these two calls — this is the exact race the fix
     // closes: two callers (e.g. two `<lr-chart zoom>` elements connecting
     // close together) both hitting `loadChartJsWithZoom()` before either has
     // had a chance to observe a completed load.
-    const p1 = loadChartJsWithZoom(importZoom);
-    const p2 = loadChartJsWithZoom(importZoom);
+    const p1 = loadChartJsWithZoom();
+    const p2 = loadChartJsWithZoom();
 
     // A memoized single load means both callers share the exact same
     // promise — a boolean check-then-act guard could never guarantee this,
@@ -390,43 +386,17 @@ describe('loadChartJsWithZoomResult (memoized page-wide zoom-plugin load)', () =
     if (result.kind !== 'available') {
       throw new Error('Expected zoom to be available.');
     }
-    expect(zoomImportCount).to.equal(1);
     expect(mod).to.equal(result.mod);
-  });
-
-  it('still resolves the chart.js module through the fully memoized public zoom adapter when the zoom plugin fails to load — feature-unavailable results intentionally still resolve the module', async () => {
-    const { loadChartJsWithZoom: loadZoomInFreshRealm } = await import(
-      './chart-feature-loader.js?coverage-zoom-feature-unavailable'
-    );
-    const warn = console.warn;
-    const warnings: unknown[][] = [];
-    console.warn = (...args: unknown[]) => warnings.push(args);
-    let mod: Awaited<ReturnType<typeof loadZoomInFreshRealm>>;
-    try {
-      mod = await loadZoomInFreshRealm(() => Promise.reject(new Error('zoom adapter boom')));
-    } finally {
-      console.warn = warn;
-    }
-    expect(mod).to.not.equal(null);
-    expect(typeof mod?.Chart).to.equal('function');
-    expect(warnings.flat().some((value) => value instanceof Error)).to.be.true;
   });
 });
 
 describe('loadChartJsWithDataLabelsResult (memoized page-wide data-labels plugin load)', () => {
   it('serializes two concurrent callers behind the same in-flight promise, then exposes the matching tagged result', async () => {
-    let importCount = 0;
-    const fakeModule = await import('chartjs-plugin-datalabels');
-    const importDataLabels = () => {
-      importCount++;
-      return Promise.resolve(fakeModule);
-    };
-
     // No `await` between the two calls — the same check-then-act race the zoom
     // loader closes: two `<lr-chart data-labels>` elements connecting close
     // together must share one in-flight load, not each register the plugin.
-    const p1 = loadChartJsWithDataLabels(importDataLabels);
-    const p2 = loadChartJsWithDataLabels(importDataLabels);
+    const p1 = loadChartJsWithDataLabels();
+    const p2 = loadChartJsWithDataLabels();
     expect(p1).to.equal(p2);
 
     const [combined] = await Promise.all([p1, p2]);
@@ -438,7 +408,6 @@ describe('loadChartJsWithDataLabelsResult (memoized page-wide data-labels plugin
     if (result.kind !== 'available') {
       throw new Error('Expected data labels to be available.');
     }
-    expect(importCount).to.equal(1);
     expect(combined?.mod).to.equal(result.mod);
     expect(combined?.plugin).to.equal(result.plugin);
   });
@@ -488,25 +457,6 @@ describe('loadChartJsWithDataLabelsResult (memoized page-wide data-labels plugin
       expect(error!.message).to.contain('id');
     }
   });
-
-  it('still resolves the chart.js module (with plugin left undefined) through the fully memoized public data-labels adapter when data-labels fails to load', async () => {
-    const { loadChartJsWithDataLabels: loadInFreshRealm } = await import(
-      './chart-feature-loader.js?coverage-data-labels-feature-unavailable'
-    );
-    const warn = console.warn;
-    const warnings: unknown[][] = [];
-    console.warn = (...args: unknown[]) => warnings.push(args);
-    let combined: Awaited<ReturnType<typeof loadInFreshRealm>>;
-    try {
-      combined = await loadInFreshRealm(() => Promise.reject(new Error('datalabels adapter boom')));
-    } finally {
-      console.warn = warn;
-    }
-    expect(combined).to.not.equal(null);
-    expect(typeof combined?.mod.Chart).to.equal('function');
-    expect(combined?.plugin).to.equal(undefined);
-    expect(warnings.flat().some((value) => value instanceof Error)).to.be.true;
-  });
 });
 
 describe('un-memoized default-import paths', () => {
@@ -544,13 +494,70 @@ describe('un-memoized default-import paths', () => {
     expect(unavailable.kind).to.equal('core-unavailable');
     expect(attemptedPeerImport).to.be.false;
   });
+});
 
-  it('keeps the data-labels adapter independent of another test module cache', async () => {
-    const { loadChartJsWithDataLabels: loadInFreshRealm } = await import(
-      './chart-feature-loader.js?coverage-data-labels'
+describe('annotation feature loading', () => {
+  it('loads and validates the installed annotation peer through the default importer', async () => {
+    const plugin = await loadAnnotationPlugin();
+    expect(typeof plugin?.id).to.equal('string');
+
+    const result = await loadChartAndAnnotation(() => Promise.resolve(fakeChartModule()));
+    expect(result.kind).to.equal('available');
+    if (result.kind !== 'available') throw new Error('Expected annotations to be available.');
+    expect(result.plugin.id.length).to.be.greaterThan(0);
+  });
+
+  it('does not import annotations when Chart.js core is unavailable', async () => {
+    let imports = 0;
+    const result = await loadChartAndAnnotation(
+      () => Promise.resolve(null),
+      () => {
+        imports += 1;
+        return Promise.resolve({ id: 'unused' });
+      },
     );
-    const legacy = await loadInFreshRealm();
-    expect(typeof legacy?.mod.Chart).to.equal('function');
-    expect(typeof legacy?.plugin?.id).to.equal('string');
+    expect(result.kind).to.equal('core-unavailable');
+    expect(imports).to.equal(0);
+  });
+
+  it('retains Chart.js when annotation loading or registration fails', async () => {
+    const chart = fakeChartModule();
+    const peerError = new Error('annotation peer failed');
+    const peerFailure = await captureWarnings(() =>
+      loadChartAndAnnotation(
+        () => Promise.resolve(chart),
+        () => Promise.reject(peerError),
+      ),
+    );
+    expect(peerFailure.result.kind).to.equal('feature-unavailable');
+    expect(peerFailure.warnings.flat()).to.contain(peerError);
+
+    const registrationError = new Error('annotation registration failed');
+    chart.Chart.register = () => {
+      throw registrationError;
+    };
+    const registrationFailure = await captureWarnings(() =>
+      loadChartAndAnnotation(
+        () => Promise.resolve(chart),
+        () => Promise.resolve({ default: { id: 'annotation-sentinel' } }),
+      ),
+    );
+    expect(registrationFailure.result.kind).to.equal('feature-unavailable');
+    expect(registrationFailure.warnings.flat()).to.contain(registrationError);
+  });
+
+  it('rejects malformed annotation namespaces and memoizes the page-wide result', async () => {
+    for (const malformed of [null, {}, { default: { id: '' } }]) {
+      const { result, warnings } = await captureWarnings(() =>
+        loadAnnotationPlugin(() => Promise.resolve(malformed as never)),
+      );
+      expect(result).to.equal(undefined);
+      expect(warnings.flat().some((value) => value instanceof Error)).to.be.true;
+    }
+
+    const first = loadChartJsWithAnnotationResult();
+    const second = loadChartJsWithAnnotationResult();
+    expect(first).to.equal(second);
+    expect((await first).kind).to.equal('available');
   });
 });

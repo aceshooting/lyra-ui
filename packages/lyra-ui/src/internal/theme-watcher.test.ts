@@ -271,16 +271,53 @@ describe('ThemeWatcher', () => {
       await aTimeout(0);
       expect(calls).to.equal(1);
 
-      style.sheet!.media.mediaText = '(min-width: 1px)';
+      mediaRule.media.mediaText = '(min-width: 1px)';
       await aTimeout(0);
       expect(calls).to.equal(2);
 
-      link.rel = 'stylesheet';
+      style.sheet!.media.mediaText = '(min-width: 1px)';
       await aTimeout(0);
       expect(calls).to.equal(3);
+
+      link.rel = 'stylesheet';
+      await aTimeout(0);
+      expect(calls).to.equal(4);
     } finally {
       style.remove();
       link.remove();
+      disconnect();
+    }
+  });
+
+  it('continues past an opaque nested rule while locating a later relevant media list', async () => {
+    const first = document.createElement('style');
+    first.textContent = '@media all {}';
+    const second = document.createElement('style');
+    second.textContent = ':root {}';
+    document.head.append(first, second);
+    const mediaRule = first.sheet!.cssRules[0] as CSSMediaRule;
+    const originalRules = Object.getOwnPropertyDescriptor(mediaRule, 'cssRules');
+    const { host, connect, disconnect } = await makeHost();
+    let calls = 0;
+    new ThemeWatcher(host, () => calls++);
+    try {
+      connect();
+      await aTimeout(0);
+      calls = 0;
+      Object.defineProperty(mediaRule, 'cssRules', {
+        configurable: true,
+        get() {
+          throw new Error('opaque nested rules');
+        },
+      });
+      second.sheet!.media.mediaText = '(min-width: 2px)';
+      await aTimeout(0);
+      expect(calls).to.equal(1);
+    } finally {
+      if (originalRules) Object.defineProperty(mediaRule, 'cssRules', originalRules);
+      else Reflect.deleteProperty(mediaRule, 'cssRules');
+      first.remove();
+      second.remove();
       disconnect();
     }
   });
@@ -662,8 +699,8 @@ describe('ThemeWatcher', () => {
   });
 
   it('shares one realm patch across separately evaluated ThemeWatcher modules', async () => {
-    const copyA = await import('./theme-watcher.js?realm-copy=a');
-    const copyB = await import('./theme-watcher.js?realm-copy=b');
+    const copyA = await import('../../dist/internal/theme-watcher.js?realm-copy=a');
+    const copyB = await import('../../dist/internal/theme-watcher.js?realm-copy=b');
     const a = await makeHost();
     const b = await makeHost();
     const original = Object.getOwnPropertyDescriptor(CSSStyleSheet.prototype, 'insertRule')?.value;

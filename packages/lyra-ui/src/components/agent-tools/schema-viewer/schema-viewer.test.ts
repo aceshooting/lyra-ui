@@ -83,6 +83,29 @@ it('renders supported composition and item branches while safely ignoring malfor
   expect(el.shadowRoot!.querySelectorAll('[part="issue"]').length).to.equal(1);
 });
 
+it('renders tuple-item schemas while omitting malformed tuple entries from the owned snapshot', async () => {
+  const tupleSchema: JsonSchemaNode = {
+    type: 'array',
+    items: [
+      { type: 'string', title: 'First' },
+      null as unknown as JsonSchemaNode,
+      { type: 'integer', title: 'Third' },
+    ],
+  };
+  const el = await fixture<LyraJsonSchemaViewer>(html`
+    <lr-json-schema-viewer .schema=${tupleSchema}></lr-json-schema-viewer>
+  `);
+
+  const paths = Array.from(
+    el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[data-path]'),
+    (button) => button.dataset['path'],
+  );
+  expect(paths).to.include.members(['/items/0', '/items/1']);
+  expect(paths).to.not.include('/items/2');
+  expect(el.shadowRoot!.querySelector('[data-path="/items/0"]')!.textContent).to.contain('Type: string');
+  expect(el.shadowRoot!.querySelector('[data-path="/items/1"]')!.textContent).to.contain('Type: integer');
+});
+
 it('formats const/default/examples constraint values, including nested objects and bounded truncation', async () => {
   const withValues: JsonSchemaNode = {
     type: 'string',
@@ -128,6 +151,46 @@ it('renders [Circular] for a self-referencing constraint value and collapses an 
   expect(text).to.contain('const: 10n');
   expect(text).to.contain('default: {"self": [Circular]}');
   expect(text).to.contain('examples: [{"a": {"b": {"c": {…}}}}]');
+});
+
+it('bounds array and object constraint formatting across primitive and hostile value kinds', async () => {
+  const manyValues: unknown[] = [null, 'text', 3, true, 4n, undefined, Symbol('symbol')];
+  manyValues.push(...Array.from({ length: 50 }, (_, index) => ({ index })));
+  const manyEntries = Object.fromEntries(
+    Array.from({ length: 52 }, (_, index) => [`key-${index}`, index]),
+  );
+  const el = await fixture<LyraJsonSchemaViewer>(html`
+    <lr-json-schema-viewer
+      .schema=${{
+        type: 'object',
+        const: manyEntries,
+        default: manyValues,
+        examples: [[1, 2]],
+        enum: Array.from({ length: 51 }, (_, index) => `choice-${index}`),
+      }}
+    ></lr-json-schema-viewer>
+  `);
+
+  const text = el.shadowRoot!.textContent ?? '';
+  expect(text).to.contain('null');
+  expect(text).to.contain('undefined');
+  expect(text).to.contain('Symbol(symbol)');
+  expect(text).to.contain('examples: [[1, 2]]');
+  expect(text).to.contain('choice-49');
+  expect(text).to.not.contain('choice-50');
+  expect(text).to.contain('…');
+  expect(text).to.not.contain('key-51');
+});
+
+it('ignores inherited schema properties while retaining own properties', async () => {
+  const properties = Object.create({ inherited: { type: 'number' } }) as Record<string, JsonSchemaNode>;
+  properties['own'] = { type: 'string' };
+  const el = await fixture<LyraJsonSchemaViewer>(html`
+    <lr-json-schema-viewer .schema=${{ type: 'object', properties }}></lr-json-schema-viewer>
+  `);
+
+  expect(el.shadowRoot!.querySelectorAll('[data-path="/properties/own"]')).to.have.length(1);
+  expect(el.shadowRoot!.querySelectorAll('[data-path="/properties/inherited"]')).to.have.length(0);
 });
 
 it('infers an implicit object type badge from properties, joins a multi-type array badge, and omits the badge entirely for a typeless leaf', async () => {
@@ -245,6 +308,23 @@ it('announces newly reached node and issue ceilings through the shared light-DOM
 
   el.remove();
   expect(document.querySelectorAll(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`).length).to.equal(0);
+});
+
+it('reconnects an already-rendered tree without announcing resting limit content', async () => {
+  const properties = Object.fromEntries(
+    Array.from({ length: 600 }, (_, index) => [`property-${index}`, { type: 'string' }]),
+  );
+  const el = await fixture<LyraJsonSchemaViewer>(html`
+    <lr-json-schema-viewer .schema=${{ type: 'object', properties }}></lr-json-schema-viewer>
+  `);
+  const parent = el.parentElement!;
+
+  el.remove();
+  parent.append(el);
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelectorAll('[part~="node"]')).to.have.length(500);
+  expect(sinkTexts()).to.deep.equal([]);
 });
 
 it('clamps a hostile maxDepth request so deeply nested schemas stay stack-safe', async () => {

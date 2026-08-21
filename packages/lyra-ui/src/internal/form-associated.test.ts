@@ -160,6 +160,35 @@ class ObjectCtl extends FormAssociated(LyraElement, objectValueAdapter) {
 }
 customElements.define(tag('demo-object-ctl'), ObjectCtl);
 
+const minimalAdapter: FormValueAdapter<unknown> = {
+  empty: null,
+  toFormValue: (value) => (value === null ? null : String(value)),
+};
+
+class MinimalAdapterCtl extends FormAssociated(LyraElement, minimalAdapter) {
+  render() {
+    return html``;
+  }
+}
+customElements.define(tag('demo-minimal-adapter-ctl'), MinimalAdapterCtl);
+
+it('supplies lossless defaults for every optional form-value adapter hook', async () => {
+  const ctl = (await fixture(html`
+    <lr-demo-minimal-adapter-ctl value="seed"></lr-demo-minimal-adapter-ctl>
+  `)) as unknown as MinimalAdapterCtl;
+  const host = ctl as unknown as HTMLElement;
+
+  expect(ctl.value).to.equal('seed');
+  ctl.defaultValue = 42;
+  expect(host.getAttribute('value')).to.equal('42');
+
+  ctl.formStateRestoreCallback('restored', 'restore');
+  expect(ctl.value).to.equal('restored');
+
+  ctl.formStateRestoreCallback(new FormData(), 'restore');
+  expect(ctl.value).to.equal(null);
+});
+
 it('submits its value via the form and restores the constructed default value on reset', async () => {
   const form = await fixture<HTMLFormElement>(html`
     <form><lr-demo-ctl name="x" value="hello"></lr-demo-ctl></form>

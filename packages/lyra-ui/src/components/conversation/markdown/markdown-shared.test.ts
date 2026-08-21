@@ -3,16 +3,51 @@ import { loadMarkdownDeps } from './markdown-loader.js';
 import type { MarkedModule } from './markdown-loader.js';
 import {
   addFailedHighlightKey,
+  applyMarkdownFragmentAnchor,
+  createMarkdownParser,
   FAILED_HIGHLIGHT_MAX,
   getCachedHighlight,
   HIGHLIGHT_CACHE_MAX,
   HIGHLIGHT_CACHE_MAX_BYTES,
+  hitTestHighlightRanges,
+  internalLinkHrefFrom,
   markdownHighlightKey,
+  MarkdownParserController,
   parseMarkdownDocument,
   processPendingHighlights,
+  tokenizeMarkdownHighlight,
+  watchMarkdownDarkTheme,
   setCachedHighlight,
   type PendingHighlight,
 } from './markdown-shared.js';
+
+it('applies the resolved palette immediately when starting the shared theme watch', () => {
+  const host = document.body.appendChild(document.createElement('div'));
+  host.style.color = 'rgb(255, 255, 255)';
+  host.style.backgroundColor = 'rgb(0, 0, 0)';
+  const applied: boolean[] = [];
+  const cleanup = watchMarkdownDarkTheme(host, (dark) => applied.push(dark));
+  try {
+    expect(applied).to.deep.equal([true]);
+  } finally {
+    cleanup();
+    host.remove();
+  }
+});
+
+describe('Markdown parser admission', () => {
+  it('rejects absent and malformed optional-peer module shapes', () => {
+    expect(createMarkdownParser(undefined)).to.equal(undefined);
+    expect(createMarkdownParser(null as unknown as MarkedModule)).to.equal(undefined);
+    expect(createMarkdownParser({} as MarkedModule)).to.equal(undefined);
+    expect(createMarkdownParser((() => undefined) as unknown as MarkedModule)).to.equal(undefined);
+  });
+
+  it('keeps an unresolved parser controller empty', () => {
+    const controller = new MarkdownParserController();
+    expect(controller.get(undefined)).to.equal(undefined);
+  });
+});
 
 describe('Markdown highlight resource bounds', () => {
   it('admits a stable first 100 active blocks so a 101-block document settles after caching', async () => {
@@ -67,6 +102,10 @@ describe('Markdown highlight resource bounds', () => {
     expect(failed.size).to.equal(FAILED_HIGHLIGHT_MAX);
     expect(failed.has('key-0')).to.be.false;
     expect(failed.has(`key-${FAILED_HIGHLIGHT_MAX + 19}`)).to.be.true;
+
+    const retainedOrder = [...failed];
+    addFailedHighlightKey(failed, retainedOrder[0]!);
+    expect([...failed]).to.deep.equal(retainedOrder);
   });
 
   it('rejects oversized entries and keeps the total successful-cache byte budget bounded', () => {
@@ -80,6 +119,18 @@ describe('Markdown highlight resource bounds', () => {
     const retainedBytes = [...cache].reduce((total, [key, html]) => total + (key.length + html.length) * 2, 0);
     expect(retainedBytes).to.be.at.most(HIGHLIGHT_CACHE_MAX_BYTES);
     expect(cache.size).to.be.lessThan(8);
+  });
+
+  it('tolerates a Map subclass whose oldest value disappears between iteration and eviction', () => {
+    class DisappearingReadMap extends Map<string, string> {
+      override get(key: string): string | undefined {
+        return key === 'stale' ? undefined : super.get(key);
+      }
+    }
+    const cache = new DisappearingReadMap([['stale', '<pre>old</pre>']]);
+
+    expect(setCachedHighlight(cache, 'replacement', '<pre>safe</pre>', 1)).to.be.true;
+    expect([...cache]).to.deep.equal([['replacement', '<pre>safe</pre>']]);
   });
 
   it('deduplicates identical work and runs at most four tokenizers concurrently', async () => {
@@ -100,6 +151,57 @@ describe('Markdown highlight resource bounds', () => {
     });
     expect(seen.size).to.equal(10);
     expect(maximumActive).to.be.at.most(4);
+  });
+});
+
+describe('Markdown rendering edge guards', () => {
+  it('discards malformed and non-palette-only highlight styles', () => {
+    const highlighted = tokenizeMarkdownHighlight(
+      {
+        codeToHtml: () =>
+          '<pre style="not-a-declaration;position:fixed"><code style="background:url(https://example.test/x)">x</code></pre>',
+      } as never,
+      { key: 'plain', lang: 'text', code: 'x' },
+    );
+
+    expect(highlighted).to.equal('<pre><code>x</code></pre>\n');
+  });
+
+  it('returns false when heading metadata has no rendered fragment target', () => {
+    const root = document.createElement('div');
+    root.innerHTML = '<p>No headings rendered</p>';
+    expect(applyMarkdownFragmentAnchor(
+      root,
+      { kind: 'fragment', id: 'missing-heading' },
+      [{ id: 'missing-heading', label: 'Missing heading', level: 2 }],
+    )).to.be.false;
+  });
+
+  it('bounds highlight hit testing before scanning an unbounded rectangle source', () => {
+    let inspected = 0;
+    const rects = {
+      *[Symbol.iterator](): IterableIterator<DOMRect> {
+        for (let index = 0; index < 2_000; index++) {
+          inspected += 1;
+          yield { left: 10, right: 20, top: 10, bottom: 20 } as DOMRect;
+        }
+      },
+    } as unknown as DOMRectList;
+    const range = {
+      getClientRects: () => rects,
+    } as unknown as Range;
+
+    expect(hitTestHighlightRanges([{ id: 'far-away', range }], 0, 0)).to.equal(null);
+    expect(inspected).to.equal(1_001);
+  });
+
+  it('treats an anchor without an href attribute as a non-internal link', () => {
+    const anchor = {
+      localName: 'a',
+      getAttribute: () => null,
+    };
+    const event = { composedPath: () => [anchor] } as unknown as MouseEvent;
+    expect(internalLinkHrefFrom(event, '/docs/')).to.equal(null);
   });
 });
 

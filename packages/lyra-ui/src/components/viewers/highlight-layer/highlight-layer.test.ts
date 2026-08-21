@@ -212,6 +212,24 @@ describe('lr-highlight-layer', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="rect"]')).to.have.length(1);
   });
 
+  it('normalizes trimmed IDs while rejecting malformed, blank, and duplicate records', async () => {
+    const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer></lr-highlight-layer>`);
+    el.items = [
+      null,
+      [],
+      { id: 3, rects: [] },
+      { id: '   ', rects: [] },
+      { id: '  stable  ', rects: [{ x: 1, y: 2, width: 3, height: 4 }] },
+      { id: 'stable', rects: [{ x: 5, y: 6, width: 7, height: 8 }] },
+    ] as unknown as HighlightLayerItem[];
+    await el.updateComplete;
+
+    expect(el.items).to.have.length(1);
+    expect(el.items[0]!.id).to.equal('stable');
+    expect(el.items[0]!.rects[0]!.x).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('[part="rect"]')).to.have.length(1);
+  });
+
   it('focuses an item whose public id contains selector metacharacters', async () => {
     const items: HighlightLayerItem[] = [
       { id: 'ordinary', rects: [{ x: 5, y: 5, width: 10, height: 5 }] },
@@ -263,6 +281,30 @@ describe('lr-highlight-layer', () => {
     const eventPromise = oneEvent(el, 'lr-highlight-activate');
     rect.click();
     expect((await eventPromise).detail).to.deep.equal({ highlightId: 'b' });
+  });
+
+  it('keeps secondary visual rects non-interactive when one logical item spans multiple rects', async () => {
+    const el = await fixture<LyraHighlightLayer>(html`
+      <lr-highlight-layer
+        .items=${[{
+          id: 'wrapped-quote',
+          rects: [
+            { x: 5, y: 5, width: 20, height: 4 },
+            { x: 5, y: 12, width: 15, height: 4 },
+          ],
+        }]}
+      ></lr-highlight-layer>
+    `);
+
+    expect(el.shadowRoot!.querySelectorAll('[part="rect"]')).to.have.length(2);
+    const targets = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="rect-target"]');
+    expect(targets).to.have.length(2);
+    expect(itemActions(el)).to.have.length(1);
+    expect(targets[0]!.getAttribute('role')).to.equal('button');
+    expect(targets[0]!.getAttribute('aria-hidden')).to.equal(null);
+    expect(targets[1]!.getAttribute('role')).to.equal(null);
+    expect(targets[1]!.getAttribute('aria-hidden')).to.equal('true');
+    expect(targets[1]!.hasAttribute('data-item-action')).to.be.false;
   });
 
   it('emits lr-highlight-activate on Enter/Space when a rect is focused', async () => {
@@ -369,6 +411,20 @@ describe('lr-highlight-layer', () => {
     ]);
   });
 
+  it('drops the roving cursor when a focused item is replaced by items with no renderable rects', async () => {
+    const el = await fixture<LyraHighlightLayer>(html`
+      <lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>
+    `);
+    itemActions(el)[1]!.focus();
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset.id).to.equal('b');
+
+    el.items = [{ id: 'empty', rects: [] }];
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelectorAll('[data-item-action]')).to.have.length(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="rect"]')).to.have.length(0);
+  });
+
   it('interactive=false removes role/tabindex from rects (pure paint)', async () => {
     const el = await fixture<LyraHighlightLayer>(
       html`<lr-highlight-layer .items=${ITEMS} .interactive=${false}></lr-highlight-layer>`,
@@ -461,6 +517,72 @@ describe('lr-highlight-layer', () => {
     parent.append(el);
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[data-flash]').length).to.equal(0);
+  });
+
+  it('ignores missing IDs and supersedes a flash before its first render completes', async () => {
+    const el = await fixture<LyraHighlightLayer>(html`
+      <lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>
+    `);
+    el.flash('missing');
+    el.flash('a');
+    el.flash('b');
+    await el.updateComplete;
+    await Promise.resolve();
+
+    const flashing = el.shadowRoot!.querySelector<HTMLElement>('[data-flash]');
+    expect(flashing?.dataset.id).to.equal('b');
+  });
+
+  it('ignores an obsolete flash timer after a newer highlight starts flashing', async () => {
+    const el = await fixture<LyraHighlightLayer>(html`
+      <lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>
+    `);
+    const originalSetTimeout = window.setTimeout;
+    const originalClearTimeout = window.clearTimeout;
+    const handlers: Array<() => void> = [];
+    window.setTimeout = ((handler: TimerHandler) => {
+      if (typeof handler === 'function') handlers.push(handler);
+      return 80 + handlers.length;
+    }) as typeof window.setTimeout;
+    window.clearTimeout = (() => undefined) as typeof window.clearTimeout;
+
+    try {
+      el.flash('a');
+      await el.updateComplete;
+      await Promise.resolve();
+      const obsolete = handlers[0]!;
+
+      el.flash('b');
+      await el.updateComplete;
+      await Promise.resolve();
+      obsolete();
+      await el.updateComplete;
+
+      const flashing = el.shadowRoot!.querySelector<HTMLElement>('[data-flash]');
+      expect(flashing?.dataset.id).to.equal('b');
+    } finally {
+      el.remove();
+      window.setTimeout = originalSetTimeout;
+      window.clearTimeout = originalClearTimeout;
+    }
+  });
+
+  it('clears a flash when adopted into a connected document without a browsing context', async () => {
+    const el = await fixture<LyraHighlightLayer>(html`
+      <lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>
+    `);
+    const detachedDocument = document.implementation.createHTMLDocument('detached');
+    el.remove();
+    detachedDocument.adoptNode(el);
+    detachedDocument.body.append(el);
+    await el.updateComplete;
+
+    el.flash('a');
+    await el.updateComplete;
+    await Promise.resolve();
+
+    expect(el.shadowRoot!.querySelectorAll('[data-flash]')).to.have.length(0);
+    el.remove();
   });
 
   it('resolves and cancels flash timing through the adopted owner window', async () => {
@@ -614,5 +736,10 @@ describe('highlight-layer animation timing', () => {
 
   it('returns zero when animation-name is none', () => {
     expect(maxPairedAnimationEndMs('none', '1.8s', '1s')).to.equal(0);
+  });
+
+  it('treats unsupported and non-finite CSS time values as zero', () => {
+    expect(maxPairedAnimationEndMs('flash', 'not-a-time', '10px')).to.equal(0);
+    expect(maxPairedAnimationEndMs('flash', 'NaNms', 'Infinitys')).to.equal(0);
   });
 });

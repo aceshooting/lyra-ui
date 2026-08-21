@@ -2637,6 +2637,23 @@ describe("upstream tab surface", () => {
     expect(rawUpstreamEvents).to.equal(0);
   });
 
+  it("contains and cancels pointerdown on the projected close affordance", async () => {
+    const tab = await fixture<LyraTab>(html`
+      <lr-tab panel="general" closable>General</lr-tab>
+    `);
+    const close = tab.shadowRoot!.querySelector('[part~="close-button"]')!;
+    let leaked = 0;
+    tab.addEventListener("pointerdown", () => leaked++);
+    const event = new PointerEvent("pointerdown", {
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    close.dispatchEvent(event);
+    expect(event.defaultPrevented).to.equal(true);
+    expect(leaked).to.equal(0);
+  });
+
   it("does not select a different tab when its close control is clicked", async () => {
     const el = await fixture<LyraTabGroup>(html`
       <lr-tab-group aria-label="Workspace tabs">

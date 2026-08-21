@@ -93,7 +93,6 @@ function createNoopInternals(): ElementInternals {
     validity: {} as ValidityState,
     validationMessage: '',
     willValidate: false,
-    setFormValue(): void {},
     setValidity(): void {},
     checkValidity(): boolean {
       return true;

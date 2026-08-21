@@ -1151,21 +1151,11 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       ({ column, id }) =>
         this.columnVisibility.get(id) ?? column.hidden !== true
     );
-    const rank = (side: 'left' | 'right', id: string): number => {
-      const ordered = this.orderedColumns.filter(
-        (entry) => normalizePinSide(this.getColumnPin(entry.id)) === side
-      );
-      return ordered.findIndex((entry) => entry.id === id);
-    };
     return entries.sort((left, right) => {
       const leftPin = normalizePinSide(this.getColumnPin(left.id));
       const rightPin = normalizePinSide(this.getColumnPin(right.id));
       if (leftPin === rightPin) return 0;
-      if (leftPin === 'left') return -1;
-      if (rightPin === 'left') return 1;
-      if (leftPin === 'right') return 1;
-      if (rightPin === 'right') return -1;
-      return rank('left', left.id) - rank('right', right.id);
+      return leftPin === 'left' || rightPin === 'right' ? -1 : 1;
     });
   }
 

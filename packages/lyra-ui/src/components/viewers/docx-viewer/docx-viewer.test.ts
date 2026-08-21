@@ -516,6 +516,25 @@ describe('DOCX registry', () => {
       textSelect: true,
     });
   });
+
+  it('defaults omitted registry anchors and highlights to inert viewer values', () => {
+    const definition = getDefaultDocumentRendererRegistry().get(
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    )!;
+    const host = document.createElement('div');
+    render(
+      definition.render!({
+        name: 'report.docx',
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        src: 'https://example.test/report.docx',
+      }) as never,
+      host,
+    );
+
+    const rendered = host.querySelector('lr-docx-viewer') as LyraDocxViewer;
+    expect(rendered.anchor).to.equal(null);
+    expect(rendered.highlights).to.deep.equal([]);
+  });
 });
 
 describe('getHeadingTree', () => {
@@ -775,6 +794,30 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     }
   });
 
+  it('bounds highlight hit-testing when a range reports too many client rects', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Hello world</p>');
+    const originalGetClientRects = Range.prototype.getClientRects;
+    try {
+      el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'world' } }];
+      await el.updateComplete;
+      Range.prototype.getClientRects = (() => Array.from(
+        { length: 1_001 },
+        () => new DOMRect(100, 100, 1, 1),
+      ) as unknown as DOMRectList) as typeof Range.prototype.getClientRects;
+      let activations = 0;
+      el.addEventListener('lr-highlight-activate', () => { activations++; });
+
+      el.shadowRoot!.querySelector('[part="content"] p')!.dispatchEvent(
+        new MouseEvent('click', { bubbles: true, composed: true, clientX: 0, clientY: 0 }),
+      );
+      await aTimeout(0);
+      expect(activations).to.equal(0);
+    } finally {
+      Range.prototype.getClientRects = originalGetClientRects;
+      restore();
+    }
+  });
+
   it('renders a native keyboard action for each resolved text-quote highlight', async () => {
     const { el, restore } = await loadWithMarkup('<p>Ada wrote the first program.</p>');
     try {
@@ -791,6 +834,29 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
       const eventPromise = oneEvent(el, 'lr-highlight-activate');
       action!.click();
       expect((await eventPromise).detail).to.deep.equal({ highlightId: 'ada' });
+    } finally {
+      restore();
+    }
+  });
+
+  it('uses a cross-inline quote as an unlabeled action name and scrolls its element ancestor', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Ada <strong>wrote</strong> the first program.</p>');
+    try {
+      const paragraph = el.shadowRoot!.querySelector('[part="content"] p') as HTMLElement;
+      let scrolls = 0;
+      paragraph.scrollIntoView = () => { scrolls++; };
+      el.highlights = [{
+        id: 'cross-inline',
+        anchor: { kind: 'text-quote', quote: 'Ada wrote' },
+      }];
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="highlight-action"]') !== null);
+      const action = el.shadowRoot!.querySelector('[part="highlight-action"]') as HTMLButtonElement;
+      expect(action.getAttribute('aria-label')).to.equal('Highlight: Ada wrote');
+
+      const eventPromise = oneEvent(el, 'lr-highlight-activate');
+      action.click();
+      expect((await eventPromise).detail).to.deep.equal({ highlightId: 'cross-inline' });
+      expect(scrolls).to.equal(1);
     } finally {
       restore();
     }
@@ -1417,6 +1483,34 @@ describe('search', () => {
     }
   });
 
+  it('uses instant scrolling for an active match when reduced motion is requested', async () => {
+    const originalMatchMedia = window.matchMedia;
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    let behavior: ScrollBehavior | undefined;
+    window.matchMedia = ((query: string) => ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      onchange: null,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      dispatchEvent: () => true,
+    })) as typeof window.matchMedia;
+    HTMLElement.prototype.scrollIntoView = ((options?: boolean | ScrollIntoViewOptions) => {
+      if (typeof options === 'object') behavior = options.behavior;
+    }) as typeof HTMLElement.prototype.scrollIntoView;
+    const { el, restore } = await loadWithMarkup('<p>The cat sat.</p>');
+    try {
+      expect(await el.search('cat')).to.equal(1);
+      expect(behavior).to.equal('auto');
+    } finally {
+      restore();
+      window.matchMedia = originalMatchMedia;
+      HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+    }
+  });
+
   it('recomputes an active search and repaints highlights when the effective locale changes on a loaded document', async () => {
     const { el, restore } = await loadWithMarkup('<p>İSTANBUL bright spot</p>');
     try {
@@ -1496,6 +1590,19 @@ describe('search', () => {
     } finally { restore(); }
   });
 
+  it('keeps search results while declining paint when range intersection checks fail', async () => {
+    const { el, restore } = await loadWithMarkup('<p>quick <strong>brown</strong> fox</p>');
+    const originalIntersectsNode = Range.prototype.intersectsNode;
+    Range.prototype.intersectsNode = () => { throw new Error('intersection unavailable'); };
+    try {
+      expect(await el.search('quick brown')).to.equal(1);
+      expect(el.shadowRoot!.querySelectorAll('[part~="search-match"]')).to.have.length(0);
+    } finally {
+      Range.prototype.intersectsNode = originalIntersectsNode;
+      restore();
+    }
+  });
+
   it('does not split an over-budget single Text node to paint a small retained match', async () => {
     const { el, restore } = await loadWithMarkup('<p></p>');
     try {
@@ -1522,6 +1629,25 @@ describe('search', () => {
       expect(paragraph.childNodes).to.have.length(1);
       expect(paragraph.textContent).to.equal('The cat sat.');
     } finally { restore(); }
+  });
+
+  it('removes an empty adjacent text node while unwrapping a search mark', async () => {
+    const { el, restore } = await loadWithMarkup('<p>The cat sat.</p>');
+    try {
+      expect(await el.search('cat')).to.equal(1);
+      const paragraph = el.shadowRoot!.querySelector('[part="content"] p') as HTMLElement;
+      const mark = paragraph.querySelector('mark[part~="search-match"]')!;
+      const before = mark.previousSibling as Text;
+      before.data = '';
+
+      el.clearSearch();
+
+      expect(paragraph.textContent).to.equal('cat sat.');
+      expect([...paragraph.childNodes].filter((node) => node.nodeType === Node.TEXT_NODE && node.textContent === ''))
+        .to.have.length(0);
+    } finally {
+      restore();
+    }
   });
 
   it('rejects an oversized query without normalizing it and reports a lower bound', async () => {

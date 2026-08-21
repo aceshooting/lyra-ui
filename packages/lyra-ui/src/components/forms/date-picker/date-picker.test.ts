@@ -3201,3 +3201,65 @@ describe('range preset identity and open bounds', () => {
     ).to.be.true;
   });
 });
+
+it("keeps single and partial range date views mode-correct", async () => {
+  const el = await fixture<LyraDatePicker>(html`
+    <lr-date-picker value="2026-07-10"></lr-date-picker>
+  `);
+
+  expect(el.valueAsRange.from).to.equal(null);
+  expect(el.valueAsRange.to).to.equal(null);
+
+  el.mode = "range";
+  await el.updateComplete;
+  expect(el.valueAsDate).to.equal(null);
+  expect(el.valueAsRange.from?.getDate()).to.equal(10);
+  expect(el.valueAsRange.to).to.equal(null);
+
+  el.valueAsRange = { from: new Date(2026, 6, 12), to: null };
+  expect(el.value).to.equal("2026-07-12");
+
+  el.valueAsRange = { from: null, to: new Date(2026, 6, 20) };
+  expect(el.value).to.equal("");
+
+  el.valueAsRange = { from: new Date(NaN), to: new Date(2026, 6, 20) };
+  expect(el.value).to.equal("");
+});
+
+it("pages a two-month calendar by one month when page-by is single", async () => {
+  const el = await fixture<LyraDatePicker>(html`
+    <lr-date-picker
+      value="2026-07-15"
+      months="2"
+      page-by="single"
+    ></lr-date-picker>
+  `);
+  const titles = (): string[] =>
+    Array.from(
+      el.shadowRoot!.querySelectorAll<HTMLElement>('[part="month-label"]'),
+      (title) => title.textContent!.trim()
+    );
+  const before = titles();
+
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="next"]')!.click();
+  await el.updateComplete;
+
+  const after = titles();
+  expect(after[0]).to.equal(before[1]);
+});
+
+it("leaves the decade view unchanged when its title cannot advance farther", async () => {
+  const el = await fixture<LyraDatePicker>(html`
+    <lr-date-picker view="decades" value="2026-07-15"></lr-date-picker>
+  `);
+  let changes = 0;
+  el.addEventListener("lr-view-change", () => changes++);
+
+  el.shadowRoot!
+    .querySelector<HTMLButtonElement>('[part="title"]')!
+    .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  await el.updateComplete;
+
+  expect(el.view).to.equal("decades");
+  expect(changes).to.equal(0);
+});

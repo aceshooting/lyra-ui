@@ -583,6 +583,211 @@ describe("filters setter validation", () => {
     expect(stored.meta.tone).to.equal("urgent");
     expect(stored.meta.self === stored.meta).to.be.true;
   });
+
+  it('snapshots hostile and oversized definition metadata without invoking accessors', async () => {
+    const el = await fixture<LyraFilterBar>(html`<lr-filter-bar></lr-filter-bar>`);
+    const revokedDefinitions = Proxy.revocable<unknown[]>([], {});
+    revokedDefinitions.revoke();
+    expect(() => {
+      el.filters = revokedDefinitions.proxy as LyraFilterBarFilterDefinition[];
+    }).not.to.throw();
+    expect(el.filters).to.deep.equal([]);
+
+    const revokedEntry = Proxy.revocable<Record<string, unknown>>({}, {});
+    revokedEntry.revoke();
+    const revokedMetadata = Proxy.revocable<Record<string, unknown>>({}, {});
+    revokedMetadata.revoke();
+    const lengthTrap = new Proxy(['ignored'], {
+      getOwnPropertyDescriptor(target, key) {
+        if (key === 'length') throw new Error('hostile array length');
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+    const indexTrap = new Proxy(['ignored'], {
+      getOwnPropertyDescriptor(target, key) {
+        if (key === '0') throw new Error('hostile array entry');
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+    const prototypeTrap = new Proxy({}, {
+      getPrototypeOf(): never {
+        throw new Error('hostile prototype');
+      },
+    });
+    const descriptorsTrap = new Proxy({}, {
+      ownKeys(): never {
+        throw new Error('hostile descriptors');
+      },
+    });
+    let accessorReads = 0;
+    const accessorMetadata: Record<string, unknown> = {};
+    Object.defineProperty(accessorMetadata, 'unsafe', {
+      enumerable: true,
+      get() {
+        accessorReads += 1;
+        return 'do not read';
+      },
+    });
+    let deep: Record<string, unknown> = { leaf: 'bounded' };
+    for (let depth = 0; depth < 18; depth += 1) deep = { child: deep };
+    const wide = Object.fromEntries(
+      Array.from({ length: 10_001 }, (_, index) => [`key-${index}`, index])
+    );
+    const sparse = new Array(2);
+    const hostileDefinition = new Proxy(function hostileDefinition() {}, {
+      get(): never {
+        throw new Error('hostile definition');
+      },
+    });
+    const filters = [
+      revokedEntry.proxy,
+      hostileDefinition,
+      {
+        filterId: 'safe',
+        label: 'Safe',
+        type: 'select',
+        options: [],
+        metadata: {
+          revokedMetadata: revokedMetadata.proxy,
+          lengthTrap,
+          indexTrap,
+          prototypeTrap,
+          descriptorsTrap,
+          accessorMetadata,
+          deep,
+          wide,
+          sparse,
+        },
+      },
+    ] as unknown as LyraFilterBarFilterDefinition[];
+
+    el.filters = filters;
+    await el.updateComplete;
+
+    expect(el.filters.map((definition) => definition.filterId)).to.deep.equal(['safe']);
+    const metadata = (el.filters[0] as unknown as { metadata: Record<string, unknown> }).metadata;
+    expect(accessorReads).to.equal(0);
+    expect(Object.hasOwn(metadata, 'revokedMetadata')).to.be.false;
+    expect((metadata.lengthTrap as unknown[]).length).to.equal(0);
+    expect((metadata.indexTrap as unknown[]).length).to.equal(0);
+    expect((metadata.sparse as unknown[]).length).to.equal(0);
+    expect(Object.keys(metadata.wide as object).length).to.equal(10_000);
+  });
+});
+
+it('normalizes hostile controlled-value descriptors without invoking accessors', async () => {
+  const el = await fixture<LyraFilterBar>(html`
+    <lr-filter-bar .filters=${basicFilters}></lr-filter-bar>
+  `);
+  const revokedValue = Proxy.revocable<Record<string, unknown>>({}, {});
+  revokedValue.revoke();
+  expect(() => {
+    el.value = revokedValue.proxy as never;
+  }).not.to.throw();
+  expect(el.value).to.deep.equal({});
+
+  const revokedField = Proxy.revocable<unknown[]>([], {});
+  revokedField.revoke();
+  el.value = { tags: revokedField.proxy as never };
+  expect(el.value).to.deep.equal({});
+
+  const lengthTrap = new Proxy(['ignored'], {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === 'length') throw new Error('hostile field length');
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  el.value = { tags: lengthTrap };
+  expect(el.value).to.deep.equal({});
+
+  const indexTrap = new Proxy(['ignored'], {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === '0') throw new Error('hostile field entry');
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  el.value = { tags: indexTrap };
+  expect(el.value.tags).to.equal(undefined);
+
+  let accessorReads = 0;
+  const accessorValue: Record<string, unknown> = {};
+  Object.defineProperty(accessorValue, 'tags', {
+    enumerable: true,
+    get() {
+      accessorReads += 1;
+      return ['unsafe'];
+    },
+  });
+  el.value = accessorValue as never;
+  expect(accessorReads).to.equal(0);
+  expect(el.value).to.deep.equal({});
+
+  const mixed = new Array(4);
+  mixed[1] = 'kept';
+  mixed[2] = 42;
+  Object.defineProperty(mixed, '3', {
+    enumerable: true,
+    get() {
+      accessorReads += 1;
+      return 'unsafe';
+    },
+  });
+  el.value = { tags: mixed, status: undefined };
+  expect(el.value.tags).to.deep.equal(['kept']);
+  expect(accessorReads).to.equal(0);
+
+  el.value = { status: {} as never };
+  expect(el.value).to.deep.equal({});
+});
+
+it('honors array clear values and custom empty predicates during normalization', async () => {
+  const render = () => html`<span>Custom</span>`;
+  const filters = [
+    {
+      filterId: 'array-equal',
+      label: 'Array equal',
+      type: 'custom',
+      custom: {
+        adapter: { valueFromEvent: () => [], clearValue: [] },
+        render,
+      },
+    },
+    {
+      filterId: 'array-different',
+      label: 'Array different',
+      type: 'custom',
+      custom: {
+        adapter: { valueFromEvent: () => [], clearValue: ['clear'] },
+        render,
+      },
+    },
+    {
+      filterId: 'predicate',
+      label: 'Predicate',
+      type: 'custom',
+      custom: {
+        adapter: {
+          valueFromEvent: () => '',
+          clearValue: '',
+          isEmpty: (value: unknown) => value === 'empty',
+        },
+        render,
+      },
+    },
+  ] as LyraFilterBarFilterDefinition[];
+  const el = await fixture<LyraFilterBar>(html`
+    <lr-filter-bar .filters=${filters}></lr-filter-bar>
+  `);
+
+  el.value = {
+    'array-equal': [],
+    'array-different': ['other'],
+    predicate: 'empty',
+  };
+  expect(el.value).to.deep.equal({ 'array-different': ['other'] });
+
+  el.value = { predicate: 'full' };
+  expect(el.value).to.deep.equal({ predicate: 'full' });
 });
 
 it("falls back to rendering lr-select for an unrecognized filter type", async () => {
@@ -598,6 +803,79 @@ it("falls back to rendering lr-select for an unrecognized filter type", async ()
     html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
   );
   expect(control(el, "weird").localName).to.equal("lr-select");
+});
+
+it('keeps malformed-but-bounded display values inert and renders an optionless unknown type', async () => {
+  const filters = [
+    {
+      filterId: 'custom-undefined',
+      label: 'Custom',
+      type: 'custom',
+      custom: {
+        adapter: {
+          valueFromEvent: () => undefined,
+          clearValue: false,
+        },
+        render: () => html`<span>Custom control</span>`,
+      },
+    },
+    { filterId: 'choice-boolean', label: 'Choice', type: 'select', options: [] },
+    { filterId: 'text-boolean', label: 'Text', type: 'text' },
+    { filterId: 'date-boolean', label: 'Date boolean', type: 'date' },
+    { filterId: 'date-malformed', label: 'Date malformed', type: 'date' },
+    { filterId: 'date-shape', label: 'Date shape', type: 'date' },
+    { filterId: 'range-shape', label: 'Range shape', type: 'date-range' },
+    { filterId: 'unknown', label: 'Unknown', type: 'future-control' },
+  ] as unknown as LyraFilterBarFilterDefinition[];
+  const el = await fixture<LyraFilterBar>(html`
+    <lr-filter-bar .filters=${filters}></lr-filter-bar>
+  `);
+
+  el.value = {
+    'custom-undefined': undefined,
+    'choice-boolean': true,
+    'text-boolean': true,
+    'date-boolean': true,
+    'date-malformed': 'not-a-date',
+    'date-shape': '2026-01-01/extra',
+    'range-shape': '2026-01-01',
+  };
+  await el.updateComplete;
+
+  expect(control(el, 'unknown').localName).to.equal('lr-select');
+  expect(control(el, 'unknown').querySelectorAll('lr-option')).to.have.length(0);
+  const labels = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="chip"]')].map(
+    (chip) => chip.textContent!.trim()
+  );
+  expect(labels).to.deep.equal([
+    'Custom:',
+    'Choice:',
+    'Text:',
+    'Date boolean:',
+    'Date malformed: not-a-date',
+    'Date shape: 2026-01-01/extra',
+    'Range shape: 2026-01-01',
+  ]);
+});
+
+it('ignores disabled and stale chip-removal callbacks', async () => {
+  const el = await fixture<LyraFilterBar>(html`
+    <lr-filter-bar .filters=${basicFilters} .value=${{ status: 'open' }}></lr-filter-bar>
+  `);
+  await el.updateComplete;
+  const chip = el.shadowRoot!.querySelector<HTMLElement>('[part="chip"]')!;
+  el.disabled = true;
+  await el.updateComplete;
+  chip.dispatchEvent(new CustomEvent('lr-remove', { bubbles: true, composed: true }));
+  expect(el.value.status).to.equal('open');
+
+  el.disabled = false;
+  el.filters = [];
+  expect(() => {
+    chip.dispatchEvent(new CustomEvent('lr-remove', { bubbles: true, composed: true }));
+  }).not.to.throw();
+  await el.updateComplete;
+  expect(el.filters).to.deep.equal([]);
 });
 
 describe("value getter/setter (URL/state serialization contract)", () => {
@@ -1889,6 +2167,39 @@ describe("'text' free-text filters", () => {
     expect(inputs, "only the chip removal itself emitted").to.equal(1);
     const native = await nativeInput(el, "q");
     expect(native.value).to.equal("");
+  });
+
+  it('cancels only the removed filter debounce when another text edit is pending', async () => {
+    const filters: LyraFilterBarFilterDefinition[] = [
+      { filterId: 'first', label: 'First', type: 'text', debounce: 10_000 },
+      { filterId: 'second', label: 'Second', type: 'text', debounce: 10_000 },
+    ];
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${filters} .value=${{ first: 'seed' }}></lr-filter-bar>
+    `);
+    await el.updateComplete;
+    await typeInto(el, 'first', 'first draft');
+    await typeInto(el, 'second', 'second draft');
+    const chip = el.shadowRoot!.querySelector<HTMLElement>('[part="chip"]')!;
+
+    chip.dispatchEvent(new CustomEvent('lr-remove', { bubbles: true, composed: true }));
+    expect(el.value).to.deep.equal({});
+    el.remove();
+  });
+
+  it('treats a malformed text-input event with no value as an empty edit', async () => {
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${textFilters}></lr-filter-bar>
+    `);
+    const composed = control(el, 'q') as HTMLElement & { value?: string };
+    Object.defineProperty(composed, 'value', {
+      configurable: true,
+      value: undefined,
+      writable: true,
+    });
+
+    composed.dispatchEvent(new CustomEvent('lr-input', { bubbles: true, composed: true }));
+    expect(el.value).to.deep.equal({});
   });
 
   it("cancels a pending debounce on disconnect, so a detached bar never emits after teardown", async () => {

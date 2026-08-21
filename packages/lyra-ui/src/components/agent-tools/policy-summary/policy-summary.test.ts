@@ -155,6 +155,23 @@ describe('lr-policy-summary', () => {
     expect((allowRow.querySelector('[part="detail"]')) == null).to.be.true;
   });
 
+  it('contains nested disclosure lifecycle events at the decision boundary', async () => {
+    const el = await fixture<LyraPolicySummary>(html`
+      <lr-policy-summary .decisions=${decisions}></lr-policy-summary>
+    `);
+    const details = el.shadowRoot!.querySelector('[part="detail"]')!;
+    let leaked = 0;
+    el.addEventListener('lr-toggle', () => leaked++);
+
+    details.dispatchEvent(new CustomEvent('lr-toggle', {
+      bubbles: true,
+      composed: true,
+      detail: { open: true },
+    }));
+
+    expect(leaked).to.equal(0);
+  });
+
   it('shrinks to a 320px allocation with a long label and explanation without horizontal overflow', async () => {
     const longDecisions: PolicyDecision[] = [
       {

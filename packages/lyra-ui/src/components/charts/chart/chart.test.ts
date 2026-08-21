@@ -5127,3 +5127,435 @@ describe('data-table disclosure', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+describe('bounded chart fallback paths', () => {
+  it('requests annotation support during initial connection when annotations are already present', async () => {
+    const mod = await import('chart.js');
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.annotations = [{ value: 1 }];
+    let requests = 0;
+    (el as any).loadLibrary = () => Promise.resolve(mod);
+    (el as any).loadAnnotationFeature = () => {
+      requests += 1;
+      return Promise.resolve({ kind: 'feature-unavailable', mod });
+    };
+    document.body.append(el);
+    try {
+      await waitUntil(() => requests === 1);
+      await waitUntil(() => (el as any).chart != null);
+      expect(requests).to.equal(1);
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('retains a usable core module when each optional feature alone is unavailable', async () => {
+    const mod = await import('chart.js');
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    await waitUntil(() => (el as any).chart != null);
+    (el as any).loading = false;
+
+    el.zoom = true;
+    (el as any).chartJsModule = undefined;
+    (el as any).loadZoomFeature = () =>
+      Promise.resolve({ kind: 'feature-unavailable', mod });
+    (el as any).requestZoomFeature();
+    await waitUntil(() => (el as any).zoomFeatureState === 'unavailable');
+    expect((el as any).chartJsModule).to.equal(mod);
+
+    el.dataLabels = true;
+    (el as any).chartJsModule = undefined;
+    (el as any).loadDataLabelsFeature = () =>
+      Promise.resolve({ kind: 'feature-unavailable', mod });
+    (el as any).requestDataLabelsFeature();
+    await waitUntil(() => (el as any).dataLabelsFeatureState === 'unavailable');
+    expect((el as any).chartJsModule).to.equal(mod);
+
+    el.annotations = [{ value: 1 }];
+    (el as any).chartJsModule = undefined;
+    (el as any).loadAnnotationFeature = () =>
+      Promise.resolve({ kind: 'feature-unavailable', mod });
+    (el as any).requestAnnotationFeature();
+    await waitUntil(() => (el as any).chartJsModule === mod);
+    expect((el as any).annotationPlugin).to.equal(undefined);
+  });
+
+  it('discards stale data-label and annotation feature results after demand is removed', async () => {
+    const mod = await import('chart.js');
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    await waitUntil(() => (el as any).chart != null);
+
+    let resolveDataLabels!: (value: unknown) => void;
+    el.dataLabels = true;
+    (el as any).loadDataLabelsFeature = () =>
+      new Promise((resolve) => {
+        resolveDataLabels = resolve;
+      });
+    (el as any).requestDataLabelsFeature();
+    el.dataLabels = false;
+    resolveDataLabels({ kind: 'available', mod, plugin: { id: 'late-labels' } });
+    await aTimeout(0);
+    expect((el as any).dataLabelsPlugin).to.equal(undefined);
+
+    let resolveAnnotation!: (value: unknown) => void;
+    el.annotations = [{ value: 1 }];
+    (el as any).loadAnnotationFeature = () =>
+      new Promise((resolve) => {
+        resolveAnnotation = resolve;
+      });
+    (el as any).requestAnnotationFeature();
+    el.annotations = [];
+    resolveAnnotation({ kind: 'available', mod, plugin: { id: 'late-annotation' } });
+    await aTimeout(0);
+    expect((el as any).annotationPlugin).to.equal(undefined);
+  });
+
+  it('samples every per-point series field and handles an empty forced-color fill', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    const style = {
+      borderColors: ['rgb(1, 2, 3)'],
+      fillColors: [],
+      authoredFillColors: [false],
+      borderRadius: 0,
+      borderWidth: 1,
+      gridBorderWidth: 1,
+      lineBorderWidth: 2,
+      pointRadius: 4,
+      forcedColors: true,
+    };
+    const dataset = (el as any).seriesToDataset(
+      {
+        label: 'sampled',
+        data: [1, 2],
+        fill: true,
+        segmentColors: ['red', 'blue'],
+        pointColors: ['green', 'yellow'],
+        pointRadius: [2, 3],
+      },
+      0,
+      [],
+      'line',
+      style,
+      [1],
+    );
+    expect(dataset.data).to.deep.equal([2]);
+    expect(dataset.backgroundColor).to.equal(undefined);
+    expect(dataset.pointRadius).to.deep.equal([3]);
+    expect(dataset.pointBackgroundColor).to.have.length(1);
+    expect(dataset.segment.borderColor({ p0DataIndex: 0 })).to.be.a('string');
+
+    const colored = (el as any).seriesToDataset(
+      { label: 'colors', data: [1, 2], color: ['red', 'blue'] },
+      0,
+      ['black'],
+      'bar',
+      { ...style, forcedColors: false, fillColors: ['black'] },
+      [1],
+    );
+    expect(colored.backgroundColor).to.have.length(1);
+  });
+
+  it('samples an over-wide series dimension and preserves source indexes', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.labels = ['row'];
+    el.datasets = Array.from({ length: 1_001 }, (_, index) => ({
+      label: `series-${index}`,
+      data: [index],
+    }));
+    const config = (el as any).buildConfig();
+    const sources = (el as any).visualDatasetSourceIndexes as number[];
+    expect(sources).to.have.length(1_000);
+    expect(sources[0]).to.equal(0);
+    expect(sources.at(-1)).to.equal(1_000);
+    expect(config.data.datasets).to.have.length(1_000);
+  });
+
+  it('uses slice activation and the physical-bottom legend fallback', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'polarArea';
+    el.labels = ['A'];
+    el.datasets = [{ label: 'share', data: [1] }];
+    let detail: unknown;
+    el.addEventListener('lr-datum-activate', (event) => {
+      detail = (event as CustomEvent).detail;
+    });
+    (el as any).activateDatum({ datasetIndex: 0, index: 0, label: 'A', value: 1 });
+    expect(detail).to.deep.include({ kind: 'slice' });
+
+    el.legendPosition = 'bottom';
+    expect((el as any).legendGridPlacement()).to.equal('bottom');
+  });
+
+  it('keeps the loading branch when Lit update completion rejects', async () => {
+    const tagName = 'lr-chart-rejecting-update-coverage';
+    if (!customElements.get(tagName)) {
+      customElements.define(
+        tagName,
+        class extends LyraChart {
+          override get updateComplete(): Promise<boolean> {
+            return Promise.reject(new Error('update failed'));
+          }
+        },
+      );
+    }
+    const el = document.createElement(tagName) as LyraChart;
+    (el as any).loadLibrary = () => import('chart.js');
+    document.body.append(el);
+    try {
+      await aTimeout(20);
+      expect((el as any).loading).to.be.true;
+      expect((el as any).chart).to.equal(undefined);
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('handles absent runtime metadata and falls back to source dataset indexes', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    expect((el as any).applyDatasetVisibility()).to.be.false;
+
+    (el as any).chart = {
+      data: {},
+      getDatasetMeta: () => undefined,
+      setDatasetVisibility: () => undefined,
+    };
+    expect((el as any).applyDatasetVisibility()).to.be.false;
+
+    let visibility: [number, boolean] | undefined;
+    el.datasets = [{ label: 'A', data: [1] }];
+    el.hiddenDatasets = [0];
+    (el as any).chart = {
+      data: { datasets: [{}] },
+      setDatasetVisibility: (index: number, visible: boolean) => {
+        visibility = [index, visible];
+      },
+    };
+    (el as any).visualDatasetSourceIndexes = undefined;
+    expect((el as any).applyDatasetVisibility()).to.be.true;
+    expect(visibility).to.deep.equal([0, false]);
+  });
+
+  it('appends an absent generated series value through an explicit labels-only config', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.datasets = [{ label: 'empty' }];
+    el.config = { data: { labels: ['A'] } };
+    el.appendData('B', [], 0);
+    expect(el.datasets[0]!.data).to.deep.equal([null, null]);
+    expect(el.config.data!.labels).to.deep.equal(['A', 'B']);
+  });
+
+  it('exports blank x/y cells for a missing point without optional point columns', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'scatter';
+    el.labels = ['A', 'B'];
+    el.datasets = [{
+      label: 'points',
+      points: [{ x: 1, y: 2 }, null as unknown as { x: number; y: number }],
+    }];
+    expect(el.exportData('csv').split('\r\n')).to.deep.equal([
+      'label,points x,points y',
+      'A,1,2',
+      'B,,',
+    ]);
+  });
+
+  it('contains watcher and warning fallbacks when their optional runtime state is absent', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'matchMedia');
+    Object.defineProperty(window, 'matchMedia', { configurable: true, value: undefined });
+    try {
+      expect(() => (el as any).armReducedMotionWatcher()).to.not.throw();
+    } finally {
+      if (descriptor) Object.defineProperty(window, 'matchMedia', descriptor);
+      else delete (window as Window & { matchMedia?: typeof matchMedia }).matchMedia;
+    }
+
+    (el as any).loading = false;
+    (el as any).loadFailed = true;
+    expect((el as any).featureWarningMessages()).to.deep.equal([]);
+  });
+
+  it('resolves empty-palette series fallbacks and both forced-color array index modes', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    (el as any).forcedColorPattern = (index: number, color: string) => `${index}:${color}`;
+    const baseStyle = {
+      borderColors: [],
+      fillColors: [],
+      authoredFillColors: [],
+      borderRadius: 0,
+      borderWidth: 1,
+      gridBorderWidth: 1,
+      lineBorderWidth: 2,
+      pointRadius: 3,
+      forcedColors: false,
+    };
+
+    const scalar = (el as any).seriesToDataset(
+      { label: 'scalar', data: [1], color: 'red' },
+      0,
+      [],
+      'bar',
+      baseStyle,
+    );
+    expect(scalar.backgroundColor).to.have.length(1);
+
+    const array = (el as any).seriesToDataset(
+      { label: 'array', data: [1], color: ['red'] },
+      0,
+      [],
+      'bar',
+      baseStyle,
+    );
+    expect(array.backgroundColor).to.have.length(1);
+
+    const decorated = (el as any).seriesToDataset(
+      {
+        label: 'decorated',
+        data: [1],
+        segmentColors: ['red'],
+        pointColors: ['blue'],
+      },
+      0,
+      [],
+      'line',
+      baseStyle,
+    );
+    expect(decorated.segment.borderColor({ p0DataIndex: 0 })).to.be.a('string');
+    expect(decorated.pointBackgroundColor).to.have.length(1);
+
+    const slice = (el as any).seriesToDataset(
+      { label: 'slice', data: [1, 2] },
+      2,
+      [],
+      'pie',
+      { ...baseStyle, borderColors: ['black'], fillColors: ['white'] },
+    );
+    expect(slice.backgroundColor).to.deep.equal(['white', 'white']);
+    expect(slice.borderColor).to.deep.equal(['black', 'black']);
+
+    const forced = (el as any).seriesToDataset(
+      { label: 'forced', data: [1, 2], color: ['red', 'blue'] },
+      3,
+      [],
+      'bar',
+      { ...baseStyle, forcedColors: true },
+    );
+    expect(forced.backgroundColor).to.deep.equal(['3:transparent', '3:transparent']);
+  });
+
+  it('measures a detached relative CSS length through its light-DOM probe', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.style.setProperty('--coverage-size', '1rem');
+    expect((el as any).styleNumber('--coverage-size', '--missing-size', 7)).to.be.greaterThan(0);
+    expect(el.children).to.have.length(0);
+  });
+
+  it('rejects non-array and primitive annotation inputs', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    (el as any).annotations = { value: 1 };
+    expect((el as any).normalizedAnnotations()).to.deep.equal([]);
+    (el as any).annotations = [42];
+    expect((el as any).normalizedAnnotations()).to.deep.equal([]);
+  });
+
+  it('uses axis aliases in both data-label callbacks and the formatter-first visual path', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'bar';
+    el.stackTotals = true;
+    el.stacked = true;
+    el.datasets = [{ label: 'secondary', axis: 'y2', data: [2] }];
+    const options = (el as any).datalabelsOptions({ tick: 'black' }, 'bar');
+    expect(options.display({ datasetIndex: 0, dataIndex: 0 })).to.be.true;
+    expect(options.formatter(2, { datasetIndex: 0, dataIndex: 0 })).to.equal('2');
+
+    el.formatter = ({ value, surface }) => `${surface}:${value}`;
+    expect((el as any).formatDataLabel(4)).to.equal('visual:4');
+  });
+
+  it('applies value bounds to a secondary vertical scale', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'bar';
+    el.min = 1;
+    el.max = 9;
+    el.datasets = [{ label: 'secondary', axis: 'y2', data: [2] }];
+    const y2 = (el as any).buildConfig().options.scales.y2;
+    expect(y2.min).to.equal(1);
+    expect(y2.max).to.equal(9);
+  });
+
+  it('uses unsampled source indexes for direct hit-testing and keyboard datums', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.labels = ['A'];
+    el.datasets = [{ label: 'series', data: [5] }];
+    (el as any).visualDatasetSourceIndexes = undefined;
+    (el as any).visualRowSourceIndexes = undefined;
+    let detail: unknown;
+    el.addEventListener('lr-datum-activate', (event) => {
+      detail = (event as CustomEvent).detail;
+    });
+    (el as any).handlePointClick({}, {
+      getElementsAtEventForMode: () => [{ datasetIndex: 0, index: 0 }],
+    });
+    expect(detail).to.deep.include({ datasetIndex: 0, index: 0, value: 5 });
+
+    (el as any).chart = { data: { labels: ['A'], datasets: [{ data: [5] }] } };
+    expect((el as any).chartDatums()).to.deep.equal([
+      { datasetIndex: 0, index: 0, label: 'A', value: 5 },
+    ]);
+    (el as any).chart = { data: { labels: [], datasets: [{}] } };
+    expect((el as any).chartDatums()).to.deep.equal([]);
+  });
+
+  it('covers remaining direct formatting and legend fallbacks', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    expect((el as any).datumAnnouncement(
+      { datasetIndex: 9, index: 0, label: 'A', value: 1 },
+      0,
+      1,
+    )).to.contain('Series');
+
+    expect((el as any).legendValue(
+      { datasetIndex: 0 },
+      { data: { datasets: [{ data: [Number.NaN, 2] }] } },
+    )).to.equal(2);
+
+    el.valueFormatter = (value, context) => `${context}:${value}`;
+    expect((el as any).tooltipLabel({ parsed: { x: 8 }, dataset: {} })).to.equal('tooltip:8');
+    expect((el as any).formatExportValue(3)).to.equal('table:3');
+    expect((el as any).legendTextFor(
+      { label: 'point', data: [{ x: 1, y: 4 }] },
+      0,
+    )).to.equal('point: legend:4');
+
+    el.legendPosition = 'bottom';
+    expect((el as any).legendPositionForLayout()).to.equal('bottom');
+    el.legendPosition = 'auto';
+    (el as any).autoLegendPosition = 'bottom';
+    expect((el as any).legendGridPlacement()).to.equal('bottom');
+  });
+
+  it('retains caller plugins without optional data labels and repairs malformed config plugins', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    const plugin = { id: 'caller-plugin' };
+    el.plugins = [plugin];
+    expect((el as any).buildConfig().plugins).to.deep.equal([plugin]);
+
+    el.config = { plugins: 'not-an-array' as unknown as never[] };
+    expect((el as any).buildConfig().plugins).to.deep.equal([plugin]);
+  });
+
+  it('announces an explicit zoom discard and rejects an out-of-range legend toggle', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    let zoomed: unknown;
+    el.addEventListener('lr-zoom', (event) => {
+      zoomed = (event as CustomEvent).detail.zoomed;
+    });
+    (el as any).zoomed = true;
+    (el as any).discardChart(true);
+    expect(zoomed).to.be.false;
+
+    el.datasets = [{ label: 'A', data: [1] }];
+    (el as any).chart = { data: { datasets: [{}] } };
+    expect(() => (el as any).toggleDataset(1)).to.not.throw();
+  });
+});

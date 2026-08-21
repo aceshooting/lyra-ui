@@ -83,6 +83,33 @@ it('rejects pathological tiny-chunk cardinality before exhausting the byte ceili
   expect(cancellations).to.equal(1);
 });
 
+it('keeps the resource-limit error authoritative when stream cancellation rejects', async () => {
+  const response = responseWithReader(
+    async () => ({ done: false, value: Uint8Array.of(1, 2) }),
+    async () => {
+      throw new Error('hostile cancellation');
+    },
+  );
+
+  let error: unknown;
+  try {
+    await readResponseArrayBuffer(response, 1);
+  } catch (caught) {
+    error = caught;
+  }
+  expect(error).to.be.instanceOf(LyraResourceLimitError);
+});
+
+it('uses a bodyless response text fallback and normalizes an invalid byte cap', async () => {
+  const response = {
+    headers: new Headers(),
+    body: null,
+    text: async () => 'fallback text',
+  } as unknown as Response;
+
+  expect(await readResponseText(response, 0)).to.equal('fallback text');
+});
+
 it('rejects tabular data over the row or column budget', () => {
   expect(() => assertTableSize([['a'], ['b']], 1, 10)).to.throw(LyraResourceLimitError);
   expect(() => assertTableSize([['a', 'b']], 10, 1)).to.throw(LyraResourceLimitError);
@@ -121,6 +148,26 @@ it('fails owner fetch resolution closed without a browsing context or for unsafe
   expect(resolveOwnerFetchTarget(detachedElement, 'relative.json') === null).to.equal(true);
   expect(resolveOwnerFetchTarget(document.createElement('div'), 'relative.json') === null).to.equal(true);
   expect(resolveOwnerFetchTarget(document.body, 'javascript:alert(1)') === null).to.equal(true);
+});
+
+it('fails owner fetch resolution closed when the owner document base cannot be read', async () => {
+  const iframe = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+  const frameDocument = iframe.contentDocument!;
+  const element = frameDocument.createElement('div');
+  frameDocument.body.append(element);
+  const descriptor = Object.getOwnPropertyDescriptor(frameDocument, 'baseURI');
+  Object.defineProperty(frameDocument, 'baseURI', {
+    configurable: true,
+    get() {
+      throw new Error('hostile base URI');
+    },
+  });
+  try {
+    expect(resolveOwnerFetchTarget(element, 'relative.json')).to.equal(null);
+  } finally {
+    if (descriptor) Object.defineProperty(frameDocument, 'baseURI', descriptor);
+    else delete (frameDocument as unknown as { baseURI?: unknown }).baseURI;
+  }
 });
 
 it('recognizes abort errors created in another browsing context', async () => {

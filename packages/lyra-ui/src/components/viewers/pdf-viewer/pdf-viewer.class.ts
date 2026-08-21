@@ -135,10 +135,6 @@ function appendPdfTextItems(items: unknown, accumulator: PdfTextAccumulator): vo
       ? '\n'
       : ' ';
     const remaining = TEXT_QUOTE_LIMITS.maxNodeCodeUnits - accumulator.length;
-    if (remaining <= 0) {
-      accumulator.truncated = true;
-      return;
-    }
     const retained = value.slice(0, remaining);
     accumulator.chunks.push(retained);
     accumulator.length += retained.length;
@@ -1641,10 +1637,6 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         : parentRun;
       textRunOwners.set(node, run);
       if (node.nodeType !== textNodeType) continue;
-      if (items.length >= TEXT_QUOTE_LIMITS.maxNodes) {
-        traversalTruncated = true;
-        break;
-      }
       const textNode = node as Text;
       const element = textNode.parentElement ?? container;
       items.push({

@@ -777,6 +777,23 @@ it('calls refreshTheme() alone to re-measure and re-layout for font-family chang
   expect(el.shadowRoot!.querySelector('svg')!.getAttribute('viewBox')).to.not.equal(before);
 });
 
+it('preserves the focused word and its announcement across an explicit theme relayout', async () => {
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`);
+  await el.updateComplete;
+  clickWord(el, 'beta');
+  await el.updateComplete;
+  const announcement = el.shadowRoot!.querySelector('[part="live-region"]')!.textContent;
+
+  el.style.setProperty('--lr-font', 'monospace');
+  el.refreshTheme();
+  await el.updateComplete;
+
+  const eventPromise = oneEvent(el, 'lr-word-activate');
+  keydown(el, 'Enter');
+  expect((await eventPromise).detail.text).to.equal('beta');
+  expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.equal(announcement);
+});
+
 it('announces the count of words actually rendered, not the raw input count', async () => {
   let el!: LyraWordCloud;
   const warnings = await captureWarnings(async () => {
@@ -793,6 +810,18 @@ it('announces the count of words actually rendered, not the raw input count', as
   expect(warnings.join('\n')).to.include('1 word(s)');
   expect(svgEl(el).getAttribute('aria-label')).to.include('1 word');
   expect(svgEl(el).getAttribute('aria-describedby')).to.equal('word-limit');
+});
+
+it('warns only once when the same omitted-word count recurs on one instance', async () => {
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud></lr-word-cloud>`);
+  const warnings = await captureWarnings(async () => {
+    el.words = [{ text: '', weight: 1 }, { text: 'kept', weight: 2 }];
+    await el.updateComplete;
+    el.words = [{ text: '   ', weight: 3 }, { text: 'fresh', weight: 4 }];
+    await el.updateComplete;
+  });
+
+  expect(warnings.filter((warning) => warning.includes('1 word(s)'))).to.have.length(1);
 });
 
 it('keeps the palette on theme tokens so explicit dark themes are not overridden by the OS preference', async () => {
@@ -951,6 +980,17 @@ it('marks the pointer-hovered word via data-hovered, and clears it on pointerlea
   expect(betaNode.hasAttribute('data-hovered')).to.be.false;
 });
 
+it('ignores a non-navigation key without moving the keyboard cursor', async () => {
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`);
+  await el.updateComplete;
+  const event = new KeyboardEvent('keydown', { key: 'PageDown', bubbles: true, cancelable: true });
+  svgEl(el).dispatchEvent(event);
+  await el.updateComplete;
+
+  expect(event.defaultPrevented).to.be.false;
+  expect(el.shadowRoot!.querySelectorAll('[part="focus-ring"]')).to.have.length(0);
+});
+
 it('clears the pressed cue on pointercancel', async () => {
   const el = (await fixture(
     html`<lr-word-cloud style="inline-size: 320px; block-size: 192px" .words=${WORDS}></lr-word-cloud>`
@@ -991,6 +1031,79 @@ it('drops a word record whose text field is not a string, keeping valid neighbor
   el.words = [{ text: 123, weight: 1 }, { text: 'valid', weight: 2 }] as never;
   await el.updateComplete;
   expect(el.words.map((w) => w.text)).to.deep.equal(['valid']);
+});
+
+it('normalizes an omitted runtime weight to zero', async () => {
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud></lr-word-cloud>`);
+  el.words = [{ text: 'weightless' }] as never;
+  await el.updateComplete;
+  expect(el.words[0]!.weight).to.equal(0);
+});
+
+it('fails closed when collection length accessors throw after passing the array check', async () => {
+  const hostileWords = new Proxy([], {
+    get(target, key, receiver) {
+      if (key === 'length') throw new Error('hostile word length');
+      return Reflect.get(target, key, receiver);
+    },
+  });
+  const hostileLegend = new Proxy([], {
+    get(target, key, receiver) {
+      if (key === 'length') throw new Error('hostile legend length');
+      return Reflect.get(target, key, receiver);
+    },
+  });
+  const hostilePalette = new Proxy([], {
+    get(target, key, receiver) {
+      if (key === 'length') throw new Error('hostile palette length');
+      return Reflect.get(target, key, receiver);
+    },
+  });
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud></lr-word-cloud>`);
+
+  el.words = hostileWords;
+  el.legend = hostileLegend;
+  el.palette = hostilePalette;
+  await el.updateComplete;
+
+  expect(el.words).to.deep.equal([]);
+  expect(el.legend).to.deep.equal([]);
+  expect(el.palette).to.equal(undefined);
+});
+
+it('renders an omission disclosure even when every supplied word is blank', async () => {
+  const warnings = await captureWarnings(async () => {
+    const el = await fixture<LyraWordCloud>(html`
+      <lr-word-cloud .words=${[{ text: '   ', weight: 1 }]}></lr-word-cloud>
+    `);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.equal('No data');
+    expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.contain('1 word');
+  });
+  expect(warnings.join('\n')).to.contain('1 word(s)');
+});
+
+it('draws a focus ring with rotated geometry for a keyboard-focused mixed word', async () => {
+  const originalRandom = Math.random;
+  try {
+    Math.random = () => 0;
+    const el = await fixture<LyraWordCloud>(html`
+      <lr-word-cloud
+        word-rotation="mixed"
+        .words=${[{ text: 'rotated-wide-word', weight: 1 }]}
+      ></lr-word-cloud>
+    `);
+    await el.updateComplete;
+    svgEl(el).focus();
+    await el.updateComplete;
+
+    const word = el.shadowRoot!.querySelector('[part="word"]')!;
+    const ring = el.shadowRoot!.querySelector('[part="focus-ring"]')!;
+    expect(word.getAttribute('transform')).to.contain('rotate(-90');
+    expect(Number(ring.getAttribute('height'))).to.be.greaterThan(Number(ring.getAttribute('width')));
+  } finally {
+    Math.random = originalRandom;
+  }
 });
 
 it('drops a legend entry whose label is blank/whitespace-only, keeping valid neighbors', async () => {

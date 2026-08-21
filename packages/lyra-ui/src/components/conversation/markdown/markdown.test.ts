@@ -20,6 +20,7 @@ import {
   markdownHighlightKey,
   MarkdownOwnedAnimationFrameController,
   tokenizeMarkdownHighlight,
+  type PendingHighlight,
 } from "./markdown-shared.js";
 
 const KATEX_OVERRIDE = Symbol.for(
@@ -1030,6 +1031,58 @@ it("clears and settles owner-frame state when requestAnimationFrame throws synch
     expect(callbackCalled).to.be.false;
   } finally {
     window.requestAnimationFrame = originalRaf;
+  }
+});
+
+it("falls back to an immediate streaming render when the owner animation-frame API throws", async () => {
+  const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
+  await el.updateComplete;
+  const originalRaf = window.requestAnimationFrame;
+  const internals = el as unknown as { renderMarkdown(): void };
+  const originalRender = internals.renderMarkdown.bind(el);
+  let renders = 0;
+  window.requestAnimationFrame = (() => {
+    throw new Error("raf unavailable");
+  }) as typeof window.requestAnimationFrame;
+  internals.renderMarkdown = () => {
+    renders += 1;
+    originalRender();
+  };
+  try {
+    el.streaming = true;
+    await el.updateComplete;
+    expect(renders).to.equal(1);
+    expect(el.shadowRoot!.querySelector('[part="content"]')!.textContent?.trim()).to.equal("");
+  } finally {
+    window.requestAnimationFrame = originalRaf;
+  }
+});
+
+it("contains an unexpected pending-highlight worker failure and releases its in-flight key", async () => {
+  const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
+  const pending: PendingHighlight = { key: "unexpected", lang: "ts", code: "value" };
+  const internals = el as unknown as {
+    highlightPending(pending: PendingHighlight[]): Promise<void>;
+    tokenizePendingHighlight(): Promise<never>;
+    inFlightHighlightKeys: Set<string>;
+  };
+  const originalTokenize = internals.tokenizePendingHighlight;
+  const originalWarn = console.warn;
+  const warnings: unknown[][] = [];
+  internals.tokenizePendingHighlight = async () => {
+    throw new Error("unexpected tokenizer failure");
+  };
+  console.warn = (...args: unknown[]) => {
+    warnings.push(args);
+  };
+  try {
+    await internals.highlightPending([pending]);
+    expect(internals.inFlightHighlightKeys.has(pending.key)).to.be.false;
+    expect(warnings).to.have.lengthOf(1);
+    expect(String(warnings[0]![0])).to.contain("failed to tokenize");
+  } finally {
+    internals.tokenizePendingHighlight = originalTokenize;
+    console.warn = originalWarn;
   }
 });
 

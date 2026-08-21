@@ -60,6 +60,17 @@ describe('supportsCustomHighlights', () => {
 });
 
 describe('acquireHighlightHandle', () => {
+  it('returns a safe inert handle when no owner document exists', () => {
+    const range = document.createRange();
+    const handle = acquireHighlightHandle({}, null);
+    expect(() => {
+      handle.setRanges('accent', [range]);
+      handle.setActive(range);
+      handle.flash(range, 1);
+      handle.release();
+    }).to.not.throw();
+  });
+
   it('isolates ranges between two owners; releasing one leaves the other painted', () => {
     const root = makeContent('<p>Revenue grew 12% year over year, driven by strong demand.</p>');
     try {
