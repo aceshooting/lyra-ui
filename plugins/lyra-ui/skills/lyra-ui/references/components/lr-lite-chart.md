@@ -87,13 +87,16 @@ passthrough). Not a subclass of `LyraChart`.
 - `barWidth: number = 32` (attribute `bar-width`, px) — each bar's fixed width in `layout="scroll"`
   mode; ignored in the default `'fit'` mode. An excessive value is reduced as needed by the
   1,000,000px scroll-content ceiling.
-- `maxLabels?: number` (attribute `max-labels`, type Number) — decimates which category axis labels
-  actually render *text* when `labels.length > maxLabels`: always shows the first and last label,
-  and roughly evenly distributes
-  the rest between them. Works in either `layout` mode. Unset (the default) renders every label.
-  Each rendered category label is allocation-aware: narrow/long text is ellipsized before paint,
-  with the complete caller label retained as its accessible name. Independently, the global
-  1,000-record safety sampler may bound both marks and labels for very large category×series input.
+- `maxLabels?: number | 'auto'` (attribute `max-labels`) — decimates which category axis labels
+  actually render *text*: always shows the first and last label and roughly evenly distributes the
+  rest between them. A number is authoritative. `'auto'` derives the cap after each resize from the
+  resolved plot width and widest rendered caller label, using the same deterministic 7px-per-
+  character estimate as label ellipsis plus 10px of lane breathing room. It therefore responds to
+  either `layout` mode without DOM text measurement or browser-specific font metrics. Unset (the
+  default) renders every label, unchanged. Each rendered category label is allocation-aware:
+  narrow/long text is ellipsized before paint, with the complete caller label retained as its
+  accessible name. Independently, the global 1,000-record safety sampler may bound both marks and
+  labels for very large category×series input.
 - `barX?: (index: number) => number` (attribute: false, bar type only) — overrides the internal
   per-category x-origin formula (`plotX + i * slot`) used by both bars and their axis labels, so a
   consumer can pixel-align this chart's bars with a sibling `<lr-heatmap>` calendar's week columns
@@ -115,7 +118,16 @@ passthrough). Not a subclass of `LyraChart`.
 - `skipZero: boolean = false` (attribute `skip-zero`, bar type only) — omits a bar entirely (no
   mark/tabindex/tooltip) for a value that is exactly `0`; `null`/non-finite values are always
   skipped regardless.
-- `valueAxisGutter?: number` (attribute `value-axis-gutter`) — value-axis gutter width.
+- `valueAxisGutter?: number | 'auto'` (attribute `value-axis-gutter`) — value-axis gutter width in
+  CSS px. A finite number is authoritative (clamped to 0…1,000,000px as before). `'auto'` sizes the
+  gutter from the exact value-tick strings rendered in that pass — `formatter` output first, then
+  `tickFormat`, then the component's `effectiveLocale` number formatting — using the deterministic
+  7px-per-character estimate plus 14px for the tick offset and font-width variance. Automatic
+  sizing never shrinks below the legacy 36px default. In `layout="fit"` it is bounded to the smaller
+  of 240px or 40% of the measured SVG width, so a pathological formatter result cannot consume the
+  plot. In `layout="scroll"` the cap is 240px: that SVG has an explicit content width, so deriving a
+  percentage cap from its own ResizeObserver result would create a shrinking feedback loop. The
+  gutter remains at logical start under RTL. Unset keeps exactly 36px.
 - `barGapRatio?: number` (attribute `bar-gap-ratio`) — overrides the internal 0.2 `BAR_GROUP_GAP`
   fraction of a category slot left as a gap between categories. Unset keeps the fixed 0.2.
 - `scale: 'linear' | 'sqrt' | 'logarithmic' = 'linear'` — `'sqrt'` (**bar type only**) maps a bar's

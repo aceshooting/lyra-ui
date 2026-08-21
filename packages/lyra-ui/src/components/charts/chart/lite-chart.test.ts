@@ -1307,6 +1307,56 @@ it('renders every label when maxLabels is unset, even for a long category list (
   expect(axisLabels.length).to.equal(20);
 });
 
+it('maxLabels="auto" derives a deterministic category-label density from the resolved plot width', async () => {
+  const labels = Array.from({ length: 12 }, (_, index) =>
+    `2026-08-${String(index + 1).padStart(2, '0')}`,
+  );
+  const el = (await fixture(html`<lr-lite-chart
+    type="bar"
+    max-labels="auto"
+    .labels=${labels}
+    .datasets=${[{ label: 'Revenue', data: labels.map((_, index) => index + 1) }]}
+  ></lr-lite-chart>`)) as LyraLiteChart;
+  const chart = el as unknown as { plotWidth: number; plotHeight: number };
+  chart.plotWidth = 420;
+  chart.plotHeight = 200;
+  await el.updateComplete;
+
+  const renderedLabelCount = () =>
+    el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]').length;
+  const wideCount = renderedLabelCount();
+
+  chart.plotWidth = 220;
+  await el.updateComplete;
+  const narrowCount = renderedLabelCount();
+
+  chart.plotWidth = 420;
+  await el.updateComplete;
+  expect(renderedLabelCount()).to.equal(wideCount);
+  expect(wideCount).to.equal(4);
+  expect(narrowCount).to.equal(2);
+});
+
+it('keeps an explicit numeric maxLabels authoritative over automatic density', async () => {
+  const labels = Array.from({ length: 12 }, (_, index) =>
+    `2026-08-${String(index + 1).padStart(2, '0')}`,
+  );
+  const el = (await fixture(html`<lr-lite-chart
+    type="bar"
+    max-labels="7"
+    .labels=${labels}
+    .datasets=${[{ label: 'Revenue', data: labels.map((_, index) => index + 1) }]}
+  ></lr-lite-chart>`)) as LyraLiteChart;
+  const chart = el as unknown as { plotWidth: number; plotHeight: number };
+  chart.plotWidth = 120;
+  chart.plotHeight = 200;
+  await el.updateComplete;
+
+  expect(
+    el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]').length,
+  ).to.equal(7);
+});
+
 it('renders every label (no cap) when maxLabels is non-finite, instead of crashing or hiding every label', async () => {
   const labels = Array.from({ length: 20 }, (_, i) => `L${i}`);
   const el = await mount(html`<lr-lite-chart
@@ -1556,6 +1606,166 @@ it('valueAxisGutter overrides the default 36px left padding, shifting the plot o
   expect(x).to.be.greaterThan(defaultX);
   // plotX(80) + (slot - groupW)/2, slot = 300 - 80 - 8 = 212, groupW = slot*0.8 = 169.6
   expect(x).to.be.closeTo(80 + (212 - 212 * 0.8) / 2, 0.5);
+});
+
+it('valueAxisGutter="auto" fits long locale-formatted currency ticks without clipping them', async () => {
+  const currency = new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+  });
+  const el = (await fixture(html`<lr-lite-chart
+    type="bar"
+    value-axis-gutter="auto"
+    .labels=${['Q1', 'Q2']}
+    .datasets=${[{ label: 'Umsatz', data: [1234.56, 9876.54] }]}
+    .tickFormat=${(value: number) => currency.format(value)}
+  ></lr-lite-chart>`)) as LyraLiteChart;
+  const chart = el as unknown as { plotWidth: number; plotHeight: number };
+  chart.plotWidth = 400;
+  chart.plotHeight = 240;
+  await el.updateComplete;
+
+  const gridLine = el.shadowRoot!.querySelector('[part="grid-line"]')!;
+  const gutter = Number(gridLine.getAttribute('x1'));
+  const ticks = [
+    ...el.shadowRoot!.querySelectorAll<SVGTextElement>(
+      '[part="axis-label"][text-anchor="end"]',
+    ),
+  ];
+  expect(gutter).to.be.greaterThan(36);
+  expect(ticks.some((tick) => tick.textContent?.includes('€'))).to.be.true;
+  for (const tick of ticks) {
+    expect(tick.getBBox().x).to.be.at.least(-0.5);
+  }
+});
+
+it('uses the unified formatter ahead of tickFormat for both automatic gutter sizing and tick text', async () => {
+  const el = (await fixture(html`<lr-lite-chart
+    type="bar"
+    value-axis-gutter="auto"
+    .labels=${['only']}
+    .datasets=${[{ label: 'Revenue', data: [100] }]}
+    .formatter=${({ surface }: { surface: string }) =>
+      surface === 'tick' ? 'fmt' : 'value'}
+    .tickFormat=${() => `ignored-${'W'.repeat(100)}`}
+  ></lr-lite-chart>`)) as LyraLiteChart;
+  const chart = el as unknown as { plotWidth: number; plotHeight: number };
+  chart.plotWidth = 400;
+  chart.plotHeight = 200;
+  await el.updateComplete;
+
+  const gutter = Number(
+    el.shadowRoot!.querySelector('[part="grid-line"]')!.getAttribute('x1'),
+  );
+  const ticks = [
+    ...el.shadowRoot!.querySelectorAll<SVGTextElement>(
+      '[part="axis-label"][text-anchor="end"]',
+    ),
+  ];
+  expect(gutter).to.equal(36);
+  expect(ticks.map((tick) => tick.textContent)).to.deep.equal(
+    ticks.map(() => 'fmt'),
+  );
+});
+
+it('bounds a pathological automatic value-axis label instead of letting it consume the plot', async () => {
+  const el = (await fixture(html`<lr-lite-chart
+    type="bar"
+    value-axis-gutter="auto"
+    .labels=${['only']}
+    .datasets=${[{ label: 'Revenue', data: [100] }]}
+    .tickFormat=${() => 'W'.repeat(1_000)}
+  ></lr-lite-chart>`)) as LyraLiteChart;
+  const chart = el as unknown as { plotWidth: number; plotHeight: number };
+  chart.plotWidth = 400;
+  chart.plotHeight = 200;
+  await el.updateComplete;
+
+  const gutter = Number(
+    el.shadowRoot!.querySelector('[part="grid-line"]')!.getAttribute('x1'),
+  );
+  expect(gutter).to.equal(160);
+  expect(el.shadowRoot!.querySelector('svg')!.getAttribute('viewBox')).to.not.match(
+    /(?:NaN|Infinity)/,
+  );
+});
+
+it('keeps automatic value-axis sizing stable in scroll layout when the observed SVG width changes', async () => {
+  const el = (await fixture(html`<lr-lite-chart
+    type="bar"
+    layout="scroll"
+    value-axis-gutter="auto"
+    .labels=${['only']}
+    .datasets=${[{ label: 'Revenue', data: [100] }]}
+    .tickFormat=${(value: number) => `USD ${value.toFixed(2)}`}
+  ></lr-lite-chart>`)) as LyraLiteChart;
+  const chart = el as unknown as { plotWidth: number; plotHeight: number };
+  chart.plotWidth = 400;
+  chart.plotHeight = 200;
+  await el.updateComplete;
+  const resolvedGutter = () =>
+    Number(el.shadowRoot!.querySelector('[part="grid-line"]')!.getAttribute('x1'));
+  const initial = resolvedGutter();
+
+  // Scroll mode observes its explicitly-sized SVG, not the host. A gutter cap derived from this
+  // callback value would feed its own width back into the next render and progressively collapse.
+  chart.plotWidth = 80;
+  await el.updateComplete;
+  expect(resolvedGutter()).to.equal(initial);
+  expect(initial).to.be.greaterThan(36);
+});
+
+it('keeps an explicit numeric valueAxisGutter authoritative over automatic tick sizing', async () => {
+  const el = (await fixture(html`<lr-lite-chart
+    type="bar"
+    value-axis-gutter="52"
+    .labels=${['only']}
+    .datasets=${[{ label: 'Revenue', data: [100] }]}
+    .tickFormat=${() => 'W'.repeat(1_000)}
+  ></lr-lite-chart>`)) as LyraLiteChart;
+  const chart = el as unknown as { plotWidth: number; plotHeight: number };
+  chart.plotWidth = 400;
+  chart.plotHeight = 200;
+  await el.updateComplete;
+
+  expect(
+    Number(el.shadowRoot!.querySelector('[part="grid-line"]')!.getAttribute('x1')),
+  ).to.equal(52);
+});
+
+it('restores the legacy axis defaults when the automatic sizing attributes are removed', async () => {
+  const labels = Array.from({ length: 6 }, (_, index) =>
+    `2026-08-${String(index + 1).padStart(2, '0')}`,
+  );
+  const el = (await fixture(html`<lr-lite-chart
+    type="bar"
+    max-labels="auto"
+    value-axis-gutter="auto"
+    .labels=${labels}
+    .datasets=${[{ label: 'Revenue', data: labels.map((_, index) => index + 100) }]}
+    .tickFormat=${(value: number) => `USD ${value.toFixed(2)}`}
+  ></lr-lite-chart>`)) as LyraLiteChart;
+  const chart = el as unknown as { plotWidth: number; plotHeight: number };
+  chart.plotWidth = 220;
+  chart.plotHeight = 200;
+  await el.updateComplete;
+
+  const renderedCategoryLabels = () =>
+    el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]');
+  const resolvedGutter = () =>
+    Number(el.shadowRoot!.querySelector('[part="grid-line"]')!.getAttribute('x1'));
+  expect(renderedCategoryLabels().length).to.be.lessThan(labels.length);
+  expect(resolvedGutter()).to.be.greaterThan(36);
+
+  el.removeAttribute('max-labels');
+  el.removeAttribute('value-axis-gutter');
+  await el.updateComplete;
+
+  expect(el.maxLabels).to.be.undefined;
+  expect(el.valueAxisGutter).to.be.undefined;
+  expect(renderedCategoryLabels().length).to.equal(labels.length);
+  expect(resolvedGutter()).to.equal(36);
 });
 
 it('falls back to the 36px default axis gutter when value-axis-gutter is non-finite, instead of a NaN bar position', async () => {

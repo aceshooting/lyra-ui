@@ -1,4 +1,11 @@
-import { html, svg, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import {
+  html,
+  svg,
+  nothing,
+  type ComplexAttributeConverter,
+  type TemplateResult,
+  type PropertyValues,
+} from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -73,6 +80,15 @@ export type LyraLiteChartLayout = 'fit' | 'scroll';
 
 const LITE_CHART_LAYOUT = literalSetConverter<LyraLiteChartLayout>(['fit', 'scroll'], 'fit');
 
+/** Numeric chart extents may opt into the component's deterministic label-width estimator. */
+const autoNumberConverter: ComplexAttributeConverter<number | 'auto' | undefined> = {
+  fromAttribute: (value) => {
+    if (value === null) return undefined;
+    const trimmed = value.trim();
+    return trimmed.toLowerCase() === 'auto' ? 'auto' : Number(trimmed);
+  },
+};
+
 export type LyraLiteChartExportFormat = 'csv' | 'svg';
 
 export type LyraLiteChartTableCellKind = 'value' | 'total';
@@ -131,6 +147,14 @@ const BAR_GROUP_GAP = 0.2; // fraction of a category slot left as gap between ca
 const BAR_GAP = 0.08; // fraction of a category slot left as gap between grouped bars
 const BAR_CORNER_RADIUS = 4; // px, used only when roundedBars is true
 const APPROX_LABEL_CHARACTER_WIDTH = 7;
+/** Breathing room included when automatic x-axis density estimates a label's required lane. */
+const AUTO_CATEGORY_LABEL_INSET = 10;
+/** A value tick sits six pixels off the plot; the remaining inset absorbs font-width variance. */
+const VALUE_AXIS_TICK_OFFSET = 6;
+const AUTO_VALUE_AXIS_SAFETY_INSET = 8;
+/** Bounds automatic value-axis growth without weakening an explicit numeric request. */
+const MAX_AUTO_VALUE_AXIS_GUTTER = 240;
+const MAX_AUTO_VALUE_AXIS_GUTTER_FRACTION = 0.4;
 /** A practical ceiling that keeps scroll-mode SVG/CSS geometry finite even for hostile inputs. */
 const MAX_SCROLL_CONTENT_WIDTH = 1_000_000;
 
@@ -239,6 +263,11 @@ interface InteractiveMark {
   value: number;
 }
 
+interface FormattedValueAxisTick {
+  value: number;
+  label: string;
+}
+
 interface LineHitPoint {
   datasetIndex: number;
   index: number;
@@ -279,7 +308,8 @@ export interface LyraLiteChartEventMap {
  * `layout="scroll"` (+ `barWidth`) gives every bar a fixed pixel width and
  * lets the plot overflow the host horizontally (scrollable) instead of
  * squeezing; `maxLabels` decimates which x-axis text labels render (bars
- * always still render) once there are more categories than that; and
+ * always still render) once there are more categories than that, with
+ * `maxLabels="auto"` deriving the cap from the allocated plot width; and
  * `barX` lets a consumer hand in its own per-category x-coordinate function
  * — e.g. to pixel-align this chart's bars with a sibling `lr-heatmap`'s
  * calendar columns — overriding the internal slot math for both bars and
@@ -291,7 +321,8 @@ export interface LyraLiteChartEventMap {
  * template when unset; `roundedBars` draws bars as a rounded-top path
  * instead of a square-cornered rect; `skipZero` omits a bar entirely (not
  * just zero-height) for an exactly-`0` value; `valueAxisGutter`/`barGapRatio`
- * override the internal `PAD_LEFT`/`BAR_GROUP_GAP` layout constants; `scale`
+ * override the internal `PAD_LEFT`/`BAR_GROUP_GAP` layout constants, while
+ * `valueAxisGutter="auto"` sizes the gutter from the rendered tick strings; `scale`
  * (`type="bar"` only) switches the bar-height mapping from the default
  * linear `niceDomain` fraction to a `Math.sqrt(value / domainMax)`
  * compression (mirroring `lr-heatmap`'s matrix-mode `sqrt` scale) so a
@@ -492,10 +523,13 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  so an excessive requested width is reduced as needed to keep SVG and CSS geometry finite. */
   @property({ type: Number, attribute: 'bar-width' }) barWidth = 32;
   /** Caps how many x-axis category labels render text once `this.labels.length` exceeds it,
-   *  decimating roughly evenly while always keeping the first and last label. Bars themselves
-   *  always render regardless — only the axis text is decimated. Unset (the default) renders every
+   *  decimating roughly evenly while always keeping the first and last label. `'auto'` derives a
+   *  deterministic cap from the resolved plot width and widest rendered category label using the
+   *  same width estimate as label ellipsis. Bars themselves always render regardless — only the
+   *  axis text is decimated. An explicit number is authoritative. Unset (the default) renders every
    *  label, unchanged from before this property existed. Works in either `layout` mode. */
-  @property({ type: Number, attribute: 'max-labels' }) maxLabels?: number;
+  @property({ converter: autoNumberConverter, attribute: 'max-labels' })
+  maxLabels?: number | 'auto';
   /** Overrides the x-origin `renderBars()`/the category labels would otherwise compute internally
    *  for a given category index, for `type="bar"` only (bars and their axis labels stay
    *  consistent with each other either way). Lets a consumer pixel-align this chart's bars with,
@@ -521,9 +555,15 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  is exactly `0` — `null`/non-finite values are always skipped regardless of this flag. Default
    *  `false` preserves today's behavior of a zero-height but focusable/titled bar. */
   @property({ type: Boolean, attribute: 'skip-zero' }) skipZero = false;
-  /** Overrides the internal `PAD_LEFT` (36px) axis-gutter constant. The gutter is on the left in
-   *  LTR and the right in RTL, keeping the y axis at logical start. Unset keeps the 36px default. */
-  @property({ type: Number, attribute: 'value-axis-gutter' }) valueAxisGutter?: number;
+  /** Overrides the internal `PAD_LEFT` (36px) axis-gutter constant, or accepts `'auto'` to size the
+   *  gutter from the exact formatted tick strings rendered in the current pass. Automatic sizing
+   *  never shrinks below 36px. Fit layout bounds it to the smaller of 240px or 40% of the measured
+   *  SVG width; scroll layout bounds it at 240px without feeding the explicitly-sized SVG's own
+   *  width back into its gutter. An explicit numeric value is authoritative and retains the
+   *  established 0..1,000,000px finite guard. The gutter is on the left in LTR and the right in
+   *  RTL, keeping the y axis at logical start. Unset keeps the 36px default. */
+  @property({ converter: autoNumberConverter, attribute: 'value-axis-gutter' })
+  valueAxisGutter?: number | 'auto';
   /** Overrides the internal `BAR_GROUP_GAP` (0.2) fraction of a category slot left as a gap between
    *  categories. Unset (the default) keeps today's fixed 0.2. */
   @property({ type: Number, attribute: 'bar-gap-ratio' }) barGapRatio?: number;
@@ -1337,20 +1377,32 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     this.focusMark(next);
   }
 
-  private renderGrid(plotX: number, plotY: number, plotW: number, plotH: number, ticks: number[], lo: number, hi: number) {
+  private formatValueAxisTick(value: number): string {
+    return this.formatter?.({ value, surface: 'tick' }) ??
+      (this.tickFormat ? this.tickFormat(value) : formatTick(value, this.effectiveLocale));
+  }
+
+  private renderGrid(
+    plotX: number,
+    plotY: number,
+    plotW: number,
+    plotH: number,
+    ticks: readonly FormattedValueAxisTick[],
+    lo: number,
+    hi: number,
+  ) {
     const rtl = this.effectiveDirection === 'rtl';
-    return ticks.map((t) => {
-      const y = plotY + plotH - this.valueFraction(t, lo, hi) * plotH;
+    return ticks.map(({ value, label }) => {
+      const y = plotY + plotH - this.valueFraction(value, lo, hi) * plotH;
       return svg`
         <line part="grid-line" x1=${plotX} y1=${y} x2=${plotX + plotW} y2=${y}></line>
         <text
           part="axis-label"
-          x=${rtl ? plotX + plotW + 6 : plotX - 6}
+          x=${rtl ? plotX + plotW + VALUE_AXIS_TICK_OFFSET : plotX - VALUE_AXIS_TICK_OFFSET}
           y=${y}
           text-anchor="end"
           dominant-baseline="middle"
-        >${this.formatter?.({ value: t, surface: 'tick' }) ??
-          (this.tickFormat ? this.tickFormat(t) : formatTick(t, this.effectiveLocale))}</text>
+        >${label}</text>
       `;
     });
   }
@@ -1776,20 +1828,77 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     return this.renderChart();
   }
 
+  private resolvedValueAxisGutter(
+    ticks: readonly FormattedValueAxisTick[],
+    measuredWidth: number,
+  ): number {
+    if (typeof this.valueAxisGutter === 'number') {
+      return finiteRange(
+        this.valueAxisGutter,
+        PAD_LEFT,
+        0,
+        MAX_SCROLL_CONTENT_WIDTH,
+      );
+    }
+    if (this.valueAxisGutter !== 'auto' || ticks.length === 0) return PAD_LEFT;
+
+    let widest = 0;
+    for (const tick of ticks) {
+      widest = Math.max(widest, tick.label.length * APPROX_LABEL_CHARACTER_WIDTH);
+    }
+    const requested = Math.ceil(widest) + VALUE_AXIS_TICK_OFFSET + AUTO_VALUE_AXIS_SAFETY_INSET;
+    const maximum = this.layout === 'scroll'
+      ? MAX_AUTO_VALUE_AXIS_GUTTER
+      : Math.max(
+          PAD_LEFT,
+          Math.min(
+            MAX_AUTO_VALUE_AXIS_GUTTER,
+            measuredWidth * MAX_AUTO_VALUE_AXIS_GUTTER_FRACTION,
+          ),
+        );
+    return finiteRange(requested, PAD_LEFT, PAD_LEFT, maximum);
+  }
+
+  private automaticMaxLabels(
+    n: number,
+    plotW: number,
+    renderedIndexes: readonly number[],
+  ): number {
+    if (n <= 1) return n;
+    let widest = 0;
+    for (const index of renderedIndexes) {
+      const label = this.labels[index] ?? '';
+      widest = Math.max(widest, label.length * APPROX_LABEL_CHARACTER_WIDTH);
+    }
+    if (widest === 0) return n;
+    const lane = widest + AUTO_CATEGORY_LABEL_INSET;
+    const fits = Math.floor(finiteRange(plotW, 0, 0, MAX_SCROLL_CONTENT_WIDTH) / lane);
+    return Math.min(n, Math.max(2, fits));
+  }
+
   /** Indexes retained by `maxLabels`, distributed across the complete domain so the sample
    * immediately before the forced final endpoint can never bunch against it. The generated mark
    * sample caps the useful result at 1,000, so this selector must do the same rather than allocate
-   * an arbitrary consumer-supplied `maxLabels` count. `undefined` means every *sampled* label
+   * an arbitrary consumer-supplied `maxLabels` count. In auto mode the resolved plot width and
+   * rendered source indexes supply a deterministic cap. `undefined` means every *sampled* label
    * renders, preserving the default and non-finite-value behavior. */
-  private visibleLabelIndexes(n: number): Set<number> | undefined {
+  private visibleLabelIndexes(
+    n: number,
+    plotW: number,
+    renderedIndexes: readonly number[],
+  ): Set<number> | undefined {
     if (this.maxLabels == null) return undefined;
+    const requested = this.maxLabels === 'auto'
+      ? this.automaticMaxLabels(n, plotW, renderedIndexes)
+      : this.maxLabels;
+    if (typeof requested !== 'number') return undefined;
     // finiteCount() falls back to `n` itself for a non-finite maxLabels (NaN/Infinity, e.g. an
     // unparsable attribute) -- making the `n <= max` check below always true, i.e. reproducing "no
     // cap", the same behavior as maxLabels being unset entirely. An explicit *negative* (but
     // finite) value instead clamps to `0` (finiteCount's own floor, same convention as
     // `normalizeBucketCount()`'s handling of a negative bucket count elsewhere in this codebase),
     // while the documented first/last guarantee still keeps both endpoints.
-    const max = finiteCount(this.maxLabels, n);
+    const max = finiteCount(requested, n);
     if (n <= max) return undefined;
     const count = Math.min(n, MAX_RENDERED_CHART_RECORDS, Math.max(2, max));
     if (count <= 1) return new Set(n === 1 ? [0] : []);
@@ -1810,12 +1919,22 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     const n = this.recordCount();
     const awaitingFitMeasurement = this.awaitingFitMeasurement();
     const h = finiteRange(this.plotHeight || 200, 200, 0, MAX_SCROLL_CONTENT_WIDTH);
-    // padLeft is a non-negative pixel gutter width -- a non-finite explicit value (NaN/Infinity,
-    // e.g. an unparsable attribute) falls back to the PAD_LEFT default; an explicit negative value
-    // instead clamps to 0. Either way the gutter never goes negative or NaN.
-    const padLeft = this.valueAxisGutter == null
-      ? PAD_LEFT
-      : finiteRange(this.valueAxisGutter, PAD_LEFT, 0, MAX_SCROLL_CONTENT_WIDTH);
+    const measuredWidth = finiteRange(
+      this.plotWidth || 400,
+      400,
+      0,
+      MAX_SCROLL_CONTENT_WIDTH,
+    );
+    const { lo, hi, ticks } = this.domain();
+    // Resolve each formatter exactly once per rendered tick and share that output with automatic
+    // gutter sizing and the SVG text. A stateful formatter therefore cannot size one string and
+    // then paint a different one in the same render pass.
+    const formattedTicks = awaitingFitMeasurement || this.withoutValueAxis
+      ? []
+      : ticks.map((value) => ({ value, label: this.formatValueAxisTick(value) }));
+    // An explicit numeric value remains authoritative. Unset and non-finite numeric values retain
+    // the established 36px fallback; the opt-in automatic branch is bounded separately.
+    const padLeft = this.resolvedValueAxisGutter(formattedTicks, measuredWidth);
     const axisGutter = padLeft + (this.yLabel ? AXIS_TITLE_SPACE : 0);
     const rtl = this.effectiveDirection === 'rtl';
     const padBottom = PAD_BOTTOM + (this.xLabel ? AXIS_TITLE_SPACE : 0);
@@ -1842,11 +1961,10 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     } else {
       // 'fit' (default): squeeze to the measured host width, byte-for-byte
       // the same computation as before `layout` existed.
-      w = finiteRange(this.plotWidth || 400, 400, 0, MAX_SCROLL_CONTENT_WIDTH);
+      w = measuredWidth;
       plotW = Math.max(0, w - axisGutter - PAD_RIGHT);
       slot = n > 0 ? plotW / n : 0;
     }
-    const { lo, hi, ticks } = this.domain();
     const recordSample = this.recordSample();
     const selectedIndices = new Set<number>();
     // Only sampled source rows can render a selected mark. Bound work by the same visual ceiling
@@ -1876,7 +1994,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
     const grid = awaitingFitMeasurement || this.withoutValueAxis
       ? []
-      : this.renderGrid(plotX, plotY, plotW, plotH, ticks, lo, hi);
+      : this.renderGrid(plotX, plotY, plotW, plotH, formattedTicks, lo, hi);
     const marks =
       awaitingFitMeasurement
         ? []
@@ -1884,7 +2002,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         ? this.renderBars(plotX, plotY, plotH, slot, lo, hi, barOrigins, recordSample, selectedIndices)
         : this.renderLines(plotX, plotY, plotW, plotH, lo, hi, recordSample, selectedIndices);
 
-    const visibleLabelIndexes = this.visibleLabelIndexes(n);
+    const visibleLabelIndexes = this.visibleLabelIndexes(
+      n,
+      plotW,
+      recordSample.rowIndexes,
+    );
     // A `max-labels` decimation keeps roughly n / visibleLabelIndexes.size slots of horizontal
     // space per surviving label, not the one slot every one of the n samples would get if none
     // were dropped -- size the clip to what a survivor actually owns. Labels are

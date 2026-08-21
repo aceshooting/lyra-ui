@@ -234,6 +234,41 @@ export const CurrencyTickFormat: Story = {
   },
 };
 
+/** Automatic axis sizing grows the value gutter for localized currency and thins category labels
+ *  from the chart's measured allocation. Both remain opt-in; numeric values still pin either
+ *  surface exactly. */
+export const AutomaticAxisSizing: Story = {
+  name: 'Automatic axis sizing',
+  render: () => {
+    const labels = Array.from({ length: 18 }, (_, index) =>
+      `2026-08-${String(index + 1).padStart(2, '0')}`,
+    );
+    const currency = new Intl.NumberFormat('de-DE', {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: 2,
+    });
+    const series: LyraLiteChartSeries[] = [
+      {
+        label: 'Umsatz',
+        data: labels.map((_, index) => 1200 + ((index * 1379) % 8500)),
+      },
+    ];
+    return html`
+      <lr-lite-chart
+        type="bar"
+        value-axis-gutter="auto"
+        max-labels="auto"
+        height="16rem"
+        style="inline-size: 24rem; max-inline-size: 100%;"
+        .labels=${labels}
+        .datasets=${series}
+        .tickFormat=${(value: number) => currency.format(value)}
+      ></lr-lite-chart>
+    `;
+  },
+};
+
 /** `layout="scroll"` gives every bar a fixed `bar-width` instead of squeezing them into the host
  *  width -- with a long category list the plot overflows the (deliberately narrow) host, which
  *  scrolls horizontally to reveal the rest, instead of cramming 40 skinny bars into one view. Its
