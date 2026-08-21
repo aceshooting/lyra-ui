@@ -300,6 +300,9 @@ export function subscribeLyraLocaleRegistry(listener: () => void): () => void {
 }
 
 const MAX_CATALOG_MESSAGES = 4_096;
+// Keep descriptor work bounded while giving ignored symbols, non-enumerable properties, and
+// accessors their own allowance rather than letting them reduce the retained-message ceiling.
+const MAX_CATALOG_PROPERTY_READS = MAX_CATALOG_MESSAGES * 2;
 const MAX_MESSAGE_KEY_LENGTH = 256;
 const PLURAL_CATEGORIES = new Set<string>([
   'zero',
@@ -368,21 +371,29 @@ function snapshotCatalog(strings: unknown): LocaleCatalog {
     trustedMessageRecords.add(frozen);
     return frozen;
   }
-  let count = 0;
+  let keys: readonly PropertyKey[];
   try {
-    for (const key in strings) {
-      if (count >= MAX_CATALOG_MESSAGES) break;
-      count += 1;
-      if (!Object.prototype.hasOwnProperty.call(strings, key)) continue;
-      if (!key || key.length > MAX_MESSAGE_KEY_LENGTH) continue;
-      const entry = ownDataValue(strings, key);
-      if (!entry.found) continue;
-      const message = snapshotMessage(entry.value);
-      if (message !== undefined) snapshot[key] = message;
-    }
+    keys = Reflect.ownKeys(strings).slice(0, MAX_CATALOG_PROPERTY_READS);
   } catch {
-    // A hostile enumeration trap invalidates the unread suffix only. Entries already copied are
-    // independent data properties, and no caller accessor has executed.
+    const frozen = Object.freeze(snapshot) as LocaleCatalog;
+    trustedMessageRecords.add(frozen);
+    return frozen;
+  }
+  let count = 0;
+  for (const key of keys) {
+    if (count >= MAX_CATALOG_MESSAGES) break;
+    if (typeof key !== 'string' || !key || key.length > MAX_MESSAGE_KEY_LENGTH)
+      continue;
+    let descriptor: PropertyDescriptor | undefined;
+    try {
+      descriptor = Reflect.getOwnPropertyDescriptor(strings, key);
+    } catch {
+      continue;
+    }
+    if (!descriptor?.enumerable || !('value' in descriptor)) continue;
+    count += 1;
+    const message = snapshotMessage(descriptor.value);
+    if (message !== undefined) snapshot[key] = message;
   }
   const frozen = Object.freeze(snapshot) as LocaleCatalog;
   trustedMessageRecords.add(frozen);
