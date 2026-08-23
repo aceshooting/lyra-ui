@@ -62,6 +62,7 @@ function snapshotSegmentedItems(
         itemValue !== itemValue.trim() ||
         seenValues.has(itemValue) ||
         typeof label !== 'string' ||
+        label.trim() === '' ||
         (disabled !== undefined && typeof disabled !== 'boolean')
       ) {
         continue;

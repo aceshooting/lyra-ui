@@ -1553,6 +1553,22 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     this.applySelection('node', node.id, additive);
   }
 
+  private onNodeClick(event: MouseEvent, node: FlowNode): void {
+    const currentTarget = event.currentTarget;
+    if (currentTarget instanceof Element) {
+      for (const entry of event.composedPath()) {
+        if (entry === currentTarget) break;
+        if (entry instanceof Element && entry.matches(
+          'button, a[href], input, select, textarea, [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"], [contenteditable="true"]',
+        )) {
+          event.stopPropagation();
+          return;
+        }
+      }
+    }
+    this.onNodeActivate(node, event.ctrlKey || event.metaKey);
+  }
+
   private onEdgeActivate(edge: FlowEdge, additive: boolean): void {
     this.emit(
       'lr-edge-activate',
@@ -2220,7 +2236,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
           role="group"
           aria-label=${this.nodeAccessibleText(node)}
           style="transform:translate(${resolved.x}px,${resolved.y}px)"
-          @click=${(e: MouseEvent) => this.onNodeActivate(node, e.ctrlKey || e.metaKey)}
+          @click=${(e: MouseEvent) => this.onNodeClick(e, node)}
           @pointerdown=${(e: PointerEvent) => this.onNodePointerDown(e, node)}
         >
           <button
@@ -2300,12 +2316,12 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     const fallbackEdges = this.edges.filter(
       (edge) => !nodeIds.has(edge.source) || !nodeIds.has(edge.target),
     );
-    return html`<div part="base" role="region" aria-label=${this.accessibleLabel || this.localize('flowCanvasLabel')}>
+    return html`<div part="base" role="region" aria-label=${this.accessibleLabel ?? this.localize('flowCanvasLabel')}>
       <div
         part="viewport"
         role="group"
         tabindex="0"
-        aria-label=${this.accessibleLabel ||
+        aria-label=${this.accessibleLabel ??
         this.localize('flowCanvasSummary', undefined, {
           nodeCount: this.formatNumber(this.nodes.length),
           edgeCount: this.formatNumber(this.edges.length),

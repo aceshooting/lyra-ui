@@ -48,7 +48,8 @@ text, independent of whether the optional map peer is available.
 
 **Events:**
 
-- `lr-render-error` — `detail: { error }` — fetch, parse, or shape-validation failure.
+- `lr-render-error` — `detail: { error }` — fetch, parse, shape-validation, or missing-map capability
+  failure. A missing optional MapLibre peer also keeps the serialized metadata fallback visible.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever serialized-metadata search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or

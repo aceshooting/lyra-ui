@@ -124,9 +124,20 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     const seen = new Set<string>();
     const formats: LyraExportFormatOption[] = [];
     for (const format of source) {
-      const snapshot = typeof format === 'string' ? format : Object.freeze({ ...format });
+      if (
+        typeof format !== 'string' &&
+        (format === null || typeof format !== 'object')
+      )
+        continue;
+      const snapshot =
+        typeof format === 'string' ? format : Object.freeze({ ...format });
       const id = typeof snapshot === 'string' ? snapshot : snapshot.formatId;
       if (typeof id !== 'string' || id.trim() === '' || seen.has(id)) continue;
+      if (
+        typeof snapshot !== 'string' &&
+        (typeof snapshot.label !== 'string' || snapshot.label.trim() === '')
+      )
+        continue;
       seen.add(id);
       formats.push(snapshot);
     }
@@ -459,7 +470,8 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
 
   private onTriggerClick(): void {
     if (this.disabled || this.loading) return;
-    if (this.formats.length <= 1) this.doExport(this.formats[0] ?? 'csv');
+    if (this.formats.length === 0) return;
+    if (this.formats.length === 1) this.doExport(this.formats[0]!);
     else this.open ? this.closeMenu() : this.openMenu();
   }
 

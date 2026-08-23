@@ -76,27 +76,78 @@ export interface NormalizedGraphModel {
 }
 
 /** The stable controlled identity used by selection/dimming and by the graph's keyed render. */
-export function graphLinkIdentity(link: LyraGraphLink): string {
-  return link.id ?? `${link.source}->${link.target}`;
+const graphLinkIdentityOverrides = new WeakMap<object, string>();
+
+export function graphLinkIdentity(link: {
+  readonly id?: string;
+  readonly source: unknown;
+  readonly target: unknown;
+}): string {
+  const source =
+    typeof link.source === 'object' && link.source !== null
+      ? (link.source as { readonly id?: unknown }).id ?? String(link.source)
+      : link.source;
+  const target =
+    typeof link.target === 'object' && link.target !== null
+      ? (link.target as { readonly id?: unknown }).id ?? String(link.target)
+      : link.target;
+  return (
+    graphLinkIdentityOverrides.get(link as object) ??
+    link.id ??
+    `${source}->${target}`
+  );
+}
+
+/** Carries a normalized link's internal disambiguation key onto its simulation copy. */
+export function copyGraphLinkIdentity<T extends object>(
+  source: object,
+  target: T
+): T {
+  const identity = graphLinkIdentityOverrides.get(source);
+  if (identity !== undefined) graphLinkIdentityOverrides.set(target, identity);
+  return target;
 }
 
 function normalizeLinks(
   values: readonly LyraGraphLink[]
 ): readonly LyraGraphLink[] {
   const source = Array.isArray(values) ? values : [];
-  return Object.freeze(
-    firstByRetrievalIdentity(
-      source.filter((value) => {
-        if (value === null || typeof value !== 'object') return false;
-        return (
-          isNonBlankIdentity(value.source) &&
-          isNonBlankIdentity(value.target) &&
-          (value.id === undefined || isNonBlankIdentity(value.id))
-        );
-      }),
-      graphLinkIdentity
-    )
+  const valid = source.filter((value) => {
+    if (value === null || typeof value !== 'object') return false;
+    return (
+      isNonBlankIdentity(value.source) &&
+      isNonBlankIdentity(value.target) &&
+      (value.id === undefined || isNonBlankIdentity(value.id))
+    );
+  });
+  const explicitIds = new Set(
+    valid.flatMap((value) => (value.id === undefined ? [] : [value.id]))
   );
+  const implicitIdentities = new Map<string, string>();
+  const seen = new Set<string>();
+  const retained: LyraGraphLink[] = [];
+  for (const value of valid) {
+    const baseIdentity =
+      value.id ?? `${value.source}->${value.target}`;
+    let identity = baseIdentity;
+    if (value.id === undefined && explicitIds.has(baseIdentity)) {
+      identity = implicitIdentities.get(baseIdentity) ?? `implicit:${baseIdentity}`;
+      let suffix = 2;
+      while (explicitIds.has(identity))
+        identity = `implicit:${baseIdentity}#${suffix++}`;
+      implicitIdentities.set(baseIdentity, identity);
+    }
+    if (seen.has(identity)) continue;
+    seen.add(identity);
+    if (identity === baseIdentity) {
+      retained.push(value);
+    } else {
+      const copy = { ...value };
+      graphLinkIdentityOverrides.set(copy, identity);
+      retained.push(copy);
+    }
+  }
+  return Object.freeze(retained);
 }
 
 function normalizeCommunities(

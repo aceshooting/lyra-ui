@@ -47,6 +47,27 @@ it('uses the chunk score as the final breakdown when optional score details are 
   expect(scores.textContent).to.contain('75%');
 });
 
+it('omits valid-id chunks whose nested source record is malformed', async () => {
+  const el = (await fixture(html`
+    <lr-retrieval-compare
+      .sets=${[
+        {
+          id: 'mixed',
+          label: 'Mixed',
+          chunks: [
+            { id: 'missing-source', text: 'bad', score: 0.8 },
+            chunk('valid', 0.7),
+          ],
+        },
+      ]}
+    ></lr-retrieval-compare>
+  `)) as LyraRetrievalCompare;
+
+  expect(el.shadowRoot!.querySelectorAll('[part="chunk"]')).to.have.length(1);
+  expect(el.shadowRoot!.textContent).to.contain('Source valid');
+  expect(el.shadowRoot!.textContent).to.not.contain('missing-source');
+});
+
 it('honors top-k and emits the full selected set/chunk pair', async () => {
   const el = (await fixture(html`<lr-retrieval-compare .sets=${sets} top-k="1"></lr-retrieval-compare>`)) as LyraRetrievalCompare;
   expect(el.shadowRoot!.querySelectorAll('[part="chunk"]').length).to.equal(2);

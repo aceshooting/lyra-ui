@@ -2889,7 +2889,7 @@ no-op if already open),
 cycling) at the ends; the active row is scrolled into view. Enter selects. Hovering a non-disabled
 row also makes it active.
 
-**Events:** `lr-open`, `lr-close` (both `detail: undefined`, cancelable — fired before the
+**Events:** `lr-open`, `lr-close` (both `detail: null`, cancelable — fired before the
 mutation, `preventDefault()` keeps the palette in its current open state), `lr-select`
 (`detail: { command }`, fired before the command's own `onSelect` runs and before the palette
 closes), and no-detail `focus`/`blur` events re-dispatched from the host whenever the search input

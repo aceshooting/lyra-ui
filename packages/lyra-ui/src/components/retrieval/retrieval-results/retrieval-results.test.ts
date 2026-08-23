@@ -329,6 +329,22 @@ it('omits blank and later-duplicate chunk ids first-wins before sorting', async 
   expect(inspector.chunks[0]!.text).to.equal('low score copy');
 });
 
+it('omits valid-id chunks whose nested source record is malformed', async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-results></lr-retrieval-results>`,
+  )) as LyraRetrievalResults;
+  (el as unknown as { chunks: unknown }).chunks = [
+    { id: 'missing-source', text: 'bad', score: 0.8 },
+    chunks[0],
+  ];
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelectorAll('[part="row"]')).to.have.length(1);
+  expect(
+    (el.shadowRoot!.querySelector('lr-chunk-inspector') as LyraChunkInspector).chunks,
+  ).to.have.length(1);
+});
+
 it('uses finite normalized scores when sorting hostile result data', async () => {
   const el = (await fixture(
     html`<lr-retrieval-results></lr-retrieval-results>`

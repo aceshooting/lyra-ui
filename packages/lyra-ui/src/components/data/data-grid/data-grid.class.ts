@@ -2002,7 +2002,25 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   }
 
   private groupKey(parent: string, id: string, value: unknown): string {
-    return `group:${parent}:${id}:${typeof value}:${safeText(value)}`;
+    return `group:${parent}:${id}:${this.groupValueKey(value)}`;
+  }
+
+  /** Primitive group values can use their serialized value; object-valued groups need identity
+   * because distinct records commonly stringify to the same `[object Object]` text. */
+  private readonly groupObjectIds = new WeakMap<object, number>();
+  private nextGroupObjectId = 0;
+
+  private groupValueKey(value: unknown): string {
+    if ((typeof value === 'object' && value !== null) || typeof value === 'function') {
+      const object = value as object;
+      let id = this.groupObjectIds.get(object);
+      if (id === undefined) {
+        id = this.nextGroupObjectId++;
+        this.groupObjectIds.set(object, id);
+      }
+      return `object:${id}`;
+    }
+    return `${typeof value}:${safeText(value)}`;
   }
 
   private topLevelGroupBuckets(

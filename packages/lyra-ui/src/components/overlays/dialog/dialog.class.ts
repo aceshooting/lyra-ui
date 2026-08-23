@@ -9,6 +9,10 @@ import {
   type OverlayHandle,
 } from '../../../internal/overlay-manager.js';
 import { nextId } from '../../../internal/a11y.js';
+import {
+  composedAccessibilityText,
+  isAccessibilitySubtreeExcluded,
+} from '../../../internal/accessibility-visibility.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import {
@@ -522,7 +526,21 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     const heading = children.find(
       (el) => el.getAttribute('slot') === null && el.matches(HEADING_SELECTOR),
     ) as HTMLElement | undefined;
-    this.headingText = heading?.textContent?.trim() || undefined;
+    if (!heading || isAccessibilitySubtreeExcluded(heading)) {
+      this.headingText = undefined;
+    } else if (heading.hasAttribute('aria-label')) {
+      this.headingText = heading.getAttribute('aria-label') ?? '';
+    } else if (heading.hasAttribute('aria-labelledby')) {
+      // A reference on the light-DOM heading itself can still be resolved by the composed text
+      // helper. For ordinary text, read the heading's children instead: the heading is assigned
+      // through this component's unnamed slot, and asking the helper to validate the slotted root
+      // can otherwise stop at that shadow boundary before it reaches the text node.
+      this.headingText = composedAccessibilityText(heading, { ancestorBoundary: this }).trim() || undefined;
+    } else {
+      this.headingText = composedAccessibilityText(Array.from(heading.childNodes), {
+        ancestorBoundary: heading,
+      }).trim() || undefined;
+    }
     this.hasLabelSlot = children.some((el) => el.getAttribute('slot') === 'label');
     this.hasHeaderActionsSlot = children.some((el) => el.getAttribute('slot') === 'header-actions');
   }

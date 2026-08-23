@@ -667,8 +667,33 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
 
   // Protected rather than private so `<lr-radio-button>` can render different chrome around the
   // identical activation contract instead of reimplementing (and drifting from) it.
-  protected onClick = (): void => this.select();
+  private isNestedInteractiveEvent(event: Event): boolean {
+    const currentTarget = event.currentTarget;
+    if (!(currentTarget instanceof Element)) return false;
+    for (const entry of event.composedPath()) {
+      if (entry === currentTarget) break;
+      if (
+        entry instanceof Element &&
+        entry.matches(
+          'button, a[href], input, select, textarea, [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"], [contenteditable="true"]',
+        )
+      ) return true;
+    }
+    return false;
+  }
+
+  protected onClick = (event: MouseEvent): void => {
+    if (this.isNestedInteractiveEvent(event)) {
+      event.stopPropagation();
+      return;
+    }
+    this.select();
+  };
   protected onKeyDown = (event: KeyboardEvent): void => {
+    if (this.isNestedInteractiveEvent(event)) {
+      event.stopPropagation();
+      return;
+    }
     if (this.effectiveDisabled) return;
     if (event.key === ' ' || event.key === 'Spacebar') {
       event.preventDefault();

@@ -39,6 +39,15 @@ it('renders a semantic horizontal divider and supports vertical orientation', as
   await expect(el).to.be.accessible();
 });
 
+it('normalizes an invalid orientation to horizontal ARIA semantics', async () => {
+  const el = await fixture(html`<lr-divider></lr-divider>`);
+  (el as unknown as { orientation: string }).orientation = 'diagonal';
+  await (el as LyraDivider).updateComplete;
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-orientation'),
+  ).to.equal('horizontal');
+});
+
 it('forwards a host aria-label to the inner separator owner', async () => {
   const el = await fixture(html`<lr-divider aria-label="Section break"></lr-divider>`);
   const divider = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;

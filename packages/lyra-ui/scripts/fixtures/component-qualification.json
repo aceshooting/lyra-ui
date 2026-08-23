@@ -14674,7 +14674,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/docx-viewer/docx-viewer.test.ts",
-              "line": 1791,
+              "line": 1792,
               "test": "is accessible with an active search match",
               "target": "el",
               "state": "populated"
@@ -17752,7 +17752,7 @@
           "evidence": [
             {
               "file": "src/components/utility/export-button/export-button.test.ts",
-              "line": 888,
+              "line": 909,
               "test": "is accessible with a multi-format menu open, including its accessible name",
               "target": "el",
               "state": "open"
@@ -17766,7 +17766,7 @@
           "evidence": [
             {
               "file": "src/components/utility/export-button/export-button.test.ts",
-              "line": 441,
+              "line": 462,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -21041,7 +21041,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/graph/graph.class.ts",
-              "line": 842,
+              "line": 844,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -21429,14 +21429,14 @@
           "evidence": [
             {
               "file": "src/components/retrieval/grounding-summary/grounding-summary.test.ts",
-              "line": 497,
+              "line": 513,
               "test": "is accessible fully populated with stats, warnings, and evidence",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/grounding-summary/grounding-summary.test.ts",
-              "line": 507,
+              "line": 523,
               "test": "renders correctly under dir=\"rtl\" fully populated, with no leftover physical-side styling assumptions",
               "target": "el",
               "state": "populated"
@@ -21456,7 +21456,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/grounding-summary/grounding-summary.test.ts",
-              "line": 509,
+              "line": 525,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -21473,7 +21473,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/grounding-summary/grounding-summary.test.ts",
-              "line": 522,
+              "line": 538,
               "kind": "320px allocation test signal"
             }
           ]
@@ -23368,7 +23368,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/ingestion-queue/ingestion-queue.test.ts",
-              "line": 949,
+              "line": 966,
               "test": "is accessible with a populated, mixed-stage queue",
               "target": "el",
               "state": "populated"
@@ -23388,7 +23388,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/ingestion-queue/ingestion-queue.test.ts",
-              "line": 292,
+              "line": 309,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -35225,7 +35225,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.test.ts",
-              "line": 54,
+              "line": 70,
               "test": "has a localized empty state and one populated overall owner",
               "target": "populated",
               "state": "populated"
@@ -37084,7 +37084,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-compare/retrieval-compare.test.ts",
-              "line": 58,
+              "line": 79,
               "test": "renders a localized empty state and remains accessible at populated state",
               "target": "populated",
               "state": "populated"
@@ -37234,21 +37234,21 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
-              "line": 1052,
+              "line": 1068,
               "test": "is accessible with a populated, selectable, metadata-carrying result set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
-              "line": 1200,
+              "line": 1216,
               "test": "is accessible while grouped and virtualized",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
-              "line": 1438,
+              "line": 1454,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -37268,7 +37268,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
-              "line": 1241,
+              "line": 1257,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -37285,7 +37285,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.test.ts",
-              "line": 1254,
+              "line": 1270,
               "kind": "320px allocation test signal"
             }
           ]
@@ -37359,7 +37359,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.class.ts",
-              "line": 467,
+              "line": 471,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39755,28 +39755,28 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-list/source-list.test.ts",
-              "line": 246,
+              "line": 248,
               "test": "preserves native semantic and ElementInternals-owned slotted children",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/retrieval/source-list/source-list.test.ts",
-              "line": 149,
+              "line": 151,
               "test": "is accessible with no cards and collapsed",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/source-list/source-list.test.ts",
-              "line": 154,
+              "line": 156,
               "test": "is accessible with cards and expanded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/retrieval/source-list/source-list.test.ts",
-              "line": 229,
+              "line": 231,
               "test": "preserves native and author-defined interactive roles in the default slot",
               "target": "el",
               "state": "populated"
@@ -39926,7 +39926,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.test.ts",
-              "line": 392,
+              "line": 413,
               "test": "is accessible with a mixed-selection tree",
               "target": "el",
               "state": "populated"
@@ -39940,7 +39940,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.test.ts",
-              "line": 187,
+              "line": 208,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -39951,7 +39951,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.test.ts",
-              "line": 660,
+              "line": 681,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -39968,7 +39968,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.test.ts",
-              "line": 1325,
+              "line": 1346,
               "kind": "320px allocation test signal"
             }
           ]
@@ -40031,7 +40031,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.class.ts",
-              "line": 468,
+              "line": 484,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -41061,7 +41061,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/stack-trace/stack-trace.class.ts",
-              "line": 255,
+              "line": 256,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -48744,7 +48744,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "reducedMotion",
-          "peerFailure",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -48889,10 +48888,10 @@
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion."
+          "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
           "applicability": "applicable",
@@ -48927,7 +48926,7 @@
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
-        "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion.",
+        "The component declares no optional peer dependencies.",
         "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
@@ -48951,7 +48950,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "peerFailure",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -49068,10 +49066,10 @@
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion."
+          "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
           "applicability": "applicable",
@@ -49106,7 +49104,7 @@
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
-        "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion.",
+        "The component declares no optional peer dependencies.",
         "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."

@@ -36,6 +36,22 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   }
 }
 
+/** Keep fixed coordinates within the finite, non-negative domain accepted by layeredLayout(). */
+function snapshotFlowPosition(value: unknown): Readonly<{ x: number; y: number }> | undefined {
+  if (!isRecord(value)) return undefined;
+  const x = value['x'];
+  const y = value['y'];
+  if (
+    typeof x !== 'number' ||
+    typeof y !== 'number' ||
+    !Number.isFinite(x) ||
+    !Number.isFinite(y) ||
+    x < 0 ||
+    y < 0
+  ) return undefined;
+  return Object.freeze({ x, y });
+}
+
 /** Clones and freezes the JSON-shaped portion of consumer node metadata without invoking getters.
  * Cycles and shared references retain their topology. Non-plain leaf objects remain opaque values;
  * the public `data` contract only promises a record, while arrays/plain nested records are the
@@ -132,9 +148,7 @@ export function snapshotFlowNodes(value: readonly FlowNode[]): readonly FlowNode
       const id = node?.id;
       if (typeof id !== 'string' || id.trim().length === 0 || seen.has(id)) continue;
       const data = isRecord(node?.data) ? snapshotFlowData(node.data) : undefined;
-      const position = node?.position
-        ? Object.freeze({ x: node.position.x, y: node.position.y })
-        : undefined;
+      const position = snapshotFlowPosition(node?.position);
       const inputs = snapshotFlowHandles(node?.inputs);
       const outputs = snapshotFlowHandles(node?.outputs);
       const snapshot = Object.freeze({

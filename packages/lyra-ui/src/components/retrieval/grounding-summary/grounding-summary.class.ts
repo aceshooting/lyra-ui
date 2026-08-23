@@ -271,7 +271,9 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
     const unsupportedClaims = finiteCount(a.unsupportedClaims);
     const coverage = finiteRange(a.coverage, 0, 0, 1);
     const hasConfidence = typeof a.confidence === 'number';
-    const warnings = a.warnings ?? [];
+    const warnings = Array.isArray(a.warnings)
+      ? a.warnings.filter((warning): warning is string => typeof warning === 'string')
+      : [];
     const numberFormat = getNumberFormat(this.effectiveLocale);
     const claims = this.normalizedClaims(a);
     const citations = this.normalizedCitations;

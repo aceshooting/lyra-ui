@@ -9,7 +9,7 @@ import {
   VALIDITY_ANCHOR,
 } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
-import { nextId, srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import {
   acquireAriaDescription,
   type AriaDescriptionLease,
@@ -747,7 +747,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     return html`<fieldset
       part="form-control"
       ?disabled=${this.effectiveDisabled}
-      aria-label=${this.accessibleLabel || nothing}
+      aria-label=${hostAriaLabel(this) ?? nothing}
       aria-describedby=${described}
       aria-invalid=${invalid ? 'true' : 'false'}
     >

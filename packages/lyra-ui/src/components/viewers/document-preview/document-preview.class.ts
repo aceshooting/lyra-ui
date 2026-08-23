@@ -171,9 +171,9 @@ export interface LyraDocumentPreviewEventMap {
  *   needs no JS (a plain `<a download>` handles it); this is purely for a host
  *   that wants to observe/log the download.
  * @event lr-render-error - `detail: { error }` — fired when this
- *   component's own `text/*`/`application/json` `fetch(src)` fails. Distinct
- *   from `status="error"`, which is entirely host-driven (see the class
- *   doc).
+ *   component rejects an unsafe text/JSON URL or when its own
+ *   `text/*`/`application/json` `fetch(src)` fails. Distinct from
+ *   `status="error"`, which is entirely host-driven (see the class doc).
  * @event lr-highlight-activate - A region highlight was activated (image format only).
  *   `detail: { highlightId }`.
  * @csspart base - The root container.

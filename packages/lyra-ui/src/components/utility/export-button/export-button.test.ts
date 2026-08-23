@@ -1,6 +1,9 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './export-button.js';
-import type { LyraExportButton } from './export-button.js';
+import type {
+  LyraExportButton,
+  LyraExportFormatDescriptor,
+} from './export-button.js';
 import { styles } from './export-button.styles.js';
 
 const rows = [{ id: 'a', name: 'Alpha' }];
@@ -17,6 +20,24 @@ it('fails closed to frozen empty choices when formats is assigned a non-array va
   expect(el.formats).to.deep.equal([]);
   expect(Object.isFrozen(el.formats)).to.equal(true);
   expect(el.open).to.equal(false);
+});
+
+it('omits descriptors without nonblank labels and stays inert for an empty format list', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  el.formats = [
+    { formatId: 'missing-label' } as LyraExportFormatDescriptor,
+    { formatId: 'blank-label', label: '   ' },
+    { formatId: 'xlsx', label: 'Excel' },
+  ];
+  await el.updateComplete;
+  expect(el.formats).to.deep.equal([{ formatId: 'xlsx', label: 'Excel' }]);
+
+  el.formats = [];
+  await el.updateComplete;
+  let exported = false;
+  el.addEventListener('lr-export', () => (exported = true));
+  (el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement).click();
+  expect(exported).to.be.false;
 });
 
 it('emits lr-export then lr-export-complete for a single format', async () => {

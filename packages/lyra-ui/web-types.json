@@ -17400,7 +17400,7 @@
               },
               {
                 "name": "lr-render-error",
-                "description": "`detail: { error }` — fired when this component's own `text/*`/`application/json` `fetch(src)` fails. Distinct from `status=\"error\"`, which is entirely host-driven (see the class doc).",
+                "description": "`detail: { error }` — fired when this component rejects an unsafe text/JSON URL or when its own `text/*`/`application/json` `fetch(src)` fails. Distinct from `status=\"error\"`, which is entirely host-driven (see the class doc).",
                 "type": "CustomEvent<{ error: unknown }>"
               }
             ]
@@ -23626,7 +23626,7 @@
               },
               {
                 "name": "lr-render-error",
-                "description": "Fetch, parse, or shape-validation failure. `detail: { error }`.",
+                "description": "Fetch, parse, shape-validation, or missing-map-capability failure. `detail: { error }`. A missing optional MapLibre peer leaves the serialized metadata fallback visible while reporting the degraded map capability.",
                 "type": "CustomEvent<{ error: unknown }>"
               },
               {
@@ -23737,7 +23737,7 @@
               },
               {
                 "name": "lr-render-error",
-                "description": "Fetch, parse, or shape-validation failure. `detail: { error }`.",
+                "description": "Fetch, parse, shape-validation, or missing-map-capability failure. `detail: { error }`. A missing optional MapLibre peer leaves the serialized metadata fallback visible while reporting the degraded map capability.",
                 "type": "CustomEvent<{ error: unknown }>"
               },
               {
@@ -47331,7 +47331,7 @@
             },
             {
               "name": "label",
-              "description": "Header text used when `label-plural` isn't set, e.g. `\"Sources\"`. Omitting it falls back to\na localized default; an explicit empty string clears it (still overridden by\n`label-plural` when that's set).\n\nType: `string | undefined`"
+              "description": "Header text used when `label-plural` isn't set, e.g. `\"Sources\"`. Omitting it falls back to\na localized default; an explicit empty string uses that localized accessible fallback so the\ndisclosure button always has a name (still overridden by `label-plural` when that's set).\n\nType: `string | undefined`"
             },
             {
               "name": "label-plural",
@@ -47368,7 +47368,7 @@
               },
               {
                 "name": "label",
-                "description": "Header text used when `label-plural` isn't set, e.g. `\"Sources\"`. Omitting it falls back to\na localized default; an explicit empty string clears it (still overridden by\n`label-plural` when that's set).\n\nAttribute: `label`",
+                "description": "Header text used when `label-plural` isn't set, e.g. `\"Sources\"`. Omitting it falls back to\na localized default; an explicit empty string uses that localized accessible fallback so the\ndisclosure button always has a name (still overridden by `label-plural` when that's set).\n\nAttribute: `label`",
                 "type": "string | undefined"
               },
               {

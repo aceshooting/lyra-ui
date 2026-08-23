@@ -127529,9 +127529,7 @@
       "registrationModule": "src/components/media/video/video.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [
-        "dompurify"
-      ],
+      "optionalPeers": [],
       "maturity": {
         "status": "experimental",
         "since": "8.0.0",
@@ -128327,9 +128325,7 @@
       "registrationModule": "src/components/media/video-playlist/video-playlist.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [
-        "dompurify"
-      ],
+      "optionalPeers": [],
       "maturity": {
         "status": "experimental",
         "since": "8.0.0",
@@ -197956,9 +197952,7 @@
         "lightDom": "surface-only",
         "runtime": {
           "registration": "all",
-          "optionalPeers": [
-            "dompurify"
-          ]
+          "optionalPeers": []
         },
         "accessibility": {
           "reviewStatus": "complete",
@@ -198059,9 +198053,7 @@
         "lightDom": "surface-only",
         "runtime": {
           "registration": "all",
-          "optionalPeers": [
-            "dompurify"
-          ]
+          "optionalPeers": []
         },
         "accessibility": {
           "reviewStatus": "complete",

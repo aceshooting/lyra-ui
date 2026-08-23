@@ -90,7 +90,7 @@ describe('lr-docx-viewer', () => {
   it('converts and sanitizes DOCX HTML', async () => {
     const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
     useLibrary(el, {
-      mammoth: { convertToHtml: () => Promise.resolve({ value: '<style>@import url(https://example.test/a.css)</style><h1 style="background:url(https://example.test/bg.png)">Report</h1><img src="https://example.test/pixel.png"><a href="https://example.test/nav">link</a><form><button>send</button></form><script>bad()</script>', messages: [] }) },
+      mammoth: { convertToHtml: () => Promise.resolve({ value: '<style>@import url(https://example.test/a.css)</style><h1 style="background:url(https://example.test/bg.png)">Report</h1><img src="https://example.test/pixel.png"><img src="data:image/png;base64,AA=="><a href="https://example.test/nav">link</a><form><button>send</button></form><script>bad()</script>', messages: [] }) },
       // The post-sanitization passive profile is independently fail-closed even if a peer-shaped
       // test double returns its input unchanged.
       DOMPurify: { sanitize: (value: string) => value },
@@ -105,6 +105,7 @@ describe('lr-docx-viewer', () => {
       expect(content.querySelectorAll('style,a,form,button').length).to.equal(0);
       expect(content.querySelector('h1')!.hasAttribute('style')).to.equal(false);
       expect(content.querySelector('img')!.hasAttribute('src')).to.equal(false);
+      expect(content.querySelectorAll('img')[1]!.getAttribute('src')).to.equal('data:image/png;base64,AA==');
       expect(content.textContent).to.contain('link');
       expect(content.textContent).to.contain('send');
     } finally {

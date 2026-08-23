@@ -457,7 +457,15 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   }
 
   private failRecorder(recorder: MediaRecorder, owner: PushToTalkWindow, error: DOMException | Error): void {
-    if (this.recorder !== recorder || this.captureWindow !== owner || this.recorderFailed) return;
+    // Cancellation owns the terminal outcome. MediaRecorder may report an asynchronous error
+    // between cancel() calling stop() and the corresponding stop event; allowing that callback to
+    // clear the flag would turn the promised cancel event into a spurious recorder error.
+    if (
+      this.recorder !== recorder ||
+      this.captureWindow !== owner ||
+      this.recorderFailed ||
+      this.cancelRequested
+    ) return;
     this.recorderFailed = true;
     this.cancelRequested = false;
     this.teardownStream();

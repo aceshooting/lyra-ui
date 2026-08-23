@@ -54,6 +54,8 @@ import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import {
+  copyGraphLinkIdentity,
+  graphLinkIdentity,
   normalizeGraphModel,
   type LyraGraphCommunity,
   type LyraGraphLink,
@@ -1159,14 +1161,18 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       if (!source) continue;
       const target = byId.get(l.target);
       if (target) {
-        resolved.push({ ...l, source, target });
+        resolved.push(
+          copyGraphLinkIdentity(l, { ...l, source, target })
+        );
       } else if (!nodeExists.has(l.target)) {
-        dangling.push({
-          ...l,
-          source,
-          target: { id: l.target, x: source.x, y: source.y } as SimNode,
-          dangling: true,
-        });
+        dangling.push(
+          copyGraphLinkIdentity(l, {
+            ...l,
+            source,
+            target: { id: l.target, x: source.x, y: source.y } as SimNode,
+            dangling: true,
+          })
+        );
       }
     }
     return { resolved, dangling };
@@ -2155,15 +2161,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private linkKey(link: SimLink): string {
-    const source =
-      typeof link.source === 'object'
-        ? (link.source as SimNode).id
-        : String(link.source);
-    const target =
-      typeof link.target === 'object'
-        ? (link.target as SimNode).id
-        : String(link.target);
-    return link.id ?? `${source}->${target}`;
+    return graphLinkIdentity(link);
   }
 
   /** Computes and emits the selection intent for activating `id`; never assigns

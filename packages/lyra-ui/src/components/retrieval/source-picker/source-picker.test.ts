@@ -44,6 +44,27 @@ it('defaults to empty sources/selectedSourceIds, showSelectAll=true, searchable=
   expect(el.label).to.equal(undefined);
 });
 
+it('fails closed for non-array collections and omits entries with blank or non-string labels', async () => {
+  const el = (await fixture(
+    html`<lr-source-picker></lr-source-picker>`,
+  )) as LyraSourcePicker;
+  (el as unknown as { sources: unknown }).sources = [
+    { id: 'missing-label' },
+    { id: 'blank-label', label: '   ' },
+    { id: 'valid', label: 'Valid source' },
+  ];
+  (el as unknown as { selectedSourceIds: unknown }).selectedSourceIds = null;
+  await el.updateComplete;
+
+  const rows = el.shadowRoot!.querySelectorAll('[role="treeitem"]');
+  expect(rows).to.have.length(1);
+  expect(rows[0]!.getAttribute('aria-label')).to.not.equal('');
+
+  (el as unknown as { sources: unknown }).sources = null;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
+});
+
 it('renders a role="tree" with one treeitem per visible entry (top-level collapsed by default)', async () => {
   const el = (await fixture(
     html`<lr-source-picker></lr-source-picker>`

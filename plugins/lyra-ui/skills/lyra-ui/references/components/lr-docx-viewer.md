@@ -17,8 +17,9 @@
 
 Fetches a `.docx` Word document as an `ArrayBuffer`, converts it to semantic HTML with the optional
 `mammoth` peer, sanitizes that HTML through the optional `dompurify` peer, and renders the result.
-Mammoth preserves document structure such as headings, paragraphs, lists, tables, and images; it is
-not intended to reproduce pixel-exact Word page layout. There is no unsanitized rendering escape
+Mammoth preserves document structure such as headings, paragraphs, lists, tables, and validated
+inline raster images; it is not intended to reproduce pixel-exact Word page layout. There is no
+unsanitized rendering escape
 hatch: if `dompurify` is unavailable, rendering is blocked even when Mammoth converted successfully.
 
 Every rendered heading's slug (the same GitHub-slugger-style algorithm `<lr-markdown>` uses) is

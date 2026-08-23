@@ -128,7 +128,31 @@ export function optionalPeersForComponent(component, packageJson) {
   );
   const found = new Set();
   const seen = new Set();
-  const queue = [path.join(packageDir, component.registrationModule)];
+  const rootFile = path.join(packageDir, component.registrationModule);
+  const queue = [rootFile];
+
+  // Video and video-playlist import the icon registration only for built-in decorative glyphs;
+  // neither forwards the icon's remote `src` capability, so the icon's sanitizer peer is not a
+  // prerequisite for either player. Other composed registrations remain in the traversal: their
+  // parent may deliberately expose the child's optional capability (icon-button's forwarded
+  // `src` is the important example).
+  const composedPeerExclusions = new Set([
+    path.join(packageDir, 'src/components/media/video/video.ts'),
+    path.join(packageDir, 'src/components/media/video-playlist/video-playlist.ts'),
+  ]);
+  const isComponentRegistration = (file) => {
+    if (
+      file === rootFile ||
+      !composedPeerExclusions.has(rootFile) ||
+      !file.startsWith(path.join(packageDir, 'src', 'components'))
+    )
+      return false;
+    try {
+      return /\bdefineElement\s*\(/.test(fs.readFileSync(file, 'utf8'));
+    } catch {
+      return false;
+    }
+  };
 
   while (queue.length) {
     const file = queue.pop();
@@ -153,7 +177,7 @@ export function optionalPeersForComponent(component, packageJson) {
     ];
     for (const match of runtimeSpecifiers) {
       const resolved = resolveTypeScriptImport(file, match[1]);
-      if (resolved) queue.push(resolved);
+      if (resolved && !isComponentRegistration(resolved)) queue.push(resolved);
     }
   }
   return [...found].sort();

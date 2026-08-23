@@ -771,7 +771,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   override render(): TemplateResult | typeof nothing {
     if (this.hideSinglePage && this.calculatedTotalPages <= 1) return nothing;
     const navigationLabel =
-      this.accessibleLabel || this.localizedProperty('paginationLabel', this.label);
+      this.accessibleLabel ?? this.localizedProperty('paginationLabel', this.label);
 
     return html`
       <nav part="base pagination" aria-label=${navigationLabel} aria-busy=${this.loading ? 'true' : 'false'}>

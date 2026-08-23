@@ -1566,6 +1566,23 @@ test('chart optional-peer attribution follows only reachable loader capabilities
   );
 });
 
+test('component registrations do not inherit optional peers from composed child registrations', () => {
+  const packageJson = readJson('package.json');
+  const peersFor = (registrationModule) =>
+    optionalPeersForComponent({ registrationModule }, packageJson);
+
+  assert.deepEqual(
+    peersFor('src/components/media/video/video.ts'),
+    [],
+    'video can autoload its built-in icon controls without requiring icon remote-sanitizer support'
+  );
+  assert.deepEqual(
+    peersFor('src/components/media/video-playlist/video-playlist.ts'),
+    [],
+    'video-playlist can autoload its composed video child without requiring an unrelated peer'
+  );
+});
+
 test('the CEM accessor projection publishes only reviewed runtime defaults and reflection', () => {
   const plugin = cemConfig.plugins.find(
     ({ name }) => name === 'lr-accessor-runtime-contracts'

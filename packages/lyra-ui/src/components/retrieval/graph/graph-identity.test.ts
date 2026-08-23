@@ -9,7 +9,7 @@ import '../path-strip/path-strip.js';
 import '../mind-map/mind-map.js';
 import '../graph-legend/graph-legend.js';
 import type { LyraGraph } from './graph.js';
-import { normalizeGraphModel } from './graph-model.js';
+import { graphLinkIdentity, normalizeGraphModel } from './graph-model.js';
 import type {
   LyraGraphCommunity,
   LyraGraphLink,
@@ -100,6 +100,24 @@ it('normalizes malformed runtime links and missing community membership', () => 
   ]);
   expect(mixedLinks.communities).to.deep.equal([
     { id: 'empty-members', memberIds: [] },
+  ]);
+});
+
+it('keeps an explicit link id distinct from an implicit endpoint identity', () => {
+  const model = normalizeGraphModel(
+    [],
+    [
+      { source: 'a', target: 'b' },
+      { id: 'a->b', source: 'a', target: 'b' },
+    ],
+    [],
+    []
+  );
+
+  expect(model.links).to.have.length(2);
+  expect(model.links.map((link) => graphLinkIdentity(link))).to.deep.equal([
+    'implicit:a->b',
+    'a->b',
   ]);
 });
 

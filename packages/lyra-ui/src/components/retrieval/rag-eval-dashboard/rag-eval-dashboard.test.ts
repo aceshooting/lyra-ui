@@ -33,6 +33,22 @@ it('renders latest metric cards, a selected trend, and filters runs by slice', a
   expect(chart.datasets).to.deep.equal([{ label: 'Groundedness', data: [0.8, 0.91] }]);
 });
 
+it('omits valid-id runs whose metrics record is malformed', async () => {
+  const el = (await fixture(
+    html`<lr-rag-eval-dashboard
+      .metrics=${metrics}
+      .runs=${[
+        { id: 'bad', label: 'Malformed' },
+        runs[0],
+      ]}
+    ></lr-rag-eval-dashboard>`,
+  )) as LyraRagEvalDashboard;
+
+  expect(el.shadowRoot!.querySelectorAll('[part="run"]')).to.have.length(1);
+  expect(el.shadowRoot!.textContent).to.contain('Baseline');
+  expect(el.shadowRoot!.textContent).to.not.contain('Malformed');
+});
+
 it('emits controlled metric, slice, and run selection events', async () => {
   const el = (await fixture(
     html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="mrr"></lr-rag-eval-dashboard>`,

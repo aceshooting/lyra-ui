@@ -9,7 +9,10 @@ import {
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { firstByRetrievalIdentity } from '../retrieval-identity.js';
+import {
+  firstByRetrievalIdentity,
+  isNonBlankIdentity,
+} from '../retrieval-identity.js';
 import { srOnly } from '../../../internal/a11y.js';
 import {
   acquireAnnouncementSink,
@@ -154,6 +157,10 @@ function retryIcon(): SVGTemplateResult {
 
 const DEFAULT_VIRTUALIZE_AT = 100;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 /**
  * `<lr-ingestion-queue>` — a controlled list of documents moving through an ingestion pipeline
  * (upload → text extraction → chunking → embedding → indexing), each row showing its stage,
@@ -278,7 +285,17 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
 
   private normalizeItems(value: unknown): IngestionQueueItem[] {
     return firstByRetrievalIdentity(
-      Array.isArray(value) ? (value as readonly IngestionQueueItem[]) : [],
+      Array.isArray(value)
+        ? value.filter((item): item is IngestionQueueItem => {
+            if (!isRecord(item) || !isNonBlankIdentity(item['id'])) return false;
+            const document = item['document'];
+            return (
+              isRecord(document) &&
+              isNonBlankIdentity(document['id']) &&
+              typeof document['name'] === 'string'
+            );
+          })
+        : [],
       (item) => item.id
     );
   }

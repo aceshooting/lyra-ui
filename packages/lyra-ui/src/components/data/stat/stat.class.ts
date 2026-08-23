@@ -404,7 +404,7 @@ export class LyraStat extends LyraElement {
             href=${href}
             target=${this.target || nothing}
             rel=${this.target ? 'noopener noreferrer' : nothing}
-            aria-label=${this.accessibleLabel || nothing}
+            aria-label=${this.accessibleLabel ?? nothing}
             ><span class="sr-only">${[this.label, this.value, this.unit].filter(Boolean).join(' ')}</span></a
           >
           <div class="linked-content" @click=${this.onLinkedContentClick}>${content}</div>

@@ -462,7 +462,9 @@ class LyraGeoJsonViewerBase extends LyraElement<LyraGeoJsonViewerEventMap> {}
  * preserves the earlier tag without sharing a custom-elements constructor.
  *
  * @customElement lr-geojson-viewer
- * @event lr-render-error - Fetch, parse, or shape-validation failure. `detail: { error }`.
+ * @event lr-render-error - Fetch, parse, shape-validation, or missing-map-capability failure.
+ *   `detail: { error }`. A missing optional MapLibre peer leaves the serialized metadata fallback
+ *   visible while reporting the degraded map capability.
  * @event {CustomEvent<LyraSearchChangeDetail>} lr-search-change - Fired whenever searchable
  *   metadata state changes. `matchCountExact=false` makes the retained count a lower bound.
  *   Bubbling, composed, and non-cancelable.

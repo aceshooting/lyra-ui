@@ -7,7 +7,10 @@ import type {
 } from '../../../ai/types.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { firstByRetrievalIdentity } from '../retrieval-identity.js';
+import {
+  firstByRetrievalIdentity,
+  isValidRetrievalChunk,
+} from '../retrieval-identity.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './retrieval-compare.styles.js';
@@ -111,7 +114,7 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
 
   private orderedChunks(set: RetrievalComparisonSet): RetrievalChunk[] {
     return firstByRetrievalIdentity(
-      Array.isArray(set.chunks) ? set.chunks : [],
+      Array.isArray(set.chunks) ? set.chunks.filter(isValidRetrievalChunk) : [],
       (chunk) => chunk.id
     )
       .map((chunk, index) => ({ chunk, index, rank: this.rank(chunk, index) }))

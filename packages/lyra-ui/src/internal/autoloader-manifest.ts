@@ -1110,11 +1110,11 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/conversation/usage-badge/usage-badge.class.js').then((module) => module.LyraUsageBadge),
   },
   'lr-video': {
-    optionalPeers: ['dompurify'],
+    optionalPeers: [],
     load: () => import('../components/media/video/video.class.js').then((module) => module.LyraVideo),
   },
   'lr-video-playlist': {
-    optionalPeers: ['dompurify'],
+    optionalPeers: [],
     load: () => import('../components/media/video-playlist/video-playlist.class.js').then((module) => module.LyraVideoPlaylist),
   },
   'lr-virtual-list': {

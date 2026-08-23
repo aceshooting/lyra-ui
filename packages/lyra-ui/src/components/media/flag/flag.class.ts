@@ -649,9 +649,13 @@ export class LyraFlag extends LyraElement {
     // Checked before the error branch: an unresolvable code is data, not a failure, so it must not
     // fall through to localized error wording that reads to a user as a bug.
     if (this.unresolved) {
+      const fallbackUrl = this.fallback
+        ? safeMediaSrc(this.fallback, this.ownerDocument?.defaultView?.URL ?? globalThis.URL)
+        : null;
+      const fallbackAlt = hostAriaLabel(this) ?? this.label ?? '';
       return html`<slot name="fallback"
-        >${this.fallback
-          ? html`<img part="fallback-image" src=${this.fallback} alt=${this.label ?? ''} />`
+        >${fallbackUrl
+          ? html`<img part="fallback-image" src=${fallbackUrl} alt=${fallbackAlt} />`
           : nothing}</slot
       >`;
     }

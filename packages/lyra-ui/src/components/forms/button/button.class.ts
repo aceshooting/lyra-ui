@@ -936,7 +936,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
         target=${this.target || nothing}
         rel=${this.resolvedRel ?? nothing}
         download=${hasDownload ? this.download ?? '' : nothing}
-        aria-label=${this.accessibleLabel || nothing}
+        aria-label=${this.accessibleLabel ?? nothing}
         aria-haspopup=${this.triggerHasPopup ?? nothing}
         aria-expanded=${this.triggerExpanded ?? nothing}
         aria-controls=${this.triggerControls || nothing}
@@ -955,7 +955,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
         part="base button"
         ?data-icon-button=${this.isIconButton}
         type="button"
-        aria-label=${this.accessibleLabel || nothing}
+        aria-label=${this.accessibleLabel ?? nothing}
         aria-haspopup=${this.triggerHasPopup ?? nothing}
         aria-expanded=${this.triggerExpanded ?? nothing}
         aria-controls=${this.triggerControls || nothing}

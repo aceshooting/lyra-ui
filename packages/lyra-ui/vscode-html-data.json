@@ -23089,7 +23089,7 @@
           "name": "label",
           "description": {
             "kind": "markdown",
-            "value": "Header text used when `label-plural` isn't set, e.g. `\"Sources\"`. Omitting it falls back to\na localized default; an explicit empty string clears it (still overridden by\n`label-plural` when that's set).\n\nType: `string | undefined`"
+            "value": "Header text used when `label-plural` isn't set, e.g. `\"Sources\"`. Omitting it falls back to\na localized default; an explicit empty string uses that localized accessible fallback so the\ndisclosure button always has a name (still overridden by `label-plural` when that's set).\n\nType: `string | undefined`"
           }
         },
         {

@@ -22,7 +22,8 @@ export class LyraDivider extends LyraElement {
   /** Shoelace-compatible vertical-orientation shorthand. */
   @property({ type: Boolean, reflect: true }) vertical = false;
   override render(): TemplateResult {
-    const orientation: LyraDividerOrientation = this.vertical ? 'vertical' : this.orientation;
+    const orientation: LyraDividerOrientation =
+      this.vertical || this.orientation === 'vertical' ? 'vertical' : 'horizontal';
     return html`<hr
       part="base"
       role="separator"

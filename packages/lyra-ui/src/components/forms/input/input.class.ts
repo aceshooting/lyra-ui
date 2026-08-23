@@ -830,7 +830,7 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
             name=${this.name || nothing}
             placeholder=${this.placeholder}
             title=${this.title || nothing}
-            aria-label=${this.accessibleLabel ||
+            aria-label=${this.accessibleLabel ??
             (hasLabel
               ? nothing
               : this.placeholder || this.localize('inputLabel'))}

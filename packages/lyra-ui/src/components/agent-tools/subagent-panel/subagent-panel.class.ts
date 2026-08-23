@@ -9,6 +9,7 @@ import {
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import { AGENT_STATUS_VARIANTS } from '../../../internal/agent-status-variants.js';
 import '../../overlays/badge/badge.class.js';
 import '../../overlays/empty/empty.class.js';
@@ -405,7 +406,9 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
   };
 
   override render(): TemplateResult {
-    const label = this.label == null ? this.localize('subagentPanelLabel') : this.label;
+    const label =
+      hostAriaLabel(this) ??
+      (this.label == null ? this.localize('subagentPanelLabel') : this.label);
     const ordered = this.orderedRunsCache;
     const firstId = ordered.rows[0]?.run.id;
     return html`

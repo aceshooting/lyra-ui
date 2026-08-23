@@ -25,7 +25,9 @@ it('uses label when set and label-plural is unset', async () => {
 it('honors an explicitly empty label as genuinely empty, distinct from omitting it', async () => {
   const el = (await fixture(html`<lr-source-list label=""></lr-source-list>`)) as LyraSourceList;
   expect(el.label).to.equal('');
-  expect(el.shadowRoot!.querySelector('[part="header"]')!.textContent!.trim()).to.equal('');
+  const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLButtonElement;
+  expect(header.textContent!.trim()).to.equal('Sources');
+  expect(header.getAttribute('aria-label')).to.equal('Sources');
 
   el.label = undefined;
   await el.updateComplete;

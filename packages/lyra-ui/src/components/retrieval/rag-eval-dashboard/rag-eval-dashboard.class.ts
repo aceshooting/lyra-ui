@@ -2,7 +2,10 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { firstByRetrievalIdentity } from '../retrieval-identity.js';
+import {
+  firstByRetrievalIdentity,
+  isNonBlankIdentity,
+} from '../retrieval-identity.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import '../../charts/chart/lite-chart.class.js';
@@ -42,6 +45,10 @@ export interface LyraRagEvalDashboardEventMap {
   'lr-metric-change': CustomEvent<{ metricId: string }>;
   'lr-slice-change': CustomEvent<{ slice: string }>;
   'lr-run-change': CustomEvent<{ run: LyraRagEvaluationRun }>;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /**
@@ -127,7 +134,14 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
 
   private get normalizedRuns(): LyraRagEvaluationRun[] {
     return firstByRetrievalIdentity(
-      Array.isArray(this.runs) ? this.runs : [],
+      Array.isArray(this.runs)
+        ? this.runs.filter((run): run is LyraRagEvaluationRun =>
+            isRecord(run) &&
+            isNonBlankIdentity(run['id']) &&
+            typeof run['label'] === 'string' &&
+            isRecord(run['metrics'])
+          )
+        : [],
       (run) => run.id
     );
   }

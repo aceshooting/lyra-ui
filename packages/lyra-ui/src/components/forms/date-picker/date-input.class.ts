@@ -2012,7 +2012,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                     part="input"
                     type="text"
                     role="combobox"
-                    aria-label=${this.accessibleLabel ||
+                    aria-label=${this.accessibleLabel ??
                     (hasLabel
                       ? nothing
                       : this.placeholder || this.localize('date'))}

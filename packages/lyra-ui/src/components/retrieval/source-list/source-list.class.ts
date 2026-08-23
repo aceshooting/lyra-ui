@@ -72,8 +72,8 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
   @property({ type: Boolean, reflect: true }) expanded = false;
 
   /** Header text used when `label-plural` isn't set, e.g. `"Sources"`. Omitting it falls back to
-   *  a localized default; an explicit empty string clears it (still overridden by
-   *  `label-plural` when that's set). */
+   *  a localized default; an explicit empty string uses that localized accessible fallback so the
+   *  disclosure button always has a name (still overridden by `label-plural` when that's set). */
   @property() label?: string;
 
   /** Fully consumer-built, already-pluralized header summary, e.g. `"3 sources"`
@@ -286,9 +286,13 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
   };
 
   override render(): TemplateResult {
-    const headerText =
+    const requestedHeaderText =
       this.labelPlural ||
       (this.label == null ? this.localize('sourceListDefaultLabel') : this.label);
+    const headerText =
+      requestedHeaderText.trim() === ''
+        ? this.localize('sourceListDefaultLabel')
+        : requestedHeaderText;
 
     return html`
       <div part="base">

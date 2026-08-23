@@ -2,7 +2,11 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { firstByRetrievalIdentity, canonicalIdentityList } from '../retrieval-identity.js';
+import {
+  firstByRetrievalIdentity,
+  canonicalIdentityList,
+  isValidRetrievalChunk,
+} from '../retrieval-identity.js';
 import {
   finiteCount,
   finiteNumber,
@@ -506,7 +510,12 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
 
   /** Keeps the first valid occurrence for every nonblank chunk id. */
   private canonicalChunks(): RetrievalChunk[] {
-    return firstByRetrievalIdentity(this.chunks, (chunk) => chunk.id);
+    return firstByRetrievalIdentity(
+      Array.isArray(this.chunks)
+        ? this.chunks.filter(isValidRetrievalChunk)
+        : [],
+      (chunk) => chunk.id
+    );
   }
 
   private normalizedSelectedChunkIds(): string[] {

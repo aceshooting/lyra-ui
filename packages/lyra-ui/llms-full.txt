@@ -16424,7 +16424,7 @@ no-op if already open),
 cycling) at the ends; the active row is scrolled into view. Enter selects. Hovering a non-disabled
 row also makes it active.
 
-**Events:** `lr-open`, `lr-close` (both `detail: undefined`, cancelable — fired before the
+**Events:** `lr-open`, `lr-close` (both `detail: null`, cancelable — fired before the
 mutation, `preventDefault()` keeps the palette in its current open state), `lr-select`
 (`detail: { command }`, fired before the command's own `onSelect` runs and before the palette
 closes), and no-detail `focus`/`blur` events re-dispatched from the host whenever the search input
@@ -26491,9 +26491,9 @@ matches, the anchor isn't `region`, or the format isn't currently `image`.
 - `lr-download` — `detail: { src, filename }` — fired when the generic-download fallback's link is
   activated. The browser download itself needs no JS (a plain `<a download>` handles it); this is
   purely for a host that wants to observe/log the download.
-- `lr-render-error` — `detail: { error }` — fired when this component's own `text/*`/
-  `application/json` `fetch(src)` fails (network error or non-2xx response). Distinct from
-  `status="error"`, which is entirely host-driven.
+- `lr-render-error` — `detail: { error }` — fired when this component rejects an unsafe text/JSON
+  URL or when its own `text/*`/`application/json` `fetch(src)` fails (network error or non-2xx
+  response). Distinct from `status="error"`, which is entirely host-driven.
 - `lr-highlight-activate` — `detail: { highlightId }` — a region highlight was clicked or activated via
   Enter/Space (image format only).
 
@@ -26603,11 +26603,12 @@ document-level assertive sink.
   for text/image sinks and `mailto:` is accepted for navigation anchors elsewhere in the library — a
   `src="data:..."` document renders/fetches fine but falls back to no download affordance in the
   generic state, and a `mailto:` names no retrievable bytes so it cannot be a download target at all.
-- A `src` that fails its sink's URL-safety check does **not** raise `lr-render-error` — that event is
-  reserved for a `fetch()` that was actually attempted and failed at the network layer; an unsafe/
-  malformed `src` is silently treated as unusable instead (a rendered `[part="error"]` message for
-  text, a silent fallback for image/download — and on the image path that fallback is the download
-  fallback directly, so an `unsupported` slot the host supplied is bypassed).
+- A `src` that fails its sink's URL-safety check raises `lr-render-error` for the text/JSON path,
+  with the localized URL-rejection error; the event is also raised when an allowed `fetch()` fails
+  at the network layer. An unsafe/malformed image or download `src` is instead treated as unusable
+  without an event (a silent image fallback or omitted download link — and on the image path that
+  fallback is the download fallback directly, so an `unsupported` slot the host supplied is
+  bypassed).
 
 ---
 
@@ -26774,8 +26775,9 @@ exactly one `lr-anchor-result` with `{ found: false }`.
 
 Fetches a `.docx` Word document as an `ArrayBuffer`, converts it to semantic HTML with the optional
 `mammoth` peer, sanitizes that HTML through the optional `dompurify` peer, and renders the result.
-Mammoth preserves document structure such as headings, paragraphs, lists, tables, and images; it is
-not intended to reproduce pixel-exact Word page layout. There is no unsanitized rendering escape
+Mammoth preserves document structure such as headings, paragraphs, lists, tables, and validated
+inline raster images; it is not intended to reproduce pixel-exact Word page layout. There is no
+unsanitized rendering escape
 hatch: if `dompurify` is unavailable, rendering is blocked even when Mammoth converted successfully.
 
 Every rendered heading's slug (the same GitHub-slugger-style algorithm `<lr-markdown>` uses) is
@@ -28298,7 +28300,8 @@ text, independent of whether the optional map peer is available.
 
 **Events:**
 
-- `lr-render-error` — `detail: { error }` — fetch, parse, or shape-validation failure.
+- `lr-render-error` — `detail: { error }` — fetch, parse, shape-validation, or missing-map capability
+  failure. A missing optional MapLibre peer also keeps the serialized metadata fallback visible.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever serialized-metadata search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or

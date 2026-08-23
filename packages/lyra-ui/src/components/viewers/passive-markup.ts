@@ -174,10 +174,19 @@ export function sanitizePassiveMarkup(
           && element.localName.toLowerCase() === 'image'
           && (name === 'href' || name === 'xlink:href' || name === 'src')
           && INLINE_RASTER_DATA.test(value.trim());
+        const keepInlineDocumentRaster = profile === 'passive-document'
+          && element.localName.toLowerCase() === 'img'
+          && name === 'src'
+          && INLINE_RASTER_DATA.test(value.trim());
         const keepTransclusionFragment = profile === 'transclusion'
           && name === 'href'
           && LOCAL_FRAGMENT.test(value.trim());
-        if (!keepSvgFragment && !keepInlineSvgRaster && !keepTransclusionFragment) {
+        if (
+          !keepSvgFragment &&
+          !keepInlineSvgRaster &&
+          !keepInlineDocumentRaster &&
+          !keepTransclusionFragment
+        ) {
           element.removeAttribute(attributeName);
         }
         continue;

@@ -10,7 +10,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraFrame } from '../../../internal/variants.js';
-import { nextId } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
@@ -524,7 +524,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
 
   override render(): TemplateResult {
     const label = this.label == null ? this.localize('taskListLabel') : this.label;
-    const ariaLabel = label;
+    const ariaLabel = hostAriaLabel(this) ?? label;
     const total = this.items.length;
     const completed = this.items.filter((item) => normalizeTaskStatus(item.status) === 'success').length;
     const canReorder = this.canReorderItems();

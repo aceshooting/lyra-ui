@@ -460,14 +460,20 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       if (seen.has(slotName)) continue;
       seen.add(slotName);
       const tabSlot = this.tabSlotName(slotName);
+      // Project before reading: the descriptor's default-slot content must be in the same
+      // composed tree as the real tab button before the visibility-aware text walk can inspect
+      // it. An empty descriptor gets its stable panel key as a last-resort accessible name, so it
+      // remains a safe, addressable choice instead of producing an unnamed tab or destabilizing
+      // the projection observer.
       this.projectSlot(child, tabSlot, projectedSlots);
+      const label = this.readElementLabel(child as LyraTab) || slotName;
       const panel = panels.find(
         (candidate) => candidate.getAttribute('name') === slotName
       );
       if (panel) this.projectSlot(panel, slotName, projectedSlots);
       next.push({
         slotName,
-        label: this.readElementLabel(child as LyraTab),
+        label,
         disabled: child.hasAttribute('disabled'),
         inert: isInertChild(child),
         element: child as LyraTab,

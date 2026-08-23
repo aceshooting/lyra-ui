@@ -97,9 +97,9 @@ matches, the anchor isn't `region`, or the format isn't currently `image`.
 - `lr-download` — `detail: { src, filename }` — fired when the generic-download fallback's link is
   activated. The browser download itself needs no JS (a plain `<a download>` handles it); this is
   purely for a host that wants to observe/log the download.
-- `lr-render-error` — `detail: { error }` — fired when this component's own `text/*`/
-  `application/json` `fetch(src)` fails (network error or non-2xx response). Distinct from
-  `status="error"`, which is entirely host-driven.
+- `lr-render-error` — `detail: { error }` — fired when this component rejects an unsafe text/JSON
+  URL or when its own `text/*`/`application/json` `fetch(src)` fails (network error or non-2xx
+  response). Distinct from `status="error"`, which is entirely host-driven.
 - `lr-highlight-activate` — `detail: { highlightId }` — a region highlight was clicked or activated via
   Enter/Space (image format only).
 
@@ -209,10 +209,11 @@ document-level assertive sink.
   for text/image sinks and `mailto:` is accepted for navigation anchors elsewhere in the library — a
   `src="data:..."` document renders/fetches fine but falls back to no download affordance in the
   generic state, and a `mailto:` names no retrievable bytes so it cannot be a download target at all.
-- A `src` that fails its sink's URL-safety check does **not** raise `lr-render-error` — that event is
-  reserved for a `fetch()` that was actually attempted and failed at the network layer; an unsafe/
-  malformed `src` is silently treated as unusable instead (a rendered `[part="error"]` message for
-  text, a silent fallback for image/download — and on the image path that fallback is the download
-  fallback directly, so an `unsupported` slot the host supplied is bypassed).
+- A `src` that fails its sink's URL-safety check raises `lr-render-error` for the text/JSON path,
+  with the localized URL-rejection error; the event is also raised when an allowed `fetch()` fails
+  at the network layer. An unsafe/malformed image or download `src` is instead treated as unusable
+  without an event (a silent image fallback or omitted download link — and on the image path that
+  fallback is the download fallback directly, so an `unsupported` slot the host supplied is
+  bypassed).
 
 ---

@@ -9,6 +9,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import {
   writeClipboardText,
   type LyraClipboardWriteFailure,
@@ -334,7 +335,7 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
       <div
         part="base"
         role="group"
-        aria-label=${this.localize('stackTraceLabel')}
+        aria-label=${hostAriaLabel(this) ?? this.localize('stackTraceLabel')}
         style=${(() => {
           // A free-form consumer string must never reach a declaration list verbatim --
           // `max-height="3rem;position:fixed"` would otherwise escape the custom property.

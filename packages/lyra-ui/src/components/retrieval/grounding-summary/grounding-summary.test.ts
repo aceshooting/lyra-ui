@@ -66,6 +66,22 @@ it("renders supported/unsupported/coverage as lr-stat, omitting confidence when 
   expect(rows[2]!.getAttribute("value")).to.equal("89%");
 });
 
+it('fails closed when assessment warnings are not a string array', async () => {
+  const el = (await fixture(
+    html`<lr-grounding-summary></lr-grounding-summary>`
+  )) as LyraGroundingSummary;
+  (el as unknown as { assessment: unknown }).assessment = {
+    supportedClaims: 1,
+    unsupportedClaims: 0,
+    coverage: 1,
+    warnings: 'not-an-array',
+  };
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="warnings"]') != null).to.equal(false);
+  expect(el.shadowRoot!.querySelectorAll('lr-stat')).to.have.length(3);
+});
+
 it("renders a fourth confidence lr-stat when assessment.confidence is set", async () => {
   const el = (await fixture(
     html`<lr-grounding-summary></lr-grounding-summary>`

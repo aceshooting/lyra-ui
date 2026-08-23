@@ -95,6 +95,23 @@ it("is accessible in the empty state", async () => {
   await expect(el).to.be.accessible();
 });
 
+it('omits ingestion rows without a usable document record before rendering', async () => {
+  const el = (await fixture(
+    html`<lr-ingestion-queue></lr-ingestion-queue>`
+  )) as LyraIngestionQueue;
+  (el as unknown as { items: unknown }).items = [
+    { id: 'missing-document', stage: 'queued' },
+    { id: 'missing-name', stage: 'queued', document: { id: 'doc-2' } },
+    item({ id: 'valid', stage: 'queued' }),
+  ];
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelectorAll('[part="item"]')).to.have.length(1);
+  expect(el.shadowRoot!.querySelector('[part="item-name"]')!.textContent).to.contain(
+    'Doc valid',
+  );
+});
+
 it("clips horizontal overflow from long queue metadata", async () => {
   const el = (await fixture(
     html`<lr-ingestion-queue

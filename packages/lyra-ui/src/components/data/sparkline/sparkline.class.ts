@@ -1,6 +1,6 @@
 import { html, nothing, svg, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
-import { nextId } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRatio } from '../../../internal/numbers.js';
@@ -200,7 +200,8 @@ export class LyraSparkline extends LyraElement {
     // computed internal accessible name") and matching lr-lite-chart, lr-tree, lr-segmented and
     // lr-avatar-group. This order was inverted until 10.0.0: an author who set both got `label`,
     // silently discarding the aria-label they wrote on the element itself.
-    if (this.accessibleLabel) return this.accessibleLabel;
+    const hostLabel = hostAriaLabel(this);
+    if (hostLabel !== null) return hostLabel;
     if (this.label) return this.label;
 
     const last = values.at(-1);

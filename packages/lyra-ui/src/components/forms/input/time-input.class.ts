@@ -1421,7 +1421,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     const describedBy = [hasError ? this.errorId : '', hasHint ? this.hintId : ''].filter(Boolean).join(' ');
     const invalid = hasError || (this.touched && !this.validity.valid);
     const hostAccessibleName = this.getAttribute('aria-label');
-    const accessibleName = hostAccessibleName || this.label || this.localize('timeInputLabel');
+    const accessibleName = hostAccessibleName ?? (this.label || this.localize('timeInputLabel'));
     const showClear = this.withClear && (this.value !== '' || this.draftHasAny);
     const nativeStep = this.step === 'any' ? 'any' : String(this.step);
 
@@ -1438,8 +1438,8 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
             id=${this.inputId}
             part="input"
             role="group"
-            aria-label=${hostAccessibleName || !hasLabel ? accessibleName : nothing}
-            aria-labelledby=${!hostAccessibleName && hasLabel ? this.labelId : nothing}
+            aria-label=${hostAccessibleName !== null || !hasLabel ? accessibleName : nothing}
+            aria-labelledby=${hostAccessibleName === null && hasLabel ? this.labelId : nothing}
             aria-describedby=${describedBy || nothing}
             aria-invalid=${String(invalid)}
             aria-controls=${this.popupId}

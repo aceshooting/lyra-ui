@@ -61,6 +61,8 @@ interface NormalizedSourceModel {
 
 const MAX_SOURCE_NODES = 2_000;
 const MAX_SOURCE_DEPTH = 64;
+const EMPTY_SOURCE_ENTRIES: readonly LyraSourceEntry[] = Object.freeze([]);
+const EMPTY_SOURCE_IDS: readonly string[] = Object.freeze([]);
 
 /**
  * `<lr-source-picker>` — a checkbox tree/list scoping which sources ground the next answer:
@@ -180,6 +182,16 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   private isMounting = true;
   private lastFilterAnnouncement = '';
 
+  private get sourceEntries(): readonly LyraSourceEntry[] {
+    return Array.isArray(this.sources) ? this.sources : EMPTY_SOURCE_ENTRIES;
+  }
+
+  private get selectedIds(): readonly string[] {
+    return Array.isArray(this.selectedSourceIds)
+      ? this.selectedSourceIds
+      : EMPTY_SOURCE_IDS;
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcementSink ??= acquireAnnouncementSink('polite', {
@@ -198,7 +210,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
 
   /** Builds a bounded, acyclic, nonblank first-id-wins tree once per `sources` identity. */
   private get sourceModel(): NormalizedSourceModel {
-    if (this.normalizedInput === this.sources && this.normalizedModel)
+    if (this.normalizedInput === this.sourceEntries && this.normalizedModel)
       return this.normalizedModel;
     const roots: NormalizedSourceNode[] = [];
     const nodes: NormalizedSourceNode[] = [];
@@ -212,7 +224,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
       depth: number;
       index: number;
     }> = [];
-    stack.push({ sources: this.sources, target: roots, depth: 0, index: 0 });
+    stack.push({ sources: this.sourceEntries, target: roots, depth: 0, index: 0 });
     let inspected = 0;
     while (stack.length) {
       const frame = stack[stack.length - 1]!;
@@ -231,6 +243,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
         typeof source !== 'object' ||
         seenObjects.has(source) ||
         !isNonBlankIdentity(source.id) ||
+        !isNonBlankIdentity(source.label) ||
         seenIds.has(source.id)
       ) {
         limited = true;
@@ -261,7 +274,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
       frame.target.push(node);
       nodes.push(node);
       byEntry.set(entry, node);
-      const children = source.children ?? [];
+      const children = Array.isArray(source.children) ? source.children : [];
       if (children.length && frame.depth >= MAX_SOURCE_DEPTH) limited = true;
       if (children.length && frame.depth < MAX_SOURCE_DEPTH)
         stack.push({
@@ -283,7 +296,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
           : [...new Set(node.children.flatMap((child) => child.leafIds))];
     }
     const leafIds = [...new Set(roots.flatMap((root) => root.leafIds))];
-    this.normalizedInput = this.sources;
+    this.normalizedInput = this.sourceEntries;
     this.normalizedModel = { roots, nodes, byEntry, leafIds, limited };
     return this.normalizedModel;
   }
@@ -299,7 +312,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   private normalizedSelectedSourceIds(): string[] {
     const valid = new Set(this.allLeafIds());
     const seen = new Set<string>();
-    return this.selectedSourceIds.filter((id) => {
+    return this.selectedIds.filter((id) => {
       if (!valid.has(id) || seen.has(id)) return false;
       seen.add(id);
       return true;
@@ -308,7 +321,8 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
 
   private checkedState(entry: LyraSourceEntry): 'true' | 'false' | 'mixed' {
     const leaves = this.descendantLeafIds(entry);
-    const selected = leaves.filter((id) => this.selectedSourceIds.includes(id));
+    const selectedIds = new Set(this.normalizedSelectedSourceIds());
+    const selected = leaves.filter((id) => selectedIds.has(id));
     if (selected.length === 0) return 'false';
     if (selected.length === leaves.length) return 'true';
     return 'mixed';
@@ -356,9 +370,10 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     super.willUpdate(changed);
     if (changed.has('sources') || changed.has('selectedSourceIds')) {
       const normalized = this.normalizedSelectedSourceIds();
+      const current = this.selectedIds;
       if (
-        normalized.length !== this.selectedSourceIds.length ||
-        normalized.some((id, index) => id !== this.selectedSourceIds[index])
+        normalized.length !== current.length ||
+        normalized.some((id, index) => id !== current[index])
       ) {
         this.selectedSourceIds = normalized;
       }
@@ -392,7 +407,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
       this.pendingFocusIndex =
         nextIndex >= 0
           ? nextIndex
-          : this.sources.length === 0 || !this.searchable
+          : this.sourceEntries.length === 0 || !this.searchable
           ? 'base'
           : 'search';
     }
@@ -444,7 +459,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   private toggleEntry(entry: LyraSourceEntry): void {
     const leaves = this.descendantLeafIds(entry);
     const willSelect = this.checkedState(entry) !== 'true';
-    const set = new Set(this.selectedSourceIds);
+    const set = new Set(this.normalizedSelectedSourceIds());
     for (const id of leaves) {
       if (willSelect) set.add(id);
       else set.delete(id);
@@ -455,7 +470,8 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   private toggleSelectAll(): void {
     const all = this.allLeafIds();
     const allSelected =
-      all.length > 0 && all.every((id) => this.selectedSourceIds.includes(id));
+      all.length > 0 &&
+      all.every((id) => this.normalizedSelectedSourceIds().includes(id));
     this.commitSelection(allSelected ? [] : all);
   }
 
@@ -601,7 +617,9 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
         : this.label != null && this.label !== hostLabel
           ? this.label
           : this.localize('sourceListDefaultLabel');
-    if (this.sources.length === 0) {
+    const sourceModel = this.sourceModel;
+    const selectedIds = this.normalizedSelectedSourceIds();
+    if (sourceModel.roots.length === 0) {
       return html`<div part="base" tabindex="-1">
         <lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>
       </div>`;
@@ -611,10 +629,10 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     const allLeaves = this.allLeafIds();
     const numberFormat = getNumberFormat(this.effectiveLocale);
     const selectAllState: 'true' | 'false' | 'mixed' =
-      this.selectedSourceIds.length === 0
+      selectedIds.length === 0
         ? 'false'
         : allLeaves.length > 0 &&
-          allLeaves.every((id) => this.selectedSourceIds.includes(id))
+          allLeaves.every((id) => selectedIds.includes(id))
         ? 'true'
         : 'mixed';
 
@@ -646,7 +664,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
               >
               <span part="summary"
                 >${this.localize('sourcePickerSelection', undefined, {
-                  selected: numberFormat.format(this.selectedSourceIds.length),
+                  selected: numberFormat.format(selectedIds.length),
                   total: numberFormat.format(allLeaves.length),
                 })}</span
               >

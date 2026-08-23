@@ -50,6 +50,20 @@ describe('sanitizePassiveMarkup', () => {
     expect(external?.hasAttribute('filter')).to.equal(false);
   });
 
+  it('retains only inline raster data sources on passive document images', () => {
+    const clean = sanitizePassiveMarkup(
+      { sanitize: (value: string) => value },
+      '<img id="inline" src="data:image/png;base64,AA=="><img id="remote" src="https://example.test/image.png">',
+      document,
+    );
+    const template = document.createElement('template');
+    template.innerHTML = clean;
+    expect(template.content.querySelector('#inline')?.getAttribute('src')).to.equal(
+      'data:image/png;base64,AA==',
+    );
+    expect(template.content.querySelector('#remote')?.hasAttribute('src')).to.equal(false);
+  });
+
   it('removes SVG animation elements while preserving passive shape siblings', () => {
     const clean = sanitizePassiveMarkup(DOMPurify, `
       <svg xmlns="http://www.w3.org/2000/svg">
