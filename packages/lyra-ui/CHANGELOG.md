@@ -1,5 +1,11 @@
 # Changelog
 
+## 12.1.2
+
+### Patch Changes
+
+- a58f119: Fix accessibility naming, interaction guards, data normalization, remote media safety, and generated contract coverage across the component library.
+
 ## 12.1.1
 
 ### Patch Changes
