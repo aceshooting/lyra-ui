@@ -64,7 +64,12 @@ function sinkTexts(doc: Document = document): string[] {
 }
 
 async function settleLayout(): Promise<void> {
-  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  // ResizeObserver notifications run after animation-frame callbacks in some engines. Four
+  // frames cover the notification -> scheduled draw -> layout/observer feedback cycle without
+  // guessing at a wall-clock delay.
+  for (let frame = 0; frame < 4; frame++) {
+    await new Promise<void>((resolve) => requestAnimationFrame(resolve));
+  }
 }
 
 describe("v9 canonical heatmap data and bounded projections", () => {
