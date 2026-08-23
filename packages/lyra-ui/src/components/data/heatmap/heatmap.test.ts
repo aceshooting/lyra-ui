@@ -63,6 +63,10 @@ function sinkTexts(doc: Document = document): string[] {
     : [];
 }
 
+async function settleLayout(): Promise<void> {
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}
+
 describe("v9 canonical heatmap data and bounded projections", () => {
   it("exposes only the discriminated data model, with no legacy mode/collection members", async () => {
     type LegacyMember = Extract<
@@ -7567,6 +7571,10 @@ describe("matrixGeometry / lr-matrix-geometry-change", () => {
     setMatrixData(el, { rowLabels: ["a"], colLabels: ["x"], values: [[1]] });
     await el.updateComplete;
     await aTimeout(0);
+    // The initial ResizeObserver callback schedules its redraw in an animation frame. Let that
+    // callback and frame finish before changing layout, otherwise the test can mistake the
+    // observer's first paint for a redraw caused by rowLabelWidth.
+    await settleLayout();
     const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
     const paintedWidth = canvas.style.width;
     expect(el.matrixGeometry).to.deep.equal({ padLeft: 140, padTop: 20, cellSize: 20 });

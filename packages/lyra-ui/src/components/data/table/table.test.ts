@@ -1,4 +1,5 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import './table.js';
 import '../../forms/select/select.js';
 import type { LyraTable, TableColumn } from './table.js';
@@ -2071,24 +2072,45 @@ it('rotates the wrapping [part="sort-icon"] element, not the inner svg, per the 
 });
 
 it('applies the shared focus-ring outline to a sortable header cell, a row, and the more-button on :focus-visible', async () => {
-  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  const wrapper = (await fixture(html`
+    <div>
+      <button type="button">before table</button>
+      <lr-table></lr-table>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
   el.columns = columns;
   el.rows = rows;
   el.hasMore = true;
   await el.updateComplete;
 
   const header = el.shadowRoot!.querySelectorAll('[part="header-cell"]')[0] as HTMLElement;
-  header.focus();
+  const row = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+  const moreButton = el.shadowRoot!.querySelector('[part="more-button"]') as HTMLElement;
+  const beforeTable = wrapper.querySelector('button') as HTMLButtonElement;
+  beforeTable.focus();
+
+  // :focus-visible is input-modality dependent. A programmatic focus happens to inherit the
+  // keyboard state in Chromium, but Firefox correctly declines it after a mouse-oriented test.
+  // Move through the real tab order so this assertion tests the rendered keyboard affordance in
+  // every engine rather than the browser's last-modality heuristic.
+  const tabTo = async (target: HTMLElement): Promise<void> => {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      await sendKeys({ press: 'Tab' });
+      if (el.shadowRoot!.activeElement === target) return;
+    }
+    expect(el.shadowRoot!.activeElement === target, 'Tab must reach the expected table stop').to.equal(true);
+  };
+
+  await tabTo(header);
   expect(getComputedStyle(header).outlineStyle).to.equal('solid');
   expect(getComputedStyle(header).outlineWidth).to.equal('2px');
 
-  const row = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
-  row.focus();
+  await tabTo(row);
   expect(getComputedStyle(row).outlineStyle).to.equal('solid');
   expect(getComputedStyle(row).outlineWidth).to.equal('2px');
 
-  const moreButton = el.shadowRoot!.querySelector('[part="more-button"]') as HTMLElement;
-  moreButton.focus();
+  await tabTo(moreButton);
   expect(getComputedStyle(moreButton).outlineStyle).to.equal('solid');
   expect(getComputedStyle(moreButton).outlineWidth).to.equal('2px');
 });

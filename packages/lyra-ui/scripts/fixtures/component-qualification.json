@@ -21745,63 +21745,63 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 736,
+              "line": 740,
               "test": "renders an opt-in native button overlay with persistent per-cell semantics",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 1253,
+              "line": 1257,
               "test": "calendar mode: is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 3490,
+              "line": 3494,
               "test": "is accessible with a selected cell",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 4839,
+              "line": 4843,
               "test": "stays accessible with legendStops set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 5000,
+              "line": 5004,
               "test": "stays accessible with a caption-only legend stop",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 5339,
+              "line": 5343,
               "test": "stays accessible with both clamps applied",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 5556,
+              "line": 5560,
               "test": "stays accessible with a date-driven cellText on the accessible-cell overlay",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 8078,
+              "line": 8086,
               "test": "scrolls the keyboard-focused cell into the scrollport, and stays axe-clean there",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 8168,
+              "line": 8176,
               "test": "hides the duplicated bands from assistive technology and stays axe-clean",
               "target": "el",
               "state": "populated"
@@ -21815,7 +21815,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 260,
+              "line": 264,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -21843,7 +21843,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 1167,
+              "line": 1171,
               "kind": "320px allocation test signal"
             }
           ]
@@ -43388,63 +43388,63 @@
           "evidence": [
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 1114,
+              "line": 1115,
               "test": "mirrors resize ArrowLeft/ArrowRight under RTL and passes axe populated",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 1680,
+              "line": 1681,
               "test": "renders a localized busy state before rows while loading",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 1971,
+              "line": 1972,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 3521,
+              "line": 3543,
               "test": "is accessible with expandedContent and an open row",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 4506,
+              "line": 4528,
               "test": "is accessible with cell titles rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 4954,
+              "line": 4976,
               "test": "is accessible in skeleton mode",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 5428,
+              "line": 5450,
               "test": "is accessible with a column of persistent editors rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 5859,
+              "line": 5881,
               "test": "is accessible while client-sorted",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 5972,
+              "line": 5994,
               "test": "is accessible while client-sorted inside groups",
               "target": "el",
               "state": "populated"
@@ -43458,7 +43458,7 @@
           "evidence": [
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 1017,
+              "line": 2,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -43469,7 +43469,7 @@
           "evidence": [
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 1115,
+              "line": 1116,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -43486,7 +43486,7 @@
           "evidence": [
             {
               "file": "src/components/data/table/table.test.ts",
-              "line": 7125,
+              "line": 7147,
               "kind": "320px allocation test signal"
             }
           ]
