@@ -682,8 +682,8 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     return false;
   }
 
-  protected onClick = (event: MouseEvent): void => {
-    if (this.isNestedInteractiveEvent(event)) {
+  protected onClick: () => void = (event?: MouseEvent): void => {
+    if (event && this.isNestedInteractiveEvent(event)) {
       event.stopPropagation();
       return;
     }
