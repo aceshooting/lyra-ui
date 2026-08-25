@@ -180,4 +180,4 @@ export function run(argv = process.argv.slice(2)) {
   console.log(`Component metadata covers ${inventory.components.length} components with reproducible history.`);
 }
 
-if (path.resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) run();
+if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))) run();

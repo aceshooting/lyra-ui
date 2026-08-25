@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const STATUS_LINE = /(`@aceshooting\/lyra-ui` source is versioned at `)([^`]+)(`; `@aceshooting\/lyra-flags` source at `)([^`]+)(`)/g;
@@ -54,7 +54,7 @@ function updateRepositoryReadmeStatus() {
   );
 }
 
-const isMain = process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url;
+const isMain = process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
 if (isMain) {
   try {
     updateRepositoryReadmeStatus();

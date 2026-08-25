@@ -11,6 +11,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { AGENT_STATUS_VARIANTS } from '../../../internal/agent-status-variants.js';
+import { firstByIdentity } from '../collection-identity.js';
 import '../../overlays/badge/badge.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './subagent-panel.styles.js';
@@ -185,8 +186,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
     const normalized: SubagentRun[] = [];
     const byId = new Map<string, SubagentRun>();
     let truncated = false;
-    for (const run of this.runs) {
-      if (run.id.trim().length === 0 || byId.has(run.id)) continue;
+    for (const run of firstByIdentity(Array.isArray(this.runs) ? this.runs : [], (r) => r.id)) {
       if (normalized.length >= MAX_RENDERED_RUNS) {
         truncated = true;
         break;

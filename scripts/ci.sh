@@ -229,6 +229,9 @@ pnpm check:release-qualification
 step "release-integrity helper tests"
 node scripts/release-integrity.test.mjs
 
+step "publish.sh helper tests"
+node scripts/publish.test.mjs
+
 # This mirrors static-checks' networked upstream contract: direct public npm fetches are pinned by
 # package identity, exact version, tarball SHA-512 and manifest SHA-256, with no lifecycle process.
 step "pinned upstream public manifests"

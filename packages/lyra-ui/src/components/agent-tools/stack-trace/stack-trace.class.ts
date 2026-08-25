@@ -37,6 +37,33 @@ function isSelectableFrame(frame: StackFrame): frame is StackFrame & { file: str
   );
 }
 
+/** Bounds how many matcher patterns `internalPatterns` retains -- generous for a manually curated
+ *  list, protective against a runaway/generated one. */
+const MAX_INTERNAL_PATTERNS = 256;
+
+/** Clone-owns `internalPatterns`: keeps every non-blank string verbatim, clones every `RegExp` via
+ *  `new RegExp(pattern.source, pattern.flags)` (a `RegExp` carries mutable `lastIndex`, so only a
+ *  detached copy is truthfully "owned"), drops anything else instead of discarding the whole
+ *  array, caps the result at `MAX_INTERNAL_PATTERNS`, and freezes it. A hostile getter on an
+ *  array-like input invalidates only that one entry -- later valid patterns remain reachable. */
+function normalizeInternalPatterns(source: unknown): readonly (string | RegExp)[] {
+  if (!Array.isArray(source)) return Object.freeze([]);
+  const patterns: (string | RegExp)[] = [];
+  for (let index = 0; index < Math.min(source.length, MAX_INTERNAL_PATTERNS); index += 1) {
+    try {
+      const entry = source[index];
+      if (typeof entry === 'string') {
+        if (entry.trim().length > 0) patterns.push(entry);
+      } else if (entry instanceof RegExp) {
+        patterns.push(new RegExp(entry.source, entry.flags));
+      }
+    } catch {
+      // A hostile getter invalidates only that entry; later valid patterns remain reachable.
+    }
+  }
+  return Object.freeze(patterns);
+}
+
 /** Visual chrome for `<lr-stack-trace>`'s root — the library's shared container-frame vocabulary. */
 export type StackTraceAppearance = LyraFrame;
 
@@ -107,9 +134,11 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  protected static override readonly ownedCollectionProperties = Object.freeze(['internalPatterns']);
-
   static override styles = [LyraElement.styles, styles];
+
+  static override properties = {
+    internalPatterns: { attribute: false, noAccessor: true },
+  };
 
   /** The raw stack trace text to parse and render. */
   @property() trace = '';
@@ -118,10 +147,23 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   @property({ type: Boolean, attribute: 'collapse-internal', reflect: true, converter: trueDefaultBooleanConverter })
   collapseInternal = true;
 
+  private _internalPatterns: readonly (string | RegExp)[] = normalizeInternalPatterns(DEFAULT_INTERNAL_PATTERNS);
+
   /** Clone-owned file-path substrings/`RegExp`s that mark a frame as internal. Defaults to
-   *  `DEFAULT_INTERNAL_PATTERNS` (common Node/browser/Python framework locations). Reassign a new
-   *  array after changes. */
-  @property({ attribute: false }) internalPatterns: readonly (string | RegExp)[] = [...DEFAULT_INTERNAL_PATTERNS];
+   *  `DEFAULT_INTERNAL_PATTERNS` (common Node/browser/Python framework locations). Assignment
+   *  validates each entry as a non-blank string or a `RegExp` -- anything else is dropped rather
+   *  than discarding the whole array -- clones every `RegExp` (a `RegExp` carries mutable
+   *  `lastIndex`, so only a detached copy is truthfully "owned"), caps the result at 256 entries,
+   *  and freezes it. Reassign a new array after changes. */
+  get internalPatterns(): readonly (string | RegExp)[] {
+    return this._internalPatterns;
+  }
+
+  set internalPatterns(next: readonly (string | RegExp)[]) {
+    const previous = this._internalPatterns;
+    this._internalPatterns = normalizeInternalPatterns(next);
+    this.requestUpdate('internalPatterns', previous);
+  }
 
   /** Shows a copy-to-clipboard button for the raw trace text. */
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) copyable = true;

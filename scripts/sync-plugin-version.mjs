@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
+import { realpathSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 
 const packageName = '@aceshooting/lyra-ui';
 const pluginName = 'lyra-ui';
@@ -136,7 +137,7 @@ async function main() {
   }
 }
 
-const isMain = process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url;
+const isMain = process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
 if (isMain) {
   try {
     await main();

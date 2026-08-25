@@ -1,8 +1,8 @@
 // Replaces the broad component/AI wildcard package exports with the exact supported public
 // routes. Component registration/class entries and stable lr-* aliases come from the authoritative
 // component inventory; the small helper list contains only deliberately documented public modules.
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { existsSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const defaultPackageDir = fileURLToPath(new URL('..', import.meta.url));
@@ -429,6 +429,6 @@ function run(argv) {
   return 0;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   process.exitCode = run(process.argv.slice(2));
 }

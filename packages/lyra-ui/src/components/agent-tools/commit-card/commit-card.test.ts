@@ -492,6 +492,19 @@ describe('lr-commit-card', () => {
     expect(labels).to.deep.equal(['Modifié', 'Ajouté']);
   });
 
+  it('degrades an out-of-union file status to a status-less row instead of throwing', async () => {
+    const el = (await fixture(html`
+      <lr-commit-card
+        files-expanded
+        hash="abcdef1"
+        .files=${[{ path: 'a.ts', additions: 1, deletions: 0, status: 'copied' }] as never}
+      ></lr-commit-card>
+    `)) as LyraCommitCard;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="file"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('[part="file-status"]') === null).to.be.true;
+  });
+
   it('defaults to compact=false and frame="card", keeping the pre-existing border/padding', async () => {
     const el = (await fixture(html`<lr-commit-card></lr-commit-card>`)) as LyraCommitCard;
     await el.updateComplete;

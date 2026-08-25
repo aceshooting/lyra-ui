@@ -5,6 +5,7 @@ import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.class.js';
 import { styles } from './chat-message.styles.js';
@@ -69,6 +70,14 @@ const STATUS_TEXT_KEY: Record<Exclude<ChatMessageStatus, 'sent'>, string> = {
   streaming: 'chatResponding',
   failed: 'chatFailedToSend',
 };
+
+/** Normalizes both the reflected `status` attribute and direct JavaScript writes -- an
+ *  out-of-set value degrades to the resting `'sent'` state rather than reaching the
+ *  `STATUS_TEXT_KEY` lookup in `statusText` below with a key it doesn't have. */
+const CHAT_MESSAGE_STATUS = literalSetConverter<ChatMessageStatus>(
+  ['sending', 'sent', 'failed', 'streaming'],
+  'sent',
+);
 
 export interface LyraChatMessageEventMap {
   'lr-message-retry': CustomEvent<{ messageId?: string }>;
@@ -219,7 +228,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   // uses for the identical reason (a property whose setter must run real
   // logic on every assignment, not just on the next completed render).
   static override properties = {
-    status: { reflect: true, noAccessor: true },
+    status: { reflect: true, noAccessor: true, converter: CHAT_MESSAGE_STATUS },
   };
 
   /** Who authored the message. Its localized identity directly names the internal article. */
@@ -303,10 +312,11 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     return this._status;
   }
   set status(value: ChatMessageStatus) {
+    const normalized = CHAT_MESSAGE_STATUS.normalize(value);
     const old = this._status;
-    if (value === old) return;
+    if (normalized === old) return;
     this.previousStatus = old;
-    this._status = value;
+    this._status = normalized;
     this.requestUpdate('status', old);
   }
 

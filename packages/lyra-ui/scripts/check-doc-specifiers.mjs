@@ -15,7 +15,7 @@
 // The lesson both share is that a naming convention over the SOURCE tree cannot see a promise made
 // in prose. This check reads the promises instead: it starts from what is written down, not from
 // what the file tree happens to look like, so it catches the next one whatever it is called.
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -166,7 +166,7 @@ export function checkDocumentedSpecifiers(packageDir = defaultPackageDir) {
   return { findings };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   const { findings } = checkDocumentedSpecifiers();
   if (findings.length > 0) {
     console.error('Documented package specifiers that do not resolve:');

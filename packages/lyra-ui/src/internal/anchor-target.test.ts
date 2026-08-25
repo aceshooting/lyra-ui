@@ -10,7 +10,7 @@ import {
   prioritizedHighlightCandidates,
   type LyraAnchorTargetEventMap,
 } from './anchor-target.js';
-import type { LyraAnchor } from '../components/viewers/document-viewer/anchors.js';
+import type { LyraAnchor, LyraHighlight } from '../components/viewers/document-viewer/anchors.js';
 import { defineElement } from './prefix.js';
 
 class StubAnchorTargetBase extends LyraElement<LyraAnchorTargetEventMap> {
@@ -199,6 +199,37 @@ describe('DocumentAnchorTarget mixin', () => {
       ['cite-1', 'First'],
       ['cite-2', 'Second'],
     ]);
+  });
+
+  it('drops a highlight whose anchor is missing, null, or non-discriminated while retaining later valid siblings', async () => {
+    const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub></lr-anchor-target-test-stub>`);
+    const validAnchor: LyraAnchor = { kind: 'page', page: 1 };
+
+    el.highlights = [
+      { id: 'a' },
+      { id: 'b', anchor: null },
+      { id: 'c', anchor: [] },
+      { id: 'd', anchor: {} },
+      { id: 'e', anchor: validAnchor },
+    ] as unknown as readonly LyraHighlight[];
+
+    expect(el.highlights.map((highlight) => highlight.id)).to.deep.equal(['e']);
+    expect(el.highlights[0]!.anchor).to.equal(validAnchor);
+  });
+
+  it('degrades a hostile anchor getter to skipping that one record while keeping later valid siblings', async () => {
+    const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub></lr-anchor-target-test-stub>`);
+    const validAnchor: LyraAnchor = { kind: 'page', page: 1 };
+    const hostile = {
+      id: 'hostile',
+      get anchor(): never {
+        throw new Error('boom');
+      },
+    };
+
+    el.highlights = [hostile, { id: 'safe', anchor: validAnchor }] as unknown as readonly LyraHighlight[];
+
+    expect(el.highlights.map((highlight) => highlight.id)).to.deep.equal(['safe']);
   });
 
   it('bounds snapshot admission while allowing one ignored entry to be replaced', async () => {

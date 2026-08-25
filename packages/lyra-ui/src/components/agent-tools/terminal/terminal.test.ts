@@ -427,6 +427,21 @@ describe('lr-terminal', () => {
     expect(line.getAttribute('aria-current')).to.equal('true');
   });
 
+  it('drops a highlight with a missing or null anchor instead of throwing, and keeps rendering', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write('a\nb\nc');
+
+    el.highlights = [{ id: 'h1', label: 'Source 1' }] as unknown as LyraTerminal['highlights'];
+    await el.updateComplete;
+    expect(el.highlights).to.have.length(0);
+    expect(el.shadowRoot!.querySelector('[part="base"]')).to.exist;
+
+    el.highlights = [{ id: 'h1', label: 'Source 1', anchor: null }] as unknown as LyraTerminal['highlights'];
+    await el.updateComplete;
+    expect(el.highlights).to.have.length(0);
+    expect(el.shadowRoot!.querySelector('[part="base"]')).to.exist;
+  });
+
   it('gives a multi-line highlight one named interactive owner and leaves blank continuation lines non-interactive', async () => {
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
     el.write('first line\n\nthird line');

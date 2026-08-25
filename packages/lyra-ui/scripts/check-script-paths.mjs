@@ -3,7 +3,7 @@
 //      silently drops only that stale argument;
 //   2. a packed-consumer fixture names a package subpath that no longer matches package.json#exports
 //      or whose exported target has moved.
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -140,6 +140,6 @@ function run(packageDir = defaultPackageDir) {
   return 0;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   process.exitCode = run();
 }

@@ -3,6 +3,7 @@
 // Resolve real TypeScript types when possible and conservatively recognize DOM-producing syntax
 // when TypeScript 7 reports a selector expression as `any`/`unknown`/error. Tests must compare a
 // boolean or stable primitive projection instead of handing Chai a live node.
+import { realpathSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -445,5 +446,5 @@ export function runTestAssertionPolicy({
   }
 }
 
-const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+const isMain = process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
 if (isMain) runTestAssertionPolicy();

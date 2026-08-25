@@ -453,6 +453,18 @@ it('omits blank invocation identities and treats a blank source key as the absen
   expect((await activated).detail).to.deep.equal({ invocationId: 'kept' });
 });
 
+it('drops malformed entry rows instead of throwing (regression)', async () => {
+  const el = await fixture<LyraToolTimeline>(html`
+    <lr-tool-timeline .entries=${[
+      null,
+      { name: 'no-id' },
+      makeEntry({ id: 'good', name: 'kept' }),
+    ] as never}></lr-tool-timeline>
+  `);
+  expect(entriesEl(el)).to.have.length(1);
+  expect(chipIn(entriesEl(el)[0]!).name).to.equal('kept');
+});
+
 it('prunes disclosure state when an identity disappears so later reuse starts collapsed', async () => {
   const entry = makeEntry({ id: 'reused', sourceKey: 'run-a' });
   const el = await fixture<LyraToolTimeline>(html`<lr-tool-timeline .entries=${[entry]}></lr-tool-timeline>`);

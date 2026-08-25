@@ -3,6 +3,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import type { CitationMessagePart, CitationSelectEventDetail, MessagePart } from '../../../ai/types.js';
+import { isNonBlankIdentity } from '../../retrieval/retrieval-identity.js';
 import type { LyraThinkingPanelEventMap } from '../../agent-tools/thinking-panel/thinking-panel.class.js';
 import type { LyraToolCallChipEventMap } from '../../agent-tools/tool-call-chip/tool-call-chip.class.js';
 import type { LyraToolResultViewEventMap } from '../../agent-tools/tool-result-view/tool-result-view.class.js';
@@ -35,6 +36,10 @@ export interface LyraMessagePartsEventMap
   'lr-citation-select': CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>;
   'lr-part-retry': CustomEvent<LyraEventDetailSnapshot<{ part: MessagePart }>>;
   'lr-render-error': CustomEvent<{ error: unknown } | { toolName: string; error: unknown }>;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /**
@@ -166,7 +171,10 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
     const seen = new Set<string>();
     return this.parts.filter((part) => {
       const id = part?.id;
-      if (typeof id !== 'string' || id.trim() === '' || seen.has(id)) return false;
+      if (!isNonBlankIdentity(id) || seen.has(id)) return false;
+      if (part.type === 'tool-call' && !isRecord(part.invocation)) return false;
+      if (part.type === 'citation' && !isRecord(part.citation)) return false;
+      if (part.type === 'attachment' && !isRecord(part.document)) return false;
       seen.add(id);
       return true;
     });

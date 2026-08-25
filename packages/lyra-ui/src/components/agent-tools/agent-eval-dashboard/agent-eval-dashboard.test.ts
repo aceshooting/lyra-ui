@@ -6,6 +6,12 @@ import type { LyraStat } from '../../data/stat/stat.class.js';
 describe('lr-agent-eval-dashboard', () => {
   it('renders metrics, trend, and runs', async () => { const el = (await fixture(html`<lr-agent-eval-dashboard .strings=${{ evaluationDashboardLabel: 'Evaluation overview' }} .metrics=${[{ id: 'pass', label: 'Pass rate', value: 0.9, format: 'percent' }]} .runs=${[{ id: 'r1', label: 'Run 1', status: 'done', metrics: { pass: 0.9 } }]}></lr-agent-eval-dashboard>`)) as LyraAgentEvalDashboard; await el.updateComplete; expect(el.shadowRoot!.querySelector('lr-lite-chart')).to.exist; expect(el.shadowRoot!.querySelectorAll('[part="run"]').length).to.equal(1); });
 
+  it('tolerates a run whose status is missing entirely instead of throwing', async () => {
+    const el = await fixture<LyraAgentEvalDashboard>(html`<lr-agent-eval-dashboard .metrics=${[{ id: 'pass', label: 'Pass', value: 0.9, format: 'percent' }]} .runs=${[{ id: 'r1', label: 'Run 1' }] as never}></lr-agent-eval-dashboard>`);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('lr-lite-chart')).to.exist;
+  });
+
   it('bounds both the chart and rendered history to max-rendered-runs', async () => {
     const runs = Array.from({ length: 140 }, (_, index) => ({
       id: `r-${index}`,

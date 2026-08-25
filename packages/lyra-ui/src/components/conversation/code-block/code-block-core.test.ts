@@ -662,6 +662,40 @@ describe("anchor-target (line-range)", () => {
     expect(line2.hasAttribute("data-active")).to.be.true;
     expect(line1.hasAttribute("data-active")).to.be.false;
   });
+
+  it('does not throw and still renders [part~="pre"] when a malformed-anchor highlight is present at first render', async () => {
+    const el = document.createElement(
+      "lr-code-block-core"
+    ) as LyraCodeBlockCore;
+    el.code = "a\nb\nc";
+    el.highlights = [
+      { id: "h1", label: "Source 1" },
+    ] as unknown as LyraCodeBlockCore["highlights"];
+    document.body.append(el);
+    try {
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part~="pre"]')).to.exist;
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('does not throw and still renders [part~="pre"] when a highlight has a null anchor at first render', async () => {
+    const el = document.createElement(
+      "lr-code-block-core"
+    ) as LyraCodeBlockCore;
+    el.code = "a\nb\nc";
+    el.highlights = [
+      { id: "h1", label: "Source 1", anchor: null },
+    ] as unknown as LyraCodeBlockCore["highlights"];
+    document.body.append(el);
+    try {
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part~="pre"]')).to.exist;
+    } finally {
+      el.remove();
+    }
+  });
 });
 
 describe("text selection (lr-text-select)", () => {

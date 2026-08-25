@@ -1775,7 +1775,12 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     // make the comparator self-inconsistent (every comparison against it returns 0) and leave the
     // order engine-defined rather than merely surprising.
     const decorated = entries.map((entry) => {
-      const raw = col.sortValue ? col.sortValue(entry.row) : String(col.cell(entry.row) ?? '');
+      const raw =
+        typeof col.sortValue === 'function'
+          ? col.sortValue(entry.row)
+          : typeof col.cell === 'function'
+            ? String(col.cell(entry.row) ?? '')
+            : '';
       return { entry, value: typeof raw === 'number' && !Number.isFinite(raw) ? null : raw };
     });
     // Array.prototype.sort is stable, so rows comparing equal keep their `rows` order.
@@ -2808,7 +2813,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                     aria-sort=${col.sortable ? ariaSort : nothing}
                     tabindex=${col.key === focusedCol ? '0' : '-1'}
                   >
-                    ${col.headerCell ? col.headerCell(col) : col.label} ${this.renderResizeHandle(col)}
+                    ${typeof col.headerCell === 'function' ? col.headerCell(col) : col.label} ${this.renderResizeHandle(col)}
                     ${active
                       ? html`<span part="sort-icon" data-dir=${this.sortDir} aria-hidden="true">${chevronIcon()}</span>`
                       : nothing}
@@ -2868,7 +2873,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                           ${this.columns.map((col) => {
                             const heatShare = this.heatShare(col, row, heatDomain);
                             const cellStyle = {
-                              ...sanitizeCellStyle(col.cellStyle ? col.cellStyle(row) ?? {} : undefined),
+                              ...sanitizeCellStyle(
+                                typeof col.cellStyle === 'function' ? (col.cellStyle(row) ?? {}) : undefined,
+                              ),
                               ...(heatShare !== null ? { '--lr-table-heat-t': heatShare } : {}),
                             };
                             // An `'always'` column renders its editor unconditionally, from first

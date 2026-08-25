@@ -16890,8 +16890,9 @@ Dashboard filter row that composes Lyra inputs and removable chips, with reset a
 **Properties:**
 
 - `filters: readonly LyraFilterBarFilterDefinition[] = []` (attribute: false) — filter schema in
-  render order. Every definition carries a nonempty, whitespace-stable, unique `filterId`; invalid
-  definitions and later duplicate filter IDs are ignored deterministically. The first 10,000
+  render order. Every definition carries a nonempty, whitespace-stable, unique `filterId` and a
+  `label` that is a non-blank string; invalid definitions (including a missing, non-string, or
+  blank `label`) and later duplicate filter IDs are ignored deterministically. The first 10,000
   definitions and nested collection entries are detached and deeply frozen at assignment; the
   optional Lit `icon` payload retains its rendering identity. Create and reassign a new array after
   changes. Writing `null` or `undefined` clears the schema; reads remain the canonical non-null

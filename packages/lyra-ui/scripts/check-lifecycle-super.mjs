@@ -11,7 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { parseSync, visitorKeys } from 'oxc-parser';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -201,4 +201,4 @@ function main() {
   console.log('Lifecycle superclass policy passed.');
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) main();
+if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))) main();

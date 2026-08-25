@@ -4,7 +4,7 @@
 // and authoritative; this script never discovers token metadata by scraping TypeScript. Runtime
 // styles are read only by `verifyRuntimeTokenParity()` as a fail-closed drift check.
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -702,7 +702,7 @@ export function generateDesignTokenArtifacts({ packageDir = defaultPackageDir, c
   return stale;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   const check = process.argv.includes('--check');
   try {
     generateDesignTokenArtifacts({ check });

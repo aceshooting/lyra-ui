@@ -35,13 +35,17 @@ export interface LyraPromptQueueEventMap {
   'lr-send-now': CustomEvent<LyraEventDetailSnapshot<{ item: PromptQueueItem }>>;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 function uniqueQueueItems(source: readonly PromptQueueItem[] | undefined): PromptQueueItem[] {
   const seen = new Set<string>();
   const result: PromptQueueItem[] = [];
   for (const item of Array.isArray(source) ? source : []) {
-    if (!item.id.trim() || seen.has(item.id)) continue;
-    seen.add(item.id);
-    result.push(item);
+    if (!isRecord(item) || typeof item['id'] !== 'string' || !item['id'].trim() || seen.has(item['id'])) continue;
+    seen.add(item['id']);
+    result.push(item as unknown as PromptQueueItem);
   }
   return result;
 }

@@ -811,6 +811,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
   private onInteractiveScopeKeyDown = (event: KeyboardEvent): void => {
     if (event.key !== 'Tab' || event.defaultPrevented || !this.open) return;
+    if (!this.overlay?.isTopmost()) return;
     const popover = this.renderRoot.querySelector<HTMLElement>('[part="popover"]');
     if (!popover) return;
     const target = this.interactiveKeyboardTarget;

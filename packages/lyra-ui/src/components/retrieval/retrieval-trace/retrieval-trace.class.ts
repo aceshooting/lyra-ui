@@ -11,7 +11,10 @@ import type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';
 import type { LyraSpan } from '../../agent-tools/trace-tree/span.js';
 import '../../agent-tools/span-waterfall/span-waterfall.class.js';
 import '../chunk-inspector/chunk-inspector.class.js';
-import { firstByRetrievalIdentity } from '../retrieval-identity.js';
+import {
+  firstByRetrievalIdentity,
+  isValidRetrievalChunk,
+} from '../retrieval-identity.js';
 import { styles } from './retrieval-trace.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -82,13 +85,22 @@ const STAGE_LABEL: Record<RetrievalStageKind, { key: string }> = {
   filter: { key: 'retrievalStageFilter' },
 };
 
+/** Runtime boundary for a stage's evidence chunks -- mirrors retrieval-compare.class.ts's
+ *  `orderedChunks` filter so a malformed or non-array `chunks` degrades to an empty list instead
+ *  of crashing `toLyraChunk`. */
+function validChunks(evidence: RetrievalStageEvidence | undefined): RetrievalChunk[] {
+  return Array.isArray(evidence?.chunks)
+    ? evidence.chunks.filter(isValidRetrievalChunk)
+    : [];
+}
+
 function hasEvidence(
   evidence: RetrievalStageEvidence | undefined
 ): evidence is RetrievalStageEvidence {
   if (!evidence) return false;
   return (
     Boolean(evidence.text) ||
-    Boolean(evidence.chunks && evidence.chunks.length > 0) ||
+    validChunks(evidence).length > 0 ||
     Boolean(evidence.metadata && Object.keys(evidence.metadata).length > 0)
   );
 }
@@ -214,7 +226,8 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
 
   private stageLabel(stage: RetrievalStage): string {
     if (stage.label) return stage.label;
-    return this.localize(STAGE_LABEL[stage.kind].key);
+    const entry = STAGE_LABEL[stage.kind];
+    return entry ? this.localize(entry.key) : stage.label || String(stage.kind);
   }
 
   private toSpans(): LyraSpan[] {
@@ -222,7 +235,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
       (stage): LyraSpan => ({
         id: stage.id,
         name: this.stageLabel(stage),
-        kind: STAGE_SPAN_KIND[stage.kind],
+        kind: STAGE_SPAN_KIND[stage.kind] ?? 'tool',
         startMs: stage.startMs,
         endMs: stage.endMs,
         status: stage.status,
@@ -278,10 +291,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
 
   private renderEvidenceBody(stage: RetrievalStage): TemplateResult {
     const evidence = stage.evidence!;
-    const chunks =
-      evidence.chunks && evidence.chunks.length > 0
-        ? evidence.chunks.map(toLyraChunk)
-        : [];
+    const chunks = validChunks(evidence).map(toLyraChunk);
     const metaEntries = evidence.metadata
       ? Object.entries(evidence.metadata)
       : [];

@@ -295,6 +295,24 @@ it("shows visible status text (not color alone) for sending/streaming/failed, an
     .true;
 });
 
+it("ignores an out-of-set status attribute instead of throwing during render", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message status="delivered">hi</lr-chat-message>`
+  )) as LyraChatMessage;
+  expect(el.shadowRoot!.querySelector('[part~="bubble"]')).to.not.be.null;
+  expect(el.status).to.equal("sent");
+});
+
+it("degrades an out-of-set post-mount status transition to sent instead of freezing on stale DOM", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message status="sent">hi</lr-chat-message>`
+  )) as LyraChatMessage;
+  el.setAttribute("status", "queued");
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part~="bubble"]')).to.not.be.null;
+  expect(el.status).to.equal("sent");
+});
+
 it("does not announce whatever status a message happens to mount with", async () => {
   const el = (await fixture(
     html`<lr-chat-message status="failed">hi</lr-chat-message>`

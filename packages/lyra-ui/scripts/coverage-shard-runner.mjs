@@ -18,12 +18,13 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import libCoverage from 'istanbul-lib-coverage';
 import libReport from 'istanbul-lib-report';
 import reports from 'istanbul-reports';
@@ -338,8 +339,9 @@ export async function executeCoverageCommand(
   return failed ? 1 : 0;
 }
 
-const invokedPath = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : '';
-if (invokedPath === import.meta.url) {
+const isMain =
+  process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+if (isMain) {
   const command = parseCoverageArguments(process.argv.slice(2));
   process.exitCode = await executeCoverageCommand(command);
 }

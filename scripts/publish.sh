@@ -821,5 +821,6 @@ if [[ -n "$primary_dir" ]]; then
     echo "!! Deploy ../lyra-ui.com, then re-run:" >&2
     echo "!!   node scripts/release-integrity.mjs verify-site-freshness \\" >&2
     echo "!!     --package ${PKG_NAME[$primary_dir]} --version ${NEW_VERSION[$primary_dir]}" >&2
+    exit 1
   fi
 fi

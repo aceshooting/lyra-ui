@@ -7378,4 +7378,26 @@ describe('a column missing its cell renderer', () => {
       console.error = originalError;
     }
   });
+
+  it('sorts on a column missing its cell renderer instead of throwing out of sortedEntries', async () => {
+    const originalError = console.error;
+    console.error = () => {};
+    try {
+      const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable;
+      el.columns = [
+        { key: 'ok', label: 'OK', cell: (row: { ok: string }) => row.ok },
+        { key: 'broken', label: 'Broken', sortable: true },
+      ] as never;
+      el.rows = [{ ok: 'a' }, { ok: 'b' }] as never;
+      el.sortKey = 'broken';
+      await el.updateComplete;
+
+      expect(
+        el.shadowRoot!.textContent?.includes('a'),
+        'the well-formed column still renders while sorting on the broken column',
+      ).to.be.true;
+    } finally {
+      console.error = originalError;
+    }
+  });
 });

@@ -14,6 +14,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { firstByIdentity } from '../collection-identity.js';
+import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
 import {
   boundedSelectionRects,
   boundedSelectionText,
@@ -263,9 +264,17 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   @property() filename = 'terminal.log';
   @property({ type: Boolean, attribute: 'announce-output' }) announceOutput = false;
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
-  /** Line-range highlights keyed by stable id. Empty/blank ids are omitted and duplicates normalize
-   *  first-wins before range ownership, activation, and anchor lookup. */
-  @property({ attribute: false }) highlights: readonly LyraHighlight[] = [];
+  private _highlights: readonly LyraHighlight[] = snapshotLyraHighlights([]);
+  /** Line-range highlights keyed by stable id. Empty/blank ids and highlights with a missing,
+   *  malformed, or non-discriminated anchor are omitted (`snapshotLyraHighlights`) before
+   *  duplicates normalize first-wins for range ownership, activation, and anchor lookup. */
+  @property({ attribute: false })
+  get highlights(): readonly LyraHighlight[] { return this._highlights; }
+  set highlights(value: readonly LyraHighlight[]) {
+    const previous = this._highlights;
+    this._highlights = snapshotLyraHighlights(value);
+    this.requestUpdate('highlights', previous);
+  }
   @property({ attribute: false }) activeHighlightId: string | null = null;
 
   private get normalizedHighlights(): readonly LyraHighlight[] {

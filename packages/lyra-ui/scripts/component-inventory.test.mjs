@@ -1566,20 +1566,91 @@ test('chart optional-peer attribution follows only reachable loader capabilities
   );
 });
 
-test('component registrations do not inherit optional peers from composed child registrations', () => {
+test('a composed icon child only contributes its own optional peer when the parent forwards the capability that reaches it', () => {
   const packageJson = readJson('package.json');
   const peersFor = (registrationModule) =>
     optionalPeersForComponent({ registrationModule }, packageJson);
 
+  // Positive case: video and video-playlist forward an author-settable `iconLibrary` straight
+  // into their composed `<lr-icon library=${...}>`, which a registered resolver can route through
+  // the same sanitized-fetch path a direct `src` uses -- so they DO inherit the icon's peer.
   assert.deepEqual(
     peersFor('src/components/media/video/video.ts'),
-    [],
-    'video can autoload its built-in icon controls without requiring icon remote-sanitizer support'
+    ['dompurify'],
+    'video forwards iconLibrary into its composed icon, so it inherits the sanitizer peer that reaches'
   );
   assert.deepEqual(
     peersFor('src/components/media/video-playlist/video-playlist.ts'),
+    ['dompurify'],
+    'video-playlist forwards iconLibrary the same way and inherits the same peer'
+  );
+
+  // Negative case: command-palette and condition-builder compose <lr-icon>/<lr-icon-button> with a
+  // literal, author-fixed glyph (`name="search"`, `icon="trash"`) and never forward `library`/`src`,
+  // so the remote-fetch-and-sanitize path is unreachable through their own public API.
+  assert.deepEqual(
+    peersFor('src/components/layout/command-palette/command-palette.ts'),
     [],
-    'video-playlist can autoload its composed video child without requiring an unrelated peer'
+    'command-palette renders a fixed decorative search glyph and never forwards library/src'
+  );
+  assert.deepEqual(
+    peersFor('src/components/data/condition-builder/condition-builder.ts'),
+    [],
+    'condition-builder renders a fixed decorative trash glyph and never forwards library/src'
+  );
+});
+
+test('a JSDoc @example mentioning an optional peer import never attributes that peer', () => {
+  const packageJson = readJson('package.json');
+  const peersFor = (registrationModule) =>
+    optionalPeersForComponent({ registrationModule }, packageJson);
+
+  const phoneInputClassSource = fs.readFileSync(
+    path.join(packageDir, 'src/components/forms/phone-input/phone-input.class.ts'),
+    'utf8'
+  );
+  assert.match(
+    phoneInputClassSource,
+    /import\('libphonenumber-js\/min'\)/,
+    'this test is only meaningful while the reachable graph still carries the comment-only example it guards against'
+  );
+
+  assert.deepEqual(
+    peersFor('src/components/forms/phone-input/phone-input.ts'),
+    [],
+    'lr-phone-input takes a consumer-built adapter and never imports libphonenumber-js itself -- ' +
+      'the only reachable text matching the peer regex is a JSDoc @example, which must not attribute the peer'
+  );
+});
+
+test('lr-flag and lr-locale-picker retain an explicit, reviewed @aceshooting/lyra-flags attribution', () => {
+  const packageJson = readJson('package.json');
+  const peersFor = (registrationModule) =>
+    optionalPeersForComponent({ registrationModule }, packageJson);
+
+  // The real dynamic `import('@aceshooting/lyra-flags')` lives in flag-peer.ts, a deliberately
+  // separate opt-in registration entry that the default registration graph never reaches from
+  // flag.ts -- so nothing in the reachable-import traversal itself, comment-stripped or not,
+  // would ever attribute the peer to <lr-flag> by walking imports alone.
+  const flagPeerSource = fs.readFileSync(
+    path.join(packageDir, 'src/components/media/flag/flag-peer.ts'),
+    'utf8'
+  );
+  assert.match(
+    flagPeerSource,
+    /import\('@aceshooting\/lyra-flags'\)/,
+    'this test is only meaningful while the real dynamic import stays in the opt-in peer entry, unreached by default registration'
+  );
+
+  assert.deepEqual(
+    peersFor('src/components/media/flag/flag.ts'),
+    ['@aceshooting/lyra-flags'],
+    '<lr-flag> cannot render its documented flag artwork without the peer -- this is a deliberate, reviewed attribution'
+  );
+  assert.deepEqual(
+    peersFor('src/components/forms/locale-picker/locale-picker.ts'),
+    ['@aceshooting/lyra-flags'],
+    '<lr-locale-picker> composes <lr-flag> to render a flag next to each locale option and inherits the same reviewed attribution'
   );
 });
 

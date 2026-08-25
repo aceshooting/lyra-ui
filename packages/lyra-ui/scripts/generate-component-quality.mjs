@@ -180,7 +180,7 @@ export async function run(argv = process.argv.slice(2)) {
   );
 }
 
-if (path.resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))) {
   run().catch((error) => {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;

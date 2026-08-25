@@ -56,6 +56,18 @@ it('normalizes duplicate decision ids first-wins before counts and disclosure ro
   expect(el.shadowRoot!.querySelector('[part="count"][data-state="deny"]')!.textContent).to.contain('0');
 });
 
+it('drops a decision with an out-of-union category or state instead of throwing', async () => {
+  const el = await fixture<LyraPolicySummary>(html`
+    <lr-policy-summary .decisions=${[
+      { id: 'valid', category: 'tool', label: 'Valid decision', state: 'allow', explanation: 'ok' },
+      { id: 'bad-category', category: 'unknown-category', label: 'Bad category', state: 'allow', explanation: 'bad' },
+      { id: 'bad-state', category: 'tool', label: 'Bad state', state: 'unknown-state', explanation: 'bad' },
+    ] as never}></lr-policy-summary>
+  `);
+  const rows = [...el.shadowRoot!.querySelectorAll('[part="decision"]')];
+  expect(rows.map((row) => row.querySelector('[part="label"]')!.textContent)).to.deep.equal(['Valid decision']);
+});
+
 describe('lr-policy-summary', () => {
   it('renders lr-empty when decisions is empty', async () => {
     const el = (await fixture(html`<lr-policy-summary></lr-policy-summary>`)) as LyraPolicySummary;

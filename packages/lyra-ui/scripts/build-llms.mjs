@@ -13,7 +13,7 @@
 //   llms/migration.md         wa-*/sl-* classification and codemod table
 // A component section is assigned to a family by the src/components/<family>/ directory its tag is
 // declared in, so the docs can never drift from the source tree's own grouping.
-import { readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync, existsSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -22,6 +22,7 @@ import {
   validateMappingNormalizations,
   validateMethodEdgeParity,
 } from './component-inventory.mjs';
+import { stripComments } from './check-form-associated.mjs';
 import { expandManifestInheritance } from './manifest-compact.mjs';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -312,11 +313,25 @@ function buildPeers(tagFacts) {
   const meta = pkg.peerDependenciesMeta ?? {};
   const srcRoot = path.join(packageDir, 'src', 'components');
 
+  // <lr-flag>'s real dynamic `import('@aceshooting/lyra-flags')` lives in flag-peer.ts, a
+  // deliberately separate opt-in registration entry the default registration graph never reaches
+  // from flag.ts, so no reachable-import walk (comment-stripped or not) will ever find it there.
+  // The peer is still genuinely required -- <lr-flag> cannot render its documented artwork
+  // without it -- so this mirrors `EXPLICIT_OPTIONAL_PEER_ATTRIBUTIONS` in
+  // generate-component-inventory.mjs: an explicit, reviewed attribution rather than one left to
+  // fall out of a comment grep. <lr-locale-picker> composes <lr-flag> in its own template to
+  // render a flag next to each locale option and inherits the same reviewed attribution.
+  const EXPLICIT_PEER_TAGS = new Map([
+    ['@aceshooting/lyra-flags', new Set(['lr-flag', 'lr-locale-picker'])],
+  ]);
+
   // Peers are attributed per tag by walking that tag's own module graph (its registration entry
   // plus every relative import it reaches), not per directory — components that share a directory
   // do not necessarily share a peer. Bare specifiers other than the peer itself end the walk.
   const peersForTag = (facts) => {
-    const found = new Set();
+    const found = new Set(
+      componentPeers.filter((peer) => EXPLICIT_PEER_TAGS.get(peer)?.has(facts.tag))
+    );
     const seen = new Set();
     const queue = [path.join(packageDir, facts.modulePath.replace(/\.class\.ts$/, '.ts'))];
     while (queue.length) {
@@ -334,7 +349,11 @@ function buildPeers(tagFacts) {
       // Deliberately NOT stripping inline `import { type X }` specifiers: a statement with any
       // value specifier still emits a real import, and under `verbatimModuleSyntax` even an
       // all-inline-type one does.
-      const text = readFileSync(resolved, 'utf8')
+      //
+      // Comments are stripped first so a JSDoc `@example` mentioning a peer import (e.g.
+      // `import('libphonenumber-js/min')` on lr-phone-input, documenting a consumer-built
+      // adapter it never imports itself) can never attribute that peer to the component.
+      const text = stripComments(readFileSync(resolved, 'utf8'))
         .replace(/\bimport\s+type\s[\s\S]*?\bfrom\s*(['"])[^'"]*\1/g, '')
         .replace(/\bexport\s+type\s*\{[\s\S]*?\}\s*from\s*(['"])[^'"]*\1/g, '');
       for (const match of text.matchAll(/(?:from\s*|import\s*(?:\(\s*)?)(['"])([^'"]+)\1/g)) {
@@ -970,7 +989,7 @@ export function build({ write = true } = {}) {
   return artifacts;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   const artifacts = build();
   console.log(
     `Built llms-full.txt + ${artifacts.size - 1} files under llms/ (${[...artifacts.values()].reduce((a, t) => a + t.length, 0)} bytes).`,

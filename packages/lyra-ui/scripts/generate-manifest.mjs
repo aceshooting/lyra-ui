@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { writeFileSync } from 'node:fs';
+import { realpathSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { cli as analyzeManifest } from '@custom-elements-manifest/analyzer/cli.js';
@@ -21,7 +21,7 @@ export async function generateManifest({ write = true } = {}) {
   return { manifest: compact, text };
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   const { manifest, text } = await generateManifest();
   const tags = (manifest.modules ?? []).flatMap((module) => module.declarations ?? [])
     .filter((declaration) => declaration.customElement && declaration.tagName).length;

@@ -417,6 +417,51 @@ it("uses first-wins identity for duplicate part ids", async () => {
   expect(rendered[0]!.textContent?.trim()).to.equal("first");
 });
 
+it("drops a tool-call part missing its invocation instead of throwing", async () => {
+  const el = (await fixture(
+    html`<lr-message-parts content-mode="plain"></lr-message-parts>`
+  )) as LyraMessageParts;
+  el.parts = [
+    { id: "a", type: "text", text: "kept" },
+    { id: "b", type: "tool-call" } as unknown as MessagePart,
+  ];
+  await el.updateComplete;
+  expect(el.shadowRoot!.textContent).to.contain("kept");
+  expect(el.shadowRoot!.querySelectorAll('[part~="part"]')).to.have.lengthOf(
+    1
+  );
+});
+
+it("drops a citation part missing its citation instead of throwing", async () => {
+  const el = (await fixture(
+    html`<lr-message-parts content-mode="plain"></lr-message-parts>`
+  )) as LyraMessageParts;
+  el.parts = [
+    { id: "a", type: "text", text: "kept" },
+    { id: "c", type: "citation" } as unknown as MessagePart,
+  ];
+  await el.updateComplete;
+  expect(el.shadowRoot!.textContent).to.contain("kept");
+  expect(el.shadowRoot!.querySelectorAll('[part~="part"]')).to.have.lengthOf(
+    1
+  );
+});
+
+it("drops an attachment part missing its document instead of throwing", async () => {
+  const el = (await fixture(
+    html`<lr-message-parts content-mode="plain"></lr-message-parts>`
+  )) as LyraMessageParts;
+  el.parts = [
+    { id: "a", type: "text", text: "kept" },
+    { id: "d", type: "attachment" } as unknown as MessagePart,
+  ];
+  await el.updateComplete;
+  expect(el.shadowRoot!.textContent).to.contain("kept");
+  expect(el.shadowRoot!.querySelectorAll('[part~="part"]')).to.have.lengthOf(
+    1
+  );
+});
+
 it("applies per-instance strings to retry controls", async () => {
   const el = (await fixture(
     html`<lr-message-parts

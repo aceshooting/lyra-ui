@@ -87,6 +87,18 @@ describe('lr-docx-viewer', () => {
     expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No document to display.');
   });
 
+  it('keeps rendering its base when an unloaded assignment carries a missing or null anchor', async () => {
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+
+    el.highlights = [{ id: 'h1', label: 'Source 1' }] as unknown as readonly LyraHighlight[];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part~="base"]')).to.exist;
+
+    el.highlights = [{ id: 'h1', label: 'Source 1', anchor: null }] as unknown as readonly LyraHighlight[];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part~="base"]')).to.exist;
+  });
+
   it('converts and sanitizes DOCX HTML', async () => {
     const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
     useLibrary(el, {

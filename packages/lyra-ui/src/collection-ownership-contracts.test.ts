@@ -17,7 +17,6 @@ import './components/agent-tools/policy-summary/policy-summary.js';
 import './components/agent-tools/prompt-studio/prompt-studio.js';
 import './components/agent-tools/schema-viewer/schema-viewer.js';
 import './components/agent-tools/span-waterfall/span-waterfall.js';
-import './components/agent-tools/stack-trace/stack-trace.js';
 import './components/agent-tools/subagent-panel/subagent-panel.js';
 import './components/agent-tools/task-list/task-list.js';
 import './components/agent-tools/test-results/test-results.js';
@@ -116,7 +115,6 @@ export const APP_OWNED_ARRAY_PROPERTY_CASES: readonly CollectionPropertyCase[] =
   { tag: 'lr-prompt-studio', property: 'versions' },
   { tag: 'lr-json-schema-viewer', property: 'issues' },
   { tag: 'lr-span-waterfall', property: 'spans' },
-  { tag: 'lr-stack-trace', property: 'internalPatterns' },
   { tag: 'lr-subagent-panel', property: 'runs' },
   { tag: 'lr-task-list', property: 'items' },
   { tag: 'lr-test-results', property: 'statusFilter' },

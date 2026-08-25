@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { pathToFileURL } from 'node:url';
+import { realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 export const SUPPORTED_TEST_BROWSERS = Object.freeze([
   'chromium',
@@ -44,7 +45,7 @@ export function normalizeBrowserInput(input) {
 }
 
 const invokedPath = process.argv[1];
-if (invokedPath && import.meta.url === pathToFileURL(invokedPath).href) {
+if (invokedPath && realpathSync(invokedPath) === realpathSync(fileURLToPath(import.meta.url))) {
   try {
     const browsers = normalizeBrowserInput(process.env.BROWSERS_INPUT);
     process.stdout.write(`browsers=${JSON.stringify(browsers)}\n`);

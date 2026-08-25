@@ -1,9 +1,14 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import './tour.js';
 import type { LyraTour, LyraTourStep } from './tour.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { styles } from './tour.styles.js';
 import { registerLyraLocale } from '../../../internal/localization.js';
+import '../../overlays/dialog/dialog.js';
+import type { LyraDialog } from '../../overlays/dialog/dialog.js';
+import '../../overlays/overlay/popover.js';
+import type { LyraPopover } from '../../overlays/overlay/popover.js';
 
 class TourComposedFocusTarget extends HTMLElement {
   constructor() {
@@ -1067,6 +1072,52 @@ describe('lr-tour', () => {
     unrelated.focus();
     press(unrelated, 'Tab', { shiftKey: true });
     expect(document.activeElement?.id).to.equal('target-last');
+  });
+
+  it('yields Tab to a modal overlay stacked above an interactive-target step', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${makeSteps(1, () => ({ interactiveTarget: true }))} open></lr-tour>
+        <div id="tour-target-0"><button id="target-open">Open</button></div>
+        <lr-dialog id="dlg" label="Dialog">
+          <button id="dlg-first">First</button>
+          <button id="dlg-second">Second</button>
+        </lr-dialog>
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    const dialog = el.querySelector('#dlg') as LyraDialog;
+    const dlgFirst = el.querySelector('#dlg-first') as HTMLButtonElement;
+    await tour.updateComplete;
+
+    dialog.open = true;
+    await dialog.updateComplete;
+    dlgFirst.focus();
+    await sendKeys({ press: 'Tab' });
+    expect(document.activeElement?.id).to.equal('dlg-second');
+  });
+
+  it('yields Tab to a nonmodal overlay stacked above an interactive-target step', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${makeSteps(1, () => ({ interactiveTarget: true }))} open></lr-tour>
+        <div id="tour-target-0"><button id="target-open">Open</button></div>
+        <button id="pop-anchor">Anchor</button>
+        <lr-popover id="pop" for="pop-anchor" style="--show-duration: 0ms; --hide-duration: 0ms">
+          <button id="pop-first">First</button>
+          <button id="pop-second">Second</button>
+        </lr-popover>
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    const pop = el.querySelector('#pop') as LyraPopover;
+    const popFirst = el.querySelector('#pop-first') as HTMLButtonElement;
+    await tour.updateComplete;
+
+    await pop.show();
+    popFirst.focus();
+    await sendKeys({ press: 'Tab' });
+    expect(document.activeElement?.id).to.equal('pop-second');
   });
 
   it('leaves Tab untouched when focus sits on the popover container itself moving forward, and routes it to the target when moving backward', async () => {

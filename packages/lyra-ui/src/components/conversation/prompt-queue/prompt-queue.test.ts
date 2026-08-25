@@ -97,6 +97,26 @@ it("uses first-wins unique nonempty item ids before rendering and mutation", asy
     .detail;
   expect(detail.itemId).to.equal("same");
   expect(detail.items).to.have.lengthOf(0);
+
+  const withMalformedRows = (await fixture(html`
+    <lr-prompt-queue .items=${[
+      null,
+      { value: "Draft" },
+      { id: 42 },
+      { id: "ok", value: "Fine" },
+    ] as never}></lr-prompt-queue>
+  `)) as LyraPromptQueue;
+  const malformedRows = withMalformedRows.shadowRoot!.querySelectorAll(
+    '[part~="item"]'
+  );
+  expect(malformedRows).to.have.lengthOf(1);
+  expect(
+    (
+      malformedRows[0]?.querySelector("lr-textarea") as HTMLElement & {
+        value: string;
+      }
+    ).value
+  ).to.equal("Fine");
 });
 
 it("emits the complete reordered value without mutating the controlled items property", async () => {

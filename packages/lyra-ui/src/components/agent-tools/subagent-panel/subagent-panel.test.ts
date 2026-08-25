@@ -171,6 +171,23 @@ it('omits blank run identities and keeps the first valid duplicate', async () =>
   expect(rows[0]!.textContent).to.contain('First');
 });
 
+it('drops malformed run rows instead of throwing (regression)', async () => {
+  const el = await fixture<LyraSubagentPanel>(html`
+    <lr-subagent-panel .runs=${[{ label: 'Analyzer', status: 'running' }, { id: 'good', label: 'Good', status: 'done' }] as never}></lr-subagent-panel>
+  `);
+  expect(el.shadowRoot!.querySelectorAll('[part~="run"]')).to.have.lengthOf(1);
+
+  const nullRow = await fixture<LyraSubagentPanel>(html`
+    <lr-subagent-panel .runs=${[null] as never}></lr-subagent-panel>
+  `);
+  expect(nullRow.shadowRoot!.querySelectorAll('[part~="run"]')).to.have.lengthOf(0);
+
+  const numericId = await fixture<LyraSubagentPanel>(html`
+    <lr-subagent-panel .runs=${[{ id: 42 }] as never}></lr-subagent-panel>
+  `);
+  expect(numericId.shadowRoot!.querySelectorAll('[part~="run"]')).to.have.lengthOf(0);
+});
+
 it('applies per-instance localized strings', async () => {
   const el = (await fixture(html`<lr-subagent-panel
     .runs=${runs}

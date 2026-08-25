@@ -5,7 +5,7 @@ import type { LyraFrame } from '../../../internal/variants.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { styles } from './commit-card.styles.js';
-import type { GitStatus } from '../../data/file-tree/file-tree.class.js';
+import { GIT_STATUSES, type GitStatus } from '../../data/file-tree/file-tree.class.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
@@ -30,6 +30,8 @@ export interface CommitFileChange {
   additions: number;
   /** Normalized to a finite non-negative integer before display and aggregate arithmetic. */
   deletions: number;
+  /** An out-of-union value degrades the row to status-less (no glyph/badge) rather than
+   *  throwing -- see the shared `GIT_STATUSES` guard in `<lr-file-tree>`. */
   status?: GitStatus;
 }
 
@@ -177,7 +179,9 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   private copyGeneration = 0;
 
   private get normalizedFiles(): CommitFileChange[] {
-    return firstByIdentity(Array.isArray(this.files) ? this.files : [], (file) => file.path);
+    return firstByIdentity(Array.isArray(this.files) ? this.files : [], (file) => file.path).map((file) =>
+      file.status === undefined || GIT_STATUSES.has(file.status) ? file : { ...file, status: undefined },
+    );
   }
 
   override disconnectedCallback(): void {

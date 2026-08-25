@@ -34,6 +34,16 @@ describe('lr-svg-viewer', () => {
     expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No image to display.');
   });
 
+  it('keeps rendering its base and empty note when an idle assignment carries a missing or malformed anchor', async () => {
+    const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
+
+    el.highlights = [{ id: 'c1', label: 'Source 1' }, { id: 'c2', anchor: null }] as unknown as LyraSvgViewer['highlights'];
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('[part~="base"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No image to display.');
+  });
+
   it('fetches and sanitizes SVG markup', async () => {
     const original = window.fetch;
     window.fetch = (() => Promise.resolve(response('<svg><script>alert(1)</script><circle r="2" /></svg>'))) as typeof window.fetch;

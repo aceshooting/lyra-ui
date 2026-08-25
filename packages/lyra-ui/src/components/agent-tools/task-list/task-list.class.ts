@@ -32,6 +32,17 @@ function normalizeTaskStatus(value: unknown): TaskStatus {
   return value === 'running' || value === 'success' || value === 'error' ? value : 'pending';
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** A well-formed row: a record carrying a nonempty string `id`. Applied to both top-level `items`
+ *  and, one level deep, their `children` -- every consumer that dereferences `item.id` (hierarchy
+ *  checks, status diffing, `idsAreUnique()`, counting, rendering) reaches only rows this passed. */
+function isValidTaskItem(value: unknown): value is TaskItem {
+  return isRecord(value) && typeof value['id'] === 'string' && value['id'].trim().length > 0;
+}
+
 /** Visual chrome for `<lr-task-list>`'s root — the library's shared container-frame vocabulary. */
 export type TaskListAppearance = LyraFrame;
 
@@ -290,7 +301,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     super.willUpdate(changed);
     if (changed.has('reorderable') && !this.reorderable) this.clearPendingReorder();
     if (changed.has('items')) {
-      for (const item of this.items) {
+      for (const item of this.validItems) {
         for (const child of item.children ?? []) {
           for (const grandchild of child.children ?? []) {
             console.warn(
@@ -318,6 +329,17 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     this.clearPendingReorder();
   }
 
+  /** `items` filtered to well-formed rows -- a malformed entry (e.g. `null`, a non-string `id`, or
+   *  a blank `id`, from a streamed/paginated source) is dropped before hierarchy checks, status
+   *  diffing, reorder bookkeeping (`idsAreUnique()` included), counting, or rendering ever
+   *  dereferences its `id`. Each item's own `children` is sanitized the same way, one level deep,
+   *  so a malformed child never reaches those same consumers either. */
+  private get validItems(): readonly TaskItem[] {
+    return this.items.filter(isValidTaskItem).map((item) =>
+      Array.isArray(item.children) ? { ...item, children: item.children.filter(isValidTaskItem) } : item,
+    );
+  }
+
   private flattenOneLevel(items: readonly TaskItem[]): TaskItem[] {
     const out: TaskItem[] = [];
     for (const item of items) {
@@ -330,7 +352,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   private diffAndAnnounce(firstSight: boolean): void {
     const region = this.liveRegion;
     const nextMap = new Map<string, TaskStatus>();
-    for (const item of this.flattenOneLevel(this.items)) {
+    for (const item of this.flattenOneLevel(this.validItems)) {
       const status = normalizeTaskStatus(item.status);
       nextMap.set(item.id, status);
       if (!firstSight && region) {
@@ -370,7 +392,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
 
   private idsAreUnique(): boolean {
     const ids = new Set<string>();
-    for (const item of this.flattenOneLevel(this.items)) {
+    for (const item of this.flattenOneLevel(this.validItems)) {
       if (item.id.trim().length === 0 || ids.has(item.id)) return false;
       ids.add(item.id);
     }
@@ -382,8 +404,8 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   }
 
   private siblingItems(parentId: string | null): readonly TaskItem[] | undefined {
-    if (parentId === null) return this.items;
-    return this.items.find((item) => item.id === parentId)?.children;
+    if (parentId === null) return this.validItems;
+    return this.validItems.find((item) => item.id === parentId)?.children;
   }
 
   private requestReorder(item: TaskItem, parentId: string | null, delta: 1 | -1): void {
@@ -525,8 +547,8 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   override render(): TemplateResult {
     const label = this.label == null ? this.localize('taskListLabel') : this.label;
     const ariaLabel = hostAriaLabel(this) ?? label;
-    const total = this.items.length;
-    const completed = this.items.filter((item) => normalizeTaskStatus(item.status) === 'success').length;
+    const total = this.validItems.length;
+    const completed = this.validItems.filter((item) => normalizeTaskStatus(item.status) === 'success').length;
     const canReorder = this.canReorderItems();
     const number = getNumberFormat(this.effectiveLocale);
     const summary = this.localize('taskListCompletedOfTotal', undefined, {
@@ -564,11 +586,11 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
         <div part="body" id=${this.bodyId} role="list" aria-label=${ariaLabel} ?hidden=${!this.expanded}>
           ${canReorder
             ? repeat(
-                this.items,
+                this.validItems,
                 (item) => item.id,
                 (item) => this.renderItem(item, 0, null, canReorder),
               )
-            : this.items.map((item) => this.renderItem(item, 0, null, canReorder))}
+            : this.validItems.map((item) => this.renderItem(item, 0, null, canReorder))}
         </div>
         <lr-live-region></lr-live-region>
       </div>

@@ -67,6 +67,15 @@ const CATEGORY_LABEL_KEY: Record<PolicyDecisionCategory, string> = {
 
 const STATES: PolicyDecisionState[] = ['allow', 'deny', 'needs-review'];
 
+// Validated against before any `STATE_LABEL_KEY`/`STATE_COUNT_KEY`/`CATEGORY_LABEL_KEY` lookup, so
+// an out-of-union `category`/`state` on host-supplied decision data degrades to a dropped row
+// instead of handing `localize()` an `undefined` key (see `<lr-file-tree>`'s `GIT_STATUSES` guard
+// for the same pattern).
+const POLICY_DECISION_STATES = new Set<PolicyDecisionState>(STATES);
+const POLICY_DECISION_CATEGORIES = new Set<PolicyDecisionCategory>(
+  Object.keys(CATEGORY_LABEL_KEY) as PolicyDecisionCategory[],
+);
+
 /**
  * `<lr-policy-summary>` — a read-only list of guardrail, permission, privacy, and tool-policy
  * decisions, each carrying an `allow` / `deny` / `needs-review` state and an always-visible,
@@ -150,12 +159,15 @@ export class LyraPolicySummary extends LyraElement {
   static override styles = [LyraElement.styles, styles];
 
   /** The decisions to render, in the given order. Controlled and never mutated by this component
-   *  -- pass a new array to update it. Empty/blank ids are omitted and duplicates normalize
-   *  first-wins before counts/rendering. */
+   *  -- pass a new array to update it. Empty/blank ids are omitted, duplicates normalize
+   *  first-wins before counts/rendering, and a decision with an out-of-union `category`/`state`
+   *  is dropped rather than rendered. */
   @property({ attribute: false }) decisions: readonly PolicyDecision[] = [];
 
   private get normalizedDecisions(): PolicyDecision[] {
-    return firstByIdentity(Array.isArray(this.decisions) ? this.decisions : [], (decision) => decision.id);
+    return firstByIdentity(Array.isArray(this.decisions) ? this.decisions : [], (decision) => decision.id).filter(
+      (decision) => POLICY_DECISION_CATEGORIES.has(decision.category) && POLICY_DECISION_STATES.has(decision.state),
+    );
   }
 
   private countOf(state: PolicyDecisionState): number {

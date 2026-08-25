@@ -1,7 +1,8 @@
 import { spawnSync } from 'node:child_process';
+import { realpathSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { dirname, relative, resolve, sep } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 
 const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -172,7 +173,8 @@ async function main() {
   process.exitCode = runShard(testFiles, configuration);
 }
 
-const invokedPath = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : '';
-if (invokedPath === import.meta.url) {
+const isMain =
+  process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+if (isMain) {
   await main();
 }

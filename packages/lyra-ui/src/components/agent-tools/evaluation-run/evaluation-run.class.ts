@@ -285,7 +285,10 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
 
   private statusCounts(): Partial<Record<AgentStatusKind, number>> {
     const counts: Partial<Record<AgentStatusKind, number>> = {};
-    for (const example of this.normalizedExamples) counts[example.status.kind] = (counts[example.status.kind] ?? 0) + 1;
+    for (const example of this.normalizedExamples) {
+      const kind = agentStatusKind(example.status);
+      counts[kind] = (counts[kind] ?? 0) + 1;
+    }
     return counts;
   }
 
@@ -327,10 +330,10 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
     const region = this.liveRegion;
     const nextStatusById = new Map<string, AgentStatusKind>();
     this.normalizedExamples.forEach((example, index) => {
-      nextStatusById.set(example.id, example.status.kind);
+      const kind = agentStatusKind(example.status);
+      nextStatusById.set(example.id, kind);
       if (firstSight || !region) return;
       const previous = this.previousStatusById.get(example.id);
-      const kind = example.status.kind;
       if (previous === undefined || previous === kind) return;
       const label = this.exampleLabel(example, index);
       // Every branch forces an immediate flush -- these are discrete lifecycle transitions, not a

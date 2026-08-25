@@ -9,6 +9,7 @@ import '../../forms/checkbox/checkbox.class.js';
 import '../../forms/switch/switch.class.js';
 import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 import { getNumberFormat, resolveIntlLocale } from '../../../internal/intl-cache.js';
+import { firstByIdentity } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_noMatchesQuery, LYRA_DEFAULT_otherCategory, LYRA_DEFAULT_searchToolsPlaceholder, LYRA_DEFAULT_selectTools, LYRA_DEFAULT_toolCount, LYRA_DEFAULT_toolSelectCustomizeHint, LYRA_DEFAULT_toolSelectLimit, LYRA_DEFAULT_toolSelectNoneAvailable, LYRA_DEFAULT_toolSelectSummary, LYRA_DEFAULT_useDefaultTools } from '../../../internal/default-strings.generated.js';
@@ -398,12 +399,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   }
 
   private get uniqueTools(): ToolSelectDialogTool[] {
-    const seen = new Set<string>();
-    return this.tools.filter((tool) => {
-      if (tool.id.trim().length === 0 || seen.has(tool.id)) return false;
-      seen.add(tool.id);
-      return true;
-    });
+    return firstByIdentity(Array.isArray(this.tools) ? this.tools : [], (tool) => tool.id);
   }
 
   private get uniqueSelectedToolIds(): string[] {

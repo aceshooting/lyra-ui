@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
+import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
 import type {
   LyraClipboardWriteFailure,
   LyraClipboardWriteSuccess,
@@ -222,9 +223,17 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   @property({ type: Boolean, attribute: 'activatable-lines' })
   activatableLines = false;
 
+  private _highlights: readonly LyraHighlight[] = snapshotLyraHighlights([]);
   /** Host-supplied highlights to paint over the code. Only `line-range` anchors are meaningful
-   *  here — every other `LyraAnchor` kind is ignored. */
-  @property({ attribute: false }) highlights: readonly LyraHighlight[] = [];
+   *  here — every other `LyraAnchor` kind, and a highlight with a missing, malformed, or
+   *  non-discriminated anchor, is ignored (`snapshotLyraHighlights`). */
+  @property({ attribute: false })
+  get highlights(): readonly LyraHighlight[] { return this._highlights; }
+  set highlights(value: readonly LyraHighlight[]) {
+    const previous = this._highlights;
+    this._highlights = snapshotLyraHighlights(value);
+    this.requestUpdate('highlights', previous);
+  }
 
   /** The `highlights` entry, if any, currently treated as active (`data-active` on its lines). */
   @property({ attribute: 'active-highlight-id' }) activeHighlightId:

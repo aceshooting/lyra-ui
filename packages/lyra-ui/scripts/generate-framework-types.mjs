@@ -5,10 +5,10 @@
 // properties, attributes, events, and CSS custom properties; this generator only translates that
 // stable surface into each framework's declaration-merging vocabulary.
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { expandManifestInheritance } from './manifest-compact.mjs';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -573,8 +573,9 @@ export function generate({ write = true } = {}) {
   return output;
 }
 
-const invokedPath = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : '';
-if (invokedPath === import.meta.url) {
+const isMain =
+  process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+if (isMain) {
   const output = generate();
   const tagCount = output.get('src/custom-elements-jsx.ts')?.match(/^  'lr-[^']+':/gm)?.length ?? 0;
   console.log(`Generated React, Vue, and Svelte declarations for ${tagCount} custom elements.`);

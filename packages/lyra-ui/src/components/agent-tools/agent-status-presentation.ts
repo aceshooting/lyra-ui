@@ -25,7 +25,11 @@ const BADGE_VARIANTS = new Set<BadgeVariant>([
 ]);
 
 export function agentStatusKind(status: AgentStatusValue): AgentStatusKind {
-  return typeof status === 'string' ? status : status.kind;
+  return typeof status === 'string'
+    ? status
+    : typeof status === 'object' && status !== null && typeof status.kind === 'string'
+      ? status.kind
+      : 'idle';
 }
 
 export function agentStatusLabel(status: AgentStatusValue): string | undefined {

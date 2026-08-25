@@ -845,3 +845,68 @@ it('falls back to string conversion for non-JSON metadata scalars', async () => 
   expect(el.shadowRoot!.querySelector('[part="evidence-metadata-value"]')!.textContent?.trim())
     .to.equal('1');
 });
+
+it('degrades an unknown stage.kind to a plain string label instead of crashing the whole timeline', async () => {
+  const stages = [
+    { id: 'good', kind: 'retrieve', startMs: 0, endMs: 5, status: 'success' },
+    { id: 's1', kind: 'dedupe', startMs: 5, endMs: 9, status: 'success' },
+  ] as unknown as RetrievalStage[];
+  const el = await fixture<LyraRetrievalTrace>(html`
+    <lr-retrieval-trace .stages=${stages}></lr-retrieval-trace>
+  `);
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="timeline"]')).to.exist;
+  const waterfall = el.shadowRoot!.querySelector(
+    'lr-span-waterfall',
+  ) as LyraSpanWaterfall;
+  const bars = [
+    ...waterfall.shadowRoot!.querySelectorAll('[part="bar"]'),
+  ].map((b) => b.getAttribute('data-id'));
+  expect(bars).to.include('good');
+  expect(bars).to.include('s1');
+});
+
+it('drops a malformed evidence chunk instead of crashing, keeping valid sibling chunks', async () => {
+  const stages = [{
+    id: 'mixed',
+    kind: 'retrieve',
+    startMs: 0,
+    endMs: 5,
+    status: 'success',
+    evidence: {
+      chunks: [
+        { id: 'ok', text: 'a', score: 1, source: { id: 's', name: 'n' } },
+        { id: 'bad', text: 'b', score: 1 },
+      ],
+    },
+  }] as unknown as RetrievalStage[];
+  const el = await fixture<LyraRetrievalTrace>(html`
+    <lr-retrieval-trace .stages=${stages}></lr-retrieval-trace>
+  `);
+  await el.updateComplete;
+
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="evidence-toggle"]')!.click();
+  await el.updateComplete;
+  const inspector = el.shadowRoot!.querySelector(
+    'lr-chunk-inspector',
+  ) as LyraChunkInspector;
+  expect(inspector.chunks.length).to.equal(1);
+});
+
+it('renders no evidence disclosure row when evidence.chunks is not an array', async () => {
+  const stages = [{
+    id: 'bad-shape',
+    kind: 'retrieve',
+    startMs: 0,
+    endMs: 5,
+    status: 'success',
+    evidence: { chunks: 'nope' },
+  }] as unknown as RetrievalStage[];
+  const el = await fixture<LyraRetrievalTrace>(html`
+    <lr-retrieval-trace .stages=${stages}></lr-retrieval-trace>
+  `);
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="evidence-row"]') === null).to.be.true;
+});

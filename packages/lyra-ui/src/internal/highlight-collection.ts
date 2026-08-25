@@ -36,9 +36,18 @@ export function snapshotLyraHighlights(value: unknown): readonly LyraHighlight[]
       if (typeof rawId !== 'string') continue;
       const id = rawId.trim();
       if (id.length === 0 || seenIds.has(id)) continue;
+      // The anchor must be a discriminated object so every adopter's `highlight.anchor.kind`
+      // dereference is safe by construction; beyond that it remains an opaque caller identity --
+      // several viewers deliberately support `scrollToAnchor(highlight.anchor)` by reference, so
+      // once admitted it is pushed unchanged (never cloned).
+      const anchor = owned['anchor'];
+      if (
+        anchor === null ||
+        typeof anchor !== 'object' ||
+        Array.isArray(anchor) ||
+        typeof (anchor as Record<string, unknown>)['kind'] !== 'string'
+      ) continue;
       seenIds.add(id);
-      // The highlight record belongs to the target. Its anchor remains an opaque caller identity:
-      // several viewers deliberately support `scrollToAnchor(highlight.anchor)` by reference.
       output.push(Object.freeze({ ...owned, id }) as unknown as LyraHighlight);
     } catch {
       // Keep later valid records when an admitted entry has a hostile getter.

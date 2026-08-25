@@ -1,8 +1,8 @@
 // Generates the autoloader's tag metadata and literal dynamic-import map from the authoritative
 // component inventory. Keeping the import specifiers literal lets bundlers split one chunk per
 // component while ordinary granular imports remain unaffected.
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const defaultPackageDir = fileURLToPath(new URL('..', import.meta.url));
@@ -209,6 +209,6 @@ function run(argv) {
   return 0;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   process.exitCode = run(process.argv.slice(2));
 }

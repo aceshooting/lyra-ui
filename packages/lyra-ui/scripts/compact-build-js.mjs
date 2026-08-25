@@ -1,3 +1,4 @@
+import { realpathSync } from 'node:fs';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -54,7 +55,7 @@ export async function compactBuildJavaScript(directory) {
   return { files: files.length, beforeBytes, afterBytes };
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   const directory = process.argv[2] ? path.resolve(process.argv[2]) : path.join(packageDir, 'dist');
   const result = await compactBuildJavaScript(directory);
   console.log(

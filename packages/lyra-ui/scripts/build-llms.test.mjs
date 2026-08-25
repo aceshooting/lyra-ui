@@ -273,6 +273,15 @@ assert.match(
 
 // 29 since chartjs-plugin-annotation joined as lr-chart's optional annotations peer.
 assert.match(peers, /All 29 peers are \*\*optional\*\*/);
+
+// lr-phone-input's only reachable mention of libphonenumber-js is a JSDoc @example
+// (`import('libphonenumber-js/min')`) showing a consumer-built adapter -- it must not attribute
+// the peer, matching the prose immediately above the table that says it never imports the peer.
+assert.doesNotMatch(
+  peers,
+  /\| `libphonenumber-js` \|[^\n]*`lr-phone-input`/,
+  'a JSDoc @example must never attribute an optional peer to the component that documents it',
+);
 assert.match(peers, /\*\*Framework declaration peers \(3\)\.\*\*/);
 assert.match(peers, /\*\*Component-loaded peers \(26\)\.\*\*/);
 

@@ -2,8 +2,8 @@
 // (`src/all.ts`, `src/ssr/all.ts`), the root-registration allowlist, and package.json#sideEffects
 // from the authoritative component inventory. The package root (`src/lyra.ts`) is deliberately
 // registration-free and is not written by this script: its named exports stay curated by hand.
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deriveSideEffects, generateSideEffects } from './generate-side-effects.mjs';
 
@@ -278,6 +278,6 @@ function run(argv) {
   return 0;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   process.exitCode = run(process.argv.slice(2));
 }

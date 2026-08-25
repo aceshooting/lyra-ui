@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 
 const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -278,8 +278,9 @@ export function readPackageScripts(directory = packageDirectory) {
   return packageJson.scripts;
 }
 
-const invokedPath = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : '';
-if (invokedPath === import.meta.url) {
+const isMain =
+  process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+if (isMain) {
   const configuration = parseLintShardArguments(process.argv.slice(2));
   process.exitCode = runLintShard(readPackageScripts(), configuration);
 }

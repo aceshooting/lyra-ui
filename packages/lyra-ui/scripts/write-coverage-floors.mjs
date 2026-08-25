@@ -16,8 +16,7 @@
 // `--write-floors` never lowers a floor without `--allow-lower`: a coverage
 // regression must be an explicit, visible decision in the diff, not a silent
 // re-baseline by whoever last ran the command.
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const packageDir = fileURLToPath(new URL('..', import.meta.url));
@@ -219,7 +218,7 @@ function main() {
   }
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   main();
 }
 

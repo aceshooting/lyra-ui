@@ -1055,6 +1055,22 @@ it('omits blank tool and selected identities before grouping, counting, and even
   expect((await pending).detail.selectedToolIds).to.deep.equal(['kept']);
 });
 
+it('drops malformed tool rows instead of throwing (regression)', async () => {
+  const el = await fixture<LyraToolSelectDialog>(html`
+    <lr-tool-select-dialog
+      open
+      .tools=${[{ name: 'Analyzer' }, { id: 'good', name: 'Good' }] as never}
+    ></lr-tool-select-dialog>
+  `);
+  expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]')).to.have.length(1);
+  expect(el.shadowRoot!.querySelector('[part="tool-name"]')!.textContent!.trim()).to.equal('Good');
+
+  const nullRows = await fixture<LyraToolSelectDialog>(html`
+    <lr-tool-select-dialog open .tools=${[null, { id: 42 }] as never}></lr-tool-select-dialog>
+  `);
+  expect(nullRows.shadowRoot!.querySelectorAll('[part="tool-row"]')).to.have.length(0);
+});
+
 it('bounds a large catalog while reserving selected identities and a keyboard-reachable continuation', async () => {
   const tools: ToolSelectDialogTool[] = Array.from({ length: 201 }, (_, index) => ({
     id: `tool-${index}`,

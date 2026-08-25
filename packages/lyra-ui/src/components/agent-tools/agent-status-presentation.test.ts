@@ -31,3 +31,10 @@ it('derives lifecycle presentation while honoring explicit caller overrides', ()
   expect(isAgentStatusTerminal({ kind: 'running', terminal: true })).to.equal(true);
   expect(isAgentStatusTerminal({ kind: 'done', terminal: false })).to.equal(false);
 });
+
+it('falls back to idle for an unshaped status instead of throwing', () => {
+  expect(agentStatusKind(undefined as never)).to.equal('idle');
+  expect(agentStatusKind(null as never)).to.equal('idle');
+  expect(agentStatusKind({} as never)).to.equal('idle');
+  expect(agentStatusKind({ label: 'No kind here' } as never)).to.equal('idle');
+});

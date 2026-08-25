@@ -202,6 +202,31 @@ describe('lr-stack-trace', () => {
     expect(first.internalPatterns).not.to.equal(second.internalPatterns);
   });
 
+  it('keeps a RegExp entry (and the string after it) instead of silently dropping the whole array', async () => {
+    const el = (await fixture(html`<lr-stack-trace></lr-stack-trace>`)) as LyraStackTrace;
+    el.internalPatterns = [/vendor/, 'node_modules/'];
+    expect(el.internalPatterns.length).to.equal(2);
+  });
+
+  it('classifies frames as internal via a RegExp pattern and renders the fold toggle', async () => {
+    const el = (await fixture(html`<lr-stack-trace></lr-stack-trace>`)) as LyraStackTrace;
+    el.internalPatterns = [/vendor\//];
+    el.trace = [
+      'Error: boom',
+      '    at first (/app/vendor/a.js:1:1)',
+      '    at second (/app/vendor/b.js:2:1)',
+      '    at app (/app/src/app.js:3:1)',
+    ].join('\n');
+    await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector('[part~="internal-toggle"]') as HTMLButtonElement;
+    expect(toggle == null).to.equal(false);
+    toggle.click();
+    await el.updateComplete;
+    expect(
+      el.shadowRoot!.querySelector('[part="frame"][data-internal]') == null,
+    ).to.equal(false);
+  });
+
   it('copy button emits lr-copy with the raw trace text', async () => {
     const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
     Object.defineProperty(navigator, 'clipboard', {

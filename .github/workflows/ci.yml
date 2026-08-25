@@ -97,6 +97,7 @@ jobs:
       - run: pnpm check:workflows
       - run: pnpm check:release-qualification
       - run: node scripts/release-integrity.test.mjs
+      - run: node scripts/publish.test.mjs
       - run: pnpm --filter @aceshooting/lyra-ui test:public-api
       - run: pnpm --filter @aceshooting/lyra-ui test:pinned-upstream-manifests
       # Fetches exact public npm tarballs with lifecycle scripts impossible, validates their

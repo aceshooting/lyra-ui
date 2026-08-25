@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { realpathSync } from 'node:fs';
 import {
   access,
   cp,
@@ -11,7 +12,7 @@ import {
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 
 export const FRAMEWORKS = Object.freeze(['react', 'vue', 'svelte']);
 export const FRAMEWORK_PNPM_CONFIG = 'auto-install-peers=false\n';
@@ -303,8 +304,9 @@ async function main() {
   }
 }
 
-const invokedPath = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : '';
-if (invokedPath === import.meta.url) {
+const isMain =
+  process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+if (isMain) {
   main().catch((error) => {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;

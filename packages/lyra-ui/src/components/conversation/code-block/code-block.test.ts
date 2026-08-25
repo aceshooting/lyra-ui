@@ -1424,6 +1424,36 @@ describe("anchor-target (line-range)", () => {
     expect(line2.hasAttribute("data-highlighted")).to.be.true;
   });
 
+  it('does not throw and still renders [part~="pre"] when a malformed-anchor highlight is present at first render', async () => {
+    const el = document.createElement("lr-code-block") as LyraCodeBlock;
+    el.code = "a\nb\nc";
+    el.highlights = [
+      { id: "h1", label: "Source 1" },
+    ] as unknown as LyraCodeBlock["highlights"];
+    document.body.append(el);
+    try {
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part~="pre"]')).to.exist;
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('does not throw and still renders [part~="pre"] when a highlight has a null anchor at first render', async () => {
+    const el = document.createElement("lr-code-block") as LyraCodeBlock;
+    el.code = "a\nb\nc";
+    el.highlights = [
+      { id: "h1", label: "Source 1", anchor: null },
+    ] as unknown as LyraCodeBlock["highlights"];
+    document.body.append(el);
+    try {
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part~="pre"]')).to.exist;
+    } finally {
+      el.remove();
+    }
+  });
+
   it("marks active highlight lines with data-active based on activeHighlightId, including the open-ended end fallback", async () => {
     const el = (await fixture(
       html`<lr-code-block code=${"a\nb\nc"}></lr-code-block>`

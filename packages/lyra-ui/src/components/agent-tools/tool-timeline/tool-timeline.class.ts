@@ -111,6 +111,10 @@ const MAX_REDACTION_DEPTH = 64;
 const MAX_REDACTION_NODES = 10_000;
 const TOOL_STATUSES = new Set<ToolCallStatus>(['pending', 'running', 'success', 'error', 'denied']);
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 function normalizeEntry(entry: ToolTimelineEntry): ToolTimelineEntry {
   const status = TOOL_STATUSES.has(entry.status) ? entry.status : 'pending';
   return status === entry.status ? entry : { ...entry, status };
@@ -408,7 +412,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   }
 
   private rebuildProjection(): void {
-    const entries = Array.isArray(this.entries) ? this.entries : [];
+    const entries: readonly unknown[] = Array.isArray(this.entries) ? this.entries : [];
     const projected: ToolTimelineEntry[] = [];
     const projectedIndex = new Map<string, number>();
     const reservedKeys = new Set(this.openedEntryIds);
@@ -416,8 +420,10 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     const displacedReserved = new Map<string, ToolTimelineEntry>();
     const seen = new Set<string>();
     for (const sourceEntry of entries) {
-      const entry = normalizeEntry(sourceEntry);
-      if (entry.id.trim().length === 0) continue;
+      if (!isRecord(sourceEntry) || typeof sourceEntry['id'] !== 'string' || sourceEntry['id'].trim().length === 0) {
+        continue;
+      }
+      const entry = normalizeEntry(sourceEntry as unknown as ToolTimelineEntry);
       const key = entryIdentity(entry);
       if (seen.has(key)) continue;
       seen.add(key);

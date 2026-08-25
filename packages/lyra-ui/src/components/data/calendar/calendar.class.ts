@@ -30,6 +30,10 @@ export interface CalendarEvent {
 export interface LyraCalendarEventMap { 'lr-date-select': CustomEvent<{ date: string }>; 'lr-event-select': CustomEvent<{ event: CalendarEvent }>; 'lr-view-change': CustomEvent<{ viewDate: string }>; }
 const monthStart = (date: Date): Date => new Date(date.getFullYear(), date.getMonth(), 1);
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 /** The two display modes `view` accepts. */
 export type CalendarView = 'month' | 'agenda';
 
@@ -131,8 +135,17 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
   }
   private changeMonth(delta: number): void { const next = new Date(this.viewStart.getFullYear(), this.viewStart.getMonth() + delta, 1); this.viewDate = formatISO(next); this.emit('lr-view-change', { viewDate: this.viewDate }); }
   private selectDate(date: string): void { this.value = date; this.focusedDate = date; this.emit('lr-date-select', { date }); }
+  /** `events`, dropping any row that is not a plain object with a string `date` -- a `null` hole
+   *  from a mapped/filtered API response, or a partially-populated row whose `date` has not been
+   *  set yet, otherwise throws from `render()` (both the agenda filter and the month bucketer
+   *  dereference `event.date` unguarded). Rows are returned by reference, never cloned: the
+   *  emitted `lr-event-select` detail must carry the exact object the caller passed in `events`
+   *  (see `identityCollectionProperties` above). */
+  private get effectiveEvents(): readonly CalendarEvent[] {
+    return this.events.filter((event): event is CalendarEvent => isRecord(event) && typeof event.date === 'string');
+  }
   /** `events` bucketed by ISO date, built once per render — the month grid reads events for each of its 42 day cells and re-renders on every roving-focus arrow-key move, so a per-cell linear scan of `events` would cost O(cells × events) per keystroke. */
-  private bucketEventsByDate(): Map<string, CalendarEvent[]> { const buckets = new Map<string, CalendarEvent[]>(); for (const event of this.events) { const bucket = buckets.get(event.date); if (bucket) bucket.push(event); else buckets.set(event.date, [event]); } return buckets; }
+  private bucketEventsByDate(): Map<string, CalendarEvent[]> { const buckets = new Map<string, CalendarEvent[]>(); for (const event of this.effectiveEvents) { const bucket = buckets.get(event.date); if (bucket) bucket.push(event); else buckets.set(event.date, [event]); } return buckets; }
   private weeks(): Date[][] { const start = this.viewStart; return monthMatrix(start.getFullYear(), start.getMonth(), this.normalizedFirstDayOfWeek); }
   /** The first and last date actually rendered by the current 6×7 grid — wider than the
    *  visible month itself (leading/trailing days from adjacent months fill out the fixed
@@ -157,7 +170,7 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
     const dayLabelFmt = getDateTimeFormat(this.effectiveLocale, { dateStyle: 'full' });
     const agendaDateFmt = getDateTimeFormat(this.effectiveLocale, { dateStyle: 'medium' });
     const dayNumberFmt = getNumberFormat(this.effectiveLocale);
-    const agenda = this.events
+    const agenda = this.effectiveEvents
       .filter((event) => event.date.startsWith(formatISO(start).slice(0, 7)))
       .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
     const eventsByDate = this.view === 'month' ? this.bucketEventsByDate() : undefined;

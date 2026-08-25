@@ -563,6 +563,20 @@ describe("filters setter validation", () => {
     expect(el.filters.map((f) => f.filterId)).to.deep.equal(["good"]);
   });
 
+  it("drops a definition whose label is missing, non-string, or blank, keeping well-formed ones", async () => {
+    const filters = [
+      { filterId: "bad-select", type: "select", options: [] },
+      { filterId: "bad-combobox", label: "   ", type: "combobox", options: [] },
+      { filterId: "bad-text", label: 42, type: "text" },
+      { filterId: "bad-date", label: null, type: "date" },
+      { filterId: "good", label: "Good", type: "select", options: [] },
+    ] as unknown as LyraFilterBarFilterDefinition[];
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
+    );
+    expect(el.filters.map((f) => f.filterId)).to.deep.equal(["good"]);
+  });
+
   it("deduplicates a circular reference inside a filter definition instead of recursing forever", async () => {
     const circular: Record<string, unknown> = { tone: "urgent" };
     circular["self"] = circular;

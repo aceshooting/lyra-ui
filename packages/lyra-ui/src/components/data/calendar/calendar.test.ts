@@ -337,6 +337,36 @@ it('renders every event for a day in its cell, in order, and none in event-free 
   expect(el.shadowRoot!.querySelectorAll('[data-date="2026-07-16"] [part="event"]')).to.have.length(0);
 });
 
+it('renders the month grid instead of throwing when an event row is missing its date', async () => {
+  // Regression: `bucketEventsByDate()`/the agenda filter dereferenced `event.date`
+  // unguarded, so a row shaped like an API partial (no `date` yet) threw from
+  // render() and left the whole grid -- not just the bad event -- unrendered.
+  const el = (await fixture(html`<lr-calendar></lr-calendar>`)) as LyraCalendar;
+  (el as unknown as { events: unknown }).events = [{ id: 'a', title: 'Standup' }];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part~="day"]')).to.have.length(42);
+});
+
+it('renders the month grid instead of throwing when an event row is null', async () => {
+  const el = (await fixture(html`<lr-calendar></lr-calendar>`)) as LyraCalendar;
+  (el as unknown as { events: unknown }).events = [null];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part~="day"]')).to.have.length(42);
+});
+
+it('still renders a well-formed event, by reference, alongside a malformed one', async () => {
+  const el = (await fixture(html`<lr-calendar view-date="2026-07-01"></lr-calendar>`)) as LyraCalendar;
+  const good = { date: '2026-07-15', title: 'Standup' };
+  (el as unknown as { events: unknown }).events = [good, { id: 'bad', title: 'No date' }];
+  await el.updateComplete;
+  const markers = el.shadowRoot!.querySelectorAll('[part~="event"]');
+  expect(markers).to.have.length(1);
+  expect(markers[0]!.textContent!.trim()).to.equal('Standup');
+  const selected = oneEvent(el, 'lr-event-select');
+  (markers[0] as HTMLButtonElement).click();
+  expect((await selected).detail.event).to.equal(good);
+});
+
 it('renders month events as valid focusable controls that keyboard users can activate', async () => {
   const event = { date: '2026-07-15', title: 'Keyboard event' };
   const el = (await fixture(

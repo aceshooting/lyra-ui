@@ -56,6 +56,14 @@ it('defaults to examples=[], total=null, label=""', async () => {
   expect(el.label).to.equal('');
 });
 
+it('tolerates an example whose status is missing entirely instead of throwing', async () => {
+  const el = (await fixture(
+    html`<lr-eval-run .examples=${[{ id: 'e1', label: 'E' }] as never}></lr-eval-run>`,
+  )) as LyraEvalRun;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="example"]')).to.have.length(1);
+});
+
 it('renders a batch progress bar reflecting completed/total and a completed-of-total summary', async () => {
   const el = (await fixture(
     html`<lr-eval-run .examples=${examples} total="4"></lr-eval-run>`,
