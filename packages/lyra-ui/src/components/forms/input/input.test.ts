@@ -907,8 +907,7 @@ describe('lr-input', () => {
     await sendMouse({ type: 'down' });
     try {
       await waitUntil(() => input.matches(':active'), 'native time input did not enter its pressed state');
-      expect(getComputedStyle(input).getPropertyValue('--lr-input-time-picker-active-bg').trim())
-        .to.equal('rgb(4, 5, 6)');
+      await waitUntil(() => getComputedStyle(input).getPropertyValue('--lr-input-time-picker-active-bg').trim() === 'rgb(4, 5, 6)', 'input --lr-input-time-picker-active-bg never reached rgb(4, 5, 6)');
     } finally {
       await sendMouse({ type: 'up' });
       await resetMouse();

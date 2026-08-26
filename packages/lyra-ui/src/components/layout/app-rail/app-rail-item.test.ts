@@ -1,8 +1,8 @@
-import { fixture, expect, html } from "@open-wc/testing";
+import { fixture, expect, html, waitUntil } from "@open-wc/testing";
 import "./app-rail-item.js";
 import "./app-rail.js";
 import type { LyraAppRailItem } from "./app-rail-item.js";
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 
 if (!customElements.get('app-rail-icon-forwarder')) {
   customElements.define(
@@ -55,7 +55,7 @@ it('inherits independent hover and pressed paint from an ancestor', async () => 
     expect(getComputedStyle(target).backgroundColor).to.equal('rgb(1, 2, 3)');
     expect(getComputedStyle(target).color).to.equal('rgb(4, 5, 6)');
     await sendMouse({ type: 'down' });
-    expect(getComputedStyle(target).backgroundColor).to.equal('rgb(7, 8, 9)');
+    await waitUntil(() => getComputedStyle(target).backgroundColor === 'rgb(7, 8, 9)', 'target background color never reached rgb(7, 8, 9)');
     expect(getComputedStyle(target).color).to.equal('rgb(10, 11, 12)');
   } finally {
     await resetMouse();
@@ -91,6 +91,8 @@ it('keeps disabled rail-item paint unchanged on hover and press', async () => {
     });
     expect(getComputedStyle(target).backgroundColor).to.equal(rest);
     await sendMouse({ type: 'down' });
+    // A press that must change nothing cannot be polled for; settle first so the read is real.
+    await settlePointer();
     expect(getComputedStyle(target).backgroundColor).to.equal(rest);
   } finally {
     await sendMouse({ type: 'up' });

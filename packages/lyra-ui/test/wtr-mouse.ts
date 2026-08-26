@@ -95,3 +95,20 @@ export async function hoverUntilMatched(
   }
   throw new Error(message);
 }
+
+/**
+ * Yields until the browser has had two frames to process an already-dispatched pointer event and
+ * recompute style.
+ *
+ * Use it before asserting that a pointer interaction changed NOTHING -- a disabled control that
+ * must not tint, a locked surface that must not drag. Such an assertion cannot poll: there is no
+ * state to wait for, and a plain synchronous read passes vacuously, because "the press has not been
+ * processed yet" and "the press was correctly inert" are indistinguishable. Two frames turns it
+ * into a real assertion. For the opposite case -- state that MUST change -- poll with `waitUntil`
+ * instead, and land the pointer with `hoverUntilMatched()` first.
+ */
+export function settlePointer(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+}

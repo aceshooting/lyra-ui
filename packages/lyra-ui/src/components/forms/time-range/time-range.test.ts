@@ -1313,7 +1313,7 @@ it("themes preset and handle hover/pressed paint through independent component h
     await sendMouse({ type: "move", position: center(preset) });
     expect(getComputedStyle(preset).borderTopColor).to.equal("rgb(1, 2, 3)");
     await sendMouse({ type: "down" });
-    expect(getComputedStyle(preset).borderTopColor).to.equal("rgb(4, 5, 6)");
+    await waitUntil(() => getComputedStyle(preset).borderTopColor === "rgb(4, 5, 6)", 'preset border top color never reached "rgb(4, 5, 6)"');
     expect(getComputedStyle(preset).backgroundColor).to.equal("rgb(7, 8, 9)");
     await sendMouse({ type: "up" });
 
@@ -1322,9 +1322,7 @@ it("themes preset and handle hover/pressed paint through independent component h
       "rgb(10, 11, 12)"
     );
     await sendMouse({ type: "down" });
-    expect(getComputedStyle(handle).backgroundColor).to.equal(
-      "rgb(13, 14, 15)"
-    );
+    await waitUntil(() => getComputedStyle(handle).backgroundColor === "rgb(13, 14, 15)", 'handle background color never reached "rgb(13, 14, 15)"');
     await sendMouse({ type: "up" });
   } finally {
     await resetMouse();

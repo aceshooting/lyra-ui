@@ -1687,12 +1687,7 @@ it('inherits close-button hover and active state hooks without changing their de
     );
 
     await sendMouse({ type: 'down' });
-    expect(getComputedStyle(close).backgroundColor).to.equal(
-      resolveInShadow(
-        'background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))',
-        'background-color',
-      ),
-    );
+    await waitUntil(() => getComputedStyle(close).backgroundColor === resolveInShadow( 'background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))', 'background-color', ), 'close background color never reached its pressed value');
     expect(getComputedStyle(close).color).to.equal(
       resolveInShadow('color: var(--lr-color-text)', 'color'),
     );
@@ -1706,7 +1701,7 @@ it('inherits close-button hover and active state hooks without changing their de
     expect(getComputedStyle(close).color).to.equal('rgb(4, 5, 6)');
 
     await sendMouse({ type: 'down' });
-    expect(getComputedStyle(close).backgroundColor).to.equal('rgb(7, 8, 9)');
+    await waitUntil(() => getComputedStyle(close).backgroundColor === 'rgb(7, 8, 9)', 'close background color never reached rgb(7, 8, 9)');
     expect(getComputedStyle(close).color).to.equal('rgb(10, 11, 12)');
   } finally {
     await resetMouse();

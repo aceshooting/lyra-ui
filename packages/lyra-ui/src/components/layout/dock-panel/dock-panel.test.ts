@@ -1495,9 +1495,7 @@ describe("collapse-toggle/handle hover and pressed theming cssprops", () => {
       );
       expect(getComputedStyle(handle).backgroundColor).to.not.equal(resting);
       await sendMouse({ type: "down" });
-      expect(getComputedStyle(handle).backgroundColor).to.equal(
-        "rgb(100, 110, 120)"
-      );
+      await waitUntil(() => getComputedStyle(handle).backgroundColor === "rgb(100, 110, 120)", 'handle background color never reached "rgb(100, 110, 120)"');
       await sendMouse({ type: "up" });
     } finally {
       await resetMouse();

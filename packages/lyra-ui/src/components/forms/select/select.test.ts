@@ -18,7 +18,7 @@ import {
   SET_OPTION_SELECTED_FROM_OWNER,
 } from "../../../internal/option-selection.js";
 import { styles } from "./select.styles.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { resetMouse, sendMouse, settlePointer } from "../../../../test/wtr-mouse.js";
 import {
   __setAnchoredOverlayRuntimeLoaderForTesting,
   type AnchoredOverlayRuntime,
@@ -3698,6 +3698,8 @@ describe("row state feedback on the already-selected option", () => {
 
       await sendMouse({ type: 'down' });
       await aTimeout(20);
+      // A press that must change nothing cannot be polled for; settle first so the read is real.
+      await settlePointer();
       expect(getComputedStyle(row).backgroundColor, 'disabled press').to.equal(resting);
     } finally {
       await sendMouse({ type: 'up' });

@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent } from "@open-wc/testing";
+import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from "@web/test-runner-commands";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import "./data-grid.js";
@@ -1305,7 +1305,7 @@ it("shows a pressed fill on an already-selected row", async () => {
     await sendMouse({ type: "move", position });
     await sendMouse({ type: "down" });
     await delay(200);
-    expect(getComputedStyle(selected).backgroundColor).to.not.equal(resting);
+    await waitUntil(() => getComputedStyle(selected).backgroundColor !== resting, 'selected background color never moved off resting');
   } finally {
     await sendMouse({ type: "up" });
     await resetMouse();

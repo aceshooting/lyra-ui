@@ -4,7 +4,7 @@ import './radio.js';
 import './radio-group.js';
 import type { LyraRadioButton } from './radio-button.class.js';
 import type { LyraRadioGroup } from './radio-group.class.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 
 it('themes the button-content gap for both button authoring paths', async () => {
   for (const markup of [
@@ -340,9 +340,7 @@ describe('lr-radio-button hover and press feedback', () => {
         const hovered = getComputedStyle(base).backgroundColor;
         expect(hovered, `${label} hover vs resting`).to.not.equal(resting);
         await sendMouse({ type: 'down' });
-        expect(getComputedStyle(base).backgroundColor, `${label} pressed vs hovered`).to.not.equal(
-          hovered,
-        );
+        await waitUntil(() => getComputedStyle(base).backgroundColor !== hovered, `${label} pressed vs hovered`);
       } finally {
         await sendMouse({ type: 'up' });
         await resetMouse();
@@ -378,6 +376,8 @@ describe('lr-radio-button hover and press feedback', () => {
         expect(getComputedStyle(painted).backgroundColor, `${radio.localName} hover background`).to.equal(restingBackground);
         expect(getComputedStyle(painted).borderTopColor, `${radio.localName} hover border`).to.equal(restingBorder);
         await sendMouse({ type: 'down' });
+        // A press that must change nothing cannot be polled for; settle first so the read is real.
+        await settlePointer();
         expect(getComputedStyle(painted).backgroundColor, `${radio.localName} active background`).to.equal(restingBackground);
         expect(getComputedStyle(painted).borderTopColor, `${radio.localName} active border`).to.equal(restingBorder);
       } finally {
@@ -405,6 +405,8 @@ describe('lr-radio-button hover and press feedback', () => {
           resting,
         );
         await sendMouse({ type: 'down' });
+        // A press that must change nothing cannot be polled for; settle first so the read is real.
+        await settlePointer();
         expect(getComputedStyle(base).backgroundColor, `disabled ${label} press vs resting`).to.equal(
           resting,
         );
@@ -433,7 +435,7 @@ describe('lr-radio-button hover and press feedback', () => {
       expect(getComputedStyle(uncheckedBase).backgroundColor).to.equal('rgb(1, 2, 3)');
       expect(getComputedStyle(uncheckedBase).borderTopColor).to.equal('rgb(4, 5, 6)');
       await sendMouse({ type: 'down' });
-      expect(getComputedStyle(uncheckedBase).backgroundColor).to.equal('rgb(7, 8, 9)');
+      await waitUntil(() => getComputedStyle(uncheckedBase).backgroundColor === 'rgb(7, 8, 9)', 'uncheckedBase background color never reached rgb(7, 8, 9)');
       expect(getComputedStyle(uncheckedBase).borderTopColor).to.equal('rgb(10, 11, 12)');
     } finally {
       await sendMouse({ type: 'up' });
@@ -461,7 +463,7 @@ describe('lr-radio-button hover and press feedback', () => {
       await sendMouse({ type: 'move', position: centerOf(checkedBase) });
       expect(getComputedStyle(checkedBase).backgroundColor).to.equal('rgb(22, 23, 24)');
       await sendMouse({ type: 'down' });
-      expect(getComputedStyle(checkedBase).backgroundColor).to.equal('rgb(25, 26, 27)');
+      await waitUntil(() => getComputedStyle(checkedBase).backgroundColor === 'rgb(25, 26, 27)', 'checkedBase background color never reached rgb(25, 26, 27)');
     } finally {
       await sendMouse({ type: 'up' });
       await resetMouse();

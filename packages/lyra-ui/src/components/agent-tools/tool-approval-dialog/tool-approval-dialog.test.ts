@@ -307,7 +307,7 @@ describe('editing', () => {
       });
       expect(getComputedStyle(edit).backgroundColor).to.equal('rgb(40, 50, 60)');
       await sendMouse({ type: 'down' });
-      expect(getComputedStyle(edit).backgroundColor).to.equal('rgb(40, 50, 60)');
+      await waitUntil(() => getComputedStyle(edit).backgroundColor === 'rgb(40, 50, 60)', 'edit background color never reached rgb(40, 50, 60)');
       await sendMouse({ type: 'up' });
     } finally {
       await resetMouse();

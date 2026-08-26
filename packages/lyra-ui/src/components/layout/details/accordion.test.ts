@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './accordion.js';
 import './accordion-item.js';
 import './details.js';
@@ -88,7 +88,7 @@ describe('<lr-accordion>', () => {
       });
       expect(getComputedStyle(button).backgroundColor).to.equal('rgb(28, 29, 30)');
       await sendMouse({ type: 'down' });
-      expect(getComputedStyle(button).backgroundColor).to.equal('rgb(31, 32, 33)');
+      await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(31, 32, 33)', 'button background color never reached rgb(31, 32, 33)');
     } finally {
       await resetMouse();
     }

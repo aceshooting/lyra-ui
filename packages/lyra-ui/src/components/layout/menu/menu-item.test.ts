@@ -5,7 +5,7 @@ import type { LyraMenuItem } from './menu-item.js';
 import './menu.js';
 import type { MenuFocusTarget } from './menu.js';
 import type { LyraMenu } from './menu.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 
 // role="menuitem" requires a role="menu"/"menubar"/"group" ancestor to
 // satisfy axe's aria-required-parent rule -- <lr-menu> normally supplies
@@ -300,6 +300,8 @@ describe('danger-state cssprops', () => {
           'rgba(0, 0, 0, 0)'
         );
         await sendMouse({ type: 'down' });
+        // A press that must change nothing cannot be polled for; settle first so the read is real.
+        await settlePointer();
         expect(getComputedStyle(row).backgroundColor).to.equal(
           'rgba(0, 0, 0, 0)'
         );

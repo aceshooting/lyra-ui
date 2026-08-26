@@ -1,4 +1,4 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './breadcrumb-item.js';
 import './breadcrumb.js';
 import type { LyraBreadcrumbItem } from './breadcrumb-item.js';
@@ -331,7 +331,7 @@ it('inherits its pressed fill independently from an ancestor', async () => {
   try {
     await sendMouse({ type: 'move', position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)] });
     await sendMouse({ type: 'down' });
-    expect(getComputedStyle(target).backgroundColor).to.equal('rgb(1, 2, 3)');
+    await waitUntil(() => getComputedStyle(target).backgroundColor === 'rgb(1, 2, 3)', 'target background color never reached rgb(1, 2, 3)');
   } finally {
     await resetMouse();
   }

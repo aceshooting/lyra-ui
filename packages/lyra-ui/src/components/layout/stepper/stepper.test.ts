@@ -1700,9 +1700,7 @@ describe("state-styling cssprops", () => {
       expect(getComputedStyle(hovered).color).to.equal("rgb(4, 5, 6)");
 
       await sendMouse({ type: "down" });
-      expect(getComputedStyle(hovered).backgroundColor).to.equal(
-        "rgb(7, 8, 9)"
-      );
+      await waitUntil(() => getComputedStyle(hovered).backgroundColor === "rgb(7, 8, 9)", 'hovered background color never reached "rgb(7, 8, 9)"');
       expect(getComputedStyle(hovered).color).to.equal("rgb(10, 11, 12)");
       expect(getComputedStyle(current).backgroundColor).to.equal(
         "rgba(0, 0, 0, 0)"
@@ -1745,13 +1743,7 @@ describe("state-styling cssprops", () => {
       );
 
       await sendMouse({ type: "down" });
-      expect(getComputedStyle(interactive).backgroundColor).to.equal(
-        resolvedInShadow(
-          el,
-          "background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))",
-          "background-color"
-        )
-      );
+      await waitUntil(() => getComputedStyle(interactive).backgroundColor === resolvedInShadow( el, "background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))", "background-color" ), 'interactive background color never reached its pressed value');
       expect(getComputedStyle(interactive).color).to.equal(
         resolvedInShadow(el, "color: var(--lr-color-text)", "color")
       );

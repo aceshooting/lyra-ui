@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './reorder-item.js';
 import type { LyraReorderItem } from './reorder-item.class.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -172,7 +172,7 @@ describe('move-button state cssprops', () => {
       );
 
       await sendMouse({ type: 'down' });
-      expect(up.matches(':active'), 'the physical pointer activates the move button').to.be.true;
+      await waitUntil(() => up.matches(':active'), 'the physical pointer activates the move button');
       expect(getComputedStyle(up).backgroundColor).to.equal(
         resolvedInShadow(
           el,
@@ -218,7 +218,7 @@ describe('move-button state cssprops', () => {
 
       await sendMouse({ type: 'move', position: centreOf(down) });
       await sendMouse({ type: 'down' });
-      expect(down.matches(':active'), 'the physical pointer activates the second move button').to.be.true;
+      await waitUntil(() => down.matches(':active'), 'the physical pointer activates the second move button');
       expect(getComputedStyle(down).backgroundColor).to.equal('rgb(0, 30, 60)');
       expect(getComputedStyle(down).color).to.equal('rgb(255, 255, 0)');
     } finally {

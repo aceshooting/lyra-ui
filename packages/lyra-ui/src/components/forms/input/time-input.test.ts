@@ -1,5 +1,5 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import './time-input.js';
 import type { LyraTimeInput } from './time-input.class.js';
 
@@ -1657,6 +1657,8 @@ describe('lr-time-input disabled segment hover/press feedback', () => {
         resting,
       );
       await sendMouse({ type: 'down' });
+      // A press that must change nothing cannot be polled for; settle first so the read is real.
+      await settlePointer();
       expect(getComputedStyle(target).backgroundColor, 'press must not tint a disabled segment').to.equal(
         resting,
       );
@@ -1706,7 +1708,7 @@ describe('lr-time-input disabled segment hover/press feedback', () => {
       const hovered = getComputedStyle(target).backgroundColor;
       expect(hovered, 'hover must move the fill off its resting colour').to.not.equal(resting);
       await sendMouse({ type: 'down' });
-      expect(getComputedStyle(target).backgroundColor, 'press vs hover').to.not.equal(hovered);
+      await waitUntil(() => getComputedStyle(target).backgroundColor !== hovered, 'press vs hover');
       await sendMouse({ type: 'up' });
     } finally {
       await resetMouse();
@@ -1742,6 +1744,8 @@ describe('lr-time-input disabled action hover/press feedback', () => {
         expect(getComputedStyle(target).backgroundColor, 'hover').to.equal(resting);
         await sendMouse({ type: 'down' });
         await waitUntil(() => target.matches(':active'));
+        // A press that must change nothing cannot be polled for; settle first so the read is real.
+        await settlePointer();
         expect(getComputedStyle(target).backgroundColor, 'press').to.equal(resting);
         await sendMouse({ type: 'up' });
       } finally {

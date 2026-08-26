@@ -5,7 +5,7 @@ import type { LyraCarousel } from "./carousel.js";
 import type { LyraCarouselItem } from "./carousel-item.js";
 import { styles } from "./carousel.styles.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 
 async function carousel(
   template = html`
@@ -3243,6 +3243,8 @@ it('keeps a disabled navigation action visually flat on hover and press', async 
     });
     await sendMouse({ type: 'down' });
     expect(previous.disabled).to.equal(true);
+    // A press that must change nothing cannot be polled for; settle first so the read is real.
+    await settlePointer();
     expect(getComputedStyle(previous).backgroundColor).to.equal(restBackground);
     expect(getComputedStyle(previous).borderColor).to.equal(restBorder);
   } finally {

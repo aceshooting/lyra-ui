@@ -1,4 +1,4 @@
-import { elementUpdated, expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { elementUpdated, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './split-panel.js';
 import { SNAP_NONE, type LyraSplitPanel, type LyraSplitPanelSnapFunction } from './split-panel.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -820,7 +820,7 @@ it('lets --lr-split-panel-divider-hover-color/-active-color retint the divider i
     expect(getComputedStyle(handle).backgroundColor).to.equal('rgb(70, 80, 90)');
     expect(getComputedStyle(handle).backgroundColor).to.not.equal(resting);
     await sendMouse({ type: 'down' });
-    expect(getComputedStyle(handle).backgroundColor).to.equal('rgb(100, 110, 120)');
+    await waitUntil(() => getComputedStyle(handle).backgroundColor === 'rgb(100, 110, 120)', 'handle background color never reached rgb(100, 110, 120)');
     await sendMouse({ type: 'up' });
   } finally {
     await resetMouse();

@@ -2559,12 +2559,7 @@ it('lets inherited CSS properties theme popup-close-button hover and active stat
       resolvedInShadow('color: var(--lr-color-brand)', 'color'),
     );
     await sendMouse({ type: 'down' });
-    expect(getComputedStyle(close).backgroundColor).to.equal(
-      resolvedInShadow(
-        'background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
-        'background-color',
-      ),
-    );
+    await waitUntil(() => getComputedStyle(close).backgroundColor === resolvedInShadow( 'background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))', 'background-color', ), 'close background color never reached its pressed value');
     expect(getComputedStyle(close).color).to.equal(
       resolvedInShadow('color: var(--lr-color-brand)', 'color'),
     );
@@ -2578,7 +2573,7 @@ it('lets inherited CSS properties theme popup-close-button hover and active stat
     expect(getComputedStyle(close).color).to.equal('rgb(4, 5, 6)');
 
     await sendMouse({ type: 'down' });
-    expect(getComputedStyle(close).backgroundColor).to.equal('rgb(7, 8, 9)');
+    await waitUntil(() => getComputedStyle(close).backgroundColor === 'rgb(7, 8, 9)', 'close background color never reached rgb(7, 8, 9)');
     expect(getComputedStyle(close).color).to.equal('rgb(10, 11, 12)');
     await sendMouse({ type: 'up' });
   } finally {

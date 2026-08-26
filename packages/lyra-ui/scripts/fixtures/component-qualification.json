@@ -1865,14 +1865,14 @@
             },
             {
               "file": "src/components/layout/app-rail/app-rail-item.test.ts",
-              "line": 307,
+              "line": 309,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/app-rail/app-rail-item.test.ts",
-              "line": 326,
+              "line": 328,
               "test": "keeps flattened interactive icon content visible but inert and outside the focus order",
               "target": "el",
               "state": "populated"
@@ -2054,21 +2054,21 @@
           "evidence": [
             {
               "file": "src/components/layout/app-rail/app-rail-item.test.ts",
-              "line": 307,
+              "line": 309,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/app-rail/app-rail-item.test.ts",
-              "line": 326,
+              "line": 328,
               "test": "keeps flattened interactive icon content visible but inert and outside the focus order",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/app-rail/app-rail-item.test.ts",
-              "line": 653,
+              "line": 655,
               "test": "is accessible with the current-state props themed",
               "target": "el",
               "state": "populated"
@@ -15693,7 +15693,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 333,
+              "line": 335,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -15710,7 +15710,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 1646,
+              "line": 1648,
               "kind": "320px allocation test signal"
             }
           ]
@@ -23627,7 +23627,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1404,
+              "line": 1403,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -23638,7 +23638,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 991,
+              "line": 990,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -23655,7 +23655,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 990,
+              "line": 989,
               "kind": "320px allocation test signal"
             }
           ]
@@ -26044,7 +26044,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 3154,
+              "line": 3149,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -26061,7 +26061,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.test.ts",
-              "line": 3148,
+              "line": 3143,
               "kind": "320px allocation test signal"
             }
           ]
@@ -27277,42 +27277,42 @@
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 403,
+              "line": 405,
               "test": "keeps every display slot decorative while the host retains the sole menuitem action",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 804,
+              "line": 806,
               "test": "is accessible with type=\"checkbox\", both unchecked and checked",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 816,
+              "line": 818,
               "test": "is accessible in the default state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 823,
+              "line": 825,
               "test": "is accessible with an icon, disabled and variant=\"danger\" states",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 920,
+              "line": 922,
               "test": "is accessible at the smallest and largest tiers",
               "target": "smallest",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 920,
+              "line": 922,
               "test": "is accessible at the smallest and largest tiers",
               "target": "largest",
               "state": "populated"
@@ -27372,7 +27372,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 333,
+              "line": 335,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -27389,7 +27389,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 1646,
+              "line": 1648,
               "kind": "320px allocation test signal"
             }
           ]
@@ -27524,42 +27524,42 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 403,
+              "line": 405,
               "test": "keeps every display slot decorative while the host retains the sole menuitem action",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 804,
+              "line": 806,
               "test": "is accessible with type=\"checkbox\", both unchecked and checked",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 816,
+              "line": 818,
               "test": "is accessible in the default state",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 823,
+              "line": 825,
               "test": "is accessible with an icon, disabled and variant=\"danger\" states",
               "target": "wrapper",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 920,
+              "line": 922,
               "test": "is accessible at the smallest and largest tiers",
               "target": "smallest",
               "state": "populated"
             },
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 920,
+              "line": 922,
               "test": "is accessible at the smallest and largest tiers",
               "target": "largest",
               "state": "populated"
@@ -27619,7 +27619,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 333,
+              "line": 335,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -27636,7 +27636,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 1646,
+              "line": 1648,
               "kind": "320px allocation test signal"
             }
           ]
@@ -27784,7 +27784,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 333,
+              "line": 335,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -27801,7 +27801,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/menu-item.test.ts",
-              "line": 1646,
+              "line": 1648,
               "kind": "320px allocation test signal"
             }
           ]
@@ -29297,7 +29297,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1404,
+              "line": 1403,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -29308,7 +29308,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 991,
+              "line": 990,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -29325,7 +29325,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 990,
+              "line": 989,
               "kind": "320px allocation test signal"
             }
           ]
@@ -30010,7 +30010,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1404,
+              "line": 1403,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -30021,7 +30021,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 991,
+              "line": 990,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -30038,7 +30038,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 990,
+              "line": 989,
               "kind": "320px allocation test signal"
             }
           ]
@@ -31134,7 +31134,7 @@
           "evidence": [
             {
               "file": "src/components/media/pan-zoom/pan-zoom.test.ts",
-              "line": 349,
+              "line": 351,
               "test": "keeps the pan/zoom surface accessible in populated state",
               "target": "el",
               "state": "populated"
@@ -31148,7 +31148,7 @@
           "evidence": [
             {
               "file": "src/components/media/pan-zoom/pan-zoom.test.ts",
-              "line": 123,
+              "line": 125,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -31159,7 +31159,7 @@
           "evidence": [
             {
               "file": "src/components/media/pan-zoom/pan-zoom.test.ts",
-              "line": 229,
+              "line": 231,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -31176,7 +31176,7 @@
           "evidence": [
             {
               "file": "src/components/media/pan-zoom/pan-zoom.test.ts",
-              "line": 319,
+              "line": 321,
               "kind": "320px allocation test signal"
             }
           ]
@@ -38611,7 +38611,7 @@
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 4312,
+              "line": 4314,
               "test": "is accessible with tags rendered and the listbox open",
               "target": "el",
               "state": "open"
@@ -38639,14 +38639,14 @@
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 4531,
+              "line": 4533,
               "test": "is accessible with the clear button rendered",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/select/select.test.ts",
-              "line": 4791,
+              "line": 4793,
               "test": "is accessible in every appearance",
               "target": "el",
               "state": "populated"
@@ -41485,7 +41485,7 @@
             },
             {
               "file": "src/components/layout/stepper/stepper.test.ts",
-              "line": 1763,
+              "line": 1755,
               "test": "is accessible with the state-styling props themed",
               "target": "el",
               "state": "populated"
@@ -42876,7 +42876,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1491,
+              "line": 1483,
               "test": "omits closed <details> text from a rich tab name and restores it when opened",
               "target": "el",
               "state": "open"
@@ -42890,49 +42890,49 @@
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1209,
+              "line": 1201,
               "test": "builds one tab per <lr-tab> and activates the first enabled one",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1237,
+              "line": 1229,
               "test": "keeps a populated disabled active closable <lr-tab> accessible on its own tag",
               "target": "tab",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1278,
+              "line": 1270,
               "test": "keeps rich <lr-tab> content inert while the outer tab retains its flattened accessible name",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1343,
+              "line": 1335,
               "test": "derives a rich tab name from accessible default-slot content and observes visibility changes",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1427,
+              "line": 1419,
               "test": "omits a rich label branch skipped by content-visibility:auto",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 2762,
+              "line": 2754,
               "test": "does not select a different tab when its close control is clicked",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 2931,
+              "line": 2923,
               "test": "remains accessible with SSR hints and all public wrapper parts",
               "target": "el",
               "state": "populated"
@@ -42968,7 +42968,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 2492,
+              "line": 2484,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -42979,7 +42979,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1872,
+              "line": 1864,
               "kind": "320px allocation test signal"
             }
           ]
@@ -43097,7 +43097,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1491,
+              "line": 1483,
               "test": "omits closed <details> text from a rich tab name and restores it when opened",
               "target": "el",
               "state": "open"
@@ -43118,49 +43118,49 @@
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1209,
+              "line": 1201,
               "test": "builds one tab per <lr-tab> and activates the first enabled one",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1278,
+              "line": 1270,
               "test": "keeps rich <lr-tab> content inert while the outer tab retains its flattened accessible name",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1343,
+              "line": 1335,
               "test": "derives a rich tab name from accessible default-slot content and observes visibility changes",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1427,
+              "line": 1419,
               "test": "omits a rich label branch skipped by content-visibility:auto",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 2604,
+              "line": 2596,
               "test": "is accessible while the scroll controls are showing",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 2762,
+              "line": 2754,
               "test": "does not select a different tab when its close control is clicked",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 2931,
+              "line": 2923,
               "test": "remains accessible with SSR hints and all public wrapper parts",
               "target": "el",
               "state": "populated"
@@ -43196,7 +43196,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 2492,
+              "line": 2484,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -43207,7 +43207,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1872,
+              "line": 1864,
               "kind": "320px allocation test signal"
             }
           ]
@@ -43338,7 +43338,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1491,
+              "line": 1483,
               "test": "omits closed <details> text from a rich tab name and restores it when opened",
               "target": "el",
               "state": "open"
@@ -43352,63 +43352,63 @@
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1209,
+              "line": 1201,
               "test": "builds one tab per <lr-tab> and activates the first enabled one",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1237,
+              "line": 1229,
               "test": "keeps a populated disabled active closable <lr-tab> accessible on its own tag",
               "target": "tab",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1250,
+              "line": 1242,
               "test": "keeps active and hidden <lr-tab-panel> instances accessible on their own tags",
               "target": "active",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1250,
+              "line": 1242,
               "test": "keeps active and hidden <lr-tab-panel> instances accessible on their own tags",
               "target": "hidden",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1278,
+              "line": 1270,
               "test": "keeps rich <lr-tab> content inert while the outer tab retains its flattened accessible name",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1343,
+              "line": 1335,
               "test": "derives a rich tab name from accessible default-slot content and observes visibility changes",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1427,
+              "line": 1419,
               "test": "omits a rich label branch skipped by content-visibility:auto",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 2762,
+              "line": 2754,
               "test": "does not select a different tab when its close control is clicked",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 2931,
+              "line": 2923,
               "test": "remains accessible with SSR hints and all public wrapper parts",
               "target": "el",
               "state": "populated"
@@ -43444,7 +43444,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 2492,
+              "line": 2484,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -43455,7 +43455,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
-              "line": 1872,
+              "line": 1864,
               "kind": "320px allocation test signal"
             }
           ]
@@ -45076,7 +45076,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 1404,
+              "line": 1403,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -45087,7 +45087,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 991,
+              "line": 990,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -45104,7 +45104,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input.test.ts",
-              "line": 990,
+              "line": 989,
               "kind": "320px allocation test signal"
             }
           ]
@@ -45236,21 +45236,21 @@
             },
             {
               "file": "src/components/forms/time-range/time-range.test.ts",
-              "line": 3002,
+              "line": 3000,
               "test": "is accessible with presets set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/time-range/time-range.test.ts",
-              "line": 3097,
+              "line": 3095,
               "test": "is accessible with the active-preset props themed",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/forms/time-range/time-range.test.ts",
-              "line": 3353,
+              "line": 3351,
               "test": "projects both aria-invalid polarities to the focusable range handles",
               "target": "el",
               "state": "populated"
@@ -45292,7 +45292,7 @@
           "evidence": [
             {
               "file": "src/components/forms/time-range/time-range.test.ts",
-              "line": 3320,
+              "line": 3318,
               "kind": "320px allocation test signal"
             }
           ]
@@ -50612,14 +50612,14 @@
           "evidence": [
             {
               "file": "src/components/media/zoomable-frame/zoomable-frame.test.ts",
-              "line": 397,
+              "line": 399,
               "test": "keeps hostile icon overrides projected but inert under the native zoom controls",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/zoomable-frame/zoomable-frame.test.ts",
-              "line": 789,
+              "line": 791,
               "test": "is accessible with a populated inline document and visible controls",
               "target": "el",
               "state": "populated"

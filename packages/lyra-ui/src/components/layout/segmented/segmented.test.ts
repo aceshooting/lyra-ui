@@ -1183,9 +1183,7 @@ describe("active-state cssprops", () => {
       expect(getComputedStyle(target).color).to.equal(expectedColor);
 
       await sendMouse({ type: "down" });
-      expect(getComputedStyle(target).backgroundColor).to.equal(
-        expectedBackground
-      );
+      await waitUntil(() => getComputedStyle(target).backgroundColor === expectedBackground, 'target background color never reached expectedBackground');
       expect(getComputedStyle(target).color).to.equal(expectedColor);
     } finally {
       await resetMouse();
@@ -1222,9 +1220,7 @@ describe("active-state cssprops", () => {
       expect(getComputedStyle(target!).color).to.equal(expectedHoverColor);
 
       await sendMouse({ type: "down" });
-      expect(getComputedStyle(target!).backgroundColor).to.equal(
-        "rgb(12, 34, 56)"
-      );
+      await waitUntil(() => getComputedStyle(target!).backgroundColor === "rgb(12, 34, 56)", 'target background color never reached "rgb(12, 34, 56)"');
       expect(getComputedStyle(target!).color).to.equal("rgb(78, 90, 123)");
       expect(getComputedStyle(checked!).backgroundColor).to.equal(
         expectedCheckedBackground

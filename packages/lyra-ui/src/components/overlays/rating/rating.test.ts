@@ -202,7 +202,7 @@ it("applies --lr-rating-active-color only while the editable rating is pressed",
       "hover does not use the pressed hook"
     ).to.equal("rgb(1, 2, 3)");
     await sendMouse({ type: "down" });
-    expect(getComputedStyle(star).color, "pressed").to.equal("rgb(4, 5, 6)");
+    await waitUntil(() => getComputedStyle(star).color === "rgb(4, 5, 6)", "pressed");
   } finally {
     await sendMouse({ type: "up" });
     await resetMouse();

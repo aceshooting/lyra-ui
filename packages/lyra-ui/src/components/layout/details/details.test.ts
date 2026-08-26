@@ -8,7 +8,7 @@ import type { LyraAccordion } from "./accordion.js";
 import type { LyraAccordionItem } from "./accordion-item.js";
 import { styles as detailsStyles } from "./details.styles.js";
 import { styles as accordionStyles } from "./accordion.styles.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { resetMouse, sendMouse, settlePointer } from "../../../../test/wtr-mouse.js";
 import { sendKeys } from "@web/test-runner-commands";
 
 it("renders a disclosure panel and reports its state", async () => {
@@ -329,6 +329,8 @@ it("keeps disabled summary paint unchanged on hover and press", async () => {
     });
     expect(getComputedStyle(summary).backgroundColor).to.equal(rest);
     await sendMouse({ type: "down" });
+    // A press that must change nothing cannot be polled for; settle first so the read is real.
+    await settlePointer();
     expect(getComputedStyle(summary).backgroundColor).to.equal(rest);
   } finally {
     await sendMouse({ type: "up" });
@@ -540,9 +542,7 @@ it("inherits independent appearance and pointer-state paint without retinting sh
       "rgb(19, 20, 21)"
     );
     await sendMouse({ type: "down" });
-    expect(getComputedStyle(summary).backgroundColor).to.equal(
-      "rgb(22, 23, 24)"
-    );
+    await waitUntil(() => getComputedStyle(summary).backgroundColor === "rgb(22, 23, 24)", 'summary background color never reached "rgb(22, 23, 24)"');
   } finally {
     await resetMouse();
   }

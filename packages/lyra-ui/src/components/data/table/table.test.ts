@@ -834,7 +834,7 @@ it('renders inherited resize-handle hover/pressed hooks while direct host values
 
     await sendMouse({ type: 'down' });
     await waitUntil(() => getComputedStyle(handle).backgroundColor === 'rgb(4, 5, 6)');
-    expect(getComputedStyle(handle).opacity).to.equal('0.72');
+    await waitUntil(() => getComputedStyle(handle).opacity === '0.72', 'handle opacity never reached 0.72');
 
     el.style.setProperty('--lr-table-resize-handle-active-bg', 'rgb(10, 11, 12)');
     await waitUntil(() => getComputedStyle(handle).backgroundColor === 'rgb(10, 11, 12)');
@@ -4667,7 +4667,7 @@ describe('--lr-table-row-selected-bg', () => {
     try {
       await sendMouse({ type: 'move', position });
       await sendMouse({ type: 'down' });
-      expect(getComputedStyle(selected).backgroundColor).to.not.equal(resting);
+      await waitUntil(() => getComputedStyle(selected).backgroundColor !== resting, 'selected background color never moved off resting');
     } finally {
       await sendMouse({ type: 'up' });
       await resetMouse();

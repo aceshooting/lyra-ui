@@ -1304,7 +1304,7 @@ it('renders independent hover and pressed theme hooks for each chart control sur
 
       await sendMouse({ type: 'down', button: 'left' });
       await aTimeout(0);
-      expect(getComputedStyle(control.element).backgroundColor).to.equal(control.active);
+      await waitUntil(() => getComputedStyle(control.element).backgroundColor === control.active, 'control.element background color never reached control.active');
       await sendMouse({ type: 'up', button: 'left' });
     }
   } finally {

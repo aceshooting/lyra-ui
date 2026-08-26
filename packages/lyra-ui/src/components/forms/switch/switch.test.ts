@@ -294,7 +294,7 @@ it("themes checked track, thumb, hover, and pressed paint through component hook
     });
     expect(getComputedStyle(track).backgroundColor).to.equal("rgb(7, 8, 9)");
     await sendMouse({ type: "down" });
-    expect(getComputedStyle(track).backgroundColor).to.equal("rgb(10, 11, 12)");
+    await waitUntil(() => getComputedStyle(track).backgroundColor === "rgb(10, 11, 12)", 'track background color never reached "rgb(10, 11, 12)"');
   } finally {
     await sendMouse({ type: "up" });
     await resetMouse();

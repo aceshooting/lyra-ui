@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from "@open-wc/testing";
+import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { render } from "lit";
 import "./rubric-form.js";
 import type { LyraRubricForm, RubricKey } from "./rubric-form.js";
@@ -1620,7 +1620,7 @@ describe("lr-rubric-form", () => {
         });
         expect(getComputedStyle(button).backgroundColor).to.equal(hover);
         await sendMouse({ type: "down" });
-        expect(getComputedStyle(button).backgroundColor).to.equal(active);
+        await waitUntil(() => getComputedStyle(button).backgroundColor === active, 'button background color never reached active');
       } finally {
         await sendMouse({ type: "up" });
         await resetMouse();

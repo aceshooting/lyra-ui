@@ -1066,9 +1066,7 @@ describe("selected/hover cssprops", () => {
       await moveMouseTo(pressed!);
       await sendMouse({ type: "down" });
       await new Promise((resolve) => requestAnimationFrame(resolve));
-      expect(getComputedStyle(pressed!).backgroundColor).to.equal(
-        "rgb(1, 2, 3)"
-      );
+      await waitUntil(() => getComputedStyle(pressed!).backgroundColor === "rgb(1, 2, 3)", 'pressed background color never reached "rgb(1, 2, 3)"');
       expect(getComputedStyle(pressed!).color).to.equal("rgb(4, 5, 6)");
       expect(getComputedStyle(selected!).backgroundColor).to.equal(
         "rgba(0, 0, 0, 0)"
@@ -1090,13 +1088,7 @@ describe("selected/hover cssprops", () => {
       await moveMouseTo(pressed);
       await sendMouse({ type: "down" });
       await new Promise((resolve) => requestAnimationFrame(resolve));
-      expect(getComputedStyle(pressed).backgroundColor).to.equal(
-        resolvedInShadow(
-          el,
-          "background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))",
-          "background-color"
-        )
-      );
+      await waitUntil(() => getComputedStyle(pressed).backgroundColor === resolvedInShadow( el, "background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))", "background-color" ), 'pressed background color never reached its pressed value');
       expect(getComputedStyle(pressed).color).to.equal(
         resolvedInShadow(
           el,

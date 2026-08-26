@@ -448,7 +448,7 @@ describe('lr-artifact-panel', () => {
           type: 'down',
         });
         await waitUntil(() => pressed.matches(':active'));
-        expect(getComputedStyle(pressed).backgroundColor).to.equal('rgb(10, 20, 30)');
+        await waitUntil(() => getComputedStyle(pressed).backgroundColor === 'rgb(10, 20, 30)', 'pressed background color never reached rgb(10, 20, 30)');
         expect(getComputedStyle(pressed).color).to.equal('rgb(40, 50, 60)');
       } finally {
         await resetMouse();

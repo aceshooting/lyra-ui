@@ -3,7 +3,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import './zoomable-frame.js';
 import type { LyraZoomableFrame } from './zoomable-frame.js';
 import * as classModule from './zoomable-frame.class.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 
 const INLINE_DOCUMENT = '<!doctype html><html><body><p>Inline preview</p></body></html>';
 
@@ -350,6 +350,8 @@ describe('zoom controls and interaction', () => {
       expect(getComputedStyle(button).backgroundColor).to.equal(rest);
       await sendMouse({ type: 'down' });
       await aTimeout(0);
+      // A press that must change nothing cannot be polled for; settle first so the read is real.
+      await settlePointer();
       expect(getComputedStyle(button).backgroundColor).to.equal(rest);
     } finally {
       await sendMouse({ type: 'up' });
