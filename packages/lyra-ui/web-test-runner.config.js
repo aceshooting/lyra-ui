@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { availableParallelism } from 'node:os';
 import { defaultReporter } from '@web/test-runner';
 import { sendKeysPlugin } from '@web/test-runner-commands/plugins';
 import { playwrightLauncher } from '@web/test-runner-playwright';
@@ -112,6 +113,7 @@ const mouseCommandPlugin = {
     }
 
     const page = session.browser.getPage(session.id);
+    await page.bringToFront();
     if (command === 'reset-mouse') {
       await page.mouse.up({ button: 'left' });
       await page.mouse.up({ button: 'middle' });
@@ -199,6 +201,18 @@ function parseTestConcurrency(value) {
 const testServerPort = parseTestServerPort(process.env.WTR_PORT);
 const testConcurrency = parseTestConcurrency(process.env.WTR_CONCURRENCY);
 const browserProduct = (process.env.WTR_BROWSER ?? 'chromium').toLowerCase();
+const isPointerTimingSensitiveBrowser =
+  browserProduct === 'firefox' || browserProduct === 'webkit' || browserProduct === 'safari';
+// Web Test Runner otherwise opens half the host CPU count in parallel pages. That becomes 30
+// Firefox tabs on the release host, where background-tab pointer/paint state is no longer reliable.
+// Preserve the automatic shape on low-core CI runners, but cap the engines with real cross-tab
+// pointer-state sensitivity at the four-page ceiling already proven by the aggregate browser sweep.
+const pointerSafeDefaultConcurrency = Math.max(
+  1,
+  Math.min(4, Math.floor(availableParallelism() / 2)),
+);
+const effectiveTestConcurrency =
+  testConcurrency ?? (isPointerTimingSensitiveBrowser ? pointerSafeDefaultConcurrency : undefined);
 // Headless Linux CI/dev runners expose no GPU. Recent WebKit (WPE) builds probe Vulkan-backed
 // Zink for GL before falling back to software rendering, and on a driverless host that probe
 // itself fails hard (`MESA: error: ZINK: vkCreateInstance failed (VK_ERROR_INCOMPATIBLE_DRIVER)`),
@@ -300,16 +314,17 @@ export default {
   ...(testServerPort === undefined ? {} : { port: testServerPort }),
   nodeResolve: true,
   browsers: [playwrightLauncher(launcherConfig)],
-  // The runner otherwise opens half the host's reported CPU count in browser pages. Standalone
-  // ordinary/platform runs retain that automatic default; parallel aggregate scripts can opt in
-  // to a per-process ceiling so multiple WTR processes do not each claim half the machine.
+  // The runner otherwise opens half the host's reported CPU count in browser pages. Firefox and
+  // WebKit retain that automatic shape on low-core runners but stop at four pages, since higher
+  // per-process concurrency makes real pointer/paint state unreliable. Chromium retains WTR's
+  // automatic default; aggregate scripts can assign an explicit per-process ceiling.
   // Coverage always stays at one: instrumentation makes each page import most of the source graph,
   // and one runner process is required for a deterministic combined report.
   ...(collectCoverage
     ? { concurrency: 1 }
-    : testConcurrency === undefined
+    : effectiveTestConcurrency === undefined
       ? {}
-      : { concurrency: testConcurrency }),
+      : { concurrency: effectiveTestConcurrency }),
   // Keep the complete browser-session watchdog high enough for a slow worker to report the actual
   // result while still failing resource leaks and unresolved tests within a bounded five minutes.
   testsFinishTimeout: 300000,

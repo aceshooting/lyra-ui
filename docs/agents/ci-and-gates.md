@@ -308,6 +308,11 @@ the same checksum-pinned actionlint workflow gate as `static-checks`.
   Node 22/pnpm 11 toolchain. The 5-browser Node 22 sweep is Firefox, Chromium, Chrome, Edge, and
   Safari. It is useful for broad installed-browser coverage, but it is not the sharded two-Node CI
   matrix.
+- When no explicit `WTR_CONCURRENCY` is assigned, the runner preserves Chromium's automatic
+  concurrency and caps Firefox/WebKit/Safari at the smaller of four pages or half the available
+  CPUs. This preserves low-core hosted-runner behavior while preventing a high-core machine from
+  opening dozens of timing-sensitive pointer pages in one process. The shared mouse-command bridge
+  also foregrounds the requesting page before each real pointer action.
 - `./scripts/ci.sh --platform-matrix` (or `--all`) runs the primary aggregate and then the exact
   local counterpart of CI's platform matrix. Its 11 legs are source-derived: Node 20 runs Firefox
   (1 shard) and Safari (1 shard); Node 22 runs Chromium (2 shards), Chrome (1 shard), Edge (1 shard),

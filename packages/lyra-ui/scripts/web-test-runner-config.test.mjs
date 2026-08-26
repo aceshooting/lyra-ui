@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { availableParallelism } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -8,7 +9,13 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const configUrl = pathToFileURL(resolve(packageDirectory, 'web-test-runner.config.js')).href;
 
-function runConfigInspection({ coverage = false, coverageReportDir, port, concurrency } = {}) {
+function runConfigInspection({
+  coverage = false,
+  coverageReportDir,
+  port,
+  concurrency,
+  browser,
+} = {}) {
   const environment = { ...process.env };
   if (coverage) environment.WTR_COVERAGE = '1';
   else delete environment.WTR_COVERAGE;
@@ -18,6 +25,8 @@ function runConfigInspection({ coverage = false, coverageReportDir, port, concur
   else environment.WTR_PORT = port;
   if (concurrency === undefined) delete environment.WTR_CONCURRENCY;
   else environment.WTR_CONCURRENCY = concurrency;
+  if (browser === undefined) delete environment.WTR_BROWSER;
+  else environment.WTR_BROWSER = browser;
 
   const source = `
     import config from ${JSON.stringify(configUrl)};
@@ -39,6 +48,54 @@ function runConfigInspection({ coverage = false, coverageReportDir, port, concur
     env: environment,
     encoding: 'utf8',
   });
+}
+
+function inspectMouseCommandOrder() {
+  const source = `
+    import config from ${JSON.stringify(configUrl)};
+    const calls = [];
+    const page = {
+      async bringToFront() { calls.push('front'); },
+      mouse: {
+        async move(x, y) { calls.push('move:' + x + ',' + y); },
+        async click(x, y) { calls.push('click:' + x + ',' + y); },
+        async down() { calls.push('down'); },
+        async up({ button }) { calls.push('up:' + (button ?? 'default')); },
+      },
+    };
+    const plugin = config.plugins.find((candidate) => candidate.name === 'lyra-mouse-command');
+    const session = {
+      id: 'session-1',
+      browser: {
+        type: 'playwright',
+        getPage(id) {
+          calls.push('page:' + id);
+          return page;
+        },
+      },
+    };
+    await plugin.executeCommand({
+      command: 'send-mouse',
+      payload: { type: 'move', position: [12, 34] },
+      session,
+    });
+    await plugin.executeCommand({
+      command: 'send-mouse',
+      payload: { type: 'click', position: [56, 78] },
+      session,
+    });
+    await plugin.executeCommand({ command: 'send-mouse', payload: { type: 'down' }, session });
+    await plugin.executeCommand({ command: 'send-mouse', payload: { type: 'up' }, session });
+    await plugin.executeCommand({ command: 'reset-mouse', session });
+    process.stdout.write(JSON.stringify(calls));
+  `;
+  const result = spawnSync(process.execPath, ['--input-type=module', '--eval', source], {
+    cwd: packageDirectory,
+    env: { ...process.env, WTR_BROWSER: 'firefox' },
+    encoding: 'utf8',
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  return JSON.parse(result.stdout);
 }
 
 function inspectConfig(options) {
@@ -64,6 +121,17 @@ test('caps coverage browser sessions without changing ordinary test concurrency'
   });
 });
 
+test('caps pointer-sensitive browser concurrency without increasing the low-core default', () => {
+  const expectedConcurrency = Math.max(
+    1,
+    Math.min(4, Math.floor(availableParallelism() / 2)),
+  );
+  assert.equal(inspectConfig({ browser: 'firefox' }).concurrency, expectedConcurrency);
+  assert.equal(inspectConfig({ browser: 'webkit' }).concurrency, expectedConcurrency);
+  assert.equal(inspectConfig({ browser: 'safari' }).concurrency, expectedConcurrency);
+  assert.equal(inspectConfig({ browser: 'chromium' }).concurrency, null);
+});
+
 test('writes a shard raw report without applying the full-suite threshold early', () => {
   const reportDir = 'coverage/shards/coverage-shard-2';
   assert.deepEqual(inspectConfig({ coverage: true, coverageReportDir: reportDir }).coverageDetails, {
@@ -85,6 +153,8 @@ test('uses a validated explicit test-server port when a parallel lane assigns on
 
 test('uses validated opt-in concurrency without weakening the coverage ceiling', () => {
   assert.equal(inspectConfig({ concurrency: '4' }).concurrency, 4);
+  assert.equal(inspectConfig({ browser: 'firefox', concurrency: '2' }).concurrency, 2);
+  assert.equal(inspectConfig({ browser: 'webkit', concurrency: '8' }).concurrency, 8);
   assert.equal(inspectConfig({ coverage: true, concurrency: '8' }).concurrency, 1);
 
   for (const concurrency of ['0', '-1', '1.5', '9007199254740992']) {
@@ -92,6 +162,29 @@ test('uses validated opt-in concurrency without weakening the coverage ceiling',
     assert.notEqual(result.status, 0, `WTR_CONCURRENCY=${concurrency} must be rejected`);
     assert.match(result.stderr, /WTR_CONCURRENCY must be a positive safe integer/u);
   }
+});
+
+test('foregrounds the requesting page before every real pointer command', () => {
+  assert.deepEqual(inspectMouseCommandOrder(), [
+    'page:session-1',
+    'front',
+    'move:12,34',
+    'page:session-1',
+    'front',
+    'click:56,78',
+    'page:session-1',
+    'front',
+    'down',
+    'page:session-1',
+    'front',
+    'up:default',
+    'page:session-1',
+    'front',
+    'up:left',
+    'up:middle',
+    'up:right',
+    'move:0,0',
+  ]);
 });
 
 test('gives every parallel browser lane a distinct explicit test-server port', () => {

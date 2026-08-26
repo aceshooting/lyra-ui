@@ -85,6 +85,11 @@
   *different* error than the one it targeted, check whether the job simply progressed further and
   hit the next unrelated pre-existing bug (`gh run view <id> --log-failed`, and `gh run list`
   against commits predating the fix) before assuming the fix itself was wrong.
+- **Real pointer commands run against the foreground Playwright page.** The shared `sendMouse()` /
+  `resetMouse()` bridge brings the requesting page to the front before touching `page.mouse`, and
+  the runner caps Firefox/WebKit at the smaller of four pages or half the available CPUs when
+  `WTR_CONCURRENCY` is unset. Higher per-process concurrency produced nondeterministic hover/press
+  failures across otherwise-unrelated files on a 60-core host; use more shards, not more pages.
 - **`noUnusedLocals`/`noUnusedParameters` can't see a field only read by a test.**
   `tsconfig.json` excludes `src/**/*.test.ts` from the strict-flags program, so a class field that
   looks write-only to `tsc` may be a colocated test's only observability seam. Before deleting a

@@ -53,7 +53,8 @@ declare -Ar WTR_LANE_PORTS=(
 # An ordinary WTR process opens half the host's reported CPU count in browser pages. Running two
 # full-engine processes with that default alongside coverage overcommits the machine (8 + 8 + 1
 # pages on a 16-core host), producing unrelated timer and paint failures. Bound this aggregate to
-# nine browser pages while leaving standalone WTR commands on their automatic default.
+# nine browser pages explicitly; standalone Firefox/WebKit commands independently retain the
+# smaller of that four-page ceiling or their low-core automatic shape.
 declare -Ar WTR_LANE_CONCURRENCY=(
   [chromium]=1
   [firefox]=4
