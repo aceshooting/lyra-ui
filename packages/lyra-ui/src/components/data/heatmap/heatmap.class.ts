@@ -890,10 +890,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * on the last draw -- not a fresh computation. That distinction is the whole contract. Computing
    * it on read from the same internal getters `drawMatrix()` uses looks equivalent and is not:
    * those getters read CURRENT layout, so any interval where layout has moved but no draw has
-   * happened yet makes the getter describe a canvas that does not exist. Two such intervals are
-   * routine -- full redraws pause while the host is outside the viewport (documented behaviour of
-   * this component), and `rowLabelWidth`/`colLabelHeight` are not redraw-triggering properties at
-   * all -- and both land hardest on the tall, partly-scrolled matrix this getter exists to serve.
+   * happened yet makes the getter describe a canvas that does not exist. Full redraws pause while
+   * the host is outside the viewport (documented behaviour of this component), so that interval
+   * can be long-lived and lands hardest on the tall, partly-scrolled matrix this getter exists to
+   * serve.
    * Returning the stored object also makes the getter and the event the same value by
    * construction rather than by coincidence.
    */
@@ -2105,6 +2105,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         'domain',
         'midpoint',
         'fitToWidth',
+        'rowLabelWidth',
+        'colLabelHeight',
+        'colLabelRotation',
         'bucketCount',
         'annotations',
         'focusedCell',
@@ -3626,8 +3629,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   /** Geometry for the semantic cell overlay. Matrix buttons describe the bitmap that exists now,
-   * not geometry a future draw might use: while redraws are paused offscreen (or a non-redrawing
-   * gutter property changes), live getters can move ahead of the last-painted canvas indefinitely. */
+   * not geometry a future draw might use: while redraws are paused offscreen, live getters can
+   * move ahead of the last-painted canvas indefinitely. */
   private accessibleCellRect(pos: CellPos): {
     x: number;
     y: number;

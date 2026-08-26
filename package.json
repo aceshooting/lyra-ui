@@ -26,7 +26,7 @@
     "storybook:check": "node --test scripts/storybook-contracts.test.mjs && node scripts/check-storybook.mjs",
     "readme:check": "node scripts/check-readme-freshness.mjs",
     "plugin:sync": "node scripts/sync-plugin-version.mjs",
-    "skill:check": "node --test scripts/sync-plugin-version.test.mjs && node scripts/sync-plugin-version.mjs --check && node scripts/check-skill-manifest.mjs",
+    "skill:check": "node --test scripts/sync-plugin-version.test.mjs scripts/skill-reference-context.test.mjs && node scripts/sync-plugin-version.mjs --check && node scripts/check-skill-manifest.mjs",
     "check:framework-recipes": "node --test scripts/check-framework-recipes.test.mjs && node scripts/check-framework-recipes.mjs",
     "test:packed-consumer-tooling": "node --test scripts/check-packed-consumer.test.mjs scripts/check-packed-attw.test.mjs",
     "check:packed-attw": "node --test scripts/check-packed-attw.test.mjs && node scripts/check-packed-attw.mjs",

@@ -654,6 +654,7 @@ if [[ "$LYRA_UI_RELEASED" -eq 1 ]]; then
     docs/component-quality.md \
     plugins/lyra-ui/.claude-plugin/plugin.json \
     plugins/lyra-ui/.codex-plugin/plugin.json \
+    plugins/lyra-ui/skills/lyra-ui/CHANGELOG.md \
     plugins/lyra-ui/skills/lyra-ui/references/ \
     skills/lyra-ui.skill \
     skills/compose-lyra-interfaces.skill

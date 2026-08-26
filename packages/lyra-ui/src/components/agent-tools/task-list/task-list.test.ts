@@ -297,7 +297,7 @@ it('drops a malformed (null) item instead of throwing (regression)', async () =>
   `);
   const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]')];
   expect(rows).to.have.length(1);
-  expect(rows[0]!.dataset.id).to.equal('ok');
+  expect(rows[0]!.dataset['id']).to.equal('ok');
 });
 
 it('drops rows with a missing or non-string id instead of rendering an invalid id (regression)', async () => {
@@ -310,7 +310,7 @@ it('drops rows with a missing or non-string id instead of rendering an invalid i
   `);
   const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]')];
   expect(rows).to.have.length(1);
-  expect(rows[0]!.dataset.id).to.equal('ok');
+  expect(rows[0]!.dataset['id']).to.equal('ok');
 });
 
 it('does not throw with reorderable set and a malformed item present (regression)', async () => {
@@ -322,7 +322,7 @@ it('does not throw with reorderable set and a malformed item present (regression
   `);
   const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]')];
   expect(rows).to.have.length(1);
-  expect(rows[0]!.dataset.id).to.equal('ok');
+  expect(rows[0]!.dataset['id']).to.equal('ok');
 
   const numericId = await fixture<LyraTaskList>(html`
     <lr-task-list reorderable .items=${[{ id: 42, label: 'numeric-id', status: 'pending' }] as never}></lr-task-list>
@@ -343,14 +343,14 @@ it('drops a malformed direct child instead of throwing, with or without reordera
   const plain = await fixture<LyraTaskList>(html`<lr-task-list .items=${malformedChildItems}></lr-task-list>`);
   const plainChildRows = plain.shadowRoot!.querySelectorAll('[part="item-children"] [part="item"]');
   expect(plainChildRows).to.have.length(1);
-  expect((plainChildRows[0] as HTMLElement).dataset.id).to.equal('child');
+  expect((plainChildRows[0] as HTMLElement).dataset['id']).to.equal('child');
 
   const reorderable = await fixture<LyraTaskList>(html`
     <lr-task-list reorderable .items=${malformedChildItems}></lr-task-list>
   `);
   const reorderableChildRows = reorderable.shadowRoot!.querySelectorAll('[part="item-children"] [part="item"]');
   expect(reorderableChildRows).to.have.length(1);
-  expect((reorderableChildRows[0] as HTMLElement).dataset.id).to.equal('child');
+  expect((reorderableChildRows[0] as HTMLElement).dataset['id']).to.equal('child');
 });
 
 describe('status-change announcements', () => {

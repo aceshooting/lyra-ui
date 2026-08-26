@@ -6,7 +6,7 @@
 - **Class** `LyraWidget`, also available unregistered from `@aceshooting/lyra-ui/components/layout/widget/widget.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecated property** `activeView` since `11.2.0`; use property `activeViewId`; removal not before `13.0.0` — `activeView` was this property's original public name; the string does not appear anywhere in CHANGELOG.md, so the rename to `activeViewId` was never announced at all. A shipped consumer's `.activeView=` binding became a dead expando and the widget fell back to its first view with no error. The alias seeds `activeViewId` rather than being read alongside it, because the component itself writes that property (a view-toggle click, and the fallback when `views` drops the active id), and a read-alongside alias would undo a later interactive change on the next update.
 - **Optional peers** none
 - **Themeable via** 16 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below

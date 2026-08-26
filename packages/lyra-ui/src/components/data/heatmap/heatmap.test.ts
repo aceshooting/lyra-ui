@@ -7749,70 +7749,32 @@ describe("matrixGeometry / lr-matrix-geometry-change", () => {
     expect(count, "a color-only redraw must not refire the geometry event").to.equal(0);
   });
 
-  it("fires lr-matrix-geometry-change exactly once when a draw changes the resolved geometry", async () => {
-    // rowLabelWidth/colLabelHeight are not in updated()'s redraw-triggering property list (they
-    // only take effect on a redraw driven by something else, e.g. `data`), so `cellSize` -- which
-    // IS in that list -- is what reliably exercises a real post-render geometry change here.
+  it("repaints and fires lr-matrix-geometry-change when only rowLabelWidth changes", async () => {
     const el = (await fixture(
       html`<lr-heatmap cell-size="20" row-label-width="140"></lr-heatmap>`
     )) as LyraHeatmap;
     setMatrixData(el, { rowLabels: ["a"], colLabels: ["x"], values: [[1]] });
     await el.updateComplete;
-    await aTimeout(0);
+    await settleLayout();
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
+    expect(canvas.style.width).to.equal("160px");
     let count = 0;
     let detail: { padLeft: number; padTop: number; cellSize: number } | undefined;
     el.addEventListener("lr-matrix-geometry-change", (e) => {
       count++;
       detail = (e as CustomEvent).detail;
     });
-    el.setAttribute("cell-size", "30");
+    el.rowLabelWidth = 300;
     await el.updateComplete;
-    await aTimeout(0);
-    expect(count, "a cellSize change changes the painted geometry").to.equal(1);
-    expect(detail).to.deep.equal({ padLeft: 140, padTop: 20, cellSize: 30 });
+    await settleLayout();
+
+    expect(canvas.style.width, "the bitmap uses the new gutter").to.equal("320px");
+    expect(count, "one geometry change produces one event").to.equal(1);
+    expect(detail).to.deep.equal({ padLeft: 300, padTop: 20, cellSize: 20 });
     expect(detail).to.deep.equal(el.matrixGeometry);
   });
 
-  // The getter is documented as "the gutter/cell geometry the last matrix-mode draw actually
-  // painted with", and the 11.2.0 notes said it "can never disagree" because it reuses the same
-  // internal getters drawMatrix() calls. Reusing those getters is exactly what made it disagree:
-  // they read CURRENT layout, not the last paint.
-  //
-  // rowLabelWidth is the sharpest demonstration because -- as the test above records -- it is not
-  // in updated()'s redraw-triggering property list. Assigning it therefore changes what the live
-  // getters compute while provoking no redraw at all, so the divergence is not a transient window
-  // (as it is for the reported viewport-paused-redraw case) but permanent until something else
-  // happens to trigger a draw.
-  it("keeps reporting the last painted geometry when live layout moves ahead of the canvas", async () => {
-    const el = (await fixture(
-      html`<lr-heatmap cell-size="20" row-label-width="140"></lr-heatmap>`
-    )) as LyraHeatmap;
-    setMatrixData(el, { rowLabels: ["a"], colLabels: ["x"], values: [[1]] });
-    await el.updateComplete;
-    await aTimeout(0);
-    // The initial ResizeObserver callback schedules its redraw in an animation frame. Let that
-    // callback and frame finish before changing layout, otherwise the test can mistake the
-    // observer's first paint for a redraw caused by rowLabelWidth.
-    await settleLayout();
-    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
-    const paintedWidth = canvas.style.width;
-    expect(el.matrixGeometry).to.deep.equal({ padLeft: 140, padTop: 20, cellSize: 20 });
-
-    let fired = 0;
-    el.addEventListener("lr-matrix-geometry-change", () => fired++);
-    el.rowLabelWidth = 300;
-    await el.updateComplete;
-    await aTimeout(0);
-
-    expect(canvas.style.width, "no redraw should have happened").to.equal(paintedWidth);
-    expect(fired, "no draw, so no geometry event").to.equal(0);
-    expect(
-      el.matrixGeometry,
-      "the getter must report what was painted, not what live layout would paint now"
-    ).to.deep.equal({ padLeft: 140, padTop: 20, cellSize: 20 });
-  });
-
-  it("keeps accessible cell buttons on the last-painted geometry until the canvas redraws", async () => {
+  it("repaints and moves the accessible cell overlay when rowLabelWidth changes", async () => {
     const el = (await fixture(html`
       <lr-heatmap
         accessible-cells
@@ -7829,10 +7791,13 @@ describe("matrixGeometry / lr-matrix-geometry-change", () => {
 
     el.rowLabelWidth = 300;
     await el.updateComplete;
-    await aTimeout(0);
+    await settleLayout();
+    await el.updateComplete;
 
-    expect(el.matrixGeometry?.padLeft).to.equal(140);
-    expect(cellInset(), "the semantic overlay must stay on the canvas's painted cell").to.equal("140px");
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
+    expect(canvas.style.width, "the cell bitmap moved with the gutter").to.equal("350px");
+    expect(el.matrixGeometry?.padLeft).to.equal(300);
+    expect(cellInset(), "the semantic overlay follows the repainted cell").to.equal("300px");
   });
 
   it("moves accessible cell buttons after a new geometry snapshot is painted", async () => {
@@ -7987,6 +7952,45 @@ describe('matrix column-label band', () => {
     const malformed = await matrixWith({ 'col-label-height': 'not-a-number' });
     expect(malformed.colLabelHeight).to.equal(undefined);
     expect(canvasHeight(malformed)).to.equal(20 + 2 * 20);
+  });
+
+  it('repaints and reports geometry when only colLabelHeight changes', async () => {
+    const el = await matrixWith();
+    await settleLayout();
+    const details: Array<{ padLeft: number; padTop: number; cellSize: number }> = [];
+    el.addEventListener('lr-matrix-geometry-change', (event) => {
+      details.push(
+        (event as CustomEvent<{
+          padLeft: number;
+          padTop: number;
+          cellSize: number;
+        }>).detail
+      );
+    });
+
+    el.colLabelHeight = 70;
+    await el.updateComplete;
+    await settleLayout();
+
+    expect(canvasHeight(el), 'the bitmap uses the new column band').to.equal(70 + 2 * 20);
+    expect(details.length, 'one geometry change produces one event').to.equal(1);
+    expect(details[0]).to.deep.equal({ padLeft: 60, padTop: 70, cellSize: 20 });
+    expect(details[0]).to.equal(el.matrixGeometry);
+  });
+
+  it('repaints column labels when only colLabelRotation changes', async () => {
+    const el = await matrixWith();
+    await settleLayout();
+    const angles = recordRotations(el);
+
+    el.colLabelRotation = 45;
+    await el.updateComplete;
+    await settleLayout();
+
+    expect(angles.length, 'one rotation per repainted column label').to.equal(2);
+    for (const angle of angles) {
+      expect(Math.abs(angle), '45 degrees in radians').to.be.closeTo(Math.PI / 4, 1e-6);
+    }
   });
 });
 

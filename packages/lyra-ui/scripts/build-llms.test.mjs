@@ -9,9 +9,11 @@ import {
   buildPeers,
   COMPOUND_USAGE_REGISTRATIONS,
   readTagFacts,
+  rewriteSharedLinksForRoot,
   TYPE_ONLY_DECLARATION_PEERS,
   validateCompoundUsageRegistrations,
 } from './build-llms.mjs';
+import { packageAllowlistProblems } from './check-llms-artifacts.mjs';
 import { createManifestInheritanceFixture } from './fixtures/manifest-inheritance.mjs';
 import { compactManifest } from './manifest-compact.mjs';
 
@@ -20,6 +22,12 @@ const inventory = JSON.parse(
 );
 const packageMetadata = JSON.parse(
   readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+);
+assert.deepEqual(packageAllowlistProblems(packageMetadata.files), []);
+assert.deepEqual(
+  packageAllowlistProblems(packageMetadata.files.filter((file) => file !== 'CHANGELOG.md')),
+  ['package.json "files" is missing "CHANGELOG.md" — it would not reach consumers.'],
+  'the published documentation links CHANGELOG.md, so the allowlist gate must require it',
 );
 const sharedReference = readFileSync(new URL('../llms/shared.md', import.meta.url), 'utf8');
 const layoutReference = readFileSync(new URL('../llms/layout.md', import.meta.url), 'utf8');
@@ -185,10 +193,37 @@ assert.match(
   /every release after 9\.0\.0[\s\S]*\[CHANGELOG\.md\]\(\.\.\/CHANGELOG\.md\)/u,
   'the shared status policy must route post-9.0 upgrades to the shipped changelog',
 );
+assert.throws(
+  () => rewriteSharedLinksForRoot('No changelog link.'),
+  /Expected exactly one/u,
+  'the root-context rewrite must fail closed when the authored link disappears',
+);
+assert.throws(
+  () => rewriteSharedLinksForRoot(
+    '[CHANGELOG.md](../CHANGELOG.md) and [CHANGELOG.md](../CHANGELOG.md)',
+  ),
+  /found 2/u,
+  'the root-context rewrite must fail closed when its exact source link becomes ambiguous',
+);
 assert.match(
   llmsIntroReference,
   /\[CHANGELOG\.md\]\(\.\/CHANGELOG\.md\): chronological release notes/u,
   'the short package reference index must expose the shipped changelog',
+);
+assert.match(
+  layoutReference,
+  /`renderItem:[^\n]*[\s\S]*returned value\s+is stamped inside `<lr-virtual-list>`'s own shadow root, not the caller's light DOM[\s\S]*document-level selectors cannot style arbitrary returned descendants/u,
+  'virtual-list renderItem guidance must disclose its shadow-root styling boundary',
+);
+const passiveTransclusionContract =
+  /Its post-sanitization\s+transclusion\s+is\s+network-silent\s+and\s+non-interactive:[\s\S]*?controls\s+with\s+no\s+passive\s+content\s+are\s+removed\./u;
+const readmePassiveTransclusion = readmeReference.match(passiveTransclusionContract)?.[0];
+const sharedPassiveTransclusion = sharedReference.match(passiveTransclusionContract)?.[0];
+assert.ok(readmePassiveTransclusion, 'the README must disclose the passive transclusion profile');
+assert.equal(
+  sharedPassiveTransclusion?.replace(/\s+/gu, ' '),
+  readmePassiveTransclusion.replace(/\s+/gu, ' '),
+  'README.md and llms/shared.md must retain identical passive transclusion security prose',
 );
 assert.match(
   layoutReference,
@@ -417,6 +452,7 @@ assert.deepEqual(TYPE_ONLY_DECLARATION_PEERS, {
 });
 
 const artifacts = build({ write: false });
+const full = [...artifacts].find(([file]) => file.endsWith('/llms-full.txt'))?.[1];
 const tokens = [...artifacts].find(([file]) => file.endsWith('/llms/tokens.md'))?.[1];
 const peers = [...artifacts].find(([file]) => file.endsWith('/llms/peers.md'))?.[1];
 const index = [...artifacts].find(([file]) => file.endsWith('/llms/index.md'))?.[1];
@@ -429,6 +465,22 @@ const compoundReferences = Object.fromEntries(
   ]),
 );
 assert.ok(tokens, 'build({ write: false }) must produce llms/tokens.md');
+assert.ok(full, 'build({ write: false }) must produce llms-full.txt');
+assert.match(
+  full,
+  /package's shipped \[CHANGELOG\.md\]\(\.\/CHANGELOG\.md\) before upgrading/u,
+  'the package-root llms-full reference must resolve CHANGELOG.md beside itself',
+);
+assert.doesNotMatch(
+  full,
+  /\[CHANGELOG\.md\]\(\.\.\/CHANGELOG\.md\)/u,
+  'llms-full must not retain shared.md\'s directory-relative changelog path',
+);
+assert.match(
+  sharedReference,
+  /\[CHANGELOG\.md\]\(\.\.\/CHANGELOG\.md\)/u,
+  'the authored llms/shared.md link must remain correct in its own directory context',
+);
 assert.ok(peers, 'build({ write: false }) must produce llms/peers.md');
 assert.ok(index, 'build({ write: false }) must produce llms/index.md');
 assert.ok(table, 'build({ write: false }) must produce per-tag component docs');

@@ -6,7 +6,7 @@
 - **Class** `LyraGraph`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
 - **Themeable via** 19 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below

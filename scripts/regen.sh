@@ -170,6 +170,7 @@ CHANGED_PATHS=(
   .agents/skills/
   plugins/lyra-ui/.claude-plugin/plugin.json
   plugins/lyra-ui/.codex-plugin/plugin.json
+  plugins/lyra-ui/skills/lyra-ui/CHANGELOG.md
   plugins/lyra-ui/skills/lyra-ui/references/
   skills/lyra-ui.skill
   skills/compose-lyra-interfaces.skill

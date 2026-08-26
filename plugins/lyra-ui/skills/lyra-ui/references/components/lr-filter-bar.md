@@ -6,7 +6,7 @@
 - **Class** `LyraFilterBar`, also available unregistered from `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 21 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -22,10 +22,11 @@ Dashboard filter row that composes Lyra inputs and removable chips, with reset a
 
 - `filters: readonly LyraFilterBarFilterDefinition[] = []` (attribute: false) — filter schema in
   render order. Every definition carries a nonempty, whitespace-stable, unique `filterId` and a
-  string `label`; invalid definitions and later duplicate filter IDs are ignored deterministically.
-  The first 10,000 definitions and nested collection entries are detached and deeply frozen at
-  assignment; the optional Lit `icon` payload retains its rendering identity. Create and reassign a
-  new array after changes. Writing `null` or `undefined` clears the schema; reads remain the canonical non-null
+  `label` that is a non-blank string; invalid definitions (including a missing, non-string, or
+  blank `label`) and later duplicate filter IDs are ignored deterministically. The first 10,000
+  definitions and nested collection entries are detached and deeply frozen at assignment; the
+  optional Lit `icon` payload retains its rendering identity. Create and reassign a new array after
+  changes. Writing `null` or `undefined` clears the schema; reads remain the canonical non-null
   empty array.
 - `value: LyraFilterBarValue = {}` (attribute: false) — sparse current values keyed by `filterId`.
   Cleared fields are omitted. Reads, writes, event details, and string-array fields are immutable

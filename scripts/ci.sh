@@ -297,6 +297,7 @@ pnpm readme:check
 step "plugin reference sync"
 ./package.sh
 freshness_diff "plugin skill package (./package.sh)" \
+  plugins/lyra-ui/skills/lyra-ui/CHANGELOG.md \
   plugins/lyra-ui/skills/lyra-ui/references/ \
   skills/lyra-ui.skill \
   skills/compose-lyra-interfaces.skill

@@ -2055,12 +2055,58 @@ it("actually paints the rendered fullscreen backdrop with the resolved --lr-widg
   expect(actual).to.equal(expected);
 });
 
-it("disables the collapse/fullscreen icon rotate transition under reduced motion", () => {
-  const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
-  expect(css).to.include("transition: transform var(--lr-transition-fast);");
-  expect(css).to.include(
-    "@media (prefers-reduced-motion: reduce) { [part='collapse-button'], [part='fullscreen-button'] { transition: none !important; } }"
+it("disables the rendered collapse/fullscreen icon rotate transition under reduced motion", async () => {
+  const el = (await fixture(html`
+    <lr-widget label="Motion" collapsible expandable>Body</lr-widget>
+  `)) as LyraWidget;
+  const controls = Array.from(
+    el.shadowRoot!.querySelectorAll<HTMLElement>(
+      '[part="collapse-button"], [part="fullscreen-button"]'
+    )
   );
+  expect(controls.length).to.equal(2);
+
+  const reducedRule = el
+    .shadowRoot!.adoptedStyleSheets.flatMap((sheet) => [...sheet.cssRules])
+    .find(
+      (rule): rule is CSSMediaRule =>
+        rule instanceof CSSMediaRule &&
+        rule.conditionText === "(prefers-reduced-motion: reduce)" &&
+        [...rule.cssRules].some(
+          (nested) =>
+            nested instanceof CSSStyleRule &&
+            nested.selectorText.includes('[part="collapse-button"]') &&
+            nested.selectorText.includes('[part="fullscreen-button"]')
+        )
+    );
+  expect(reducedRule?.conditionText).to.equal(
+    "(prefers-reduced-motion: reduce)"
+  );
+
+  const originalCondition = reducedRule!.media.mediaText;
+  try {
+    reducedRule!.media.mediaText = "not all";
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve())
+    );
+    for (const control of controls) {
+      const computed = getComputedStyle(control);
+      expect(computed.transitionProperty.split(", ")).to.include("transform");
+      expect(parseFloat(computed.transitionDuration)).to.be.greaterThan(0);
+    }
+
+    reducedRule!.media.mediaText = "all";
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve())
+    );
+    for (const control of controls) {
+      const computed = getComputedStyle(control);
+      expect(computed.transitionProperty).to.equal("none");
+      expect(parseFloat(computed.transitionDuration)).to.equal(0);
+    }
+  } finally {
+    reducedRule!.media.mediaText = originalCondition;
+  }
 });
 
 it("gives view-toggle's resting state a hover, gated via :where() so a consumer ::part(view-toggle):hover can win, without changing the pressed state's own styling", () => {

@@ -6,7 +6,7 @@
 - **Class** `LyraKnowledgeBase`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/knowledge-base/knowledge-base.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 20 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below

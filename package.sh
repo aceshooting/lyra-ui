@@ -8,11 +8,13 @@
 # forgotten repeatedly shipped a stale packaged skill, since pnpm lint's contract-policy chain
 # checks llms/ freshness but not the packaged copy under plugins/ -- only the docs-and-storybook
 # CI job's `docs:check` step catches that drift, days after it's easy to trace back.) The
-# references are generated copies so the archive stays self-contained.
+# references are generated context-aware copies so the archive stays self-contained.
 #
 # The skill deliberately does NOT ship llms-full.txt: it is the same content concatenated into one
-# ~750 KB file, and an agent reading a single component should pay for one component, not the whole
-# catalog. references/components/<tag>.md is addressed directly from the tag name.
+# multi-megabyte file, and an agent reading a single component should pay for one component, not the
+# whole catalog. references/components/<tag>.md is addressed directly from the tag name. The package
+# changelog is copied instead, and standalone-only link rewrites remove promises that would require
+# bundling llms-full.txt.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -49,6 +51,8 @@ for file in index.md shared.md tokens.md peers.md migration.md; do
   cp "${LLMS_DIR}/${file}" "${REFERENCES_DIR}/${file}"
 done
 cp -r "${LLMS_DIR}/components" "${REFERENCES_DIR}/components"
+cp "${ROOT_DIR}/packages/lyra-ui/CHANGELOG.md" "${SKILL_DIR}/CHANGELOG.md"
+node "${ROOT_DIR}/scripts/skill-reference-context.mjs" "${REFERENCES_DIR}"
 
 mkdir -p "${OUTPUT_DIR}"
 TMP_DIR="$(mktemp -d)"

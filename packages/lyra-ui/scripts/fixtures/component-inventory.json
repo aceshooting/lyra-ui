@@ -22931,7 +22931,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "[]"
           },
           {
             "name": "language",
@@ -23424,7 +23425,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "[]"
           },
           {
             "name": "language",

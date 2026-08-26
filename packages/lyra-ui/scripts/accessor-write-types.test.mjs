@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -20,6 +20,30 @@ import { generateManifest } from './generate-manifest.mjs';
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const plugin = cemConfig.plugins.find(({ name }) => name === 'lr-accessor-write-types');
 const runtimePlugin = cemConfig.plugins.find(({ name }) => name === 'lr-accessor-runtime-contracts');
+
+async function generateManifestFromIsolatedCaller() {
+  const scratch = mkdtempSync(path.join(os.tmpdir(), 'lyra-manifest-caller-'));
+  const callerPackage = path.join(scratch, 'package.json');
+  const sentinel = `${JSON.stringify({
+    private: true,
+    customElements: 'sentinel/custom-elements.json',
+  }, null, 2)}\n`;
+  const originalCwd = process.cwd();
+  writeFileSync(callerPackage, sentinel);
+  try {
+    process.chdir(scratch);
+    const result = await generateManifest({ write: false });
+    assert.equal(
+      readFileSync(callerPackage, 'utf8'),
+      sentinel,
+      'no-write manifest generation must not rewrite the caller package.json',
+    );
+    return result;
+  } finally {
+    process.chdir(originalCwd);
+    rmSync(scratch, { recursive: true, force: true });
+  }
+}
 
 function syntheticManifest() {
   return {
@@ -320,7 +344,7 @@ test('source scanning marks conflicting or opaque duplicate alias declarations a
 });
 
 test('fresh no-write CEM retains reviewed runtime and public-document subclass contracts', async () => {
-  const { manifest } = await generateManifest({ write: false });
+  const { manifest } = await generateManifestFromIsolatedCaller();
   const declarations = manifest.modules.flatMap((module) => module.declarations ?? []);
   const declaration = (tagName) => declarations.find((candidate) => candidate.tagName === tagName);
   const member = (tagName, name, kind = 'field') => declaration(tagName)?.members?.find(

@@ -779,6 +779,122 @@ it('normalizes hostile controlled-value descriptors without invoking accessors',
   expect(el.value).to.deep.equal({});
 });
 
+describe('special filter ids', () => {
+  const filters: LyraFilterBarFilterDefinition[] = [
+    {
+      filterId: '__proto__',
+      label: 'Tags',
+      type: 'combobox',
+      multiple: true,
+      required: true,
+      options: [
+        { value: 'urgent', label: 'Urgent' },
+        { value: 'billing', label: 'Billing' },
+      ],
+    },
+    {
+      filterId: 'neighbor',
+      label: 'Neighbor',
+      type: 'select',
+      options: [
+        { value: 'open', label: 'Open' },
+        { value: 'closed', label: 'Closed' },
+      ],
+    },
+  ];
+
+  function expectSafeOwnEntry(
+    value: LyraFilterBar['value'],
+    expected: readonly string[],
+  ): void {
+    expect(Object.prototype.hasOwnProperty.call(value, '__proto__')).to.be.true;
+    expect(value['__proto__']).to.deep.equal(expected);
+    const prototype = Object.getPrototypeOf(value);
+    expect(prototype === null || prototype === Object.prototype).to.be.true;
+    expect(Array.isArray(prototype)).to.be.false;
+  }
+
+  it('normalizes and clones an own __proto__ value while preserving a valid neighbor', async () => {
+    const assigned = JSON.parse(
+      '{"__proto__":["urgent"],"neighbor":"open"}',
+    ) as LyraFilterBar['value'];
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar .filters=${filters} .value=${assigned}></lr-filter-bar>
+    `);
+
+    const snapshot = el.value;
+    expectSafeOwnEntry(snapshot, ['urgent']);
+    expect(snapshot['neighbor']).to.equal('open');
+    expect(Object.keys(snapshot)).to.deep.equal(['__proto__', 'neighbor']);
+    expect(el.hasActiveFilters).to.be.true;
+    expect(el.invalidFilterIds).to.deep.equal([]);
+    expect(el.shadowRoot!.querySelectorAll('[part="chip"]')).to.have.length(2);
+  });
+
+  it('restores an own __proto__ default and a valid neighbor through reset()', async () => {
+    const filtersWithDefaults: LyraFilterBarFilterDefinition[] = [
+      {
+        ...filters[0]!,
+        defaultValue: ['urgent'],
+      },
+      {
+        ...filters[1]!,
+        defaultValue: 'closed',
+      },
+    ];
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar
+        .filters=${filtersWithDefaults}
+        .value=${{ neighbor: 'open' }}
+      ></lr-filter-bar>
+    `);
+
+    const resetPromise = oneEvent(el, 'lr-reset');
+    el.reset();
+    const resetEvent = await resetPromise as CustomEvent<{ value: LyraFilterBar['value'] }>;
+
+    expectSafeOwnEntry(el.value, ['urgent']);
+    expect(el.value['neighbor']).to.equal('closed');
+    expectSafeOwnEntry(resetEvent.detail.value, ['urgent']);
+    expect(resetEvent.detail.value['neighbor']).to.equal('closed');
+    await el.updateComplete;
+    expect(el.invalidFilterIds).to.deep.equal([]);
+    expect(el.shadowRoot!.querySelectorAll('[part="chip"]')).to.have.length(2);
+  });
+
+  it('commits and clears an own __proto__ edit without losing a valid neighbor', async () => {
+    const el = await fixture<LyraFilterBar>(html`
+      <lr-filter-bar
+        .filters=${filters}
+        .value=${{ neighbor: 'open' }}
+      ></lr-filter-bar>
+    `);
+    const combo = control(el, '__proto__') as HTMLElement & { value: string[] };
+
+    const inputPromise = oneEvent(el, 'lr-input');
+    combo.value = ['billing'];
+    combo.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    const inputEvent = await inputPromise as CustomEvent<LyraFilterBarInputDetail>;
+
+    expectSafeOwnEntry(el.value, ['billing']);
+    expect(el.value['neighbor']).to.equal('open');
+    expectSafeOwnEntry(inputEvent.detail.value, ['billing']);
+    expect(inputEvent.detail.value['neighbor']).to.equal('open');
+    expect(el.invalidFilterIds).to.deep.equal([]);
+    expect(el.shadowRoot!.querySelectorAll('[part="chip"]')).to.have.length(2);
+
+    combo.value = [];
+    combo.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(Object.prototype.hasOwnProperty.call(el.value, '__proto__')).to.be.false;
+    expect(el.value['neighbor']).to.equal('open');
+    expect(el.invalidFilterIds).to.deep.equal(['__proto__']);
+    expect(el.shadowRoot!.querySelectorAll('[part="chip"]')).to.have.length(1);
+    const prototype = Object.getPrototypeOf(el.value);
+    expect(prototype === null || prototype === Object.prototype).to.be.true;
+  });
+});
+
 it('honors array clear values and custom empty predicates during normalization', async () => {
   const render = () => html`<span>Custom</span>`;
   const filters = [

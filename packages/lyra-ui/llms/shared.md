@@ -45,6 +45,18 @@ summaries sit at the start of the applicable authored `llms/<family>.md` file; e
 version notes remain in the component's own section. `llms/migration.md` is narrower: it covers
 `wa-*`/`sl-*` renames and compatibility decisions, not Lyra release history.
 
+The major-version landmarks after 9.0.0 are:
+
+- **10.0.0:** removed eligible members deprecated during 9.x and made the public-contract
+  corrections listed in its changelog entry; follow that entry's per-member migration guidance.
+- **11.0.0:** carried no known consumer-breaking change. The major number recorded conservative
+  public-API-gate fingerprint and generated-type churn; consumers upgrading from 10.x were not
+  expected to change code.
+- **12.0.0:** removed the inherited static `LyraElement.getPropertyDescriptor()` surface after Lit
+  deprecated that finalization hook. Ordinary component consumers need no migration; only subclasses
+  that themselves overrode the hook are affected. Collection snapshot enforcement moved to a
+  decorator-agnostic accessor seam instead.
+
 ### The support window
 
 Compatibility promises are bounded by a published support window, not by "evergreen browsers":
@@ -1850,12 +1862,17 @@ member/default/import rewrite. Only the first two classifications are automatic;
 location-aware report rather than treating a README relationship as a rename allowlist.
 
 Security-motivated differences remain explicit. `lr-include` sanitizes every fragment, omits a
-script-executing mode, and defaults to same-origin fetches; link-like controls strip `opener` and
-force-add `noopener noreferrer` whenever `target` is set while preserving other settable author
-tokens where the component exposes `rel`; iframe/media/viewer inputs keep their URL validation,
-sandbox, size caps, and generation guards. A use that depends on weaker behavior is left unchanged
-with a warning. For a staged theme migration, map existing values onto `--lr-theme-*` explicitly in
-application CSS rather than expecting an implicit compatibility layer.
+script-executing mode, and defaults to same-origin fetches. Its post-sanitization transclusion is
+network-silent and non-interactive: anchors remain only for resolvable same-document `#fragment`
+links (rebased per include instance); every other navigation or resource attribute, including
+`href`, `src`, `srcset`, `action`, `ping`, and `poster`, is stripped, so images do not load.
+Form-control and custom-element wrappers are unwrapped to safe ordinary text or children, while
+controls with no passive content are removed. Link-like controls strip `opener` and force-add
+`noopener noreferrer` whenever `target` is set while preserving other settable author tokens where
+the component exposes `rel`; iframe/media/viewer inputs keep their URL validation, sandbox, size
+caps, and generation guards. A use that depends on weaker behavior is left unchanged with a warning.
+For a staged theme migration, map existing values onto `--lr-theme-*` explicitly in application CSS
+rather than expecting an implicit compatibility layer.
 
 ## Family barrels
 

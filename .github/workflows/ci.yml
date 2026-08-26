@@ -123,7 +123,7 @@ jobs:
       - run: git diff --exit-code -- packages/lyra-ui/vscode-html-data.json packages/lyra-ui/vscode-css-data.json packages/lyra-ui/web-types.json
       - run: pnpm readme:check
       - run: ./package.sh
-      - run: git diff --exit-code -- plugins/lyra-ui/skills/lyra-ui/references/ skills/lyra-ui.skill skills/compose-lyra-interfaces.skill
+      - run: git diff --exit-code -- plugins/lyra-ui/skills/lyra-ui/CHANGELOG.md plugins/lyra-ui/skills/lyra-ui/references/ skills/lyra-ui.skill skills/compose-lyra-interfaces.skill
       - run: pnpm skill:check
       - run: pnpm storybook:check-theme
 

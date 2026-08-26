@@ -13,7 +13,7 @@
 //   llms/migration.md         wa-*/sl-* classification and codemod table
 // A component section is assigned to a family by the src/components/<family>/ directory its tag is
 // declared in, so the docs can never drift from the source tree's own grouping.
-import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -848,6 +848,19 @@ export function buildComponentFile(
     .join('\n');
 }
 
+const SHARED_CHANGELOG_LINK = '[CHANGELOG.md](../CHANGELOG.md)';
+const ROOT_CHANGELOG_LINK = '[CHANGELOG.md](./CHANGELOG.md)';
+
+export function rewriteSharedLinksForRoot(text) {
+  const occurrences = text.split(SHARED_CHANGELOG_LINK).length - 1;
+  if (occurrences !== 1) {
+    throw new Error(
+      `Expected exactly one ${SHARED_CHANGELOG_LINK} in llms/shared.md, found ${occurrences}.`,
+    );
+  }
+  return text.replace(SHARED_CHANGELOG_LINK, ROOT_CHANGELOG_LINK);
+}
+
 // ---------------------------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------------------------
@@ -858,6 +871,7 @@ export function build({ write = true } = {}) {
 
   const preamble = read('llms', '00-preamble.md').trimEnd();
   const shared = read('llms', 'shared.md').trimEnd();
+  const rootShared = rewriteSharedLinksForRoot(shared);
 
   const sectionsByFamily = new Map();
   const sectionByTag = new Map();
@@ -940,7 +954,7 @@ export function build({ write = true } = {}) {
       ' `wa-*`/`sl-*` migration (`llms/migration.md`)',
   ].join('\n');
 
-  const fullParts = [preamble, '', contents, '', '---', '', '# Foundation', '', shared, ''];
+  const fullParts = [preamble, '', contents, '', '---', '', '# Foundation', '', rootShared, ''];
   for (const [family, title] of FAMILIES) {
     fullParts.push(`# ${title} (\`components/${family}/\`)`, '');
     for (const section of sectionsByFamily.get(family)) fullParts.push(section.text, '');

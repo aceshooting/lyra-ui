@@ -45,7 +45,10 @@ indexOfKey?(key): number }`. When set it takes precedence over `items`. The inde
   out-of-range results mean no match. An array source receives the same clone-owned frozen sequence
   and row-identity contract as `items`; an indexed-source object passes through by identity.
 - `renderItem: (item: unknown, index: number) => unknown = () => nothing` (attribute: false) — renders
-  one row's content, typically returning a `lit-html` `TemplateResult`. JS-only.
+  one row's content, typically returning a `lit-html` `TemplateResult`. JS-only. The returned value
+  is stamped inside `<lr-virtual-list>`'s own shadow root, not the caller's light DOM, so
+  document-level selectors cannot style arbitrary returned descendants. Use inherited custom
+  properties, the public row parts, or a self-styled custom element in the returned template.
 
 **Narrow rows:** ordinary `renderItem` content can shrink and wraps even at a 320px allocation,
 including an otherwise-unbroken value; in `row-height="auto"` mode the measured row height follows

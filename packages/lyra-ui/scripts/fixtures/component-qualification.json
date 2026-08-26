@@ -5741,7 +5741,7 @@
           "evidence": [
             {
               "file": "src/components/data/calendar/calendar.test.ts",
-              "line": 434,
+              "line": 464,
               "kind": "320px allocation test signal"
             }
           ]
@@ -7163,28 +7163,28 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-message/chat-message.test.ts",
-              "line": 945,
+              "line": 963,
               "test": "is accessible fully populated: avatar, badges, attachments, actions, timestamp, and status=\"failed\"",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/chat-message/chat-message.test.ts",
-              "line": 963,
+              "line": 981,
               "test": "is accessible with outside actions populated",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/chat-message/chat-message.test.ts",
-              "line": 1309,
+              "line": 1327,
               "test": "is accessible with a custom failure-slot alert banner",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/conversation/chat-message/chat-message.test.ts",
-              "line": 1455,
+              "line": 1473,
               "test": "is accessible with the bubble geometry props set on a failed message",
               "target": "el",
               "state": "populated"
@@ -9013,7 +9013,7 @@
             },
             {
               "file": "src/components/conversation/code-block/code-block.test.ts",
-              "line": 2009,
+              "line": 2039,
               "test": "is accessible with a custom tab size on tab-indented code",
               "target": "el",
               "state": "populated"
@@ -9027,7 +9027,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.test.ts",
-              "line": 896,
+              "line": 930,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -9130,7 +9130,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.class.ts",
-              "line": 344,
+              "line": 345,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -9215,7 +9215,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.test.ts",
-              "line": 896,
+              "line": 930,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -9307,7 +9307,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.class.ts",
-              "line": 344,
+              "line": 345,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -10147,14 +10147,14 @@
             },
             {
               "file": "src/components/agent-tools/commit-card/commit-card.test.ts",
-              "line": 550,
+              "line": 563,
               "test": "is accessible in the populated compact + plain states",
               "target": "compactEl",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/commit-card/commit-card.test.ts",
-              "line": 550,
+              "line": 563,
               "test": "is accessible in the populated compact + plain states",
               "target": "plainEl",
               "state": "populated"
@@ -10186,7 +10186,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/commit-card/commit-card.test.ts",
-              "line": 607,
+              "line": 620,
               "kind": "320px allocation test signal"
             }
           ]
@@ -10249,7 +10249,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/commit-card/commit-card.class.ts",
-              "line": 286,
+              "line": 288,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -14725,7 +14725,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/docx-viewer/docx-viewer.test.ts",
-              "line": 1836,
+              "line": 1848,
               "test": "is accessible with an active search match",
               "target": "el",
               "state": "populated"
@@ -14820,7 +14820,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/docx-viewer/docx-viewer.test.ts",
-              "line": 107,
+              "line": 119,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -18472,14 +18472,14 @@
           "evidence": [
             {
               "file": "src/components/layout/filter-bar/filter-bar.test.ts",
-              "line": 2421,
+              "line": 2551,
               "test": "is accessible with a text filter populated, its chip shown, and a revealed required error",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/layout/filter-bar/filter-bar.test.ts",
-              "line": 2457,
+              "line": 2587,
               "test": "is accessible in a populated state: active filters, loading spinner, and a revealed required error",
               "target": "el",
               "state": "populated"
@@ -18504,7 +18504,7 @@
           "evidence": [
             {
               "file": "src/components/layout/filter-bar/filter-bar.test.ts",
-              "line": 1965,
+              "line": 2095,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -18521,7 +18521,7 @@
           "evidence": [
             {
               "file": "src/components/layout/filter-bar/filter-bar.test.ts",
-              "line": 1977,
+              "line": 2107,
               "kind": "320px allocation test signal"
             }
           ]
@@ -18584,7 +18584,7 @@
           "evidence": [
             {
               "file": "src/components/layout/filter-bar/filter-bar.class.ts",
-              "line": 822,
+              "line": 846,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -21860,14 +21860,14 @@
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 8350,
+              "line": 8354,
               "test": "scrolls the keyboard-focused cell into the scrollport, and stays axe-clean there",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/data/heatmap/heatmap.test.ts",
-              "line": 8440,
+              "line": 8444,
               "test": "hides the duplicated bands from assistive technology and stays axe-clean",
               "target": "el",
               "state": "populated"
@@ -21983,7 +21983,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 2145,
+              "line": 2148,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -28270,7 +28270,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/message-parts/message-parts.test.ts",
-              "line": 615,
+              "line": 640,
               "test": "is accessible with populated mixed content",
               "target": "el",
               "state": "populated"
@@ -33611,7 +33611,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-queue/prompt-queue.test.ts",
-              "line": 432,
+              "line": 452,
               "test": "honors editable=\"false\" and is accessible while populated",
               "target": "el",
               "state": "populated"
@@ -41209,7 +41209,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/stack-trace/stack-trace.class.ts",
-              "line": 299,
+              "line": 300,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42306,14 +42306,14 @@
           "evidence": [
             {
               "file": "src/components/viewers/svg-viewer/svg-viewer.test.ts",
-              "line": 651,
+              "line": 661,
               "test": "is accessible with zoomable off and a region highlight active",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/viewers/svg-viewer/svg-viewer.test.ts",
-              "line": 924,
+              "line": 934,
               "test": "is accessible with the active-region prop themed",
               "target": "el",
               "state": "populated"
@@ -42333,7 +42333,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/svg-viewer/svg-viewer.test.ts",
-              "line": 618,
+              "line": 628,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -42402,7 +42402,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/svg-viewer/svg-viewer.test.ts",
-              "line": 86,
+              "line": 96,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -43993,7 +43993,7 @@
             },
             {
               "file": "src/components/agent-tools/task-list/task-list.test.ts",
-              "line": 527,
+              "line": 589,
               "test": "is accessible expanded, with items, children, and detail text",
               "target": "el",
               "state": "populated"
@@ -44154,21 +44154,21 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/terminal/terminal.test.ts",
-              "line": 976,
+              "line": 981,
               "test": "is accessible with content, copy/download buttons, and a highlight set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/terminal/terminal.test.ts",
-              "line": 1624,
+              "line": 1629,
               "test": "is accessible in the populated compact and plain states",
               "target": "compact",
               "state": "populated"
             },
             {
               "file": "src/components/agent-tools/terminal/terminal.test.ts",
-              "line": 1624,
+              "line": 1629,
               "test": "is accessible in the populated compact and plain states",
               "target": "plain",
               "state": "populated"
@@ -44182,7 +44182,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/terminal/terminal.test.ts",
-              "line": 1044,
+              "line": 1049,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -44205,7 +44205,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/terminal/terminal.test.ts",
-              "line": 1305,
+              "line": 1310,
               "kind": "320px allocation test signal"
             }
           ]
@@ -44268,7 +44268,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/terminal/terminal.class.ts",
-              "line": 770,
+              "line": 771,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -47670,21 +47670,21 @@
           "evidence": [
             {
               "file": "src/components/utility/tour/tour.test.ts",
-              "line": 1955,
+              "line": 2001,
               "test": "gives a whitespace-heading dialog a localized fallback name with rich content and a missing target",
               "target": "tour",
               "state": "open"
             },
             {
               "file": "src/components/utility/tour/tour.test.ts",
-              "line": 2095,
+              "line": 2141,
               "test": "is accessible with an open, multi-step tour and a resolvable target",
               "target": "tour",
               "state": "open"
             },
             {
               "file": "src/components/utility/tour/tour.test.ts",
-              "line": 2118,
+              "line": 2164,
               "test": "is accessible with showProgress disabled and a hidden Previous control",
               "target": "tour",
               "state": "open"
@@ -47709,7 +47709,7 @@
           "evidence": [
             {
               "file": "src/components/utility/tour/tour.test.ts",
-              "line": 1546,
+              "line": 1592,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -47720,7 +47720,7 @@
           "evidence": [
             {
               "file": "src/components/utility/tour/tour.test.ts",
-              "line": 2199,
+              "line": 2245,
               "kind": "reduced-motion test signal"
             }
           ]
@@ -47731,7 +47731,7 @@
           "evidence": [
             {
               "file": "src/components/utility/tour/tour.test.ts",
-              "line": 2136,
+              "line": 2182,
               "kind": "320px allocation test signal"
             }
           ]
@@ -49911,7 +49911,7 @@
             },
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 2354,
+              "line": 2400,
               "test": "is accessible with the active-state props themed",
               "target": "el",
               "state": "populated"
@@ -49947,7 +49947,7 @@
           "evidence": [
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "line": 2062,
+              "line": 2074,
               "kind": "reduced-motion test signal"
             }
           ]

@@ -6,7 +6,7 @@
 - **Class** `LyraFileInput`, also available unregistered from `@aceshooting/lyra-ui/components/media/file-input/file-input.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecated part** `base` since `8.2.3`; use part `::part(file-input)`; removal not before `10.0.0` — The file-input part names the interactive picker surface; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-file-input` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is.
 - **Deprecated part** `label` since `8.2.3`; use part `::part(form-control-label)`; removal not before `10.0.0` — The form-control-label part follows the shared form-control vocabulary; label remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-file-input` still publishes its own deprecated `label` part, so this alias is removed only when upstream's is.
 - **Optional peers** none

@@ -12,9 +12,28 @@ import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build, FAMILIES } from './build-llms.mjs';
+import { isMainModule } from './is-main-module.mjs';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const problems = [];
+const REQUIRED_PACKAGE_FILES = Object.freeze([
+  'CHANGELOG.md',
+  'llms.txt',
+  'llms-full.txt',
+  'llms/index.md',
+  'llms/shared.md',
+  'llms/tokens.md',
+  'llms/peers.md',
+  'llms/migration.md',
+  'llms/components',
+]);
+
+export function packageAllowlistProblems(packageFiles) {
+  const files = packageFiles instanceof Set ? packageFiles : new Set(packageFiles ?? []);
+  return REQUIRED_PACKAGE_FILES.filter((required) => !files.has(required)).map(
+    (required) => `package.json "files" is missing "${required}" — it would not reach consumers.`,
+  );
+}
 
 // 1. Generated artifacts match a fresh build.
 const expected = build({ write: false });
@@ -87,28 +106,16 @@ for (const [file, text] of expected) {
 // 4. The published allowlist covers what the docs point at.
 const pkg = JSON.parse(readFileSync(path.join(packageDir, 'package.json'), 'utf8'));
 const files = new Set(pkg.files ?? []);
-for (const required of [
-  'llms.txt',
-  'llms-full.txt',
-  'llms/index.md',
-  'llms/shared.md',
-  'llms/tokens.md',
-  'llms/peers.md',
-  'llms/migration.md',
-  'llms/components',
-]) {
-  if (!files.has(required)) {
-    problems.push(`package.json "files" is missing "${required}" — it would not reach consumers.`);
+problems.push(...packageAllowlistProblems(files));
+
+if (isMainModule(import.meta.url)) {
+  if (problems.length > 0) {
+    console.error('Generated agent-facing docs are out of sync:\n');
+    for (const problem of problems) console.error(`  - ${problem}`);
+    process.exitCode = 1;
+  } else {
+    console.log(
+      `llms artifacts are in sync: llms-full.txt + ${expected.size - 1} files under llms/, ${seenPaths.size} documented import paths resolve.`,
+    );
   }
 }
-
-if (problems.length > 0) {
-  console.error('Generated agent-facing docs are out of sync:\n');
-  for (const problem of problems) console.error(`  - ${problem}`);
-  process.exit(1);
-}
-
-console.log(
-  `llms artifacts are in sync: llms-full.txt + ${expected.size - 1} files under llms/, ${seenPaths.size} documented import paths resolve.`,
-);
-

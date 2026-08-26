@@ -6,7 +6,7 @@
 - **Class** `LyraAppRailItem`, also available unregistered from `@aceshooting/lyra-ui/components/layout/app-rail/app-rail-item.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecated attribute** `active` since `11.2.0`; use attribute `current`; removal not before `13.0.0` — The attribute half of the restored `active` property alias. `active` was this member's original public name in both forms; the rename to `current` was never announced, so markup that already wrote `<lr-app-rail-item active>` stopped marking the item current with no error. Shares the property record's compatibility window because it is the same correction.
 - **Deprecated property** `active` since `11.2.0`; use property `current`; removal not before `13.0.0` — `active` was this property's original public name and was documented as such when it shipped. It was renamed to `current` with no changelog entry, no alias and no deprecation record, so every shipped consumer's `.active=` binding silently became a dead expando -- a Lit property binding on a custom element is untyped, so nothing in a consumer's type check, test suite or build could see it. The measured downstream effect was an app rail with no current-item indicator and a permanent aria-current="false". Restoring the name is a correction, not a new API, so the compatibility window runs long: this alias is what shipped consumers already wrote.
 - **Optional peers** none

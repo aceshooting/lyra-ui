@@ -6,7 +6,7 @@
 - **Class** `LyraLocalePicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/locale-picker/locale-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below

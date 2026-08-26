@@ -105,12 +105,6 @@ function hasEvidence(
   );
 }
 
-function validChunks(evidence: RetrievalStageEvidence | undefined): RetrievalChunk[] {
-  return Array.isArray(evidence?.chunks)
-    ? evidence.chunks.filter(isValidRetrievalChunk)
-    : [];
-}
-
 function toLyraChunk(chunk: RetrievalChunk): LyraChunk {
   return {
     id: chunk.id,

@@ -467,8 +467,25 @@ function isBuiltInSet(value: LyraFilterBarFieldValue): boolean {
   return Array.isArray(value) ? value.length > 0 : value !== '';
 }
 
-/** Clones the controlled value at its object and string-array boundaries. */
-function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
+/** Defines an arbitrary public filter id as an own data property. Assignment cannot be used here:
+ * `__proto__` is a valid id and invokes Object.prototype's legacy setter on an ordinary record. */
+function defineFilterValueEntry(
+  record: Record<string, LyraFilterBarFieldValue>,
+  key: string,
+  value: LyraFilterBarFieldValue,
+): void {
+  Object.defineProperty(record, key, {
+    value,
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  });
+}
+
+/** Clones the controlled value at its object and string-array boundaries into a mutable record. */
+function cloneFilterValueRecord(
+  value: LyraFilterBarValue,
+): Record<string, LyraFilterBarFieldValue> {
   const clone: Record<string, LyraFilterBarFieldValue> = {};
   const descriptors: PropertyDescriptorMap = Object.getOwnPropertyDescriptors(value);
   let retained = 0;
@@ -478,9 +495,14 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
     if (typeof key !== 'string' || !descriptor?.enumerable || !('value' in descriptor)) continue;
     retained += 1;
     const fieldValue = snapshotFilterFieldValue(descriptor.value);
-    if (fieldValue !== undefined) clone[key] = fieldValue;
+    if (fieldValue !== undefined) defineFilterValueEntry(clone, key, fieldValue);
   }
-  return Object.freeze(clone);
+  return clone;
+}
+
+/** Clones and freezes the public controlled-value snapshot. */
+function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
+  return Object.freeze(cloneFilterValueRecord(value));
 }
 
 /**
@@ -728,7 +750,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
       if (!descriptor || !('value' in descriptor)) continue;
       const fieldValue = snapshotFilterFieldValue(descriptor.value);
       if (this.isEmpty(def, fieldValue)) continue;
-      normalized[def.filterId] = fieldValue;
+      defineFilterValueEntry(normalized, def.filterId, fieldValue);
     }
     return Object.freeze(normalized);
   }
@@ -787,9 +809,10 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     const out: Record<string, LyraFilterBarFieldValue> = {};
     for (const def of this._filters) {
       if (def.defaultValue !== undefined && !this.isEmpty(def, def.defaultValue)) {
-        out[def.filterId] = Array.isArray(def.defaultValue)
+        const value = Array.isArray(def.defaultValue)
           ? Object.freeze([...def.defaultValue])
           : def.defaultValue;
+        defineFilterValueEntry(out, def.filterId, value);
       }
     }
     return Object.freeze(out);
@@ -802,9 +825,10 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
   ): void {
     const definition = this._filters.find((candidate) => candidate.filterId === id);
     if (this.disabled || !definition) return;
+    // Object spread uses own-data-property creation, so existing special ids remain own entries.
     const next: Record<string, LyraFilterBarFieldValue> = { ...this._value };
     if (this.isEmpty(definition, value)) delete next[id];
-    else next[id] = value;
+    else defineFilterValueEntry(next, id, value);
     this.value = next;
     this.emit('lr-input', Object.freeze({
       value: this.value,

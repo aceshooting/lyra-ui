@@ -6,7 +6,7 @@
 - **Class** `LyraKnownDate`, also available unregistered from `@aceshooting/lyra-ui/components/utility/known-date/known-date.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecated part** `label` since `8.0.0`; use part `::part(form-control-label)`; removal not before `10.0.0` — The form-control-label part matches the shared form-control vocabulary; label remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-known-date` still publishes its own deprecated `label` part, so this alias is removed only when upstream's is.
 - **Optional peers** none
 - **Themeable via** 17 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below

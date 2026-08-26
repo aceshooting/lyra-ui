@@ -634,6 +634,10 @@ export const EVENT_RUNTIME_CONTRACTS = new Map([
 ]);
 
 export default {
+  // Programmatic analysis must stay read-only. The analyzer's package-json helper resolves from
+  // the caller's working directory rather than the explicit analysis cwd, while this package owns
+  // both of its manifest metadata paths itself.
+  packagejson: false,
   globs: ['src/components/**/*.ts', 'src/internal/lyra-element.ts'],
   exclude: ['**/*.test.ts', '**/*.styles.ts', '**/*.stories.ts'],
   outdir: '.',

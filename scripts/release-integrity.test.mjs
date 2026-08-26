@@ -1187,6 +1187,7 @@ test('release script pins its repository and pushes release refs atomically', ()
   );
   assert.match(publishScript, /plugins\/lyra-ui\/\.codex-plugin\/plugin\.json/);
   assert.match(publishScript, /\.claude-plugin\/marketplace\.json/);
+  assert.match(publishScript, /plugins\/lyra-ui\/skills\/lyra-ui\/CHANGELOG\.md/);
   assert.match(publishScript, /plugins\/lyra-ui\/skills\/lyra-ui\/references/);
   assert.match(publishScript, /skills\/lyra-ui\.skill/);
   assert.match(publishScript, /skills\/compose-lyra-interfaces\.skill/);
@@ -1349,6 +1350,32 @@ test('release script pins its repository and pushes release refs atomically', ()
     ciWorkflow.indexOf('\n  lint:')
   );
   assert.match(lintShardJob, /fetch-depth: 0/);
+});
+
+test('package freshness gates track the standalone skill changelog', () => {
+  const workflow = readFileSync(
+    path.join(repoRoot, '.github/workflows/ci.yml'),
+    'utf8'
+  );
+  const ciScript = readFileSync(path.join(repoRoot, 'scripts/ci.sh'), 'utf8');
+  const regenScript = readFileSync(path.join(repoRoot, 'scripts/regen.sh'), 'utf8');
+  const changelogPath = 'plugins/lyra-ui/skills/lyra-ui/CHANGELOG.md';
+
+  const packageFreshnessLine = workflow
+    .split('\n')
+    .find((line) => line.includes('git diff --exit-code -- plugins/lyra-ui/skills/lyra-ui/'));
+  assert.ok(packageFreshnessLine, 'CI must retain the standalone skill freshness diff');
+  assert.ok(packageFreshnessLine.includes(changelogPath));
+  const packageFreshnessBlock = ciScript.slice(
+    ciScript.indexOf('step "plugin reference sync"'),
+    ciScript.indexOf('step "skill:check"')
+  );
+  assert.ok(packageFreshnessBlock.includes(changelogPath));
+  const changedPathsBlock = regenScript.slice(
+    regenScript.indexOf('CHANGED_PATHS=('),
+    regenScript.indexOf('git status --short -- "${CHANGED_PATHS[@]}"')
+  );
+  assert.ok(changedPathsBlock.includes(changelogPath));
 });
 
 test('release script exits non-zero when the published upgrade feed stays stale', () => {

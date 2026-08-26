@@ -28,6 +28,7 @@ import {
   migrationParityMetadata,
   optionalPeersForComponent,
   runtimeModuleSpecifiers,
+  sourceForwardsRemoteIconCapability,
   reviewedAccessibilityMetadata,
   reviewedMethodEdgeParity,
   reviewedMigrationDecision,
@@ -1687,6 +1688,172 @@ test('optional-peer parsing ignores imports written only in comments, examples, 
       'optional-peer-fixture.ts'
     ),
     ['runtime-peer/subpath', 'lazy-runtime-peer']
+  );
+});
+
+test('composed-icon capability evidence requires an actual author-settable remote binding', () => {
+  assert.equal(
+    sourceForwardsRemoteIconCapability(
+      `
+        class SyntheticViewer {
+          render() {
+            return html\`<lr-icon .src=\${this.remoteArtwork}></lr-icon>\`;
+          }
+        }
+      `,
+      new Set(['remoteArtwork']),
+      'synthetic-viewer.ts'
+    ),
+    true,
+    'a differently named public property bound to the child src forwards remote capability'
+  );
+  assert.equal(
+    sourceForwardsRemoteIconCapability(
+      `
+        class SyntheticToolbar {
+          render() {
+            return html\`<lr-icon-button library=\${this.brandGlyphs}></lr-icon-button>\`;
+          }
+        }
+      `,
+      new Set(['brandGlyphs']),
+      'synthetic-toolbar.ts'
+    ),
+    true,
+    'a differently named public property bound to the child library forwards remote capability'
+  );
+  assert.equal(
+    sourceForwardsRemoteIconCapability(
+      `
+        class ProseBeforeIcon {
+          render() {
+            return html\`<p>Here's the icon</p><lr-icon .src=\${this.src}></lr-icon>\`;
+          }
+        }
+      `,
+      new Set(['src']),
+      'prose-before-icon.ts'
+    ),
+    true,
+    'an apostrophe in ordinary template text cannot hide a later live icon binding'
+  );
+  assert.equal(
+    sourceForwardsRemoteIconCapability(
+      `
+        class QuotedAttributeBeforeIcon {
+          render() {
+            return html\`<p title="Here's \${this.copy}">Preview</p><lr-icon .src=\${this.src}></lr-icon>\`;
+          }
+        }
+      `,
+      new Set(['src']),
+      'quoted-attribute-before-icon.ts'
+    ),
+    true,
+    'quoted-attribute state survives an earlier interpolation and ends with its start tag'
+  );
+  assert.equal(
+    sourceForwardsRemoteIconCapability(
+      `
+        class FixedGlyphWithUnrelatedSource {
+          render() {
+            void this.src;
+            return html\`<lr-icon name="search"></lr-icon>\`;
+          }
+        }
+      `,
+      new Set(['src']),
+      'fixed-glyph.ts'
+    ),
+    false,
+    'merely declaring or reading a public src property is not forwarding evidence'
+  );
+  assert.equal(
+    sourceForwardsRemoteIconCapability(
+      `
+        class NativeImage {
+          render() {
+            return html\`<img .src=\${this.remoteArtwork}>\`;
+          }
+        }
+      `,
+      new Set(['remoteArtwork']),
+      'native-image.ts'
+    ),
+    false,
+    'a remote binding on an unrelated element is not composed-icon forwarding evidence'
+  );
+  assert.equal(
+    sourceForwardsRemoteIconCapability(
+      `
+        const internalLibrary = 'system';
+        const render = () => html\`<lr-icon .library=\${internalLibrary}></lr-icon>\`;
+      `,
+      new Set(['brandGlyphs']),
+      'internal-icon.ts'
+    ),
+    false,
+    'an internal binding that reads no author-settable property does not expose the capability'
+  );
+  assert.equal(
+    sourceForwardsRemoteIconCapability(
+      `
+        class CommentedOutIcon {
+          render() {
+            return html\`<!-- <lr-icon .src=\${this.src}></lr-icon> -->\`;
+          }
+        }
+      `,
+      new Set(['src']),
+      'commented-out-icon.ts'
+    ),
+    false,
+    'an icon-like binding inside an HTML comment is not a live composed capability'
+  );
+  assert.equal(
+    sourceForwardsRemoteIconCapability(
+      `
+        class InterpolatedComment {
+          render() {
+            return html\`<!-- \${this.src}<lr-icon .src=\${this.src}></lr-icon> -->\`;
+          }
+        }
+      `,
+      new Set(['src']),
+      'interpolated-comment.ts'
+    ),
+    false,
+    'HTML-comment state survives earlier interpolations in the same template'
+  );
+  assert.equal(
+    sourceForwardsRemoteIconCapability(
+      `
+        class TextareaExample {
+          render() {
+            return html\`<textarea><lr-icon .src=\${this.src}></lr-icon></textarea>\`;
+          }
+        }
+      `,
+      new Set(['src']),
+      'textarea-example.ts'
+    ),
+    false,
+    'icon-like source text inside a raw-text element is not a live start tag'
+  );
+  assert.equal(
+    sourceForwardsRemoteIconCapability(
+      `
+        class LegacyRawTextExample {
+          render() {
+            return html\`<xmp/><lr-icon .src=\${this.src}></lr-icon>\`;
+          }
+        }
+      `,
+      new Set(['src']),
+      'legacy-raw-text-example.ts'
+    ),
+    false,
+    'a slash cannot self-close a legacy HTML raw-text container and expose hidden markup'
   );
 });
 

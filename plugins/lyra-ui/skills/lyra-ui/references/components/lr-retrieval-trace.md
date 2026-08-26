@@ -6,7 +6,7 @@
 - **Class** `LyraRetrievalTrace`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/retrieval-trace/retrieval-trace.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 13 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
