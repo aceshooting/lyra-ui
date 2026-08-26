@@ -9,7 +9,7 @@ import {
 import "./message-feedback.js";
 import type { LyraMessageFeedback } from "./message-feedback.js";
 import type { LyraChip } from "../../overlays/chip/chip.class.js";
-import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { hoverUntilMatched, resetMouse } from "../../../../test/wtr-mouse.js";
 
 const reasons = [
   { id: "wrong", label: "Factually wrong" },
@@ -1230,7 +1230,7 @@ async function hoverCentre(
     const hit = host.shadowRoot!.elementFromPoint(...centre());
     return hit === target || (hit != null && target.contains(hit));
   }, "the target became hit-testable");
-  await sendMouse({ type: "move", position: centre() });
+  await hoverUntilMatched(target, "the target never registered :hover");
 }
 
 it("stops the submit button reacting to a real hover the moment it becomes disabled", async function () {
