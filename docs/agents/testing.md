@@ -164,14 +164,17 @@
   restore in `afterEach`). A leaked stub bleeds into later, unrelated tests and produces
   state-dependent failures — this bit `lr-push-to-talk`'s
   `MediaRecorder`/`getUserMedia`/`AudioContext` stubs during the voice-component work.
-- **`pnpm test:coverage`'s printed `Code coverage: X %` line is the mean of the four metrics**
-  (statements/branches/functions/lines), not a weighted or headline figure — verified in
-  `@web/test-runner`'s own `getCodeCoverage.js`. Because functions are a much smaller population
-  than branches library-wide, one newly-covered function moves that mean roughly 5x more than one
-  covered branch arm — sweep uncovered functions first when asked to raise "coverage." Some gaps
-  are uncoverable by design (e.g. `ElementInternals` shim methods a component only attaches for
-  the `<fieldset disabled>` cascade and never calls, or `toAttribute` converters on properties
-  without `reflect: true`, which Lit never invokes) — don't chase those.
+- **Only the merged coverage summary is the library-wide headline.** `pnpm test:coverage` runs four
+  sequential shards, and Web Test Runner prints a `Code coverage: X %` line for each partial shard.
+  Each such line is the arithmetic mean of that shard's statements/branches/functions/lines, not
+  the complete suite. After the runner merges the shards, compute the release-wide mean from
+  `coverage/coverage-summary.json#total`; `check:coverage-floors` separately enforces every merged
+  per-metric floor. Because functions are a much smaller population than branches library-wide,
+  one newly-covered function moves the merged mean roughly 5x more than one covered branch arm —
+  sweep uncovered functions first when asked to raise "coverage." Some gaps are uncoverable by
+  design (e.g. `ElementInternals` shim methods a component only attaches for the
+  `<fieldset disabled>` cascade and never calls, or `toAttribute` converters on properties without
+  `reflect: true`, which Lit never invokes) — don't chase those.
 - **A test fixture with a missing required field can pass under `wtr` while failing `tsc`.**
   `wtr`'s esbuild pipeline strips TypeScript types at transform time, so an incomplete DTO fixture
   (e.g. missing a required `mimeType`) can run and pass the test while still failing `pnpm lint`'s
