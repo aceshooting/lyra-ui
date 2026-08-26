@@ -24,13 +24,13 @@ function withScripts(overrides) {
   return { ...currentScripts, ...overrides };
 }
 
-test('partitions all 85 current lint command occurrences exactly once', () => {
+test('partitions all 87 current lint command occurrences exactly once', () => {
   const inventory = buildLintInventory(currentScripts);
   const lanes = partitionLintInventory(inventory);
   const selected = lanes.flatMap((lane) => lane.commands);
 
-  assert.equal(inventory.length, 85);
-  assert.equal(inventory.filter((item) => item.source === 'contract-policy').length, 82);
+  assert.equal(inventory.length, 87);
+  assert.equal(inventory.filter((item) => item.source === 'contract-policy').length, 84);
   assert.deepEqual(
     inventory.slice(-3).map((item) => item.command),
     [
@@ -48,7 +48,7 @@ test('partitions all 85 current lint command occurrences exactly once', () => {
     commandCounts(inventory.map((item) => item.command)),
   );
   assert.equal(new Set(selected.map((item) => item.ordinal)).size, inventory.length);
-  assert.deepEqual(lanes.map((lane) => lane.totalWeight), [170, 170, 170]);
+  assert.deepEqual(lanes.map((lane) => lane.totalWeight), [171, 171, 170]);
   for (const lane of lanes) {
     assert.deepEqual(
       lane.commands.map((item) => item.ordinal),
@@ -78,7 +78,7 @@ test('assigns unknown valid commands and preserves repeated occurrences by ordin
   const inventory = buildLintInventory(scripts);
   const selected = partitionLintInventory(inventory).flatMap((lane) => lane.commands);
 
-  assert.equal(inventory.length, 87);
+  assert.equal(inventory.length, 89);
   assert.equal(inventory.filter((item) => item.command === futureCommand).length, 2);
   assert.equal(selected.filter((item) => item.command === futureCommand).length, 2);
   assert.deepEqual(

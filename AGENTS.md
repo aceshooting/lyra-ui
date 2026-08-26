@@ -258,6 +258,14 @@ vocabulary every component shares. Full rules:
   `<purpose>-icon` — binding on lyra-original components too.
 - A surface change lands JSDoc + test + story + `llms/<family>.md` + manifest/editor-data together;
   `check-component-coverage.mjs` only proves the *tag* has a story and a test, never the new member.
+- A property's **documented default** is gated: `check:llms-defaults` cross-checks every
+  `` `name: type = default` `` and `` `name?: type` `` claim in the authored `llms/<family>.md`
+  against `custom-elements.json`, in both directions. Changing `foo = ''` to `foo?: string` (or
+  back) without editing the prose now fails `pnpm lint`. It matters because `label: string = ''`
+  promises an unset read of `''` — so `el.label.trim()` is safe and `?? fallback` is dead code —
+  when the real readback is `undefined`. Nothing checked this before, which is how one review found
+  the same class twice and a sweep then found eleven more instances unreported. A deliberate
+  exception opts out with `<!-- llms-default-exempt: reason -->`.
 
 ## i18n, RTL, and theming — digest
 
