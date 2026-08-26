@@ -382,8 +382,19 @@ Full rules and incident write-ups: **[docs/agents/testing.md](docs/agents/testin
   a re-emitted non-composed native event, or pointer/`:active` state — a full local single-engine
   sweep also catches what CI's *sharding* hides.
 - **Reading a pointer-driven `:hover`/`:active` state, or a transitioning paint, straight after
-  `sendMouse` is racy per engine.** Poll with `waitUntil` and/or zero `--lr-transition-fast` on the
-  fixture. Three separate tests here have been fixed for exactly this.
+  `sendMouse` is racy per engine.** `sendMouse()` resolves when the synthesized command completes,
+  which does not mean the browser has processed the resulting native pointer event — and a late
+  layout settle can move the target out from under an already-dispatched position. Land the pointer
+  with `hoverUntilMatched()` (`test/wtr-mouse.js`), which re-reads the rect and re-dispatches until
+  `:hover` actually matches, then poll the rendered result with `waitUntil` and/or zero
+  `--lr-transition-fast` on the fixture. Five separate tests have been fixed for exactly this, four
+  of them only reproducing under `Test All Browsers` — the unsharded complete-suite run, whose
+  higher per-process page count is the condition the sharded gates never create.
+  A component-managed `:state(x)` is the strictest case: it needs the event dispatched, the handler
+  run *and* the `CustomStateSet` updated, so never read one synchronously after a press
+  (`image-comparer.test.ts`'s drag assertion is the reference). Reading such state right after a
+  `sendMouse({ type: 'down' })` is a live pattern in ~46 places; converting one is cheap, and the
+  sweep that finds them is a grep for an `expect(` within three lines of a mouse `down`.
 - **Regenerate component-quality after ANY change under `src/`, test files included** — rebuild,
   then `node scripts/generate-component-quality.mjs --write --measure-gzip`. It measures built gzip
   size *and* per-component test quality, and a byte-identical `pnpm manifest` is not evidence it is

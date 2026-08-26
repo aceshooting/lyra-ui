@@ -1,7 +1,7 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './image-comparer.js';
 import type { LyraImageComparer } from './image-comparer.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 it('renders before and after slots with a positioned divider', async () => {
   const el = (await fixture(html`
@@ -260,13 +260,26 @@ it('keeps the full-bleed range hit surface at the icon floor and fills an explic
   const hit = fixedHeight.shadowRoot!.elementFromPoint(clientX, clientY) as HTMLElement | null;
   expect(hit?.getAttribute('part'), 'the lower explicit allocation remains a real drag target').to.equal('input');
   try {
-    await sendMouse({ type: 'move', position: [clientX, clientY] });
+    // `:state(dragging)` is set by a pointerdown handler, so it needs the event dispatched, the
+    // handler run and the CustomStateSet updated -- strictly more than a UA-painted `:active`.
+    // Land the pointer first (hoverUntilMatched proves the move was processed, not merely sent),
+    // then poll: reading it straight after `sendMouse` lost the race on Firefox's unsharded run.
+    await hoverUntilMatched(input, 'the range never took the pointer at its lower allocation', (rect) => [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.bottom - 4),
+    ]);
     await sendMouse({ type: 'down' });
-    expect(fixedHeight.matches(':state(dragging)')).to.be.true;
+    await waitUntil(
+      () => fixedHeight.matches(':state(dragging)'),
+      'pressing the lower allocation never began a drag',
+    );
   } finally {
     await resetMouse();
   }
-  expect(fixedHeight.matches(':state(dragging)')).to.be.false;
+  await waitUntil(
+    () => !fixedHeight.matches(':state(dragging)'),
+    'releasing the pointer never ended the drag',
+  );
 });
 
 it('contains long unbroken 320px comparisons in LTR and Arabic RTL and mirrors the handle', async () => {

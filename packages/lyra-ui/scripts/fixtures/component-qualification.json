@@ -22934,14 +22934,14 @@
           "evidence": [
             {
               "file": "src/components/media/image-comparer/image-comparer.test.ts",
-              "line": 394,
+              "line": 407,
               "test": "keeps interactive descendants of the decorative handle slot out of focus and the accessibility tree",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/image-comparer/image-comparer.test.ts",
-              "line": 609,
+              "line": 622,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -22966,7 +22966,7 @@
           "evidence": [
             {
               "file": "src/components/media/image-comparer/image-comparer.test.ts",
-              "line": 284,
+              "line": 297,
               "kind": "rendered RTL test signal"
             }
           ]
