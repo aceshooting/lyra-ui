@@ -6,6 +6,7 @@
 - **Class** `LyraTaskList`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/task-list/task-list.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 11 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -26,9 +27,10 @@ confirmed moves are announced through an internal `<lr-live-region>`.
 status: TaskStatus; detail?: string; children?: readonly TaskItem[] }` with `TaskStatus = 'pending' |
 'running' | 'success' | 'error'` (both exported here). `detail` is an optional secondary plain-text
 line; `children` is exactly **one** level of sub-steps — a child's own `children` is ignored with a
-`console.warn`. While `reorderable`, every top-level task and direct child must have a globally
-unique, nonempty `id`; invalid or duplicate data stays visible but fails closed, with no row
-keyboard stops or reorder requests.
+`console.warn`. Runtime non-record rows and rows without a nonempty string `id` are omitted before
+rendering, summaries, announcements, and reorder validation. While `reorderable`, every retained
+top-level task and direct child must additionally have a globally unique `id`; duplicate data stays
+visible but fails closed, with no row keyboard stops or reorder requests.
 `reorderable: boolean = false` (reflected) enables Ctrl/Cmd+ArrowUp/ArrowDown on a focused task.
 It emits a request only; the host must assign a new reordered `items` array before the task visibly
 moves or an announcement is made. `label?: string` omits into localized `taskListLabel` (`'Tasks'`

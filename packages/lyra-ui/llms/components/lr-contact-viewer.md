@@ -6,9 +6,10 @@
 - **Class** `LyraContactViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/contact-viewer/contact-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -23,7 +24,7 @@ label when `FN` is absent).
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the contacts. Parsing retains at most 250
 contacts and 2 MiB of rendered contact text, keeping the complete accepted model searchable and
-anchorable without a 10,000-card eager DOM tree.
+text-quote anchorable without a 10,000-card eager DOM tree.
 
 **Properties:** `src: string = ''`, `name: string = ''`,
 `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — `1`–`6` expose every
@@ -32,7 +33,9 @@ keeps the names visual-only — and `maxHeight: string = ''` (attribute `max-hei
 `max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
 precedence over `name` by attribute presence, including an explicitly empty value. `highlights`,
 `activeHighlightId`, `anchor`, and
-`anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
+`anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract. Fragment
+resolution is an exact DOM `id` lookup, but generated contact cards define no fragment ids, so a
+fragment jump reports `found: false`. Use a text-quote anchor for contact content.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on rendered contact text and emit the shared search/anchor events.
@@ -53,7 +56,10 @@ highlights are passive and cannot be activated.
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base`, `body`, `contact`, `contact-name`, `contact-org`, `contact-tel`,
-`contact-email`, `contact-adr`, `spinner`, and `error`.
+`contact-email`, `contact-adr`, `spinner`, `error`, and `anchor-live-region` (an aria-hidden,
+non-live shadow mirror of the latest anchor-jump message; the spoken copy is appended to the shared
+document-level polite sink only while the viewer and its composed ancestors are exposed to the
+accessibility tree).
 
 **Themeable custom properties:** `--lr-contact-viewer-max-height` (default `none`) — maximum block
 size of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.

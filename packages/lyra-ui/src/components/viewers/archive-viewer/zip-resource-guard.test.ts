@@ -8,7 +8,6 @@ import {
   type ZipArchiveGuardOptions,
 } from './zip-resource-guard.js';
 
-const LOCAL_SIGNATURE = 0x04034b50;
 const CENTRAL_SIGNATURE = 0x02014b50;
 const END_SIGNATURE = 0x06054b50;
 

@@ -1,11 +1,12 @@
 #!/usr/bin/env node
+import { isMainModule } from './is-main-module.mjs';
 
 // Generates opt-in React/JSX, Vue, and Svelte declaration entry points from the public Custom
 // Elements Manifest. The manifest owns the tag/class/module relationship and the documented
 // properties, attributes, events, and CSS custom properties; this generator only translates that
 // stable surface into each framework's declaration-merging vocabulary.
 
-import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -573,9 +574,7 @@ export function generate({ write = true } = {}) {
   return output;
 }
 
-const isMain =
-  process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
-if (isMain) {
+if (isMainModule(import.meta.url)) {
   const output = generate();
   const tagCount = output.get('src/custom-elements-jsx.ts')?.match(/^  'lr-[^']+':/gm)?.length ?? 0;
   console.log(`Generated React, Vue, and Svelte declarations for ${tagCount} custom elements.`);

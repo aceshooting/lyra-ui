@@ -409,7 +409,7 @@ describe('tree-item declarative child model', () => {
       if (observerDescriptor) {
         Object.defineProperty(frameWindow, 'MutationObserver', observerDescriptor);
       } else {
-        delete (frameWindow as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+        Reflect.deleteProperty(frameWindow, 'MutationObserver');
       }
       frame.remove();
     }
@@ -708,6 +708,30 @@ describe('recursive data-model CSS parts', () => {
     'checkbox__label',
   ];
 
+  it('applies mirrored item state parts to the painted row box', async () => {
+    const style = document.createElement('style');
+    style.textContent = `
+      lr-tree-item.state-part-probe::part(item--selected) {
+        background: rgb(1, 2, 3);
+      }
+    `;
+    document.head.append(style);
+    try {
+      const el = (await fixture(html`<lr-tree-item
+        class="state-part-probe"
+        .item=${{ id: 'selected', label: 'Selected item', selected: true }}
+      ></lr-tree-item>`)) as LyraTreeItem;
+      const row = el.shadowRoot!.querySelector<HTMLElement>('[part~="row"]')!;
+      const statePart = el.shadowRoot!.querySelector<HTMLElement>('[part~="item--selected"]')!;
+
+      expect(getComputedStyle(statePart).backgroundColor).to.equal('rgb(1, 2, 3)');
+      expect(getComputedStyle(row).backgroundColor).to.equal('rgb(1, 2, 3)');
+      expect(statePart.getBoundingClientRect().width).to.be.greaterThan(0);
+    } finally {
+      style.remove();
+    }
+  });
+
   it('forwards every public part and lets one consumer rule style rows at three depths', async () => {
     const style = document.createElement('style');
     style.textContent = `
@@ -863,6 +887,61 @@ it('gives the expand/collapse toggle the shared minimum tappable size', async ()
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
   expect(getComputedStyle(toggle).minInlineSize).to.equal('40px');
   expect(getComputedStyle(toggle).minBlockSize).to.equal('40px');
+});
+
+it('gives the expand/collapse toggle distinct pointer-hover feedback', async function () {
+  if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
+  const el = (await fixture(html`<lr-tree-item
+    style="--lr-color-surface-hover: rgb(7, 8, 9)"
+    .item=${{ id: 'branch', label: 'Branch', children: [{ id: 'leaf', label: 'Leaf' }] }}
+  ></lr-tree-item>`)) as LyraTreeItem;
+  const toggle = el.shadowRoot!.querySelector<HTMLElement>('[part="toggle"]')!;
+  const rect = toggle.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    await waitUntil(() => getComputedStyle(toggle).backgroundColor === 'rgb(7, 8, 9)');
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('gives the expand/collapse toggle pressed feedback distinct from hover', async function () {
+  if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
+  this.timeout(10_000);
+  const el = (await fixture(html`<lr-tree-item
+    style="--lr-color-surface-hover: rgb(7, 8, 9); --lr-color-mix-partner: rgb(40, 50, 60); --lr-color-mix-active: 100%"
+    .item=${{ id: 'branch', label: 'Branch', children: [{ id: 'leaf', label: 'Leaf' }] }}
+  ></lr-tree-item>`)) as LyraTreeItem;
+  const toggle = el.shadowRoot!.querySelector<HTMLElement>('[part="toggle"]')!;
+  const rect = toggle.getBoundingClientRect();
+  let pressed = false;
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    await waitUntil(() => getComputedStyle(toggle).backgroundColor === 'rgb(7, 8, 9)');
+    const hovered = getComputedStyle(toggle).backgroundColor;
+
+    await sendMouse({ type: 'down' });
+    pressed = true;
+    await waitUntil(
+      () =>
+        toggle.hasAttribute('data-pressed') &&
+        getComputedStyle(toggle).backgroundColor !== hovered,
+      'the disclosure toggle never painted a distinct pressed fill',
+    );
+    expect(getComputedStyle(toggle).backgroundColor).to.not.equal(hovered);
+    await sendMouse({ type: 'up' });
+    pressed = false;
+    await waitUntil(() => !toggle.hasAttribute('data-pressed'));
+  } finally {
+    if (pressed) await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
 });
 
 it('themes checked and indeterminate checkbox paint independently from the shared brand', async () => {

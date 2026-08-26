@@ -6,9 +6,10 @@
 - **Class** `LyraFlowCanvas`, also available unregistered from `@aceshooting/lyra-ui/components/data/flow-canvas/flow-canvas.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 29 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 29 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -127,9 +128,12 @@ normalizes to a safe part token also exposes `node-type-{value}`. A selected nod
 actual messages are flushed to the document's shared light-DOM polite sink; mount is silent, and
 identical repeated messages are appended as separate announcements.
 
-**Themeable custom properties:** `--lr-flow-canvas-grid-size` (default: the finite `grid` property,
-or `8px`; dotted background spacing). Set it on the canvas or a theme ancestor to override that
-property-derived fallback. Each edge tone colors its stroke and the arrowhead marker it references:
+**Themeable custom properties:** `--lr-canvas-reserved-height` (default
+`var(--lr-size-24rem)`) controls the host's default block size and matches the pre-upgrade
+reservation stylesheet; an explicit outer `block-size` still wins. `--lr-flow-canvas-grid-size`
+(default: the finite `grid` property, or `8px`; dotted background spacing) can be set on the canvas
+or a theme ancestor to override that property-derived fallback. Each edge tone colors its stroke
+and the arrowhead marker it references:
 `--lr-flow-canvas-edge-neutral-color` (default `var(--lr-color-border)`),
 `--lr-flow-canvas-edge-brand-color` (default `var(--lr-color-brand)`),
 `--lr-flow-canvas-edge-success-color` (default `var(--lr-color-success)`),
@@ -188,8 +192,10 @@ four above. Set it to `transparent` to opt out of the hover treatment.
   emit `lr-selection-change`.
 - Auto-layout (via the dependency-free `layeredLayout()` util) only ever positions nodes that are
   missing an explicit `position`; a node the host has already positioned is left exactly where it is
-  and used as a fixed anchor for the rest of the layout pass. The utility bounds virtual ordering
-  work. If that ceiling is reached, the canvas renders a localized `layout-limit` status and sets
+  and, when its resolved center is nonnegative and within the safe-integer range, is used as a fixed
+  anchor for the rest of the layout pass. Negative and larger finite coordinates remain rendered
+  and caller-controlled but are omitted from the bounded utility's fixed-anchor input. The utility
+  bounds virtual ordering work. If that ceiling is reached, the canvas renders a localized `layout-limit` status and sets
   `lr-layout-change.detail.truncated` to `true`; positions remain usable. Call the public utility
   directly with `maxVirtualWaypoints` when an application needs a different work ceiling.
 - `droppable` only accepts drags carrying the exact `FLOW_PALETTE_MIME_TYPE` MIME type a

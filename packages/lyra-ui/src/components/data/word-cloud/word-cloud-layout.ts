@@ -35,6 +35,9 @@ export type WordCloudRotation = 'none' | 'mixed';
 export interface WordCloudLayoutOptions {
   readonly minFontSize: number;
   readonly maxFontSize: number;
+  /** Optional weight-domain endpoints. A valid pair pins the input scale instead of deriving it
+   * from this cloud's own lightest/heaviest eligible words. */
+  readonly domain?: readonly [number, number];
   readonly scale: WordCloudScale;
   readonly wordRotation: WordCloudRotation;
   /** Measures the rendered width of `text` set at `fontSize`, e.g. via a canvas 2D
@@ -214,6 +217,14 @@ export function layoutWordCloud(words: readonly WordCloudWord[], options: WordCl
     const ew = effectiveWeight(w.weight);
     if (ew < minWeight) minWeight = ew;
     if (ew > maxWeight) maxWeight = ew;
+  }
+  const pinnedDomain = options.domain;
+  if (pinnedDomain) {
+    const [first, second] = pinnedDomain;
+    if (Number.isFinite(first) && Number.isFinite(second) && first !== second) {
+      minWeight = Math.min(first, second);
+      maxWeight = Math.max(first, second);
+    }
   }
 
   // eligible is already weight-descending (a suffix of byWeightDesc), which

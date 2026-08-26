@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { srOnly } from '../../../internal/a11y.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { DocumentAnchorTarget, prioritizedHighlightCandidates } from '../../../internal/anchor-target.js';
 import type {
@@ -172,9 +173,10 @@ function validateDocumentComplexity(node: Node): void {
  *  when any segment is out of range or a non-trailing segment isn't a valid element index. */
 function resolvePath(
   root: Element,
-  path: readonly PathSegment[],
+  path: unknown,
   budget?: PathResolutionBudget,
 ): { element: Element; attr?: string } | null {
+  if (!Array.isArray(path)) return null;
   if (budget && budget.remaining-- <= 0) return null;
   let current: Element = root;
   for (let i = 0; i < path.length; i++) {
@@ -240,8 +242,9 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  * Host-supplied `highlights` are resolved the same way: every entry whose anchor is a `node-path`
  * this document can resolve tints its element row (`data-highlight`, carrying the entry's tone) and
  * gains a focusable `[part="highlight-action"]` button that emits `lr-highlight-activate`. Entries
- * whose anchor kind or path this viewer cannot resolve are ignored rather than partially painted,
- * and a highlight inside a collapsed subtree paints once that subtree is expanded.
+ * whose anchor kind or path this viewer cannot resolve -- including a missing or non-array path --
+ * are ignored rather than partially painted, and a highlight inside a collapsed subtree paints
+ * once that subtree is expanded.
  *
  * Namespace-literal: qualified names render exactly as authored, with no namespace-URI-aware
  * matching. Every document type declaration is rejected before `DOMParser`, preventing both
@@ -349,7 +352,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, specialistTokens, styles, viewerLoadingStyles];
+  static override styles = [LyraElement.styles, specialistTokens, styles, viewerLoadingStyles, srOnly];
 
   /** URL to fetch and parse as XML. Ignored once `xml` is set. */
   @property() src = '';
@@ -1067,7 +1070,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
             ? renderViewerLoading(this.localize('loadingDocument'))
             : state.kind === 'error'
               ? html`<div part="error">${state.message}</div>`
-              : html`<p>${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`}
+              : html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`}
         ${this.renderAnchorLiveRegion()}
       </div>
     `;

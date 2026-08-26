@@ -15,7 +15,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A category-grouped, filterable dialog for picking which agent tools are enabled for a conversation. Each checkbox keeps the tool name as its concise name and receives description/disabled-reason text through its supporting-description bridge. Omitted heading/search labels localize; every supplied string stays literal. `useDefaults` is a single top-level switch — while on, every per-tool checkbox renders disabled (reflecting whatever `selected` holds); turning it off is the "customize" action that unlocks per-tool editing. Large result sets mount in 200-row batches, reserving matching selected identities before ordinary rows, with an explicit localized limit notice and Load more continuation.',
+          'A category-grouped, filterable dialog for picking which agent tools are enabled for a conversation. Each checkbox keeps the tool name as its concise name and receives description/disabled-reason text through its supporting-description bridge. Omitted heading/search labels localize; an empty search placeholder stays visually empty while retaining the localized input name. Backdrop dismissal is opt-in through `lightDismiss`; Escape remains available by default. `useDefaults` is a single top-level switch — while on, every per-tool checkbox renders disabled (reflecting whatever `selected` holds); turning it off is the "customize" action that unlocks per-tool editing. Large result sets mount in 200-row batches, reserving matching selected identities before ordinary rows, with an explicit localized limit notice and Load more continuation.',
       },
     },
   },
@@ -110,6 +110,20 @@ export const OpenInitially: Story = {
       .tools=${TOOLS}
       .selectedToolIds=${['web_search', 'fetch_url', 'run_python', 'read_file']}
     ></lr-tool-select-dialog>
+  `,
+};
+
+export const LightDismiss: Story = {
+  name: 'Opt-in light dismissal',
+  render: () => html`
+    <div>
+      <button @click=${openDialog}>Select tools (light dismiss)</button>
+      <lr-tool-select-dialog
+        light-dismiss
+        .tools=${TOOLS}
+        .selectedToolIds=${['web_search', 'fetch_url', 'run_python']}
+      ></lr-tool-select-dialog>
+    </div>
   `,
 };
 

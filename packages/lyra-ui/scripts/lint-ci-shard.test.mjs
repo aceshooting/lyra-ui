@@ -24,16 +24,20 @@ function withScripts(overrides) {
   return { ...currentScripts, ...overrides };
 }
 
-test('partitions all 78 current lint command occurrences exactly once', () => {
+test('partitions all 85 current lint command occurrences exactly once', () => {
   const inventory = buildLintInventory(currentScripts);
   const lanes = partitionLintInventory(inventory);
   const selected = lanes.flatMap((lane) => lane.commands);
 
-  assert.equal(inventory.length, 78);
-  assert.equal(inventory.filter((item) => item.source === 'contract-policy').length, 76);
+  assert.equal(inventory.length, 85);
+  assert.equal(inventory.filter((item) => item.source === 'contract-policy').length, 82);
   assert.deepEqual(
-    inventory.slice(-2).map((item) => item.command),
-    ['tsc --noEmit -p tsconfig.json', 'pnpm run test:types'],
+    inventory.slice(-3).map((item) => item.command),
+    [
+      'tsc --noEmit -p tsconfig.json',
+      'pnpm run test:types',
+      'pnpm run check:test-types',
+    ],
   );
   assert.deepEqual(
     selected.map((item) => item.ordinal).sort((left, right) => left - right),
@@ -44,7 +48,7 @@ test('partitions all 78 current lint command occurrences exactly once', () => {
     commandCounts(inventory.map((item) => item.command)),
   );
   assert.equal(new Set(selected.map((item) => item.ordinal)).size, inventory.length);
-  assert.deepEqual(lanes.map((lane) => lane.totalWeight), [167, 166, 166]);
+  assert.deepEqual(lanes.map((lane) => lane.totalWeight), [170, 170, 170]);
   for (const lane of lanes) {
     assert.deepEqual(
       lane.commands.map((item) => item.ordinal),
@@ -74,7 +78,7 @@ test('assigns unknown valid commands and preserves repeated occurrences by ordin
   const inventory = buildLintInventory(scripts);
   const selected = partitionLintInventory(inventory).flatMap((lane) => lane.commands);
 
-  assert.equal(inventory.length, 80);
+  assert.equal(inventory.length, 87);
   assert.equal(inventory.filter((item) => item.command === futureCommand).length, 2);
   assert.equal(selected.filter((item) => item.command === futureCommand).length, 2);
   assert.deepEqual(
@@ -111,13 +115,15 @@ test('rejects malformed policy chains, unsupported operators, and unsupported co
   }
 });
 
-test('requires the exact contract-policy lint wrapper and type-check suffix', () => {
-  const exactSuffix = 'tsc --noEmit -p tsconfig.json && pnpm run test:types';
+test('requires the exact contract-policy lint wrapper and all three blocking type-checks', () => {
+  const exactSuffix =
+    'tsc --noEmit -p tsconfig.json && pnpm run test:types && pnpm run check:test-types';
   for (const lint of [
     exactSuffix,
     'pnpm run contract-policy',
     'pnpm run contract-policy && pnpm run test:types',
     'pnpm run contract-policy && pnpm run test:types && tsc --noEmit -p tsconfig.json',
+    'pnpm run contract-policy && tsc --noEmit -p tsconfig.json && pnpm run test:types',
     `pnpm run contract-policy && ${exactSuffix} && pnpm run check:script-paths`,
     'pnpm run contract-policy; tsc --noEmit -p tsconfig.json && pnpm run test:types',
   ]) {

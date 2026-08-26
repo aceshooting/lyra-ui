@@ -53,6 +53,7 @@ export const styles = css`
     box-sizing: border-box;
     inline-size: max-content;
     min-inline-size: min(
+      var(--lr-popover-viewport-clamp),
       var(--lr-size-8rem),
       var(--lr-positioner-available-inline-size, 100vw)
     );

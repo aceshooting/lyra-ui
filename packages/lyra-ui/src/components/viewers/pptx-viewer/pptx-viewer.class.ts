@@ -70,6 +70,9 @@ class LyraPptxViewerBase extends LyraElement<LyraPptxViewerEventMap> {}
  * not represented by the renderer.
  * Remote bytes and measured ZIP expansion are bounded before renderer-owned parsing begins; a
  * peer that does not expose a complete, safely bounded ZIP-limits capability fails closed.
+ * Lyra assigns no fragment ids to slides. A fragment anchor can resolve only an exact DOM `id`
+ * exposed in the optional renderer's currently mounted output; renderer-owned ids are not a
+ * stable Lyra navigation contract. Use `page`/`goToSlide()` or a text-quote anchor instead.
  *
  * @customElement lr-pptx-viewer
  * @event lr-load - Fired after a presentation opens. `detail: { slideCount }`.
@@ -414,24 +417,45 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
       || width <= 0
       || width > MAX_PPTX_THUMBNAIL_WIDTH
     ) return false;
-    container.replaceChildren();
-    const handle = viewer.renderThumbnailToContainer(page - 1, container, { width });
-    if (!handle) return false;
+    const previousChildren = [...container.childNodes];
+    const restorePreviousChildren = (): void => {
+      container.replaceChildren(...previousChildren);
+    };
+    let handle: ReturnType<PptxViewerAdapter['renderThumbnailToContainer']>;
+    try {
+      handle = viewer.renderThumbnailToContainer(page - 1, container, { width });
+    } catch {
+      restorePreviousChildren();
+      return false;
+    }
+    if (!handle) {
+      restorePreviousChildren();
+      return false;
+    }
     try {
       await handle.ready;
     } catch {
       handle.dispose();
+      restorePreviousChildren();
       return false;
     }
     if (generation !== this.generation || viewer !== this.viewer || !container.isConnected) {
       handle.dispose();
+      restorePreviousChildren();
       return false;
+    }
+    for (const child of previousChildren) {
+      if (child.parentNode === container) child.remove();
     }
     return handle;
   }
 
+  private isValidSlideIndex(index: number): boolean {
+    return Number.isSafeInteger(index) && index >= 0 && index < this.slideCount;
+  }
+
   private commitSlide(index: number): void {
-    if (!Number.isSafeInteger(index) || index < 0 || index >= this.slideCount) return;
+    if (!this.isValidSlideIndex(index)) return;
     const changed = index !== this.currentSlideIndex;
     this.currentSlideIndex = index;
     this.page = index + 1;
@@ -679,8 +703,10 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
       this.viewer = viewer;
       this.viewerUnsubscribe = viewer.subscribe(this.onViewerEvent);
       this.slideCount = viewer.slideCount;
-      this.currentSlideIndex = viewer.currentSlideIndex;
-      this.page = viewer.currentSlideIndex + 1;
+      if (this.isValidSlideIndex(viewer.currentSlideIndex)) {
+        this.currentSlideIndex = viewer.currentSlideIndex;
+        this.page = viewer.currentSlideIndex + 1;
+      }
       this.publishPageViewerSnapshot('ready', viewer.slideCount);
       this.emit('lr-load', { slideCount: viewer.slideCount });
     } catch (error) {

@@ -40,12 +40,22 @@ export const styles = css`
     padding: var(--lr-space-xs) var(--lr-space-s);
   }
   [part~='metric'] {
+    display: grid;
+    gap: var(--lr-space-2xs);
     padding: var(--lr-space-xs);
     text-align: start;
   }
   [part~='slice-selected'],
   [part~='metric-selected'] {
-    border-color: var(--lr-color-brand);
+    border-color: var(
+      --lr-rag-eval-dashboard-selected-border-color,
+      var(--lr-color-brand)
+    );
+  }
+  [part='metric-category'] {
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+    overflow-wrap: anywhere;
   }
   [part~='slice-selected'] {
     min-inline-size: var(--lr-icon-button-size);
@@ -59,7 +69,11 @@ export const styles = css`
   [part~='slice']:active,
   [part~='metric']:active,
   [part='run']:active {
-    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(
+      in oklab,
+      var(--lr-color-surface-raised),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   [part~='slice']:focus-visible,
   [part~='metric']:focus-visible,

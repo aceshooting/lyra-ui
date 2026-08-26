@@ -6,6 +6,25 @@ import type { LyraInput } from './input.class.js';
 import { styles } from './input.styles.js';
 
 describe('lr-input', () => {
+  it('applies the documented resting action color to clear and password actions', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div style="--lr-input-action-color: rgb(1, 2, 3)">
+        <lr-input type="password" password-toggle value="secret"></lr-input>
+        <lr-input clearable value="clear me"></lr-input>
+      </div>
+    `);
+    const password = wrapper.querySelector<LyraInput>('lr-input[type="password"]');
+    const clearable = wrapper.querySelector<LyraInput>('lr-input[clearable]');
+    if (!password || !clearable) throw new Error('Both input action fixtures were not rendered.');
+    for (const [el, part] of [
+      [password, 'password-toggle'],
+      [clearable, 'clear-button'],
+    ] as const) {
+      const action = el.shadowRoot!.querySelector<HTMLElement>(`[part~="${part}"]`)!;
+      expect(getComputedStyle(action).color, part).to.equal('rgb(1, 2, 3)');
+    }
+  });
+
   it('uses the component-scoped focus border hook inherited from an ancestor', async () => {
     const wrapper = await fixture<HTMLDivElement>(html`
       <div style="--lr-input-focus-border-color: rgb(1, 2, 3)">
@@ -25,9 +44,11 @@ describe('lr-input', () => {
 
     expect(el.checkValidity()).to.be.false;
     expect(aliases).to.have.lengthOf(1);
-    expect((aliases[0].target) === (el)).to.equal(true);
-    expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
-    expect(aliases[0].cancelable).to.be.true;
+    const alias = aliases[0];
+    if (!alias) throw new Error('The invalid alias was not emitted.');
+    expect(alias.target === el).to.equal(true);
+    expect(alias.bubbles && alias.composed).to.be.true;
+    expect(alias.cancelable).to.be.true;
 
     el.value = 'Ada';
     expect(el.checkValidity()).to.be.true;
@@ -48,8 +69,10 @@ describe('lr-input', () => {
 
     expect(el.checkValidity()).to.be.false;
     expect(natives).to.have.lengthOf(1);
-    expect(natives[0].cancelable, 'the native invalid event is cancelable').to.be.true;
-    expect(natives[0].defaultPrevented).to.be.true;
+    const native = natives[0];
+    if (!native) throw new Error('The native invalid event was not emitted.');
+    expect(native.cancelable, 'the native invalid event is cancelable').to.be.true;
+    expect(native.defaultPrevented).to.be.true;
   });
 
   it('leaves the native invalid event alone when the alias is not cancelled', async () => {
@@ -59,7 +82,9 @@ describe('lr-input', () => {
 
     expect(el.checkValidity()).to.be.false;
     expect(natives).to.have.lengthOf(1);
-    expect(natives[0].defaultPrevented).to.be.false;
+    const native = natives[0];
+    if (!native) throw new Error('The native invalid event was not emitted.');
+    expect(native.defaultPrevented).to.be.false;
   });
 
   it('bars constraint validation while disabled, fieldset-disabled or readonly', async () => {
@@ -193,12 +218,16 @@ describe('lr-input', () => {
     }));
 
     expect(nativeEvents).to.have.length(1);
-    expect(nativeEvents[0] instanceof InputEvent).to.be.true;
-    expect(nativeEvents[0].target === el).to.be.true;
-    expect(nativeEvents[0].data).to.equal('x');
-    expect(nativeEvents[0].inputType).to.equal('insertText');
+    const nativeEvent = nativeEvents[0];
+    if (!nativeEvent) throw new Error('The native input event was not relayed.');
+    expect(nativeEvent instanceof InputEvent).to.be.true;
+    expect(nativeEvent.target === el).to.be.true;
+    expect(nativeEvent.data).to.equal('x');
+    expect(nativeEvent.inputType).to.equal('insertText');
     expect(aliases).to.have.length(1);
-    expect(aliases[0].detail).to.deep.equal({ value: 'x' });
+    const alias = aliases[0];
+    if (!alias) throw new Error('The input alias was not emitted.');
+    expect(alias.detail).to.deep.equal({ value: 'x' });
   });
 
   it('exposes exactly one native focus/blur pair, and never lr-focus/lr-blur', async () => {
@@ -1252,7 +1281,7 @@ describe('lr-input showPicker() / stepUp() / stepDown()', () => {
 
     if (descriptor?.configurable) {
       try {
-        delete prototype.showPicker;
+        Reflect.deleteProperty(prototype, 'showPicker');
         expect(() => el.showPicker()).to.not.throw();
       } finally {
         Object.defineProperty(prototype, 'showPicker', descriptor);

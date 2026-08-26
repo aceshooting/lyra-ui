@@ -13,7 +13,7 @@
 //   llms/migration.md         wa-*/sl-* classification and codemod table
 // A component section is assigned to a family by the src/components/<family>/ directory its tag is
 // declared in, so the docs can never drift from the source tree's own grouping.
-import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -22,8 +22,12 @@ import {
   validateMappingNormalizations,
   validateMethodEdgeParity,
 } from './component-inventory.mjs';
-import { stripComments } from './check-form-associated.mjs';
+import {
+  optionalPeersForComponent,
+  runtimeModuleSpecifiers,
+} from './generate-component-inventory.mjs';
 import { expandManifestInheritance } from './manifest-compact.mjs';
+import { isMainModule } from './is-main-module.mjs';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const llmsDir = path.join(packageDir, 'llms');
@@ -306,66 +310,35 @@ export function buildTokens() {
   return body.join('\n') + '\n';
 }
 
-function buildPeers(tagFacts) {
+function publishablePeerRange(peer, range) {
+  if (typeof range !== 'string' || range.length === 0) {
+    throw new TypeError(`${peer}: peer dependency needs a non-empty string range`);
+  }
+  if (!range.startsWith('workspace:')) return range;
+  const publishable = range.slice('workspace:'.length);
+  if (!publishable || publishable === '*' || publishable === '^' || publishable === '~') {
+    throw new Error(
+      `${peer}: cannot derive published peer guidance from unresolved workspace range ${range}`,
+    );
+  }
+  return publishable;
+}
+
+export function buildPeers(tagFacts) {
   const pkg = JSON.parse(read('package.json'));
   const peers = Object.keys(pkg.peerDependencies ?? {}).sort();
   const componentPeers = peers.filter((peer) => !(peer in TYPE_ONLY_DECLARATION_PEERS));
   const meta = pkg.peerDependenciesMeta ?? {};
   const srcRoot = path.join(packageDir, 'src', 'components');
 
-  // <lr-flag>'s real dynamic `import('@aceshooting/lyra-flags')` lives in flag-peer.ts, a
-  // deliberately separate opt-in registration entry the default registration graph never reaches
-  // from flag.ts, so no reachable-import walk (comment-stripped or not) will ever find it there.
-  // The peer is still genuinely required -- <lr-flag> cannot render its documented artwork
-  // without it -- so this mirrors `EXPLICIT_OPTIONAL_PEER_ATTRIBUTIONS` in
-  // generate-component-inventory.mjs: an explicit, reviewed attribution rather than one left to
-  // fall out of a comment grep. <lr-locale-picker> composes <lr-flag> in its own template to
-  // render a flag next to each locale option and inherits the same reviewed attribution.
-  const EXPLICIT_PEER_TAGS = new Map([
-    ['@aceshooting/lyra-flags', new Set(['lr-flag', 'lr-locale-picker'])],
-  ]);
-
-  // Peers are attributed per tag by walking that tag's own module graph (its registration entry
-  // plus every relative import it reaches), not per directory — components that share a directory
-  // do not necessarily share a peer. Bare specifiers other than the peer itself end the walk.
-  const peersForTag = (facts) => {
-    const found = new Set(
-      componentPeers.filter((peer) => EXPLICIT_PEER_TAGS.get(peer)?.has(facts.tag))
-    );
-    const seen = new Set();
-    const queue = [path.join(packageDir, facts.modulePath.replace(/\.class\.ts$/, '.ts'))];
-    while (queue.length) {
-      const file = queue.pop();
-      const resolved = [file, file.replace(/\.js$/, '.ts')].find((c) => existsSync(c) && c.endsWith('.ts'));
-      if (!resolved || seen.has(resolved)) continue;
-      seen.add(resolved);
-      // Strip whole `import type` / `export type ... from` statements before scanning. TypeScript
-      // ERASES those entirely, so they are not runtime edges and must not attribute a peer or
-      // extend the walk. Missing this listed all four Chart.js peers against `lr-lite-chart`, whose
-      // only link to `chart.class.ts` is `import type { LyraChartDatumActivateDetail, ... }` -- and
-      // whose entire reason to exist is having no Chart.js dependency, so the header inverted the
-      // choice the component offers.
-      //
-      // Deliberately NOT stripping inline `import { type X }` specifiers: a statement with any
-      // value specifier still emits a real import, and under `verbatimModuleSyntax` even an
-      // all-inline-type one does.
-      //
-      // Comments are stripped first so a JSDoc `@example` mentioning a peer import (e.g.
-      // `import('libphonenumber-js/min')` on lr-phone-input, documenting a consumer-built
-      // adapter it never imports itself) can never attribute that peer to the component.
-      const text = stripComments(readFileSync(resolved, 'utf8'))
-        .replace(/\bimport\s+type\s[\s\S]*?\bfrom\s*(['"])[^'"]*\1/g, '')
-        .replace(/\bexport\s+type\s*\{[\s\S]*?\}\s*from\s*(['"])[^'"]*\1/g, '');
-      for (const match of text.matchAll(/(?:from\s*|import\s*(?:\(\s*)?)(['"])([^'"]+)\1/g)) {
-        const specifier = match[2];
-        for (const peer of componentPeers) {
-          if (specifier === peer || specifier.startsWith(`${peer}/`)) found.add(peer);
-        }
-        if (specifier.startsWith('.')) queue.push(path.resolve(path.dirname(resolved), specifier));
-      }
-    }
-    return [...found];
-  };
+  // Use the inventory's parser-backed module traversal so docs and autoloader prerequisites are
+  // generated from one runtime-edge definition. Comments, examples, strings, and type-only imports
+  // cannot become peer requirements, and capability-gated composed children follow the same rule.
+  const peersForTag = (facts) =>
+    optionalPeersForComponent(
+      { registrationModule: facts.modulePath.replace(/\.class\.ts$/, '.ts') },
+      pkg,
+    ).filter((peer) => componentPeers.includes(peer));
 
   const byPeer = new Map(peers.map((p) => [p, []]));
   for (const facts of tagFacts.values()) {
@@ -379,7 +352,11 @@ function buildPeers(tagFacts) {
       if (entry.isDirectory()) walk(full);
       else if (/\.ts$/.test(entry.name) && !/\.(test|stories)\.ts$/.test(entry.name)) {
         const text = readFileSync(full, 'utf8');
-        for (const peer of componentPeers) if (text.includes(`'${peer}`)) walkAll.add(peer);
+        for (const specifier of runtimeModuleSpecifiers(text, full)) {
+          for (const peer of componentPeers) {
+            if (specifier === peer || specifier.startsWith(`${peer}/`)) walkAll.add(peer);
+          }
+        }
       }
     }
   };
@@ -387,7 +364,7 @@ function buildPeers(tagFacts) {
 
   const rows = peers.map((peer) => ({
     peer,
-    range: pkg.peerDependencies[peer],
+    range: publishablePeerRange(peer, pkg.peerDependencies[peer]),
     optional: meta[peer]?.optional !== false,
     tags: [...new Set(byPeer.get(peer))].sort(),
     seenAnywhere: walkAll.has(peer),
@@ -411,11 +388,11 @@ function buildPeers(tagFacts) {
     `**Component-loaded peers (${componentPeers.length}).** No component imports one eagerly. Install a`,
     'peer only when you use a component that needs it.',
     '',
-    '**How they load.** A component that needs a peer resolves it through a dynamic `import()` on first',
-    'use, rendering an `<lr-skeleton>` placeholder with `aria-busy="true"` on the host while it settles.',
-    'If the peer is genuinely absent, the component falls back to an empty/degraded render and logs one',
-    '`console.warn` (deduped module-wide, not per instance) — it never throws and never blocks paint.',
-    '`<lr-phone-input>` is the exception: it takes an explicit consumer-built adapter',
+    '**How they load.** Most component-loaded peers resolve through a dynamic `import()` on first use.',
+    'Loading and failure behavior is component-specific: placeholders, `aria-busy`, visible localized',
+    'fallbacks, events, and console diagnostics vary. Consult the owning component section for its exact',
+    'loading and failure contract. `<lr-phone-input>` is the exception: it takes an explicit',
+    'consumer-built adapter',
     '(`loadLibphonenumberAdapter()`) instead of importing `libphonenumber-js` itself.',
     '',
     '**SheetJS (`xlsx`).** The supported `>=0.20.3 <0.21.0` releases are distributed by SheetJS',
@@ -696,6 +673,11 @@ export function buildMigration() {
     'in the scan instead of accepting an inert `lr-*` result.',
     'Targets with optional runtime peers also emit an `OPTIONAL_PEER_REQUIRED` report entry naming',
     'each package that must be installed.',
+    'Migrated Web Awesome and Shoelace icon tags emit `BEHAVIOR_REVIEW_REQUIRED` because Lyra\'s',
+    'dependency-free default library contains only `add`, `check`, `close`, `search`, `menu`,',
+    '`chevron-left`, `chevron-right`, `chevron-down`, `calendar`, `command`, and `trash`.',
+    'Replace other names explicitly or provide their vocabulary with',
+    "`registerIconLibrary('default', { resolver })`.",
     'Re-running the tool is idempotent; comments, prose, partial strings, and unrelated packages are',
     'left alone.',
     '',
@@ -795,7 +777,13 @@ function buildIndex(sectionsByFamily, tagFacts) {
   return out.join('\n');
 }
 
-export function buildComponentFile(tag, section, tagFacts, peersByTag) {
+export function buildComponentFile(
+  tag,
+  section,
+  tagFacts,
+  peersByTag,
+  { familyHasBreakingNotes = false } = {},
+) {
   const facts = tagFacts.get(tag);
   const shares = section.tags.filter((t) => t !== tag && tagFacts.has(t));
   const peers = peersByTag.get(tag) ?? [];
@@ -834,6 +822,10 @@ export function buildComponentFile(tag, section, tagFacts, peersByTag) {
     `- **Family** \`components/${facts.family}/\` — see \`llms/index.md\` for its siblings`,
     `- **Status** \`${facts.status}\` since \`${facts.since}\` — see the maturity and deprecation` +
       ' policy in `llms/shared.md`',
+    '- **Release history** [CHANGELOG.md](../../CHANGELOG.md)' +
+      (familyHasBreakingNotes
+        ? '; family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)'
+        : ''),
     ...(deprecationLines.length ? deprecationLines : ['- **Deprecations** none']),
     peers.length
       ? `- **Optional peers** ${peers.map((p) => `\`${p}\``).join(', ') } — see \`llms/peers.md\``
@@ -975,9 +967,13 @@ export function build({ write = true } = {}) {
     [path.join(llmsDir, 'migration.md'), buildMigration()],
   ]);
   for (const [tag, section] of sectionByTag) {
+    const facts = tagFacts.get(tag);
+    const familyHasBreakingNotes = (sectionsByFamily.get(facts.family) ?? []).some((candidate) =>
+      /^Breaking changes\b/iu.test(candidate.title),
+    );
     artifacts.set(
       path.join(llmsDir, 'components', `${tag}.md`),
-      buildComponentFile(tag, section, tagFacts, peersByTag),
+      buildComponentFile(tag, section, tagFacts, peersByTag, { familyHasBreakingNotes }),
     );
   }
 
@@ -989,7 +985,7 @@ export function build({ write = true } = {}) {
   return artifacts;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
+if (isMainModule(import.meta.url)) {
   const artifacts = build();
   console.log(
     `Built llms-full.txt + ${artifacts.size - 1} files under llms/ (${[...artifacts.values()].reduce((a, t) => a + t.length, 0)} bytes).`,

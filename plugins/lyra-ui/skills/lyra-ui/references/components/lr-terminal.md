@@ -6,6 +6,7 @@
 - **Class** `LyraTerminal`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/terminal/terminal.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 16 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -29,9 +30,9 @@ codes. `replace(content: string): void` synchronously replaces the parsed buffer
 string = 'terminal.log'`, `announceOutput: boolean = false` (attribute `announce-output`),
 `accessibleLabel: string = ''` (attribute `aria-label`), `highlights: readonly LyraHighlight[] = []` (attribute:
 false), and `activeHighlightId: string | null = null` (attribute: false). Empty/blank highlight ids
-and later duplicates are omitted before painting, focus ownership, active lookup, and activation events. A host `aria-label` names
-the host; the nested `role="log"` keeps the localized terminal-purpose name rather than cloning the
-same label, and an explicit empty host label never leaves the actionable log unnamed.
+and later duplicates are omitted before painting, focus ownership, active lookup, and activation
+events. A non-empty host `aria-label` is forwarded to the nested `role="log"`; an absent or explicit
+empty value uses the localized terminal-purpose fallback, so the actionable log remains named.
 `compact: boolean = false` (reflected) — tightens `[part="toolbar"]`'s padding and gap and each
 rendered line's inline padding for a terminal embedded in an already-padded transcript row, the same
 convention `<lr-task-list>` and `<lr-thinking-panel>` use; purely a density knob, the card border and

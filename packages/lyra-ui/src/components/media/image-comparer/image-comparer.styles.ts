@@ -179,7 +179,7 @@ export const styles = css`
     outline: none;
   }
   [part="handle"]:has([part="input"]:focus-visible) .handle-visual {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   /* [part='input'] is a fully-transparent full-bleed native <input type="range">, so hover feedback

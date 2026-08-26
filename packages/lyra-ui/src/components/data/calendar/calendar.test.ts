@@ -2,7 +2,6 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './calendar.js';
 import type { LyraCalendar } from './calendar.js';
 import { formatISO } from '../../forms/date-picker/calendar-core.js';
-import { styles } from './calendar.styles.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
@@ -23,6 +22,37 @@ it('renders a month and emits date selections', async () => {
   expect((await selected).detail.date).to.equal('2026-07-15');
 });
 
+it('drops malformed or unnamed event rows while retaining valid neighboring events', async () => {
+  const el = (await fixture(
+    html`<lr-calendar view-date="2026-07-01"></lr-calendar>`,
+  )) as LyraCalendar;
+  el.events = [
+    null,
+    { id: 'missing-date', title: 'Missing date' },
+    { id: 'blank-title', date: '2026-07-15', title: '   ' },
+    { id: 'non-string-title', date: '2026-07-15', title: 42 },
+    { id: 'kept', date: '2026-07-15', title: 'Standup' },
+  ] as unknown as typeof el.events;
+
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelectorAll('[part~="day"]')).to.have.lengthOf(42);
+  expect(el.shadowRoot!.querySelectorAll('[part~="event"]')).to.have.lengthOf(1);
+  expect(el.shadowRoot!.querySelector('[part~="event"]')!.textContent).to.equal('Standup');
+});
+
+it('keeps rendering the month grid when every event row is malformed', async () => {
+  const el = (await fixture(
+    html`<lr-calendar view-date="2026-07-01"></lr-calendar>`,
+  )) as LyraCalendar;
+  el.events = [null, { id: 'missing-date', title: 'Standup' }] as unknown as typeof el.events;
+
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelectorAll('[part~="day"]')).to.have.lengthOf(42);
+  expect(el.shadowRoot!.querySelectorAll('[part~="event"]')).to.have.lengthOf(0);
+});
+
 it('keeps exactly one focusable day after navigating the view away from any anchor date', async () => {
   // Regression test: the roving tab stop was `focusedDate || value || today`
   // with no fallback -- a visible month containing none of those three
@@ -40,7 +70,7 @@ it('keeps exactly one focusable day after navigating the view away from any anch
   expect(focusable, 'expected exactly one focusable day after navigating three months forward').to.have.length(1);
   const now = new Date();
   const expectedFirstOfMonth = formatISO(new Date(now.getFullYear(), now.getMonth() + 3, 1));
-  expect((focusable[0] as HTMLElement).dataset.date).to.equal(expectedFirstOfMonth);
+  expect((focusable[0] as HTMLElement).dataset['date']).to.equal(expectedFirstOfMonth);
 });
 
 it('rolls the view to the next month when ArrowDown moves focus past the bottom of the 6-week grid', async () => {
@@ -82,18 +112,50 @@ it('gives the previous/next month nav buttons the shared minimum hit area and ma
   expect(nextStyle.borderRadius).to.equal(previousStyle.borderRadius);
 });
 
-it('gives nav buttons, day cells, and agenda-event buttons hover/focus-visible treatment', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/button\[part~='nav'\]:hover[^{]*\{[^}]*background:/);
-  expect(css).to.match(/button\[part~='nav'\]:focus-visible[^{]*\{[^}]*outline:/);
-  expect(css).to.match(/\[part='day'\]:focus-visible[^{]*\{[^}]*outline:/);
-  expect(css).to.match(/\[part='agenda-event'\]:hover[^{]*\{[^}]*background:/);
-  expect(css).to.match(/\[part='agenda-event'\]:focus-visible[^{]*\{[^}]*outline:/);
-});
+it('renders hover and keyboard focus-visible treatment on nav, day, and agenda-event buttons', async () => {
+  const month = (await fixture(html`
+    <lr-calendar
+      view-date="2026-07-01"
+      style="--lr-color-brand-quiet: rgb(1, 2, 3); --lr-focus-ring-width: 6px; --lr-focus-ring-color: rgb(4, 5, 6);"
+    ></lr-calendar>
+  `)) as LyraCalendar;
+  const agenda = (await fixture(html`
+    <lr-calendar
+      view="agenda"
+      view-date="2026-07-01"
+      style="--lr-color-brand-quiet: rgb(1, 2, 3); --lr-focus-ring-width: 6px; --lr-focus-ring-color: rgb(4, 5, 6);"
+      .events=${[{ id: 'standup', date: '2026-07-15', title: 'Standup' }]}
+    ></lr-calendar>
+  `)) as LyraCalendar;
+  const targets = [
+    month.shadowRoot!.querySelector<HTMLElement>('button[part~="nav"]')!,
+    month.shadowRoot!.querySelector<HTMLElement>('[part="day"]')!,
+    agenda.shadowRoot!.querySelector<HTMLElement>('[part="agenda-event"]')!,
+  ];
 
-it('gives a mouse user hover feedback on a clickable day cell, matching the keyboard focus-visible ring', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='day'\]:hover/);
+  for (const target of targets) {
+    target.scrollIntoView({ block: 'center' });
+    const rect = target.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(
+        () => getComputedStyle(target).backgroundColor === 'rgb(1, 2, 3)',
+        `${target.getAttribute('part')} never painted its hover feedback`,
+      );
+    } finally {
+      await resetMouse();
+    }
+
+    await sendKeys({ press: 'Tab' });
+    target.focus();
+    await waitUntil(() => {
+      const computed = getComputedStyle(target);
+      return computed.outlineWidth === '6px' && computed.outlineColor === 'rgb(4, 5, 6)';
+    }, `${target.getAttribute('part')} never painted its keyboard focus ring`);
+  }
 });
 
 // Regression test: [part='day'][data-selected='true'] used to be declared AFTER the
@@ -266,6 +328,24 @@ it('applies a valid CalendarEvent.color as the event marker background', async (
   await el.updateComplete;
   const marker = el.shadowRoot!.querySelector('[data-date="2026-07-15"] [part="event"]') as HTMLElement;
   expect(marker.style.backgroundColor).to.not.equal('');
+});
+
+it('preserves a colored event\'s computed foreground and background in agenda view', async () => {
+  const event = { date: '2026-07-15', title: 'Color parity', color: 'rgb(12, 34, 56)' };
+  const el = await fixture<LyraCalendar>(html`
+    <lr-calendar view-date="2026-07-01" .events=${[event]}></lr-calendar>
+  `);
+  const monthEvent = el.shadowRoot!.querySelector('[part="event"]') as HTMLElement;
+  const monthStyle = getComputedStyle(monthEvent);
+  const expectedBackground = monthStyle.backgroundColor;
+  const expectedForeground = monthStyle.color;
+
+  el.view = 'agenda';
+  await el.updateComplete;
+  const agendaEvent = el.shadowRoot!.querySelector('[part="agenda-event"]') as HTMLElement;
+  const agendaStyle = getComputedStyle(agendaEvent);
+  expect(agendaStyle.backgroundColor).to.equal(expectedBackground);
+  expect(agendaStyle.color).to.equal(expectedForeground);
 });
 
 // The regression this guards: the hover/press feedback used to be `filter: brightness()`, which
@@ -492,6 +572,17 @@ it('uses an authored host aria-label as the internal section name instead of the
   expect(section.getAttribute('aria-label')).to.equal('Product schedule');
 });
 
+it('uses a programmatic accessibleLabel as the internal section name', async () => {
+  const el = (await fixture(html`<lr-calendar></lr-calendar>`)) as LyraCalendar;
+  el.accessibleLabel = 'Programmatic schedule';
+  await el.updateComplete;
+
+  expect(el.hasAttribute('aria-label')).to.equal(false);
+  expect(el.shadowRoot!.querySelector('section')!.getAttribute('aria-label')).to.equal(
+    'Programmatic schedule',
+  );
+});
+
 it('themes the title and date weights through the shared semibold token', async () => {
   const el = (await fixture(
     html`<lr-calendar view-date="2026-07-01" style="--lr-font-weight-semibold: 700"></lr-calendar>`,
@@ -508,7 +599,7 @@ it('falls back to a sane first-day-of-week instead of producing Invalid Date for
   )) as LyraCalendar;
   const days = [...el.shadowRoot!.querySelectorAll('[part="day"]')] as HTMLElement[];
   expect(days).to.have.length(42);
-  expect(days.every((day) => /^\d{4}-\d{2}-\d{2}$/.test(day.dataset.date || ''))).to.be.true;
+  expect(days.every((day) => /^\d{4}-\d{2}-\d{2}$/.test(day.dataset['date'] || ''))).to.be.true;
 });
 
 // Jan 1 2023 is a Sunday and Jan 2 2023 is a Monday -- fixed, well-known anchor dates used to

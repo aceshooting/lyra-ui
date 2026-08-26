@@ -45,9 +45,39 @@ it('visibly abbreviates pathological labels without compressing glyphs and retai
   expect(valuePart.textContent).to.equal(`${'B'.repeat(8)}…`);
   expect(labelPart.hasAttribute('textLength')).to.equal(false);
   expect(valuePart.hasAttribute('textLength')).to.equal(false);
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('title')).to.equal(`${label}: ${valueText}`);
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(base.querySelector('title')?.textContent).to.equal(`${label}: ${valueText}`);
+  expect(base.hasAttribute('title')).to.equal(false);
   expect(el.getAttribute('aria-label')).to.equal(label);
   expect(el.getAttribute('aria-valuetext')).to.equal(valueText);
+});
+
+it('provides an SVG title tooltip for truncated text in every shape', async () => {
+  const fullLabel = 'A deliberately long gauge label';
+  const fullValue = 'A deliberately long value';
+  for (const shape of ['radial', 'ring', 'linear'] as const) {
+    const el = (await fixture(html`<lr-gauge
+      shape=${shape}
+      .label=${fullLabel}
+      .valueText=${fullValue}
+    ></lr-gauge>`)) as LyraGauge;
+    const svg = el.shadowRoot!.querySelector('svg')!;
+    expect(svg.querySelector('title')?.textContent).to.equal(`${fullLabel}: ${fullValue}`);
+    expect(svg.hasAttribute('title')).to.equal(false);
+  }
+});
+
+it('localizes the full label/value text exposed by a truncated SVG tooltip', async () => {
+  const el = (await fixture(html`<lr-gauge
+    label="A deliberately long gauge label"
+    value-text="A deliberately long value"
+  ></lr-gauge>`)) as LyraGauge;
+  el.strings = { gaugeValueLabel: '{value} for {label}' };
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('svg title')?.textContent).to.equal(
+    'A deliberately long value for A deliberately long gauge label',
+  );
 });
 
 it('reflects value/min/max as ARIA meter attributes', async () => {
@@ -59,6 +89,23 @@ it('reflects value/min/max as ARIA meter attributes', async () => {
   expect(el.getAttribute('aria-valuemin')).to.equal('0');
   expect(el.getAttribute('aria-valuemax')).to.equal('50');
   expect(el.getAttribute('aria-label')).to.equal('CPU');
+});
+
+it('preserves an author-supplied host role while keeping the finite value contract current', async () => {
+  const el = (await fixture(html`
+    <lr-gauge role="progressbar" aria-label="Upload" value="30" min="0" max="50"></lr-gauge>
+  `)) as LyraGauge;
+  expect(el.getAttribute('role')).to.equal('progressbar');
+  expect(el.getAttribute('aria-valuenow')).to.equal('30');
+
+  el.value = 40;
+  await el.updateComplete;
+  expect(el.getAttribute('role')).to.equal('progressbar');
+  expect(el.getAttribute('aria-valuenow')).to.equal('40');
+
+  el.removeAttribute('role');
+  await el.updateComplete;
+  expect(el.getAttribute('role')).to.equal('meter');
 });
 
 it('preserves an explicit host accessible name instead of replacing it with the visible label', async () => {

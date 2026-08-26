@@ -107,11 +107,7 @@ it('reads reduced-motion preference from each adopted component owner window', a
   const elements: Array<HTMLElement & { updateComplete: Promise<unknown> }> = [];
 
   try {
-    const segmented = document.createElement('lr-segmented') as HTMLElement & {
-      items: Array<{ value: string; label: string }>;
-      scrollToValue(value: string): void;
-      updateComplete: Promise<unknown>;
-    };
+    const segmented = document.createElement('lr-segmented');
     segmented.items = [{ value: 'one', label: 'One' }];
     elements.push(segmented);
     document.body.append(segmented);
@@ -144,18 +140,11 @@ it('reads reduced-motion preference from each adopted component owner window', a
     (tabGroup as unknown as { scrollTabs(edge: 'start' | 'end'): void }).scrollTabs('end');
     expect(tabBehavior).to.equal('instant');
 
-    const virtualList = document.createElement('lr-virtual-list') as HTMLElement & {
-      items: number[];
-      rowHeight: number;
-      renderItem(item: number): string;
-      keyFunction(item: number): number;
-      scrollToIndex(index: number, options?: { align?: 'start'; behavior?: 'smooth' }): void;
-      updateComplete: Promise<unknown>;
-    };
+    const virtualList = document.createElement('lr-virtual-list');
     virtualList.items = [1];
     virtualList.rowHeight = 40;
     virtualList.renderItem = (item) => String(item);
-    virtualList.keyFunction = (item) => item;
+    virtualList.keyFunction = (item) => Number(item);
     elements.push(virtualList);
     document.body.append(virtualList);
     await virtualList.updateComplete;

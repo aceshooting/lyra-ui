@@ -128,7 +128,7 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
   }
   [part="play-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part="play-button"] svg {

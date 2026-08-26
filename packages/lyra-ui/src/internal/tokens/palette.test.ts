@@ -6,8 +6,8 @@ import { palette } from './palette.styles.js';
 
 /** The same two layers, in the same order, that every `LyraElement` adopts. */
 class PaletteProbe extends LitElement {
-  static styles = [palette, tokens];
-  render() {
+  static override styles = [palette, tokens];
+  override render() {
     return html`<div part="probe"></div>`;
   }
 }
@@ -60,7 +60,7 @@ describe('the semantic grid is live, not inert', () => {
       ['--lr-color-danger', '--lr-color-danger-fill-loud'],
       ['--lr-color-on-brand', '--lr-color-brand-on-loud'],
       ['--lr-color-on-danger', '--lr-color-danger-on-loud'],
-    ]) {
+    ] as const) {
       expect(read(el, flat), `${flat} vs ${slot}`).to.equal(read(el, slot));
     }
   });

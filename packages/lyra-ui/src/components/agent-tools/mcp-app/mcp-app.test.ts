@@ -206,11 +206,13 @@ it('accepts messages only from its own frame and clamps resize requests', async 
   const event = await toolCall as CustomEvent<{ requestId: string; name: string; args: unknown }>;
   expect(event.detail.name).to.equal('refresh_weather');
 
+  const resize = oneEvent(el, 'lr-mcp-resize');
   window.dispatchEvent(frameMessage(
     iframe.contentWindow,
     { channel: 'lyra-mcp-app', version: 1, type: 'resize', height: 50_000 },
     'null',
   ));
+  expect((await resize).detail.height).to.equal(500);
   await el.updateComplete;
   expect(iframe.style.height).to.equal('500px');
 
@@ -398,8 +400,8 @@ it('retargets authenticated frame messages to the adopted owner window and clean
     ownerWindow,
     'removeEventListener',
   );
-  const originalAdd = ownerWindow.addEventListener.bind(ownerWindow);
-  const originalRemove = ownerWindow.removeEventListener.bind(ownerWindow);
+  const originalAdd: EventTarget['addEventListener'] = ownerWindow.addEventListener.bind(ownerWindow);
+  const originalRemove: EventTarget['removeEventListener'] = ownerWindow.removeEventListener.bind(ownerWindow);
   let messageListenerAdds = 0;
   let messageListenerRemoves = 0;
   Object.defineProperty(ownerWindow, 'addEventListener', {
@@ -575,7 +577,7 @@ it('is accessible with an app loaded', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('keeps a non-empty host name on the host and preserves explicit-empty frame semantics', async () => {
+it('keeps a non-empty host name on the host without letting an explicit-empty host name unname the frame', async () => {
   const el = (await fixture(html`<lr-mcp-app
     aria-label="Weather experience"
     .resource=${{ uri: 'ui://weather/app', title: 'Weather controls', html: '<p>Weather</p>' }}
@@ -586,7 +588,19 @@ it('keeps a non-empty host name on the host and preserves explicit-empty frame s
 
   el.setAttribute('aria-label', '');
   await el.updateComplete;
-  expect(frame.title).to.equal('');
+  expect(frame.title).to.equal('Weather controls');
+  await expect(el).to.be.accessible();
+});
+
+it('uses a programmatic accessibleLabel for the frame when no host attribute is authored', async () => {
+  const el = await fixture<LyraMcpApp>(html`
+    <lr-mcp-app
+      .accessibleLabel=${'Weather controls'}
+      .resource=${{ uri: 'ui://weather/app', title: 'Resource title', html: '<p>Weather</p>' }}
+    ></lr-mcp-app>
+  `);
+  expect(el.hasAttribute('aria-label')).to.equal(false);
+  expect(el.shadowRoot!.querySelector('iframe')!.title).to.equal('Weather controls');
 });
 
 it('applies per-instance localized strings', async () => {

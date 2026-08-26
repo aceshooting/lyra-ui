@@ -131,9 +131,12 @@ it('treats a submitter as enabled when the DOM cannot evaluate :disabled', async
     <form><button id="go" type="submit">Go</button></form>
   `)) as HTMLFormElement;
   const button = form.querySelector('button')!;
-  button.matches = () => {
-    throw new DOMException('Selector unsupported', 'NotSupportedError');
-  };
+  Object.defineProperty(button, 'matches', {
+    configurable: true,
+    value() {
+      throw new DOMException('Selector unsupported', 'NotSupportedError');
+    },
+  });
 
   expect(findImplicitSubmitter(form)?.id).to.equal('go');
 });
@@ -188,10 +191,11 @@ it('falls back to a custom host ancestor when no form-owner API exists', async (
 });
 
 it('contains throwing form-owner APIs and hostile returned owners', () => {
-  const throwingMethod = document.createElement('div') as HTMLElement & { getForm: () => unknown };
-  throwingMethod.getForm = () => {
-    throw new Error('form owner unavailable');
-  };
+  const throwingMethod = Object.assign(document.createElement('div'), {
+    getForm(): unknown {
+      throw new Error('form owner unavailable');
+    },
+  });
 
   const throwingProperty = document.createElement('div');
   Object.defineProperty(throwingProperty, 'form', {
@@ -207,8 +211,9 @@ it('contains throwing form-owner APIs and hostile returned owners', () => {
       return undefined;
     },
   });
-  const hostileMethod = document.createElement('div') as HTMLElement & { getForm: () => unknown };
-  hostileMethod.getForm = () => hostileOwner;
+  const hostileMethod = Object.assign(document.createElement('div'), {
+    getForm: () => hostileOwner,
+  });
 
   expect(submitOnEnter(throwingMethod, enterEvent())).to.be.false;
   expect(submitOnEnter(throwingProperty, enterEvent())).to.be.false;

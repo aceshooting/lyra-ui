@@ -6,6 +6,7 @@
 - **Class** `LyraToolResultView`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-result-view/tool-result-view.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 3 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
@@ -68,7 +69,7 @@ result text (only present in that mode). `fallback-copy` — the `<lr-copy-butto
 `copyable` is set alongside the `fallback="text"` kind (only present when both are set).
 
 **Themeable custom properties:** `--lr-tool-result-view-font` (default `var(--lr-font-mono)`, the
-library's shared monospace stack, so a `--lr-theme-font-mono` override reaches it) — only used by the
+library's shared monospace stack, so a `--lr-theme-font-family-mono` override reaches it) — only used by the
 `fallback="text"` kind's `[part='fallback-text']`. Otherwise none — the component's own styling is
 deliberately minimal; all visible styling comes from whatever renderer/`<lr-skeleton>`/
 `<lr-json-viewer>`/`<lr-copy-button>` child is currently mounted.

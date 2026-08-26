@@ -6,6 +6,7 @@
 - **Class** `LyraTree`, also available unregistered from `@aceshooting/lyra-ui/components/data/tree/tree.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 3 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -79,8 +80,9 @@ deeply-nested node's own shadow root still reaches it).
 readonly selected?: boolean; readonly disabled?: boolean; readonly lazy?: boolean; readonly
 badges?: readonly TreeBadge[]; readonly icon?: unknown; readonly description?: string; readonly
 accessibleLabel?: string }`. `TreeBadge` is `{ readonly text: string; readonly tone?:
-LyraVariant; readonly label?: string }`. `badges` renders tone-mapped chips in order and each
-  chip's accessible name uses `label ?? text`.
+LyraVariant; readonly label?: string }`. `badges` renders tone-mapped chips in order. A nonempty
+  `label` makes that chip a named `img`; when the override is omitted or empty, no generic role or
+  redundant `aria-label` is added and the visible `text` contributes to the treeitem name naturally.
   `icon` renders as a decorative leading visual, `description` as secondary visible row text, and
   `accessibleLabel` names the `role="treeitem"` host without changing its visible label. An
   author-supplied host `aria-label` takes precedence by presence and is never overwritten or
@@ -91,10 +93,10 @@ LyraVariant; readonly label?: string }`. `badges` renders tone-mapped chips in o
   both child models. `single` selects one item; `leaf` selects one loaded leaf; `multiple` displays
   checkboxes and cascades through enabled descendants; `leaf-multiple` applies that cascade only
   to leaves. Partially-selected branches expose `indeterminate`
-- `label: string = ''` — accessible name for the tree; `role="tree"` lives on an internal
-  `[part="base"]` element. The component forwards a host `aria-label` to that semantic element when
-  `label` is empty; `label` takes precedence when both are set. External `aria-labelledby` idrefs
-  are not forwarded across the shadow boundary.
+- `label: string = ''` — accessible-name fallback for the tree; `role="tree"` lives on an internal
+  `[part="base"]` element. A host `aria-label` takes precedence by attribute presence, including an
+  explicit empty string; removing it restores the `label` fallback. External `aria-labelledby`
+  idrefs are not forwarded across the shadow boundary.
 - `reorderable: boolean = false` (reflected) — opts into keyboard reordering. Unset, no `lr-reorder`
   is ever emitted, Ctrl/Cmd+Arrow behaves exactly like a plain Arrow press, and the internal live
   region is not rendered at all.
@@ -262,6 +264,10 @@ groups the primary label and optional wrapping secondary description while prese
 interactive treeitem per row. `icon`, `description` and `badge` render only in the data model —
 the declarative model has no icon/description/badge inputs, so a row written as markup renders
 `row`/`toggle`/`content`/`label` (and `group` while expanded) and nothing else.
+`item` and its four state aliases are real painted row containers: consumer background, border,
+padding, and opacity rules reach the visible row rather than a boxless wrapper.
+The enabled disclosure `toggle` has its own pointer-hover feedback in addition to the row's hover
+treatment; disabled toggles remain visually inert.
 In the data model, every recursively rendered child forwards this complete part list under the
 same names, so one selector on the outer item, such as `lr-tree-item::part(row)`, reaches matching
 parts at every rendered depth. Declarative children remain light-DOM hosts and can be matched

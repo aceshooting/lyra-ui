@@ -9,7 +9,7 @@ import {
   readResponseText,
   resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import {
   DocumentAnchorTarget,
@@ -118,10 +118,12 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  *   scans at most 4,000,000 cell code units, and retains at most 1,000 matches;
  *   `matchCountExact=false` identifies a ceiling-truncated lower bound.
  * @csspart base - The root wrapper with explicit `aria-busy` loading state.
- * @csspart body - The scrollable wrapper around the fetched-state content, capped by `max-height`.
- * @csspart sheet - The wrapper around the header row and virtualized body.
+ * @csspart body - The wrapper around the fetched-state content, capped by `max-height`; the nested
+ *   virtual-list remains the data-row scrollport within that allocation.
+ * @csspart sheet - The named `role="table"` wrapper around the header row and virtualized body.
  * @csspart rows - The virtualized row list.
- * @csspart header-row - The sticky header row, rendered while `has-header-row` is set.
+ * @csspart header-row - The persistent header above the virtualized row scrollport, rendered while
+ *   `has-header-row` is set.
  * @csspart data-row - One virtualized data row.
  * @csspart cell - One rendered cell.
  * @csspart cell-highlight - A structural cell covered by a `highlights` entry.
@@ -133,8 +135,9 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  * @cssprop [--lr-csv-viewer-highlight-color=var(--lr-color-brand)] - Outline color of a highlighted
  *   cell. The active highlight changes a private warning-color default; an inherited or direct
  *   public value remains authoritative.
- * @cssprop [--lr-csv-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
- *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
+ * @cssprop [--lr-csv-viewer-max-height=none] - Maximum block size allocated to `[part="body"]`;
+ *   the nested virtual-list scrolls data rows within the remainder below the persistent header.
+ *   The `maxHeight` property sets this token inline on `[part="base"]`.
  * @status stable
  * @since 4.0.0
  */
@@ -620,9 +623,12 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
         const header = this.hasHeaderRow ? rows[0] : undefined;
         const body = this.hasHeaderRow ? rows.slice(1) : rows;
         const count = columns(rows);
+        const tableLabel = hostAriaLabel(this)
+          ?? (this.name || this.localize('csvViewerLabel'));
         content = html`<div
           part="sheet"
           role="table"
+          aria-label=${tableLabel}
           aria-rowcount=${rows.length}
           aria-colcount=${count}
         >

@@ -6,6 +6,7 @@
 - **Class** `LyraToolParamForm`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-param-form/tool-param-form.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 8 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -235,10 +236,10 @@ a JSON object, falls back to `{}` for malformed/non-object state, and does not e
   `=== undefined` fallback check.
 - additional value keys are retained and submitted (matching JSON Schema's default open-object
   behavior), but schema-valued/false `additionalProperties` is outside this renderer's subset.
-- reassign `value`/`schema` after changing them. Direct in-place mutation is resnapshotted by the
-  component's own `checkValidity()`/`reportValidity()`, but native `form.checkValidity()` and
-  submission use the last synchronized snapshot because the browser cannot observe arbitrary object
-  mutation.
+- `value` and `schema` are detached, deeply frozen assignment-time snapshots. Reassign either
+  property after changing caller-owned input; direct in-place mutation cannot alter the component,
+  and neither its own `checkValidity()`/`reportValidity()` nor native form validation resnapshots the
+  original object.
 - `lr-validity-change` fires once immediately at connect time even before any user interaction, so a
   form with an unmet required field announces `valid: false` on mount, not only after the first edit.
 

@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+
+import { isMainModule } from '../packages/lyra-ui/scripts/is-main-module.mjs';
 
 const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const RELEASE_TYPES = new Set(['major', 'minor', 'patch']);
@@ -62,7 +64,7 @@ export function renderChangesetPackagePlan(plan) {
   return plan.map(({ id, packages }) => `${id}\t${packages.join(' ')}`).join('\n');
 }
 
-export function loadChangesetPackagePlan(root = repoRoot) {
+function loadChangesetPackagePlan(root = repoRoot) {
   const workspace = mkdtempSync(path.join(tmpdir(), 'lyra-changeset-status-'));
   const output = path.join(workspace, 'status.json');
   const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
@@ -77,8 +79,7 @@ export function loadChangesetPackagePlan(root = repoRoot) {
   }
 }
 
-const isMain = process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
-if (isMain) {
+if (isMainModule(import.meta.url)) {
   try {
     console.log(renderChangesetPackagePlan(loadChangesetPackagePlan()));
   } catch (error) {

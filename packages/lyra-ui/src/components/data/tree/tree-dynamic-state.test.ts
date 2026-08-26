@@ -16,6 +16,11 @@ const data = [
   { id: '2', label: 'Leaf' },
 ];
 
+function required<T>(value: T | undefined, context: string): T {
+  if (value === undefined) throw new Error(`Missing ${context}`);
+  return value;
+}
+
 /** Walks into shadow roots to find the actually-focused element (a focused
  *  element inside a shadow tree only surfaces as its shadow host via the
  *  plain `document.activeElement`). */
@@ -38,12 +43,17 @@ it('preserves nested per-node expanded state when a nested children array is reo
   childB.expanded = true;
   await root.updateComplete;
 
-  root.item = { ...root.item, children: [nested[0].children![1], nested[0].children![0]] };
+  const rootData = required(nested[0], 'root data item');
+  const children = required(rootData.children, 'root data children');
+  root.item = {
+    ...required(root.item, 'rendered root item data'),
+    children: [required(children[1], 'second child data'), required(children[0], 'first child data')],
+  };
   await root.updateComplete;
 
   const after = [...root.shadowRoot!.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
   expect((after[0]) === (childB)).to.equal(true, 'the "B" node instance should be reused after reordering');
-  expect(after[0].expanded).to.be.true;
+  expect(required(after[0], 'reordered first child').expanded).to.be.true;
 });
 
 it('forwards `label` to the internal role="tree" element\'s aria-label, and omits it when unset', async () => {
@@ -122,7 +132,11 @@ it('keeps arrow-key navigation correct after a node\'s `item` is mutated directl
   // Legitimate direct write path (also used by this file's own
   // "reorders a nested children array" test above) -- no `data`
   // reassignment on `<lr-tree>`, no `lr-node-toggle` event.
-  root.item = { ...root.item, children: [...root.item.children!, { id: 'c', label: 'C' }] };
+  const rootItem = required(root.item, 'rendered root item data');
+  root.item = {
+    ...rootItem,
+    children: [...required(rootItem.children, 'rendered root children'), { id: 'c', label: 'C' }],
+  };
   await root.updateComplete;
 
   (b as unknown as HTMLElement).dispatchEvent(

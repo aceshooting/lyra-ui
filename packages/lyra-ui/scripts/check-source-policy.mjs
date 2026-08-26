@@ -1,3 +1,5 @@
+import { isMainModule } from './is-main-module.mjs';
+
 // Source policy checker: fast, dependency-free static rules over src/components (plus
 // src/internal where noted) that guard the library's i18n/RTL invariants and two frozen
 // test-coverage baselines. Rules:
@@ -810,8 +812,9 @@ function cssBlocks(stripped) {
   return blocks;
 }
 
-function checkPhysicalCss(file, rawLines, findings) {
-  const stripped = stripCssComments(fs.readFileSync(file, 'utf8'));
+function checkPhysicalCss(file, rawSource, findings) {
+  const rawLines = rawSource.split('\n');
+  const stripped = stripCssComments(rawSource);
   const blocks = cssBlocks(stripped);
   const lines = stripped.split('\n');
   const strippedLines = lines;
@@ -832,6 +835,38 @@ function checkPhysicalCss(file, rawLines, findings) {
     }
     offset += lineText.length + 1;
   });
+}
+
+/**
+ * Runs the per-file source rules through one shared routing seam. Keeping component and internal
+ * callers on this function prevents shared helpers from silently receiving a smaller policy set.
+ * The two exclusions are low-level implementation boundaries, not directory-wide exemptions:
+ * intl-cache.ts constructs the cached Intl formatters, and announcer.ts implements the sink API.
+ */
+export function collectSourcePolicyFindings({
+  file,
+  source,
+  knownKeys = new Set(),
+  skipIntlOutsideCache = false,
+  skipAnnouncementSource = false,
+}) {
+  const findings = [];
+  const rawLines = source.split('\n');
+  if (file.endsWith('.styles.ts')) {
+    checkPhysicalCss(file, source, findings);
+    return findings;
+  }
+
+  const stripped = stripJsComments(source);
+  checkLocalizeFallback(file, stripped, knownKeys, findings);
+  if (!skipIntlOutsideCache) checkIntlOutsideCache(file, stripped, findings);
+  checkUnsafeIntlLocale(file, stripped, findings);
+  checkPointercancelPairing(file, stripped, rawLines, findings);
+  checkRtlArrowKeys(file, stripped, rawLines, findings);
+  checkShadowLiveRegion(file, source, findings);
+  if (!skipAnnouncementSource) checkAnnouncementSource(file, source, findings);
+  if (file.endsWith('.class.ts')) checkAnnouncerTimerRealm(file, source, findings);
+  return findings;
 }
 
 // ---------------------------------------------------------------------------
@@ -891,8 +926,6 @@ export function runSourcePolicy() {
   const internalTreeFiles = walk(internalRoot);
   const componentFiles = componentTreeFiles.filter(isSource).sort();
   const allInternalFiles = internalTreeFiles.filter(isSource).sort();
-  const internalFiles = allInternalFiles.filter((file) => path.basename(file) !== 'intl-cache.ts');
-
   const findings = [];
   const notes = [];
   const strippedByFile = new Map();
@@ -948,29 +981,20 @@ export function runSourcePolicy() {
   }
 
   for (const file of componentFiles) {
-    const stripped = strippedByFile.get(file);
     const rawSource = fs.readFileSync(file, 'utf8');
-    const rawLines = rawSource.split('\n');
-    if (file.endsWith('.styles.ts')) {
-      checkPhysicalCss(file, rawLines, findings);
-      continue;
-    }
-    checkLocalizeFallback(file, stripped, knownKeys, findings);
-    checkIntlOutsideCache(file, stripped, findings);
-    checkUnsafeIntlLocale(file, stripped, findings);
-    checkPointercancelPairing(file, stripped, rawLines, findings);
-    checkRtlArrowKeys(file, stripped, rawLines, findings);
-    checkShadowLiveRegion(file, rawSource, findings);
-    checkAnnouncementSource(file, rawSource, findings);
-    if (file.endsWith('.class.ts')) checkAnnouncerTimerRealm(file, rawSource, findings);
+    findings.push(...collectSourcePolicyFindings({ file, source: rawSource, knownKeys }));
   }
 
-  for (const file of internalFiles) {
-    checkIntlOutsideCache(file, strippedByFile.get(file), findings);
-    checkUnsafeIntlLocale(file, strippedByFile.get(file), findings);
-    if (path.basename(file) !== 'announcer.ts') {
-      checkAnnouncementSource(file, fs.readFileSync(file, 'utf8'), findings);
-    }
+  for (const file of allInternalFiles) {
+    findings.push(
+      ...collectSourcePolicyFindings({
+        file,
+        source: fs.readFileSync(file, 'utf8'),
+        knownKeys,
+        skipIntlOutsideCache: path.basename(file) === 'intl-cache.ts',
+        skipAnnouncementSource: path.basename(file) === 'announcer.ts',
+      })
+    );
   }
 
   const offenders = collectRatchetOffenders(componentFiles, strippedByFile);
@@ -1005,5 +1029,4 @@ export function runSourcePolicy() {
   }
 }
 
-const isMain = process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url));
-if (isMain) runSourcePolicy();
+if (isMainModule(import.meta.url)) runSourcePolicy();

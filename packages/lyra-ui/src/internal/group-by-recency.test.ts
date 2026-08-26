@@ -14,10 +14,10 @@ it('buckets Today/Yesterday/Previous 7 Days/Older using calendar-day boundaries'
   const result = groupByRecency(items, { now: NOW });
 
   expect(result.map((b) => b.label)).to.deep.equal(['Today', 'Yesterday', 'Previous 7 Days', 'Older']);
-  expect(result[0].items).to.deep.equal([at(0)]);
-  expect(result[1].items).to.deep.equal([at(1)]);
-  expect(result[2].items).to.deep.equal([at(2), at(7)]);
-  expect(result[3].items).to.deep.equal([at(8), at(30)]);
+  expect(result[0]!.items).to.deep.equal([at(0)]);
+  expect(result[1]!.items).to.deep.equal([at(1)]);
+  expect(result[2]!.items).to.deep.equal([at(2), at(7)]);
+  expect(result[3]!.items).to.deep.equal([at(8), at(30)]);
 });
 
 it('treats "yesterday" as the previous calendar date, not a rolling 24-hour window', () => {
@@ -26,19 +26,19 @@ it('treats "yesterday" as the previous calendar date, not a rolling 24-hour wind
   const lateYesterday = new Date(2024, 0, 14, 23, 0, 0);
   const result = groupByRecency([lateYesterday], { now: NOW });
   expect(result).to.have.length(1);
-  expect(result[0].label).to.equal('Yesterday');
+  expect(result[0]!.label).to.equal('Yesterday');
 });
 
 it('treats an early-morning "today" item as Today even though it is >12h before `now`', () => {
   const earlyToday = new Date(2024, 0, 15, 0, 30, 0);
   const result = groupByRecency([earlyToday], { now: NOW });
-  expect(result[0].label).to.equal('Today');
+  expect(result[0]!.label).to.equal('Today');
 });
 
 it('omits buckets that end up with no items', () => {
   const result = groupByRecency([at(0), at(0)], { now: NOW });
   expect(result).to.have.length(1);
-  expect(result[0].label).to.equal('Today');
+  expect(result[0]!.label).to.equal('Today');
 });
 
 it('returns an empty array for an empty input', () => {
@@ -51,12 +51,12 @@ it('preserves each bucket\'s original relative order (no re-sorting)', () => {
   const b = at(2, 12);
   const result = groupByRecency([c, a, b], { now: NOW });
   expect(result).to.have.length(1);
-  expect(result[0].items).to.deep.equal([c, a, b]);
+  expect(result[0]!.items).to.deep.equal([c, a, b]);
 });
 
 it('defaults getTimestamp to assuming the item itself is a Date', () => {
   const result = groupByRecency([at(0)], { now: NOW });
-  expect(result[0].label).to.equal('Today');
+  expect(result[0]!.label).to.equal('Today');
 });
 
 it('uses a custom getTimestamp, accepting a Date/number/string return', () => {
@@ -71,9 +71,9 @@ it('uses a custom getTimestamp, accepting a Date/number/string return', () => {
   ];
   const result = groupByRecency(items, { now: NOW, getTimestamp: (item) => item.ts });
   expect(result.map((b) => b.label)).to.deep.equal(['Today', 'Yesterday', 'Previous 7 Days']);
-  expect(result[0].items[0].id).to.equal('a');
-  expect(result[1].items[0].id).to.equal('b');
-  expect(result[2].items[0].id).to.equal('c');
+  expect(result[0]!.items[0]!.id).to.equal('a');
+  expect(result[1]!.items[0]!.id).to.equal('b');
+  expect(result[2]!.items[0]!.id).to.equal('c');
 });
 
 it('overrides one or more labels while leaving the rest at their English default', () => {
@@ -86,18 +86,18 @@ it('buckets a future-dated item (relative to `now`) as Today', () => {
   const future = new Date(2024, 0, 20);
   const result = groupByRecency([future], { now: NOW });
   expect(result).to.have.length(1);
-  expect(result[0].label).to.equal('Today');
+  expect(result[0]!.label).to.equal('Today');
 });
 
 it('buckets an unparseable timestamp as Older rather than throwing or dropping it', () => {
   const result = groupByRecency(['not-a-date'], { now: NOW, getTimestamp: (s) => s });
   expect(result).to.have.length(1);
-  expect(result[0].label).to.equal('Older');
-  expect(result[0].items).to.deep.equal(['not-a-date']);
+  expect(result[0]!.label).to.equal('Older');
+  expect(result[0]!.items).to.deep.equal(['not-a-date']);
 });
 
 it('defaults `now` to the real current time when unset', () => {
   const result = groupByRecency([new Date()]);
   expect(result).to.have.length(1);
-  expect(result[0].label).to.equal('Today');
+  expect(result[0]!.label).to.equal('Today');
 });

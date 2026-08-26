@@ -84,8 +84,8 @@ it('normalizes unsupported closed-set attributes and untyped property writes', a
   el.variant = 'danger';
   await el.updateComplete;
   const foreign = el as unknown as Record<string, unknown>;
-  foreign.countdown = 'diagonal';
-  foreign.variant = 'loud';
+  foreign['countdown'] = 'diagonal';
+  foreign['variant'] = 'loud';
   await el.updateComplete;
   expect(el.countdown).to.equal(undefined);
   expect(el.hasAttribute('countdown')).to.be.false;
@@ -396,7 +396,9 @@ it('keeps countdown direction explicit inside an RTL page', async () => {
   `);
   const el = wrapper.querySelector('lr-alert') as LyraAlert;
   await el.show();
-  expect(el.effectiveDirection).to.equal('rtl');
+  expect(
+    (el as unknown as { readonly effectiveDirection: 'ltr' | 'rtl' }).effectiveDirection,
+  ).to.equal('rtl');
   expect(
     el.shadowRoot!.querySelector<HTMLElement>('.countdown')!.style.transformOrigin.startsWith('left center'),
   ).to.be.true;

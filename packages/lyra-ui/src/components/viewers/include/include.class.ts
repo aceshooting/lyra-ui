@@ -151,6 +151,12 @@ function elementWithId(root: ParentNode, id: string): Element | null {
  * actually re-execute embedded `<script>` tags) is incompatible with this
  * library's sanitize-always contract, so that option is simply omitted
  * rather than shipped as a documented no-op.
+ * The post-sanitization transclusion profile is network-silent and non-interactive: anchors are
+ * retained, but only resolvable same-document `#fragment` links survive and those ids are rebased
+ * per include instance. Other navigation and resource attributes such as `href`, `src`, `srcset`,
+ * `action`, `ping`, and `poster` are removed, so images never load. Form controls and custom
+ * elements cannot remain interactive; their wrappers are unwrapped when their ordinary children
+ * are safe, while elements such as inputs that have no passive content are removed.
  * A `src` beginning with `#` clones the matching same-page element's children
  * without fetching. A remote URL may carry the same kind of fragment; the
  * fragmentless response is byte-capped and sanitized before the target is

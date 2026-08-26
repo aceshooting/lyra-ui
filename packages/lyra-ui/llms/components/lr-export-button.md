@@ -6,6 +6,7 @@
 - **Class** `LyraExportButton`, also available unregistered from `@aceshooting/lyra-ui/components/utility/export-button/export-button.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -42,13 +43,14 @@ extension?: string }`. Descriptor labels/descriptions are consumer-supplied, alr
 - `loading: boolean = false` (reflected) — controlled busy state for an async or server-generated
   export; sets host/trigger `aria-busy` and disables the trigger and menu items. The component does
   not toggle it automatically
-- `label?: string` — trigger button text; `undefined` uses the localized `exportButtonLabel`
-  default. Every supplied string, including `''` and `'Export'`, is caller-owned. The effective
-  label also feeds the format-choice menu's localized accessible name
+- `label?: string` — trigger button text; omission uses the localized `exportButtonLabel` default.
+  Every supplied string, including `''` and `'Export'`, remains caller-owned visible copy. An empty
+  or whitespace-only visible label keeps the localized default as the trigger's accessible name;
+  the effective accessible name also feeds the format-choice menu's localized name
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the trigger's
   accessible name and feeds the localized format-menu name without changing the visible label.
   Presence is authoritative, so an explicit empty string is preserved; `null` restores naming from
-  the visible label
+  a nonempty visible label or the localized fallback
 - `open: boolean = false` (reflected)
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the native trigger button.
@@ -114,7 +116,7 @@ escapeCsvField, buildCsv, downloadBlob } from
 '@aceshooting/lyra-ui/components/utility/export-button/csv.js'`):
 
 ```ts
-escapeCsvField(value: unknown): string   // quotes/escapes; neutralizes leading ASCII/fullwidth =,+,-,@ and tab/CR/LF formula prefixes with an apostrophe
+escapeCsvField(value: unknown): string   // quotes/escapes; neutralizes leading whitespace and ASCII/fullwidth =,+,-,@ formula prefixes with an apostrophe
 buildCsv(rows: readonly Readonly<Record<string, unknown>>[], columns: readonly LyraCsvColumn[]): string  // CRLF-joined, header row included
 downloadBlob(content: string, filename: string, mime: string, ownerDocument?: Document): void // triggers a browser download in the supplied document realm
 ```
@@ -134,6 +136,8 @@ downloadBlob(content: string, filename: string, mime: string, ownerDocument?: Do
   normalized closed without a false `lr-show`/`lr-hide` pair; shrinking an open menu to one format,
   or becoming `disabled`/`loading`, closes it and repairs focus. JSON projection safely preserves
   an own enumerable column literally named `__proto__`.
+- an empty format list, including one whose descriptors are all rejected during validation,
+  disables the trigger because no export action exists.
 - the multi-format menu (`role="menu"`) supports full arrow-key navigation — ArrowUp/ArrowDown move
   between items (opening the menu and seeding the right one focused, if it was closed), Home/End
   jump to the first/last item once open, Escape closes it and returns focus to the trigger button,

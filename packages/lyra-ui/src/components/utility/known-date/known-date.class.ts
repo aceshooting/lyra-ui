@@ -61,6 +61,14 @@ const EMPTY_PARTS: Readonly<LyraKnownDateParts> = {
   year: '',
 };
 
+/** Local proleptic-Gregorian construction without Date's legacy 0–99 → 1900 remap. */
+function localDate(year: number, month: number, day: number): Date {
+  const date = new Date(0);
+  date.setHours(0, 0, 0, 0);
+  date.setFullYear(year, month, day);
+  return date;
+}
+
 /** Parse `YYYY-MM-DD` into a local Date, or null if invalid (calendar-invalid
  *  combinations like Feb 30 are rejected, not silently rolled over). Local
  *  port of `date-picker/calendar-core.ts#parseISO` -- duplicated rather than
@@ -71,7 +79,7 @@ function parseISO(value: string): Date | null {
   const year = Number(match[1]);
   const month = Number(match[2]);
   const day = Number(match[3]);
-  const date = new Date(year, month - 1, day);
+  const date = localDate(year, month - 1, day);
   if (isNaN(date.getTime())) return null;
   if (
     date.getFullYear() !== year ||
@@ -87,7 +95,7 @@ function parseISO(value: string): Date | null {
 function formatISO(date: Date): string {
   const mm = String(date.getMonth() + 1).padStart(2, '0');
   const dd = String(date.getDate()).padStart(2, '0');
-  return `${date.getFullYear()}-${mm}-${dd}`;
+  return `${String(date.getFullYear()).padStart(4, '0')}-${mm}-${dd}`;
 }
 
 /** Determines the locale's day/month/year field order from a real formatted
@@ -188,7 +196,8 @@ function addCompatibilityDetail<T extends Event>(
  * @customElement lr-known-date
  * @event {InputEvent & { readonly detail: LyraKnownDateEventDetail }} input - A bubbling, composed
  *   native input event fired on every keystroke in
- *   any field. Its compatibility `detail.value` is the canonical ISO date
+ *   any field, retaining the originating edit's `inputType`. Its compatibility `detail.value` is
+ *   the canonical ISO date
  *   only once all three fields resolve to a real calendar date, otherwise `''`; `detail.day`/
  *   `month`/`year` always carry the live raw typed text.
  * @event {Event & { readonly detail: LyraKnownDateEventDetail }} change - A bubbling, composed
@@ -254,7 +263,7 @@ function addCompatibilityDetail<T extends Event>(
  * @cssprop [--lr-known-date-invalid-border-color=var(--lr-color-danger)] - Border color of each
  *   `field-input` while `:host([data-invalid])` is set.
  * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker, rendered after
- * the shared `form-control-label` marker contract. Set it to `''` to suppress the marker, or to any other quoted
+ * the `legend` box. Set it to `''` to suppress the marker, or to any other quoted
  * string (`' (required)'`, a localized word) to replace it. Caller-supplied content, so it is never
  * localized here.
  * @cssprop [--lr-form-control-required-color=var(--lr-color-danger)] - Color of that marker,
@@ -971,7 +980,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
       new InputEventConstructor('input', {
         bubbles: true,
         composed: true,
-        inputType: 'insertText',
+        inputType: (e as Partial<InputEvent>).inputType || 'insertText',
       }),
       this.detailFor(field)
     );

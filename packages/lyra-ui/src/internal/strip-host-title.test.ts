@@ -5,8 +5,8 @@ import { StripHostTitleAttribute } from './strip-host-title.js';
 import { tag } from './prefix.js';
 
 class Ctl extends StripHostTitleAttribute(LyraElement) {
-  @property() title = '';
-  render() {
+  @property() override title = '';
+  override render() {
     return html``;
   }
 }
@@ -60,8 +60,8 @@ it('normalizes a declarative title during a late custom-element upgrade', async 
   document.body.append(unresolved);
   try {
     class LateCtl extends StripHostTitleAttribute(LyraElement) {
-      @property() title = '';
-      render() {
+      @property() override title = '';
+      override render() {
         return html``;
       }
     }

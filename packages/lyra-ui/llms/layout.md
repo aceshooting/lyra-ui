@@ -197,7 +197,8 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
   renders nothing (`hidden`, out of the accessibility tree) instead of the always-visible overlay
   card this state rendered before `open` existed. Setting `open = true` reveals it as a
   focus-trapped floating panel with a `[part="backdrop"]` scrim; Escape or a backdrop click set
-  `open` back to `false`. Leaving `'floating'` while `open` is still `true` also closes it, the same
+  `open` back to `false`. While open, the floating panel is the modal root and every sibling pane
+  behind it is inert. Leaving `'floating'` while `open` is still `true` also closes it, the same
   way `<lr-app-rail>` closes its mobile overlay when leaving `'mobile'` while open.
 
 `collapse`'s three resulting states — `'wide'` (default, today's plain layout) / `'rail'` / `'floating'`
@@ -255,7 +256,8 @@ Otherwise shared tokens only.
 Keyboard: focus a divider (`Tab`), then `ArrowRight`/`ArrowLeft` (horizontal) or
 `ArrowDown`/`ArrowUp` (vertical) to resize by a fixed 2% step — RTL-aware for horizontal layouts
 (under `direction: rtl`, the forward/backward keys and drag-delta sign both swap so they still track
-the visually-adjacent panel).
+the visually-adjacent panel). Home and End jump directly to that divider's current achievable
+minimum and maximum, including per-panel px/percent constraints.
 
 **Known gotchas:**
 
@@ -902,9 +904,9 @@ or badge while the button's accessible name stays exactly its accessibility-expo
 Direct default-slot element roots in that visual label become inert while projected and regain
 their latest author-owned inert state when released; use text/glyph markup, not an independent
 action. Author `aria-hidden`, hidden, inert, and CSS-hidden branches are excluded from the name, and
-direct-label text or visibility changes refresh it. `active` on a tab/panel pair is an SSR hint: the
-group reads an initially active tab and then keeps both child attributes synchronized with its own
-selection after hydration.
+direct-label text or visibility changes refresh it. `active` on a paired or labeled unpaneled tab is
+an SSR hint: the group reads an initially active tab and then keeps the source tab and any matching
+panel attributes synchronized with its own selection after hydration.
 
 Implements the WAI-ARIA APG tabs pattern. With the default `activation="auto"`, Left/Right (swapped
 under RTL, or Up/Down when `placement` is `start`/`end`) move focus _and_ selection together; with
@@ -1280,9 +1282,10 @@ from the group host or an ancestor of it. Declaring one on the `<lr-tab>` itself
 element is _inside_ that button in the flattened tree, and inheritance only runs the other way.
 
 Before group hydration, an unassigned tab places itself in the public `nav` slot. The group then
-writes its internal per-tab `slot` attribute itself. A tab with no `panel` still gets a stable
-synthetic name from its position, so an unpaired tab renders a button with an empty panel rather
-than silently disappearing.
+writes its internal per-tab `slot` attribute itself. A labeled tab with no `panel` gets a stable
+synthetic name from its position; the allocator avoids every authored tab and panel name, so mixed
+paired/unpaired markup cannot collapse two tabs into one key. An unpaneled descriptor with no
+accessibility-exposed label is omitted instead of exposing the synthetic key as its spoken name.
 
 The visual close affordance is non-focusable because `<lr-tab-group>` projects this descriptor
 inside the real `role="tab"` button. Rendering another focusable button there would create a
@@ -1393,8 +1396,8 @@ the move open (mirroring `lr-confirm-bar`'s cancelable approve/deny pattern) unt
 
 **Properties:**
 
-- `label: string = ''` — accessible name for the internal `role="list"`; when empty, a host
-  `aria-label` is forwarded as a fallback.
+- `label: string = ''` — accessible-name fallback for the internal `role="list"`. A present host
+  `aria-label` always wins over `label`, including when the host value is explicitly empty.
 - `disabled: boolean = false` (reflected) — disables every item's move buttons and the Ctrl/Cmd+
   Arrow shortcut, without mutating any item's own `disabled` attribute.
 
@@ -1658,8 +1661,8 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
   `startIndex` as a measured virtual entry immediately before that row. Its live block size
   contributes to every following offset, so a variable-height or late-resizing marker never covers
   the group's first row. Markers remain windowed with their rows. Groups are sorted by `startIndex`;
-  a `startIndex` that's non-integer, out of range, or a duplicate of an earlier group's is silently
-  dropped rather than rendered wrong. An entry whose
+  a non-object entry or a `startIndex` that's non-integer, out of range, or a duplicate of an earlier
+  group's is silently dropped rather than rendered wrong. An entry whose
   `label` is the **empty string** renders no marker at all — it is a pure position anchor, for a host
   that renders its own group header as an ordinary row (and would otherwise end up with two stacked
   headers) but still needs this component to know where each group starts, e.g. to drive
@@ -1935,8 +1938,8 @@ persist its committed `widthPx` yourself. Listen for the preceding cancelable
 `lr-rail-resize-request` event when a host needs to veto a proposed width.
 `preferredMode` separately lets a host manually prefer `'full'`/`'icon-only'` for the non-mobile
 breakpoint axis (e.g. a user's own collapse toggle) while `mobile-breakpoint` continues to be tracked
-automatically regardless — it's only consulted while `mode` isn't force-pinned via the `mode`
-accessor itself, which still takes full priority.
+automatically regardless — it's only consulted while `forceMode` is `'auto'` or unset; an explicit
+`forceMode` value takes full priority.
 
 **Properties:**
 
@@ -1957,9 +1960,9 @@ accessor itself, which still takes full priority.
   rail switches from `'icon-only'` to `'mobile'`. Should be smaller than `iconOnlyBreakpoint` to
   produce all three states as the viewport narrows.
 - `open: boolean = false` (reflected) — whether the mobile floating overlay is shown. Only meaningful
-  while `mode` is `'mobile'` — the value is preserved (not reset) while another mode is active, but
-  no overlay chrome renders until `mode` is `'mobile'` again. Set this directly, or use the built-in
-  toggle button — there is no separate `show()`/`hide()` pair.
+  while `mode` is `'mobile'`; leaving mobile mode closes it so a later mobile transition cannot
+  restore a stale modal. Set this directly, or use the built-in toggle button — there is no separate
+  `show()`/`hide()` pair.
 - `label?: string` — optional accessible name for the rail's navigation landmark and mobile dialog.
   Every nonempty supplied string is honored literally; only absence/empty uses the localized
   navigation fallback. A host-level `aria-label` attribute (including an explicit empty value)
@@ -1967,8 +1970,8 @@ accessor itself, which still takes full priority.
 - `preferredMode?: 'full' | 'icon-only' | null` (attribute `preferred-mode`) — manually prefers
   `'full'` or `'icon-only'` for the non-mobile breakpoint axis, while `mobile-breakpoint` continues to
   be tracked automatically regardless — e.g. a user's manual collapse toggle that should still yield
-  to a genuinely too-narrow-for-any-inline-rail viewport. Only consulted while `mode` isn't
-  force-pinned via its own accessor (see above) — that continues to take full priority, unchanged.
+  to a genuinely too-narrow-for-any-inline-rail viewport. Only consulted while `forceMode` is
+  `'auto'` or unset (see above); an explicit `forceMode` value takes full priority.
   Unset (the default, `null`) reproduces the original breakpoint-only behavior exactly.
 - `hideToggle: boolean = false` (reflected, attribute `hide-toggle`) — suppresses the built-in mobile
   `[part='toggle']` hamburger/close button entirely, for a consumer that already owns an external
@@ -2077,14 +2080,15 @@ fallback at its exact state rule and preserves the previous brand or active-mix 
 ```
 
 ```ts
-rail.mode = "icon-only"; // force a presentation regardless of viewport width
-rail.mode = "auto"; // release the force, resume live breakpoint tracking
+rail.forceMode = "icon-only"; // force a presentation regardless of viewport width
+rail.forceMode = "auto"; // release the force, resume live breakpoint tracking
 ```
 
 The package root also exports a pure `computeAppRailMode(iconOnlyMatches: boolean, mobileMatches:
-boolean, preferredMode?: 'full' | 'icon-only' | null): AppRailMode` resolver (plus the
-`AppRailMode`/`AppRailModeInput`/`AppRailModeChangeDetail`/`AppRailToggleDetail`/`AppRailResizeDetail`
-types) — the same logic the element's internal `matchMedia` listeners call, exposed standalone so a
+boolean, preferredMode?: 'full' | 'icon-only' | null): LyraAppRailMode` resolver (plus the
+`LyraAppRailMode`/`LyraAppRailModeInput`/`LyraAppRailPreferredMode`/`LyraAppRailPersistField`/
+`LyraAppRailModeChangeDetail`/`LyraAppRailToggleDetail`/`LyraAppRailResizeDetail` types) — the same
+logic the element's internal `matchMedia` listeners call, exposed standalone so a
 consumer can compute or unit-test the same resolution without a real browser window. `mobileMatches`
 wins over everything else when true (the viewport is narrower than both breakpoints at once);
 otherwise `preferredMode` (when set) wins over `iconOnlyMatches`.
@@ -2100,15 +2104,14 @@ component only lays out whatever is slotted and can't inspect or fix up a consum
 
 **Known gotchas:**
 
-- `mode`'s setter accepts the wider `AppRailModeInput` (including the `'auto'` sentinel) but the
-  getter's return type is the narrower `AppRailMode` — assigning `'auto'` is a one-way instruction,
-  not a value read back later; there is no `isForced`-style property to check whether the rail is
-  currently locked to a mode or tracking the viewport.
+- `mode` is the readonly `LyraAppRailMode` result. `forceMode` accepts the non-mobile
+  `LyraAppRailPreferredMode` values plus the `'auto'` release sentinel, so whether the rail is
+  pinned or tracking the viewport remains directly observable.
 - reassigning `icon-only-breakpoint`/`mobile-breakpoint` after first render tears down and rebuilds
-  the `matchMedia` listeners, but does not itself un-force a previously-forced `mode` — if a consumer
-  set `mode = 'icon-only'`, changing the breakpoints won't resume auto-tracking until `mode = 'auto'`
-  is set explicitly.
-- leaving `'mobile'` mode while `open` (via a breakpoint crossing or a forced `mode` reassignment)
+  the `matchMedia` listeners, but does not itself clear `forceMode` — if a consumer set
+  `forceMode = 'icon-only'`, changing the breakpoints won't resume auto-tracking until
+  `forceMode = 'auto'` is set explicitly.
+- leaving `'mobile'` mode while `open` (via a breakpoint crossing or a `forceMode` reassignment)
   auto-closes the overlay through the same path as the toggle button, so `lr-toggle` still fires
   and the scroll lock/focus trap still release normally — a consumer listening only for explicit
   toggle-button clicks would miss this closure.
@@ -2331,9 +2334,10 @@ A non-interactive section heading inside `<lr-menu>`'s default slot. Mirrors `sl
 
 The host takes `role="presentation"` on connect (a `role="menu"` may only contain menu-item roles,
 so a heading with a generic role would make the menu's own children invalid) — unless the consumer
-already set a `role`, which is left alone. `<lr-menu>` enumerates its items by `instanceof
-LyraMenuItem`, so a label is never enrolled in the roving tabindex and can never become a focus
-stop; nothing on `<lr-menu>` has to know this element exists.
+already set a `role`, which is left alone. `<lr-menu>` enumerates its interactive items by local tag
+name (`lr-menu-item` or `lr-dropdown-item`), not `instanceof`, so an adopted same-origin
+foreign-realm item remains enrollable. A label matches neither tag, is never enrolled in the roving
+tabindex, and can never become a focus stop; nothing on `<lr-menu>` has to know this element exists.
 
 To announce a _named group_ rather than a caption, wrap the labelled items in an element with
 `role="group"` and give it a matching `aria-label`. `aria-labelledby` pointing at this element's
@@ -2868,7 +2872,9 @@ shortcut?, keywords?: readonly string[], disabled?, icon?, onSelect? }`. The seq
   must be nonempty and unique; invalid rows are omitted and the first duplicate wins. Replacing or
   reordering the array preserves the active command by `commandId`. `icon` is an optional leading glyph (a `TemplateResult`,
   an emoji string, etc. — not restricted to a square icon) rendered in the `icon` part before the
-  label; a command with no `icon` renders no `icon` part at all. Filtering is case-insensitive
+  label; a command with no `icon` renders no `icon` part at all. A runtime `keywords` value that is
+  not an array is ignored, as are non-string members, without dropping otherwise-valid commands.
+  Filtering is case-insensitive
   substring matching over `label` + `description` + `group` + `keywords` joined together (not
   fuzzy/subsequence), memoized per `commands` array identity — reassign the array, never mutate it
   in place. Consecutive commands sharing a `group` render one `[part='group']` heading, so pre-sort
@@ -3283,7 +3289,7 @@ draggable/resizable target; set it to `transparent` to opt out of the hover trea
   `LyraDashboardCollisionDetail`, and `LyraDashboardLayoutChangeDetail` — readonly event-detail
   interfaces used by `LyraDashboardGridEventMap`.
 - `--lr-dashboard-grid-collision-outline-color` — Outline color of a cell whose current drag/resize preview collides with another cell. Default: `var(--lr-color-danger)`.
-- `--lr-dashboard-grid-interaction-shadow` — Box shadow applied during a cell drag or resize. Default: `var(--lr-shadow)`.
+- `--lr-dashboard-grid-interaction-shadow` — Box shadow applied during a cell drag or resize. Default: `var(--lr-shadow-m)`.
 
 ## `lr-drilldown-panel`
 

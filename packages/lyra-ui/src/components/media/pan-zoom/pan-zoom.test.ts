@@ -89,6 +89,47 @@ it('keeps zoom methods, reset semantics, and lr-zoom-change', async () => {
   expect(scrollCalls).to.deep.equal([{ left: 0, top: 0 }]);
 });
 
+it('resets to exactly 100 percent when zoom-step does not divide one', async () => {
+  const el = await fixture<LyraPanZoom>(html`
+    <lr-pan-zoom zoom="1.3" zoom-step="0.3"></lr-pan-zoom>
+  `);
+  const reset = el.shadowRoot!.querySelector('[part="reset"]') as HTMLButtonElement;
+
+  const changed = oneEvent(el, 'lr-zoom-change');
+  reset.click();
+  expect((await changed).detail).to.deep.equal({ zoom: 1 });
+  expect(el.zoom).to.equal(1);
+
+  el.zoom = 1.3;
+  await el.updateComplete;
+  el.resetZoom();
+  expect(el.zoom).to.equal(1);
+
+  el.zoom = 1.3;
+  await el.updateComplete;
+  el.resetView();
+  expect(el.zoom).to.equal(1);
+});
+
+it('uses group semantics for independently tabbable zoom controls', async () => {
+  const el = await fixture<LyraPanZoom>(html`<lr-pan-zoom></lr-pan-zoom>`);
+  const controls = el.shadowRoot!.querySelector('[part="controls"]') as HTMLElement;
+  const buttons = [...controls.querySelectorAll<HTMLButtonElement>('button')];
+
+  expect(controls.getAttribute('role')).to.equal('group');
+  expect(controls.getAttribute('aria-label')).to.equal('Zoom controls');
+  expect(buttons.map((button) => button.tabIndex)).to.deep.equal([0, 0, 0]);
+
+  const arrow = new KeyboardEvent('keydown', {
+    key: 'ArrowRight',
+    bubbles: true,
+    cancelable: true,
+  });
+  buttons[0]!.dispatchEvent(arrow);
+  expect(arrow.defaultPrevented).to.equal(false);
+  expect(el.zoom).to.equal(1);
+});
+
 it('keeps keyboard zoom while leaving slotted editors alone', async () => {
   const el = await fixture<LyraPanZoom>(html`<lr-pan-zoom><input value="10" /></lr-pan-zoom>`);
   const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;

@@ -86,13 +86,21 @@ describe('SlotPresenceController', () => {
     const originalRemove = ShadowRoot.prototype.removeEventListener;
     let additions = 0;
     let removals = 0;
-    ShadowRoot.prototype.addEventListener = function (type, listener, options): void {
+    ShadowRoot.prototype.addEventListener = function (
+      type: string,
+      listener: EventListenerOrEventListenerObject | null,
+      options?: boolean | AddEventListenerOptions,
+    ): void {
       if (type === 'slotchange') additions += 1;
-      originalAdd.call(this, type, listener, options);
+      if (listener !== null) originalAdd.call(this, type, listener, options);
     };
-    ShadowRoot.prototype.removeEventListener = function (type, listener, options): void {
+    ShadowRoot.prototype.removeEventListener = function (
+      type: string,
+      listener: EventListenerOrEventListenerObject | null,
+      options?: boolean | EventListenerOptions,
+    ): void {
       if (type === 'slotchange') removals += 1;
-      originalRemove.call(this, type, listener, options);
+      if (listener !== null) originalRemove.call(this, type, listener, options);
     };
 
     try {
@@ -140,23 +148,21 @@ describe('SlotPresenceController', () => {
     let updates = 0;
     const child = document.createElement('span');
     child.slot = 'label';
-    const host = document.createElement('div') as HTMLDivElement & ReactiveControllerHost & {
-      hasUpdated: boolean;
-      [SEED_FIRST_RENDER_STATE](seed: () => void): void;
-    };
-    host.hasUpdated = false;
+    const host = Object.assign(document.createElement('div'), {
+      hasUpdated: false,
+      addController(controller: ReactiveController): void {
+        registered = controller;
+      },
+      removeController(): void {},
+      requestUpdate(): void {
+        updates += 1;
+      },
+      updateComplete: Promise.resolve(true),
+      [SEED_FIRST_RENDER_STATE](seed: () => void): void {
+        deferredSeeds.push(seed);
+      },
+    });
     host.append(child);
-    host.addController = (controller: ReactiveController): void => {
-      registered = controller;
-    };
-    host.removeController = (): void => undefined;
-    host.requestUpdate = (): void => {
-      updates += 1;
-    };
-    host.updateComplete = Promise.resolve(true);
-    host[SEED_FIRST_RENDER_STATE] = (seed: () => void): void => {
-      deferredSeeds.push(seed);
-    };
 
     const slots = new SlotPresenceController(host);
     registered?.hostConnected?.();
@@ -174,18 +180,17 @@ describe('SlotPresenceController', () => {
   it('reconciles rendered slots after hostUpdated without clearing an unseen conditional slot', async () => {
     let registered: ReactiveController | undefined;
     let updates = 0;
-    const host = document.createElement('div') as HTMLDivElement & ReactiveControllerHost & {
-      hasUpdated: boolean;
-    };
-    host.hasUpdated = false;
-    host.addController = (controller: ReactiveController): void => {
-      registered = controller;
-    };
-    host.removeController = (): void => undefined;
-    host.requestUpdate = (): void => {
-      updates += 1;
-    };
-    host.updateComplete = Promise.resolve(true);
+    const host = Object.assign(document.createElement('div'), {
+      hasUpdated: false,
+      addController(controller: ReactiveController): void {
+        registered = controller;
+      },
+      removeController(): void {},
+      requestUpdate(): void {
+        updates += 1;
+      },
+      updateComplete: Promise.resolve(true),
+    });
 
     const emptyForwardingSlot = document.createElement('slot');
     emptyForwardingSlot.slot = 'label';
@@ -244,9 +249,17 @@ describe('SlotPresenceController', () => {
     middle.append(innerForwarder);
 
     const middleRoot = middle.attachShadow({ mode: 'open' });
-    const host = document.createElement('div') as HTMLDivElement & ReactiveControllerHost & {
-      hasUpdated: boolean;
-    };
+    const host = Object.assign(document.createElement('div'), {
+      hasUpdated: false,
+      addController(controller: ReactiveController): void {
+        registered = controller;
+      },
+      removeController(): void {},
+      requestUpdate(): void {
+        updates += 1;
+      },
+      updateComplete: Promise.resolve(true),
+    });
     const outerForwarder = document.createElement('slot');
     outerForwarder.name = 'label';
     outerForwarder.slot = 'label';
@@ -257,15 +270,6 @@ describe('SlotPresenceController', () => {
     const root = host.attachShadow({ mode: 'open' });
     root.innerHTML = '<slot name="label"></slot>';
     Object.defineProperty(host, 'renderRoot', { value: root });
-    host.hasUpdated = false;
-    host.addController = (controller: ReactiveController): void => {
-      registered = controller;
-    };
-    host.removeController = (): void => undefined;
-    host.requestUpdate = (): void => {
-      updates += 1;
-    };
-    host.updateComplete = Promise.resolve(true);
     document.body.append(frame);
 
     const slots = new SlotPresenceController(host);

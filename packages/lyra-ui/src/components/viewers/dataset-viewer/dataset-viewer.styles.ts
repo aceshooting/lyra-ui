@@ -24,6 +24,13 @@ export const styles = css`
       var(--_lr-dataset-viewer-max-height)
     );
   }
+  /* A scroll container clips both axes and becomes the sticky header's containing block even when
+     it has no height cap and therefore never scrolls. Page mode accepts page-level horizontal
+     overflow in exchange for keeping an uncapped header pinned to the page scrollport. */
+  :host([scroll-mode='page']) [part='body'] {
+    overflow: visible;
+    max-block-size: none;
+  }
   [part='table'] {
     display: flex;
     flex-direction: column;
@@ -119,7 +126,7 @@ export const styles = css`
   }
   [part='cell-highlight-action']:focus-visible,
   lr-virtual-list::part(cell-highlight-action):focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
   }
   lr-virtual-list {

@@ -44,6 +44,10 @@ try {
     join(fixtureRoot, 'scripts', 'generate-autoloader-manifest.mjs'),
     readFileSync(join(scriptDir, 'generate-autoloader-manifest.mjs'), 'utf8'),
   );
+  writeFileSync(
+    join(fixtureRoot, 'scripts', 'is-main-module.mjs'),
+    readFileSync(join(scriptDir, 'is-main-module.mjs'), 'utf8'),
+  );
   writeInventory([beta, alpha]);
 
   const script = join(fixtureRoot, 'scripts', 'generate-autoloader-manifest.mjs');

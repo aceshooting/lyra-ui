@@ -18,7 +18,15 @@ import {
   type AriaOwnershipLease,
 } from '../../../internal/aria-ownership.js';
 import { isActionableElement } from '../../../internal/focus-navigation.js';
-import { place, virtualAnchorFromRect, type VirtualAnchor } from '../../../internal/positioner.js';
+import {
+  deferredPlaceReady as place,
+  waitForDeferredPlacement,
+  type DeferredOperationHandle,
+} from '../../../internal/anchored-overlay-runtime.js';
+import {
+  virtualAnchorFromRect,
+  type VirtualAnchor,
+} from '../../../internal/positioner-geometry.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { finiteDuration, finiteNumber } from '../../../internal/numbers.js';
 import {
@@ -266,7 +274,9 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   /** `options.returnFocusTo` from the `showAt()` call that opened the tooltip, if any -- see
    *  `showAt()`'s doc comment and `activateTooltipOverlay()`'s `onEscape` callback. */
   private returnFocusTo?: HTMLElement;
-  private cleanup?: () => void;
+  private cleanup?: DeferredOperationHandle;
+  /** True only while the deferred runtime intentionally conceals an otherwise-open popup. */
+  private placementPending = false;
   private timer?: number;
   private timerView?: Window;
   private pendingDirection?: 'show' | 'hide';
@@ -699,7 +709,10 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   private applyOpenState(next: boolean): void {
     const old = this._open;
     this._open = next;
-    if (!next) this.cancelShadowContentScan();
+    if (!next) {
+      this.cancelShadowContentScan();
+      this.placementPending = false;
+    }
     // Reset here rather than in onLeave: every close path (hide(), Escape, forceClose(), a
     // vetoed reopen) funnels through this one assignment, so the flag can never outlive the
     // pointer interaction that set it.
@@ -724,6 +737,16 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     const token = ++this.transitionToken;
     await this.updateComplete;
     if (this.transitionToken !== token) return;
+    if (event === 'lr-after-show') {
+      const positioned = await waitForDeferredPlacement(() => this.cleanup);
+      if (this.transitionToken !== token || !this.open) return;
+      if (!positioned) {
+        await this.forceClose();
+        return;
+      }
+      await this.updateComplete;
+      if (this.transitionToken !== token) return;
+    }
     if (this.isConnected) {
       const popup = this.renderRoot.querySelector<HTMLElement>('[part~="popup"]');
       const showing = event === 'lr-after-show';
@@ -769,6 +792,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     if (!this.open || !anchor || !popup) {
       this.positionedAnchor = undefined;
       this.anchorPositioned = false;
+      this.placementPending = false;
       return;
     }
     if (anchor !== this.positionedAnchor) {
@@ -776,6 +800,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     }
     if (this.open && anchor && popup) {
       const arrowPadding = Math.max(0, finiteNumber(this.arrowPadding, 0));
+      this.placementPending = true;
       this.cleanup = place(anchor, popup, {
         placement: rtlAwarePlacement(this.placement, this),
         strategy: this.hoist ? 'fixed' : 'absolute',
@@ -784,6 +809,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
         arrow: this.rendersArrow && arrowElement ? arrowElement : undefined,
         arrowPadding,
         onPlaced: ({ placement, arrow }) => {
+          this.placementPending = false;
           this.positionedAnchor = anchor;
           this.anchorPositioned = true;
           const side = applyOverlayArrow(arrowElement, {
@@ -1058,7 +1084,8 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     // host's inherited value; consumer-authored hidden/visibility rules on the content or its
     // outer composed ancestors still participate in each getComputedStyle() call below.
     const popup = this.renderRoot.querySelector<HTMLElement>('[part~="popup"]');
-    const bypassClosedVisibility = popup?.hasAttribute('data-hidden') === true;
+    const bypassClosedVisibility =
+      popup?.hasAttribute('data-hidden') === true || this.placementPending;
     const previousVisibility = popup?.style.getPropertyValue('visibility') ?? '';
     const previousVisibilityPriority = popup?.style.getPropertyPriority('visibility') ?? '';
     if (popup && bypassClosedVisibility) {

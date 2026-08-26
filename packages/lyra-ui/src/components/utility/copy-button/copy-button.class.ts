@@ -226,8 +226,9 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   /** Use fixed positioning for the tooltip so it can escape clipped containers. */
   @property({ type: Boolean, reflect: true }) hoist = false;
 
-  /** Accessible name forwarded from the host to the internal button. When unset, the localized
-   *  Copy/Copied/failure state provides the name. */
+  /** Accessible name forwarded from the host to the internal button. When unset or blank, the
+   * localized Copy/Copied/failure state provides the name so the icon-only trigger never becomes
+   * unnamed. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   /** Prevent activation and remove the internal button from the tab order. */
@@ -545,6 +546,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
         : 'base button';
     const tooltipDisabled = this.tooltip === 'none';
     const tooltipOpen = !tooltipDisabled && this.status !== 'rest';
+    const buttonLabel = this.accessibleLabel?.trim() ? this.accessibleLabel : statusLabel;
     return html`
       <lr-tooltip
         .content=${statusLabel}
@@ -566,7 +568,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
                 part=${part}
                 type="button"
                 ?disabled=${this.disabled}
-                aria-label=${this.accessibleLabel ?? statusLabel}
+                aria-label=${buttonLabel}
                 @click=${this.onClick}
               >
                 ${this.renderIcon()}

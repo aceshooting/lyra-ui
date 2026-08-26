@@ -58,35 +58,35 @@ describe('parseStackTrace', () => {
     ].join('\n');
     const groups = parseStackTrace(trace, DEFAULT_INTERNAL_PATTERNS);
     expect(groups).to.have.lengthOf(1);
-    expect(groups[0].message).to.equal('TypeError: Cannot read properties of undefined');
-    expect(groups[0].frames).to.have.lengthOf(2);
-    expect(groups[0].frames[0]).to.deep.include({
+    expect(groups[0]!.message).to.equal('TypeError: Cannot read properties of undefined');
+    expect(groups[0]!.frames).to.have.lengthOf(2);
+    expect(groups[0]!.frames[0]).to.deep.include({
       functionName: 'Object.doThing',
       file: '/app/src/util.js',
       line: 10,
       column: 5,
       internal: false,
     });
-    expect(groups[0].frames[1].internal).to.be.true; // node:internal matches the default pattern list
+    expect(groups[0]!.frames[1]!.internal).to.be.true; // node:internal matches the default pattern list
   });
 
   it('parses a bare (no function name) V8 frame', () => {
     const trace = 'Error: boom\n    at /app/index.js:3:1';
     const groups = parseStackTrace(trace, DEFAULT_INTERNAL_PATTERNS);
-    expect(groups[0].frames[0]).to.deep.include({ file: '/app/index.js', line: 3, column: 1 });
-    expect(groups[0].frames[0].functionName).to.be.undefined;
+    expect(groups[0]!.frames[0]).to.deep.include({ file: '/app/index.js', line: 3, column: 1 });
+    expect(groups[0]!.frames[0]!.functionName).to.be.undefined;
   });
 
   it('parses a Firefox/Safari-style trace (fn@file:line:col)', () => {
     const trace = 'doThing@https://example.com/app.js:12:3\n@https://example.com/app.js:20:1';
     const groups = parseStackTrace(trace, []);
-    expect(groups[0].frames[0]).to.deep.include({
+    expect(groups[0]!.frames[0]).to.deep.include({
       functionName: 'doThing',
       file: 'https://example.com/app.js',
       line: 12,
       column: 3,
     });
-    expect(groups[0].frames[1].functionName).to.be.undefined;
+    expect(groups[0]!.frames[1]!.functionName).to.be.undefined;
   });
 
   it('starts a new group on a JS "Caused by:" chained-error line', () => {
@@ -98,9 +98,9 @@ describe('parseStackTrace', () => {
     ].join('\n');
     const groups = parseStackTrace(trace, []);
     expect(groups).to.have.lengthOf(2);
-    expect(groups[0].message).to.equal('Error: outer');
-    expect(groups[1].message).to.equal('Error: inner');
-    expect(groups[1].frames[0].file).to.equal('/y.js');
+    expect(groups[0]!.message).to.equal('Error: outer');
+    expect(groups[1]!.message).to.equal('Error: inner');
+    expect(groups[1]!.frames[0]!.file).to.equal('/y.js');
   });
 
   it('parses a Python traceback, reversing frame order to innermost-first', () => {
@@ -114,12 +114,12 @@ describe('parseStackTrace', () => {
     ].join('\n');
     const groups = parseStackTrace(trace, []);
     expect(groups).to.have.lengthOf(1);
-    expect(groups[0].message).to.equal('ValueError: bad');
-    expect(groups[0].frames).to.have.lengthOf(2);
+    expect(groups[0]!.message).to.equal('ValueError: bad');
+    expect(groups[0]!.frames).to.have.lengthOf(2);
     // innermost-first: the `run` frame (deeper, raises the error) comes before `<module>`.
-    expect(groups[0].frames[0]).to.deep.include({ file: '/app/main.py', line: 4, functionName: 'run' });
-    expect(groups[0].frames[1]).to.deep.include({ file: '/app/main.py', line: 10, functionName: '<module>' });
-    expect(groups[0].frames[0].raw).to.include('raise ValueError');
+    expect(groups[0]!.frames[0]).to.deep.include({ file: '/app/main.py', line: 4, functionName: 'run' });
+    expect(groups[0]!.frames[1]).to.deep.include({ file: '/app/main.py', line: 10, functionName: '<module>' });
+    expect(groups[0]!.frames[0]!.raw).to.include('raise ValueError');
   });
 
   it('starts a new Python group on a chained "direct cause" separator', () => {
@@ -136,15 +136,15 @@ describe('parseStackTrace', () => {
     ].join('\n');
     const groups = parseStackTrace(trace, []);
     expect(groups).to.have.lengthOf(2);
-    expect(groups[0].message).to.equal('ValueError: first');
-    expect(groups[1].message).to.equal('RuntimeError: second');
+    expect(groups[0]!.message).to.equal('ValueError: first');
+    expect(groups[1]!.message).to.equal('RuntimeError: second');
   });
 
   it('marks a frame internal when its file matches a string or RegExp pattern', () => {
     const trace = 'Error: x\n    at f (/app/node_modules/dep/index.js:1:1)\n    at g (/app/src/x.js:2:2)';
     const groups = parseStackTrace(trace, ['node_modules/', /^\/app\/src\//]);
-    expect(groups[0].frames[0].internal).to.be.true;
-    expect(groups[0].frames[1].internal).to.be.true;
+    expect(groups[0]!.frames[0]!.internal).to.be.true;
+    expect(groups[0]!.frames[1]!.internal).to.be.true;
   });
 
   it('falls back to zero groups (verbatim raw rendering upstream) when nothing parses', () => {
@@ -155,9 +155,9 @@ describe('parseStackTrace', () => {
   it('keeps an unparseable interior line as a raw (file-less) frame entry, not dropped', () => {
     const trace = 'Error: x\n    at f (/app/a.js:1:1)\n  (some tool-injected note)\n    at g (/app/b.js:2:2)';
     const groups = parseStackTrace(trace, []);
-    expect(groups[0].frames).to.have.lengthOf(3);
-    expect(groups[0].frames[1].file).to.be.undefined;
-    expect(groups[0].frames[1].raw.trim()).to.equal('(some tool-injected note)');
+    expect(groups[0]!.frames).to.have.lengthOf(3);
+    expect(groups[0]!.frames[1]!.file).to.be.undefined;
+    expect(groups[0]!.frames[1]!.raw.trim()).to.equal('(some tool-injected note)');
   });
 
   it('preserves 400-digit V8 named, bare, and Firefox locations as raw frames instead of coercing them to Infinity', () => {
@@ -243,7 +243,7 @@ describe('parseStackTrace', () => {
 
     expect(frames[0]).to.deep.include({ file: '/app/safe.js', line: Number.MAX_SAFE_INTEGER, column: Number.MAX_SAFE_INTEGER });
     expect(frames[1]).to.deep.include({ internal: false, raw: `    at unsafe (/app/unsafe.js:${unsafe}:${unsafe})` });
-    expect(frames[1].file).to.be.undefined;
+    expect(frames[1]!.file).to.be.undefined;
   });
 
   it('returns no structured groups when every location is unsafe, preserving the complete trace for verbatim fallback', () => {

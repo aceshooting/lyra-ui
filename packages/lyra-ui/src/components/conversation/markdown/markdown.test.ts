@@ -86,6 +86,30 @@ it("explains how to preload the optional parser when getMarked() is called cold"
   );
 });
 
+it("clears aria-busy when optional-peer loading settles without changing the fallback render", async () => {
+  const el = (await fixture(
+    html`<lr-markdown></lr-markdown>`
+  )) as LyraMarkdown;
+  await loadMarkdownDeps();
+  await el.updateComplete;
+  const originalRenderMarkdown = LyraMarkdownClass.prototype.renderMarkdown;
+  LyraMarkdownClass.prototype.renderMarkdown = function (): void {};
+  try {
+    (el as unknown as { deps?: unknown }).deps = undefined;
+    el.requestUpdate();
+    await el.updateComplete;
+    expect(el.getAttribute("aria-busy")).to.equal("true");
+
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+    expect(el.hasAttribute("aria-busy")).to.be.false;
+  } finally {
+    LyraMarkdownClass.prototype.renderMarkdown = originalRenderMarkdown;
+  }
+});
+
 it("is accessible with no content set", async () => {
   const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
   await expect(el).to.be.accessible();
@@ -235,7 +259,7 @@ it("exposes an instance-owned marked parser and a public renderMarkdown() refres
     );
     expect(second.shadowRoot!.querySelector("strong") === null).to.be.true;
   } finally {
-    parser.defaults = originalDefaults;
+    Reflect.set(parser, 'defaults', originalDefaults);
   }
 });
 
@@ -269,7 +293,7 @@ it("implements getMarked() and updateAll() with the shared compatibility parser"
       "global parser"
     );
   } finally {
-    parser.defaults = originalDefaults;
+    Reflect.set(parser, 'defaults', originalDefaults);
     LyraMarkdownClass.updateAll();
   }
 });
@@ -655,8 +679,8 @@ it("adds an align attribute to an aligned table header cell, and omits <tbody> f
     () => el.shadowRoot!.querySelector('[part="table"]') !== null
   );
   const ths = el.shadowRoot!.querySelectorAll('[part="table"] th');
-  expect(ths[0].getAttribute("align")).to.equal("left");
-  expect(ths[1].getAttribute("align")).to.equal("right");
+  expect(ths[0]!.getAttribute("align")).to.equal("left");
+  expect(ths[1]!.getAttribute("align")).to.equal("right");
   expect(el.shadowRoot!.querySelector('[part="table"] tbody') == null).to.be
     .true;
 });
@@ -683,8 +707,8 @@ it("defaults heading-offset to 0, preserving today's exact <h${depth}> output", 
     () => el.shadowRoot!.querySelector('[part="heading"]') !== null
   );
   const headings = el.shadowRoot!.querySelectorAll('[part="heading"]');
-  expect(headings[0].tagName).to.equal("H1");
-  expect(headings[1].tagName).to.equal("H2");
+  expect(headings[0]!.tagName).to.equal("H1");
+  expect(headings[1]!.tagName).to.equal("H2");
 });
 
 it("shifts every rendered heading by heading-offset, clamped at h6", async () => {
@@ -697,10 +721,10 @@ it("shifts every rendered heading by heading-offset, clamped at h6", async () =>
     () => el.shadowRoot!.querySelector('[part="heading"]') !== null
   );
   const headings = el.shadowRoot!.querySelectorAll('[part="heading"]');
-  expect(headings[0].tagName).to.equal("H3");
-  expect(headings[1].tagName).to.equal("H4");
+  expect(headings[0]!.tagName).to.equal("H3");
+  expect(headings[1]!.tagName).to.equal("H4");
   expect(
-    headings[2].tagName,
+    headings[2]!.tagName,
     "a source h6 clamps at h6 rather than overflowing"
   ).to.equal("H6");
 });
@@ -716,8 +740,8 @@ it("normalizes a NaN heading-offset to 0 instead of producing an invalid <hNaN> 
     () => el.shadowRoot!.querySelector('[part="heading"]') !== null
   );
   const headings = el.shadowRoot!.querySelectorAll('[part="heading"]');
-  expect(headings[0].tagName).to.equal("H1");
-  expect(headings[1].tagName).to.equal("H2");
+  expect(headings[0]!.tagName).to.equal("H1");
+  expect(headings[1]!.tagName).to.equal("H2");
 });
 
 it("omits target/rel on rendered links when link-target is explicitly disabled", async () => {
@@ -1228,7 +1252,7 @@ describe("fallback matrix", () => {
       const { detail } = await listener;
       expect(detail.error).to.exist;
       expect(calls).to.have.length(1);
-      expect(calls[0][0]).to.contain("dompurify");
+      expect(calls[0]![0]).to.contain("dompurify");
     } finally {
       console.warn = originalWarn;
     }
@@ -1628,10 +1652,10 @@ describe("shiki highlighting (real peer)", () => {
       ...el.shadowRoot!.querySelectorAll('[part="code-block"]'),
     ] as HTMLElement[];
     expect(blocks.length).to.equal(2);
-    expect(blocks[0].querySelector("code")!.className).to.include(
+    expect(blocks[0]!.querySelector("code")!.className).to.include(
       "language-ts"
     );
-    expect(blocks[1].querySelector("code")!.className).to.include(
+    expect(blocks[1]!.querySelector("code")!.className).to.include(
       "language-python"
     );
   });
@@ -1651,9 +1675,9 @@ describe("shiki highlighting (real peer)", () => {
     const blocks = [
       ...el.shadowRoot!.querySelectorAll('[part="code-block"]'),
     ] as HTMLElement[];
-    expect(blocks[0].querySelector("span") != null).to.equal(true); // ts: highlighted
-    expect(blocks[1].querySelector("span") == null).to.equal(true); // unrecognized: stays plain
-    expect(blocks[1].querySelector("code")!.textContent).to.equal("hello\n");
+    expect(blocks[0]!.querySelector("span") != null).to.equal(true); // ts: highlighted
+    expect(blocks[1]!.querySelector("span") == null).to.equal(true); // unrecognized: stays plain
+    expect(blocks[1]!.querySelector("code")!.textContent).to.equal("hello\n");
   });
 
   it("discards a stale in-flight highlight superseded by a newer content change (highlightToken guard)", async () => {
@@ -1835,11 +1859,11 @@ describe("shiki highlighting (real peer)", () => {
       ] as HTMLElement[];
       expect(blocks.length).to.equal(2);
       expect(
-        blocks[0].querySelector("span") != null,
+        blocks[0]!.querySelector("span") != null,
         "a sibling block's successful highlight must still reach the DOM -- proves the trailing renderMarkdown() after highlightPending() still ran"
       ).to.be.true;
       expect(
-        blocks[1].querySelector("span") == null,
+        blocks[1]!.querySelector("span") == null,
         "the unrecognized language keeps its plain-text fallback, same as any other unsupported language"
       ).to.be.true;
     } finally {
@@ -2380,8 +2404,8 @@ describe("scrollToAnchor / highlights (text-quote)", () => {
       new MouseEvent("click", {
         bubbles: true,
         composed: true,
-        clientX: rect.left + rect.width / 2,
-        clientY: rect.top + rect.height / 2,
+        clientX: rect!.left + rect!.width / 2,
+        clientY: rect!.top + rect!.height / 2,
       })
     );
     const event = await listener;
@@ -2443,12 +2467,13 @@ describe("scrollToAnchor / highlights (text-quote)", () => {
       "getSelection"
     );
     if (needsSelectionFacade) {
-      const composedRange = {
+      const composedRange: StaticRange = {
         startContainer: textNode,
         startOffset: 10,
         endContainer: textNode,
         endOffset: 15,
-      } as StaticRange;
+        collapsed: false,
+      };
       const facade = {
         rangeCount: 1,
         isCollapsed: false,
@@ -2567,7 +2592,7 @@ describe("repaintHighlights <mark>-wrap fallback (forced via a hidden Highlight 
     class AmbientHighlight extends Set<Range> {
       priority = 0;
     }
-    const cssWithHighlights = Object.create(ambientCssValue ?? null) as CSS & {
+    const cssWithHighlights = Object.create(ambientCssValue ?? null) as Window['CSS'] & {
       highlights: Map<string, AmbientHighlight>;
     };
     Object.defineProperty(cssWithHighlights, "highlights", {

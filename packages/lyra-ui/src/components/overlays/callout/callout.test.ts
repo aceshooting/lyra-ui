@@ -98,10 +98,10 @@ it('normalizes every unsupported closed-set attribute and untyped property write
   el.headingLevel = '2';
   await el.updateComplete;
   const foreign = el as unknown as Record<string, unknown>;
-  foreign.variant = 'primary';
-  foreign.appearance = 'quiet';
-  foreign.size = 'huge';
-  foreign.headingLevel = '7';
+  foreign['variant'] = 'primary';
+  foreign['appearance'] = 'quiet';
+  foreign['size'] = 'huge';
+  foreign['headingLevel'] = '7';
   await el.updateComplete;
   expect(el.variant).to.equal('brand');
   expect(el.getAttribute('variant')).to.equal('brand');
@@ -431,9 +431,9 @@ it('renders an interactive icon assignment as inert decorative presentation', as
 });
 
 it('does not announce updates while the host or a composed ancestor is hidden', async () => {
-  const wrapper = await fixture(html`
+  const wrapper = (await fixture(html`
     <section><lr-callout>Initial callout</lr-callout></section>
-  `);
+  `)) as HTMLElement;
   const el = wrapper.querySelector('lr-callout') as LyraCallout;
   await settleLiveRegion(el);
   const polite = document.querySelector<HTMLElement>(
@@ -1074,10 +1074,13 @@ it('decouples the close-button hover fill from --lr-callout-background so a bran
 function relativeLuminance(color: string): number {
   const channels = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/u.exec(color);
   if (!channels) throw new Error(`unparseable computed colour: ${color}`);
-  const [r, g, b] = [1, 2, 3].map((index) => {
-    const channel = Number(channels[index]) / 255;
+  const linearChannel = (index: number): number => {
+    const rawChannel = channels[index];
+    if (rawChannel === undefined) throw new Error(`missing computed colour channel: ${color}`);
+    const channel = Number(rawChannel) / 255;
     return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
-  });
+  };
+  const [r, g, b] = [linearChannel(1), linearChannel(2), linearChannel(3)];
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 

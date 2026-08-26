@@ -12,7 +12,7 @@ afterEach(() => {
 /** A minimal ReactiveControllerHost backed by a real element, capturing the controller the
  *  ThemeWatcher registers so tests can drive its lifecycle hooks directly. */
 async function makeHost(ownerDocument: Document = document): Promise<{
-  host: ReactiveControllerHost & Element;
+  host: ReactiveControllerHost & HTMLElement;
   connect(): void;
   disconnect(): void;
 }> {
@@ -27,7 +27,7 @@ async function makeHost(ownerDocument: Document = document): Promise<{
     removeController() {},
     requestUpdate() {},
     updateComplete: Promise.resolve(true),
-  }) as unknown as ReactiveControllerHost & Element;
+  });
   let connected = false;
   const disconnect = () => {
     if (!connected) return;
@@ -157,7 +157,7 @@ describe('ThemeWatcher', () => {
     try {
       expect(() => connect()).to.not.throw();
     } finally {
-      delete (host as unknown as Record<string, unknown>).ownerDocument;
+      delete (host as unknown as Record<string, unknown>)['ownerDocument'];
     }
   });
 
@@ -385,7 +385,7 @@ describe('ThemeWatcher', () => {
       unrelatedRoot.adoptedStyleSheets = unrelatedSheets;
       unrelatedHost.remove();
       delete (watchedRoot as unknown as Record<string, unknown>)
-        .querySelectorAll;
+        ['querySelectorAll'];
     }
   });
 
@@ -699,8 +699,10 @@ describe('ThemeWatcher', () => {
   });
 
   it('shares one realm patch across separately evaluated ThemeWatcher modules', async () => {
-    const copyA = await import('../../dist/internal/theme-watcher.js?realm-copy=a');
-    const copyB = await import('../../dist/internal/theme-watcher.js?realm-copy=b');
+    const copyAPath = '../../dist/internal/theme-watcher.js?realm-copy=a';
+    const copyBPath = '../../dist/internal/theme-watcher.js?realm-copy=b';
+    const copyA = await import(copyAPath);
+    const copyB = await import(copyBPath);
     const a = await makeHost();
     const b = await makeHost();
     const original = Object.getOwnPropertyDescriptor(CSSStyleSheet.prototype, 'insertRule')?.value;
@@ -875,18 +877,18 @@ describe('ThemeWatcher', () => {
     const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
     const frameDocument = iframe.contentDocument!;
     const frameWindow = iframe.contentWindow as unknown as Record<string, unknown>;
-    const originalShadowRoot = frameWindow.ShadowRoot;
-    const originalDocumentCtor = frameWindow.Document;
-    frameWindow.ShadowRoot = undefined; // patchAdoptedStyleSheets: `!prototype` guard
-    frameWindow.Document = { prototype: Object.create(null) }; // patchAdoptedStyleSheets: `!target` guard
+    const originalShadowRoot = frameWindow['ShadowRoot'];
+    const originalDocumentCtor = frameWindow['Document'];
+    frameWindow['ShadowRoot'] = undefined; // patchAdoptedStyleSheets: `!prototype` guard
+    frameWindow['Document'] = { prototype: Object.create(null) }; // patchAdoptedStyleSheets: `!target` guard
     const watched = await makeHost(frameDocument);
     new ThemeWatcher(watched.host, () => {});
     try {
       expect(() => watched.connect()).to.not.throw();
     } finally {
       watched.disconnect();
-      frameWindow.ShadowRoot = originalShadowRoot;
-      frameWindow.Document = originalDocumentCtor;
+      frameWindow['ShadowRoot'] = originalShadowRoot;
+      frameWindow['Document'] = originalDocumentCtor;
     }
   });
 
@@ -894,30 +896,30 @@ describe('ThemeWatcher', () => {
     const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
     const frameDocument = iframe.contentDocument!;
     const frameWindow = iframe.contentWindow as unknown as Record<string, unknown>;
-    const originalDocumentCtor = frameWindow.Document;
-    const originalMediaList = frameWindow.MediaList;
+    const originalDocumentCtor = frameWindow['Document'];
+    const originalMediaList = frameWindow['MediaList'];
     const fakeDocumentProto: Record<string, unknown> = {};
     Object.defineProperty(fakeDocumentProto, 'adoptedStyleSheets', {
       value: [],
       writable: true,
       configurable: true,
     }); // data property, no setter -> patchAdoptedStyleSheets' `!original?.set` guard
-    frameWindow.Document = { prototype: fakeDocumentProto };
+    frameWindow['Document'] = { prototype: fakeDocumentProto };
     const fakeMediaListProto: Record<string, unknown> = {};
     Object.defineProperty(fakeMediaListProto, 'mediaText', {
       value: '',
       writable: true,
       configurable: true,
     }); // data property, no setter -> patchSetter's `!original?.set` guard
-    frameWindow.MediaList = { prototype: fakeMediaListProto };
+    frameWindow['MediaList'] = { prototype: fakeMediaListProto };
     const watched = await makeHost(frameDocument);
     new ThemeWatcher(watched.host, () => {});
     try {
       expect(() => watched.connect()).to.not.throw();
     } finally {
       watched.disconnect();
-      frameWindow.Document = originalDocumentCtor;
-      frameWindow.MediaList = originalMediaList;
+      frameWindow['Document'] = originalDocumentCtor;
+      frameWindow['MediaList'] = originalMediaList;
     }
   });
 

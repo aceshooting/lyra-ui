@@ -6,6 +6,7 @@
 - **Class** `LyraChunkInspector`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/chunk-inspector/chunk-inspector.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 16 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -89,8 +90,20 @@ Plus shared tokens otherwise.
 
 ```html
 <lr-chunk-inspector></lr-chunk-inspector>
+<lr-document-viewer id="document-viewer"></lr-document-viewer>
 <script>
   const inspector = document.querySelector("lr-chunk-inspector");
+  const documentViewer = document.getElementById("document-viewer");
+  const sourcesById = new Map([
+    [
+      "doc-1",
+      {
+        name: "Q3 report.pdf",
+        mimeType: "application/pdf",
+        src: "/reports/q3-report.pdf",
+      },
+    ],
+  ]);
   inspector.chunks = [
     {
       id: "c1",
@@ -99,11 +112,18 @@ Plus shared tokens otherwise.
       sourceId: "doc-1",
       title: "Q3 report",
       page: 4,
+      anchor: { kind: "page", page: 4 },
     },
   ];
-  inspector.addEventListener("lr-chunk-open", (e) =>
-    documentViewer.openAt(e.detail.sourceId, e.detail.anchor)
-  );
+  inspector.addEventListener("lr-chunk-open", (e) => {
+    const source = sourcesById.get(e.detail.sourceId);
+    if (!source) return;
+    documentViewer.name = source.name;
+    documentViewer.mimeType = source.mimeType;
+    documentViewer.src = source.src;
+    documentViewer.anchor = e.detail.anchor ?? null;
+    documentViewer.open = true;
+  });
 </script>
 ```
 

@@ -68,9 +68,9 @@ it('renders one cell per item, colored by its category', async () => {
   await el.updateComplete;
   const cells = [...el.shadowRoot!.querySelectorAll('[part="cell"]')] as HTMLElement[];
   expect(cells.length).to.equal(3);
-  expect(cells[0].style.backgroundColor).to.not.equal('');
-  expect(cells[0].style.backgroundColor).to.equal(cells[2].style.backgroundColor); // both 'text'
-  expect(cells[0].style.backgroundColor).to.not.equal(cells[1].style.backgroundColor);
+  expect(cells[0]!.style.backgroundColor).to.not.equal('');
+  expect(cells[0]!.style.backgroundColor).to.equal(cells[2]!.style.backgroundColor); // both 'text'
+  expect(cells[0]!.style.backgroundColor).to.not.equal(cells[1]!.style.backgroundColor);
 });
 
 it('bounds the DOM window for 200 and 500 items at 320px without sacrificing full roving focus', async () => {
@@ -115,6 +115,25 @@ it('bounds the DOM window for 200 and 500 items at 320px without sacrificing ful
       }
     }
   }
+});
+
+it('anchors a bounded window on a valid controlled selection before focus enters the strip', async () => {
+  const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
+  el.categories = categories;
+  el.items = Array.from({ length: 500 }, (_, index) => ({
+    id: `item-${index + 1}`,
+    categoryId: index % 2 === 0 ? 'text' : 'tool',
+    label: `Item ${index + 1}`,
+  }));
+  el.selectedIndex = 499;
+  await el.updateComplete;
+
+  const selected = el.shadowRoot!.querySelector<HTMLElement>('[part="cell"][data-selected]');
+  expect(selected, 'the controlled item is mounted inside the bounded window').to.not.equal(null);
+  expect(selected!.dataset['index']).to.equal('499');
+  expect(selected!.getAttribute('aria-current')).to.equal('true');
+  expect(selected!.tabIndex, 'the mounted window retains one keyboard entry stop').to.equal(0);
+  expect(el.shadowRoot!.querySelectorAll('[part="cell"]')).to.have.length(200);
 });
 
 it('snapshots readonly models and enforces first-wins unique item/category ids', async () => {
@@ -190,9 +209,9 @@ it('renders a marker on cells whose item sets marker: true, and none otherwise',
   el.categories = categories;
   await el.updateComplete;
   const cells = [...el.shadowRoot!.querySelectorAll('[part="cell"]')] as HTMLElement[];
-  expect((cells[0].querySelector('[part="marker"]')) == null).to.be.true;
-  expect(cells[1].querySelector('[part="marker"]')).to.exist;
-  expect((cells[2].querySelector('[part="marker"]')) == null).to.be.true;
+  expect((cells[0]!.querySelector('[part="marker"]')) == null).to.be.true;
+  expect(cells[1]!.querySelector('[part="marker"]')).to.exist;
+  expect((cells[2]!.querySelector('[part="marker"]')) == null).to.be.true;
 });
 
 it('is a labeled list whose items expose their individual details', async () => {
@@ -231,9 +250,18 @@ it('joins generated clauses with the effective locale list punctuation', async (
     el.items = items;
     el.categories = categories;
     await el.updateComplete;
+    const localize = (
+      el as unknown as {
+        localize(
+          key: string,
+          fallback?: string,
+          values?: Record<string, string | number>
+        ): string;
+      }
+    ).localize.bind(el);
     const clauses = [
-      el.localize('sequenceStripCategoryCount', undefined, { label: 'Text', count: new Intl.NumberFormat(locale).format(2), pluralCount: 2 }),
-      el.localize('sequenceStripCategoryCount', undefined, { label: 'Tool', count: new Intl.NumberFormat(locale).format(1), pluralCount: 1 }),
+      localize('sequenceStripCategoryCount', undefined, { label: 'Text', count: new Intl.NumberFormat(locale).format(2), pluralCount: 2 }),
+      localize('sequenceStripCategoryCount', undefined, { label: 'Tool', count: new Intl.NumberFormat(locale).format(1), pluralCount: 1 }),
     ];
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
       new Intl.ListFormat(locale, { style: 'long', type: 'unit' }).format(clauses),

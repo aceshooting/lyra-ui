@@ -19,7 +19,7 @@ export const styles = css`
     overflow-y: auto;
     overflow-x: clip;
     inline-size: max-content;
-    min-inline-size: min(var(--lr-size-14rem), var(--lr-positioner-available-inline-size, var(--lr-size-14rem)));
+    min-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-14rem), var(--lr-positioner-available-inline-size, 100vw));
     max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-24rem), var(--lr-positioner-available-inline-size, 100vw));
     padding: var(--lr-space-xs);
     background: var(--lr-color-surface);
@@ -49,7 +49,7 @@ export const styles = css`
 
   [part='option'] {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: var(--lr-space-xs);
     inline-size: 100%;
     min-block-size: var(--lr-icon-button-size);

@@ -1,7 +1,12 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './time-input.js';
 import type { LyraTimeInput } from './time-input.class.js';
+
+interface WindowWithEventConstructors extends Window {
+  Event: typeof Event;
+  FocusEvent: typeof FocusEvent;
+}
 
 const segment = (el: LyraTimeInput, name: string): HTMLElement =>
   el.shadowRoot!.querySelector(`[data-segment="${name}"]`)!;
@@ -673,6 +678,19 @@ describe('lr-time-input popup dismissal, autofill, and stepping', () => {
     expect(getComputedStyle(column).overflowX).to.equal('hidden');
   });
 
+  it('keeps the mirrored picker dimensions relative to the component font size', async () => {
+    const el = await fixture<LyraTimeInput>(html`
+      <lr-time-input value="10:00" style="font-size: 20px"></lr-time-input>
+    `);
+    await el.show();
+    await el.updateComplete;
+    const column = el.shadowRoot!.querySelector<HTMLElement>('[part="column"]')!;
+    const item = el.shadowRoot!.querySelector<HTMLElement>('[part~="column-item"]')!;
+
+    expect(column.getBoundingClientRect().width).to.be.closeTo(60, 0.5);
+    expect(item.getBoundingClientRect().height).to.be.closeTo(45, 0.5);
+  });
+
   it('closes the popup on Escape and returns focus to the active segment', async () => {
     const el = await fixture<LyraTimeInput>(html`<lr-time-input value="10:00"></lr-time-input>`);
     await el.show();
@@ -859,7 +877,8 @@ describe('lr-time-input popup dismissal, autofill, and stepping', () => {
     const iframe = document.createElement('iframe');
     document.body.append(iframe);
     const frameDocument = iframe.contentDocument!;
-    const frameWindow = iframe.contentWindow!;
+    const frameWindow = iframe.contentWindow as WindowWithEventConstructors | null;
+    if (!frameWindow) throw new Error('The iframe window was unavailable.');
     const el = await fixture<LyraTimeInput>(html`
       <lr-time-input hour-format="24" value="10:30"></lr-time-input>
     `);
@@ -915,7 +934,8 @@ describe('lr-time-input popup dismissal, autofill, and stepping', () => {
     const iframe = document.createElement('iframe');
     document.body.append(iframe);
     const frameDocument = iframe.contentDocument!;
-    const frameWindow = iframe.contentWindow!;
+    const frameWindow = iframe.contentWindow as WindowWithEventConstructors | null;
+    if (!frameWindow) throw new Error('The iframe window was unavailable.');
     const el = await fixture<LyraTimeInput>(html`
       <lr-time-input hour-format="24" value="10:30"></lr-time-input>
     `);
@@ -1692,6 +1712,43 @@ describe('lr-time-input disabled segment hover/press feedback', () => {
       await resetMouse();
     }
   });
+});
+
+describe('lr-time-input disabled action hover/press feedback', () => {
+  const centerOf = (node: Element): [number, number] => {
+    const rect = node.getBoundingClientRect();
+    return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
+  };
+
+  for (const testCase of [
+    {
+      name: 'disabled picker toggle',
+      template: html`<lr-time-input disabled value="09:30" style="--lr-transition-fast: 0s"></lr-time-input>`,
+      part: 'expand-button',
+    },
+    {
+      name: 'readonly clear action',
+      template: html`<lr-time-input readonly with-clear value="09:30" style="--lr-transition-fast: 0s"></lr-time-input>`,
+      part: 'clear-button',
+    },
+  ]) {
+    it(`does not tint the ${testCase.name}`, async () => {
+      const el = await fixture<LyraTimeInput>(testCase.template);
+      const target = el.shadowRoot!.querySelector<HTMLElement>(`[part="${testCase.part}"]`)!;
+      const resting = getComputedStyle(target).backgroundColor;
+      try {
+        await sendMouse({ type: 'move', position: centerOf(target) });
+        await waitUntil(() => target.matches(':hover'));
+        expect(getComputedStyle(target).backgroundColor, 'hover').to.equal(resting);
+        await sendMouse({ type: 'down' });
+        await waitUntil(() => target.matches(':active'));
+        expect(getComputedStyle(target).backgroundColor, 'press').to.equal(resting);
+        await sendMouse({ type: 'up' });
+      } finally {
+        await resetMouse();
+      }
+    });
+  }
 });
 
 // Every other value-bearing control here -- lr-input, lr-date-picker, lr-slider, lr-known-date --

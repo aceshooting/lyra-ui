@@ -18,7 +18,11 @@ import {
 import { sizes } from '../../../internal/sizes.styles.js';
 import { closeIcon, chevronIcon } from '../../../internal/icons.js';
 import { finiteNumber } from '../../../internal/numbers.js';
-import { place } from '../../../internal/positioner.js';
+import {
+  deferredPlaceReady as place,
+  waitForDeferredPlacement,
+  type DeferredOperationHandle,
+} from '../../../internal/anchored-overlay-runtime.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import {
   activateNonmodalOverlay,
@@ -265,8 +269,8 @@ function containsElement(container: Element | null, value: unknown): value is El
  * @cssprop [--lr-time-input-column-selected-font-weight=var(--lr-font-weight-semibold)] - Selected option weight.
  * @cssprop --lr-time-input-column-selected-hover-bg - Selected-option hover fill; derived when unset.
  * @cssprop --lr-time-input-column-selected-active-bg - Selected-option pressed fill; derived when unset.
- * @cssprop [--column-item-height=2.25em] - Picker row height.
- * @cssprop [--column-width=3em] - Picker column width.
+ * @cssprop [--column-item-height=calc(var(--lr-size-1em)*2.25)] - Picker row height.
+ * @cssprop [--column-width=calc(var(--lr-size-1em)*3)] - Picker column width.
  * @cssprop [--show-duration=var(--lr-duration-fast)] - Picker opening duration.
  * @cssprop [--hide-duration=var(--lr-duration-fast)] - Picker closing duration.
  * @cssprop [--lr-form-control-required-content=' *'] - The required-field marker rendered after the
@@ -357,7 +361,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   private digitSegment?: SegmentName;
   private pendingSegmentFocus?: SegmentName;
   private restoringSegmentFocus = false;
-  private cleanupPositioner?: () => void;
+  private cleanupPositioner?: DeferredOperationHandle;
   private overlayHandle?: OverlayHandle;
   private lightDismissDocument?: Document;
   private restoreFocusOnClose = true;
@@ -928,6 +932,18 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     const token = ++this.transitionToken;
     await this.updateComplete;
     if (this.transitionToken !== token) return;
+    if (event === 'lr-after-show') {
+      const positioned = await waitForDeferredPlacement(
+        () => this.cleanupPositioner,
+      );
+      if (this.transitionToken !== token || !this.open) return;
+      if (!positioned) {
+        this.forceClose(false);
+        return;
+      }
+      await this.updateComplete;
+      if (this.transitionToken !== token) return;
+    }
     if (this.isConnected) {
       const view = this.ownerDocument.defaultView;
       if (view) await new Promise<void>((resolve) => view.requestAnimationFrame(() => resolve()));

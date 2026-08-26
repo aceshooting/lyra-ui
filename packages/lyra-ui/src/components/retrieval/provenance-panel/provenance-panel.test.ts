@@ -1,10 +1,11 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import './provenance-panel.js';
 import type {
   LyraProvenancePanel,
   LyraProvenance,
 } from './provenance-panel.js';
-import { styles } from './provenance-panel.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const provenance: LyraProvenance = {
   entities: [{ id: 'e1', label: 'Marie Curie', type: 'person' }],
@@ -215,10 +216,64 @@ it('is accessible with full provenance', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('gives the disclosure header hover/focus-visible', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='header'\]:hover/);
-  expect(css).to.match(/\[part='header'\]:focus-visible[^{]*\{[^}]*outline:/);
+it('treats non-array provenance sections as empty and omits malformed nested rows', async () => {
+  const el = await fixture<LyraProvenancePanel>(html`
+    <lr-provenance-panel
+      .provenance=${{
+        entities: { id: 'collapsed-object' },
+        relationships: [null, { path: 'not-an-array' }],
+        communities: [null, { id: 'community', label: 'Valid community' }],
+        chunks: [
+          null,
+          { id: 'chunk', text: 'Valid chunk', score: 0.5, sourceId: 'source' },
+        ],
+      } as unknown as LyraProvenancePanel['provenance']}
+    ></lr-provenance-panel>
+  `);
+
+  expect(el.shadowRoot!.querySelectorAll('lr-entity-chip').length).to.equal(0);
+  expect(el.shadowRoot!.querySelectorAll('lr-path-strip').length).to.equal(0);
+  expect(el.shadowRoot!.querySelectorAll('lr-community-card').length).to.equal(
+    1
+  );
+  expect(el.shadowRoot!.querySelectorAll('lr-chunk-inspector').length).to.equal(
+    1
+  );
+  await expect(el).shadowDom.to.be.accessible();
+});
+
+it('renders the disclosure header hover/focus-visible feedback', async () => {
+  const el = await fixture<LyraProvenancePanel>(html`
+    <lr-provenance-panel
+      style="--lr-color-brand-quiet: rgb(1, 2, 3); --lr-focus-ring-width: 6px; --lr-focus-ring-color: rgb(4, 5, 6)"
+      .provenance=${provenance}
+    ></lr-provenance-panel>
+  `);
+  const target = el.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+  target.scrollIntoView({ block: 'center' });
+  const rect = target.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ],
+    });
+    await waitUntil(
+      () => getComputedStyle(target).backgroundColor === 'rgb(1, 2, 3)',
+      'the provenance disclosure hover background never painted'
+    );
+  } finally {
+    await resetMouse();
+  }
+
+  await sendKeys({ press: 'Tab' });
+  target.focus();
+  await waitUntil(() => {
+    const computed = getComputedStyle(target);
+    return computed.outlineWidth === '6px' && computed.outlineColor === 'rgb(4, 5, 6)';
+  }, 'the provenance disclosure keyboard focus ring never painted');
 });
 
 it('formats section counts with the effective locale', async () => {

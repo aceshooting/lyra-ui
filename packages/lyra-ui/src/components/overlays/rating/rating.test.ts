@@ -1,7 +1,6 @@
-import { fixture, expect, html } from "@open-wc/testing";
+import { fixture, expect, html, waitUntil } from "@open-wc/testing";
 import "./rating.js";
 import { LyraRating } from "./rating.js";
-import { styles } from "./rating.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 it("exposes fresh callable static validators that project live rating validity", async () => {
@@ -45,12 +44,14 @@ it("emits one cancelable lr-invalid alias whose cancellation cancels the native 
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
+  const alias = aliases[0];
+  if (!alias) throw new Error('expected one lr-invalid alias event');
   // Compared as a boolean, never as two DOM nodes: a failing chai assertion carrying an element
   // hangs the whole file.
-  expect(aliases[0].target === el, "lr-invalid is retargeted to the host").to.be
+  expect(alias.target === el, "lr-invalid is retargeted to the host").to.be
     .true;
-  expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
-  expect(aliases[0].cancelable, "lr-invalid is a real veto point").to.be.true;
+  expect(alias.bubbles && alias.composed).to.be.true;
+  expect(alias.cancelable, "lr-invalid is a real veto point").to.be.true;
   expect(
     nativePrevented,
     "native invalid left alone while nobody cancels"
@@ -88,18 +89,41 @@ it("exposes the live rating surface across updates and reconnects", async () => 
   expect(el.rating === surface).to.equal(true);
 });
 
-it("gives the star row hover feedback matching the keyboard focus-visible cue", () => {
-  const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
-  expect(css).to.match(
-    /\[part~='base'\]:hover \[part='star'\]\s*\{[^}]*color:/
-  );
-});
+it("renders star-row hover feedback only while the rating is editable", async () => {
+  const mount = async (state = ""): Promise<LyraRating> => fixture<LyraRating>(html`
+    <lr-rating
+      .readonly=${state === "readonly"}
+      .disabled=${state === "disabled"}
+      style="--lr-color-border: rgb(1, 2, 3); --lr-color-border-strong: rgb(4, 5, 6)"
+    ></lr-rating>
+  `);
+  const editable = await mount();
+  const readonly = await mount("readonly");
+  const disabled = await mount("disabled");
 
-it("keeps --lr-rating-empty-color reachable while the editable rating is hovered", () => {
-  const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
-  expect(css).to.match(
-    /\[part~='base'\]:hover \[part='star'\]\s*\{[^}]*color:\s*var\(\s*--lr-rating-empty-color,/
-  );
+  for (const [label, el, expected] of [
+    ["editable", editable, "rgb(4, 5, 6)"],
+    ["readonly", readonly, "rgb(1, 2, 3)"],
+    ["disabled", disabled, "rgb(1, 2, 3)"],
+  ] as const) {
+    const base = baseOf(el);
+    const star = starsOf(el)[0]!;
+    expect(getComputedStyle(star).color, `${label} resting color`).to.equal("rgb(1, 2, 3)");
+    base.scrollIntoView({ block: "center" });
+    const rect = base.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: "move",
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(
+        () => getComputedStyle(star).color === expected,
+        `${label} rating settled on the wrong hover color`,
+      );
+    } finally {
+      await resetMouse();
+    }
+  }
 });
 
 it("applies the mapped symbol color and spacing custom properties to rendered symbols", async () => {
@@ -204,23 +228,7 @@ it("applies --symbol-size while preserving --lr-rating-size precedence", async (
   ).to.equal("29px");
 });
 
-it("gates the pointer cursor and hover highlight behind readonly/disabled, not just disabled (regression)", () => {
-  const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
-  expect(css).to.match(
-    /:host\(:not\(:disabled\):not\(\[readonly\]\)\) \[part~='base'\]\s*\{[^}]*cursor:\s*pointer/
-  );
-  expect(css).to.match(
-    /:host\(:not\(:disabled\):not\(\[readonly\]\)\) \[part~='base'\]:hover \[part='star'\]\s*\{[^}]*color:/
-  );
-  // The old disabled-only gate must be gone, not merely joined by the new readonly+disabled one.
-  expect(css).to.not.include(
-    ":host(:not([disabled])) [part~='base']:hover [part='star']"
-  );
-  // `:disabled` (not `[disabled]`) is what tracks fieldset-cascaded disablement.
-  expect(css).to.not.include(":host([disabled])");
-});
-
-it("does not show a pointer cursor on a readonly rating (it is still focusable but not settable)", async () => {
+it("shows a pointer cursor only on an editable rating", async () => {
   const interactive = (await fixture(
     html`<lr-rating></lr-rating>`
   )) as LyraRating;
@@ -233,8 +241,11 @@ it("does not show a pointer cursor on a readonly rating (it is still focusable b
   const readonlyBase = readonly.shadowRoot!.querySelector(
     '[part~="base"]'
   ) as HTMLElement;
+  const disabled = (await fixture(html`<lr-rating disabled></lr-rating>`)) as LyraRating;
+  const disabledBase = baseOf(disabled);
   expect(getComputedStyle(interactiveBase).cursor).to.equal("pointer");
   expect(getComputedStyle(readonlyBase).cursor).to.not.equal("pointer");
+  expect(getComputedStyle(disabledBase).cursor).to.not.equal("pointer");
 });
 
 it("exposes a keyboard-accessible rating slider", async () => {
@@ -643,17 +654,21 @@ it("renders a distinct partial fill for a fractional value under a fractional pr
   const el = (await fixture(
     html`<lr-rating value="3.5" precision="0.5" max="5"></lr-rating>`
   )) as LyraRating;
-  const stars = el.shadowRoot!.querySelectorAll('[part="star"]');
-  const thirdFill = stars[2].querySelector('[part="star-fill"]') as HTMLElement;
-  const fourthFill = stars[3].querySelector(
+  const stars = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="star"]');
+  const thirdStar = stars[2];
+  const fourthStar = stars[3];
+  const fifthStar = stars[4];
+  if (!thirdStar || !fourthStar || !fifthStar) throw new Error('expected five rendered stars');
+  const thirdFill = thirdStar.querySelector('[part="star-fill"]') as HTMLElement;
+  const fourthFill = fourthStar.querySelector(
     '[part="star-fill"]'
   ) as HTMLElement;
-  const fifthFill = stars[4].querySelector('[part="star-fill"]') as HTMLElement;
+  const fifthFill = fifthStar.querySelector('[part="star-fill"]') as HTMLElement;
   expect(thirdFill.style.inlineSize, "fully filled star").to.equal("100%");
   expect(fourthFill.style.inlineSize, "half-filled star").to.equal("50%");
   expect(fifthFill.style.inlineSize, "empty star").to.equal("0%");
-  expect(stars[2].hasAttribute("data-filled")).to.be.true;
-  expect(stars[3].hasAttribute("data-filled")).to.be.false;
+  expect(thirdStar.hasAttribute("data-filled")).to.be.true;
+  expect(fourthStar.hasAttribute("data-filled")).to.be.false;
 });
 
 it("selects the pointer segment within a star using fractional precision", async () => {
@@ -870,6 +885,26 @@ it("publishes required/optional and valid/invalid as :state() selectors", async 
   el.value = 4;
   expect(host.matches(":state(valid)"), "valid once rated").to.be.true;
   expect(host.matches(":state(invalid)"), "invalid once rated").to.be.false;
+});
+
+it("projects explicit valid and invalid states onto the host slider role", async () => {
+  const el = (await fixture(
+    html`<lr-rating name="score" value="3"></lr-rating>`
+  )) as LyraRating;
+  await el.updateComplete;
+
+  expect(el.getAttribute("role")).to.equal("slider");
+  expect(el.getAttribute("aria-invalid")).to.equal("false");
+
+  el.setCustomValidity("That score is disputed.");
+  await el.updateComplete;
+  expect(el.checkValidity()).to.be.false;
+  expect(el.getAttribute("aria-invalid")).to.equal("true");
+
+  el.setCustomValidity("");
+  await el.updateComplete;
+  expect(el.checkValidity()).to.be.true;
+  expect(el.getAttribute("aria-invalid")).to.equal("false");
 });
 
 it("withholds user-valid/user-invalid until the user has rated or blurred the control", async function () {

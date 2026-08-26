@@ -10,7 +10,7 @@ import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import "./json-viewer.js";
 import type { LyraJsonViewer } from "./json-viewer.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
-import { styles } from "./json-viewer.styles.js";
+import { resolveLyraLocale } from "../../../internal/localization-runtime.js";
 
 const sample = {
   name: "Ada Lovelace",
@@ -244,7 +244,7 @@ it("locale-formats collapsed item/key counts before interpolation", async () => 
       .data=${data}
     ></lr-json-viewer>`
   )) as LyraJsonViewer;
-  const expected = new Intl.NumberFormat(el.effectiveLocale).format(1234);
+  const expected = new Intl.NumberFormat(resolveLyraLocale(el)).format(1234);
   expect(el.shadowRoot!.querySelector(".preview")!.textContent).to.contain(
     expected
   );
@@ -540,11 +540,27 @@ it("exposes every rendered JSON row as a public row part", async () => {
   );
 });
 
-it("routes row hover fill through --lr-json-viewer-row-hover-bg", () => {
-  const css = styles.cssText.replace(/\s+/g, " ");
-  expect(css).to.match(
-    /\.row:hover\s*\{[^}]*background:\s*var\(--lr-json-viewer-row-hover-bg,\s*var\(--lr-color-brand-quiet\)\)/
-  );
+it("routes rendered row hover fill through --lr-json-viewer-row-hover-bg", async () => {
+  const el = await withData(sample);
+  el.style.setProperty("--lr-json-viewer-row-hover-bg", "rgb(1, 2, 3)");
+  const row = el.shadowRoot!.querySelector<HTMLElement>(".row")!;
+  row.scrollIntoView({ block: "center" });
+  const rect = row.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: "move",
+      position: [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ],
+    });
+    await waitUntil(
+      () => getComputedStyle(row).backgroundColor === "rgb(1, 2, 3)",
+      "the JSON row hover token never reached the rendered row"
+    );
+  } finally {
+    await resetMouse();
+  }
 });
 
 it("highlights matching keys/values with data-match when search is set", async () => {
@@ -613,7 +629,7 @@ it("preserves manual toggle overrides across a data reassignment with the same s
 
 it("renders a self-referencing value without a stack overflow, showing a circular marker instead of recursing", async () => {
   const o: Record<string, unknown> = { name: "root" };
-  o.self = o;
+  o["self"] = o;
   const el = await withData(o);
 
   // The `self` key itself is rendered exactly once -- recursing into it
@@ -660,7 +676,7 @@ it("bounds valid acyclic deep rendering and reports the localized resource limit
     ></lr-json-viewer>`
   )) as LyraJsonViewer;
   const rows = el.shadowRoot!.querySelectorAll(".row");
-  const formatter = new Intl.NumberFormat(el.effectiveLocale);
+  const formatter = new Intl.NumberFormat(resolveLyraLocale(el));
   const limit = el.shadowRoot!.querySelector('[part="limit"]')!;
   expect(rows.length).to.be.lessThan(300);
   expect(limit.textContent).to.equal(
@@ -734,7 +750,7 @@ it("copies a bigint value without throwing, downgrading it to a plain string", a
 
 it("copies a self-referencing value without throwing, substituting the localized circular marker", async () => {
   const o: Record<string, unknown> = { name: "root" };
-  o.self = o;
+  o["self"] = o;
   const el = await withData(o);
   el.copyable = true;
   await el.updateComplete;
@@ -1277,8 +1293,7 @@ describe("imperative search API", () => {
       if (parentClipboard)
         Object.defineProperty(window.navigator, "clipboard", parentClipboard);
       else
-        delete (window.navigator as Navigator & { clipboard?: Clipboard })
-          .clipboard;
+        Reflect.deleteProperty(window.navigator, "clipboard");
       if (frameClipboard) {
         Object.defineProperty(
           frameWindow.navigator,
@@ -1286,8 +1301,7 @@ describe("imperative search API", () => {
           frameClipboard
         );
       } else {
-        delete (frameWindow.navigator as Navigator & { clipboard?: Clipboard })
-          .clipboard;
+        Reflect.deleteProperty(frameWindow.navigator, "clipboard");
       }
       frame.remove();
     }
@@ -1418,11 +1432,33 @@ it("keeps per-node copy actions visible in coarse/no-hover mode without overflow
 });
 
 describe("hover-rule specificity (::part() theming escape hatch)", () => {
-  it("wraps the toggle's hover retheme rule in :where() so a consumer's ::part(toggle):hover wins", () => {
-    const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
-    expect(css).to.match(
-      /:where\(\[part='toggle'\]\):hover:where\(:not\(\[hidden\]\)\)\s*\{[^}]*background:\s*var\(--lr-color-brand-quiet\)/
-    );
+  it("lets a consumer's ::part(toggle):hover override win under a real pointer", async () => {
+    const style = document.createElement("style");
+    style.textContent =
+      "lr-json-viewer::part(toggle):hover { background: rgb(7, 8, 9); }";
+    document.head.appendChild(style);
+    try {
+      const el = await withData(sample);
+      const toggle = el.shadowRoot!.querySelector<HTMLElement>(
+        '[part="toggle"]:not([hidden])'
+      )!;
+      toggle.scrollIntoView({ block: "center" });
+      const rect = toggle.getBoundingClientRect();
+      await sendMouse({
+        type: "move",
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => getComputedStyle(toggle).backgroundColor === "rgb(7, 8, 9)",
+        "the consumer JSON toggle hover background never won"
+      );
+    } finally {
+      await resetMouse();
+      style.remove();
+    }
   });
 
   it("a ::part(copy-button):hover override actually wins over the internal reveal rule", async function () {
@@ -1505,10 +1541,11 @@ describe("search-match highlight cssprop indirection", () => {
 describe("lifecycle: willUpdate calls super", () => {
   it("calls super.willUpdate() so a future base-class hook is not silently skipped", async () => {
     let sawCall = false;
-    const original = LyraElement.prototype.willUpdate;
-    (
-      LyraElement.prototype as unknown as { willUpdate: () => void }
-    ).willUpdate = function (this: LyraElement, ...args: unknown[]) {
+    const basePrototype = LyraElement.prototype as unknown as {
+      willUpdate: (...args: unknown[]) => void;
+    };
+    const original = basePrototype.willUpdate;
+    basePrototype.willUpdate = function (this: LyraElement, ...args: unknown[]) {
       sawCall = true;
       return (original as (...a: unknown[]) => void).apply(this, args);
     };
@@ -1518,7 +1555,7 @@ describe("lifecycle: willUpdate calls super", () => {
       await el.updateComplete;
       expect(sawCall).to.be.true;
     } finally {
-      LyraElement.prototype.willUpdate = original;
+      basePrototype.willUpdate = original;
     }
   });
 });

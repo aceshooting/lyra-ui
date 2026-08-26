@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isMainModule } from './is-main-module.mjs';
 
 // Every ReactiveElement lifecycle override whose superclass exposes a callable matching hook must
 // keep that hook in the chain. Today several hooks are no-ops in LyraElement/ReactiveElement, but
@@ -201,4 +202,4 @@ function main() {
   console.log('Lifecycle superclass policy passed.');
 }
 
-if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))) main();
+if (isMainModule(import.meta.url)) main();

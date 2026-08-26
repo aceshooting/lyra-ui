@@ -45,6 +45,8 @@ export interface LyraPanZoomEventMap {
  *
  * `resetZoom()` returns zoom to 1 while preserving the native scroll offset. `resetView()` also
  * returns the viewport to its origin for consumers that replace the inspected content.
+ * The three controls are independently tabbable native buttons in a labelled `group`; they do not
+ * claim the arrow-key navigation contract of an ARIA toolbar.
  *
  * @customElement lr-pan-zoom
  * @slot - Content to inspect; when `src` is set, an image is rendered instead.
@@ -56,7 +58,7 @@ export interface LyraPanZoomEventMap {
  * @csspart base - The frame wrapper.
  * @csspart viewport - The scrollable viewport.
  * @csspart content - The transformed content wrapper.
- * @csspart controls - Zoom controls.
+ * @csspart controls - Labelled group of independently tabbable zoom controls.
  * @csspart zoom-out - Zoom-out button.
  * @csspart zoom-in - Zoom-in button.
  * @csspart reset - Reset-to-100-percent button.
@@ -107,11 +109,11 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
     return finiteRange(this.zoom, 1, this.safeMinZoom, this.safeMaxZoom);
   }
 
-  private setZoom(value: number): void {
+  private setZoom(value: number, quantize = true): void {
     const min = this.safeMinZoom;
     const max = this.safeMaxZoom;
     const step = this.safeZoomStep;
-    const stepped = Math.round(value / step) * step;
+    const stepped = quantize ? Math.round(value / step) * step : value;
     const next = Math.min(max, Math.max(min, Math.round(stepped * 100) / 100));
     if (next === this.zoom) return;
     this.zoom = next;
@@ -127,7 +129,9 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
   }
 
   resetZoom(): void {
-    this.setZoom(1);
+    // Reset is a semantic 100% destination, not another relative zoom step. It remains bounded by
+    // min/max, but a step such as 0.3 must not quantize 1 down to 0.9.
+    this.setZoom(1, false);
   }
 
   resetView(): void {
@@ -203,7 +207,7 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
           ${safeSrc ? html`<img src=${safeSrc} alt=${this.alt} />` : html`<slot></slot>`}
         </div>
       </div>
-      <div part="controls" role="toolbar" aria-label=${this.localize('zoomControls')}>
+      <div part="controls" role="group" aria-label=${this.localize('zoomControls')}>
         <button part="zoom-out" type="button" aria-label=${this.localize('zoomOut')} ?disabled=${zoom <= min} @click=${() => this.zoomOut()}>−</button>
         <button part="reset" type="button" @click=${() => this.resetZoom()}>
           <span class="sr-only">${this.localize('resetZoom')} </span><span>${this.localize('pdfViewerCurrentZoom', undefined, {

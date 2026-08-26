@@ -11,7 +11,7 @@ type CssEscapeHost = { escape?: (identifier: string) => string };
 function createRealmFrame(): {
   iframe: HTMLIFrameElement;
   frameDocument: Document;
-  frameWindow: Window & typeof globalThis;
+  frameWindow: Window;
 } {
   const iframe = document.createElement('iframe');
   document.body.append(iframe);
@@ -136,11 +136,11 @@ describe('lr-condition-builder v9 contract', () => {
     expect(el.shadowRoot!.querySelector('[part="conditions"]')!.getAttribute('role')).to.equal('list');
     expect(rows[0]!.getAttribute('role')).to.equal('listitem');
     expect(rows[1]!.getAttribute('role')).to.equal('listitem');
-    const row0FieldSelect = rows[0].querySelector('[part="field-select"]') as LyraSelect;
-    const row0OperatorSelect = rows[0].querySelector('[part="operator-select"]') as LyraSelect;
+    const row0FieldSelect = rows[0]!.querySelector('[part="field-select"]') as LyraSelect;
+    const row0OperatorSelect = rows[0]!.querySelector('[part="operator-select"]') as LyraSelect;
     expect(row0FieldSelect.value).to.equal('name');
     expect(row0OperatorSelect.value).to.equal('contains');
-    const row0Value = rows[0].querySelector('[part="value"]') as LyraInput;
+    const row0Value = rows[0]!.querySelector('[part="value"]') as LyraInput;
     expect(row0Value.tagName.toLowerCase()).to.equal('lr-input');
     expect(row0Value.value).to.equal('acme');
   });
@@ -194,17 +194,94 @@ describe('lr-condition-builder v9 contract', () => {
     const el = (await fixture(html`<lr-condition-builder .fields=${FIELDS} .value=${value}></lr-condition-builder>`)) as LyraConditionBuilder;
     await el.updateComplete;
     const rows = el.shadowRoot!.querySelectorAll('[part="condition"]');
-    const tag = (i: number) => rows[i].querySelector('[part="value"]')!.tagName.toLowerCase();
+    const tag = (i: number) => rows[i]!.querySelector('[part="value"]')!.tagName.toLowerCase();
     expect(tag(0)).to.equal('lr-input'); // string
-    expect((rows[0].querySelector('[part="value"]') as LyraInput).type).to.equal('text');
+    expect((rows[0]!.querySelector('[part="value"]') as LyraInput).type).to.equal('text');
     expect(tag(1)).to.equal('lr-input'); // number
-    expect((rows[1].querySelector('[part="value"]') as LyraInput).type).to.equal('number');
+    expect((rows[1]!.querySelector('[part="value"]') as LyraInput).type).to.equal('number');
     expect(tag(2)).to.equal('lr-select'); // boolean
     expect(tag(3)).to.equal('lr-date-input'); // date
-    expect((rows[3].querySelector('[part="value"]') as LyraDateInput).value).to.equal('2026-01-01');
+    expect((rows[3]!.querySelector('[part="value"]') as LyraDateInput).value).to.equal('2026-01-01');
     expect(tag(4)).to.equal('lr-select'); // enum, eq
     expect(tag(5)).to.equal('lr-combobox'); // enum, in
-    expect((rows[5].querySelector('[part="value"]') as LyraCombobox).multiple).to.be.true;
+    expect((rows[5]!.querySelector('[part="value"]') as LyraCombobox).multiple).to.be.true;
+  });
+
+  it('forwards date and numeric field constraints to the composed value controls', async () => {
+    const fields: ConditionBuilderField[] = [
+      { name: 'age', type: 'number', min: 18, max: 65, step: 0.5 },
+      { name: 'createdAt', type: 'date', min: '2026-01-01', max: '2026-12-31' },
+    ];
+    const value: ConditionBuilderValue = {
+      combinator: 'and',
+      conditions: [
+        { id: 'number', field: 'age', operator: 'gte', value: 21 },
+        { id: 'date', field: 'createdAt', operator: 'gte', value: '2026-06-01' },
+      ],
+    };
+    const el = (await fixture(html`
+      <lr-condition-builder .fields=${fields} .value=${value}></lr-condition-builder>
+    `)) as LyraConditionBuilder;
+    await el.updateComplete;
+
+    const numberInput = conditionRow(el, 0).querySelector('[part="value"]') as LyraInput;
+    expect(numberInput.min).to.equal(18);
+    expect(numberInput.max).to.equal(65);
+    expect(numberInput.step).to.equal(0.5);
+    const dateInput = conditionRow(el, 1).querySelector('[part="value"]') as LyraDateInput;
+    expect(dateInput.min).to.equal('2026-01-01');
+    expect(dateInput.max).to.equal('2026-12-31');
+  });
+
+  it('omits non-finite numeric constraints and clone-owns the retained field metadata', async () => {
+    const fields: ConditionBuilderField[] = [
+      {
+        name: 'age',
+        type: 'number',
+        min: Number.NEGATIVE_INFINITY,
+        max: 100,
+        step: Number.POSITIVE_INFINITY,
+      },
+    ];
+    const value: ConditionBuilderValue = {
+      combinator: 'and',
+      conditions: [{ id: 'number', field: 'age', operator: 'eq', value: 21 }],
+    };
+    const el = (await fixture(html`
+      <lr-condition-builder .fields=${fields} .value=${value}></lr-condition-builder>
+    `)) as LyraConditionBuilder;
+    (fields[0] as { max: number }).max = 200;
+    await el.updateComplete;
+
+    expect(el.fields[0]!.min).to.be.undefined;
+    expect(el.fields[0]!.max).to.equal(100);
+    expect(el.fields[0]!.step).to.be.undefined;
+    const numberInput = conditionRow(el, 0).querySelector('[part="value"]') as LyraInput;
+    expect(numberInput.min).to.be.undefined;
+    expect(numberInput.max).to.equal(100);
+    expect(numberInput.step).to.be.undefined;
+  });
+
+  it('leaves composed controls unconstrained when the new field metadata is unset', async () => {
+    const value: ConditionBuilderValue = {
+      combinator: 'and',
+      conditions: [
+        { id: 'number', field: 'age', operator: 'eq', value: 21 },
+        { id: 'date', field: 'createdAt', operator: 'eq', value: '2026-06-01' },
+      ],
+    };
+    const el = (await fixture(html`
+      <lr-condition-builder .fields=${FIELDS} .value=${value}></lr-condition-builder>
+    `)) as LyraConditionBuilder;
+    await el.updateComplete;
+
+    const numberInput = conditionRow(el, 0).querySelector('[part="value"]') as LyraInput;
+    expect(numberInput.min).to.be.undefined;
+    expect(numberInput.max).to.be.undefined;
+    expect(numberInput.step).to.be.undefined;
+    const dateInput = conditionRow(el, 1).querySelector('[part="value"]') as LyraDateInput;
+    expect(dateInput.min).to.equal('');
+    expect(dateInput.max).to.equal('');
   });
 
   it('renders no value control (a placeholder) for a unary operator', async () => {
@@ -332,7 +409,7 @@ describe('lr-condition-builder v9 contract', () => {
     expect(ev.detail.value.conditions[0].value).to.be.undefined;
   });
 
-  it('normalizes non-finite controlled number conditions when value or field metadata arrives', async () => {
+  it('preserves non-finite controlled number conditions while reporting their invalid value type', async () => {
     const el = (await fixture(html`
       <lr-condition-builder
         .fields=${FIELDS}
@@ -341,21 +418,85 @@ describe('lr-condition-builder v9 contract', () => {
           conditions: [
             { id: 'positive', field: 'age', operator: 'eq', value: Number.POSITIVE_INFINITY },
             { id: 'negative', field: 'age', operator: 'eq', value: Number.NEGATIVE_INFINITY },
+            { id: 'nan', field: 'age', operator: 'eq', value: Number.NaN },
           ],
         }}
       ></lr-condition-builder>
     `)) as LyraConditionBuilder;
     await el.updateComplete;
-    expect(el.value.conditions.map((condition) => condition.value)).to.deep.equal([undefined, undefined]);
-    expect(JSON.stringify(el.value).includes('null'), 'the normalized model never persists Infinity as JSON null').to.equal(false);
+    expect(el.value.conditions.map((condition) => condition.value)).to.deep.equal([
+      Number.POSITIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+      Number.NaN,
+    ]);
+    expect(el.validationIssues).to.deep.equal([
+      { conditionId: 'positive', code: 'value-type' },
+      { conditionId: 'negative', code: 'value-type' },
+      { conditionId: 'nan', code: 'value-type' },
+    ]);
 
     const late = document.createElement('lr-condition-builder') as LyraConditionBuilder;
     late.value = {
       combinator: 'and',
       conditions: [{ id: 'late', field: 'age', operator: 'eq', value: Number.POSITIVE_INFINITY }],
     };
+    const persistedSnapshot = late.value;
     late.fields = FIELDS;
-    expect(late.value.conditions[0]?.value, 'late field metadata re-normalizes the controlled model').to.be.undefined;
+    expect(late.value, 'late field metadata does not replace the controlled snapshot').to.equal(persistedSnapshot);
+    expect(
+      late.value.conditions[0]?.value,
+      'late field metadata validates without rewriting the controlled model',
+    ).to.equal(Number.POSITIVE_INFINITY);
+    expect(late.validationIssues).to.deep.equal([{ conditionId: 'late', code: 'value-type' }]);
+  });
+
+  it('preserves incompatible controlled operator/value shapes and reports field, operator, arity, and type issues', async () => {
+    const value: ConditionBuilderValue = {
+      combinator: 'and',
+      conditions: [
+        { id: 'operator', field: 'active', operator: 'contains', value: 'yes' },
+        { id: 'multi-scalar', field: 'status', operator: 'in', value: 'open' },
+        { id: 'unary-value', field: 'name', operator: 'isEmpty', value: 'legacy' },
+        { id: 'scalar-array', field: 'age', operator: 'eq', value: ['21'] },
+        { id: 'boolean-string', field: 'active', operator: 'eq', value: 'true' },
+        { id: 'missing-field', field: 'retired', operator: 'eq', value: 'yes' },
+        { id: 'valid', field: 'status', operator: 'in', value: ['open'] },
+      ],
+    };
+    const el = (await fixture(html`
+      <lr-condition-builder .fields=${FIELDS} .value=${value}></lr-condition-builder>
+    `)) as LyraConditionBuilder;
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal(value);
+    expect(el.validationIssues).to.deep.equal([
+      { conditionId: 'operator', code: 'operator-not-allowed' },
+      { conditionId: 'multi-scalar', code: 'operator-arity' },
+      { conditionId: 'unary-value', code: 'operator-arity' },
+      { conditionId: 'scalar-array', code: 'operator-arity' },
+      { conditionId: 'boolean-string', code: 'value-type' },
+      { conditionId: 'missing-field', code: 'field-unavailable' },
+    ]);
+    expect(Object.isFrozen(el.validationIssues)).to.equal(true);
+    expect(Object.isFrozen(el.validationIssues[0])).to.equal(true);
+    expect(el.invalidConditionIds).to.deep.equal([
+      'operator',
+      'multi-scalar',
+      'unary-value',
+      'scalar-array',
+      'boolean-string',
+      'missing-field',
+    ]);
+    expect(Object.isFrozen(el.invalidConditionIds)).to.equal(true);
+    expect(el.checkValidity()).to.equal(false);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-invalid')).to.equal('true');
+    expect(conditionRow(el, 0).getAttribute('aria-invalid')).to.equal('true');
+    expect(conditionRow(el, 0).getAttribute('data-validation-code')).to.equal('operator-not-allowed');
+    expect(conditionRow(el, 6).getAttribute('aria-invalid')).to.equal('false');
+
+    expect(el.reportValidity()).to.equal(false);
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('operator-select');
+    await expect(el).to.be.accessible();
   });
 
   it('selecting a boolean value control coerces to a real boolean', async () => {
@@ -803,15 +944,15 @@ describe('lr-condition-builder v9 contract', () => {
 
     const fieldSelect = conditionRow(el, 0).querySelector('[part="field-select"]') as LyraSelect;
     setAndDispatch(fieldSelect, 'value', 'age', 'change');
-    expect(el.value.conditions[0].field).to.equal('name');
+    expect(el.value.conditions[0]!.field).to.equal('name');
 
     const opSelect = conditionRow(el, 0).querySelector('[part="operator-select"]') as LyraSelect;
     setAndDispatch(opSelect, 'value', 'isEmpty', 'change');
-    expect(el.value.conditions[0].operator).to.equal('contains');
+    expect(el.value.conditions[0]!.operator).to.equal('contains');
 
     const valueInput = conditionRow(el, 0).querySelector('[part="value"]') as LyraInput;
     setAndDispatch(valueInput, 'value', 'zzz', 'lr-input');
-    expect(el.value.conditions[0].value).to.equal('a');
+    expect(el.value.conditions[0]!.value).to.equal('a');
 
     const combinator = el.shadowRoot!.querySelector('[part="combinator"]') as LyraSelect;
     setAndDispatch(combinator, 'value', 'or', 'change');
@@ -1030,6 +1171,10 @@ describe('lr-condition-builder v9 contract', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="condition"]').length).to.equal(6);
     expect(el.shadowRoot!.querySelector('[part="combinator"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-invalid')).to.equal('false');
+    expect(conditionRow(el, 0).getAttribute('aria-invalid')).to.equal('false');
+    expect(el.checkValidity()).to.equal(true);
+    expect(el.reportValidity()).to.equal(true);
     await expect(el).to.be.accessible();
   });
 });

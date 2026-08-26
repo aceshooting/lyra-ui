@@ -36,7 +36,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   }
 }
 
-/** Keep fixed coordinates within the finite, non-negative domain accepted by layeredLayout(). */
+/** Retain every finite canvas coordinate; the canvas plane permits negative positions. */
 function snapshotFlowPosition(value: unknown): Readonly<{ x: number; y: number }> | undefined {
   if (!isRecord(value)) return undefined;
   const x = value['x'];
@@ -45,9 +45,7 @@ function snapshotFlowPosition(value: unknown): Readonly<{ x: number; y: number }
     typeof x !== 'number' ||
     typeof y !== 'number' ||
     !Number.isFinite(x) ||
-    !Number.isFinite(y) ||
-    x < 0 ||
-    y < 0
+    !Number.isFinite(y)
   ) return undefined;
   return Object.freeze({ x, y });
 }

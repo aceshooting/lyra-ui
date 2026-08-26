@@ -17,7 +17,7 @@ class StubTextViewerBase extends LyraElement<LyraTextViewerTargetEventMap> {
   @property({ attribute: 'root-id' }) rootId: string | null = null;
   @property({ attribute: false }) bodyText: string | null = null;
 
-  render() {
+  override render() {
     if (this.noBody) return litHtml`<div part="not-body">no body here</div>${this.renderAnchorLiveRegion()}`;
     if (this.bodyText !== null) {
       return litHtml`<div part="body" id=${this.rootId ?? nothing}><p>${this.bodyText}</p></div
@@ -27,6 +27,10 @@ class StubTextViewerBase extends LyraElement<LyraTextViewerTargetEventMap> {
       ><p id="section-one">${PARAGRAPH_ONE}</p><p>${PARAGRAPH_TWO}</p><p>İzmir</p></div
     >${this.renderAnchorLiveRegion()}`;
   }
+}
+
+interface StubTextViewerBase {
+  renderAnchorLiveRegion(): unknown;
 }
 
 class StubTextViewer extends TextViewerTarget(StubTextViewerBase) {

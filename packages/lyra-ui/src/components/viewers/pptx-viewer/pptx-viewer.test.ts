@@ -14,9 +14,9 @@ import type {
   PptxTextSearchResult,
   PptxViewerApi,
 } from "./pptx-loader.js";
-import { styles } from "./pptx-viewer.styles.js";
 import { getDefaultDocumentRendererRegistry } from "../document-viewer/registry.js";
 import type { LyraHighlight } from "../document-viewer/anchors.js";
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import {
   VIEWER_SEARCH_QUERY_LIMIT,
   VIEWER_SEARCH_WORK_LIMIT,
@@ -424,12 +424,17 @@ describe("lr-pptx-viewer", () => {
       el.src = "https://example.test/deck.pptx";
       await oneEvent(el, "lr-load");
       const target = el.ownerDocument.createElement("div");
+      const committed = el.ownerDocument.createElement('span');
+      committed.textContent = 'committed preview';
+      target.append(committed);
       el.parentElement!.append(target);
       const result = el.renderPageThumbnailToContainer(1, target);
       el.remove();
       ready.resolve();
       expect(await result).to.be.false;
       expect(fake.calls.disposeThumbnail).to.equal(1);
+      expect(target.childNodes.length).to.equal(1);
+      expect(target.firstChild === committed).to.be.true;
     } finally {
       restore();
     }
@@ -815,6 +820,36 @@ describe("lr-pptx-viewer", () => {
       rect.width,
       "live-region inline size stays clipped to 1px"
     ).to.be.at.most(1);
+  });
+
+  it('reports found:false for generated id-less presentation output', async () => {
+    const fake = fakeModule();
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(
+        html`<lr-pptx-viewer></lr-pptx-viewer>`,
+      );
+      el.loadRenderer = async () => fake.module;
+      const loaded = oneEvent(el, 'lr-load');
+      el.src = 'https://example.test/deck.pptx';
+      await loaded;
+      const timing = el as unknown as {
+        anchorTimeoutMs: number;
+        anchorRetryIntervalMs: number;
+      };
+      timing.anchorTimeoutMs = 20;
+      timing.anchorRetryIntervalMs = 2;
+      expect(
+        el.shadowRoot!.querySelector('[part="container"]')!.hasAttribute('id'),
+      ).to.equal(false);
+      const resultEvent = oneEvent(el, 'lr-anchor-result');
+      expect(
+        await el.scrollToAnchor({ kind: 'fragment', id: 'slide-1' }),
+      ).to.equal(false);
+      expect((await resultEvent).detail).to.deep.equal({ found: false });
+    } finally {
+      restore();
+    }
   });
 
   it("is accessible with a mounted presentation and its slide-nav controls visible", async () => {
@@ -1441,9 +1476,43 @@ describe("lr-pptx-viewer", () => {
       el.src = 'https://example.test/deck.pptx';
       await oneEvent(el, 'lr-load');
       const target = el.ownerDocument.createElement('div');
+      const committed = el.ownerDocument.createElement('span');
+      committed.textContent = 'committed preview';
+      target.append(committed);
       el.parentElement!.append(target);
 
       expect(await el.renderPageThumbnailToContainer(1, target)).to.be.false;
+      expect(target.childNodes.length).to.equal(1);
+      expect(target.firstChild === committed).to.be.true;
+    } finally {
+      restore();
+    }
+  });
+
+  it('returns false and preserves prior content when thumbnail rendering throws synchronously', async () => {
+    const fake = fakeModule(2);
+    fake.viewer.renderThumbnailToContainer = () => {
+      throw new Error('thumbnail render failed synchronously');
+    };
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/deck.pptx';
+      await oneEvent(el, 'lr-load');
+      const target = el.ownerDocument.createElement('div');
+      const committed = el.ownerDocument.createElement('span');
+      committed.textContent = 'committed preview';
+      target.append(committed);
+      el.parentElement!.append(target);
+
+      const outcome = await el.renderPageThumbnailToContainer(1, target).then(
+        (value) => value,
+        () => 'rejected' as const,
+      );
+      expect(outcome).to.equal(false);
+      expect(target.childNodes.length).to.equal(1);
+      expect(target.firstChild === committed).to.be.true;
     } finally {
       restore();
     }
@@ -1470,10 +1539,15 @@ describe("lr-pptx-viewer", () => {
       el.src = 'https://example.test/deck.pptx';
       await oneEvent(el, 'lr-load');
       const target = el.ownerDocument.createElement('div');
+      const committed = el.ownerDocument.createElement('span');
+      committed.textContent = 'committed preview';
+      target.append(committed);
       el.parentElement!.append(target);
 
       expect(await el.renderPageThumbnailToContainer(1, target)).to.be.false;
       expect(disposed).to.equal(1);
+      expect(target.childNodes.length).to.equal(1);
+      expect(target.firstChild === committed).to.be.true;
     } finally {
       restore();
     }
@@ -1498,6 +1572,29 @@ describe("lr-pptx-viewer", () => {
       el.page = 999;
       await el.updateComplete;
       expect(el.page).to.equal(3); // clamps to the mounted slide count
+    } finally {
+      restore();
+    }
+  });
+
+  it('rejects negative and out-of-range renderer-owned initial slide indices', async () => {
+    const restore = stubFetch();
+    try {
+      for (const initialIndex of [-1, 2]) {
+        const fake = fakeModule(2);
+        fake.viewer.currentSlideIndex = initialIndex;
+        const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+        el.loadRenderer = async () => fake.module;
+        el.src = `https://example.test/deck-${initialIndex}.pptx`;
+        await oneEvent(el, 'lr-load');
+
+        expect(el.page, `initial index ${initialIndex}`).to.equal(1);
+        expect(el.pageViewerSnapshot, `initial index ${initialIndex}`).to.deep.include({
+          status: 'ready',
+          page: 1,
+          pageCount: 2,
+        });
+      }
     } finally {
       restore();
     }
@@ -1559,10 +1656,47 @@ describe("lr-pptx-viewer", () => {
 });
 
 describe("styling", () => {
-  it("gives previous-button and next-button a hover state", () => {
-    const css = styles.cssText.replace(/\s+/g, " ");
-    expect(css).to.match(/\[part=["']previous-button["']\]:hover/);
-    expect(css).to.match(/\[part=["']next-button["']\]:hover/);
+  it("changes both rendered slide buttons under real pointer hover", async () => {
+    const fake = fakeModule();
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`
+        <lr-pptx-viewer
+          style="--lr-color-brand-quiet: rgb(1, 2, 3)"
+        ></lr-pptx-viewer>
+      `);
+      el.loadRenderer = async () => fake.module;
+      const loaded = oneEvent(el, 'lr-load');
+      el.src = 'https://example.test/deck.pptx';
+      await loaded;
+
+      for (const selector of [
+        '[part="previous-button"]',
+        '[part="next-button"]',
+      ]) {
+        const button = el.shadowRoot!.querySelector(selector) as HTMLElement;
+        const resting = getComputedStyle(button).backgroundColor;
+        const box = button.getBoundingClientRect();
+        await resetMouse();
+        await sendMouse({
+          type: 'move',
+          position: [
+            Math.round(box.left + box.width / 2),
+            Math.round(box.top + box.height / 2),
+          ],
+        });
+        await waitUntil(
+          () => getComputedStyle(button).backgroundColor !== resting,
+          `${selector} never entered its rendered hover state`,
+        );
+        expect(getComputedStyle(button).backgroundColor).to.equal(
+          'rgb(1, 2, 3)',
+        );
+      }
+    } finally {
+      await resetMouse();
+      restore();
+    }
   });
 
   it('mirrors slide-navigation chevrons when inherited direction changes', async () => {

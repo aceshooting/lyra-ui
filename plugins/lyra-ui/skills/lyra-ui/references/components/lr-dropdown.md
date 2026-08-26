@@ -6,6 +6,7 @@
 - **Class** `LyraDropdown`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/overlay/dropdown.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -36,6 +37,11 @@ The trigger always receives `aria-haspopup="menu"`. `popupRole` is narrowed to t
 back to `menu` and never puts a dialog/menu role on the outer positioning shell. This matches Web
 Awesome's fixed inner menu role and Shoelace's consumer-menu ownership rather than exposing a
 Lyra-only role switch.
+
+ArrowDown opens and focuses the first enabled item; ArrowUp opens and focuses the last enabled
+item, whether the interaction owner is slotted or resolved through `for`.
+The inherited `data-popover="close"` descendant action is also supported and follows the same
+disabled/inert and nearest-owner rules described for `lr-popover`.
 
 The generated menu uses the dropdown's presence-sensitive host `aria-label`, `accessibleLabel`, or
 localized "Menu" fallback. A consumer-supplied menu keeps its own naming precedence: its host

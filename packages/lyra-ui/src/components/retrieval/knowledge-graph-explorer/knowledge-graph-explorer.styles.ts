@@ -3,13 +3,13 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    block-size: var(--lr-canvas-reserved-height, var(--lr-size-24rem));
   }
   /* Makes an explicit host height actually bound the explorer. Without this chain the column sized
      itself from content alone -- chiefly the composed graph's intrinsic svg/canvas aspect ratio --
      so a host height left a dead gap or was overflowed. Same block-size: 100% propagation
      lr-multi-split and lr-widget use; min-block-size: 0 lets the graph shrink past its intrinsic
-     size rather than forcing the column taller than its allocation. With no host height both
-     percentages resolve to auto, unchanged. */
+     size rather than forcing the column taller than its allocation. */
   [part='base'] {
     display: flex;
     flex-direction: column;
@@ -93,8 +93,8 @@ export const styles = css`
     overflow-x: clip;
   }
   /* The one flexible row: it takes what the toolbar, search results, pinned row and path strip
-     leave. flex-basis stays auto so an unsized host still gets the graph's intrinsic height, and
-     min-block-size: 0 drops the content-based flex minimum that would stop it shrinking. */
+     leave. flex-basis stays auto so the graph contributes its configured block size when room is
+     distributed; min-block-size: 0 drops the content-based minimum that would stop it shrinking. */
   [part='graph'] {
     display: block;
     inline-size: 100%;

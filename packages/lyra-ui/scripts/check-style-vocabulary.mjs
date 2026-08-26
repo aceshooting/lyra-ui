@@ -1,10 +1,12 @@
+import { isMainModule } from './is-main-module.mjs';
+
 // Fails when a component re-declares a union the shared styling vocabulary already owns.
 // Before 8.0.0 the library shipped ten byte-identical copies of
 // `'neutral' | 'brand' | 'success' | 'warning' | 'danger'` under ten different names, spelled across
 // three different property names (`variant`, `tone`, `kind`). The cost was not the duplication --
 // it was that a consumer could not learn the vocabulary once, and that adding a sixth tone meant
-// finding ten files. `src/internal/variants.ts` now owns each of these; a local copy is a drift
-// vector, so it fails here rather than at review time.
+// finding ten files. `src/internal/variants.ts` and `src/internal/shared-unions.ts` now own these
+// reusable sets; a local copy is a drift vector, so it fails here rather than at review time.
 // The check is on the MEMBER SET, not the name or the order: renaming the alias or reordering the
 // members is exactly how the copies diverged in the first place.
 // Run: node scripts/check-style-vocabulary.mjs
@@ -15,7 +17,10 @@ import { fileURLToPath } from 'node:url';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const componentsRoot = join(packageDir, 'src', 'components');
-const vocabularyPath = join(packageDir, 'src', 'internal', 'variants.ts');
+const vocabularyPaths = [
+  join(packageDir, 'src', 'internal', 'variants.ts'),
+  join(packageDir, 'src', 'internal', 'shared-unions.ts'),
+];
 
 /** Every `export type X = 'a' | 'b';` in a source file, as a name -> sorted member list. */
 export function readStringUnions(source) {
@@ -30,6 +35,24 @@ export function readStringUnions(source) {
 }
 
 export const key = (members) => [...members].sort().join('|');
+
+/** Combines canonical union sources while retaining the module a component should import. */
+export function buildSharedVocabulary(sources) {
+  const owners = new Map();
+  for (const { modulePath, source } of sources) {
+    for (const [name, members] of readStringUnions(source)) {
+      const memberKey = key(members);
+      const existing = owners.get(memberKey);
+      if (existing) {
+        throw new Error(
+          `canonical union \`${name}\` in ${modulePath} duplicates \`${existing.name}\` in ${existing.modulePath}`
+        );
+      }
+      owners.set(memberKey, { name, modulePath });
+    }
+  }
+  return owners;
+}
 
 function sourceFiles(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -49,11 +72,15 @@ const ALLOWED = new Map([
   // happen to be short lowercase words. Collapsing them into LyraVariant would be wrong.
 ]);
 
-if (process.argv[1] && process.argv[1].endsWith('check-style-vocabulary.mjs')) {
-  const shared = readStringUnions(readFileSync(vocabularyPath, 'utf8'));
-  const sharedByKey = new Map([...shared].map(([name, members]) => [key(members), name]));
+if (isMainModule(import.meta.url)) {
+  const sharedByKey = buildSharedVocabulary(
+    vocabularyPaths.map((file) => ({
+      modulePath: relative(join(packageDir, 'src'), file).replaceAll('\\', '/'),
+      source: readFileSync(file, 'utf8'),
+    }))
+  );
   if (sharedByKey.size === 0) {
-    throw new Error('parsed no shared unions from internal/variants.ts -- the file shape changed');
+    throw new Error('parsed no shared unions from the internal vocabulary modules -- their file shape changed');
   }
 
   const findings = [];
@@ -62,7 +89,9 @@ if (process.argv[1] && process.argv[1].endsWith('check-style-vocabulary.mjs')) {
     for (const [name, members] of readStringUnions(readFileSync(file, 'utf8'))) {
       const owner = sharedByKey.get(key(members));
       if (owner && !ALLOWED.has(name)) {
-        findings.push(`${where}: \`${name}\` duplicates \`${owner}\` -- import it from internal/variants.ts instead`);
+        findings.push(
+          `${where}: \`${name}\` duplicates \`${owner.name}\` -- import it from ${owner.modulePath} instead`
+        );
       }
     }
   }
@@ -70,10 +99,11 @@ if (process.argv[1] && process.argv[1].endsWith('check-style-vocabulary.mjs')) {
   if (findings.length) {
     console.error(`Style-vocabulary contract failed with ${findings.length} finding(s):`);
     for (const finding of findings) console.error(`- ${finding}`);
-    console.error('\nThe shared unions live in src/internal/variants.ts. Re-export the shared name if the manifest needs the local one.');
+    console.error(
+      '\nShared unions live in src/internal/variants.ts and src/internal/shared-unions.ts. Re-export a local alias when a mirrored manifest contract requires its existing name.'
+    );
     process.exitCode = 1;
   } else {
     console.log(`Style-vocabulary contract passed: ${sharedByKey.size} shared unions, no component-local duplicates.`);
   }
 }
-

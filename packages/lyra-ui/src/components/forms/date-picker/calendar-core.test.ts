@@ -14,18 +14,24 @@ import {
   resolveFirstDayOfWeek,
 } from './calendar-core.js';
 
+const matrixDate = (matrix: Date[][], row: number, column: number): Date => {
+  const date = matrix[row]?.[column];
+  if (!date) throw new Error(`Missing calendar cell at ${row},${column}.`);
+  return date;
+};
+
 it('builds a 6x7 month matrix', () => {
   const m = monthMatrix(2026, 6, 1); // July 2026, Monday-first
   expect(m.length).to.equal(6);
-  expect(m[0].length).to.equal(7);
+  expect(m[0]?.length).to.equal(7);
   expect(formatISO(new Date(2026, 6, 7))).to.equal('2026-07-07');
 });
 
 it('week-aligns to the first day of week', () => {
   const sun = monthMatrix(2026, 6, 0); // Sunday-first
-  expect(sun[0][0].getDay()).to.equal(0);
+  expect(matrixDate(sun, 0, 0).getDay()).to.equal(0);
   const mon = monthMatrix(2026, 6, 1); // Monday-first
-  expect(mon[0][0].getDay()).to.equal(1);
+  expect(matrixDate(mon, 0, 0).getDay()).to.equal(1);
 });
 
 it('round-trips ISO parse/format', () => {
@@ -43,7 +49,7 @@ it('round-trips years 0000, 0001, 0099, 0100, and 9999 without the Date 1900 rem
     expect(formatISO(parsed!), iso).to.equal(iso);
   }
   expect(parseISO('0001-02-29')).to.equal(null);
-  expect(formatISO(monthMatrix(99, 11, 0)[0][0])).to.match(/^0099-/);
+  expect(formatISO(matrixDate(monthMatrix(99, 11, 0), 0, 0))).to.match(/^0099-/);
 });
 
 it('rejects calendar-invalid dates instead of letting them roll over to the next month', () => {

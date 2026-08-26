@@ -38,6 +38,7 @@ export interface LyraDocumentViewerEventMap {
   'lr-close': CustomEvent<DocumentViewerCloseReason>;
   'lr-download': CustomEvent<{ src: string; filename: string }>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
+  'lr-render-error': CustomEvent<{ error: unknown }>;
 }
 
 /**
@@ -65,6 +66,9 @@ export interface LyraDocumentViewerEventMap {
  *   produces `{ found: false }`; the `<lr-document-preview>` fallback reports its actual anchor
  *   result. An anchor-capable renderer reports its own jump result through its embedded
  *   `DocumentAnchorTarget` mixin, which composes up through this element unchanged.
+ * @event lr-render-error - Fired by the fallback preview or an embedded renderer when fetching,
+ *   parsing, sanitizing, or rendering fails. `detail: { error }` composes through this shell
+ *   unchanged.
  * @csspart body - Wrapper around the active renderer or fallback preview. It exposes explicit
  *   `aria-busy`; visible loading/error text is ordinary content and transitions announce through
  *   the shared document-level polite/assertive sinks.

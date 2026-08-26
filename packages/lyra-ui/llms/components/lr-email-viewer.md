@@ -6,9 +6,10 @@
 - **Class** `LyraEmailViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/email-viewer/email-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `postal-mime` — see `llms/peers.md`
-- **Themeable via** 24 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 25 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -23,6 +24,15 @@ attachment row is a real `<button>` that emits `lr-attachment-open` with an immu
 of the decoded bytes; opening, downloading, or object-URL'ing them is the host's job (e.g.
 `URL.createObjectURL(content)` → `<lr-document-viewer>` → revoke on
 `lr-close`).
+An attachment with no filename uses the localized `emailViewerUnnamedAttachment` fallback
+(`"Unnamed attachment"` in English) for its visible name, open-button accessible name, and
+`lr-attachment-open` detail. The fallback resolves while rendering, so changing the locale or
+per-instance `strings` after the message loads updates it without reparsing the message.
+
+Sanitized HTML uses the passive-document profile: anchors, form controls, and custom elements are
+unwrapped to ordinary text/children where safe, remote navigation/resource attributes are removed,
+and an `<a>` itself never remains. Images render only inline base64 GIF, JPEG, PNG, or WebP data;
+same-document SVG fragment references may remain.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the message.
@@ -35,7 +45,10 @@ localized show/hide toggle. `false` (the default) preserves the full body render
 host `aria-label` makes the host the sole named semantic owner; an explicitly empty host label
 keeps the shadow `region` with an empty name, and an absent host label falls back to `name` or the
 localized label. `highlights`, `activeHighlightId`, `anchor`, and
-`anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
+`anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract. A fragment is
+an exact DOM `id` lookup: Lyra generates no ids for message headers or a plain-text body, while an
+HTML message can resolve only an id retained from its sanitized body. Without such an id the jump
+reports `found: false`; text-quote anchors work across all rendered message text.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on rendered message text and emit the shared search/anchor events.
@@ -64,7 +77,10 @@ The three shared text-viewer events bubble and compose and are non-cancelable.
 `attachment-item`), `attachment-name` (an attachment's filename, inside `attachment-button`),
 `attachment-size` (an attachment's formatted file size, inside `attachment-button`), `quoted` (a
 folded quoted-text block, hidden until expanded, only while `foldQuotes`), `quote-toggle` (the
-show/hide-quoted-text toggle button, only while `foldQuotes`), `spinner`, and `error`.
+show/hide-quoted-text toggle button, only while `foldQuotes`), `spinner`, `error`, and
+`anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest anchor-jump message; the
+spoken copy is appended to the shared document-level polite sink only while the viewer and its
+composed ancestors are exposed to the accessibility tree).
 
 **Themeable custom properties:** `--lr-email-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.

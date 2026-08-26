@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A human-in-the-loop gate for a single proposed tool call: approve, deny, or edit its arguments first. Initial focus lands on Deny (not Approve) since approving is the consequential action here — see the component source for the full rationale.',
+          'A human-in-the-loop gate for a single proposed tool call: approve, deny, or edit its arguments first. Initial focus lands on Deny (not Approve) since approving is the consequential action here. Backdrop dismissal is opt-in through lightDismiss; Escape remains available by default.',
       },
     },
   },
@@ -36,6 +36,20 @@ export const Default: Story = {
     <div>
       <button @click=${openDialog}>Propose web_search call</button>
       <lr-tool-approval-dialog proposal-key="run-1:call-1" tool-name="web_search" .args=${SEARCH_ARGS}></lr-tool-approval-dialog>
+    </div>
+  `,
+};
+
+export const LightDismiss: Story = {
+  name: 'Opt-in backdrop dismissal',
+  render: () => html`
+    <div>
+      <button @click=${openDialog}>Propose light-dismissible call</button>
+      <lr-tool-approval-dialog
+        light-dismiss
+        tool-name="web_search"
+        .args=${SEARCH_ARGS}
+      ></lr-tool-approval-dialog>
     </div>
   `,
 };

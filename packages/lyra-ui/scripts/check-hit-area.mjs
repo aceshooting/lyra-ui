@@ -1,3 +1,5 @@
+import { isMainModule } from './is-main-module.mjs';
+
 // Static check for the shared minimum icon-button hit-area convention (see
 // src/internal/tokens.styles.ts's `--lr-icon-button-size`, 2.5rem/40px):
 // every independently-interactive, icon-sized control (a literal `<button>`,
@@ -24,7 +26,10 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const sourceDir = path.join(packageDir, 'src', 'components');
+const sourceRoots = [
+  path.join(packageDir, 'src', 'components'),
+  path.join(packageDir, 'src', 'internal'),
+];
 
 const FLOOR_PX = 40; // --lr-icon-button-size == 2.5rem == 40px at the default 16px root.
 const REM_PX = 16;
@@ -944,20 +949,28 @@ export function checkStaticHitAreaFixture(
 // ---- main -------------------------------------------------------------
 
 function main() {
-  const classFiles = walk(sourceDir)
-    .filter((file) => file.endsWith('.class.ts'))
-    .sort();
+  const [componentsRoot, internalRoot] = sourceRoots;
+  const sourceFiles = [
+    ...walk(componentsRoot).filter((file) => file.endsWith('.class.ts')),
+    ...walk(internalRoot).filter(
+      (file) =>
+        file.endsWith('.ts') &&
+        !file.endsWith('.test.ts') &&
+        !file.endsWith('.stories.ts') &&
+        !file.endsWith('.d.ts'),
+    ),
+  ].sort();
 
   const errors = [];
   let candidateCount = 0;
   let exemptCount = 0;
 
-  for (const classFile of classFiles) {
-    const rawSource = fs.readFileSync(classFile, 'utf8');
-    const relPath = path.relative(packageDir, classFile).replaceAll(path.sep, '/');
+  for (const sourceFile of sourceFiles) {
+    const rawSource = fs.readFileSync(sourceFile, 'utf8');
+    const relPath = path.relative(packageDir, sourceFile).replaceAll(path.sep, '/');
     const result = checkStaticHitAreaFixture(
       rawSource,
-      resolveStylesSources(classFile, rawSource),
+      resolveStylesSources(sourceFile, rawSource),
       relPath,
     );
     errors.push(...result.errors);
@@ -973,11 +986,11 @@ function main() {
     process.exitCode = 1;
   } else {
     console.log(
-      `Hit-area contract passed: ${candidateCount} icon-button candidate(s) checked across ${classFiles.length} components (${exemptCount} exempted).`,
+      `Hit-area contract passed: ${candidateCount} icon-button candidate(s) checked across ${sourceFiles.length} component/internal source files (${exemptCount} exempted).`,
     );
   }
 }
 
-if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))) {
+if (isMainModule(import.meta.url)) {
   main();
 }

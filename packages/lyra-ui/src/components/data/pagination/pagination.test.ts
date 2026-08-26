@@ -1,7 +1,6 @@
 import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./pagination.js";
 import type { LyraPagination } from "./pagination.js";
-import { styles } from "./pagination.styles.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
@@ -1090,47 +1089,62 @@ it("renders the compact page input with textfield appearance to suppress native 
 });
 
 describe("nav button hover specificity", () => {
-  it("wraps the internal hover:not(:disabled) rule in :where() so a consumer ::part(...):hover override wins without !important", async () => {
-    const el = await pagination();
-    const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
-      .flatMap((sheet) => Array.from(sheet.cssRules))
-      .map((rule) => rule.cssText.replace(/"/g, "'"))
-      .find(
-        (text) =>
-          text.includes(":hover") &&
-          (text.includes("[part~='previous-button']") ||
-            text.includes("[part~='next-button']"))
-      );
-    expect(internalRule).to.contain(":where(");
-  });
-
-  it("wraps every interactive state qualifier in :where()", () => {
-    const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
-    for (const selector of [
-      "[part~='next-button']:where(:hover)",
-      "[part~='next-button']:where(:active)",
-      "[part~='next-button']:where(:focus-visible)",
-      "[part~='next-button']:where(:disabled)",
-      "[part~='button']:where([aria-disabled='true'])",
-      "[part~='page-current']:where(:hover)",
-      "[part~='page-current']:where(:active)",
-    ]) {
-      expect(css, selector).to.contain(selector);
+  it("lets a consumer ::part(...):hover override win without !important", async () => {
+    const style = document.createElement("style");
+    style.textContent = `
+      lr-pagination::part(previous-button):hover,
+      lr-pagination::part(next-button):hover,
+      lr-pagination::part(page-current):hover {
+        background: rgb(1, 2, 3);
+      }
+    `;
+    document.head.append(style);
+    try {
+      const el = await pagination();
+      const targets = [
+        el.shadowRoot!.querySelector<HTMLElement>('[part~="previous-button"]')!,
+        el.shadowRoot!.querySelector<HTMLElement>('[part~="next-button"]')!,
+        el.shadowRoot!.querySelector<HTMLElement>('[part~="page-current"]')!,
+      ];
+      for (const target of targets) {
+        target.scrollIntoView({ block: "center" });
+        const rect = target.getBoundingClientRect();
+        try {
+          await sendMouse({
+            type: "move",
+            position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+          });
+          await waitUntil(
+            () => getComputedStyle(target).backgroundColor === "rgb(1, 2, 3)",
+            `${target.getAttribute("part")} did not accept the consumer hover override`,
+          );
+        } finally {
+          await resetMouse();
+        }
+      }
+    } finally {
+      style.remove();
     }
   });
 });
 
 describe("page-input invalid-state specificity (regression)", () => {
-  it("wraps the internal [aria-invalid] rule in :where() so a consumer ::part(page-input) border-color override wins", async () => {
-    const el = await compactPagination();
-    const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
-      .flatMap((sheet) => Array.from(sheet.cssRules))
-      .map((rule) => rule.cssText.replace(/"/g, "'"))
-      .find(
-        (text) =>
-          text.includes("[part='page-input']") && text.includes("aria-invalid")
-      );
-    expect(internalRule).to.contain(":where(");
+  it("lets a consumer ::part(page-input) border-color override win while invalid", async () => {
+    const style = document.createElement("style");
+    style.textContent = `lr-pagination::part(page-input) { border-color: rgb(1, 2, 3); }`;
+    document.head.append(style);
+    try {
+      const el = await compactPagination();
+      const input = el.shadowRoot!.querySelector('[part="page-input"]') as HTMLInputElement;
+      input.value = "0";
+      input.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
+      await el.updateComplete;
+      expect(input.getAttribute("aria-invalid")).to.equal("true");
+      expect(getComputedStyle(input).borderTopColor).to.equal("rgb(1, 2, 3)");
+    } finally {
+      style.remove();
+    }
   });
 
   it("lets a consumer retint the invalid page-input border via the scoped --lr-pagination-invalid-border cssprop (regression)", async () => {
@@ -1390,15 +1404,15 @@ describe("numbered page list", () => {
       "a",
       "a",
     ]);
-    expect(nodes[0].getAttribute("href")).to.equal("/products?page=1");
-    expect(nodes[2].getAttribute("href")).to.equal("/products?page=3");
+    expect(nodes[0]!.getAttribute("href")).to.equal("/products?page=1");
+    expect(nodes[2]!.getAttribute("href")).to.equal("/products?page=3");
     expect(
-      nodes[1].hasAttribute("href"),
+      nodes[1]!.hasAttribute("href"),
       "the current page is where the reader already is"
     ).to.be.false;
-    expect(nodes[1].getAttribute("aria-current")).to.equal("page");
+    expect(nodes[1]!.getAttribute("aria-current")).to.equal("page");
     // No target, therefore no rel to get wrong.
-    expect(nodes[0].hasAttribute("target")).to.be.false;
+    expect(nodes[0]!.hasAttribute("target")).to.be.false;
   });
 
   it("removes every link-mode tab stop while disabled or loading", async () => {
@@ -1540,9 +1554,9 @@ describe("numbered page list", () => {
     await el.updateComplete;
     const nodes = pageNodes(el);
 
-    expect(nodes[2].getAttribute("href")).to.equal("#results/3");
+    expect(nodes[2]!.getAttribute("href")).to.equal("#results/3");
     expect(
-      nodes[2].textContent!.trim(),
+      nodes[2]!.textContent!.trim(),
       "the visible label is still localized"
     ).to.equal(new Intl.NumberFormat("ar-EG").format(3));
   });
@@ -1563,7 +1577,7 @@ describe("numbered page list", () => {
       "button",
     ]);
     expect(
-      nodes[0].hasAttribute("href"),
+      nodes[0]!.hasAttribute("href"),
       "the inactive current link is not resolved"
     ).to.equal(false);
   });
@@ -1850,7 +1864,7 @@ describe("numbered page list", () => {
     it("defaults to outlined: a bordered control on the surface", async () => {
       const el = await appearanceFixture();
       expect(el.appearance).to.equal("outlined");
-      const page = pageNodes(el)[0];
+      const page = pageNodes(el)[0]!;
       expect(getComputedStyle(page).borderTopStyle).to.equal("solid");
       expect(getComputedStyle(page).borderTopColor).to.equal(
         resolvedInShadow(
@@ -1870,28 +1884,28 @@ describe("numbered page list", () => {
 
     it("strips both the fill and the border for plain, and keeps the border for filled-outlined", async () => {
       const plain = await appearanceFixture("plain");
-      expect(getComputedStyle(pageNodes(plain)[0]).backgroundColor).to.equal(
+      expect(getComputedStyle(pageNodes(plain)[0]!).backgroundColor).to.equal(
         "rgba(0, 0, 0, 0)"
       );
-      expect(getComputedStyle(pageNodes(plain)[0]).borderTopColor).to.equal(
+      expect(getComputedStyle(pageNodes(plain)[0]!).borderTopColor).to.equal(
         "rgba(0, 0, 0, 0)"
       );
 
       const filled = await appearanceFixture("filled");
-      expect(getComputedStyle(pageNodes(filled)[0]).borderTopColor).to.equal(
+      expect(getComputedStyle(pageNodes(filled)[0]!).borderTopColor).to.equal(
         "rgba(0, 0, 0, 0)"
       );
       expect(
-        getComputedStyle(pageNodes(filled)[0]).backgroundColor
+        getComputedStyle(pageNodes(filled)[0]!).backgroundColor
       ).to.not.equal("rgba(0, 0, 0, 0)");
 
       const filledOutlined = await appearanceFixture("filled-outlined");
       expect(
-        getComputedStyle(pageNodes(filledOutlined)[0]).borderTopColor
+        getComputedStyle(pageNodes(filledOutlined)[0]!).borderTopColor
       ).to.not.equal("rgba(0, 0, 0, 0)");
       expect(
-        getComputedStyle(pageNodes(filledOutlined)[0]).backgroundColor
-      ).to.equal(getComputedStyle(pageNodes(filled)[0]).backgroundColor);
+        getComputedStyle(pageNodes(filledOutlined)[0]!).backgroundColor
+      ).to.equal(getComputedStyle(pageNodes(filled)[0]!).backgroundColor);
     });
 
     it("keeps the current page a solid brand chip in every appearance, accent included", async () => {
@@ -1906,7 +1920,7 @@ describe("numbered page list", () => {
         const current = el.shadowRoot!.querySelector(
           '[part~="page-current"]'
         ) as HTMLElement;
-        const other = pageNodes(el)[0];
+        const other = pageNodes(el)[0]!;
         expect(getComputedStyle(current).backgroundColor, appearance).to.equal(
           resolvedInShadow(
             el,
@@ -1925,8 +1939,8 @@ describe("numbered page list", () => {
       const accent = await appearanceFixture("accent");
       const outlined = await appearanceFixture("outlined");
       expect(
-        getComputedStyle(pageNodes(accent)[0]).backgroundColor
-      ).to.not.equal(getComputedStyle(pageNodes(outlined)[0]).backgroundColor);
+        getComputedStyle(pageNodes(accent)[0]!).backgroundColor
+      ).to.not.equal(getComputedStyle(pageNodes(outlined)[0]!).backgroundColor);
     });
   });
 });

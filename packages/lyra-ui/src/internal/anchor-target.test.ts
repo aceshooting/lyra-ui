@@ -17,9 +17,13 @@ class StubAnchorTargetBase extends LyraElement<LyraAnchorTargetEventMap> {
   @property({ type: Number, attribute: 'apply-succeeds-after' }) applySucceedsAfter = 0;
   applyCallCount = 0;
 
-  render() {
+  override render() {
     return litHtml`<div part="content">stub content for selection tests</div>${this.renderAnchorLiveRegion()}`;
   }
+}
+
+interface StubAnchorTargetBase {
+  renderAnchorLiveRegion(): unknown;
 }
 
 class StubAnchorTarget extends DocumentAnchorTarget(StubAnchorTargetBase) {
@@ -201,7 +205,7 @@ describe('DocumentAnchorTarget mixin', () => {
     ]);
   });
 
-  it('drops a highlight whose anchor is missing, null, or non-discriminated while retaining later valid siblings', async () => {
+  it('drops highlights whose anchors are missing, null, arrays, blank, or non-discriminated while retaining later valid siblings', async () => {
     const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub></lr-anchor-target-test-stub>`);
     const validAnchor: LyraAnchor = { kind: 'page', page: 1 };
 
@@ -210,26 +214,29 @@ describe('DocumentAnchorTarget mixin', () => {
       { id: 'b', anchor: null },
       { id: 'c', anchor: [] },
       { id: 'd', anchor: {} },
-      { id: 'e', anchor: validAnchor },
+      { id: 'e', anchor: { kind: '   ' } },
+      { id: 'f', anchor: validAnchor },
     ] as unknown as readonly LyraHighlight[];
 
-    expect(el.highlights.map((highlight) => highlight.id)).to.deep.equal(['e']);
+    expect(el.highlights.map((highlight) => highlight.id)).to.deep.equal(['f']);
     expect(el.highlights[0]!.anchor).to.equal(validAnchor);
   });
 
-  it('degrades a hostile anchor getter to skipping that one record while keeping later valid siblings', async () => {
+  it('keeps later valid highlights when an earlier anchor getter throws', async () => {
     const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub></lr-anchor-target-test-stub>`);
     const validAnchor: LyraAnchor = { kind: 'page', page: 1 };
-    const hostile = {
-      id: 'hostile',
-      get anchor(): never {
-        throw new Error('boom');
+    const hostile = { id: 'hostile' } as Record<string, unknown>;
+    Object.defineProperty(hostile, 'anchor', {
+      enumerable: true,
+      get() {
+        throw new Error('hostile anchor getter');
       },
-    };
+    });
 
     el.highlights = [hostile, { id: 'safe', anchor: validAnchor }] as unknown as readonly LyraHighlight[];
 
     expect(el.highlights.map((highlight) => highlight.id)).to.deep.equal(['safe']);
+    expect(el.highlights[0]!.anchor).to.equal(validAnchor);
   });
 
   it('bounds snapshot admission while allowing one ignored entry to be replaced', async () => {

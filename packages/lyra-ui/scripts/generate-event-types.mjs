@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isMainModule } from './is-main-module.mjs';
 
 // Generates `src/events.ts` — the package's global typed-event surface.
 // Why generated rather than authored: the library dispatches hundreds of events across ~200
@@ -16,7 +17,7 @@
 // The output is deterministic (stable sort order, no timestamps, no absolute paths) so
 // `check-event-types.mjs` can regenerate it in memory and diff.
 
-import { readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -388,6 +389,6 @@ function main() {
   );
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
+if (isMainModule(import.meta.url)) {
   main();
 }

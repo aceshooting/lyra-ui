@@ -6,6 +6,7 @@
 - **Class** `LyraProvenancePanel`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/provenance-panel/provenance-panel.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 7 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
@@ -25,11 +26,14 @@ component. Pure projection + event conduit: no fetching, no graph/viewer imports
 LyraEntity[]; relationships?: { path: LyraPathElement[] }[]; communities?: LyraCommunity[]; chunks?:
 LyraChunk[] }`; each present array renders through the matching sibling component (`lr-entity-
 chip` row, one `lr-path-strip` per relationship, `lr-community-card`, `lr-chunk-inspector`);
-  `null` or every section empty renders the overall empty state
+  `null` or every section empty renders the overall empty state. Non-array nested collections are
+  treated as empty; malformed relationship records and blank/later-duplicate entity, community, or
+  chunk ids are omitted without hiding valid neighboring records
 - `types: LyraNodeTypeStyle[] = []` (attribute: false) — forwarded to the Entities section's chips
 - `thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 }` (attribute: false) —
   forwarded to the Text chunks section's `lr-chunk-inspector`
-- `label: string = ''` — fallback name for the stable overall group. A non-empty host `aria-label`
+- `label?: string` — fallback name for the stable overall group; omission uses the localized panel
+  label. A non-empty host `aria-label`
   makes the host the sole overall owner; an explicitly empty host label stays empty
 
 **Events:** `lr-toggle` (`detail: { section, expanded }`, a section header was toggled —

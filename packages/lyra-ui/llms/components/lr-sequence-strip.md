@@ -6,6 +6,7 @@
 - **Class** `LyraSequenceStrip`, also available unregistered from `@aceshooting/lyra-ui/components/data/sequence-strip/sequence-strip.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 11 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -25,10 +26,11 @@ Home/End move the stop — direction-aware, so the arrows swap under RTL — and
 the same `[part="tooltip"]` detail that pointer hover does. That tooltip is positioned from the
 active cell, not from the center of the whole strip. The tooltip is visual only and is not
 wired through `aria-describedby`, because the cell's own `aria-label` already exposes the identical
-text and describing it again would duplicate the announcement. Cells are inspectable, not
-actionable: there is no per-cell click/activation event, so unlike `<lr-heatmap>` there is nothing
-to fire on Enter/Space. Setting `showLegend` additionally renders a static `[part="legend"]` key
-below the strip, so the color-to-category mapping is readable without visiting each cell.
+text and describing it again would duplicate the announcement. Cells are actionable: clicking a
+cell, or pressing Enter/Space on the roving cell, emits `lr-item-activate`. Selection is controlled,
+so the consumer updates `selectedIndex` when it accepts that activation. Setting `showLegend`
+additionally renders a static `[part="legend"]` key below the strip, so the color-to-category
+mapping is readable without visiting each cell.
 
 A standard host `aria-label` names the host itself and is not copied verbatim to the internal
 list; `accessible-label` remains the list-specific override and otherwise the generated
@@ -151,9 +153,9 @@ the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-fon
 
 **Known gotchas:**
 
-- there is no `lr-cell-click`/keyboard-interaction model at all — unlike `lr-heatmap`'s
-  canvas cells, a strip cell is purely a hover target; build a click handler outside this component
-  (e.g. on a wrapping element) if per-item activation is needed.
+- the activation event is `lr-item-activate`, not `lr-cell-click`. Click and Enter/Space emit the
+  activated item's `index`/`id`, but do not mutate the controlled `selectedIndex`; listen for the
+  event and update that property when the application accepts the activation.
 - an `items` entry whose `categoryId` has no matching `categories` entry still renders its own cell
   (background `transparent`) rather than being dropped, so a strip stays the same length as `items`
   regardless of `categories` coverage.

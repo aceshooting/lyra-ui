@@ -6,6 +6,7 @@
 - **Class** `LyraDashboardGrid`, also available unregistered from `@aceshooting/lyra-ui/components/layout/dashboard-grid/dashboard-grid.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 5 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -87,4 +88,4 @@ draggable/resizable target; set it to `transparent` to opt out of the hover trea
   `LyraDashboardCollisionDetail`, and `LyraDashboardLayoutChangeDetail` — readonly event-detail
   interfaces used by `LyraDashboardGridEventMap`.
 - `--lr-dashboard-grid-collision-outline-color` — Outline color of a cell whose current drag/resize preview collides with another cell. Default: `var(--lr-color-danger)`.
-- `--lr-dashboard-grid-interaction-shadow` — Box shadow applied during a cell drag or resize. Default: `var(--lr-shadow)`.
+- `--lr-dashboard-grid-interaction-shadow` — Box shadow applied during a cell drag or resize. Default: `var(--lr-shadow-m)`.

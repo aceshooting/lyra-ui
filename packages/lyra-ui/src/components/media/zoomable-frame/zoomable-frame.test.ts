@@ -1,4 +1,4 @@
-import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './zoomable-frame.js';
 import type { LyraZoomableFrame } from './zoomable-frame.js';
@@ -310,14 +310,20 @@ describe('zoom controls and interaction', () => {
         type: 'move',
         position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
       });
-      await aTimeout(0);
     };
 
     try {
       await resetMouse();
       await moveTo(defaultButton);
-      expect(getComputedStyle(defaultButton).backgroundColor === defaultBackground).to.be.false;
+      await waitUntil(
+        () => getComputedStyle(defaultButton).backgroundColor !== defaultBackground,
+        'default zoom control hover background did not paint',
+      );
       await moveTo(themedButton);
+      await waitUntil(
+        () => getComputedStyle(themedButton).backgroundColor === 'rgb(29, 30, 31)',
+        'themed zoom control hover background did not paint',
+      );
       expect(getComputedStyle(themedButton).backgroundColor).to.equal('rgb(29, 30, 31)');
     } finally {
       await resetMouse();
@@ -351,7 +357,7 @@ describe('zoom controls and interaction', () => {
     }
   });
 
-  it('supports localized slotted icon controls and keyboard plus/minus shortcuts', async () => {
+  it('uses a labelled native-button group and supports keyboard plus/minus shortcuts', async () => {
     const el = await fixture<LyraZoomableFrame>(html`
       <lr-zoomable-frame zoom="1" zoom-levels="50% 100% 150%">
         <span slot="zoom-in-icon">larger</span>
@@ -359,7 +365,7 @@ describe('zoom controls and interaction', () => {
       </lr-zoomable-frame>
     `);
     const controls = el.shadowRoot!.querySelector('[part="controls"]') as HTMLElement;
-    expect(controls.getAttribute('role')).to.equal('toolbar');
+    expect(controls.getAttribute('role')).to.equal('group');
     expect(el.querySelectorAll('[slot="zoom-in-icon"]').length).to.equal(1);
     controls.dispatchEvent(new KeyboardEvent('keydown', { key: '+', bubbles: true, cancelable: true }));
     expect(el.zoom).to.equal(1.5);
@@ -367,7 +373,7 @@ describe('zoom controls and interaction', () => {
     expect(el.zoom).to.equal(1);
   });
 
-  it('leaves zoom shortcuts alone when toolbar keydown has modifiers or an unrelated key', async () => {
+  it('leaves zoom shortcuts alone when control-group keydown has modifiers or an unrelated key', async () => {
     const el = await fixture<LyraZoomableFrame>(html`
       <lr-zoomable-frame zoom="1" zoom-levels="50% 100% 150%"></lr-zoomable-frame>
     `);
@@ -474,7 +480,7 @@ describe('zoom controls and interaction', () => {
     expect(clicks).to.equal(0);
   });
 
-  it('routes the iframe and toolbar accessible names through .strings', async () => {
+  it('routes the iframe and control-group accessible names through .strings', async () => {
     const el = await fixture<LyraZoomableFrame>(html`
       <lr-zoomable-frame .strings=${{
         zoomableFrameLabel: 'Aperçu intégré',

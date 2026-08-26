@@ -6,6 +6,7 @@
 - **Class** `LyraChart`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
 - **Themeable via** 16 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -47,11 +48,12 @@ property).
   included in the generated accessible description, mirroring `lr-heatmap` — the label is
   consumer-supplied text and so is not localized, and an unlabelled line has no nameable meaning to
   announce. Needs the optional `chartjs-plugin-annotation` peer, loaded on first actual demand, so a
-  page with no annotated charts never downloads it; without it the chart still renders and a single
-  console warning explains the no-op. The plugin is registered globally, like `chartjs-plugin-zoom`
-  and unlike `chartjs-plugin-datalabels`: it draws nothing unless a chart supplies annotation
-  options, so the registration is unobservable to charts that set none, and registration is also
-  what installs the plugin's own element defaults
+  page with no annotated charts never downloads it; without it the chart still renders, and a
+  console warning plus a localized visible warning and light-DOM announcement explain the no-op.
+  The plugin is registered globally, like `chartjs-plugin-zoom` and unlike
+  `chartjs-plugin-datalabels`: it draws nothing unless a chart supplies annotation options, so the
+  registration is unobservable to charts that set none, and registration is also what installs the
+  plugin's own element defaults
 - `scaleType: 'linear' | 'logarithmic' = 'linear'` (attribute `scale-type`, type
   `LyraChartScaleType`) — scale type for the **value** axis; the categorical axis is never
   affected. `'logarithmic'` plots data spanning several orders of magnitude (prices, latency
@@ -75,7 +77,9 @@ property).
   announcements, generated summaries, and the accessible table. Point wording is localized as
   whole messages: `chartPointCoordinates`, `chartBubblePointCoordinates`, and
   `chartLabeledPoint` own coordinate names, order, separators, and the label wrapper. A caller's
-  point label is interpolated verbatim rather than translated or parsed.
+  point label is interpolated verbatim rather than translated or parsed. At runtime, non-record
+  dataset entries are dropped while valid sibling series remain usable; an omitted `data`/`points`
+  payload is still a valid empty series.
   - `pointRadius` takes a single number (applied to every point) **or** an array matching `data`'s
     length that sizes each point independently — passed straight through to Chart.js, which
     supports both natively. Useful for emphasizing a single outlier or the latest reading without
@@ -365,11 +369,12 @@ resolved to concrete colors/CSS-pixel numbers on every draw; `rem` uses the live
 **Optional peer deps:** `chart.js` (mandatory peer, lazy-imported on every `connectedCallback()`
 regardless of options), `chartjs-plugin-zoom` (lazy-imported *additionally* only when `zoom` is — or
 later becomes — `true`; never fetched for a chart that keeps `zoom` unset/false, since the plugin
-has a hard dependency on `hammerjs`), and `chartjs-plugin-datalabels` only when `data-labels` or
-`stack-totals` is enabled. Each capability load is memoized once per page, registering
-only the tree-shaken controller/element/scale subset actually used. A failed zoom or data-label
-peer is not a failed chart: the canvas, legend, and accessible alternative remain usable; the
-requested enhancement is disabled and a localized static `feature-warning` is visibly rendered and
+has a hard dependency on `hammerjs`), `chartjs-plugin-datalabels` only when `data-labels` or
+`stack-totals` is enabled, and `chartjs-plugin-annotation` only when `annotations` contains a usable
+entry. Each capability load is memoized once per page, registering only the tree-shaken
+controller/element/scale subset actually used. A failed zoom, data-label, or annotation peer is not
+a failed chart: the canvas, legend, and accessible alternative remain usable; the requested
+enhancement is disabled and a localized static `feature-warning` is visibly rendered and
 announced. In particular, unavailable data labels do not remove generated table totals.
 
 ```html
@@ -401,8 +406,10 @@ announced. In particular, unavailable data labels do not remove generated table 
   `y2` block. `xLabel`/`yLabel`/`y2Label` are still silently inert for all four of those types (a
   radial scale and "no scale" both have nowhere to put an axis title) — reach a titled radial scale
   only via raw `config`.
-- No `chartjs-plugin-annotation` is registered by default — reachable only by importing it
-  separately and using the raw `config` passthrough (Chart.js's registry is a global singleton).
+- `annotations` loads and registers `chartjs-plugin-annotation` on first actual demand; consumers
+  do not hand-register it or route ordinary reference lines/bands through raw `config`. A chart
+  with no usable annotations never requests the peer. Raw `config` remains the escape hatch for
+  plugin-specific annotation options outside the declarative surface.
 - while the `chart.js` peer is resolving, `render()` swaps in a `<lr-skeleton shape="rect">` for
   the canvas, and the **host element itself** (not the skeleton) carries `aria-busy="true"` — set/
   cleared in `updated()` off the private `loading` state (same lazy-load pattern as

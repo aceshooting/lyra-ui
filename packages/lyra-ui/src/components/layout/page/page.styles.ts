@@ -3,11 +3,11 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     --_lr-page-aside-width: var(--aside-width, auto);
-    --_lr-page-banner-height: var(--banner-height, 0);
-    --_lr-page-header-height: var(--header-height, 0);
+    --_lr-page-banner-height: var(--banner-height, calc(0 * var(--lr-size-1px)));
+    --_lr-page-header-height: var(--header-height, calc(0 * var(--lr-size-1px)));
     --_lr-page-main-width: var(--main-width, 1fr);
     --_lr-page-menu-width: var(--menu-width, auto);
-    --_lr-page-subheader-height: var(--subheader-height, 0);
+    --_lr-page-subheader-height: var(--subheader-height, calc(0 * var(--lr-size-1px)));
     display: block;
     min-inline-size: 0;
     color: var(--lr-color-text);

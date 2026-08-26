@@ -6,6 +6,7 @@
 - **Class** `LyraDocumentCompare`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/document-compare/document-compare.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
 - **Themeable via** 7 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below

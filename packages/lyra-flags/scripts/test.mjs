@@ -44,6 +44,7 @@ import {
 } from '../index.js';
 import {
   flagUrl as flagUrlStandard,
+  flagUrls as flagUrlsStandard,
   createFlagUrlResolver as createFlagUrlResolverStandard,
   FLAG_LOADERS as FLAG_LOADERS_STANDARD_ENTRY,
 } from '../standard.js';
@@ -425,6 +426,10 @@ assert.match(readmeText, /@aceshooting\/lyra-flags\/detailed/);
 // --- re-acquiring exactly the cost ./standard exists to avoid. ---
 
 {
+  const standardUrls = await flagUrlsStandard();
+  assert.equal(standardUrls.fr, await flagUrlStandard('fr'));
+  assert.equal(standardUrls.us, await flagUrlStandard('us'));
+
   assert.equal(typeof createFlagUrlResolverStandard, 'function');
 
   const bulkResolveStandard = createFlagUrlResolverStandard();
@@ -466,6 +471,11 @@ assert.match(readmeText, /@aceshooting\/lyra-flags\/detailed/);
   const standardDts = readFileSync(path.join(pkgDir, 'standard.d.ts'), 'utf8');
   assert.match(
     standardDts,
+    /export declare function flagUrls\(/,
+    'standard.d.ts must declare flagUrls so a TypeScript consumer sees it.',
+  );
+  assert.match(
+    standardDts,
     /export declare function createFlagUrlResolver\(/,
     'standard.d.ts must declare createFlagUrlResolver so a TypeScript consumer sees it.',
   );
@@ -488,7 +498,11 @@ assert.match(readmeText, /@aceshooting\/lyra-flags\/detailed/);
   );
 
   // Same wiring proof as the flagUrl() self-reference above, for the new export.
-  const { createFlagUrlResolver: selfReferencedCreate } = await import('@aceshooting/lyra-flags/standard');
+  const {
+    flagUrls: selfReferencedFlagUrls,
+    createFlagUrlResolver: selfReferencedCreate,
+  } = await import('@aceshooting/lyra-flags/standard');
+  assert.equal((await selfReferencedFlagUrls()).fr, await flagUrlStandard('fr'));
   assert.equal(await selfReferencedCreate()('fr'), await flagUrlStandard('fr'));
 }
 

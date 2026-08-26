@@ -1,5 +1,6 @@
+import { isMainModule } from './is-main-module.mjs';
+
 import { spawnSync } from 'node:child_process';
-import { realpathSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -173,8 +174,6 @@ async function main() {
   process.exitCode = runShard(testFiles, configuration);
 }
 
-const isMain =
-  process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
-if (isMain) {
+if (isMainModule(import.meta.url)) {
   await main();
 }

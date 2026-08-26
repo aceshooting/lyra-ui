@@ -130,6 +130,10 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
   }
+  [part="error"] {
+    color: var(--lr-color-danger);
+    font-size: var(--lr-font-size-sm);
+  }
   [part="limit"] {
     color: var(--lr-color-danger);
     font-size: var(--lr-font-size-sm);

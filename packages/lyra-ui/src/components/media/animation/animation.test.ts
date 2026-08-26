@@ -67,6 +67,26 @@ interface FakeIntersectionObserverInstance {
   disconnected: boolean;
 }
 
+function firstAnimation(target: Element): Animation {
+  const animation = target.getAnimations()[0];
+  if (!animation) throw new Error('Expected the target to own an animation');
+  return animation;
+}
+
+function computedTiming(animation: Animation): ComputedEffectTiming {
+  const effect = animation.effect;
+  if (!effect) throw new Error('Expected the animation to own an effect');
+  return effect.getComputedTiming();
+}
+
+function computedKeyframes(animation: Animation): ComputedKeyframe[] {
+  const effect = animation.effect;
+  if (!effect || !('getKeyframes' in effect) || typeof effect.getKeyframes !== 'function') {
+    throw new Error('Expected the animation to own a keyframe effect');
+  }
+  return effect.getKeyframes();
+}
+
 /** Stubs the global `IntersectionObserver` with a fully fake, manually-driven
  *  implementation so play-on-visible tests control exactly when (and
  *  whether) intersection is reported -- the same spy-the-observer-constructor
@@ -289,7 +309,7 @@ it("preserves signed finite WAAPI delays while normalizing only invalid timing v
   const animations = target.getAnimations();
   expect(animations.length).to.equal(1);
 
-  const timing = animations[0].effect!.getComputedTiming();
+  const timing = computedTiming(animations[0]!);
   expect(timing.duration).to.equal(1000); // NaN -> falls back to the constructed default
   expect(timing.delay).to.equal(-50); // signed delay is valid WAAPI input
   expect(timing.endDelay).to.equal(0); // Infinity is not a valid endDelay
@@ -310,10 +330,7 @@ it("does not impose the setTimeout ceiling on finite WAAPI durations or end dela
   `)) as LyraAnimation;
   await el.updateComplete;
 
-  const timing = el
-    .querySelector("p")!
-    .getAnimations()[0]
-    .effect!.getComputedTiming();
+  const timing = computedTiming(firstAnimation(el.querySelector("p")!));
   expect(timing.duration).to.equal(3_000_000_000);
   expect(timing.endDelay).to.equal(-250);
 });
@@ -327,7 +344,7 @@ it("keeps the documented Infinity default for iterations intact (a legitimate WA
   await el.updateComplete;
 
   const target = el.querySelector("p")!;
-  const timing = target.getAnimations()[0].effect!.getComputedTiming();
+  const timing = computedTiming(firstAnimation(target));
   expect(timing.iterations).to.equal(Infinity);
 });
 
@@ -356,17 +373,19 @@ it('resolves slide-in/slide-out "start"/"end" presets against the effective text
     `)) as LyraAnimation;
     await el.updateComplete;
     const target = el.querySelector("p")!;
-    const [from, to] = target.getAnimations()[0].effect!.getKeyframes();
+    const frames = computedKeyframes(firstAnimation(target));
+    const from = frames[0]!;
+    const to = frames[1]!;
     const offscreen = mode === "in" ? from : to;
     const onscreen = mode === "in" ? to : from;
-    expect(String(offscreen.transform)).to.include("translateX");
-    expect(String(offscreen.transform).includes("-1 *")).to.equal(
+    expect(String(offscreen['transform'])).to.include("translateX");
+    expect(String(offscreen['transform']).includes("-1 *")).to.equal(
       negative,
       `${name} dir=${dir}`
     );
-    expect(String(onscreen.transform)).to.equal("translateX(0px)");
-    expect(String(mode === "in" ? from.opacity : to.opacity)).to.equal("0");
-    expect(String(mode === "in" ? to.opacity : from.opacity)).to.equal("1");
+    expect(String(onscreen['transform'])).to.equal("translateX(0px)");
+    expect(String(mode === "in" ? from['opacity'] : to['opacity'])).to.equal("0");
+    expect(String(mode === "in" ? to['opacity'] : from['opacity'])).to.equal("1");
   }
 });
 
@@ -384,18 +403,13 @@ it("routes preset geometry through the inheritable public hook before its privat
       >
     </div>
   `);
-  const [inherited, direct] = Array.from(
-    wrapper.querySelectorAll("lr-animation")
-  ) as LyraAnimation[];
+  const inherited = wrapper.querySelectorAll<LyraAnimation>("lr-animation")[0]!;
+  const direct = wrapper.querySelectorAll<LyraAnimation>("lr-animation")[1]!;
   await Promise.all([inherited.updateComplete, direct.updateComplete]);
   const inheritedTarget = inherited.querySelector("p")!;
   const directTarget = direct.querySelector("p")!;
-  const inheritedFrom = inheritedTarget
-    .getAnimations()[0]!
-    .effect!.getKeyframes()[0]!;
-  const directFrom = directTarget
-    .getAnimations()[0]!
-    .effect!.getKeyframes()[0]!;
+  const inheritedFrom = computedKeyframes(firstAnimation(inheritedTarget))[0]!;
+  const directFrom = computedKeyframes(firstAnimation(directTarget))[0]!;
   expect(
     getComputedStyle(inheritedTarget)
       .getPropertyValue("--lr-animation-slide-distance")
@@ -406,10 +420,10 @@ it("routes preset geometry through the inheritable public hook before its privat
       .getPropertyValue("--lr-animation-slide-distance")
       .trim()
   ).to.equal("17px");
-  expect(String(inheritedFrom.transform)).to.include(
+  expect(String(inheritedFrom['transform'])).to.include(
     "var(--lr-animation-slide-distance, var(--_lr-animation-slide-distance))"
   );
-  expect(String(directFrom.transform)).to.include(
+  expect(String(directFrom['transform'])).to.include(
     "var(--lr-animation-slide-distance, var(--_lr-animation-slide-distance))"
   );
 });
@@ -429,7 +443,7 @@ it("derives duration/easing from the --lr-transition-fast token when timingPrese
   await el.updateComplete;
 
   const target = el.querySelector("p")!;
-  const timing = target.getAnimations()[0].effect!.getComputedTiming();
+  const timing = computedTiming(firstAnimation(target));
   expect(timing.duration).to.equal(120); // --lr-transition-fast: 120ms ease-out (tokens.styles.ts)
   expect(timing.easing).to.equal("ease-out");
 });
@@ -443,7 +457,7 @@ it('parses a whole-second --lr-transition-ambient token (the "s" unit branch, vs
   await el.updateComplete;
 
   const target = el.querySelector("p")!;
-  const timing = target.getAnimations()[0].effect!.getComputedTiming();
+  const timing = computedTiming(firstAnimation(target));
   expect(timing.duration).to.equal(1800); // --lr-transition-ambient: 1.8s ease-in-out (tokens.styles.ts)
   expect(timing.easing).to.equal("ease-in-out");
 });
@@ -462,7 +476,7 @@ it("falls back to the constructed default duration/easing when the resolved --lr
   await el.updateComplete;
 
   const target = el.querySelector("p")!;
-  const timing = target.getAnimations()[0].effect!.getComputedTiming();
+  const timing = computedTiming(firstAnimation(target));
   expect(timing.duration).to.equal(1000);
   expect(timing.easing).to.equal("linear");
 });
@@ -480,10 +494,7 @@ it("rejects malformed timing-token numbers instead of passing NaN into WAAPI", a
   `)) as LyraAnimation;
   await el.updateComplete;
 
-  const timing = el
-    .querySelector("p")!
-    .getAnimations()[0]
-    .effect!.getComputedTiming();
+  const timing = computedTiming(firstAnimation(el.querySelector("p")!));
   expect(timing.duration).to.equal(1000);
   expect(timing.easing).to.equal("linear");
 });
@@ -505,10 +516,7 @@ it("falls back to the constructed default duration/easing when a well-formed tok
   `)) as LyraAnimation;
   await el.updateComplete;
 
-  const timing = el
-    .querySelector("p")!
-    .getAnimations()[0]
-    .effect!.getComputedTiming();
+  const timing = computedTiming(firstAnimation(el.querySelector("p")!));
   expect(timing.duration).to.equal(1000);
   expect(timing.easing).to.equal("linear");
 });
@@ -526,7 +534,7 @@ it("normalizes invalid WAAPI direction, fill, and easing values without rejectin
   document.body.append(el);
   try {
     await el.updateComplete;
-    const timing = target.getAnimations()[0].effect!.getComputedTiming();
+    const timing = computedTiming(firstAnimation(target));
     expect(timing.direction).to.equal("normal");
     // WAAPI resolves the safe `auto` input to its computed `none` value.
     expect(timing.fill).to.equal("none");
@@ -766,9 +774,9 @@ it("a `keyframes` override always wins over `name`, per the documented precedenc
   await el.updateComplete;
 
   const target = el.querySelector("p")!;
-  const [from, to] = target.getAnimations()[0].effect!.getKeyframes();
-  expect(String(from.opacity)).to.equal("0.2");
-  expect(String(to.opacity)).to.equal("0.9");
+  const frames = computedKeyframes(firstAnimation(target));
+  expect(String(frames[0]!['opacity'])).to.equal("0.2");
+  expect(String(frames[1]!['opacity'])).to.equal("0.9");
 });
 
 it("does not throw and stays inert when there is no slotted target to animate (currentTime/play-on-visible/start all no-op the Animation half)", async () => {
@@ -1049,11 +1057,11 @@ it("resolves named presets through the public registry while retaining token tim
       </lr-animation>
     `)) as LyraAnimation;
     await el.updateComplete;
-    const native = el.querySelector("p")!.getAnimations()[0];
-    const [from, to] = native.effect!.getKeyframes();
-    expect(String(from.opacity)).to.equal("0.3");
-    expect(String(to.opacity)).to.equal("0.7");
-    expect(native.effect!.getComputedTiming().duration).to.equal(120);
+    const native = firstAnimation(el.querySelector("p")!);
+    const frames = computedKeyframes(native);
+    expect(String(frames[0]!['opacity'])).to.equal("0.3");
+    expect(String(frames[1]!['opacity'])).to.equal("0.7");
+    expect(computedTiming(native).duration).to.equal(120);
   } finally {
     cleanup();
   }
@@ -1101,10 +1109,7 @@ it("resolves mirrored named easings before validating raw CSS timing functions",
     </lr-animation>
   `)) as LyraAnimation;
   await el.updateComplete;
-  const easing = el
-    .querySelector("span")!
-    .getAnimations()[0]
-    .effect!.getComputedTiming().easing;
+  const easing = computedTiming(firstAnimation(el.querySelector("span")!)).easing;
   expect(easing).to.match(/^cubic-bezier\(/);
 });
 
@@ -1158,7 +1163,7 @@ it('keeps non-array, oversized, and null keyframe sequences inert', async () => 
     ]) {
       el.keyframes = keyframes as unknown as Keyframe[];
       await el.updateComplete;
-      const frames = target.getAnimations()[0]?.effect?.getKeyframes() ?? [];
+      const frames = computedKeyframes(firstAnimation(target));
       expect(frames.length).to.equal(2);
     }
   } finally {
@@ -1208,21 +1213,21 @@ it("uses a weak per-instance preset override ahead of the global value and keeps
     document.body.append(el);
     await el.updateComplete;
     expect(
-      String(target.getAnimations()[0].effect!.getKeyframes()[0]?.opacity)
+      String(computedKeyframes(firstAnimation(target))[0]?.['opacity'])
     ).to.equal("0.8");
 
     el.remove();
     document.body.append(el);
     await el.updateComplete;
     expect(
-      String(target.getAnimations()[0].effect!.getKeyframes()[0]?.opacity)
+      String(computedKeyframes(firstAnimation(target))[0]?.['opacity'])
     ).to.equal("0.8");
 
     instanceCleanup();
     el.duration = 321;
     await el.updateComplete;
     expect(
-      String(target.getAnimations()[0].effect!.getKeyframes()[0]?.opacity)
+      String(computedKeyframes(firstAnimation(target))[0]?.['opacity'])
     ).to.equal("0.1");
   } finally {
     instanceCleanup();
@@ -1255,14 +1260,14 @@ it("rebuilds a registry animation when inherited text direction changes", async 
   try {
     await el.updateComplete;
     expect(
-      String(target.getAnimations()[0].effect!.getKeyframes()[0]?.transform)
+      String(computedKeyframes(firstAnimation(target))[0]?.['transform'])
     ).to.include("-12px");
 
     wrapper.dir = "rtl";
     await new Promise<void>((resolve) => queueMicrotask(resolve));
     await el.updateComplete;
     expect(
-      String(target.getAnimations()[0].effect!.getKeyframes()[0]?.transform)
+      String(computedKeyframes(firstAnimation(target))[0]?.['transform'])
     ).to.include("12px");
   } finally {
     cleanup();
@@ -1347,7 +1352,7 @@ it("falls back to the sanitized baseline timing options when a registry override
     const target = el.querySelector("p")!;
     const animations = target.getAnimations();
     expect(animations.length).to.equal(1);
-    const timing = animations[0].effect!.getComputedTiming();
+    const timing = computedTiming(animations[0]!);
     // baseOptions carries the component's own safeDirection ('reverse'), not the malformed
     // override's value -- proof the catch path's retry, not the first (throwing) attempt, won.
     expect(timing.direction).to.equal("reverse");
@@ -1370,7 +1375,7 @@ it("play-on-visible: observes the slotted target and starts playback once it int
     const target = el.querySelector("p")!;
     expect(io.observedTargets).to.include(target);
 
-    const latest = io.instances[io.instances.length - 1];
+    const latest = io.instances[io.instances.length - 1]!;
     latest.callback(
       [{ isIntersecting: true } as unknown as IntersectionObserverEntry],
       latest as unknown as IntersectionObserver
@@ -1397,7 +1402,7 @@ it("play-on-visible: a notification batch with no entries is a defensive no-op",
     `)) as LyraAnimation;
     await el.updateComplete;
 
-    const latest = io.instances[io.instances.length - 1];
+    const latest = io.instances[io.instances.length - 1]!;
     latest.callback([], latest as unknown as IntersectionObserver);
     await el.updateComplete;
 
@@ -1422,7 +1427,7 @@ it("play-on-visible-repeat: keeps observing and toggles `play` on subsequent ent
     `)) as LyraAnimation;
     await el.updateComplete;
 
-    const latest = io.instances[io.instances.length - 1];
+    const latest = io.instances[io.instances.length - 1]!;
     latest.callback(
       [{ isIntersecting: true } as unknown as IntersectionObserverEntry],
       latest as unknown as IntersectionObserver
@@ -1462,7 +1467,7 @@ it("play-on-visible: passes a custom Element `root` through, and re-observes (di
     `)) as LyraAnimation;
     await el.updateComplete;
 
-    const first = io.instances[io.instances.length - 1];
+    const first = io.instances[io.instances.length - 1]!;
     expect(first.options?.root === rootEl).to.equal(true);
 
     el.rootMargin = "20px";
@@ -1472,7 +1477,7 @@ it("play-on-visible: passes a custom Element `root` through, and re-observes (di
       first.disconnected,
       "the previous observer should be torn down before re-observing"
     ).to.be.true;
-    const second = io.instances[io.instances.length - 1];
+    const second = io.instances[io.instances.length - 1]!;
     expect(second).to.not.equal(first);
     expect(second.options?.rootMargin).to.equal("20px");
 

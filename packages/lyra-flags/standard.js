@@ -16,6 +16,16 @@ export function flagUrl(code) {
 }
 
 /**
+ * Resolves every shipped standard-tier flag URL at once. This is the tier-committed twin of the
+ * package root's `flagUrls()`: it reaches only `flags/eager.js`, so importing this entry does not
+ * make the detailed or compact loader graphs reachable.
+ * @returns {Promise<Record<string, string>>} Map of code to standard-tier flag URL.
+ */
+export async function flagUrls() {
+  return (await import('./flags/eager.js')).FLAG_URLS;
+}
+
+/**
  * Resolves every shipped standard-tier flag URL at once, then hands back a `flagUrl`-shaped
  * resolver that reads from that one shared map — the tier-committed twin of the package root's
  * `createFlagUrlResolver()`, for a page that renders most or all flags at once (a country table,
@@ -40,7 +50,7 @@ export function flagUrl(code) {
  *   resolver, suitable for `<lr-flag>`'s `setFlagUrlResolver()`.
  */
 export function createFlagUrlResolver() {
-  const urlsPromise = import('./flags/eager.js').then((module) => module.FLAG_URLS);
+  const urlsPromise = flagUrls();
   return async function resolveFlagUrl(code) {
     return (await urlsPromise)[code];
   };

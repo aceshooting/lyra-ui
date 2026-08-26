@@ -6,12 +6,15 @@ export const styles = css`
     outline: none; /* the host is the focusable treeitem; the visible ring lives on [part=row] */
   }
   [part~='item'] {
-    display: contents;
+    border-radius: var(--lr-radius);
   }
   :host(:focus-visible) [part='row'] {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  /* no-hover-state: the dynamically named [part~='item'] ancestor owns the row's hover and active
+     fills below, and this row explicitly inherits that background. itemPartNames() assembles the
+     ancestor's token list at runtime, so the static containment checker cannot see the relationship. */
   [part='row'] {
     position: relative;
     display: flex;
@@ -25,45 +28,48 @@ export const styles = css`
       var(--lr-space-s) + min(var(--lr-tree-depth, 0) * var(--indent-size, var(--lr-space-l)), var(--lr-size-8rem))
     );
     cursor: pointer;
-    border-radius: var(--lr-radius);
+    border-radius: inherit;
+    background: inherit;
   }
-  :host([aria-selected='true']) [part='row'] {
+  :host([aria-selected='true']) [part~='item'] {
     color: var(--lr-tree-selected-color, var(--lr-color-brand));
     background: var(--lr-tree-selected-bg, var(--lr-color-brand-quiet));
   }
-  /* MUST stay after the selected-row rule above, and the second arm exists so it can: that rule
-     matches a selected row at (0,3,0), out of reach of a bare [part='row']:hover ((0,2,0)), so the
-     selected row -- the likeliest hover target -- would never light up. Going through :host() lands
+  /* MUST stay after the selected-item rule above, and the second arm exists so it can: that rule
+     matches a selected item at (0,3,0), out of reach of a bare [part~='item']:hover ((0,2,0)), so
+     the selected item -- the likeliest hover target -- would never light up. Going through :host() lands
      both arms at that rule's specificity so source order decides, with :where() keeping the state
      qualifier out of the count. A color-mix step rather than the plain brand-quiet fallback used
      elsewhere, since the selected row's resting fill already resolves to that token. */
-  [part='row']:hover,
-  :host(:where([aria-selected='true'])) [part='row']:hover {
+  [part~='item']:hover,
+  :host(:where([aria-selected='true'])) [part~='item']:hover {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
-  /* MUST stay after the selected-row rule above, and the second arm exists so it can: that rule
-     matches a selected row at (0,3,0), out of reach of a bare [part='row']:active ((0,2,0)), so the
-     selected row -- the one a user presses next -- would answer nothing. Going through :host()
+  /* MUST stay after the selected-item rule above, and the second arm exists so it can: that rule
+     matches a selected item at (0,3,0), out of reach of a bare [part~='item']:active ((0,2,0)), so
+     the selected item -- the one a user presses next -- would answer nothing. Going through :host()
      lands both arms at that rule's specificity so source order decides, with :where() keeping the
      state qualifier out of the count. */
-  [part='row']:active,
-  :host(:where([aria-selected='true'])) [part='row']:active {
+  [part~='item']:active,
+  :host(:where([aria-selected='true'])) [part~='item']:active {
     background: color-mix(
       in oklab,
       var(--lr-color-brand-quiet),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  :host([aria-disabled='true']) [part='row'] {
-    cursor: default;
+  :host([aria-disabled='true']) [part~='item'] {
     opacity: var(--lr-opacity-disabled);
   }
-  :host([aria-disabled='true']) [part='row']:hover {
+  :host([aria-disabled='true']) [part='row'] {
+    cursor: default;
+  }
+  :host([aria-disabled='true']) [part~='item']:hover {
     background: transparent;
   }
   /* A disabled item stays inert under the pointer for the press as well as the hover -- otherwise
      it lights up on mousedown and then does nothing. */
-  :host([aria-disabled='true']) [part='row']:active {
+  :host([aria-disabled='true']) [part~='item']:active {
     background: transparent;
   }
   [part='toggle'] {
@@ -85,6 +91,26 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     cursor: pointer;
     flex: 0 0 auto;
+  }
+  :where([part='toggle']):hover:where(:not(:disabled)) {
+    background: var(--lr-color-surface-hover, var(--lr-color-border));
+    border-radius: var(--lr-radius);
+  }
+  :where([part='toggle']):active:where(:not(:disabled)) {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-surface-hover, var(--lr-color-border)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
+  /* Firefox suppresses native :active because the toggle's mousedown deliberately prevents the
+     hidden button from stealing focus from the treeitem. Mirror the same short-lived press state. */
+  :where([part='toggle'])[data-pressed]:where(:not(:disabled)) {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-surface-hover, var(--lr-color-border)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   [part='expand-button'] {
     display: inline-flex;

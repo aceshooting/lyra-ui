@@ -68,10 +68,12 @@ export interface LyraCommand {
   /** Stable business identity. Must be nonempty and unique within `commands`; the first command
    *  wins when an untyped caller supplies duplicates. */
   commandId: string;
+  /** Nonblank text used as the command row's visible and accessible name. */
   label: string;
   description?: string;
   group?: string;
   shortcut?: string;
+  /** Additional search terms. Runtime non-array values and non-string entries are ignored. */
   keywords?: readonly string[];
   disabled?: boolean;
   /** Optional leading TemplateResult glyph, rendered before `label` (`LyraPaletteItem.icon`/
@@ -234,14 +236,18 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       this.normalizedCommandIds = new Map();
       for (const command of this.commands ?? []) {
         let commandId: unknown;
+        let label: unknown;
         try {
           commandId = command?.commandId;
+          label = command?.label;
         } catch {
           continue;
         }
         if (
           typeof commandId !== 'string' ||
           commandId.trim() === '' ||
+          typeof label !== 'string' ||
+          label.trim() === '' ||
           seen.has(commandId)
         )
           continue;
@@ -263,16 +269,24 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     if (this.haystacksFor !== commands || this.haystacksLocale !== locale) {
       this.haystacksFor = commands;
       this.haystacksLocale = locale;
-      this.haystacks = commands.map((command) =>
-        [
+      this.haystacks = commands.map((command) => {
+        let keywords: unknown;
+        try {
+          keywords = command.keywords;
+        } catch {
+          keywords = [];
+        }
+        return [
           command.label,
           command.description ?? '',
           command.group ?? '',
-          ...(command.keywords ?? []),
+          ...(Array.isArray(keywords)
+            ? keywords.filter((keyword): keyword is string => typeof keyword === 'string')
+            : []),
         ]
           .join(' ')
-          .toLocaleLowerCase(locale)
-      );
+          .toLocaleLowerCase(locale);
+      });
     }
     return this.haystacks;
   }

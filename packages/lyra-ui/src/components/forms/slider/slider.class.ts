@@ -16,6 +16,7 @@ import { syncValidityStates } from '../../../internal/custom-states.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
+import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { isRtl } from '../../../internal/rtl.js';
 import {
   decimalPlaces,
@@ -68,7 +69,7 @@ const LABEL_ID = 'slider-label';
 /** The value axis. `'horizontal'` maps values to the inline axis (mirroring
  *  under RTL), `'vertical'` to the block axis with the domain minimum at the
  *  block end. */
-export type SliderOrientation = 'horizontal' | 'vertical';
+export type SliderOrientation = LyraOrientation;
 
 /** Side of a handle used for its focus/drag tooltip. */
 export type SliderTooltipPlacement = 'top' | 'right' | 'bottom' | 'left';
@@ -639,7 +640,10 @@ export class LyraSlider extends LyraSliderBase {
   /** Gap between a handle and its tooltip, measured in CSS pixels. */
   @property({ type: Number, attribute: 'tooltip-distance' }) tooltipDistance = 8;
 
-  /** Shoelace-compatible tooltip switch. `none` hides; top/bottom also set the placement. */
+  /** Shoelace-compatible tooltip switch. `none` hides; top/bottom also set the placement. Lyra
+   *  defaults to `none`, unlike `<sl-range>`'s `top`; the migration codemod inserts `tooltip="top"`,
+   *  while a manual tag rename must set it explicitly to preserve Shoelace's default.
+   * @default 'none' */
   @property() tooltip: 'top' | 'bottom' | 'none' = 'none';
 
   /** Optional human-readable formatter for a handle's `aria-valuetext` (and
@@ -847,6 +851,7 @@ export class LyraSlider extends LyraSliderBase {
   setCustomValidity(message: string): void {
     this.validityController.setCustomValidity(message ?? '');
     this.syncValidityStates();
+    this.requestUpdate();
   }
 
   /** Clears consumer-supplied validity and restores the current range constraints. */
@@ -1528,6 +1533,7 @@ export class LyraSlider extends LyraSliderBase {
         aria-describedby=${describedBy ?? nothing}
         aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
         aria-readonly=${this.readonly ? 'true' : 'false'}
+        aria-invalid=${this.internals.validity.valid ? 'false' : 'true'}
         style=${this.offsetStyle(percent)}
         @pointerdown=${(e: PointerEvent) => this.onPointerDown(handle, e)}
         @keydown=${(e: KeyboardEvent) => this.onKeyDown(handle, e)}

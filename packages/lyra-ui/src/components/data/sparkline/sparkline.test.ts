@@ -167,6 +167,32 @@ it('forwards a host aria-label to the semantic SVG', async () => {
   );
 });
 
+it('forwards a programmatic accessibleLabel property to the semantic SVG', async () => {
+  const el = (await fixture(`<lr-sparkline></lr-sparkline>`)) as LyraSparkline;
+  el.values = [1, 3, 2, 5];
+  el.accessibleLabel = 'Programmatic trend name';
+  await el.updateComplete;
+
+  expect(el.hasAttribute('aria-label')).to.equal(false);
+  expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal(
+    'Programmatic trend name',
+  );
+});
+
+it('keeps the documented naming precedence across the host attribute and both properties', async () => {
+  const el = (await fixture(`<lr-sparkline></lr-sparkline>`)) as LyraSparkline;
+  el.values = [1, 3, 2, 5];
+  el.label = 'Visible-series label';
+  el.accessibleLabel = 'Programmatic compatibility name';
+  await el.updateComplete;
+  const svg = el.shadowRoot!.querySelector('svg')!;
+  expect(svg.getAttribute('aria-label')).to.equal('Visible-series label');
+
+  el.setAttribute('aria-label', 'Authored host name');
+  await el.updateComplete;
+  expect(svg.getAttribute('aria-label')).to.equal('Authored host name');
+});
+
 it('renders one bar per value in bar mode', async () => {
   const el = (await fixture(`<lr-sparkline mark="bar"></lr-sparkline>`)) as LyraSparkline;
   el.values = [4, 8, 2];

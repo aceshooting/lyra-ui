@@ -33,8 +33,8 @@ it('renders one [part="entry"] row per entry, carrying data-variant', async () =
   )) as LyraActivityFeed;
   const rows = [...el.shadowRoot!.querySelectorAll('[part="entry"]')] as HTMLElement[];
   expect(rows.length).to.equal(2);
-  expect(rows[0]!.dataset.variant).to.equal('brand');
-  expect(rows[1]!.dataset.variant).to.equal('neutral');
+  expect(rows[0]!.dataset['variant']).to.equal('brand');
+  expect(rows[1]!.dataset['variant']).to.equal('neutral');
   expect(rows[0]!.querySelector('[part="entry-text"]')!.textContent!.trim()).to.equal('Searching the web…');
 });
 
@@ -490,6 +490,25 @@ describe('follow contract (virtualized)', () => {
     expect(el.shadowRoot!.querySelector('lr-virtual-list')!.getAttribute('aria-label')).to.equal('Steps');
   });
 
+  it('uses the host aria-label for the internal list in both render paths', async () => {
+    const plain = await fixture<LyraActivityFeed>(html`
+      <lr-activity-feed aria-label="Recent activity" expanded .entries=${makeEntries(1)}></lr-activity-feed>
+    `);
+    expect(plain.shadowRoot!.querySelector('[part="body"]')!.getAttribute('aria-label')).to.equal('Recent activity');
+
+    const virtualized = await fixture<LyraActivityFeed>(html`
+      <lr-activity-feed
+        aria-label="Recent activity"
+        expanded
+        virtualize-at="0"
+        .entries=${makeEntries(1)}
+      ></lr-activity-feed>
+    `);
+    expect(virtualized.shadowRoot!.querySelector('lr-virtual-list')!.getAttribute('aria-label')).to.equal(
+      'Recent activity',
+    );
+  });
+
   it('does not leak the internal lr-virtual-list lr-visible-range-change event past the host under its own name', async () => {
     const el = (await fixture(
       html`<lr-activity-feed expanded virtualize-at="0" .entries=${makeEntries(5)}></lr-activity-feed>`,
@@ -507,6 +526,20 @@ describe('follow contract (virtualized)', () => {
     );
     await el.updateComplete;
 
+    expect(count).to.equal(0);
+  });
+
+  it('does not leak the internal lr-virtual-scroll compatibility event', async () => {
+    const el = await fixture<LyraActivityFeed>(html`
+      <lr-activity-feed expanded virtualize-at="0" .entries=${makeEntries(5)}></lr-activity-feed>
+    `);
+    let count = 0;
+    el.addEventListener('lr-virtual-scroll', () => count++);
+    el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(new CustomEvent('lr-virtual-scroll', {
+      bubbles: true,
+      composed: true,
+      detail: { start: 0, end: 1 },
+    }));
     expect(count).to.equal(0);
   });
 
@@ -591,12 +624,16 @@ describe('follow contract (virtualized)', () => {
 
   it('calls scrollToIndex on the virtual-list to follow the latest entry in live mode', async () => {
     const originalMatchMedia = window.matchMedia;
-    window.matchMedia = ((query: string) => ({
+    window.matchMedia = (query: string): MediaQueryList => ({
       matches: query === '(prefers-reduced-motion: reduce)',
       media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
       addEventListener: () => {},
       removeEventListener: () => {},
-    })) as typeof window.matchMedia;
+      dispatchEvent: () => true,
+    });
     try {
       const el = (await fixture(
         html`<lr-activity-feed

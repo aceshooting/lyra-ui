@@ -1,7 +1,7 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './neighbor-list.js';
 import type { LyraNeighborList, LyraNeighborRow } from './neighbor-list.js';
-import { styles } from './neighbor-list.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const rows: LyraNeighborRow[] = [
   {
@@ -79,6 +79,25 @@ it('formats multi-value node metadata as a locale-aware list instead of fixed pu
       '3',
     ])
   );
+});
+
+it('omits a non-string node type instead of throwing from Intl.ListFormat', async () => {
+  const el = await fixture<LyraNeighborList>(html`
+    <lr-neighbor-list
+      .rows=${[
+        {
+          relation: 'works_for',
+          direction: 'out',
+          node: { id: 'acme', label: 'Acme', type: { id: 42 }, degree: 3 },
+        },
+      ] as unknown as LyraNeighborRow[]}
+    ></lr-neighbor-list>
+  `);
+
+  expect(el.shadowRoot!.querySelector('[part="node-label"]')).to.exist;
+  expect(
+    el.shadowRoot!.querySelector('[part="node-meta"]')?.textContent
+  ).to.equal('3');
 });
 
 it('clamps node-meta to the row width so text-overflow:ellipsis actually triggers when an ancestor sizes the row intrinsically', async () => {
@@ -513,9 +532,31 @@ it('is accessible with grouped, expandable rows', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('gives node-label a hover state', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='node-label'\]:hover/);
+it('paints node-label hover feedback under a real pointer', async () => {
+  const el = await fixture<LyraNeighborList>(html`
+    <lr-neighbor-list
+      style="--lr-color-brand-quiet: rgb(1, 2, 3)"
+      .rows=${rows}
+    ></lr-neighbor-list>
+  `);
+  const target = el.shadowRoot!.querySelector<HTMLElement>('[part="node-label"]')!;
+  target.scrollIntoView({ block: 'center' });
+  const rect = target.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ],
+    });
+    await waitUntil(
+      () => getComputedStyle(target).backgroundColor === 'rgb(1, 2, 3)',
+      'the neighbor node-label hover background never painted'
+    );
+  } finally {
+    await resetMouse();
+  }
 });
 
 describe('row part styling reaches both rendering paths', () => {

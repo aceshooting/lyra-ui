@@ -6,6 +6,7 @@
 - **Class** `LyraRetrievalResults`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/retrieval-results/retrieval-results.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 29 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
@@ -73,7 +74,7 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
   replaces the whole result view with a neutral visible message. Caller-supplied text is not
   localized (app/network data, not library copy). A new non-empty value is announced through a
   shared assertive light-DOM region; initial and reconnect content is not replayed
-- `label: string = ''` — fallback name for the populated result group; defaults to localized
+- `label?: string` — fallback name for the populated result group; omission uses localized
   `chunkInspectorLabel`. A non-empty host `aria-label` makes the host the sole overall owner; an
   explicitly empty host label stays empty
 
@@ -87,7 +88,7 @@ region. Initial empty content, loading intermediates, and reconnects are not rep
   — the _complete_ updated selection, both as ids and as exactly one canonical record per id, so a
   host needn't re-look-up ids against its own copy on every toggle. This derived detail is always
   canonicalized nonblank/first-wins regardless of the legacy `dedupe` switch.
-- `lr-load-more` (`detail: undefined`) — from the virtual list's scroll-near-bottom detection while
+- `lr-load-more` (`detail: null`) — from the virtual list's scroll-near-bottom detection while
   virtualized, or the `[part="load-more"]` button otherwise. Only fires while `hasMore` is true and
   `loading` is false.
 - `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) — forwarded verbatim from a row's
@@ -141,5 +142,7 @@ lever, repainting every other brand surface with it. Plus shared tokens otherwis
   component's.
 - Below the virtualization threshold, scroll-near-bottom isn't a meaningful gesture, so a
   `[part="load-more"]` button takes its place (replaced by a spinner while `loading`).
+- Source-group fallback labels are re-evaluated when the effective locale or a `.strings`
+  override changes; a cached grouping never leaves the previous localized “untitled source” text.
 
 ---

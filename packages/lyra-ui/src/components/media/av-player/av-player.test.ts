@@ -2,11 +2,11 @@ import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/t
 import './av-player.js';
 import '../../layout/virtual-list/virtual-list.js';
 import type { LyraAvPlayer, LyraAvCue } from './av-player.js';
-import { styles } from './av-player.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { invalidateLyraTheme } from '../../../internal/theme-watcher.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
+import { sendKeys } from '@web/test-runner-commands';
 
 const MP3_SRC = 'https://example.test/podcast.mp3';
 const MP4_SRC = 'https://example.test/clip.mp4';
@@ -16,6 +16,48 @@ function assertiveAnnouncements(): string[] {
     `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
   );
   return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
+}
+
+/** Canvas-unit tests own visibility explicitly; observer lifecycle is covered in its dedicated
+ * suite above. Disconnecting the real observer prevents a late browser delivery from racing the
+ * geometry/theme assertion under test. */
+function enableWaveformPainting(el: LyraAvPlayer): void {
+  const internals = el as unknown as {
+    unbindWaveformVisibilityObserver(): void;
+    waveformVisible: boolean;
+    drawWaveform(): void;
+  };
+  internals.unbindWaveformVisibilityObserver();
+  internals.waveformVisible = true;
+  internals.drawWaveform();
+}
+
+function intersectionEntry(target: Element, isIntersecting: boolean): IntersectionObserverEntry {
+  const targetBounds = target.getBoundingClientRect();
+  return {
+    target,
+    time: performance.now(),
+    rootBounds: null,
+    boundingClientRect: targetBounds,
+    intersectionRect: isIntersecting ? targetBounds : new DOMRectReadOnly(),
+    isIntersecting,
+    intersectionRatio: isIntersecting ? 1 : 0,
+  };
+}
+
+function resizeEntry(target: Element): ResizeObserverEntry {
+  const contentRect = target.getBoundingClientRect();
+  const size: ResizeObserverSize = {
+    inlineSize: contentRect.width,
+    blockSize: contentRect.height,
+  };
+  return {
+    target,
+    contentRect,
+    borderBoxSize: [size],
+    contentBoxSize: [size],
+    devicePixelContentBoxSize: [size],
+  };
 }
 
 const CUES: LyraAvCue[] = [
@@ -29,6 +71,7 @@ it('redraws a token-colored waveform after an out-of-band theme invalidation', a
     html`<lr-av-player .peaks=${[0.25, 0.75]}></lr-av-player>`,
   )) as LyraAvPlayer;
   await el.updateComplete;
+  enableWaveformPainting(el);
   let redraws = 0;
   const internals = el as unknown as { drawWaveform: () => void };
   const originalDraw = internals.drawWaveform;
@@ -45,6 +88,65 @@ it('redraws a token-colored waveform after an out-of-band theme invalidation', a
 });
 
 describe('visibility-gated waveform redraws', () => {
+  it('waits for the first visibility result before the initial waveform paint', async () => {
+    const originalIntersectionObserver = Object.getOwnPropertyDescriptor(window, 'IntersectionObserver');
+    let callback: IntersectionObserverCallback | undefined;
+    class TestIntersectionObserver {
+      constructor(next: IntersectionObserverCallback) {
+        callback = next;
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+      takeRecords(): IntersectionObserverEntry[] {
+        return [];
+      }
+      readonly root = null;
+      readonly rootMargin = '0px';
+      readonly thresholds = [0];
+    }
+    Object.defineProperty(window, 'IntersectionObserver', {
+      configurable: true,
+      value: TestIntersectionObserver,
+    });
+
+    const prototype = customElements.get('lr-av-player')!.prototype as {
+      paintWaveform(this: LyraAvPlayer): void;
+    };
+    const originalPaint = prototype.paintWaveform;
+    let paints = 0;
+    prototype.paintWaveform = function (this: LyraAvPlayer): void {
+      paints += 1;
+      originalPaint.call(this);
+    };
+
+    let el: LyraAvPlayer | undefined;
+    try {
+      el = (await fixture(html`<lr-av-player .peaks=${[0.25, 0.75]}></lr-av-player>`)) as LyraAvPlayer;
+      await el.updateComplete;
+      await aTimeout(0);
+      expect(callback !== undefined, 'the initial observer is installed').to.equal(true);
+      expect(paints, 'mount stays paint-free until visibility is known').to.equal(0);
+
+      callback!([intersectionEntry(el, false)], {} as IntersectionObserver);
+      await aTimeout(0);
+      expect(paints, 'the initial hidden result keeps the waveform dirty').to.equal(0);
+
+      callback!([intersectionEntry(el, true)], {} as IntersectionObserver);
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+      expect(paints, 'the first visible result performs one coalesced paint').to.equal(1);
+    } finally {
+      el?.remove();
+      prototype.paintWaveform = originalPaint;
+      if (originalIntersectionObserver) {
+        Object.defineProperty(window, 'IntersectionObserver', originalIntersectionObserver);
+      } else {
+        delete (window as unknown as { IntersectionObserver?: typeof IntersectionObserver })
+          .IntersectionObserver;
+      }
+    }
+  });
+
   it('defers hidden waveform paints and coalesces the visibility catch-up', async () => {
     const originalIntersectionObserver = Object.getOwnPropertyDescriptor(window, 'IntersectionObserver');
     let callback: IntersectionObserverCallback | undefined;
@@ -80,7 +182,7 @@ describe('visibility-gated waveform redraws', () => {
       expect(callback !== undefined, 'the owner-window visibility observer is installed').to.equal(true);
       expect(observed, 'the observer watches the player host').to.equal(true);
 
-      callback!([{ target: el, isIntersecting: false } as IntersectionObserverEntry], {} as IntersectionObserver);
+      callback!([intersectionEntry(el, false)], {} as IntersectionObserver);
       let paints = 0;
       const internals = el as unknown as { paintWaveform(): void };
       const originalPaint = internals.paintWaveform.bind(el);
@@ -96,7 +198,7 @@ describe('visibility-gated waveform redraws', () => {
       window.dispatchEvent(new Event('resize'));
       expect(paints, 'hidden peaks, theme, and resize invalidations perform no canvas work').to.equal(0);
 
-      callback!([{ target: el, isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+      callback!([intersectionEntry(el, true)], {} as IntersectionObserver);
       await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
       expect(paints, 'hidden invalidations coalesce into the visibility-entry paint').to.equal(1);
 
@@ -141,7 +243,7 @@ describe('visibility-gated waveform redraws', () => {
       const parent = el.parentElement!;
       await el.updateComplete;
       expect(callbacks.length).to.equal(1);
-      callbacks[0]!([{ target: el, isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+      callbacks[0]!([intersectionEntry(el, true)], {} as IntersectionObserver);
 
       let paints = 0;
       const internals = el as unknown as { paintWaveform(): void };
@@ -158,11 +260,11 @@ describe('visibility-gated waveform redraws', () => {
       expect(callbacks.length).to.equal(2);
       expect(paints, 'a reconnect must not trust visibility from the detached placement').to.equal(0);
 
-      callbacks[1]!([{ target: el, isIntersecting: false } as IntersectionObserverEntry], {} as IntersectionObserver);
+      callbacks[1]!([intersectionEntry(el, false)], {} as IntersectionObserver);
       window.dispatchEvent(new Event('resize'));
       expect(paints, 'the fresh off-screen observation keeps resize work deferred').to.equal(0);
 
-      callbacks[1]!([{ target: el, isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+      callbacks[1]!([intersectionEntry(el, true)], {} as IntersectionObserver);
       await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
       expect(paints, 'the new owner-realm observer catches up once on re-entry').to.equal(1);
     } finally {
@@ -248,7 +350,7 @@ describe('visibility-gated waveform redraws', () => {
       await el.updateComplete;
       expect(mainConstructions).to.equal(1);
       mainCallback!(
-        [{ target: el, isIntersecting: false } as IntersectionObserverEntry],
+        [intersectionEntry(el, false)],
         {} as IntersectionObserver,
       );
       frameDocument.body.append(frameDocument.adoptNode(el));
@@ -266,7 +368,7 @@ describe('visibility-gated waveform redraws', () => {
         originalPaint();
       };
       mainCallback!(
-        [{ target: el, isIntersecting: true } as IntersectionObserverEntry],
+        [intersectionEntry(el, true)],
         {} as IntersectionObserver,
       );
       el.peaks = [0.5, 1];
@@ -274,14 +376,14 @@ describe('visibility-gated waveform redraws', () => {
       expect(paints, 'a known-hidden player stays deferred after adoption').to.equal(0);
 
       ownerCallback!(
-        [{ target: el, isIntersecting: true } as IntersectionObserverEntry],
+        [intersectionEntry(el, true)],
         {} as IntersectionObserver,
       );
       await new Promise<void>((resolve) => frameWindow.requestAnimationFrame(() => resolve()));
       expect(paints, 'the adopted owner realm performs the deferred paint').to.equal(1);
 
       mainCallback!(
-        [{ target: el, isIntersecting: false } as IntersectionObserverEntry],
+        [intersectionEntry(el, false)],
         {} as IntersectionObserver,
       );
       el.peaks = [0.6, 0.4];
@@ -289,14 +391,14 @@ describe('visibility-gated waveform redraws', () => {
       expect(paints, 'a queued source-realm callback cannot suppress owner-realm painting').to.equal(2);
 
       ownerCallback!(
-        [{ target: el, isIntersecting: false } as IntersectionObserverEntry],
+        [intersectionEntry(el, false)],
         {} as IntersectionObserver,
       );
       el.peaks = [0.75, 0.25];
       await el.updateComplete;
       expect(paints, 'the current owner-realm callback still gates hidden painting').to.equal(2);
       ownerCallback!(
-        [{ target: el, isIntersecting: true } as IntersectionObserverEntry],
+        [intersectionEntry(el, true)],
         {} as IntersectionObserver,
       );
       await new Promise<void>((resolve) => frameWindow.requestAnimationFrame(() => resolve()));
@@ -352,7 +454,7 @@ function transcriptList(el: LyraAvPlayer): TranscriptList {
 }
 
 function renderedTranscriptRow(list: TranscriptList, index: number): HTMLElement | undefined {
-  return list.renderedRows.find((row) => row.dataset.rowIndex === String(index));
+  return list.renderedRows.find((row) => row.dataset['rowIndex'] === String(index));
 }
 
 describe('defaults', () => {
@@ -594,8 +696,13 @@ describe('playback controls', () => {
     expect(select.value).to.equal('1.75');
   });
 
-  it('resets native appearance on the rate-select, themes its option list, and adds hover/focus/a chevron', async () => {
-    const el = (await fixture(html`<lr-av-player src=${MP4_SRC}></lr-av-player>`)) as LyraAvPlayer;
+  it('renders native rate-select theming, its hover state, and the decorative chevron', async () => {
+    const el = (await fixture(html`
+      <lr-av-player
+        src=${MP4_SRC}
+        style="--lr-color-surface: rgb(7, 8, 9); --lr-color-text: rgb(10, 11, 12); --lr-color-brand-quiet: rgb(1, 2, 3)"
+      ></lr-av-player>
+    `)) as LyraAvPlayer;
     await el.updateComplete;
     const select = el.shadowRoot!.querySelector('[part="rate-select"]') as HTMLSelectElement;
     expect(getComputedStyle(select).appearance).to.equal('none');
@@ -603,10 +710,24 @@ describe('playback controls', () => {
     const wrapper = select.closest('.rate-select-wrapper');
     expect((wrapper) != null, 'the select must be wrapped so a decorative chevron can be positioned over it').to.equal(true);
     expect(wrapper!.querySelector('.rate-select-chevron svg'), 'a decorative chevron must render since appearance:none removes the native one').to.exist;
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='rate-select'\] option[^{]*\{[^}]*background:/);
-    expect(css).to.match(/\[part='rate-select'\]:hover[^{]*\{[^}]*background:/);
-    expect(css).to.match(/\[part='rate-select'\]:focus-visible[^{]*\{[^}]*outline:/);
+    const optionStyle = getComputedStyle(select.options[0]!);
+    expect(optionStyle.backgroundColor).to.equal('rgb(7, 8, 9)');
+    expect(optionStyle.color).to.equal('rgb(10, 11, 12)');
+
+    select.scrollIntoView({ block: 'center' });
+    const rect = select.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(
+        () => getComputedStyle(select).backgroundColor === 'rgb(1, 2, 3)',
+        'the rate-select hover background never appeared',
+      );
+    } finally {
+      await resetMouse();
+    }
   });
 
   it('returns the native play promise and preserves its rejection for imperative callers', async () => {
@@ -788,8 +909,8 @@ describe('cues and transcript', () => {
     await el.updateComplete;
     const rows = cueRows(el);
     expect(rows.length).to.equal(3);
-    expect(rows[0].querySelector('[part="cue-speaker"]')!.textContent).to.equal('Host');
-    expect(rows[2].querySelector('[part="cue-text"]')!.textContent).to.equal('Thanks for having me');
+    expect(rows[0]!.querySelector('[part="cue-speaker"]')!.textContent).to.equal('Host');
+    expect(rows[2]!.querySelector('[part="cue-text"]')!.textContent).to.equal('Thanks for having me');
   });
 
   it('emits lr-cue-change and marks the active cue as currentTime crosses cue boundaries', async () => {
@@ -803,14 +924,14 @@ describe('cues and transcript', () => {
     expect(Object.isFrozen(detail)).to.equal(true);
     await el.updateComplete;
     const rows = cueRows(el);
-    expect(rows[1].getAttribute('aria-current')).to.equal('true');
+    expect(rows[1]!.getAttribute('aria-current')).to.equal('true');
   });
 
   it("clicking a transcript row seeks to that cue's start", async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .cues=${CUES}></lr-av-player>`)) as LyraAvPlayer;
     const media = mediaEl(el);
     const rows = cueRows(el);
-    rows[2].click();
+    rows[2]!.click();
     expect(media.currentTime).to.equal(25);
   });
 
@@ -819,7 +940,7 @@ describe('cues and transcript', () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .cues=${longCues}></lr-av-player>`)) as LyraAvPlayer;
     await el.updateComplete;
     const rows = cueRows(el);
-    expect(rows[0].querySelector('[part="cue-time"]')!.textContent).to.equal('1:01:01');
+    expect(rows[0]!.querySelector('[part="cue-time"]')!.textContent).to.equal('1:01:01');
   });
 
   it('formats cue times and playback-rate labels with the effective locale', async () => {
@@ -831,7 +952,7 @@ describe('cues and transcript', () => {
         .rates=${[1, 1.5]}
       ></lr-av-player>
     `)) as LyraAvPlayer;
-    const time = cueRows(el)[0].querySelector('[part="cue-time"]')!.textContent!;
+    const time = cueRows(el)[0]!.querySelector('[part="cue-time"]')!.textContent!;
     const labels = [...el.shadowRoot!.querySelectorAll('[part="rate-select"] option')].map(
       (option) => option.textContent,
     );
@@ -1064,7 +1185,7 @@ describe('search', () => {
     await el.updateComplete;
     const rows = cueRows(el);
     expect(rows.filter((row) => row.hasAttribute('data-match')).length).to.equal(1);
-    expect(rows[1].hasAttribute('data-active-match')).to.be.true;
+    expect(rows[1]!.hasAttribute('data-active-match')).to.be.true;
   });
 
   it('retains the active search result by cue id when matching cues are reordered', async () => {
@@ -1143,17 +1264,17 @@ describe('search highlighting', () => {
     await el.search('host');
     await el.updateComplete;
     let rows = cueRows(el);
-    expect(rows[0].hasAttribute('data-match')).to.be.true;
-    expect(rows[0].hasAttribute('data-active-match')).to.be.true;
-    expect(rows[1].hasAttribute('data-match')).to.be.true;
-    expect(rows[1].hasAttribute('data-active-match')).to.be.false;
-    expect(rows[2].hasAttribute('data-match')).to.be.false;
+    expect(rows[0]!.hasAttribute('data-match')).to.be.true;
+    expect(rows[0]!.hasAttribute('data-active-match')).to.be.true;
+    expect(rows[1]!.hasAttribute('data-match')).to.be.true;
+    expect(rows[1]!.hasAttribute('data-active-match')).to.be.false;
+    expect(rows[2]!.hasAttribute('data-match')).to.be.false;
 
     el.searchNext();
     await el.updateComplete;
     rows = cueRows(el);
-    expect(rows[0].hasAttribute('data-active-match'), 'active match moved off row 0').to.be.false;
-    expect(rows[1].hasAttribute('data-active-match'), 'active match moved onto row 1').to.be.true;
+    expect(rows[0]!.hasAttribute('data-active-match'), 'active match moved off row 0').to.be.false;
+    expect(rows[1]!.hasAttribute('data-active-match'), 'active match moved onto row 1').to.be.true;
 
     el.clearSearch();
     await el.updateComplete;
@@ -1189,6 +1310,21 @@ describe('timeline marker RTL positioning', () => {
 });
 
 describe('timeline marker activation', () => {
+  it('keeps the loaded timeline rendered when a highlight omits its anchor', async () => {
+    const el = await fixture<LyraAvPlayer>(
+      html`<lr-av-player src=${MP3_SRC}></lr-av-player>`,
+    );
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: 60, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+
+    el.highlights = [{ id: 'missing-anchor' }] as unknown as LyraAvPlayer['highlights'];
+    await el.updateComplete;
+
+    expect(el.highlights.map((highlight) => highlight.id)).to.deep.equal([]);
+    expect(el.shadowRoot!.querySelectorAll('[part="timeline"]').length).to.equal(1);
+  });
+
   it('clicking a marker seeks to its start, sets activeHighlightId, and emits lr-highlight-activate', async () => {
     const el = (await fixture(html`
       <lr-av-player
@@ -1271,26 +1407,110 @@ it('renders marker actions as siblings of the slider and passes populated access
 });
 
 describe('hover feedback for click-to-seek/clickable parts', () => {
-  it('gives the timeline strip a :hover treatment, so a mouse user gets feedback before clicking', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='timeline'\]:hover/);
-  });
+  it('renders hover treatment on the timeline, highlight markers, and transcript cue rows', async () => {
+    const el = await fixture<LyraAvPlayer>(html`
+      <lr-av-player
+        src=${MP3_SRC}
+        style="--lr-color-brand: rgb(1, 2, 3); --lr-color-brand-quiet: rgb(4, 5, 6); --lr-color-mix-partner: rgb(255, 255, 255); --lr-color-mix-hover: 50%"
+        .cues=${CUES}
+        .highlights=${[{ id: 'chapter', anchor: { kind: 'time-range', start: 5 } }]}
+      ></lr-av-player>
+    `);
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: 60, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    await waitUntil(() => cueRows(el).length > 1);
+    el.shadowRoot!.querySelector<HTMLElement>('lr-virtual-list')!
+      .style.setProperty('--lr-color-brand-quiet', 'rgb(4, 5, 6)');
+    const timeline = el.shadowRoot!.querySelector<HTMLElement>('[part="timeline"]')!;
+    const marker = el.shadowRoot!.querySelector<HTMLElement>('[part="timeline-marker"]')!;
+    const cue = cueRows(el)[1]!;
 
-  it('gives timeline highlight markers a :hover treatment', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='timeline-marker'\]:hover/);
-  });
+    timeline.scrollIntoView({ block: 'center' });
+    let rect = timeline.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.right - 5), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(
+        () => getComputedStyle(timeline).borderTopColor === 'rgb(1, 2, 3)',
+        'the timeline hover border never appeared',
+      );
+    } finally {
+      await resetMouse();
+    }
 
-  it('gives transcript cue rows a :hover treatment', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/lr-virtual-list::part\(cue\):hover/);
+    marker.scrollIntoView({ block: 'center' });
+    rect = marker.getBoundingClientRect();
+    const restingMarker = getComputedStyle(marker).backgroundColor;
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(
+        () => getComputedStyle(marker).backgroundColor !== restingMarker,
+        'the timeline marker hover fill never appeared',
+      );
+    } finally {
+      await resetMouse();
+    }
+
+    cue.scrollIntoView({ block: 'center' });
+    rect = cue.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(
+        () => getComputedStyle(cue).backgroundColor === 'rgb(4, 5, 6)',
+        'the transcript cue hover background never appeared',
+      );
+    } finally {
+      await resetMouse();
+    }
   });
 });
 
 describe('focus-visible feedback for keyboard-operable parts', () => {
-  it('gives the seek/scrub timeline a :focus-visible outline, since it is a real role="slider" keyboard target', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='timeline'\]:focus-visible[^{]*\{[^}]*outline:/);
+  it('honors the composite focus-ring shorthand on every AV keyboard target', async () => {
+    const el = await fixture<LyraAvPlayer>(html`
+      <lr-av-player
+        src=${MP3_SRC}
+        style="--lr-focus-ring: 5px dashed rgb(1, 2, 3)"
+        .cues=${CUES}
+        .highlights=${[{ id: 'chapter', anchor: { kind: 'time-range', start: 5 } }]}
+      ></lr-av-player>
+    `);
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: 60, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    await waitUntil(() => cueRows(el).length > 0);
+    // The cue lives behind lr-virtual-list's own token-reset boundary. Setting the exposed
+    // transcript part itself models `lr-av-player::part(transcript) { --lr-focus-ring: ... }`.
+    const transcript = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement;
+    transcript.style.setProperty('--lr-focus-ring', '5px dashed rgb(1, 2, 3)');
+
+    const targets = [
+      el.shadowRoot!.querySelector('[part="rate-select"]'),
+      el.shadowRoot!.querySelector('[part="timeline"]'),
+      el.shadowRoot!.querySelector('[part="timeline-marker"]'),
+      cueRows(el)[0],
+    ] as HTMLElement[];
+    for (const target of targets) {
+      await sendKeys({ press: 'Tab' });
+      target.focus();
+      expect(target.matches(':focus-visible'), target.getAttribute('part') ?? target.localName).to.equal(true);
+      const computed = getComputedStyle(target);
+      const label = target.getAttribute('part') ?? target.localName;
+      expect(computed.outlineStyle, label).to.equal('dashed');
+      expect(computed.outlineWidth, label).to.equal('5px');
+      expect(computed.outlineColor, label).to.equal('rgb(1, 2, 3)');
+    }
   });
 });
 
@@ -1551,6 +1771,7 @@ describe('numeric safety (finite clamping)', () => {
         .peaks=${[Number.NaN, Number.POSITIVE_INFINITY, -1, 2]}
       ></lr-av-player>
     `)) as LyraAvPlayer;
+    enableWaveformPainting(el);
     const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
       updateComplete: Promise<boolean>;
     };
@@ -1731,7 +1952,7 @@ describe('waveform', () => {
         redraws += 1;
       };
       observation!.callback(
-        [{ target: canvas } as ResizeObserverEntry],
+        [resizeEntry(canvas)],
         {} as ResizeObserver,
       );
       expect(redraws).to.equal(0);
@@ -1772,6 +1993,7 @@ describe('waveform', () => {
     `);
     const el = wrapper.querySelector('lr-av-player') as LyraAvPlayer;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    enableWaveformPainting(el);
     await waitUntil(() => canvas.width > 100);
     const initialWidth = canvas.width;
 
@@ -1782,6 +2004,7 @@ describe('waveform', () => {
 
   it('caps huge CSS-size and DPR signals before allocating the waveform backing store', async () => {
     const el = (await fixture(html`<lr-av-player .peaks=${[0.25, 0.75]}></lr-av-player>`)) as LyraAvPlayer;
+    enableWaveformPainting(el);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const originalDpr = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
     Object.defineProperty(window, 'devicePixelRatio', { value: 1000, configurable: true });
@@ -1827,6 +2050,7 @@ describe('waveform', () => {
       await el.updateComplete;
       frameDocument.body.append(frameDocument.adoptNode(el));
       await el.updateComplete;
+      enableWaveformPainting(el);
 
       const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
       Object.defineProperty(canvas, 'clientWidth', { value: 12, configurable: true });
@@ -1858,6 +2082,7 @@ describe('waveform', () => {
 
   it('falls back to devicePixelRatio 1 and 1px dimensions when those signals are unavailable', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .peaks=${[0.2, 0.6]}></lr-av-player>`)) as LyraAvPlayer;
+    enableWaveformPainting(el);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const originalDpr = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
     Object.defineProperty(window, 'devicePixelRatio', { value: 0, configurable: true });
@@ -1875,6 +2100,7 @@ describe('waveform', () => {
 
   it('is a no-op when the canvas cannot provide a 2d context', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .peaks=${[0.2, 0.6]}></lr-av-player>`)) as LyraAvPlayer;
+    enableWaveformPainting(el);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     Object.defineProperty(canvas, 'getContext', { value: () => null, configurable: true });
     expect(() => window.dispatchEvent(new Event('resize'))).to.not.throw();
@@ -1886,6 +2112,7 @@ describe('waveform', () => {
     source[40] = 0.3;
     const peaks = Object.freeze([...source]) as unknown as number[];
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .peaks=${peaks}></lr-av-player>`)) as LyraAvPlayer;
+    enableWaveformPainting(el);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const context = canvas.getContext('2d')!;
     const originalFillRect = context.fillRect.bind(context);
@@ -1919,6 +2146,7 @@ describe('waveform', () => {
   it('paints a single physical waveform column from only the final peak sample when the canvas is too narrow to decimate (barCount=1)', async () => {
     const peaks = [0.9, 0.9, 0.9, 0.1];
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .peaks=${peaks}></lr-av-player>`)) as LyraAvPlayer;
+    enableWaveformPainting(el);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const context = canvas.getContext('2d')!;
     const originalFillRect = context.fillRect.bind(context);
@@ -1948,6 +2176,7 @@ describe('waveform', () => {
 
   it('uses finite waveform geometry when canvas measurements or devicePixelRatio are non-finite', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .peaks=${[0.2, 0.6, 0.8]}></lr-av-player>`)) as LyraAvPlayer;
+    enableWaveformPainting(el);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const context = canvas.getContext('2d')!;
     const originalFillRect = context.fillRect.bind(context);
@@ -1975,6 +2204,7 @@ describe('waveform', () => {
 
   it('keeps a stable canvas ref callback identity, so an unrelated re-render does not redraw the waveform (regression)', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .peaks=${[0.2, 0.8]}></lr-av-player>`)) as LyraAvPlayer;
+    enableWaveformPainting(el);
     let redraws = 0;
     (el as unknown as { drawWaveform: () => void }).drawWaveform = () => {
       redraws += 1;
@@ -1991,6 +2221,7 @@ describe('waveform', () => {
   it('uses the --lr-color-brand custom property for the waveform fill when the host defines it', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .peaks=${[1, 1]}></lr-av-player>`)) as LyraAvPlayer;
     el.style.setProperty('--lr-color-brand', 'rgb(0, 200, 0)');
+    enableWaveformPainting(el);
     window.dispatchEvent(new Event('resize'));
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
@@ -2003,6 +2234,7 @@ describe('waveform', () => {
     const el = (await fixture(html`
       <lr-av-player src=${MP3_SRC} .peaks=${[1, 1]}></lr-av-player>
     `)) as LyraAvPlayer;
+    enableWaveformPainting(el);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
     el.style.setProperty('--lr-color-brand', 'rgb(0, 200, 0)');
@@ -2034,9 +2266,9 @@ describe('tracks', () => {
     const media = mediaEl(el);
     const trackEls = [...media.querySelectorAll('track')];
     expect(trackEls.length).to.equal(1);
-    expect(trackEls[0].src).to.equal('https://example.test/en.vtt');
-    expect(trackEls[0].label).to.equal('English');
-    expect(trackEls[0].default).to.be.true;
+    expect(trackEls[0]!.src).to.equal('https://example.test/en.vtt');
+    expect(trackEls[0]!.label).to.equal('English');
+    expect(trackEls[0]!.default).to.be.true;
   });
 });
 
@@ -2399,7 +2631,7 @@ describe('active-state cssprop escape hatches', () => {
 
   it('renders a cue with the component chrome rather than the raw UA button appearance', async () => {
     const el = await withCues();
-    const cue = cueRows(el)[2]; // neither current nor a search match: the plain `cue` treatment
+    const cue = cueRows(el)[2]!; // neither current nor a search match: the plain `cue` treatment
     const style = getComputedStyle(cue);
     // A raw UA button computes to padding 1px 6px, a grey background and a visible border here.
     expect(style.padding).to.not.equal('1px 6px');
@@ -2453,8 +2685,8 @@ describe('active-state cssprop escape hatches', () => {
     await el.updateComplete;
     const markers = [...el.shadowRoot!.querySelectorAll('[part="timeline-marker"]')] as HTMLElement[];
     expect(markers.length).to.equal(2);
-    expect(getComputedStyle(markers[0]).backgroundColor, 'the untoned marker reads --lr-av-player-marker-bg').to.equal('rgb(10, 20, 30)');
-    expect(getComputedStyle(markers[1]).backgroundColor, 'the success-toned marker reads --lr-av-player-marker-success-bg').to.equal('rgb(40, 50, 60)');
+    expect(getComputedStyle(markers[0]!).backgroundColor, 'the untoned marker reads --lr-av-player-marker-bg').to.equal('rgb(10, 20, 30)');
+    expect(getComputedStyle(markers[1]!).backgroundColor, 'the success-toned marker reads --lr-av-player-marker-success-bg').to.equal('rgb(40, 50, 60)');
   });
 
   it('mixes a timeline marker hover and pressed fill from its own tone, and makes pressed the stronger step', async () => {
@@ -2480,12 +2712,12 @@ describe('active-state cssprop escape hatches', () => {
     const markers = [...el.shadowRoot!.querySelectorAll('[part="timeline-marker"]')] as HTMLElement[];
     expect(markers.length).to.equal(2);
 
-    const plainFill = getComputedStyle(markers[0]).backgroundColor;
-    const dangerFill = getComputedStyle(markers[1]).backgroundColor;
+    const plainFill = getComputedStyle(markers[0]!).backgroundColor;
+    const dangerFill = getComputedStyle(markers[1]!).backgroundColor;
     expect(plainFill, 'the untoned fill is not empty').to.not.equal('');
     expect(dangerFill, 'the danger tone supplies its own fill for the mixes to read').to.not.equal(plainFill);
 
-    const target = markers[1];
+    const target = markers[1]!;
     target.scrollIntoView({ block: 'center', inline: 'center' });
     await aTimeout(0);
     const rect = target.getBoundingClientRect();
@@ -2554,7 +2786,7 @@ describe('active-state cssprop escape hatches', () => {
     document.head.append(style);
     try {
       const el = await withCues();
-      expect(getComputedStyle(cueRows(el)[0]).letterSpacing).to.equal('3px');
+      expect(getComputedStyle(cueRows(el)[0]!).letterSpacing).to.equal('3px');
       expect(getComputedStyle(currentCue(el)).backgroundColor).to.equal('rgb(1, 2, 3)');
       expect(getComputedStyle(activeMatchCue(el)).outlineColor).to.equal('rgb(4, 5, 6)');
       expect(getComputedStyle(cueRoot(el).querySelector('[part="cue-time"]') as HTMLElement).color).to.equal('rgb(7, 8, 9)');
@@ -2628,7 +2860,7 @@ it('keeps every marker category distinguishable in forced colors', async () => {
   }
 });
 
-it('keeps rate hover visible in forced colors', async function () {
+it.skip('keeps rate hover visible in forced colors', async function () {
   // Quarantined, not a reflexive skip -- see the investigation trail below. The underlying
   // behavior (the playback-rate select's hover outline stays visible without color under
   // forced-colors) is real and its stylesheet rule
@@ -2655,7 +2887,6 @@ it('keeps rate hover visible in forced colors', async function () {
   // simply not be reliable in that unsharded configuration at any wait budget -- a fifth blind
   // widening isn't warranted. Diagnosing this for real needs instrumentation running inside an
   // actual failing Test All Browsers job, not another local or standalone repro attempt.
-  this.skip();
   this.timeout(20000);
   await setForcedColors('active');
   try {
@@ -2700,19 +2931,21 @@ it('registers one shared audio/video renderer across every AV MIME type', async 
   const {
     adaptDocumentRenderer,
     getDefaultDocumentRendererRegistry,
+    loadDocumentRenderer,
     snapshotLyraDocumentRendererPayload,
   } = await import('../../viewers/document-viewer/registry.js');
   const registry = getDefaultDocumentRendererRegistry();
   const def = registry.get('audio/mpeg');
   expect(def, 'importing av-player.js registers the renderer').to.exist;
   expect(registry.get('audio/wav'), 'audio MIME types share one definition').to.equal(def);
+  const resolvedDefinition = await loadDocumentRenderer(def!);
 
   expect(def!.matches!({ name: 'talk.MP3', mimeType: 'audio/mpeg', src: MP3_SRC })).to.be.true;
   expect(def!.matches!({ name: 'no-extension', mimeType: 'video/webm', src: MP3_SRC })).to.be.true;
   expect(def!.matches!({ name: 'notes.txt', mimeType: 'text/plain', src: MP3_SRC })).to.be.false;
 
   const file = { name: 'talk.mp3', mimeType: 'audio/mpeg', src: MP3_SRC };
-  const legacyInvocation = adaptDocumentRenderer(def!, file);
+  const legacyInvocation = adaptDocumentRenderer(resolvedDefinition, file);
   expect(legacyInvocation.capabilities).to.deep.equal({ anchors: ['time-range'], search: false });
   const legacyHost = (await fixture(html`<div>${legacyInvocation.render()}</div>`)) as HTMLElement;
   const legacyPlayer = legacyHost.querySelector('lr-av-player') as LyraAvPlayer;
@@ -2732,7 +2965,7 @@ it('registers one shared audio/video renderer across every AV MIME type', async 
       label: 'English',
     }],
   });
-  const richInvocation = adaptDocumentRenderer(def!, file, richPayload);
+  const richInvocation = adaptDocumentRenderer(resolvedDefinition, file, richPayload);
   expect(richInvocation.capabilities).to.deep.equal({ anchors: ['time-range'], search: true });
   const richHost = (await fixture(html`<div>${richInvocation.render()}</div>`)) as HTMLElement;
   const richPlayer = richHost.querySelector('lr-av-player') as LyraAvPlayer;
@@ -2754,7 +2987,7 @@ it('registers one shared audio/video renderer across every AV MIME type', async 
     ],
     tracks: [],
   });
-  expect(adaptDocumentRenderer(def!, file, truncatedPayload).capabilities)
+  expect(adaptDocumentRenderer(resolvedDefinition, file, truncatedPayload).capabilities)
     .to.deep.equal({ anchors: ['time-range'], search: false });
 });
 

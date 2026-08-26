@@ -1,6 +1,6 @@
 import { expect, oneEvent, waitUntil } from '@open-wc/testing';
 import './emoji-picker.js';
-import type { LyraEmojiPicker, EmojiPickerGroup } from './emoji-picker.js';
+import type { LyraEmojiPicker, EmojiPickerGroup, EmojiPickerItem } from './emoji-picker.js';
 import { styles } from './emoji-picker.styles.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -21,6 +21,38 @@ const groups: EmojiPickerGroup[] = [
     emojis: [{ emoji: '🐶', name: 'dog face', shortcodes: ['dog'] }],
   },
 ];
+
+function requiredItem<T>(
+  items: ArrayLike<T>,
+  index: number,
+  description: string,
+): T {
+  const item = items[index];
+  if (item === undefined) {
+    throw new Error(`Expected ${description} at index ${index}.`);
+  }
+  return item;
+}
+
+function fixtureGroup(index: number): EmojiPickerGroup {
+  return requiredItem(groups, index, 'emoji fixture group');
+}
+
+function fixtureEmoji(groupIndex: number, emojiIndex: number): EmojiPickerItem {
+  return requiredItem(fixtureGroup(groupIndex).emojis, emojiIndex, 'emoji fixture item');
+}
+
+function adjacentRowOffsetDifference(offsets: readonly number[]): number {
+  return requiredItem(offsets, 1, 'second virtual-row offset') -
+    requiredItem(offsets, 0, 'first virtual-row offset');
+}
+
+function expectDisabledStatusOption(el: LyraEmojiPicker, part: 'empty' | 'load-error'): void {
+  const row = el.shadowRoot!.querySelector(`[part="${part}"]`);
+  expect(row?.getAttribute('role')).to.equal('option');
+  expect(row?.getAttribute('aria-selected')).to.equal('false');
+  expect(row?.getAttribute('aria-disabled')).to.equal('true');
+}
 
 // Elements created below bypass `fixture()` (see `connectEmojiPicker()`), so they don't benefit
 // from `fixture()`'s own automatic wrapper cleanup -- track and remove them here instead.
@@ -299,7 +331,7 @@ describe('windowed geometry token resolution', () => {
   /** The row pitch the component actually laid out with, read back from two adjacent rows. */
   const renderedRowHeight = (el: LyraEmojiPicker): number => {
     const offsets = rowOffsets(el);
-    return offsets[1] - offsets[0];
+    return adjacentRowOffsetDifference(offsets);
   };
 
   const firstRowButtons = (el: LyraEmojiPicker): HTMLElement[] => [
@@ -428,7 +460,7 @@ it('keeps committed aria-selected state separate from roving active navigation',
   el.groups = groups;
   await el.updateComplete;
   const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')];
-  buttons[0].click();
+  requiredItem(buttons, 0, 'first emoji button').click();
   await el.updateComplete;
   expect(buttons.map((button) => button.getAttribute('aria-selected'))).to.deep.equal([
     'true',
@@ -438,7 +470,7 @@ it('keeps committed aria-selected state separate from roving active navigation',
 
   const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
   grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
-  expect(buttons[1].hasAttribute('data-active')).to.be.true;
+  expect(requiredItem(buttons, 1, 'second emoji button').hasAttribute('data-active')).to.be.true;
   expect(buttons.map((button) => button.getAttribute('aria-selected'))).to.deep.equal([
     'true',
     'false',
@@ -501,6 +533,11 @@ describe('search filtering', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="emoji"]').length).to.equal(0);
     expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
+    expectDisabledStatusOption(el, 'empty');
+    await expect(el).to.be.accessible();
+    expect(
+      el.shadowRoot!.querySelectorAll('[role="listbox"] > *:not([role])').length,
+    ).to.equal(0);
   });
 
   it('case-folds names and queries with the effective locale', async () => {
@@ -586,21 +623,27 @@ describe('keyboard navigation', () => {
     await el.updateComplete;
     const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
     const buttons = [...el.shadowRoot!.querySelectorAll('[part="emoji"]')];
+    const first = requiredItem(buttons, 0, 'first RTL emoji button');
+    const second = requiredItem(buttons, 1, 'second RTL emoji button');
 
     grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
-    expect(buttons[1].hasAttribute('data-active')).to.be.true; // ArrowLeft is "forward" under RTL
-    expect(buttons[0].hasAttribute('data-active')).to.be.false;
+    expect(second.hasAttribute('data-active')).to.be.true; // ArrowLeft is "forward" under RTL
+    expect(first.hasAttribute('data-active')).to.be.false;
 
     grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
-    expect(buttons[0].hasAttribute('data-active')).to.be.true; // ArrowRight is "backward" under RTL
-    expect(buttons[1].hasAttribute('data-active')).to.be.false;
+    expect(first.hasAttribute('data-active')).to.be.true; // ArrowRight is "backward" under RTL
+    expect(second.hasAttribute('data-active')).to.be.false;
   });
 
   it('activates the focused emoji on Enter, not a stale active index', async () => {
     const el = await connectEmojiPicker();
     el.groups = groups;
     await el.updateComplete;
-    const third = el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')[2];
+    const third = requiredItem(
+      el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]'),
+      2,
+      'third emoji button',
+    );
 
     third.focus(); // focusin syncs the active index to the truly focused option
     const eventPromise = oneEvent(el, 'lr-change');
@@ -681,14 +724,18 @@ describe('keyboard navigation', () => {
         'blur',
       ]);
       expect(removedAliases).to.deep.equal([]);
-      expect(nativeEvents[0] instanceof ownerWindow.InputEvent).to.equal(true);
-      expect(nativeEvents[0] instanceof InputEvent).to.equal(false);
-      expect(nativeEvents[1].constructor === ownerWindow.Event).to.equal(true);
-      expect(nativeEvents[1] instanceof ownerWindow.CustomEvent).to.equal(false);
-      expect(nativeEvents[2] instanceof ownerWindow.FocusEvent).to.equal(true);
-      expect(nativeEvents[3] instanceof ownerWindow.FocusEvent).to.equal(true);
-      expect((nativeEvents[2] as FocusEvent).relatedTarget === related).to.equal(true);
-      expect((nativeEvents[3] as FocusEvent).relatedTarget === related).to.equal(true);
+      const inputEvent = requiredItem(nativeEvents, 0, 'owner-realm input event');
+      const changeEvent = requiredItem(nativeEvents, 1, 'owner-realm change event');
+      const focusEvent = requiredItem(nativeEvents, 2, 'owner-realm focus event');
+      const blurEvent = requiredItem(nativeEvents, 3, 'owner-realm blur event');
+      expect(inputEvent instanceof ownerWindow.InputEvent).to.equal(true);
+      expect(inputEvent instanceof InputEvent).to.equal(false);
+      expect(changeEvent.constructor === ownerWindow.Event).to.equal(true);
+      expect(changeEvent instanceof ownerWindow.CustomEvent).to.equal(false);
+      expect(focusEvent instanceof ownerWindow.FocusEvent).to.equal(true);
+      expect(blurEvent instanceof ownerWindow.FocusEvent).to.equal(true);
+      expect((focusEvent as FocusEvent).relatedTarget === related).to.equal(true);
+      expect((blurEvent as FocusEvent).relatedTarget === related).to.equal(true);
     } finally {
       frame.remove();
     }
@@ -750,22 +797,24 @@ describe('keyboard navigation', () => {
     await el.updateComplete;
     const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
     const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')];
+    const first = requiredItem(buttons, 0, 'first roving emoji button');
+    const third = requiredItem(buttons, 2, 'third roving emoji button');
     expect(buttons.map((b) => b.tabIndex)).to.deep.equal([0, -1, -1]);
 
     // Group labels span the full row, so the two smileys form the first visual row and the dog
     // starts the next one: one row down from index 0 lands on index 2.
     grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     expect(buttons.map((b) => b.tabIndex)).to.deep.equal([-1, -1, 0]);
-    expect(el.shadowRoot!.activeElement?.id).to.equal(buttons[2].id); // roving focus follows
+    expect(el.shadowRoot!.activeElement?.id).to.equal(third.id); // roving focus follows
 
     grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
     expect(buttons.map((b) => b.tabIndex)).to.deep.equal([0, -1, -1]);
 
     grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
-    expect(buttons[2].tabIndex).to.equal(0);
+    expect(third.tabIndex).to.equal(0);
     grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
-    expect(buttons[0].tabIndex).to.equal(0);
-    expect(buttons[2].tabIndex).to.equal(-1);
+    expect(first.tabIndex).to.equal(0);
+    expect(third.tabIndex).to.equal(-1);
   });
 
   it('ignores a focusin event whose target is not an emoji button', async () => {
@@ -796,10 +845,11 @@ describe('keyboard navigation', () => {
     internals.focusedGridItem = undefined;
     internals.pendingGridFocus = { index: 0 }; // simulates a focus restore already scheduled
 
-    buttons[1].focus(); // a real focusin, as if a consumer's own focus() call raced the restoration
+    const second = requiredItem(buttons, 1, 'second pending-focus emoji button');
+    second.focus(); // a real focusin, as if a consumer's own focus() call raced the restoration
 
     expect(internals.focusedGridItem, 'onGridFocusIn must defer while a restore is pending').to.equal(undefined);
-    expect(buttons[1].hasAttribute('data-active')).to.be.false; // setActiveIndex was never reached for this focus
+    expect(second.hasAttribute('data-active')).to.be.false; // setActiveIndex was never reached for this focus
     expect(internals.pendingGridFocus).to.deep.equal({ index: 0 }); // left untouched for the real restore to consume
   });
 
@@ -888,7 +938,7 @@ it('localizes the fallback heading for a built-in group id with no registered la
 
 it('keeps a consumer-supplied label verbatim even for a built-in numeric key', async () => {
   const el = await connectEmojiPicker();
-  el.groups = [{ key: '0', label: 'My own zero group', emojis: groups[0].emojis }];
+  el.groups = [{ key: '0', label: 'My own zero group', emojis: fixtureGroup(0).emojis }];
   el.strings = { emojiPickerGroupSmileysEmotion: 'Émotions' };
   await el.updateComplete;
   expect([...el.shadowRoot!.querySelectorAll('[part="group-label"]')].map((h) => h.textContent!.trim())).to.deep.equal([
@@ -964,8 +1014,8 @@ describe('disabled', () => {
     await el.updateComplete;
     let fired = false;
     el.addEventListener('lr-change', () => { fired = true; });
-    (el as unknown as { pick(item: { emoji: string; name: string; shortcodes?: string[] }): void }).pick(
-      groups[0]!.emojis[0]!,
+    (el as unknown as { pick(item: EmojiPickerItem): void }).pick(
+      fixtureEmoji(0, 0),
     );
     expect(fired).to.be.false;
     expect(el.value).to.equal('');
@@ -1020,6 +1070,9 @@ describe('native focus/blur bridging', () => {
     input.dispatchEvent(new FocusEvent('focus', { relatedTarget: outside }));
     const focusEvent = await focusEventPromise;
     expect(focusEvent instanceof FocusEvent).to.be.true;
+    if (!(focusEvent instanceof FocusEvent)) {
+      throw new Error('Expected the relayed focus event to be a FocusEvent.');
+    }
     expect(focusEvent.relatedTarget === outside).to.be.true;
     expect(focusEvent.bubbles).to.be.true;
     expect(focusEvent.composed).to.be.true;
@@ -1028,6 +1081,9 @@ describe('native focus/blur bridging', () => {
     input.dispatchEvent(new FocusEvent('blur', { relatedTarget: outside }));
     const blurEvent = await blurEventPromise;
     expect(blurEvent instanceof FocusEvent).to.be.true;
+    if (!(blurEvent instanceof FocusEvent)) {
+      throw new Error('Expected the relayed blur event to be a FocusEvent.');
+    }
     expect(blurEvent.relatedTarget === outside).to.be.true;
     expect(blurEvent.bubbles).to.be.true;
     expect(blurEvent.composed).to.be.true;
@@ -1116,6 +1172,17 @@ describe('label/hint/error chrome', () => {
     el.setAttribute('aria-label', 'Reaction picker');
     await el.updateComplete;
     expect(grid.getAttribute('aria-label')).to.equal('Reaction picker');
+    expect(grid.hasAttribute('aria-labelledby')).to.be.false;
+  });
+
+  it('preserves an explicitly empty host aria-label on the internal grid', async () => {
+    const el = await connectEmojiPicker();
+    el.groups = groups;
+    el.setAttribute('aria-label', '');
+    await el.updateComplete;
+    const grid = el.shadowRoot!.querySelector('[part="grid"]')!;
+
+    expect(grid.getAttribute('aria-label')).to.equal('');
     expect(grid.hasAttribute('aria-labelledby')).to.be.false;
   });
 
@@ -1277,12 +1344,13 @@ describe('emoji interaction-state cssprops', () => {
       --lr-emoji-picker-keyboard-active-bg: rgb(0, 51, 102);
     `);
     const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')];
-    buttons[0].click();
+    const first = requiredItem(buttons, 0, 'first themed emoji button');
+    first.click();
     await el.updateComplete;
     const active = await activateAnEmoji(el);
-    expect(getComputedStyle(buttons[0]).backgroundColor).to.equal('rgb(102, 0, 51)');
+    expect(getComputedStyle(first).backgroundColor).to.equal('rgb(102, 0, 51)');
     expect(getComputedStyle(active).backgroundColor).to.equal('rgb(0, 51, 102)');
-    expect(buttons[0].getAttribute('aria-selected')).to.equal('true');
+    expect(first.getAttribute('aria-selected')).to.equal('true');
     expect(active.getAttribute('aria-selected')).to.equal('false');
   });
 
@@ -1347,7 +1415,7 @@ describe('windowed geometry fallbacks', () => {
 
     const offsets = rowOffsets(el);
     expect(offsets.length).to.be.greaterThan(1);
-    expect(offsets[1] - offsets[0]).to.equal(56); // VIRTUAL_ROW_HEIGHT_FALLBACK, not the overridden 128px
+    expect(adjacentRowOffsetDifference(offsets)).to.equal(56); // VIRTUAL_ROW_HEIGHT_FALLBACK, not the overridden 128px
   });
 
   it('falls back to the default row height when its token resolves to an invalid length while unlaid-out, without disturbing a sibling token that is still valid', async () => {
@@ -1366,7 +1434,7 @@ describe('windowed geometry fallbacks', () => {
     await el.updateComplete;
 
     const offsets = rowOffsets(el);
-    expect(offsets[1] - offsets[0]).to.equal(56); // VIRTUAL_ROW_HEIGHT_FALLBACK, from the NaN guard
+    expect(adjacentRowOffsetDifference(offsets)).to.equal(56); // VIRTUAL_ROW_HEIGHT_FALLBACK, from the NaN guard
 
     el.style.display = '';
     await el.updateComplete;
@@ -1406,7 +1474,7 @@ describe('windowed geometry fallbacks', () => {
 
       const offsets = rowOffsets(el);
       expect(offsets.length).to.be.greaterThan(1);
-      expect(offsets[1] - offsets[0]).to.equal(56); // VIRTUAL_ROW_HEIGHT_FALLBACK, from the per-probe unresolved-style guard
+      expect(adjacentRowOffsetDifference(offsets)).to.equal(56); // VIRTUAL_ROW_HEIGHT_FALLBACK, from the per-probe unresolved-style guard
     } finally {
       window.getComputedStyle = realGetComputedStyle;
     }
@@ -1423,7 +1491,7 @@ describe('windowed geometry fallbacks', () => {
     await el.updateComplete;
 
     const offsets = rowOffsets(el);
-    expect(offsets[1] - offsets[0]).to.equal(56); // VIRTUAL_ROW_HEIGHT_FALLBACK, not the literal zero
+    expect(adjacentRowOffsetDifference(offsets)).to.equal(56); // VIRTUAL_ROW_HEIGHT_FALLBACK, not the literal zero
   });
 
   it('renders and functions without ResizeObserver, skipping only the auto-re-measurement it would provide', async () => {
@@ -1496,7 +1564,11 @@ describe('setActiveIndex beyond the rendered window', () => {
     first.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
     await el.updateComplete;
 
-    expect(el.shadowRoot!.activeElement?.dataset['index']).to.equal('499');
+    const active = el.shadowRoot!.activeElement;
+    if (!(active instanceof HTMLElement)) {
+      throw new Error('Expected the active windowed emoji to be an HTMLElement.');
+    }
+    expect(active.dataset['index']).to.equal('499');
   });
 
   it('scrolls the windowed grid to the active row when End jumps past the currently rendered rows', async () => {
@@ -1789,17 +1861,21 @@ it('resets the active index back to 0 when a smaller groups array leaves the pre
   const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
   grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true })); // active index -> 2 (last)
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')[2].tabIndex).to.equal(0);
+  expect(requiredItem(
+    el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]'),
+    2,
+    'third active-index emoji button',
+  ).tabIndex).to.equal(0);
 
   // Reassigning `groups` directly (not filtering via the search input, which already zeroes the
   // active index itself) is what leaves updated()'s own out-of-range clamp as the only thing that
   // can catch this.
-  el.groups = [{ key: 'smileys', label: 'Smileys', emojis: [groups[0].emojis[0]] }];
+  el.groups = [{ key: 'smileys', label: 'Smileys', emojis: [fixtureEmoji(0, 0)] }];
   await el.updateComplete;
 
   const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')];
   expect(buttons.length).to.equal(1);
-  expect(buttons[0].tabIndex).to.equal(0);
+  expect(requiredItem(buttons, 0, 'sole clamped emoji button').tabIndex).to.equal(0);
 });
 
 it('moves owned grid focus to the clamped survivor when groups remove the focused emoji', async () => {
@@ -1808,10 +1884,11 @@ it('moves owned grid focus to the clamped survivor when groups remove the focuse
   await el.updateComplete;
 
   const originalButtons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')];
-  originalButtons[2].focus();
-  expect(el.shadowRoot!.activeElement?.id).to.equal(originalButtons[2].id);
+  const originalThird = requiredItem(originalButtons, 2, 'third original emoji button');
+  originalThird.focus();
+  expect(el.shadowRoot!.activeElement?.id).to.equal(originalThird.id);
 
-  el.groups = [{ key: 'smileys', label: 'Smileys', emojis: [groups[0].emojis[0]] }];
+  el.groups = [{ key: 'smileys', label: 'Smileys', emojis: [fixtureEmoji(0, 0)] }];
   await el.updateComplete;
 
   const survivor = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="emoji"]')!;
@@ -1824,8 +1901,9 @@ it('clears a pending grid focus and refocuses the search input when a groups rea
   el.groups = groups;
   await el.updateComplete;
   const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')];
-  buttons[0].focus();
-  expect(el.shadowRoot!.activeElement?.id).to.equal(buttons[0].id);
+  const first = requiredItem(buttons, 0, 'first focused emoji button');
+  first.focus();
+  expect(el.shadowRoot!.activeElement?.id).to.equal(first.id);
 
   el.groups = []; // the focused emoji itself disappears, and no option survives to take its place
   await el.updateComplete;
@@ -1848,12 +1926,12 @@ it('clamps the active index to 0 without stealing focus from the search input wh
   expect(el.shadowRoot!.activeElement === input).to.be.true;
   expect(input.getAttribute('aria-activedescendant')).to.match(/-item-2$/);
 
-  el.groups = [{ key: 'smileys', label: 'Smileys', emojis: [groups[0].emojis[0]] }];
+  el.groups = [{ key: 'smileys', label: 'Smileys', emojis: [fixtureEmoji(0, 0)] }];
   await el.updateComplete;
 
   const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')];
   expect(buttons.length).to.equal(1);
-  expect(buttons[0].tabIndex).to.equal(0);
+  expect(requiredItem(buttons, 0, 'sole search-focused emoji button').tabIndex).to.equal(0);
   expect(el.shadowRoot!.activeElement === input).to.be.true;
 });
 
@@ -1872,7 +1950,7 @@ it("falls back to a pending grid focus entry's clamped index when its item refer
   await el.updateComplete;
 
   const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')];
-  expect(buttons[1].tabIndex).to.equal(0);
+  expect(requiredItem(buttons, 1, 'second pending-focus emoji button').tabIndex).to.equal(0);
 });
 
 it('preserves focused emoji identity across group reordering without stealing foreign focus', async () => {
@@ -1882,7 +1960,7 @@ it('preserves focused emoji identity across group reordering without stealing fo
 
   const dog = el.shadowRoot!.querySelector<HTMLButtonElement>('[aria-label="dog face"]')!;
   dog.focus();
-  el.groups = [groups[1], groups[0]];
+  el.groups = [fixtureGroup(1), fixtureGroup(0)];
   await el.updateComplete;
   expect(el.shadowRoot!.activeElement?.getAttribute('aria-label')).to.equal('dog face');
 
@@ -1891,7 +1969,7 @@ it('preserves focused emoji identity across group reordering without stealing fo
   created.push(foreign);
   document.body.append(foreign);
   foreign.focus();
-  el.groups = [{ key: 'smileys', label: 'Smileys', emojis: [groups[0].emojis[0]] }];
+  el.groups = [{ key: 'smileys', label: 'Smileys', emojis: [fixtureEmoji(0, 0)] }];
   await el.updateComplete;
   expect(document.activeElement?.id).to.equal(foreign.id);
 });
@@ -1909,7 +1987,7 @@ it('resolves a pending grid-focus item from the flat list when the focused-item 
   // identity below, not the cache.
   (el as unknown as { focusedGridItem?: unknown }).focusedGridItem = undefined;
 
-  el.groups = [groups[1], groups[0]];
+  el.groups = [fixtureGroup(1), fixtureGroup(0)];
   await el.updateComplete;
   expect(el.shadowRoot!.activeElement?.getAttribute('aria-label')).to.equal('dog face');
 });
@@ -1958,6 +2036,11 @@ describe('optional-peer load failure', () => {
     expect((errorEl(el)!.textContent ?? '').trim().length > 0).to.equal(true);
     // The plain "no matches" state must not be what a failed install looks like.
     expect(emptyText(el) === null).to.equal(true);
+    expectDisabledStatusOption(el, 'load-error');
+    await expect(el).to.be.accessible();
+    expect(
+      el.shadowRoot!.querySelectorAll('[role="listbox"] > *:not([role])').length,
+    ).to.equal(0);
   });
 
   it('announces the failure through the shared light-DOM assertive sink', async () => {
@@ -1977,6 +2060,11 @@ describe('optional-peer load failure', () => {
     await el.updateComplete;
     expect(errorEl(el) === null).to.equal(true);
     expect((emptyText(el) ?? '').length > 0).to.equal(true);
+    expectDisabledStatusOption(el, 'empty');
+    await expect(el).to.be.accessible();
+    expect(
+      el.shadowRoot!.querySelectorAll('[role="listbox"] > *:not([role])').length,
+    ).to.equal(0);
   });
 
   it('keeps a peer that legitimately resolved zero groups on the ordinary empty state', async () => {

@@ -496,10 +496,10 @@ it('owns the stall timeout in the adopted window and rejects stale callbacks', a
   let frameHandle = 7400;
 
   window.setTimeout = ((handler: TimerHandler, delay?: number, ...args: unknown[]) => {
-    if (delay !== 43210) return originalMainSet.call(window, handler, delay, ...args);
     if (typeof handler !== 'function') throw new TypeError('Expected a timeout callback.');
+    if (delay !== 43210) return originalMainSet(() => handler(...args), delay);
     const handle = ++mainHandle;
-    mainCallbacks.set(handle, handler as VoidFunction);
+    mainCallbacks.set(handle, () => handler(...args));
     return handle;
   }) as typeof window.setTimeout;
   window.clearTimeout = ((handle?: number) => {
@@ -507,10 +507,10 @@ it('owns the stall timeout in the adopted window and rejects stale callbacks', a
     else originalMainClear.call(window, handle);
   }) as typeof window.clearTimeout;
   frameWindow.setTimeout = ((handler: TimerHandler, delay?: number, ...args: unknown[]) => {
-    if (delay !== 43210) return originalFrameSet.call(frameWindow, handler, delay, ...args);
     if (typeof handler !== 'function') throw new TypeError('Expected a timeout callback.');
+    if (delay !== 43210) return originalFrameSet(() => handler(...args), delay);
     const handle = ++frameHandle;
-    frameCallbacks.set(handle, handler as VoidFunction);
+    frameCallbacks.set(handle, () => handler(...args));
     return handle;
   }) as typeof frameWindow.setTimeout;
   frameWindow.clearTimeout = ((handle?: number) => {

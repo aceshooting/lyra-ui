@@ -1201,8 +1201,8 @@ try {
   if (shouldAssertHydrationTag('lr-badge')) {
     const badgeHydration = hydrationResult('lr-badge');
     const expectedBadgeSemantics = {
-      hostRole: 'status',
-      statusOwnerCount: 1,
+      hostRole: null,
+      statusOwnerCount: 0,
       sliderOwnerCount: 0,
       shadowStatusOwnerCount: 0,
       shadowSliderOwnerCount: 0,
@@ -1221,7 +1221,7 @@ try {
       assert.deepEqual(
         semantics,
         expectedBadgeSemantics,
-        `lr-badge ${phase} must retain exactly one host status owner and no shadow duplicate`
+        `lr-badge ${phase} must remain static by default and must not acquire a shadow status owner`
       );
     }
   }

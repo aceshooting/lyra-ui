@@ -6,6 +6,7 @@
 - **Class** `LyraPageRail`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/page-rail/page-rail.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 15 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -42,7 +43,8 @@ viewer, allocation width, status, or document identity changes.
 If `pageCount` shrinks past the currently focused row, focus moves to the absolute last remaining
 page instead of using the rendered window's local index or being lost with the virtualized row.
 Rapid consecutive shrinks supersede an in-flight repair, so focus lands on the latest count. The
-numeric type-ahead buffer is cleared on detach.
+numeric type-ahead buffer is cleared on detach. Alt/Ctrl/Meta-modified digits are left to browser or
+application shortcuts and never enter the buffer.
 
 **CSS parts:** `base` (the rail), `pages` (the embedded `<lr-virtual-list>`), `page` (one page
 button), `page-current` (the button for the current `page`), `thumbnail` (the thumbnail canvas/DOM

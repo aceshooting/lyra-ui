@@ -61,11 +61,12 @@ property).
   included in the generated accessible description, mirroring `lr-heatmap` — the label is
   consumer-supplied text and so is not localized, and an unlabelled line has no nameable meaning to
   announce. Needs the optional `chartjs-plugin-annotation` peer, loaded on first actual demand, so a
-  page with no annotated charts never downloads it; without it the chart still renders and a single
-  console warning explains the no-op. The plugin is registered globally, like `chartjs-plugin-zoom`
-  and unlike `chartjs-plugin-datalabels`: it draws nothing unless a chart supplies annotation
-  options, so the registration is unobservable to charts that set none, and registration is also
-  what installs the plugin's own element defaults
+  page with no annotated charts never downloads it; without it the chart still renders, and a
+  console warning plus a localized visible warning and light-DOM announcement explain the no-op.
+  The plugin is registered globally, like `chartjs-plugin-zoom` and unlike
+  `chartjs-plugin-datalabels`: it draws nothing unless a chart supplies annotation options, so the
+  registration is unobservable to charts that set none, and registration is also what installs the
+  plugin's own element defaults
 - `scaleType: 'linear' | 'logarithmic' = 'linear'` (attribute `scale-type`, type
   `LyraChartScaleType`) — scale type for the **value** axis; the categorical axis is never
   affected. `'logarithmic'` plots data spanning several orders of magnitude (prices, latency
@@ -89,7 +90,9 @@ property).
   announcements, generated summaries, and the accessible table. Point wording is localized as
   whole messages: `chartPointCoordinates`, `chartBubblePointCoordinates`, and
   `chartLabeledPoint` own coordinate names, order, separators, and the label wrapper. A caller's
-  point label is interpolated verbatim rather than translated or parsed.
+  point label is interpolated verbatim rather than translated or parsed. At runtime, non-record
+  dataset entries are dropped while valid sibling series remain usable; an omitted `data`/`points`
+  payload is still a valid empty series.
   - `pointRadius` takes a single number (applied to every point) **or** an array matching `data`'s
     length that sizes each point independently — passed straight through to Chart.js, which
     supports both natively. Useful for emphasizing a single outlier or the latest reading without
@@ -379,11 +382,12 @@ resolved to concrete colors/CSS-pixel numbers on every draw; `rem` uses the live
 **Optional peer deps:** `chart.js` (mandatory peer, lazy-imported on every `connectedCallback()`
 regardless of options), `chartjs-plugin-zoom` (lazy-imported *additionally* only when `zoom` is — or
 later becomes — `true`; never fetched for a chart that keeps `zoom` unset/false, since the plugin
-has a hard dependency on `hammerjs`), and `chartjs-plugin-datalabels` only when `data-labels` or
-`stack-totals` is enabled. Each capability load is memoized once per page, registering
-only the tree-shaken controller/element/scale subset actually used. A failed zoom or data-label
-peer is not a failed chart: the canvas, legend, and accessible alternative remain usable; the
-requested enhancement is disabled and a localized static `feature-warning` is visibly rendered and
+has a hard dependency on `hammerjs`), `chartjs-plugin-datalabels` only when `data-labels` or
+`stack-totals` is enabled, and `chartjs-plugin-annotation` only when `annotations` contains a usable
+entry. Each capability load is memoized once per page, registering only the tree-shaken
+controller/element/scale subset actually used. A failed zoom, data-label, or annotation peer is not
+a failed chart: the canvas, legend, and accessible alternative remain usable; the requested
+enhancement is disabled and a localized static `feature-warning` is visibly rendered and
 announced. In particular, unavailable data labels do not remove generated table totals.
 
 ```html
@@ -415,8 +419,10 @@ announced. In particular, unavailable data labels do not remove generated table 
   `y2` block. `xLabel`/`yLabel`/`y2Label` are still silently inert for all four of those types (a
   radial scale and "no scale" both have nowhere to put an axis title) — reach a titled radial scale
   only via raw `config`.
-- No `chartjs-plugin-annotation` is registered by default — reachable only by importing it
-  separately and using the raw `config` passthrough (Chart.js's registry is a global singleton).
+- `annotations` loads and registers `chartjs-plugin-annotation` on first actual demand; consumers
+  do not hand-register it or route ordinary reference lines/bands through raw `config`. A chart
+  with no usable annotations never requests the peer. Raw `config` remains the escape hatch for
+  plugin-specific annotation options outside the declarative surface.
 - while the `chart.js` peer is resolving, `render()` swaps in a `<lr-skeleton shape="rect">` for
   the canvas, and the **host element itself** (not the skeleton) carries `aria-busy="true"` — set/
   cleared in `updated()` off the private `loading` state (same lazy-load pattern as
@@ -465,7 +471,9 @@ passthrough). Not a subclass of `LyraChart`.
   `LyraLiteChartSeries { readonly label: string; readonly data: readonly (number|null)[];
   readonly color?: string }`; the deprecated `LiteSeries` name remains an alias for migration.
   `color` accepts a valid CSS `color`, while invalid values,
-  declaration-breaking input, and `url()` paint servers fall back to the built-in palette
+  declaration-breaking input, and `url()` paint servers fall back to the built-in palette. A
+  runtime entry whose required `data` member is not an array is dropped while valid siblings
+  continue to render.
 - `legend: boolean = false`
 - `legendPosition: 'top'|'bottom'|'start'|'end' = 'bottom'` (attribute `legend-position`) — logical
   placement for the DOM legend; side positions are bounded and stack responsively in narrow hosts
@@ -524,9 +532,11 @@ passthrough). Not a subclass of `LyraChart`.
   mode; ignored in the default `'fit'` mode. An excessive value is reduced as needed by the
   1,000,000px scroll-content ceiling.
 - `maxLabels?: number | 'auto'` (attribute `max-labels`) — decimates which category axis labels
-  actually render *text*: always shows the first and last label and roughly evenly distributes the
-  rest between them. A number is authoritative. `'auto'` derives the cap after each resize from the
-  resolved plot width and widest rendered caller label, using the same deterministic 7px-per-
+  actually render *text*: after the global record sampler runs, it selects from those retained
+  categories, always shows the first and last sampled label, and roughly evenly distributes the
+  rest between them. A number is authoritative up to the number of sampled categories. `'auto'`
+  derives the cap after each resize from the resolved plot width and widest rendered caller label,
+  using the same deterministic 7px-per-
   character estimate as label ellipsis plus 10px of lane breathing room. It therefore responds to
   either `layout` mode without DOM text measurement or browser-specific font metrics. Unset (the
   default) renders every label, unchanged. Each rendered category label is allocation-aware:
@@ -734,7 +744,8 @@ of every entry in these lists.**
 `yLabel` (`y-label`), plus additive `labels`, `datasets`, `valueFormatter`, `formatter`, `area`, `zoom`,
 `height`, `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`), `dataLabels`
 (`data-labels`), `stackTotals` (`stack-totals`), `config`, `showDataTable`
-(`show-data-table`), `chartArea` (readonly), and `chart`. `type` differs only in its initial value.
+(`show-data-table`), `dataTableToggle` (`data-table-toggle`), `chartArea` (readonly), and `chart`.
+`type` differs only in its initial value.
 
 **Methods:** `appendData(label, values, maxPoints?)`, `exportData('csv' | 'png')`, `renderChart()`, `resetZoom()`,
 `refreshTheme()`.
@@ -768,7 +779,8 @@ together. The mirrored hooks are `--border-color-1`,
 `--grid-color`, `--line-border-width`, and `--point-radius`, also identical to the core chart.
 
 **Optional peer deps:** same as `lr-chart` — `chart.js`, plus `chartjs-plugin-zoom` only once
-`zoom` is set, and `chartjs-plugin-datalabels` only once `data-labels`/`stack-totals` is set.
+`zoom` is set, `chartjs-plugin-datalabels` only once `data-labels`/`stack-totals` is set, and
+`chartjs-plugin-annotation` only once `annotations` contains a usable entry.
 
 ```html
 <lr-bar-chart></lr-bar-chart>
@@ -816,7 +828,7 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   (`without-tooltip`), `valueFormatter`, `formatter`, `area`, `zoom`, `config`, `height`, `xLabel` (`x-label`),
   `yLabel` (`y-label`), `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`),
   `stacked`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `showDataTable`
-  (`show-data-table`), `chartArea` (readonly).
+  (`show-data-table`), `dataTableToggle` (`data-table-toggle`), `chartArea` (readonly).
 
 **Methods:** `resetZoom()`, `refreshTheme()`, and `renderChart()` are inherited; `appendSamples(values,
 maxSamples?)` appends finite raw samples and optionally retains only the newest samples.
@@ -850,8 +862,9 @@ mirrored `--border-color-1`,
 `--border-radius`, `--border-width`, `--grid-border-width`, `--grid-color`,
 `--line-border-width`, and `--point-radius` hooks listed on the core chart.
 
-**Optional peer deps:** the same `chart.js` peer, plus `chartjs-plugin-zoom` when `zoom` is set and
-`chartjs-plugin-datalabels` when `data-labels` or `stack-totals` is set.
+**Optional peer deps:** the same `chart.js` peer, plus `chartjs-plugin-zoom` when `zoom` is set,
+`chartjs-plugin-datalabels` when `data-labels` or `stack-totals` is set, and
+`chartjs-plugin-annotation` when `annotations` contains a usable entry.
 
 All of the above behave exactly as documented in `llms/components/lr-chart.md` — read that file for
 their semantics, defaults, and gotchas.
@@ -888,7 +901,8 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 - `datasets: readonly LyraBoxPlotSeries[] = []` (attribute: false) — each series contains readonly
   `LyraBoxPlotSummary { min, q1, median, q3, max }` values. Summaries must be finite and ordered
   `min <= q1 <= median <= q3 <= max`; invalid entries are omitted and caller objects are never
-  passed to the mutating peer.
+  passed to the mutating peer. A runtime series whose required `data` member is not an array is
+  dropped while valid siblings continue to render.
 - `hiddenDatasets?: readonly number[]` (attribute: false) — complete controlled visibility snapshot
   for the DOM legend. `undefined` leaves every box series visible; `[]` likewise explicitly makes
   every series visible, while a defined canonical list of zero-based indexes hides those series.
@@ -909,7 +923,10 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 - `label: string | null = null`, `description: string | null = null` — canonical accessible name
   and description; host `aria-label` wins by presence, including an explicit empty string
 - `formatter?: LyraChartFormatter`, `valueFormatter?: LyraChartValueFormatter` — numeric axis,
-  tooltip, table, summary, and export formatting; the context-object formatter takes precedence
+  tooltip, table, summary, and export formatting. The context-object formatter receives the
+  family-wide `spoken` surface for the generated summary and `export` for CSV cells; the legacy
+  positional formatter continues to receive `table` for both compatibility paths. The
+  context-object formatter takes precedence
 - `showDataTable: boolean = false` (attribute `show-data-table`) — reveals the accessible data table
 - `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
   localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*

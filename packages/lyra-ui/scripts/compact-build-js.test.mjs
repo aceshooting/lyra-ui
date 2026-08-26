@@ -12,9 +12,13 @@ try {
     path.join(nested, 'entry.js'),
     `// duplicate authored prose does not ship in JavaScript\nexport class ReadableName {\n  method(value) { return value + 1; }\n}\nexport const syntaxOnly = true ? 'kept' : 'discarded';\n`,
   );
+  await writeFile(
+    path.join(nested, 'cli.mjs'),
+    `// copied public executables are emitted after the main build\nexport function migrate(value) { return value ?? 'fallback'; }\n`,
+  );
   await writeFile(path.join(nested, 'entry.d.ts'), '/** IDE documentation stays. */\nexport class ReadableName {}\n');
   const result = await compactBuildJavaScript(fixture);
-  assert.equal(result.files, 1);
+  assert.equal(result.files, 2);
   assert.ok(result.afterBytes < result.beforeBytes);
   const output = await readFile(path.join(nested, 'entry.js'), 'utf8');
   assert.doesNotMatch(output, /duplicate authored prose|sourceMappingURL/);
@@ -22,6 +26,9 @@ try {
   assert.match(output, /kept/);
   assert.doesNotMatch(output, /discarded/);
   assert.doesNotMatch(output, /true\s*\?/);
+  const cliOutput = await readFile(path.join(nested, 'cli.mjs'), 'utf8');
+  assert.doesNotMatch(cliOutput, /copied public executables/);
+  assert.ok(cliOutput.length < 70);
   assert.match(await readFile(path.join(nested, 'entry.d.ts'), 'utf8'), /IDE documentation stays/);
 } finally {
   await rm(fixture, { recursive: true, force: true });

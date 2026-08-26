@@ -1,4 +1,4 @@
-import { fixture, expect, oneEvent, html } from '@open-wc/testing';
+import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import './attachment-trigger.js';
 import '../../layout/menu/menu.js';
 import '../../layout/menu/menu-item.js';
@@ -6,6 +6,7 @@ import type { LyraAttachmentFilesDetail, LyraAttachmentTrigger } from './attachm
 import type { LyraMenu } from '../../layout/menu/menu.js';
 import type { LyraMenuItem } from '../../layout/menu/menu-item.js';
 import type { LyraDropdown } from '../../overlays/overlay/dropdown.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function trigger(el: LyraAttachmentTrigger): HTMLButtonElement {
   return el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
@@ -73,9 +74,15 @@ it('owns, bounds, deduplicates, and normalizes a hostile capabilities collection
   const supplied = ['image', 'bogus', 'camera', 'image', 'audio', 'files'];
   el.capabilities = supplied as typeof el.capabilities;
   await el.updateComplete;
-  expect(el.capabilities).to.deep.equal(['image', 'camera']);
+  expect(el.capabilities).to.deep.equal(['image', 'camera', 'audio', 'files']);
   expect(el.capabilities).not.to.equal(supplied);
   expect(Object.isFrozen(el.capabilities)).to.be.true;
+  expect(menuItems(el).map((item) => item.value)).to.deep.equal([
+    'image',
+    'camera',
+    'audio',
+    'files',
+  ]);
 
   const hostile = new Proxy(['files'], {
     get() {
@@ -86,6 +93,21 @@ it('owns, bounds, deduplicates, and normalizes a hostile capabilities collection
   await el.updateComplete;
   expect(el.capabilities).to.deep.equal(['files']);
   expect(trigger(el).getAttribute('aria-label')).to.equal('Attach files');
+});
+
+it('bounds capability normalization to the first 64 candidates', async () => {
+  const el = (await fixture(html`
+    <lr-attachment-trigger></lr-attachment-trigger>
+  `)) as LyraAttachmentTrigger;
+  const supplied = Array.from({ length: 65 }, () => 'bogus');
+  supplied[63] = 'camera';
+  supplied[64] = 'files';
+
+  el.capabilities = supplied as typeof el.capabilities;
+  await el.updateComplete;
+
+  expect(el.capabilities).to.deep.equal(['camera']);
+  expect(trigger(el).getAttribute('aria-label')).to.equal('Use camera');
 });
 
 it('uses an image-specific aria-label for a single image capability', async () => {
@@ -229,8 +251,8 @@ it('emits lr-files with the capability and an immutable array snapshot that surv
   // already read back empty here. This is the regression case for that.
   expect(detail.capability).to.equal('files');
   expect(detail.files.length).to.equal(2);
-  expect(detail.files[0].name).to.equal('a.txt');
-  expect(detail.files[1].name).to.equal('b.txt');
+  expect(detail.files[0]!.name).to.equal('a.txt');
+  expect(detail.files[1]!.name).to.equal('b.txt');
   expect(Array.isArray(detail.files)).to.be.true;
   expect(Object.isFrozen(detail.files)).to.be.true;
   // The input resets after reading the selection so re-picking the same
@@ -575,9 +597,9 @@ describe('localization', () => {
     await el.updateComplete;
 
     const [filesItem, imageItem, cameraItem] = menuItems(el);
-    expect(filesItem.textContent?.trim()).to.equal('Téléverser des fichiers');
-    expect(imageItem.textContent?.trim()).to.equal('Téléverser une photo');
-    expect(cameraItem.textContent?.trim()).to.equal('Prendre une photo');
+    expect(filesItem!.textContent?.trim()).to.equal('Téléverser des fichiers');
+    expect(imageItem!.textContent?.trim()).to.equal('Téléverser une photo');
+    expect(cameraItem!.textContent?.trim()).to.equal('Prendre une photo');
   });
 });
 
@@ -625,17 +647,20 @@ describe('trigger-button hover specificity', () => {
     try {
       const el = (await fixture(html`<lr-attachment-trigger></lr-attachment-trigger>`)) as LyraAttachmentTrigger;
       const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
-      // jsdom/browser test runners don't synthesize a real :hover pseudo-class from a dispatched
-      // event, so assert via computed specificity order instead: the external rule must appear
-      // in the matched rule list with specificity >= the internal .trigger-button:hover rule's.
-      // Simplest robust check here: force-apply :hover via CSS.supports-independent inline
-      // class toggling is not applicable to a pseudo-class -- instead assert the internal rule's
-      // computed specificity by reading the stylesheet text directly.
-      const internalSheet = (el.shadowRoot!.adoptedStyleSheets ?? [])
-        .flatMap((sheet) => Array.from(sheet.cssRules))
-        .map((rule) => rule.cssText)
-        .find((text) => text.includes(':hover') && text.includes('.trigger-button'));
-      expect(internalSheet).to.contain(':where(');
+      trigger.scrollIntoView({ block: 'center' });
+      const rect = trigger.getBoundingClientRect();
+      try {
+        await sendMouse({
+          type: 'move',
+          position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+        });
+        await waitUntil(
+          () => getComputedStyle(trigger).color === 'rgb(1, 2, 3)',
+          'the consumer trigger hover override never reached the rendered button',
+        );
+      } finally {
+        await resetMouse();
+      }
     } finally {
       style.remove();
     }

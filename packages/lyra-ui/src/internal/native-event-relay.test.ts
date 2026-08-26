@@ -366,7 +366,7 @@ describe('relayNativeEvent', () => {
     button.dispatchEvent(new Event('change', { bubbles: true, composed: true, cancelable: true }));
 
     expect(seen.length).to.equal(1);
-    expect(seen[0].constructor === Event).to.be.true;
+    expect(seen[0]!.constructor === Event).to.be.true;
     expect(seen[0] instanceof InputEvent).to.be.false;
     expect(seen[0] instanceof FocusEvent).to.be.false;
 

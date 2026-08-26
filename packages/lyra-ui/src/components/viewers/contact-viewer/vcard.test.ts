@@ -4,22 +4,28 @@ import { parseVCards } from './vcard.js';
 
 const CARD = ['BEGIN:VCARD', 'VERSION:4.0', 'FN:John Q. Public', 'N:Public;John;Quinlan;Mr.;Esq.', 'ORG:ABC\\, Inc.;Division', 'TEL;TYPE=work,voice:+1-404', 'EMAIL;TYPE=work:john@example.com', 'ADR;TYPE=work:;;Main Street;Town;CA;123;USA', 'END:VCARD'].join('\r\n');
 
+function first<T>(values: readonly T[]): T {
+  const value = values[0];
+  if (value === undefined) throw new Error('Expected a parsed vCard value');
+  return value;
+}
+
 describe('parseVCards', () => {
   it('parses names, organization, typed values, and structured addresses', () => {
-    const [contact] = parseVCards(CARD);
+    const contact = first(parseVCards(CARD));
     expect(contact.fn).to.equal('John Q. Public');
     expect(contact.n!.familyNames).to.equal('Public');
     expect(contact.org).to.deep.equal(['ABC, Inc.', 'Division']);
     expect(contact.tel).to.deep.equal([{ value: '+1-404', types: ['work', 'voice'] }]);
-    expect(contact.adr[0].streetAddress).to.equal('Main Street');
+    expect(first(contact.adr).streetAddress).to.equal('Main Street');
   });
   it('unfolds lines, unescapes values, and parses multiple cards', () => {
     const text = ['BEGIN:VCARD', 'VERSION:3.0', 'FN:Folded', 'NOTE:long', ' value', 'END:VCARD', 'BEGIN:VCARD', 'VERSION:2.1', 'FN:Second', 'END:VCARD'].join('\r\n');
     expect(parseVCards(text).map((contact) => contact.fn)).to.deep.equal(['Folded', 'Second']);
-    expect(parseVCards('BEGIN:VCARD\nVERSION:4.0\nFN:A\\, B\\; C\\nD\nEND:VCARD')[0].fn).to.equal('A, B; C\nD');
+    expect(first(parseVCards('BEGIN:VCARD\nVERSION:4.0\nFN:A\\, B\\; C\\nD\nEND:VCARD')).fn).to.equal('A, B; C\nD');
   });
   it('ignores an empty physical line inside a framed card', () => {
-    expect(parseVCards('BEGIN:VCARD\nVERSION:4.0\n\nFN:Blank tolerant\nEND:VCARD')[0].fn)
+    expect(first(parseVCards('BEGIN:VCARD\nVERSION:4.0\n\nFN:Blank tolerant\nEND:VCARD')).fn)
       .to.equal('Blank tolerant');
   });
   it('returns an empty array only for an actually empty document', () => {
@@ -31,7 +37,7 @@ describe('parseVCards', () => {
   });
   it('matches framing markers only as complete lines without Unicode index drift', () => {
     const unicode = ['BEGIN:VCARD', 'VERSION:4.0', 'FN:Straße İpek', 'NOTE:not BEGIN:VCARD or END:VCARD', 'END:VCARD'].join('\r\n');
-    expect(parseVCards(unicode)[0].fn).to.equal('Straße İpek');
+    expect(first(parseVCards(unicode)).fn).to.equal('Straße İpek');
     expect(() => parseVCards(`prefixßBEGIN:VCARD\r\n${CARD}`)).to.throw(/data outside/);
     expect(() => parseVCards('BEGIN:VCARD\r\nVERSION:4.0\r\nNOTE:END:VCARD')).to.throw(/missing END/);
   });
@@ -45,10 +51,10 @@ describe('parseVCards', () => {
       'EMAIL;TYPE="INTERNET,WORK":j@example.test',
       'END:VCARD',
     ].join('\r\n');
-    const [contact] = parseVCards(source);
+    const contact = first(parseVCards(source));
     expect(contact.fn).to.equal('Jörg Müller');
-    expect(contact.tel[0].types).to.deep.equal(['home', 'voice']);
-    expect(contact.email[0].types).to.deep.equal(['internet', 'work']);
+    expect(first(contact.tel).types).to.deep.equal(['home', 'voice']);
+    expect(first(contact.email).types).to.deep.equal(['internet', 'work']);
   });
   it('honors escaped backslashes in parameters and unindented quoted-printable soft lines', () => {
     const source = [
@@ -59,7 +65,7 @@ describe('parseVCards', () => {
       'TEL;TYPE="work\\\\phone":+352',
       'END:VCARD',
     ].join('\r\n');
-    const [contact] = parseVCards(source);
+    const contact = first(parseVCards(source));
 
     expect(contact.fn).to.equal('JörgMüller');
     expect(contact.tel).to.deep.equal([{ value: '+352', types: ['work\\phone'] }]);
@@ -87,7 +93,7 @@ describe('parseVCards', () => {
   });
   it('treats 8BIT encoding as a pass-through with no quoted-printable decoding', () => {
     const source = ['BEGIN:VCARD', 'VERSION:2.1', 'FN;ENCODING=8BIT:Plain=20Text', 'END:VCARD'].join('\r\n');
-    expect(parseVCards(source)[0].fn).to.equal('Plain=20Text');
+    expect(first(parseVCards(source)).fn).to.equal('Plain=20Text');
   });
   it('rejects a non-UTF-8/US-ASCII CHARSET parameter without quoted-printable encoding', () => {
     const source = ['BEGIN:VCARD', 'VERSION:2.1', 'FN;CHARSET=ISO-8859-1:Test', 'END:VCARD'].join('\r\n');
@@ -129,7 +135,7 @@ describe('parseVCards', () => {
   });
   it('strips a leading group label from a grouped property name', () => {
     const source = ['BEGIN:VCARD', 'VERSION:3.0', 'item1.TEL:+1-555-0100', 'item1.X-ABLabel:Mobile', 'END:VCARD'].join('\r\n');
-    const [contact] = parseVCards(source);
+    const contact = first(parseVCards(source));
     expect(contact.tel).to.deep.equal([{ value: '+1-555-0100', types: [] }]);
   });
   it('rejects a duplicate VERSION property', () => {
@@ -142,7 +148,7 @@ describe('parseVCards', () => {
   });
   it('pads a structured N value that has fewer components than expected', () => {
     const source = ['BEGIN:VCARD', 'VERSION:4.0', 'N:Doe', 'END:VCARD'].join('\r\n');
-    const [contact] = parseVCards(source);
+    const contact = first(parseVCards(source));
     expect(contact.n).to.deep.equal({
       familyNames: 'Doe',
       givenNames: '',

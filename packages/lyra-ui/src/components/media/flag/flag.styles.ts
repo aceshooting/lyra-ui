@@ -12,7 +12,8 @@ export const styles = css`
     max-inline-size: 100%;
     vertical-align: middle;
   }
-  [part='image'] {
+  [part='image'],
+  [part='fallback-image'] {
     display: block;
     block-size: 100%;
     inline-size: 100%;
@@ -58,14 +59,15 @@ export const styles = css`
     block-size: var(--lr-size-1em);
     inline-size: var(--lr-size-1em);
   }
-  :host([shape='circle']) [part='image'] {
+  :host([shape='circle']) :is([part='image'], [part='fallback-image']) {
     inline-size: 100%;
     block-size: 100%;
     border-radius: 50%;
   }
 
   @media (forced-colors: active) {
-    [part='image'] {
+    [part='image'],
+    [part='fallback-image'] {
       box-shadow: 0 0 0 var(--lr-size-1px) CanvasText inset;
     }
     [part='error'] {

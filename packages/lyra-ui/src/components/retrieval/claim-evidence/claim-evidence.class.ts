@@ -27,8 +27,12 @@ import { LYRA_DEFAULT_claimEvidenceConfidence, LYRA_DEFAULT_claimEvidenceContrad
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraClaimEvidenceEventMap {
-  'lr-claim-select': CustomEvent<LyraEventDetailSnapshot<{ claim: GroundedClaim }>>;
-  'lr-citation-select': CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>;
+  'lr-claim-select': CustomEvent<
+    LyraEventDetailSnapshot<{ claim: GroundedClaim }>
+  >;
+  'lr-citation-select': CustomEvent<
+    LyraEventDetailSnapshot<CitationSelectEventDetail>
+  >;
 }
 
 const STATUS_VARIANT: Record<GroundedClaimStatus, BadgeVariant> = {
@@ -37,6 +41,18 @@ const STATUS_VARIANT: Record<GroundedClaimStatus, BadgeVariant> = {
   unsupported: 'danger',
   contradicted: 'danger',
 };
+
+function normalizedClaimStatus(status: unknown): GroundedClaimStatus {
+  switch (status) {
+    case 'supported':
+    case 'partially-supported':
+    case 'unsupported':
+    case 'contradicted':
+      return status;
+    default:
+      return 'unsupported';
+  }
+}
 
 /**
  * `<lr-claim-evidence>` — a controlled claim-by-claim grounding audit. It relates generated
@@ -96,7 +112,10 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  protected static override readonly ownedCollectionProperties = Object.freeze(['claims', 'citations']);
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'claims',
+    'citations',
+  ]);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -173,6 +192,7 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
   ): TemplateResult {
     const selected = claim.id === this.selectedClaimId;
     const citations = this.resolvedCitations(claim, allCitations);
+    const status = normalizedClaimStatus(claim.status);
     const claimPart = selected ? 'claim claim-selected' : 'claim';
     return html`
       <li part=${claimPart} aria-current=${selected ? 'true' : 'false'}>
@@ -182,8 +202,8 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
           aria-pressed=${selected ? 'true' : 'false'}
           @click=${() => this.emit('lr-claim-select', { claim })}
         >
-          <lr-badge part="status" variant=${STATUS_VARIANT[claim.status]}>
-            ${this.statusLabel(claim.status)}
+          <lr-badge part="status" variant=${STATUS_VARIANT[status]}>
+            ${this.statusLabel(status)}
           </lr-badge>
           <span part="claim-text">${claim.text}</span>
           ${typeof claim.confidence === 'number'

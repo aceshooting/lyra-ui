@@ -16,13 +16,14 @@ interface WebSocketModule {
 }
 
 const sessionId = new URL(window.location.href).searchParams.get('wtr-session-id');
+const webSocketModulePath = '/__web-dev-server__web-socket.js';
 
 async function setMediaPreference(command: string, payload: unknown): Promise<void> {
   if (sessionId === null) {
     throw new Error('Media emulation requires a browser controlled by Web Test Runner.');
   }
 
-  const webSocketModule = (await import('/__web-dev-server__web-socket.js')) as WebSocketModule;
+  const webSocketModule = (await import(webSocketModulePath)) as WebSocketModule;
   const response = await webSocketModule.sendMessageWaitForResponse({
     type: 'wtr-command',
     sessionId,

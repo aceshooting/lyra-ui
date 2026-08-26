@@ -243,7 +243,9 @@ export interface LyraGraphEventMap {
     linkId?: string;
   }>;
   'lr-node-expand': CustomEvent<{ nodeId: string }>;
-  'lr-selection-change': CustomEvent<LyraEventDetailSnapshot<{ nodeIds: string[]; linkIds: string[] }>>;
+  'lr-selection-change': CustomEvent<
+    LyraEventDetailSnapshot<{ nodeIds: string[]; linkIds: string[] }>
+  >;
   'lr-community-click': CustomEvent<{ communityId: string }>;
   /** Frame-coalesced pan/zoom/layout signal — see the class doc's `lr-viewport-change` event entry. */
   'lr-viewport-change': CustomEvent<{ k: number; x: number; y: number }>;
@@ -341,6 +343,8 @@ export interface LyraGraphEventMap {
  * @csspart tooltip - The hover tooltip (`renderer="canvas"` only; the SVG `<title>` replacement).
  * @csspart cursor-items - The container of offscreen keyboard-roving items (`renderer="canvas"` only).
  * @csspart cursor-item - An offscreen keyboard-roving item (`renderer="canvas"`'s a11y virtual cursor).
+ * @cssprop [--lr-canvas-reserved-height=var(--lr-size-24rem)] - Default host block size, shared
+ *   with the pre-upgrade reservation stylesheet. An explicit outer `block-size` still wins.
  * @cssprop [--lr-node-fill=var(--lr-color-brand)] - Default node fill, overridden per-node by `LyraGraphNode.color`.
  * @cssprop [--lr-link-color=var(--lr-color-border)] - Default link stroke, overridden per-link by a link's own `color`.
  * @cssprop [--lr-graph-cat-1=var(--lr-theme-graph-cat-1,#8250df)] - First categorical fallback color for typed nodes.
@@ -389,7 +393,17 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  protected static override readonly ownedCollectionProperties = Object.freeze(['nodes', 'links', 'nodeTypes', 'hiddenTypes', 'communities', 'selectedNodeIds', 'selectedLinkIds', 'dimmedNodeIds', 'dimmedLinkIds']);
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'nodes',
+    'links',
+    'nodeTypes',
+    'hiddenTypes',
+    'communities',
+    'selectedNodeIds',
+    'selectedLinkIds',
+    'dimmedNodeIds',
+    'dimmedLinkIds',
+  ]);
 
   static override get observedAttributes(): string[] {
     return [...new Set([...super.observedAttributes, 'role'])];
@@ -421,7 +435,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   @property({ attribute: false }) hiddenTypes: readonly string[] = [];
   /** Renders one translucent hull per entry, behind links/nodes. Membership is the union of
    *  `memberIds` and every node whose `communityId` matches this entry's `id`. */
-  @property({ attribute: false }) communities: readonly LyraGraphCommunity[] = [];
+  @property({ attribute: false }) communities: readonly LyraGraphCommunity[] =
+    [];
   private normalizedGraphModel?: NormalizedGraphModel;
   private normalizedGraphSources?: readonly [
     readonly LyraGraphNode[],
@@ -527,8 +542,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  no `lr-selection-change`. Controlled, mirroring `lr-heatmap.selectedCell`: the component
    *  never mutates `selectedNodeIds`/`selectedLinkIds` itself, only emits intent; the host assigns
    *  them back. */
-  @property({ attribute: 'selection-mode' }) selectionMode: LyraGraphSelectionMode =
-    'none';
+  @property({ attribute: 'selection-mode' })
+  selectionMode: LyraGraphSelectionMode = 'none';
   /** Controlled ids of selected nodes. Selection gestures emit intent without mutating this array. */
   @property({ attribute: false }) selectedNodeIds: readonly string[] = [];
   /** Controlled ids of selected links, using each link's stable effective key. */
@@ -672,7 +687,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  order -- rebuilt by `redrawPickCanvas()` alongside the pick canvas itself, so a pick color's
    *  decoded index always maps back to the exact item it was drawn for. */
   private pickItems: (
-    | { kind: 'hull'; entry: { community: LyraGraphCommunity; members: SimNode[] } }
+    | {
+        kind: 'hull';
+        entry: { community: LyraGraphCommunity; members: SimNode[] };
+      }
     | { kind: Extract<LyraGraphPickKind, 'link'>; link: SimLink }
     | { kind: Extract<LyraGraphPickKind, 'node'>; node: SimNode }
   )[] = [];
@@ -731,11 +749,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private edgeLabelMeasureCtx?: CanvasRenderingContext2D | null;
   private linkPaintProbe?: HTMLCanvasElement;
   private readonly linkPaintVisibilityCache = new Map<string, boolean>();
+  private readonly resolvedCssColorCache = new Map<string, string>();
 
   constructor() {
     super();
     new ThemeWatcher(this, () => {
       this.linkPaintVisibilityCache.clear();
+      this.resolvedCssColorCache.clear();
       if (this.renderer === 'canvas') this.markCanvasDirty();
     });
   }
@@ -977,7 +997,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   /** Invisible edge paint never creates a pointer/keyboard control. The edge remains in
    * `simLinks` and the offscreen topology summary, but is excluded from navigation and picking. */
-  private isInteractiveLink(link: SimLink): boolean {
+  private isInteractiveLink(
+    link: SimLink,
+    resolveColor: (value: string) => string
+  ): boolean {
     if (this.safeLinkWidth(link) <= 0) return false;
     const computed = this.computedStyle();
     const safe = sanitizeNodeColor(link.color);
@@ -986,7 +1009,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       (computed.getPropertyValue('--lr-link-color').trim() ||
         computed.getPropertyValue('--lr-color-border').trim());
     const color = effectivePaint
-      ? this.resolveCssColorValue(effectivePaint, computed).trim().toLowerCase()
+      ? resolveColor(effectivePaint).trim().toLowerCase()
       : undefined;
     if (!color) return true;
     if (
@@ -1044,9 +1067,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   private navigableLinks(): SimLink[] {
     if (!this.navigableLinksCache) {
-      this.navigableLinksCache = this.simLinks.filter((link) =>
-        this.isInteractiveLink(link)
-      );
+      this.navigableLinksCache = this.simLinks.length
+        ? this.withCanvasColorResolver((resolveColor) =>
+            this.simLinks.filter((link) =>
+              this.isInteractiveLink(link, resolveColor)
+            )
+          )
+        : [];
     }
     return this.navigableLinksCache;
   }
@@ -1161,9 +1188,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       if (!source) continue;
       const target = byId.get(l.target);
       if (target) {
-        resolved.push(
-          copyGraphLinkIdentity(l, { ...l, source, target })
-        );
+        resolved.push(copyGraphLinkIdentity(l, { ...l, source, target }));
       } else if (!nodeExists.has(l.target)) {
         dangling.push(
           copyGraphLinkIdentity(l, {
@@ -1551,176 +1576,222 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     });
   }
 
-  /** Canvas 2D's `fillStyle`/`strokeStyle` don't accept a raw `var(--x)` string the way an inline
-   *  SVG `style` attribute does -- resolves it to the actual cascaded color via `getComputedStyle`
-   *  first (the same "canvas can't consume var() directly" resolution `<lr-heatmap>` already
-   *  uses for its own canvas-drawn tokens). `value` untouched when it isn't a bare `var(...)` ref
-   *  (a literal `LyraGraphNode.color`/`LyraGraphLink.color` hex/rgb string already resolves fine as-is). */
-  private resolveCssColorValue(value: string, cs: CSSStyleDeclaration): string {
-    const match = value.match(/^var\((--[\w-]+)/);
-    if (!match) return value;
-    return cs.getPropertyValue(match[1]!).trim() || value;
+  /** Resolves every accepted CSS color through the live cascade before it reaches Canvas 2D.
+   * Canvas does not consistently accept CSS-wide keywords, custom properties, or newer color
+   * functions even when the style engine does. A shadow child inherits the same host tokens and
+   * `color` as the rendered graph, so its computed `color` is the concrete, canvas-safe value. */
+  private resolveCssColorWithProbe(value: string, probe: HTMLElement): string {
+    const cached = this.resolvedCssColorCache.get(value);
+    if (cached !== undefined) return cached;
+    probe.style.color = '';
+    probe.style.color = value;
+    const resolved = getComputedStyle(probe).color.trim();
+    const result = resolved || getComputedStyle(this).color || 'transparent';
+    this.resolvedCssColorCache.set(value, result);
+    return result;
+  }
+
+  private createCanvasColorProbe(): HTMLElement {
+    const probe = this.ownerDocument.createElement('span');
+    probe.setAttribute('aria-hidden', 'true');
+    probe.style.position = 'absolute';
+    probe.style.inlineSize = '0';
+    probe.style.blockSize = '0';
+    probe.style.overflow = 'hidden';
+    probe.style.visibility = 'hidden';
+    probe.style.pointerEvents = 'none';
+    this.renderRoot.append(probe);
+    return probe;
+  }
+
+  private withCanvasColorResolver<T>(
+    callback: (resolve: (value: string) => string) => T
+  ): T {
+    const probe = this.createCanvasColorProbe();
+    try {
+      return callback((value) => this.resolveCssColorWithProbe(value, probe));
+    } finally {
+      probe.remove();
+    }
   }
 
   private buildCanvasScene(cs: CSSStyleDeclaration): CanvasScene {
-    const hullFillDefault =
-      cs.getPropertyValue('--lr-graph-hull-fill').trim() ||
-      cs.getPropertyValue('--lr-color-brand').trim();
-    const hulls = this.visibleCommunities().map((entry) => ({
-      d: hullPathD(this.communityHull(entry.members)),
-      fill: sanitizeNodeColor(entry.community.color) ?? hullFillDefault,
-    }));
-    const linkColorDefault =
-      cs.getPropertyValue('--lr-link-color').trim() ||
-      cs.getPropertyValue('--lr-color-border').trim();
-    const links = this.simLinks.map((l) => {
-      const coords = this.linkCoordinates(l);
-      const own = sanitizeNodeColor(l.color);
-      return {
-        x1: coords.x1,
-        y1: coords.y1,
-        x2: coords.x2,
-        y2: coords.y2,
-        color: own ? this.resolveCssColorValue(own, cs) : linkColorDefault,
-        width: this.safeLinkWidth(l),
-        dash: l.dash,
-        directed: l.directed,
-        selected: this.isSelected('link', this.linkKey(l)),
-        dimmed: this.isDimmed('link', this.linkKey(l)),
-      };
-    });
-    const edgeLabels =
-      this.showEdgeLabels && this.canvasCamera.k >= this.safeEdgeLabelMinZoom
-        ? this.simLinks
-            .filter((l) => l.label)
-            .map((l) => {
-              const pos = this.edgeLabelPosition(l);
-              const coords = this.linkCoordinates(l);
-              const edgeLength = Math.hypot(
-                coords.x2 - coords.x1,
-                coords.y2 - coords.y1
-              );
-              const tooLong =
-                this.edgeLabelWidth(l.label!) >
-                edgeLength * EDGE_LABEL_LENGTH_GATE_RATIO;
-              return { x: pos.x, y: pos.y, text: l.label!, tooLong };
-            })
-            .filter((l) => !l.tooLong)
-            .map(({ x, y, text }) => ({ x, y, text }))
-        : [];
-    const nodeFillDefault =
-      cs.getPropertyValue('--lr-node-fill').trim() ||
-      cs.getPropertyValue('--lr-color-brand').trim();
-    const nodes = this.simNodes.map((n) => {
-      const fill = this.nodeFill(n);
-      return {
-        x: n.x ?? 0,
-        y: n.y ?? 0,
-        r: this.nodeRadius(n),
-        shape: this.nodeShape(n),
-        fill: fill ? this.resolveCssColorValue(fill, cs) : nodeFillDefault,
-        selected: this.isSelected('node', n.id),
-        dimmed: this.isDimmed('node', n.id),
-      };
-    });
-    const nodeLabels = this.simNodes
-      .filter((n) => n.label)
-      .map((n) => ({
-        x: (n.x ?? 0) + this.nodeRadius(n) + 2,
-        y: n.y ?? 0,
-        text: n.label!,
+    return this.withCanvasColorResolver((resolveColor) => {
+      const hullFillDefault =
+        cs.getPropertyValue('--lr-graph-hull-fill').trim() ||
+        cs.getPropertyValue('--lr-color-brand').trim();
+      const hulls = this.visibleCommunities().map((entry) => ({
+        d: hullPathD(this.communityHull(entry.members)),
+        fill: resolveColor(
+          sanitizeNodeColor(entry.community.color) ?? hullFillDefault
+        ),
       }));
-    const expandIndicators = this.simNodes
-      .filter((n) => n.expandable)
-      .map((n) => ({ x: n.x ?? 0, y: n.y ?? 0, r: this.nodeRadius(n) }));
-    const focusNode =
-      this.focusNodeId != null
-        ? this.simNodes.find((n) => n.id === this.focusNodeId)
+      const linkColorDefault =
+        cs.getPropertyValue('--lr-link-color').trim() ||
+        cs.getPropertyValue('--lr-color-border').trim();
+      const links = this.simLinks.map((l) => {
+        const coords = this.linkCoordinates(l);
+        const own = sanitizeNodeColor(l.color);
+        return {
+          x1: coords.x1,
+          y1: coords.y1,
+          x2: coords.x2,
+          y2: coords.y2,
+          color: resolveColor(own ?? linkColorDefault),
+          width: this.safeLinkWidth(l),
+          dash: l.dash,
+          directed: l.directed,
+          selected: this.isSelected('link', this.linkKey(l)),
+          dimmed: this.isDimmed('link', this.linkKey(l)),
+        };
+      });
+      const edgeLabels =
+        this.showEdgeLabels && this.canvasCamera.k >= this.safeEdgeLabelMinZoom
+          ? this.simLinks
+              .filter((l) => l.label)
+              .map((l) => {
+                const pos = this.edgeLabelPosition(l);
+                const coords = this.linkCoordinates(l);
+                const edgeLength = Math.hypot(
+                  coords.x2 - coords.x1,
+                  coords.y2 - coords.y1
+                );
+                const tooLong =
+                  this.edgeLabelWidth(l.label!) >
+                  edgeLength * EDGE_LABEL_LENGTH_GATE_RATIO;
+                return { x: pos.x, y: pos.y, text: l.label!, tooLong };
+              })
+              .filter((l) => !l.tooLong)
+              .map(({ x, y, text }) => ({ x, y, text }))
+          : [];
+      const nodeFillDefault =
+        cs.getPropertyValue('--lr-node-fill').trim() ||
+        cs.getPropertyValue('--lr-color-brand').trim();
+      const nodes = this.simNodes.map((n) => {
+        const fill = this.nodeFill(n);
+        return {
+          x: n.x ?? 0,
+          y: n.y ?? 0,
+          r: this.nodeRadius(n),
+          shape: this.nodeShape(n),
+          fill: resolveColor(fill ?? nodeFillDefault),
+          selected: this.isSelected('node', n.id),
+          dimmed: this.isDimmed('node', n.id),
+        };
+      });
+      const nodeLabels = this.simNodes
+        .filter((n) => n.label)
+        .map((n) => ({
+          x: (n.x ?? 0) + this.nodeRadius(n) + 2,
+          y: n.y ?? 0,
+          text: n.label!,
+        }));
+      const expandIndicators = this.simNodes
+        .filter((n) => n.expandable)
+        .map((n) => ({ x: n.x ?? 0, y: n.y ?? 0, r: this.nodeRadius(n) }));
+      const focusNode =
+        this.focusNodeId != null
+          ? this.simNodes.find((n) => n.id === this.focusNodeId)
+          : undefined;
+      const focusedPart =
+        activeElementIn(this.shadowRoot)?.getAttribute('part')?.split(/\s+/) ??
+        [];
+      const activeIdentity = focusedPart.includes('cursor-item')
+        ? this.graphItemIdentity(this.normalizedGraphItem())
         : undefined;
-    const focusedPart =
-      activeElementIn(this.shadowRoot)?.getAttribute('part')?.split(/\s+/) ??
-      [];
-    const activeIdentity = focusedPart.includes('cursor-item')
-      ? this.graphItemIdentity(this.normalizedGraphItem())
-      : undefined;
-    const activeNode =
-      activeIdentity?.kind === 'node'
-        ? this.simNodes.find((node) => node.id === activeIdentity.id)
+      const activeNode =
+        activeIdentity?.kind === 'node'
+          ? this.simNodes.find((node) => node.id === activeIdentity.id)
+          : undefined;
+      const activeLink =
+        activeIdentity?.kind === 'link'
+          ? this.navigableLinks().find(
+              (link) => this.linkKey(link) === activeIdentity.id
+            )
+          : undefined;
+      const activeCommunity =
+        activeIdentity?.kind === 'community'
+          ? this.visibleCommunities().find(
+              (entry) => entry.community.id === activeIdentity.id
+            )
+          : undefined;
+      const activeLinkCoordinates = activeLink
+        ? this.linkCoordinates(activeLink)
         : undefined;
-    const activeLink =
-      activeIdentity?.kind === 'link'
-        ? this.navigableLinks().find(
-            (link) => this.linkKey(link) === activeIdentity.id
-          )
-        : undefined;
-    const activeCommunity =
-      activeIdentity?.kind === 'community'
-        ? this.visibleCommunities().find(
-            (entry) => entry.community.id === activeIdentity.id
-          )
-        : undefined;
-    const activeLinkCoordinates = activeLink
-      ? this.linkCoordinates(activeLink)
-      : undefined;
-    return {
-      hulls,
-      links,
-      edgeLabels,
-      nodes,
-      nodeLabels,
-      expandIndicators,
-      focusHalo: focusNode
-        ? {
-            x: focusNode.x ?? 0,
-            y: focusNode.y ?? 0,
-            r: this.nodeRadius(focusNode) + FOCUS_HALO_PADDING,
-          }
-        : undefined,
-      keyboardFocusRing: activeNode
-        ? {
-            x: activeNode.x ?? 0,
-            y: activeNode.y ?? 0,
-            r: this.nodeRadius(activeNode) + 4,
-          }
-        : undefined,
-      keyboardFocusLink:
-        activeLink && activeLinkCoordinates
-          ? { ...activeLinkCoordinates, width: this.safeLinkWidth(activeLink) }
+      return {
+        hulls,
+        links,
+        edgeLabels,
+        nodes,
+        nodeLabels,
+        expandIndicators,
+        focusHalo: focusNode
+          ? {
+              x: focusNode.x ?? 0,
+              y: focusNode.y ?? 0,
+              r: this.nodeRadius(focusNode) + FOCUS_HALO_PADDING,
+            }
           : undefined,
-      keyboardFocusHull: activeCommunity
-        ? { d: hullPathD(this.communityHull(activeCommunity.members)) }
-        : undefined,
-      showNodeLabels: this.canvasCamera.k >= CANVAS_NODE_LABEL_MIN_ZOOM,
-      haloColor: this.ownerWindow?.matchMedia?.('(forced-colors: active)')
-        .matches
-        ? 'CanvasText'
-        : cs.getPropertyValue('--lr-graph-focus-halo-color').trim() ||
-          cs.getPropertyValue('--lr-color-brand').trim(),
-      selectedColor:
-        cs.getPropertyValue('--lr-graph-selected-color').trim() ||
-        cs.getPropertyValue('--lr-color-success').trim(),
-      dimmedOpacity: (() => {
-        const value = Number(
-          cs.getPropertyValue('--lr-graph-dimmed-opacity').trim()
-        );
-        return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0.35;
-      })(),
-      hullOpacity: (() => {
-        const value = Number(
-          cs.getPropertyValue('--lr-graph-hull-opacity').trim()
-        );
-        return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0.12;
-      })(),
-      labelColor: cs.getPropertyValue('--lr-color-text').trim(),
-      labelHaloColor:
-        cs.getPropertyValue('--lr-graph-edge-label-halo').trim() ||
-        cs.getPropertyValue('--lr-color-surface').trim(),
-      expandBadgeFill: cs.getPropertyValue('--lr-color-surface').trim(),
-      expandBadgeStroke: cs.getPropertyValue('--lr-color-border-strong').trim(),
-      font: `${this.edgeLabelFontPx()}px ${
-        cs.getPropertyValue('--lr-font').trim() || 'sans-serif'
-      }`,
-    };
+        keyboardFocusRing: activeNode
+          ? {
+              x: activeNode.x ?? 0,
+              y: activeNode.y ?? 0,
+              r: this.nodeRadius(activeNode) + 4,
+            }
+          : undefined,
+        keyboardFocusLink:
+          activeLink && activeLinkCoordinates
+            ? {
+                ...activeLinkCoordinates,
+                width: this.safeLinkWidth(activeLink),
+              }
+            : undefined,
+        keyboardFocusHull: activeCommunity
+          ? { d: hullPathD(this.communityHull(activeCommunity.members)) }
+          : undefined,
+        showNodeLabels: this.canvasCamera.k >= CANVAS_NODE_LABEL_MIN_ZOOM,
+        haloColor: resolveColor(
+          this.ownerWindow?.matchMedia?.('(forced-colors: active)').matches
+            ? 'CanvasText'
+            : cs.getPropertyValue('--lr-graph-focus-halo-color').trim() ||
+                cs.getPropertyValue('--lr-color-brand').trim()
+        ),
+        selectedColor: resolveColor(
+          cs.getPropertyValue('--lr-graph-selected-color').trim() ||
+            cs.getPropertyValue('--lr-color-success').trim()
+        ),
+        dimmedOpacity: (() => {
+          const value = Number(
+            cs.getPropertyValue('--lr-graph-dimmed-opacity').trim()
+          );
+          return Number.isFinite(value)
+            ? Math.min(1, Math.max(0, value))
+            : 0.35;
+        })(),
+        hullOpacity: (() => {
+          const value = Number(
+            cs.getPropertyValue('--lr-graph-hull-opacity').trim()
+          );
+          return Number.isFinite(value)
+            ? Math.min(1, Math.max(0, value))
+            : 0.12;
+        })(),
+        labelColor: resolveColor(cs.getPropertyValue('--lr-color-text').trim()),
+        labelHaloColor: resolveColor(
+          cs.getPropertyValue('--lr-graph-edge-label-halo').trim() ||
+            cs.getPropertyValue('--lr-color-surface').trim()
+        ),
+        expandBadgeFill: resolveColor(
+          cs.getPropertyValue('--lr-color-surface').trim()
+        ),
+        expandBadgeStroke: resolveColor(
+          cs.getPropertyValue('--lr-color-border-strong').trim()
+        ),
+        font: `${this.edgeLabelFontPx()}px ${
+          cs.getPropertyValue('--lr-font').trim() || 'sans-serif'
+        }`,
+      };
+    });
   }
 
   /** Sizes the backing store to the canvas's own rendered CSS box (`clientWidth`/`clientHeight`,
@@ -2215,6 +2286,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op today, but a future shared mixin under LyraElement must still run
+    this.resolvedCssColorCache.clear();
     // Every update gets a fresh navigableLinks() result computed at most once (see that cache
     // field's own doc comment for why this can't be gated on graphItemsChanged like the sibling
     // caches below).

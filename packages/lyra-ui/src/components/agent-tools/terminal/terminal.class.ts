@@ -13,7 +13,6 @@ import { createAnsiParser, type AnsiSegment, type AnsiStyles } from '../../../in
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
-import { firstByIdentity } from '../collection-identity.js';
 import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
 import {
   boundedSelectionRects,
@@ -263,11 +262,14 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   @property({ type: Boolean, reflect: true }) downloadable = false;
   @property() filename = 'terminal.log';
   @property({ type: Boolean, attribute: 'announce-output' }) announceOutput = false;
+  /** Accessible name for the nested `role="log"`; a non-empty host `aria-label` is forwarded,
+   *  while an empty value falls back to the localized terminal-purpose label. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
-  private _highlights: readonly LyraHighlight[] = snapshotLyraHighlights([]);
   /** Line-range highlights keyed by stable id. Empty/blank ids and highlights with a missing,
    *  malformed, or non-discriminated anchor are omitted (`snapshotLyraHighlights`) before
-   *  duplicates normalize first-wins for range ownership, activation, and anchor lookup. */
+   *  duplicates normalize first-wins for range ownership, activation, and anchor lookup.
+   * @default [] */
+  private _highlights: readonly LyraHighlight[] = snapshotLyraHighlights([]);
   @property({ attribute: false })
   get highlights(): readonly LyraHighlight[] { return this._highlights; }
   set highlights(value: readonly LyraHighlight[]) {
@@ -278,7 +280,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   @property({ attribute: false }) activeHighlightId: string | null = null;
 
   private get normalizedHighlights(): readonly LyraHighlight[] {
-    return firstByIdentity(Array.isArray(this.highlights) ? this.highlights : [], (highlight) => highlight.id);
+    return this.highlights;
   }
 
   /** Tightens the toolbar's padding/gap and each rendered line's inline padding for a terminal

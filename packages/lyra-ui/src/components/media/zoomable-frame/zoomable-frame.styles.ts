@@ -16,7 +16,7 @@ export const styles = css`
   }
 
   :host(:where([data-frame-focused])) {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
 
@@ -96,7 +96,7 @@ export const styles = css`
 
   [part='zoom-in-button']:focus-visible,
   [part='zoom-out-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
 

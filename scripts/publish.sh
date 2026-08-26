@@ -436,6 +436,9 @@ for dir in "${RELEASE_DIRS[@]}"; do
   echo "==> [$name] Build"
   pnpm --filter "$name" --if-present run build
   echo
+  echo "==> [$name] Check public API release bump"
+  pnpm --filter "$name" --if-present run check:public-api
+  echo
   echo "==> [$name] Generate built component-quality evidence"
   pnpm --filter "$name" --if-present run component-quality
   echo

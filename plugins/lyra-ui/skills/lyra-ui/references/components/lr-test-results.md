@@ -6,9 +6,10 @@
 - **Class** `LyraTestResults`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/test-results/test-results.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -81,3 +82,5 @@ library-wide brand tokens. Per-result status foregrounds are independently expos
 `--lr-test-results-failed-color` (default `var(--lr-color-danger)`),
 `--lr-test-results-skipped-color` (default `var(--lr-color-text-quiet)`), and
 `--lr-test-results-running-color` (default `var(--lr-color-brand)`).
+`--lr-test-results-spinner-size` (default `var(--lr-size-1em)`) controls the composed spinner's
+diameter in a running test row without requiring an override of `lr-spinner`'s token.

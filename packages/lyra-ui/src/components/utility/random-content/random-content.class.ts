@@ -1,7 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-import { composedAccessibilityText } from '../../../internal/announcement-text.js';
+import { composedAccessibilityTextResult } from '../../../internal/announcement-text.js';
 import { pauseIcon, playIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteDuration, finiteInteger } from '../../../internal/numbers.js';
@@ -24,6 +24,13 @@ const RANDOM_CONTENT_MODE = literalSetConverter<LyraRandomContentMode>(
 export interface LyraRandomContentEventMap {
   'lr-content-change': CustomEvent<{ readonly items: readonly Element[] }>;
   'lr-pause-change': CustomEvent<{ readonly paused: boolean }>;
+}
+
+interface SelectionAnnouncementSnapshot {
+  readonly labelReferenceRoots: ReadonlySet<Document | ShadowRoot>;
+  readonly referencedElements: ReadonlySet<Element>;
+  readonly text: string;
+  readonly traversedShadowRoots: ReadonlySet<ShadowRoot>;
 }
 
 /**
@@ -476,38 +483,83 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     }
   }
 
-  private selectionAnnouncement(selected: readonly Element[]): string {
+  private selectionAnnouncementSnapshot(
+    selected: readonly Element[],
+  ): SelectionAnnouncementSnapshot {
+    const labelReferenceRoots = new Set<Document | ShadowRoot>();
+    const referencedElements = new Set<Element>();
+    const traversedShadowRoots = new Set<ShadowRoot>();
     const content = selected
-      .map((item) => composedAccessibilityText(item).replace(/\s+/g, ' ').trim())
+      .map((item) => {
+        const result = composedAccessibilityTextResult(item);
+        for (const root of result.labelReferenceRoots) labelReferenceRoots.add(root);
+        for (const reference of result.referencedElements) referencedElements.add(reference);
+        for (const root of result.traversedShadowRoots) traversedShadowRoots.add(root);
+        return result.text.replace(/\s+/g, ' ').trim();
+      })
       .filter(Boolean)
       .join(' ');
     const context = this.getAttribute('aria-label')?.trim() ?? '';
-    if (!context || context === content) return content;
-    return content ? `${context}: ${content}` : context;
+    let text = content;
+    if (context && context !== content) text = content ? `${context}: ${content}` : context;
+    return { labelReferenceRoots, referencedElements, text, traversedShadowRoots };
+  }
+
+  private selectionAnnouncement(selected: readonly Element[]): string {
+    return this.selectionAnnouncementSnapshot(selected).text;
   }
 
   private announcementObservationOptions(): MutationObserverInit {
     return {
       attributes: true,
-      attributeFilter: ['alt', 'aria-hidden', 'aria-label', 'class', 'hidden', 'inert', 'open', 'slot', 'style'],
+      attributeFilter: [
+        'alt',
+        'aria-hidden',
+        'aria-label',
+        'aria-labelledby',
+        'class',
+        'hidden',
+        'id',
+        'inert',
+        'open',
+        'slot',
+        'style',
+      ],
       characterData: true,
       childList: true,
       subtree: true,
     };
   }
 
-  private observeAnnouncementContent(): void {
+  private observeAnnouncementNode(node: Node): void {
+    this.announcementContentObserver?.observe(node, this.announcementObservationOptions());
+  }
+
+  private observeLabelReferenceRoot(root: Document | ShadowRoot): void {
+    this.announcementContentObserver?.observe(root, {
+      attributes: true,
+      attributeFilter: ['id'],
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  private observeAnnouncementContent(): SelectionAnnouncementSnapshot {
+    const snapshot = this.selectionAnnouncementSnapshot(this.previousSelection ?? []);
     const observer = this.announcementContentObserver;
-    if (!observer) return;
+    if (!observer) return snapshot;
     observer.disconnect();
-    const options = this.announcementObservationOptions();
-    observer.observe(this, options);
+    this.observeAnnouncementNode(this);
     for (const slot of this.querySelectorAll<HTMLSlotElement>('slot')) {
       if (slot.assignedNodes().length === 0) continue;
       for (const assigned of slot.assignedNodes({ flatten: true })) {
-        observer.observe(assigned, options);
+        this.observeAnnouncementNode(assigned);
       }
     }
+    for (const root of snapshot.labelReferenceRoots) this.observeLabelReferenceRoot(root);
+    for (const reference of snapshot.referencedElements) this.observeAnnouncementNode(reference);
+    for (const root of snapshot.traversedShadowRoots) this.observeAnnouncementNode(root);
+    return snapshot;
   }
 
   private startAnnouncementContentObserver(): void {
@@ -515,8 +567,8 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
     if (!MutationObserverCtor) return;
     this.announcementContentObserver = new MutationObserverCtor(() => {
-      this.observeAnnouncementContent();
-      this.announceCurrentSelectionIfChanged();
+      const snapshot = this.observeAnnouncementContent();
+      this.announceCurrentSelectionIfChanged(snapshot.text);
     });
     this.observeAnnouncementContent();
   }
@@ -526,8 +578,9 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     this.announcementContentObserver = undefined;
   }
 
-  private announceCurrentSelectionIfChanged(): void {
-    const text = this.selectionAnnouncement(this.previousSelection ?? []);
+  private announceCurrentSelectionIfChanged(
+    text = this.selectionAnnouncement(this.previousSelection ?? []),
+  ): void {
     if (!this.selectionAnnouncementsArmed) {
       this.lastAnnouncementText = text;
       return;
@@ -540,12 +593,12 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   private onForwardedSlotChange = (event: Event): void => {
     const slot = event.target as HTMLSlotElement;
     if (!this.contains(slot)) return;
-    this.observeAnnouncementContent();
+    const snapshot = this.observeAnnouncementContent();
     if (!this.poolsEqual(this.eligible(), this.lastPool)) {
       this.onSlotChange();
       return;
     }
-    this.announceCurrentSelectionIfChanged();
+    this.announceCurrentSelectionIfChanged(snapshot.text);
   };
 
   private reselect(options: { resetPrevious?: boolean; announce?: boolean } = {}): readonly Element[] {
@@ -562,7 +615,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     const selected = this.preserveFocusedSubtree(pool, this.computeSelectionForMode(pool, count));
     this.applySelection(pool, selected);
     this.previousSelection = selected;
-    const announcement = this.selectionAnnouncement(selected);
+    const announcement = this.observeAnnouncementContent().text;
     this.lastAnnouncementText = announcement;
     if (options.announce !== false) {
       this.announcementSink?.announce(announcement);

@@ -128,8 +128,8 @@ export const LiveOsmTiles: Story = {
 };
 
 /**
- * `choropleth` adds a GeoJSON fill layer, colored by interpolating `field`'s
- * value across `stops` -- pair it with `legend` to label the color ramp.
+ * `choropleth` adds a GeoJSON fill layer. This heavy-tailed example uses logarithmic interpolation
+ * and feeds the exact same stops to the continuous legend, keeping the visible key truthful.
  */
 export const Choropleth: Story = {
   render: () => {
@@ -141,6 +141,7 @@ export const Choropleth: Story = {
         [50, storyColor('warning')],
         [100, storyColor('danger')],
       ],
+      interpolation: 'logarithmic',
       geojson: {
         type: 'FeatureCollection',
         features: [
@@ -184,11 +185,7 @@ export const Choropleth: Story = {
         style="height: 20rem"
         center="[2.3522, 48.8566]"
         zoom="10"
-        .legend=${[
-          { color: storyColor('brand'), label: 'Low', pattern: 'solid' },
-          { color: storyColor('warning'), label: 'Medium', pattern: 'dots' },
-          { color: storyColor('danger'), label: 'High', pattern: 'crosshatch' },
-        ]}
+        .legendGradient=${choropleth.stops}
         .choropleth=${choropleth}
         .mapStyle=${RASTER_STYLE}
       ></lr-map>

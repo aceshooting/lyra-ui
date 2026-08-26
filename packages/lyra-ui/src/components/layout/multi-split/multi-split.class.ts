@@ -215,7 +215,8 @@ export interface LyraMultiSplitEventMap {
  * visually hidden — instead of the always-visible overlay card this state
  * rendered before `open` existed. Setting `open = true` reveals it as a
  * focus-trapped floating panel with a `[part="backdrop"]` scrim; Escape or a
- * backdrop click set `open` back to `false`. `open` is preserved (not reset)
+ * backdrop click set `open` back to `false`. Every sibling pane behind the drawer is inert for the
+ * same interval, while the floating pane is the shared overlay manager's modal root. `open` is preserved (not reset)
  * while `collapseState` isn't `'floating'`, but no drawer chrome renders
  * until it is again — except that leaving `'floating'` while `open` is
  * `true` (a breakpoint crossing back to `'wide'`/`'rail'`, or a forced
@@ -250,7 +251,8 @@ export interface LyraMultiSplitEventMap {
  * @csspart divider - Each `role="separator"` between two panels. `aria-valuenow` is the leading
  *   panel's percentage; `aria-valuemin`/`aria-valuemax` are that divider's currently achievable
  *   range, bounded by both adjacent panels' effective constraints and their current combined
- *   share (not whole-track bounds). Carries `aria-disabled="true"` and is drag/keyboard-inert
+ *   share (not whole-track bounds). Home/End move directly to those achievable extremes. Carries
+ *   `aria-disabled="true"` and is drag/keyboard-inert
  *   while its adjacent panel is collapsed (`'rail'`/`'floating'`).
  * @csspart backdrop - The `'floating'` drawer's scrim. Only rendered while `collapseState === 'floating'` and `open`.
  * @cssprop [--lr-multi-split-overlay-color=var(--lr-color-overlay)] - The `'floating'` drawer scrim's color, applied to `[part="backdrop"]`.
@@ -1740,6 +1742,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     this.overlayHandle = activateOverlay({
       host: this,
       panel: () => this.floatingPanelEl,
+      modalRoot: () => this.floatingPanelEl,
       onEscape: () => (this.open = false),
       onBackdrop: () => (this.open = false),
       lockScroll: true,
@@ -1754,6 +1757,11 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
 
   private onBackdropClick = (): void => {
     this.overlayHandle?.dismissBackdrop();
+  };
+
+  /** Native pointer input retargets from an inert scrim to the allowed base-path ancestor. */
+  private onModalLayerClick = (event: MouseEvent): void => {
+    if (event.target === this.baseEl) this.overlayHandle?.dismissBackdrop();
   };
 
   private onPointerDown = (e: PointerEvent, index: number): void => {
@@ -1896,12 +1904,35 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
         : rtl
         ? 'ArrowRight'
         : 'ArrowLeft';
-    if (e.key === forwardKey) {
+    if (e.key === 'Home' || e.key === 'End') {
+      const { min, max } = this.dividerValueRange(index);
+      const current = this.sizes[index];
+      if (current !== undefined) {
+        const target = e.key === 'Home' ? min : max;
+        if (this.applyDelta(index, target - current, true)) e.preventDefault();
+      }
+    } else if (e.key === forwardKey) {
       if (this.applyDelta(index, KEYBOARD_STEP, true)) e.preventDefault();
     } else if (e.key === backwardKey) {
       if (this.applyDelta(index, -KEYBOARD_STEP, true)) e.preventDefault();
     }
   };
+
+  private dividerValueRange(
+    index: number,
+    bounds: ConstraintResolution['bounds'] = this.resolveConstraintBounds(
+      this.getContainerSize()
+    ).bounds
+  ): { min: number; max: number } {
+    const pairTotal = (this.sizes[index] ?? 0) + (this.sizes[index + 1] ?? 0);
+    const leading = bounds[index]!;
+    const trailing = bounds[index + 1]!;
+    const min = Math.max(leading.min, pairTotal - trailing.max);
+    return {
+      min,
+      max: Math.max(min, Math.min(leading.max, pairTotal - trailing.min)),
+    };
+  }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
@@ -2133,14 +2164,10 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       // whole track — pushing past it would starve the partner even though
       // this pair still has room. Keep max >= min for imperfect persisted or
       // consumer-supplied starting sizes.
-      const pairTotal = (this.sizes[i] ?? 0) + (this.sizes[i + 1] ?? 0);
-      // resolveConstraintBounds() always returns a bounds array of exactly this.panelCount
-      // entries (computed synchronously, in the same render() call, from the same panelCount),
-      // so every index up to panelCount - 2 -- this loop's max -- is always in range.
-      const a = bounds[i]!;
-      const b = bounds[i + 1]!;
-      const valueMin = Math.max(a.min, pairTotal - b.max);
-      const valueMax = Math.max(valueMin, Math.min(a.max, pairTotal - b.min));
+      const { min: valueMin, max: valueMax } = this.dividerValueRange(
+        i,
+        bounds
+      );
       const disabled = this.isDividerDisabled(i);
       dividers.push(html`<div
         part="divider"
@@ -2165,7 +2192,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       ></div>`);
     }
     const showBackdrop = this.collapseState === 'floating' && this.open;
-    return html`<div part="base">
+    return html`<div part="base" @click=${this.onModalLayerClick}>
       <slot @slotchange=${this.onSlotChange}></slot>
       ${dividers}
       ${showBackdrop

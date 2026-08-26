@@ -36,6 +36,18 @@ export const WithValueText: Story = {
   render: () => html`<lr-gauge value="72" max="100" label="Temp" .valueText=${'72°F'}></lr-gauge>`,
 };
 
+export const AuthoredRoleAndLongText: Story = {
+  render: () => html`
+    <lr-gauge
+      role="progressbar"
+      value="72"
+      max="100"
+      label="Deployment readiness across every production region"
+      value-text="Seventy-two percent and improving"
+    ></lr-gauge>
+  `,
+};
+
 export const NonzeroMin: Story = {
   render: () => html`<lr-gauge value="18" min="-20" max="40" label="Outdoor Temp"></lr-gauge>`,
 };

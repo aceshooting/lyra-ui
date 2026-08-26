@@ -21,7 +21,7 @@ import type { LyraSelect } from '../components/forms/select/select.js';
 import type { LyraRating } from '../components/overlays/rating/rating.js';
 
 class Ctl extends FormAssociated(LyraElement) {
-  render() {
+  override render() {
     return html``;
   }
 }
@@ -29,9 +29,9 @@ customElements.define(tag('demo-ctl'), Ctl);
 
 /** A mixin consumer that carries the (non-mixin) `readonly` property every editable wrapper has. */
 class ReadonlyCtl extends FormAssociated(LyraElement) {
-  static properties = { readonly: { type: Boolean, reflect: true } };
+  static override properties = { readonly: { type: Boolean, reflect: true } };
   readonly = false;
-  render() {
+  override render() {
     return html``;
   }
 }
@@ -42,9 +42,9 @@ customElements.define(tag('demo-readonly-ctl'), ReadonlyCtl);
  * Lit writes on its own async cycle, and its `updateValidity()` override reads that input back.
  */
 class NativeCtl extends FormAssociated(LyraElement) {
-  static properties = { pattern: { reflect: true } };
+  static override properties = { pattern: { reflect: true } };
   pattern = '';
-  render() {
+  override render() {
     return html`<input pattern=${this.pattern || nothing} .value=${this.value} />`;
   }
   protected updateValidity(): void {
@@ -82,7 +82,7 @@ const isoDateAdapter: FormValueAdapter<Date | null> = {
 };
 
 class DateCtl extends FormAssociated(LyraElement, isoDateAdapter) {
-  render() {
+  override render() {
     return html``;
   }
 }
@@ -140,7 +140,7 @@ it('restores string-array state from a foreign-realm FormData without accepting 
 });
 
 class TagsCtl extends FormAssociated(LyraElement, tagListAdapter) {
-  render() {
+  override render() {
     return html``;
   }
 }
@@ -154,7 +154,7 @@ const objectValueAdapter: FormValueAdapter<object> = {
 };
 
 class ObjectCtl extends FormAssociated(LyraElement, objectValueAdapter) {
-  render() {
+  override render() {
     return html``;
   }
 }
@@ -166,7 +166,7 @@ const minimalAdapter: FormValueAdapter<unknown> = {
 };
 
 class MinimalAdapterCtl extends FormAssociated(LyraElement, minimalAdapter) {
-  render() {
+  override render() {
     return html``;
   }
 }

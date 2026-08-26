@@ -2,6 +2,21 @@ import { aTimeout, expect, fixture, html } from '@open-wc/testing';
 import './resize-observer.js';
 import type { LyraResizeObserver } from './resize-observer.class.js';
 
+function resizeEntry(target: Element): ResizeObserverEntry {
+  const contentRect = target.getBoundingClientRect();
+  const size: ResizeObserverSize = {
+    inlineSize: contentRect.width,
+    blockSize: contentRect.height,
+  };
+  return {
+    target,
+    contentRect,
+    borderBoxSize: [size],
+    contentBoxSize: [size],
+    devicePixelContentBoxSize: [size],
+  };
+}
+
 // A wrapper component whose own shadow root puts a forwarding `<slot>` directly inside
 // `<lr-resize-observer>` -- the one composition where the internal slot's own `slotchange` never
 // fires (its assigned node stays the same forwarding `<slot>` element) even though the FLATTENED
@@ -170,10 +185,10 @@ describe('<lr-resize-observer>', () => {
       const reconnectedObserver = records.at(-1)!;
       adoptedObserver.callback([], {} as ResizeObserver);
       expect(events, 'the first lifecycle remains stale after reconnect').to.equal(0);
-      const resizeEntry = { target } as ResizeObserverEntry;
-      reconnectedObserver.callback([resizeEntry], {} as ResizeObserver);
+      const entry = resizeEntry(target);
+      reconnectedObserver.callback([entry], {} as ResizeObserver);
       expect(events, 'the current lifecycle still forwards entries').to.equal(1);
-      expect(latestDetail!.entries[0] === resizeEntry).to.equal(true);
+      expect(latestDetail!.entries[0] === entry).to.equal(true);
       expect(Object.isFrozen(latestDetail)).to.equal(true);
       expect(Object.isFrozen(latestDetail!.entries)).to.equal(true);
     } finally {

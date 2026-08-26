@@ -85,6 +85,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
   // GENERATED DEFAULT-STRING SLICE: END
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['metrics', 'runs']);
+  protected static override readonly immutableEventDetails = Object.freeze(['lr-run-activate']);
 
   static override styles = [LyraElement.styles, styles];
   /** Metric cards and selector choices. Empty ids are omitted; duplicates normalize first-wins. */

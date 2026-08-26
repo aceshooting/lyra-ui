@@ -43,7 +43,12 @@ function uniqueQueueItems(source: readonly PromptQueueItem[] | undefined): Promp
   const seen = new Set<string>();
   const result: PromptQueueItem[] = [];
   for (const item of Array.isArray(source) ? source : []) {
-    if (!isRecord(item) || typeof item['id'] !== 'string' || !item['id'].trim() || seen.has(item['id'])) continue;
+    if (
+      !isRecord(item) ||
+      typeof item['id'] !== 'string' ||
+      !item['id'].trim() ||
+      seen.has(item['id'])
+    ) continue;
     seen.add(item['id']);
     result.push(item as unknown as PromptQueueItem);
   }

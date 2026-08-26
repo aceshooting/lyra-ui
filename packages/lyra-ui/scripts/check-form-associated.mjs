@@ -1,3 +1,5 @@
+import { isMainModule } from './is-main-module.mjs';
+
 // Guards against a bug class that has already recurred once in this package: a form-associated
 // custom element (`static formAssociated = true`, or the shared `FormAssociated` mixin from
 // `internal/form-associated.ts`) that doesn't follow the hardened pattern established for this
@@ -67,11 +69,12 @@
 //       could have happened in the shared implementation.
 //       The rule is off unless the caller passes a `handRolledAllowlist`, because the allowlist is
 //       a repo-wide census and is meaningless for an isolated source fixture; `main()` passes it.
-//   (g) a component declaring `static formAssociated = true` without the shared mixin must
-//       value-import and call `installFormControlLabelSupport()`. A bare import is not enough:
-//       production bundlers legitimately erase it when package metadata classifies the internal
-//       module as side-effect-free. The shared mixin performs the call once for all of its users.
-//       This rule is enabled by the repo scan and optional for isolated fixtures.
+//   (g) a component declaring `static formAssociated = true` without the shared mixin must either
+//       value-import and call `installFormControlLabelSupport()`, or pair the capture-only installer
+//       with a local `FORM_CONTROL_LABEL_FACTORY`. A bare import is not enough: production bundlers
+//       legitimately erase it when package metadata classifies the internal module as
+//       side-effect-free. The shared mixin performs the full call once for all of its users. This
+//       rule is enabled by the repo scan and optional for isolated fixtures.
 // A component that extends the shared `FormAssociated` mixin directly and never redeclares
 // name/required/disabled gets all of the above for free and is not flagged.
 // Self-test: `node scripts/check-form-associated.test.mjs`.
@@ -608,17 +611,35 @@ export function findFormAssociatedViolations(source, options = {}) {
   }
 
   if (requireLabelSupport && isDirectFormAssociated && !isMixinConsumer) {
-    const importsInstaller =
+    const importsFullInstaller =
       /import\s*\{[^}]*\binstallFormControlLabelSupport\b[^}]*\}\s*from\s*['"][^'"]*\/form-control-labels\.js['"]\s*;/s.test(
         code,
       );
-    const callsInstaller = /\binstallFormControlLabelSupport\s*\(\s*\)\s*;/.test(code);
-    if (!importsInstaller || !callsInstaller) {
+    const callsFullInstaller = /\binstallFormControlLabelSupport\s*\(\s*\)\s*;/.test(code);
+    const importsCaptureInstaller =
+      /import\s*\{[^}]*\binstallFormControlInternalsCapture\b[^}]*\}\s*from\s*['"][^'"]*\/form-control-labels\.js['"]\s*;/s.test(
+        code,
+      );
+    const callsCaptureInstaller = /\binstallFormControlInternalsCapture\s*\(\s*\)\s*;/.test(code);
+    const importsLocalFactorySymbol =
+      /import\s*\{[^}]*\bFORM_CONTROL_LABEL_FACTORY\b[^}]*\}\s*from\s*['"][^'"]*\/lyra-element\.js['"]\s*;/s.test(
+        code,
+      );
+    const declaresLocalFactory =
+      /\bstatic\s+\[\s*FORM_CONTROL_LABEL_FACTORY\s*\]\s*=/.test(code);
+    const installsFullSupport = importsFullInstaller && callsFullInstaller;
+    const installsLeanSupport =
+      importsCaptureInstaller &&
+      callsCaptureInstaller &&
+      importsLocalFactorySymbol &&
+      declaresLocalFactory;
+    if (!installsFullSupport && !installsLeanSupport) {
       add(
         'g',
-        'declares form association directly but does not value-import and call ' +
-          '`installFormControlLabelSupport()` -- a side-effect-only import can be removed from a ' +
-          'production bundle, silently losing external-label activation and internals capture.',
+        'declares form association directly but neither value-imports and calls ' +
+          '`installFormControlLabelSupport()` nor pairs `installFormControlInternalsCapture()` ' +
+          'with a local `FORM_CONTROL_LABEL_FACTORY` -- a side-effect-only import can be removed ' +
+          'from a production bundle, silently losing external-label activation and internals capture.',
       );
     }
   }
@@ -768,4 +789,4 @@ export function main() {
   }
 }
 
-if (process.argv[1] && process.argv[1].endsWith('check-form-associated.mjs')) main();
+if (isMainModule(import.meta.url)) main();

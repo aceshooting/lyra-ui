@@ -30,7 +30,7 @@ const urlIs = (expected) => (value) => value === expected;
  * Intentional docs failures are scoped to the exact page, diagnostic kind, URL, and message.
  * Keep this list beside the evaluator so every browser audit uses the same fail-closed policy.
  */
-export const DOCS_DIAGNOSTIC_ALLOWLIST = Object.freeze([
+const DOCS_DIAGNOSTIC_ALLOWLIST = Object.freeze([
   {
     pageId: 'animatedimage--docs',
     kind: 'console',

@@ -26,6 +26,18 @@ const schema = {
   },
 };
 
+it('treats Swagger-style non-array required values as no required-property list', async () => {
+  for (const required of [true, 'query']) {
+    const el = await fixture<LyraJsonSchemaViewer>(html`
+      <lr-json-schema-viewer
+        .schema=${{ type: 'object', required, properties: { query: { type: 'string' } } } as unknown as JsonSchemaNode}
+      ></lr-json-schema-viewer>
+    `);
+    expect(el.shadowRoot!.querySelectorAll('[part="node"]')).to.have.lengthOf(2);
+    expect(el.shadowRoot!.querySelectorAll('[part="required"]')).to.have.lengthOf(0);
+  }
+});
+
 it('renders nested JSON Schema structure, constraints, required state, and validation issues', async () => {
   const el = (await fixture(
     html`<lr-json-schema-viewer

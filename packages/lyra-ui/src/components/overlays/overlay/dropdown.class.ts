@@ -40,7 +40,8 @@ interface ConsumerMenuSnapshot {
  * becomes that contained engine instead of being wrapped in a second menu, preserving its own
  * header/list/footer regions and naming precedence. Motion resolves through
  * `dropdown.show`/`dropdown.hide` in the public animation registry without changing the inherited
- * Popover lifecycle.
+ * Popover lifecycle. ArrowDown and ArrowUp open the menu and focus its first or last enabled item
+ * whether the trigger is slotted or resolved through `for`.
  *
  * @customElement lr-dropdown
  * @slot trigger - The interactive element that toggles the dropdown.

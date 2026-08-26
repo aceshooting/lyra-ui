@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { srOnly } from '../../../internal/a11y.js';
 import {
   DocumentAnchorTarget,
   prioritizedHighlightCandidates,
@@ -92,7 +93,9 @@ class LyraSvgViewerBase extends LyraElement<LyraSvgViewerEventMap> {}
  * @event lr-highlight-activate - A region highlight was activated. `detail: { highlightId }`.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
  *   call is applied. `detail: { found }`.
- * @csspart base - The root container.
+ * @csspart base - The root container. It owns `role="img"` only for passive loaded SVG content;
+ *   idle, loading, error, zoomable, and interactive-highlight states use `role="region"` so their
+ *   descendant state text and controls remain exposed to assistive technology.
  * @csspart body - The wrapper around the fetched-state content.
  * @csspart svg - The sanitized SVG document, once loaded.
  * @csspart spinner - Visible ordinary loading content with a motion-safe progress indicator;
@@ -144,7 +147,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, viewerLoadingStyles];
+  static override styles = [LyraElement.styles, styles, viewerLoadingStyles, srOnly];
 
   /** URL to fetch and render as sanitized inline SVG. */
   @property() src = '';
@@ -396,7 +399,11 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
   override render(): TemplateResult {
     const maxHeight = sanitizeCssLength(this.maxHeight);
     const regionHighlights = this.regionHighlights();
-    const surfaceRole = this.zoomable || regionHighlights.length > 0 ? 'region' : 'img';
+    const surfaceRole = this.fetchState.kind === 'loaded'
+      && !this.zoomable
+      && regionHighlights.length === 0
+      ? 'img'
+      : 'region';
     return html`<div part="base" role=${viewerSemanticRole(this, surfaceRole) ?? nothing} aria-label=${viewerSemanticLabel(this, this.name || this.localize('svgViewerLabel')) ?? nothing} aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'} style=${maxHeight ? styleMap({ '--lr-svg-viewer-max-height': maxHeight }) : nothing}>
       <div part="body">${this.renderBody(regionHighlights)}</div>
       ${this.renderAnchorLiveRegion()}

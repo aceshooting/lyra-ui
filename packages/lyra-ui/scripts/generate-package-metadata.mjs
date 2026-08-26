@@ -1,5 +1,7 @@
-import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { isMainModule } from './is-main-module.mjs';
+
+import { readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -54,6 +56,6 @@ function main() {
   console.log(`Generated package metadata for ${packageJson.name}@${packageJson.version}.`);
 }
 
-if (process.argv[1] && realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1])) {
+if (isMainModule(import.meta.url)) {
   main();
 }

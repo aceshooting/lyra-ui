@@ -148,6 +148,10 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
    *  normalize first-wins before the review form receives them. */
   @property({ attribute: false }) rubricKeys: readonly RubricKey[] = EMPTY_KEYS;
 
+  /** Accessible name for the independently interactive comparison grid. Falls back to the
+   *  localized evaluation-runs label when unset. */
+  @property() label = '';
+
   private get normalizedRuns(): EvalRunResult[] {
     return firstByIdentity(Array.isArray(this.runs) ? this.runs : [], (run) => run.id);
   }
@@ -228,6 +232,8 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
 
   private renderDiff(selected: EvalRunResult, baseline: EvalRunResult | undefined): TemplateResult {
     const comparing = Boolean(baseline && baseline.id !== selected.id);
+    const selectedOutput = typeof selected.output === 'string' ? selected.output : '';
+    const baselineOutput = typeof baseline?.output === 'string' ? baseline.output : selectedOutput;
     return html`<div part="diff">
       ${comparing
         ? html`<div part="diff-labels">
@@ -238,8 +244,8 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
       <lr-diff-view
         part="diff-view"
         layout=${comparing ? 'split' : 'unified'}
-        .oldText=${baseline?.output ?? selected.output}
-        .newText=${selected.output}
+        .oldText=${baselineOutput}
+        .newText=${selectedOutput}
         @lr-copy=${this.stopOwnedEvent}
         @lr-error=${this.stopOwnedEvent}
         @lr-copy-error=${this.stopOwnedEvent}
@@ -262,11 +268,12 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
           .rowKey=${(row: EvalRunResult) => row.id}
           .selectionMode=${'single'}
           .selectedRowKeys=${new Set([this.effectiveSelectedRunId])}
-          aria-label=${this.localize('evaluationDashboardRunsLabel')}
+          aria-label=${this.label || this.localize('evaluationDashboardRunsLabel')}
           @input=${this.stopOwnedEvent}
           @change=${this.stopOwnedEvent}
           @focus=${this.stopOwnedEvent}
           @blur=${this.stopOwnedEvent}
+          @lr-sort-request=${this.stopOwnedEvent}
           @lr-priority-columns-visibility-change=${this.stopOwnedEvent}
           @lr-sort=${this.stopOwnedEvent}
           @lr-row-expand-toggle=${this.stopOwnedEvent}

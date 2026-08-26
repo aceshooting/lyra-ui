@@ -6,9 +6,10 @@
 - **Class** `LyraInclude`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/include/include.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify` — see `llms/peers.md`
-- **Themeable via** 1 part, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 2 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -21,6 +22,12 @@ unlike `<lr-html-viewer>`, which renders a foreign document inside an isolated p
 markup always passes through the shared DOMPurify-backed sanitizer before it reaches `innerHTML`;
 there is deliberately no `allow-scripts`-style escape hatch (the Web Awesome/Shoelace equivalents'
 raw injection option is omitted, not shipped as a no-op).
+The post-sanitization transclusion profile is network-silent and non-interactive: anchors are
+retained, but only resolvable same-document `#fragment` links survive and those ids are rebased per
+include instance. Other navigation and resource attributes such as `href`, `src`, `srcset`,
+`action`, `ping`, and `poster` are removed, so images never load. Form controls and custom elements
+cannot remain interactive; their wrappers are unwrapped when their ordinary children are safe,
+while elements such as inputs that have no passive content are removed.
 
 A bare primitive: no label/hint/error chrome, no implicit role, no computed accessible name, and no
 `aria-live` wrapper (the fragment can carry its own landmarks; wrapping the host would re-announce
@@ -89,7 +96,10 @@ The three shared text-viewer events bubble and compose and are non-cancelable.
 the sanitized fragment on success, and left untouched on failure (as is any previously successful
 include).
 
-**CSS parts:** `base` — the `display: contents` wrapper around the default slot.
+**CSS parts:** `base` (the `display: contents` wrapper around the default slot), and
+`anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest anchor-jump message; the
+spoken copy is appended to the shared document-level polite sink only while the viewer and its
+composed ancestors are exposed to the accessibility tree).
 
 An absent `dompurify` fails closed: it fires `lr-include-error` with
 `reason: 'missing-sanitizer'` and leaves the existing content in place — unsanitized markup is

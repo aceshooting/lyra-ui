@@ -16,7 +16,7 @@ export type TreeSelection = 'single' | 'multiple' | 'leaf' | 'leaf-multiple';
 export interface TreeBadge {
   readonly text: string;
   readonly tone?: LyraVariant;
-  /** Accessible name override; falls back to `text` when omitted. */
+  /** Accessible name override. When omitted or empty, the visible `text` names the chip naturally. */
   readonly label?: string;
 }
 

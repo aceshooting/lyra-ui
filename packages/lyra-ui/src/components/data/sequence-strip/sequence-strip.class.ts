@@ -56,17 +56,20 @@ export interface LyraSequenceStripEventMap {
  * canvas — sized/named consistently with the sparkline/heatmap family, but a glanceable aggregate
  * visualization. The strip is a labeled `role="list"` and each cell is a named list item.
  * Exactly one cell is tabbable; Left/Right and Home/End rove through the items and show the same
- * detail tooltip as pointer hover. Cells are inspectable rather than actionable, so they do not
- * emit an activation event. A host `aria-label` names the host itself without being duplicated on
- * the internal list; `accessible-label` names that list, otherwise its category summary does.
+ * detail tooltip as pointer hover. Clicking a cell, or pressing Enter/Space on the roving cell,
+ * emits the controlled `lr-item-activate` event without moving selection. A host `aria-label`
+ * names the host itself without being duplicated on the internal list; `accessible-label` names
+ * that list, otherwise its category summary does.
  * A category whose label is omitted or blank uses the localized unnamed-category label for
  * affected list-item names and tooltips, its summary clause, and its legend row.
  * Controlled item refreshes preserve the focused
  * item by id, clamp to the nearest survivor, and focus the stable list when the strip becomes empty.
  * A queued arrow/Home/End focus is generation- and identity-bound: replacing `items`, disconnecting,
  * or reconnecting before that update settles cannot focus the same numeric index in a new model.
- * At most 200 items around the roving stop are mounted at once; `aria-posinset`/`aria-setsize`
- * retain positions in the bounded canonical sequence and navigation shifts the window. Assignment
+ * At most 200 items around the roving stop are mounted at once; before focus enters, a valid
+ * controlled `selectedIndex` anchors that stop/window so its `aria-current` cell is present.
+ * `aria-posinset`/`aria-setsize` retain positions in the bounded canonical sequence and navigation
+ * shifts the window. Assignment
  * retains at most the first 10,000 items and categories as detached frozen snapshots; reassign a
  * collection after changing it.
  *
@@ -180,8 +183,10 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
    *
    * Controlled, not self-managing: activating a cell emits `lr-item-activate` and does **not**
    * move the selection on its own, so the consumer stays the single source of truth and the
-   * component cannot drift from a playback index it does not own. An out-of-range or non-integer
-   * value selects nothing rather than throwing.
+   * component cannot drift from a playback index it does not own. Before focus enters, a valid
+   * selection anchors the bounded render window and its sole keyboard entry stop; keyboard roving
+   * remains authoritative after focus. An out-of-range or non-integer value selects nothing rather
+   * than throwing.
    */
   // numeric-guard-exempt: isSelected() below rejects anything that is not an in-range integer
   // before this value is used, so a non-finite or fractional write selects nothing rather than
@@ -432,7 +437,13 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     const ariaLabel = this.accessibleLabel == null ? this.autoSummary() : this.accessibleLabel;
     const activeIndex = this.hoverIndex ?? this.keyboardIndex;
     const active = activeIndex !== null ? this.items[activeIndex] : undefined;
-    const tabStop = this.keyboardIndex ?? 0;
+    const selectedIndex =
+      Number.isInteger(this.selectedIndex) &&
+      this.selectedIndex >= 0 &&
+      this.selectedIndex < this.items.length
+        ? this.selectedIndex
+        : null;
+    const tabStop = this.keyboardIndex ?? selectedIndex ?? 0;
     const tooltipIndex = activeIndex ?? tabStop;
     const maxStart = Math.max(0, this.items.length - MAX_RENDERED_ITEMS);
     const windowStart = Math.min(maxStart, Math.max(0, tabStop - Math.floor(MAX_RENDERED_ITEMS / 2)));

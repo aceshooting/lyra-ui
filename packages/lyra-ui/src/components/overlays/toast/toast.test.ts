@@ -933,7 +933,7 @@ it('recreates its child observer in the adopted owner realm', async () => {
   } finally {
     region.remove();
     if (descriptor) Object.defineProperty(foreignWindow, 'MutationObserver', descriptor);
-    else delete (foreignWindow as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+    else Reflect.deleteProperty(foreignWindow, 'MutationObserver');
     iframe.remove();
   }
 });
@@ -982,7 +982,7 @@ it('create() does not depend on the ambient document factory after adoption', as
     expect(typeof item.hide).to.equal('function');
   } finally {
     if (descriptor) Object.defineProperty(document, 'createElement', descriptor);
-    else delete (document as Document & { createElement?: Document['createElement'] }).createElement;
+    else Reflect.deleteProperty(document, 'createElement');
     region.remove();
     iframe.remove();
   }

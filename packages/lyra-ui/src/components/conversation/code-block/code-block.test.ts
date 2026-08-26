@@ -735,7 +735,7 @@ describe("copy button", () => {
       const handle = nativeSetTimeout(handler, timeout, ...args);
       if (timeout === 1500) {
         confirmationHandle = handle;
-        if (typeof handler === "function") confirmationCallback = handler;
+        if (typeof handler === "function") confirmationCallback = () => handler(...args);
       }
       return handle;
     }) as typeof frameWindow.setTimeout;
@@ -1372,6 +1372,28 @@ describe("highlight-lines", () => {
 });
 
 describe("anchor-target (line-range)", () => {
+  it('renders from the first update after malformed highlight collections are assigned', async () => {
+    const malformedCollections: readonly unknown[] = [
+      null,
+      [null],
+      'not-a-collection',
+      [{ id: 'missing-anchor' }],
+    ];
+
+    for (const malformed of malformedCollections) {
+      const el = document.createElement('lr-code-block') as LyraCodeBlock;
+      el.code = 'const ready = true;';
+      el.highlights = malformed as LyraCodeBlock['highlights'];
+      document.body.append(el);
+      try {
+        await el.updateComplete;
+        expect(el.shadowRoot!.querySelectorAll('[part~="pre"]').length).to.equal(1);
+      } finally {
+        el.remove();
+      }
+    }
+  });
+
   it("scrolls to the start line of a line-range anchor", async () => {
     const el = (await fixture(
       html`<lr-code-block code=${"a\nb\nc\nd\ne"}></lr-code-block>`
@@ -2111,6 +2133,28 @@ describe("shiki dark-theme signal", () => {
     await el2Ready(el);
     const body = el.shadowRoot!.querySelector('[part="body"]')!;
     expect(body.getAttribute("data-dark-theme")).to.equal("true");
+  });
+
+  it("keeps line-number gutters at the quiet text color under a dark theme", async () => {
+    const wrapper = (await fixture(html`
+      <div
+        style="--lr-theme-color-text-normal:rgb(242, 242, 242); --lr-theme-color-text-quiet:rgb(140, 140, 140); --lr-theme-color-surface-default:rgb(26, 26, 26);"
+      >
+        <lr-code-block line-numbers .code=${"first\nsecond"}></lr-code-block>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector("lr-code-block") as LyraCodeBlock;
+    await el2Ready(el);
+    const body = el.shadowRoot!.querySelector('[part="body"]')!;
+    await waitUntil(() => body.getAttribute("data-dark-theme") === "true");
+    const gutter = el.shadowRoot!.querySelector<HTMLElement>(".line-number")!;
+    const probe = document.createElement("span");
+    probe.style.color = "var(--lr-color-text-quiet)";
+    el.shadowRoot!.append(probe);
+    const expected = getComputedStyle(probe).color;
+    probe.remove();
+
+    expect(getComputedStyle(gutter).color).to.equal(expected);
   });
 
   it('does not mark part="body" as dark-theme with the default light --lr-color-* fallbacks', async () => {

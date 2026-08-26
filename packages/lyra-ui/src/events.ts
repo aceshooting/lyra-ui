@@ -2411,15 +2411,16 @@ export type LyraRemoveConditionEvent = LyraConditionBuilderEventMap['lr-remove-c
 export type LyraRenameEvent = LyraConversationItemEventMap['lr-rename'];
 
 /**
- * `lr-render-error` — dispatched by 26 components: `<lr-archive-viewer>`, `<lr-av-player>`,
+ * `lr-render-error` — dispatched by 27 components: `<lr-archive-viewer>`, `<lr-av-player>`,
  * `<lr-calendar-viewer>`, `<lr-contact-viewer>`, `<lr-csv-viewer>`, `<lr-dataset-viewer>`,
- * `<lr-document-compare>`, `<lr-document-preview>`, `<lr-docx-viewer>`, `<lr-ebook-viewer>`,
- * `<lr-email-viewer>`, `<lr-geojson-view>`, `<lr-geojson-viewer>`, `<lr-html-viewer>`,
- * `<lr-image-viewer>`, `<lr-markdown-core>`, `<lr-markdown>`, `<lr-message-parts>`,
- * `<lr-notebook-viewer>`, `<lr-pdf-viewer>`, `<lr-pptx-viewer>`, `<lr-spreadsheet-viewer>`,
- * `<lr-svg-viewer>`, `<lr-tool-result-view>`, `<lr-widget-renderer>`, `<lr-xml-viewer>`.
+ * `<lr-document-compare>`, `<lr-document-preview>`, `<lr-document-viewer>`, `<lr-docx-viewer>`,
+ * `<lr-ebook-viewer>`, `<lr-email-viewer>`, `<lr-geojson-view>`, `<lr-geojson-viewer>`,
+ * `<lr-html-viewer>`, `<lr-image-viewer>`, `<lr-markdown-core>`, `<lr-markdown>`,
+ * `<lr-message-parts>`, `<lr-notebook-viewer>`, `<lr-pdf-viewer>`, `<lr-pptx-viewer>`,
+ * `<lr-spreadsheet-viewer>`, `<lr-svg-viewer>`, `<lr-tool-result-view>`, `<lr-widget-renderer>`,
+ * `<lr-xml-viewer>`.
  *
- * A union of 25 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 26 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g.
  * `LyraArchiveViewerEventMap['lr-render-error']`.
  */
@@ -2432,6 +2433,7 @@ export type LyraRenderErrorEvent =
   | LyraDatasetViewerEventMap['lr-render-error']
   | LyraDocumentCompareEventMap['lr-render-error']
   | LyraDocumentPreviewEventMap['lr-render-error']
+  | LyraDocumentViewerEventMap['lr-render-error']
   | LyraDocxViewerEventMap['lr-render-error']
   | LyraEbookViewerEventMap['lr-render-error']
   | LyraEmailViewerEventMap['lr-render-error']

@@ -21,6 +21,7 @@ interface ReactiveOverlay extends HTMLElement {
   fullscreen?: boolean;
   mode?: string;
   label?: string;
+  mobileBreakpoint?: string;
   toolName?: string;
   expandable?: boolean;
   images?: LyraLightboxImage[];
@@ -134,7 +135,7 @@ const adapters: OverlayAdapter[] = [
 
 function create(adapter: OverlayAdapter): ReactiveOverlay {
   const element = document.createElement(adapter.tag) as ReactiveOverlay;
-  element.dataset.overlayTest = adapter.tag;
+  element.dataset['overlayTest'] = adapter.tag;
   adapter.setup?.(element);
   document.body.append(element);
   return element;
@@ -189,8 +190,8 @@ for (const adapter of adapters) {
 }
 
 for (let index = 0; index < adapters.length; index++) {
-  const bottomAdapter = adapters[index];
-  const topAdapter = adapters[(index + 1) % adapters.length];
+  const bottomAdapter = adapters[index]!;
+  const topAdapter = adapters[(index + 1) % adapters.length]!;
   it(`routes one Escape only to topmost ${topAdapter.tag} above ${bottomAdapter.tag}`, async () => {
     const bottom = create(bottomAdapter);
     bottomAdapter.activate(bottom);
@@ -211,8 +212,8 @@ for (let index = 0; index < adapters.length; index++) {
 }
 
 it('ignores a backdrop belonging to an overlay underneath the topmost overlay', async () => {
-  const bottomAdapter = adapters[0];
-  const topAdapter = adapters[1];
+  const bottomAdapter = adapters[0]!;
+  const topAdapter = adapters[1]!;
   const bottom = create(bottomAdapter);
   bottomAdapter.activate(bottom);
   await bottom.updateComplete;
@@ -235,7 +236,7 @@ it('ignores a backdrop belonging to an overlay underneath the topmost overlay', 
 for (const adapter of adapters) {
   it(`${adapter.tag} restores its opener after direct state closure`, async () => {
     const trigger = document.createElement('button');
-    trigger.dataset.overlayTrigger = adapter.tag;
+    trigger.dataset['overlayTrigger'] = adapter.tag;
     document.body.append(trigger);
     trigger.focus();
     const element = create(adapter);
@@ -267,7 +268,7 @@ for (const adapter of reconnectAdapters) {
     expect(composedContains(element, deepActiveElement(document))).to.be.true;
 
     const destination = document.createElement('div');
-    destination.dataset.overlayTest = 'reparent-target';
+    destination.dataset['overlayTest'] = 'reparent-target';
     document.body.append(destination);
     destination.append(element);
     await Promise.resolve();
@@ -278,12 +279,12 @@ for (const adapter of reconnectAdapters) {
 
 it('moves outside focus into a responsive panel when an open inline panel becomes modal', async () => {
   const trigger = document.createElement('button');
-  trigger.dataset.overlayTrigger = 'responsive-transition';
+  trigger.dataset['overlayTrigger'] = 'responsive-transition';
   document.body.append(trigger);
   trigger.focus();
-  const adapter = adapters[1];
+  const adapter = adapters[1]!;
   const panel = document.createElement(adapter.tag) as ReactiveOverlay;
-  panel.dataset.overlayTest = adapter.tag;
+  panel.dataset['overlayTest'] = adapter.tag;
   panel.mode = 'inline';
   panel.label = 'Panel';
   panel.open = true;
@@ -303,7 +304,7 @@ it('moves outside focus into a responsive panel when an open inline panel become
 
 it('returns focus to the date popup opener after a calendar selection hides the focused day', async () => {
   const element = document.createElement('lr-date-input') as ReactiveOverlay;
-  element.dataset.overlayTest = 'lr-date-input';
+  element.dataset['overlayTest'] = 'lr-date-input';
   document.body.append(element);
   await element.updateComplete;
   const expand = element.shadowRoot!.querySelector('[part="expand-button"]') as HTMLButtonElement;
@@ -324,7 +325,7 @@ it('returns focus to the date popup opener after a calendar selection hides the 
 
 it('returns Escape focus to the text input that opened the date popup with Alt+ArrowDown', async () => {
   const element = document.createElement('lr-date-input') as ReactiveOverlay;
-  element.dataset.overlayTest = 'lr-date-input';
+  element.dataset['overlayTest'] = 'lr-date-input';
   document.body.append(element);
   await element.updateComplete;
   const input = element.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;

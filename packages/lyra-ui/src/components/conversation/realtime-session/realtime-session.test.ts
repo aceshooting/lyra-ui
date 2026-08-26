@@ -63,7 +63,9 @@ it('types and preserves every composed push-to-talk event unchanged', async () =
       })
     );
     const received = await pending;
-    expect(received.target?.localName).to.equal('lr-realtime-session');
+    expect(received.target instanceof Element ? received.target.localName : null).to.equal(
+      'lr-realtime-session'
+    );
     expect(received.bubbles).to.equal(true);
     expect(received.composed).to.equal(true);
     expect(received.detail).to.deep.equal(details[index]);
@@ -143,6 +145,23 @@ it('contains undocumented native input/change events from auxiliary children', a
 
   expect(inputs).to.equal(0);
   expect(changes).to.equal(0);
+});
+
+it('contains the composed transcript follow event outside its public event surface', async () => {
+  const el = (await fixture(
+    html`<lr-realtime-session state="connected"></lr-realtime-session>`,
+  )) as LyraRealtimeSession;
+  const transcript = el.shadowRoot!.querySelector('lr-transcript-feed')!;
+  let followChanges = 0;
+  el.addEventListener('lr-follow-change', () => followChanges++);
+
+  transcript.dispatchEvent(new CustomEvent('lr-follow-change', {
+    bubbles: true,
+    composed: true,
+    detail: { following: false },
+  }));
+
+  expect(followChanges).to.equal(0);
 });
 
 it('applies per-instance localized strings', async () => {

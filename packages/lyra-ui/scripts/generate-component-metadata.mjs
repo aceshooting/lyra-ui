@@ -1,3 +1,5 @@
+import { isMainModule } from './is-main-module.mjs';
+
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -180,4 +182,4 @@ export function run(argv = process.argv.slice(2)) {
   console.log(`Component metadata covers ${inventory.components.length} components with reproducible history.`);
 }
 
-if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))) run();
+if (isMainModule(import.meta.url)) run();

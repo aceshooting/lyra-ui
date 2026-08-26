@@ -851,7 +851,7 @@ function sourceFilesBelow(directory, packageDir) {
 }
 
 /** Authored TS owners reachable through package.json exports, including the root/AI surfaces. */
-export function publicPackageSourceModules(packageDir) {
+function publicPackageSourceModules(packageDir) {
   const packageFile = path.join(packageDir, 'package.json');
   if (!existsSync(packageFile)) return [];
   const manifest = JSON.parse(readFileSync(packageFile, 'utf8'));

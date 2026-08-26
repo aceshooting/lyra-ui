@@ -71,7 +71,7 @@ describe('lr-page-rail', () => {
   it('mediated mode: page-count host attribute drives the number of rows without a viewer', async () => {
     const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="5"></lr-page-rail>`);
     await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
-    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as unknown as HTMLElement & {
       items: unknown[];
       source: { count: number; itemAt(index: number): number };
     };
@@ -259,8 +259,8 @@ describe('lr-page-rail', () => {
     await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part~="page"]') != null);
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
     const buttons = list.shadowRoot!.querySelectorAll('[part~="page"]');
-    expect(buttons[1].getAttribute('aria-label')).to.equal('Page 2, 2 highlighted passages');
-    expect(buttons[0].getAttribute('aria-label')).to.equal('Page 1');
+    expect(buttons[1]!.getAttribute('aria-label')).to.equal('Page 2, 2 highlighted passages');
+    expect(buttons[0]!.getAttribute('aria-label')).to.equal('Page 1');
   });
 
   it('counts the first unique nonempty highlight id once across page heat summaries', async () => {
@@ -284,7 +284,7 @@ describe('lr-page-rail', () => {
     viewer.emitLoad(2);
     await el.updateComplete;
     await waitUntil(() => viewer.renderCalls.length > 0);
-    expect(viewer.renderCalls[0].width).to.equal(64);
+    expect(viewer.renderCalls[0]!.width).to.equal(64);
   });
 
   it('supports renderer-owned DOM thumbnails and disposes their handles when rows are invalidated', async () => {
@@ -376,7 +376,7 @@ describe('lr-page-rail', () => {
 
   it('falls back to lr-file-icon when renderPageThumbnail() rejects, same as resolving false (regression)', async () => {
     class RejectingViewer extends StubViewer {
-      renderPageThumbnail(page: number, canvas: HTMLCanvasElement, options?: { width?: number }): Promise<boolean> {
+      override renderPageThumbnail(page: number, _canvas: HTMLCanvasElement, options?: { width?: number }): Promise<boolean> {
         this.renderCalls.push({ page, width: options?.width });
         return Promise.reject(new Error('decode failed'));
       }
@@ -402,6 +402,30 @@ describe('lr-page-rail', () => {
     base.dispatchEvent(new KeyboardEvent('keydown', { key: '7', bubbles: true, composed: true }));
     await el.updateComplete;
     expect(el.page).to.equal(7);
+  });
+
+  it('leaves modifier-held digits available to application shortcuts', async () => {
+    const el = await fixture<LyraPageRail>(
+      html`<lr-page-rail page-count="12"></lr-page-rail>`
+    );
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    for (const init of [
+      { altKey: true },
+      { ctrlKey: true },
+      { metaKey: true },
+      { ctrlKey: true, altKey: true },
+    ]) {
+      const event = new KeyboardEvent('keydown', {
+        key: '3',
+        bubbles: true,
+        composed: true,
+        ...init,
+      });
+      base.dispatchEvent(event);
+      await el.updateComplete;
+      expect(el.page).to.equal(1);
+      expect(event.defaultPrevented).to.equal(false);
+    }
   });
 
   it('does not combine digits typed before and after a disconnect', async () => {
@@ -668,11 +692,11 @@ describe('lr-page-rail', () => {
     list.scrollToIndex(90, { align: 'start', behavior: 'auto' });
     list.scrollContainer!.dispatchEvent(new Event('scroll'));
     await waitUntil(
-      () => Number(list.renderedRows[0]?.dataset.rowIndex) > 50,
+      () => Number(list.renderedRows[0]?.dataset['rowIndex']) > 50,
       'virtual list never materialized a high page window',
     );
     const focusedRow = list.renderedRows.at(-1)!;
-    const focusedPage = Number(focusedRow.dataset.rowIndex) + 1;
+    const focusedPage = Number(focusedRow.dataset['rowIndex']) + 1;
     expect(focusedPage).to.be.greaterThan(50);
     focusedRow.querySelector<HTMLButtonElement>('[part~="page"]')!.focus();
 
@@ -691,7 +715,7 @@ describe('lr-page-rail', () => {
     list.scrollToIndex(90, { align: 'start', behavior: 'auto' });
     list.scrollContainer!.dispatchEvent(new Event('scroll'));
     await waitUntil(
-      () => Number(list.renderedRows[0]?.dataset.rowIndex) > 50,
+      () => Number(list.renderedRows[0]?.dataset['rowIndex']) > 50,
       'virtual list never materialized a high page window',
     );
     list.renderedRows.at(-1)!.querySelector<HTMLButtonElement>('[part~="page"]')!.focus();
@@ -711,7 +735,7 @@ describe('lr-page-rail', () => {
     await waitUntil(() => updateCompleteReads > 0, 'first focus repair never reached its deferred materialization');
     await waitUntil(
       () => list.renderedRows.length > 0
-        && list.renderedRows.every((row) => Number(row.dataset.rowIndex) < 50)
+        && list.renderedRows.every((row) => Number(row.dataset['rowIndex']) < 50)
         && list.shadowRoot!.activeElement === null,
       'first shrink did not remove the focused high row',
     );
@@ -720,7 +744,7 @@ describe('lr-page-rail', () => {
     await el.updateComplete;
     await waitUntil(
       () => list.renderedRows.length > 0
-        && list.renderedRows.every((row) => Number(row.dataset.rowIndex) < 40),
+        && list.renderedRows.every((row) => Number(row.dataset['rowIndex']) < 40),
       'second shrink did not reach the virtual list',
     );
     repairGate.resolve(undefined);
@@ -739,7 +763,7 @@ describe('lr-page-rail', () => {
     list.scrollToIndex(90, { align: 'start', behavior: 'auto' });
     list.scrollContainer!.dispatchEvent(new Event('scroll'));
     await waitUntil(
-      () => Number(list.renderedRows[0]?.dataset.rowIndex) > 50,
+      () => Number(list.renderedRows[0]?.dataset['rowIndex']) > 50,
       'virtual list never materialized a high page window',
     );
     list.renderedRows.at(-1)!.querySelector<HTMLButtonElement>('[part~="page"]')!.focus();
@@ -1041,7 +1065,7 @@ describe('lr-page-rail', () => {
 
   it('caps a pathological page count without materializing virtual-list items', async () => {
     const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="1000000000"></lr-page-rail>`);
-    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as unknown as HTMLElement & {
       items: unknown[];
       source: { count: number; itemAt(index: number): number };
     };
@@ -1118,7 +1142,7 @@ describe('lr-page-rail', () => {
     viewer.emitLoad(1);
     await el.updateComplete;
     await waitUntil(() => viewer.renderCalls.length > 0);
-    expect(viewer.renderCalls[0].width).to.equal(0);
+    expect(viewer.renderCalls[0]!.width).to.equal(0);
   });
 
   it('clamps an out-of-range or NaN page into [1, pageCount] for the virtual-list active-item-id binding', async () => {

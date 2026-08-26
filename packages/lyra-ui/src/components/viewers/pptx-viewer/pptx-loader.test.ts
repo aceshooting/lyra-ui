@@ -154,7 +154,7 @@ describe('pptx loader', () => {
       await loadPptxRenderer(async () => ({ default: fallback }) as never),
     ).to.equal(fallback);
     const mixed = await loadPptxRenderer(async () => ({ ...named, default: fallback }) as never);
-    expect((mixed!.PptxViewer) === (named.PptxViewer)).to.equal(true);
+    expect(mixed!.PptxViewer as unknown).to.equal(named.PptxViewer);
     expect(mixed!.RECOMMENDED_ZIP_LIMITS).to.equal(named.RECOMMENDED_ZIP_LIMITS);
   });
 

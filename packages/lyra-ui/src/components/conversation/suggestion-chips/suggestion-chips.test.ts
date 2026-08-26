@@ -1,7 +1,7 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './suggestion-chips.js';
 import type { LyraSuggestionChips } from './suggestion-chips.js';
-import { styles } from './suggestion-chips.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const suggestions = [
   { suggestionId: 'a', label: 'Summarize this' },
@@ -49,8 +49,8 @@ it('renders the optional detail line only when set', async () => {
     html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,
   )) as LyraSuggestionChips;
   const chips = [...el.shadowRoot!.querySelectorAll('[part~="chip"]')];
-  expect((chips[0].querySelector('[part="chip-detail"]')) == null).to.be.true;
-  expect(chips[1].querySelector('[part="chip-detail"]')!.textContent).to.equal(
+  expect((chips[0]!.querySelector('[part="chip-detail"]')) == null).to.be.true;
+  expect(chips[1]!.querySelector('[part="chip-detail"]')!.textContent).to.equal(
     'Related to the last stack trace',
   );
 });
@@ -71,7 +71,7 @@ it('renders an optional literal icon as decorative content without changing chip
   expect(icons[0]!.textContent).to.equal('🔎');
   expect(icons[0]!.getAttribute('aria-hidden')).to.equal('true');
   chips[0]!.focus();
-  expect(el.shadowRoot!.activeElement?.dataset['suggestionId']).to.equal('icon');
+  expect(el.shadowRoot!.activeElement?.getAttribute('data-suggestion-id')).to.equal('icon');
   await expect(el).to.be.accessible();
 });
 
@@ -81,7 +81,7 @@ it('emits lr-suggestion-select with suggestionId and label on activation', async
   )) as LyraSuggestionChips;
   const chips = [...el.shadowRoot!.querySelectorAll('[part~="chip"]')] as HTMLButtonElement[];
   const eventPromise = oneEvent(el, 'lr-suggestion-select');
-  chips[1].click();
+  chips[1]!.click();
   const ev = await eventPromise;
   expect(ev.detail).to.deep.equal({ suggestionId: 'b', label: 'Explain the error' });
 });
@@ -104,6 +104,23 @@ it('requires unique nonempty suggestionId values with deterministic first-wins r
   const selected = oneEvent(el, 'lr-suggestion-select');
   chips[0]!.click();
   expect((await selected).detail).to.deep.equal({ suggestionId: 'same', label: 'First occurrence' });
+});
+
+it('drops suggestions with empty or whitespace-only labels while retaining an accessible valid chip', async () => {
+  const el = (await fixture(html`
+    <lr-suggestion-chips
+      .suggestions=${[
+        { suggestionId: 'empty', label: '' },
+        { suggestionId: 'blank', label: '   ' },
+        { suggestionId: 'valid', label: 'Real suggestion' },
+      ]}
+    ></lr-suggestion-chips>
+  `)) as LyraSuggestionChips;
+
+  const chips = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="chip"]')];
+  expect(chips.length).to.equal(1);
+  expect(chips[0]!.textContent?.trim()).to.equal('Real suggestion');
+  await expect(el).to.be.accessible();
 });
 
 it('is a labeled group with a default or custom label', async () => {
@@ -162,16 +179,16 @@ it('roving tabindex: only one chip is tabbable at a time, and ArrowRight/ArrowLe
     html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,
   )) as LyraSuggestionChips;
   const chips = [...el.shadowRoot!.querySelectorAll('[part~="chip"]')] as HTMLButtonElement[];
-  expect(chips[0].tabIndex).to.equal(0);
-  expect(chips[1].tabIndex).to.equal(-1);
-  expect(chips[2].tabIndex).to.equal(-1);
+  expect(chips[0]!.tabIndex).to.equal(0);
+  expect(chips[1]!.tabIndex).to.equal(-1);
+  expect(chips[2]!.tabIndex).to.equal(-1);
 
   el.shadowRoot!
     .querySelector('[part="base"]')!
     .dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
   await el.updateComplete;
-  expect(chips[0].tabIndex).to.equal(-1);
-  expect(chips[1].tabIndex).to.equal(0);
+  expect(chips[0]!.tabIndex).to.equal(-1);
+  expect(chips[1]!.tabIndex).to.equal(0);
   expect((el.shadowRoot!.activeElement) === (chips[1])).to.equal(true);
 });
 
@@ -183,7 +200,7 @@ it('wraps around from the last chip to the first with ArrowRight, and swaps unde
   base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true }));
   await el.updateComplete;
   const chips = [...el.shadowRoot!.querySelectorAll('[part~="chip"]')] as HTMLButtonElement[];
-  expect(chips[1].tabIndex).to.equal(0); // ArrowLeft is "forward" under RTL
+  expect(chips[1]!.tabIndex).to.equal(0); // ArrowLeft is "forward" under RTL
 });
 
 it('Home/End jump to the first/last chip', async () => {
@@ -194,10 +211,10 @@ it('Home/End jump to the first/last chip', async () => {
   const chips = [...el.shadowRoot!.querySelectorAll('[part~="chip"]')] as HTMLButtonElement[];
   base.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
   await el.updateComplete;
-  expect(chips[2].tabIndex).to.equal(0);
+  expect(chips[2]!.tabIndex).to.equal(0);
   base.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true }));
   await el.updateComplete;
-  expect(chips[0].tabIndex).to.equal(0);
+  expect(chips[0]!.tabIndex).to.equal(0);
 });
 
 it('preserves focus on a chip whose id survives a suggestions replacement (keyed repeat)', async () => {
@@ -207,7 +224,7 @@ it('preserves focus on a chip whose id survives a suggestions replacement (keyed
   const secondChip = [...el.shadowRoot!.querySelectorAll('[part~="chip"]')][1] as HTMLButtonElement;
   secondChip.focus();
 
-  el.suggestions = [suggestions[0], suggestions[1], { suggestionId: 'd', label: 'New follow-up' }];
+  el.suggestions = [suggestions[0]!, suggestions[1]!, { suggestionId: 'd', label: 'New follow-up' }];
   await el.updateComplete;
 
   const stillSecondChip = [...el.shadowRoot!.querySelectorAll('[part~="chip"]')][1] as HTMLButtonElement;
@@ -226,13 +243,13 @@ it('keeps active identity through reorder and transfers focus when that chip is 
   el.suggestions = [suggestions[2]!, suggestions[1]!, suggestions[0]!];
   await el.updateComplete;
   await waitUntil(() => el.shadowRoot!.activeElement?.getAttribute('data-suggestion-id') === 'b');
-  expect(el.shadowRoot!.activeElement?.dataset['suggestionId']).to.equal('b');
+  expect(el.shadowRoot!.activeElement?.getAttribute('data-suggestion-id')).to.equal('b');
   expect(chips().find((chip) => chip.dataset['suggestionId'] === 'b')?.tabIndex).to.equal(0);
 
   el.suggestions = [suggestions[2]!, suggestions[0]!];
   await el.updateComplete;
   await waitUntil(() => el.shadowRoot!.activeElement?.getAttribute('data-suggestion-id') === 'a');
-  expect(el.shadowRoot!.activeElement?.dataset['suggestionId']).to.equal('a');
+  expect(el.shadowRoot!.activeElement?.getAttribute('data-suggestion-id')).to.equal('a');
   expect(chips().filter((chip) => chip.tabIndex === 0)).to.have.length(1);
 });
 
@@ -339,16 +356,27 @@ describe('part="row" / --lr-suggestion-chips-justify', () => {
 });
 
 describe('--lr-suggestion-chips-hover-bg / -hover-border', () => {
-  it('reads the hover background/border through per-component cssprops, not just the bare shared brand tokens (regression)', () => {
-    // Real :hover can't be forced from test JS without an actual pointer move, so this asserts
-    // the declaration's indirection layer directly -- same convention as the sibling
-    // --lr-env-list-reveal-active-bg/-border fix's own stylesheet-source check.
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(
-      /\[part~='chip'\]:hover\s*\{[^}]*background:\s*var\(--lr-suggestion-chips-hover-bg,\s*var\(--lr-color-brand-quiet\)\)/,
-    );
-    expect(css).to.match(
-      /\[part~='chip'\]:hover\s*\{[^}]*border-color:\s*var\(--lr-suggestion-chips-hover-border,\s*var\(--lr-color-brand\)\)/,
-    );
+  it('renders the hover background/border through the per-component cssprops', async () => {
+    const el = await fixture<LyraSuggestionChips>(html`
+      <lr-suggestion-chips
+        style="--lr-suggestion-chips-hover-bg: rgb(1, 2, 3); --lr-suggestion-chips-hover-border: rgb(4, 5, 6)"
+        .suggestions=${suggestions}
+      ></lr-suggestion-chips>
+    `);
+    const chip = el.shadowRoot!.querySelector<HTMLElement>('[part~="chip"]')!;
+    chip.scrollIntoView({ block: 'center' });
+    const rect = chip.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(() => {
+        const computed = getComputedStyle(chip);
+        return computed.backgroundColor === 'rgb(1, 2, 3)' && computed.borderTopColor === 'rgb(4, 5, 6)';
+      }, 'the suggestion chip hover cssprops never reached the rendered chip');
+    } finally {
+      await resetMouse();
+    }
   });
 });

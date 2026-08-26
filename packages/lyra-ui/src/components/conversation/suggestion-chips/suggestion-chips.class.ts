@@ -17,6 +17,7 @@ import { LYRA_DEFAULT_suggestionsLabel } from '../../../internal/default-strings
 
 export interface LyraChatSuggestion {
   suggestionId: string;
+  /** Nonblank text used as the chip button's visible and accessible name. */
   label: string;
   /** Optional literal icon hint (for example, an emoji). Rendered decoratively before the text. */
   icon?: string;
@@ -96,8 +97,21 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
     const seen = new Set<string>();
     const normalized: LyraChatSuggestion[] = [];
     for (const suggestion of items ?? []) {
-      const suggestionId = suggestion?.suggestionId;
-      if (typeof suggestionId !== 'string' || suggestionId.trim() === '' || seen.has(suggestionId)) continue;
+      let suggestionId: unknown;
+      let label: unknown;
+      try {
+        suggestionId = suggestion?.suggestionId;
+        label = suggestion?.label;
+      } catch {
+        continue;
+      }
+      if (
+        typeof suggestionId !== 'string' ||
+        suggestionId.trim() === '' ||
+        typeof label !== 'string' ||
+        label.trim() === '' ||
+        seen.has(suggestionId)
+      ) continue;
       seen.add(suggestionId);
       normalized.push(suggestion);
     }

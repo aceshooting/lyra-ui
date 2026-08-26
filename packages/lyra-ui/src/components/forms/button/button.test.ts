@@ -1,8 +1,9 @@
-import { fixture, expect, html, oneEvent } from "@open-wc/testing";
+import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./button.js";
 import type { LyraButton } from "./button.class.js";
 import { styles } from "./button.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { setReducedMotion } from "../../../../test/wtr-media.js";
 
 const normalizedStyles = () =>
   styles.cssText
@@ -502,6 +503,42 @@ describe("lr-button", () => {
     expect(css).to.match(
       /@media \(prefers-reduced-motion: reduce\) \{[^]*\[part~='base'\]:not\([^)]*:disabled[^)]*\):active\s*\{[^}]*transform:\s*none[^}]*\}[^]*\}/
     );
+  });
+
+  it("withdraws the rendered active transform under reduced motion", async () => {
+    try {
+      await setReducedMotion("no-preference");
+      const el = (await fixture(
+        html`<lr-button style="--lr-transition-fast: 0ms">Save</lr-button>`
+      )) as LyraButton;
+      const target = el.shadowRoot!.querySelector<HTMLElement>(
+        '[part~="base"]'
+      )!;
+      const rect = target.getBoundingClientRect();
+      await resetMouse();
+      await sendMouse({
+        type: "move",
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      await sendMouse({ type: "down" });
+      await waitUntil(
+        () => getComputedStyle(target).transform !== "none",
+        "button active transform did not render"
+      );
+
+      await setReducedMotion("reduce");
+      await waitUntil(
+        () => getComputedStyle(target).transform === "none",
+        "button active transform remained under reduced motion"
+      );
+    } finally {
+      await sendMouse({ type: "up" });
+      await resetMouse();
+      await setReducedMotion("no-preference");
+    }
   });
 
   it("is form-associated, participating in an ancestor form.elements the same way wa-button does", async () => {
@@ -1799,12 +1836,12 @@ describe("lr-button: named submitter and form-submission overrides", () => {
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       const data = new FormData(form, event.submitter);
-      captured.action = data.get("action") as string | null;
-      captured.q = data.get("q") as string | null;
+      captured['action'] = data.get("action") as string | null;
+      captured['q'] = data.get("q") as string | null;
     });
     el.click();
-    expect(captured.action).to.equal("save");
-    expect(captured.q).to.equal("hello");
+    expect(captured['action']).to.equal("save");
+    expect(captured['q']).to.equal("hello");
   });
 
   it("contributes an empty value for a named button with no value", async () => {
@@ -1815,12 +1852,12 @@ describe("lr-button: named submitter and form-submission overrides", () => {
     const captured: Record<string, string | null> = { action: null };
     form.addEventListener("submit", (event) => {
       event.preventDefault();
-      captured.action = new FormData(form, event.submitter).get("action") as
+      captured['action'] = new FormData(form, event.submitter).get("action") as
         | string
         | null;
     });
     el.click();
-    expect(captured.action).to.equal("");
+    expect(captured['action']).to.equal("");
   });
 
   it("leaves the submitted FormData and event.submitter untouched when nothing is named (regression)", async () => {
@@ -1934,14 +1971,14 @@ describe("lr-button: named submitter and form-submission overrides", () => {
     });
     el.click();
 
-    expect(seen.tag).to.equal("button");
-    expect(seen.type).to.equal("submit");
-    expect(seen.name).to.equal("action");
-    expect(seen.value).to.equal("save");
-    expect(seen.action).to.include("/custom-endpoint");
-    expect(seen.enctype).to.equal("multipart/form-data");
-    expect(seen.method).to.equal("post");
-    expect(seen.target).to.equal("_blank");
+    expect(seen['tag']).to.equal("button");
+    expect(seen['type']).to.equal("submit");
+    expect(seen['name']).to.equal("action");
+    expect(seen['value']).to.equal("save");
+    expect(seen['action']).to.include("/custom-endpoint");
+    expect(seen['enctype']).to.equal("multipart/form-data");
+    expect(seen['method']).to.equal("post");
+    expect(seen['target']).to.equal("_blank");
   });
 
   it("preserves present-empty native submitter overrides instead of inheriting the form values", async () => {
@@ -2048,7 +2085,7 @@ describe("lr-button: named submitter and form-submission overrides", () => {
     const captured: Record<string, string | null> = { action: null };
     form.addEventListener("submit", (event) => {
       event.preventDefault();
-      captured.action = new FormData(form, event.submitter).get("action") as
+      captured['action'] = new FormData(form, event.submitter).get("action") as
         | string
         | null;
     });
@@ -2057,7 +2094,7 @@ describe("lr-button: named submitter and form-submission overrides", () => {
     el.name = "action";
     el.value = "save";
     el.click();
-    expect(captured.action).to.equal("save");
+    expect(captured['action']).to.equal("save");
   });
 
   it("exposes the submitter overrides as unset by default (regression)", async () => {
@@ -2616,6 +2653,120 @@ it("exposes the native validation surface of its form association", async () => 
   expect([...el.labels].map((node) => (node as Element).id)).to.deep.equal([
     "send-label",
   ]);
+});
+
+it('tracks a late external label\'s text and releases it after reassociation', async () => {
+  const container = (await fixture(html`
+    <div><lr-button id="late-button">Send</lr-button></div>
+  `)) as HTMLDivElement;
+  const el = container.querySelector('lr-button') as LyraButton;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  const label = document.createElement('label');
+  label.htmlFor = el.id;
+  label.textContent = 'Late label';
+  container.prepend(label);
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  expect(base.getAttribute('aria-label')).to.equal('Late label');
+
+  label.textContent = 'Updated label';
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  expect(base.getAttribute('aria-label')).to.equal('Updated label');
+
+  label.htmlFor = 'another-button';
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  expect(base.hasAttribute('aria-label')).to.equal(false);
+});
+
+it('retains generic label support when a full form control loads after the lean button entry', async () => {
+  await import('../input/input.js');
+  const container = (await fixture(html`
+    <div>
+      <label for="later-generic-control">Loaded later</label>
+      <lr-input id="later-generic-control"></lr-input>
+    </div>
+  `)) as HTMLDivElement;
+  const control = container.querySelector('lr-input') as HTMLElement & {
+    readonly updateComplete: Promise<unknown>;
+  };
+  await control.updateComplete;
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  const semantic = control.shadowRoot?.querySelector('input');
+  expect(semantic?.getAttribute('aria-label') ?? null).to.equal('Loaded later');
+});
+
+it('uses captured ElementInternals labels as the authority instead of rediscovering a DOM label', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(ElementInternals.prototype, 'labels');
+  const nativeGet = descriptor?.get;
+  expect(typeof nativeGet).to.equal('function');
+  const emptyLabels = document.createElement('div').querySelectorAll('label');
+  Object.defineProperty(ElementInternals.prototype, 'labels', {
+    ...descriptor,
+    configurable: true,
+    get() {
+      return emptyLabels;
+    },
+  });
+  try {
+    const container = (await fixture(html`
+      <div>
+        <label for="captured-label-button">Ignored fallback label</label>
+        <lr-button id="captured-label-button">Send</lr-button>
+      </div>
+    `)) as HTMLDivElement;
+    const el = container.querySelector('lr-button') as LyraButton;
+    await el.updateComplete;
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    expect(base.hasAttribute('aria-label')).to.equal(false);
+  } finally {
+    if (descriptor) Object.defineProperty(ElementInternals.prototype, 'labels', descriptor);
+  }
+});
+
+it('does not claim an implicit label whose first labelable descendant is another control', async () => {
+  const label = (await fixture(html`
+    <label>Native field <input><lr-button>Send</lr-button></label>
+  `)) as HTMLLabelElement;
+  const el = label.querySelector('lr-button') as LyraButton;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  await el.updateComplete;
+  expect(label.control?.localName).to.equal('input');
+  expect(base.hasAttribute('aria-label')).to.equal(false);
+});
+
+it('does not re-read every button label for an unrelated root mutation', async () => {
+  const container = (await fixture(html`
+    <div>
+      ${Array.from({ length: 24 }, (_, index) => html`
+        <label for=${`indexed-button-${index}`}>Button ${index}</label>
+        <lr-button id=${`indexed-button-${index}`}>Action</lr-button>
+      `)}
+      <p id="unrelated-button-prose">Unrelated prose</p>
+    </div>
+  `)) as HTMLDivElement;
+  const buttons = [...container.querySelectorAll<LyraButton>('lr-button')];
+  await Promise.all(buttons.map((button) => button.updateComplete));
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+  const descriptor = Object.getOwnPropertyDescriptor(ElementInternals.prototype, 'labels');
+  const nativeGet = descriptor?.get;
+  expect(typeof nativeGet).to.equal('function');
+  let reads = 0;
+  Object.defineProperty(ElementInternals.prototype, 'labels', {
+    ...descriptor,
+    configurable: true,
+    get(this: ElementInternals) {
+      reads++;
+      return nativeGet!.call(this) as NodeList;
+    },
+  });
+  try {
+    container.querySelector('#unrelated-button-prose')!.textContent = 'Changed prose';
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(reads).to.equal(0);
+  } finally {
+    if (descriptor) Object.defineProperty(ElementInternals.prototype, 'labels', descriptor);
+  }
 });
 
 it("bars required validity while disabled, loading, or rendered as a link and restores it", async () => {

@@ -6,6 +6,7 @@
 - **Class** `LyraLiteChart`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/lite-chart.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 18 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -29,7 +30,9 @@ passthrough). Not a subclass of `LyraChart`.
   `LyraLiteChartSeries { readonly label: string; readonly data: readonly (number|null)[];
   readonly color?: string }`; the deprecated `LiteSeries` name remains an alias for migration.
   `color` accepts a valid CSS `color`, while invalid values,
-  declaration-breaking input, and `url()` paint servers fall back to the built-in palette
+  declaration-breaking input, and `url()` paint servers fall back to the built-in palette. A
+  runtime entry whose required `data` member is not an array is dropped while valid siblings
+  continue to render.
 - `legend: boolean = false`
 - `legendPosition: 'top'|'bottom'|'start'|'end' = 'bottom'` (attribute `legend-position`) — logical
   placement for the DOM legend; side positions are bounded and stack responsively in narrow hosts
@@ -88,9 +91,11 @@ passthrough). Not a subclass of `LyraChart`.
   mode; ignored in the default `'fit'` mode. An excessive value is reduced as needed by the
   1,000,000px scroll-content ceiling.
 - `maxLabels?: number | 'auto'` (attribute `max-labels`) — decimates which category axis labels
-  actually render *text*: always shows the first and last label and roughly evenly distributes the
-  rest between them. A number is authoritative. `'auto'` derives the cap after each resize from the
-  resolved plot width and widest rendered caller label, using the same deterministic 7px-per-
+  actually render *text*: after the global record sampler runs, it selects from those retained
+  categories, always shows the first and last sampled label, and roughly evenly distributes the
+  rest between them. A number is authoritative up to the number of sampled categories. `'auto'`
+  derives the cap after each resize from the resolved plot width and widest rendered caller label,
+  using the same deterministic 7px-per-
   character estimate as label ellipsis plus 10px of lane breathing room. It therefore responds to
   either `layout` mode without DOM text measurement or browser-specific font metrics. Unset (the
   default) renders every label, unchanged. Each rendered category label is allocation-aware:

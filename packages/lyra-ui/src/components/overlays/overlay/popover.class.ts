@@ -22,6 +22,7 @@ import { loadAnchoredOverlayRuntime } from '../../../internal/anchored-overlay-r
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import {
+  literalSetConverter,
   omittedEmptyStringConverter,
   trueDefaultBooleanConverter,
 } from '../../../internal/converters.js';
@@ -68,6 +69,11 @@ let popoverConnectionSequence = 0;
  */
 export type LyraPopupRole = 'dialog' | 'menu' | 'none';
 
+const POPUP_ROLE = literalSetConverter<LyraPopupRole>(
+  ['dialog', 'menu', 'none'],
+  'dialog',
+);
+
 export type { LyraArrowPlacement, OverlayVirtualRect };
 
 /** The `showAt()` rectangle, shared verbatim with `<lr-tooltip>` (see `./overlay-shared.ts`). */
@@ -105,11 +111,14 @@ export interface LyraPopoverEventMap {
  * Positioning resolves `showAt()` virtual anchor, direct `.anchor`, `for`, then the interaction
  * owner, in that order. Thus `anchor` can position against an element that never receives click or
  * ARIA state, while `for` owns both positioning and interaction only when no trigger is slotted.
+ * Activating an enabled, non-inert light-DOM descendant with `data-popover="close"` requests this
+ * closest owning popover to close. Nested popovers consume their own close actions.
  *
  * @customElement lr-popover
  * @slot trigger - The highest-priority interaction/ARIA owner; toggles the popover even when
  *   positioning uses `anchor` or `for`.
- * @slot - Popover content.
+ * @slot - Popover content. An enabled, non-inert descendant with `data-popover="close"` closes its
+ *   nearest owning popover when activated.
  * @event lr-show - The popover is about to open. Cancelable — `preventDefault()` keeps it closed.
  * @event lr-after-show - The popover is open and its transition has finished.
  * @event lr-hide - The popover is about to close, for every dismissal path (Escape, light
@@ -217,15 +226,18 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   /** Semantic role used by the popup. `dialog` (default) for a contextual surface, `menu` for an
    *  action menu, or `none` to render no role and no generated name so the slotted content owns
    *  its own semantics -- see `LyraPopupRole` for why a navigation disclosure needs that.
+   *  Unsupported attribute values and untyped property writes normalize to `dialog` before the
+   *  role or trigger ARIA is rendered.
    *  @default 'dialog' */
-  @property({ attribute: 'popup-role' })
+  @property({ attribute: 'popup-role', converter: POPUP_ROLE })
   get popupRole(): LyraPopupRole {
     return this._popupRole;
   }
   set popupRole(next: LyraPopupRole) {
-    if (next === this._popupRole) return;
+    const normalized = POPUP_ROLE.normalize(next);
+    if (normalized === this._popupRole) return;
     const old = this._popupRole;
-    this._popupRole = next;
+    this._popupRole = normalized;
     this.requestUpdate('popupRole', old);
   }
   private _disabled = false;
@@ -359,9 +371,14 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   /** Trigger-key extension point. Generic popovers deliberately retain click-only toggling. */
   protected onTriggerKeyDown(_event: KeyboardEvent): void {}
 
+  /** A `for` trigger lives outside the shadow wrapper that normally delegates key events. */
+  private onExternalTriggerKeyDown = (event: KeyboardEvent): void => {
+    this.onTriggerKeyDown(event);
+  };
+
   /** Lets a mapped subclass include a separate containing element in its dismiss boundary. */
   protected isInsideLightDismissBoundary(path: EventTarget[]): boolean {
-    return path.includes(this);
+    return path.includes(this) || (this.trigger != null && path.includes(this.trigger));
   }
 
   /** Runs once when a newly opened/re-anchored popup has completed its first placement and is no
@@ -474,6 +491,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     this.resetHostIdObserver();
     this.overlayHandle?.suspend();
     this.trigger?.removeEventListener('click', this.onTriggerClick);
+    this.trigger?.removeEventListener('keydown', this.onExternalTriggerKeyDown);
     this.releaseTriggerA11y();
     this.trigger = undefined;
     // A pending after-event must not announce a transition the detached element left behind.
@@ -544,9 +562,11 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       return;
     }
     this.trigger?.removeEventListener('click', this.onTriggerClick);
+    this.trigger?.removeEventListener('keydown', this.onExternalTriggerKeyDown);
     this.trigger = next;
     if (this.trigger && this.trigger !== this.slottedTrigger) {
       this.trigger.addEventListener('click', this.onTriggerClick);
+      this.trigger.addEventListener('keydown', this.onExternalTriggerKeyDown);
     }
     this.syncTriggerA11y();
     if (this.open) {

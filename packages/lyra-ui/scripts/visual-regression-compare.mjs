@@ -4,8 +4,8 @@ import { PNG } from 'pngjs';
 // Pixelmatch filters the low-amplitude anti-aliasing differences through its own threshold. Keep
 // the remaining absolute allowance deliberately small: screenshots cover the full viewport so a
 // percentage-only allowance can otherwise exceed the entire painted area of a compact control.
-export const PIXELMATCH_THRESHOLD = 0.1;
-export const MAX_DIFF_PIXELS = 32;
+const PIXELMATCH_THRESHOLD = 0.1;
+const MAX_DIFF_PIXELS = 32;
 
 export function comparePngs(baselineBuffer, currentBuffer) {
   let baseline;

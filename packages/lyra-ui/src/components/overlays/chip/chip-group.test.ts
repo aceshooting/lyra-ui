@@ -3,7 +3,6 @@ import { LitElement, html as litHtml } from 'lit';
 import './chip-group.js';
 import './chip.js';
 import type { LyraChipGroup } from './chip-group.js';
-import { styles } from './chip-group.styles.js';
 
 // A minimal host that re-projects its own light-DOM children into a
 // `<lr-chip-group>` living in its shadow DOM via a forwarding `<slot>` --
@@ -12,10 +11,10 @@ import { styles } from './chip-group.styles.js';
 // one element) under-counts what the group's own default slot actually
 // flattens to (the real projected `<lr-chip>`s).
 class ChipGroupForwarder extends LitElement {
-  protected createRenderRoot() {
+  protected override createRenderRoot() {
     return this.attachShadow({ mode: 'open' });
   }
-  protected render() {
+  protected override render() {
     return litHtml`<lr-chip-group max-visible="2"><slot></slot></lr-chip-group>`;
   }
 }
@@ -44,11 +43,22 @@ function focusedChipPart(chip: HTMLElement): string | null {
   return chip.shadowRoot?.activeElement?.getAttribute('part') ?? null;
 }
 
-it("wraps the internal [aria-expanded='true'] rule in :where() so a consumer ::part(overflow-indicator) override can win (regression)", () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='overflow-indicator'\]:where\(\[aria-expanded='true'\]\)/);
-  // The old, over-specific unwrapped shape must be gone, not merely joined by the new one.
-  expect(css).to.not.include("[part='overflow-indicator'][aria-expanded='true']");
+it('lets a consumer ::part(overflow-indicator) override win while expanded', async () => {
+  const style = document.createElement('style');
+  style.textContent = `lr-chip-group::part(overflow-indicator) { color: rgb(1, 2, 3); }`;
+  document.head.append(style);
+  try {
+    const el = (await fixture(fiveChips())) as LyraChipGroup;
+    el.maxVisible = 3;
+    await el.updateComplete;
+    const indicator = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="overflow-indicator"]')!;
+    indicator.click();
+    await el.updateComplete;
+    expect(indicator.getAttribute('aria-expanded')).to.equal('true');
+    expect(getComputedStyle(indicator).color).to.equal('rgb(1, 2, 3)');
+  } finally {
+    style.remove();
+  }
 });
 
 it('lets a consumer retint the expanded overflow-indicator via the scoped --lr-chip-group-overflow-expanded-color cssprop (regression)', async () => {

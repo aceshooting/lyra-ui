@@ -51,7 +51,8 @@ export interface ToolSelectionChangeDetail {
 /**
  * Reason the dialog was dismissed, forwarded as the `lr-close` event detail
  * -- mirrors `<lr-dialog>`'s own `DialogCloseReason` shape. `'escape'`/
- * `'backdrop'` come from the dialog's own built-in dismiss triggers; any
+ * `'backdrop'` come from the dialog's own built-in dismiss triggers (the latter only while
+ * `lightDismiss` is enabled); any
  * other string is whatever a caller passes to `close()` directly (e.g. a
  * consumer's own footer Done button).
  */
@@ -96,8 +97,8 @@ interface ToolProjection {
  *
  * This renders its own dialog panel rather than nesting a `<lr-dialog>` in
  * its shadow template. Shared overlay infrastructure coordinates stacking,
- * focus trapping, Escape/backdrop dismissal, and focus return with every
- * other overlay in the same document.
+ * focus trapping, Escape dismissal, optional backdrop dismissal, and focus
+ * return with every other overlay in the same document.
  *
  * `useDefaults` is a single top-level switch: while `true`, every per-tool
  * checkbox below renders disabled (still reflecting whatever `selectedToolIds`
@@ -109,8 +110,8 @@ interface ToolProjection {
  * control for that transition rather than a separate button duplicating it.
  *
  * There is no built-in footer/close button — like `<lr-dialog>`, dismissal
- * happens via Escape, a backdrop click, or a consumer's own `footer`-slotted
- * action calling `close()`. This also means the search input is the very
+ * happens via Escape, an opted-in `lightDismiss` backdrop click, or a
+ * consumer's own `footer`-slotted action calling `close()`. This also means the search input is the very
  * first focusable element in the panel with no special-casing needed, so
  * it's what receives focus on open (see `updated()`).
  *
@@ -123,6 +124,8 @@ interface ToolProjection {
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Native/prefixed input and change events from the composed checkbox and switch controls stop at
+ * this dialog's boundary; consumers receive only the aggregate `lr-change` proposal above.
  *
  * @customElement lr-tool-select-dialog
  * @slot footer - Optional action buttons (e.g. a "Done" button), rendered in a bottom row.
@@ -131,7 +134,7 @@ interface ToolProjection {
  * `detail: { selectedToolIds: string[], useDefaults: boolean }`. Cancelable; preventing it preserves
  * both properties and restores the built-in checkbox or switch to its current checked state.
  * @event lr-close - `detail: ToolSelectDialogCloseReason`. Fired exactly once per dismissal,
- * via Escape, a backdrop click, or a `close()` call.
+ * via Escape, an opted-in backdrop click, or a `close()` call.
  * @event focus - Re-dispatched when the internal search input receives focus.
  * @event blur - Re-dispatched when the internal search input loses focus.
  * @csspart backdrop - The full-viewport scrim behind the panel.
@@ -196,6 +199,10 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   /** Whether the dialog is open. Set this directly or use `show()`/`hide()`/`close()`. */
   @property({ type: Boolean, reflect: true }) open = false;
 
+  /** Dismisses the dialog on a backdrop click. Opt-in and `false` by default, matching
+   *  `<lr-dialog>`, `<lr-drawer>`, and `<lr-lightbox>`. */
+  @property({ type: Boolean, attribute: 'light-dismiss' }) lightDismiss = false;
+
   /** The full set of tools a consumer offers, across all categories. Empty ids are omitted and
    *  duplicate ids use a deterministic first-wins projection. */
   @property({ attribute: false }) tools: readonly ToolSelectDialogTool[] = [];
@@ -216,8 +223,9 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
    *  stays labelled by its visible heading to avoid cloning the same owner. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
-  /** Search placeholder and accessible name. Omission uses the localized default; supplied text
-   *  remains literal even when it matches the former English default or is empty. */
+  /** Search placeholder. Omission uses the localized default; supplied text remains literal even
+   *  when it matches the former English default or is empty. An empty/whitespace-only placeholder
+   *  leaves the field visually empty while its accessible name falls back to the localized default. */
   @property({ attribute: 'search-placeholder' }) searchPlaceholder?: string;
   /** Native editing-assistance and virtual-keyboard hints forwarded to the search input. */
   @property() autocomplete = '';
@@ -298,7 +306,9 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
       host: this,
       panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
       onEscape: () => this.close('escape'),
-      onBackdrop: () => this.close('backdrop'),
+      onBackdrop: () => {
+        if (this.lightDismiss) this.close('backdrop');
+      },
       lockScroll: true,
       suspendWhenUnrendered: true,
     });
@@ -311,8 +321,8 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   /**
    * Close the dialog and return focus to whatever had it before the dialog
    * opened. `reason` is forwarded as the `lr-close` detail — built-in
-   * triggers pass `'escape'`/`'backdrop'`; a consumer's own close affordance
-   * (e.g. a footer Done button) should call this directly with its own
+   * triggers pass `'escape'`/`'backdrop'` (the latter only when `lightDismiss` is enabled); a
+   * consumer's own close affordance (e.g. a footer Done button) should call this directly with its own
    * reason string, so every dismissal path funnels through the same event
    * instead of the consumer having to also toggle `open` itself.
    */
@@ -360,6 +370,10 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   private onSearchFocus = (): void => { this.emit('focus'); };
   private onSearchBlur = (): void => { this.emit('blur'); };
 
+  private stopNestedControlEvent = (event: Event): void => {
+    event.stopPropagation();
+  };
+
   private onDefaultsToggle = (e: CustomEvent<{ checked: boolean }>): void => {
     e.stopPropagation();
     const next: ToolSelectionChangeDetail = {
@@ -399,7 +413,10 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   }
 
   private get uniqueTools(): ToolSelectDialogTool[] {
-    return firstByIdentity(Array.isArray(this.tools) ? this.tools : [], (tool) => tool.id);
+    return firstByIdentity(
+      Array.isArray(this.tools) ? this.tools : [],
+      (tool) => tool.id,
+    );
   }
 
   private get uniqueSelectedToolIds(): string[] {
@@ -488,6 +505,9 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
           value=${tool.id}
           ?checked=${this.selectedToolIds.includes(tool.id)}
           ?disabled=${rowDisabled}
+          @input=${this.stopNestedControlEvent}
+          @lr-input=${this.stopNestedControlEvent}
+          @change=${this.stopNestedControlEvent}
           @lr-change=${(e: CustomEvent<{ checked: boolean }>) => this.onToolToggle(tool, e)}
         >
           <span part="tool-name">
@@ -535,6 +555,9 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     const searchPlaceholder = this.searchPlaceholder === undefined
       ? this.localize('searchToolsPlaceholder')
       : this.searchPlaceholder;
+    const searchAccessibleName = searchPlaceholder.trim().length > 0
+      ? searchPlaceholder
+      : this.localize('searchToolsPlaceholder');
     const knownIds = new Set(uniqueTools.map((tool) => tool.id));
     const selectedCount = new Set(
       this.selectedToolIds.filter((id) => knownIds.has(id))
@@ -568,7 +591,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
             type="search"
             .value=${this.query}
             placeholder=${searchPlaceholder}
-            aria-label=${searchPlaceholder}
+            aria-label=${searchAccessibleName}
             autocomplete=${this.autocomplete || nothing}
             .spellcheck=${this.spellcheck}
             autocapitalize=${this.autocapitalize || nothing}
@@ -584,6 +607,9 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
           <lr-switch
             part="defaults-toggle"
             ?checked=${this.useDefaults}
+            @input=${this.stopNestedControlEvent}
+            @lr-input=${this.stopNestedControlEvent}
+            @change=${this.stopNestedControlEvent}
             @lr-change=${this.onDefaultsToggle}
           >
             ${this.localize('useDefaultTools')}

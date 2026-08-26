@@ -62,7 +62,7 @@ test('keeps the packed button canary aligned with the authoritative granular har
   const budgetPath = 'dist/components/forms/button/button.js';
   assert.equal(
     bundleBudgets[budgetPath],
-    44,
+    30,
     'the granular button entry must retain an explicit KiB ceiling',
   );
   assert.match(

@@ -9,6 +9,7 @@ import {
 import './csv-viewer.js';
 import type { LyraCsvViewer } from './csv-viewer.js';
 import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const CSV =
   'Name,Role\nAda Lovelace,Mathematician\nGrace Hopper,Computer scientist';
@@ -173,11 +174,42 @@ describe('lr-csv-viewer', () => {
       );
       expect(
         (
-          el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+          el.shadowRoot!.querySelector('lr-virtual-list') as unknown as HTMLElement & {
             items: unknown[][];
           }
         ).items[0]
       ).to.deep.equal(['Ada', 'Wrote notes on the "Engine", 1843']);
+    } finally {
+      restore();
+    }
+  });
+  it('keeps the header fixed above the actual virtualized row scrollport when capped', async () => {
+    const el = (await fixture(
+      html`<lr-csv-viewer max-height="96px"></lr-csv-viewer>`
+    )) as LyraCsvViewer;
+    const restore = fetchText([
+      'Name,Role',
+      ...Array.from({ length: 100 }, (_unused, index) => `Person ${index},Role ${index}`),
+    ].join('\n'));
+    try {
+      el.src = 'https://example.test/people.csv';
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="header-row"]') !== null
+      );
+      const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+      const header = el.shadowRoot!.querySelector(
+        '[part="header-row"]'
+      ) as HTMLElement;
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+      const scrollport = list.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      await waitUntil(() => scrollport.scrollHeight > scrollport.clientHeight);
+      expect(body.scrollHeight).to.be.at.most(body.clientHeight + 1);
+      const initialTop = header.getBoundingClientRect().top;
+      scrollport.scrollTop = 64;
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      expect(scrollport.scrollTop).to.be.greaterThan(0);
+      expect(Math.abs(header.getBoundingClientRect().top - initialTop))
+        .to.be.at.most(1);
     } finally {
       restore();
     }
@@ -196,7 +228,7 @@ describe('lr-csv-viewer', () => {
       );
       const list = el.shadowRoot!.querySelector(
         'lr-virtual-list'
-      ) as HTMLElement & { items: unknown[][] };
+      ) as unknown as HTMLElement & { items: unknown[][] };
       expect(list.items).to.deep.equal([
         ['Ada', 'first; clause\r\nsecond clause'],
         ['Grace', 'plain'],
@@ -400,7 +432,7 @@ describe('lr-csv-viewer', () => {
         .true;
       expect(
         (
-          el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+          el.shadowRoot!.querySelector('lr-virtual-list') as unknown as HTMLElement & {
             items: unknown[][];
           }
         ).items
@@ -452,6 +484,18 @@ describe('lr-csv-viewer', () => {
     expect(base.getAttribute('role')).to.be.null;
     expect(base.getAttribute('aria-label')).to.be.null;
     expect(el.getAttribute('aria-label')).to.equal('Quarterly report');
+    const restore = fetchText(CSV);
+    try {
+      el.src = 'https://example.test/report.csv';
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="sheet"]') !== null
+      );
+      expect(
+        el.shadowRoot!.querySelector('[part="sheet"]')!.getAttribute('aria-label')
+      ).to.equal('Quarterly report');
+    } finally {
+      restore();
+    }
   });
   it('preserves an explicitly empty host aria-label on the stable region without duplicating it on the table', async () => {
     const el = (await fixture(
@@ -467,7 +511,8 @@ describe('lr-csv-viewer', () => {
       const sheet = el.shadowRoot!.querySelector('[part="sheet"]')!;
       expect(base.hasAttribute('aria-label')).to.be.true;
       expect(base.getAttribute('aria-label')).to.equal('');
-      expect(sheet.hasAttribute('aria-label')).to.be.false;
+      expect(sheet.hasAttribute('aria-label')).to.be.true;
+      expect(sheet.getAttribute('aria-label')).to.equal('');
     } finally {
       restore();
     }
@@ -510,9 +555,21 @@ describe('lr-csv-viewer', () => {
         .strings=${{ csvViewerLabel: 'Document CSV' }}
       ></lr-csv-viewer>`
     )) as LyraCsvViewer;
-    expect(
-      el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
-    ).to.equal('Document CSV');
+    const restore = fetchText(CSV);
+    try {
+      el.src = 'https://example.test/people.csv';
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="sheet"]') !== null
+      );
+      expect(
+        el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
+      ).to.equal('Document CSV');
+      expect(
+        el.shadowRoot!.querySelector('[part="sheet"]')!.getAttribute('aria-label')
+      ).to.equal('Document CSV');
+    } finally {
+      restore();
+    }
   });
   it('applies max-height as a custom property on the base part', async () => {
     const el = (await fixture(
@@ -526,6 +583,30 @@ describe('lr-csv-viewer', () => {
   });
 
   describe('cell-range anchor-target', () => {
+    it('keeps loaded cells and later updates working when a highlight omits its anchor', async () => {
+      const el = await fixture<LyraCsvViewer>(html`<lr-csv-viewer></lr-csv-viewer>`);
+      const restore = fetchText(GRID_CSV);
+      try {
+        el.src = 'https://example.test/people.csv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="header-row"]') !== null);
+
+        el.highlights = [{ id: 'missing-anchor' }] as unknown as LyraCsvViewer['highlights'];
+        await el.updateComplete;
+        el.maxHeight = '12rem';
+        await el.updateComplete;
+
+        expect(el.highlights.map((highlight) => highlight.id)).to.deep.equal([]);
+        expect(el.shadowRoot!.querySelectorAll('[part="header-row"]').length).to.equal(1);
+        expect(
+          (el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).style.getPropertyValue(
+            '--lr-csv-viewer-max-height',
+          ),
+        ).to.equal('12rem');
+      } finally {
+        restore();
+      }
+    });
+
     it('scrolls to a cell-range anchor addressing the raw grid (header included)', async () => {
       const el = (await fixture(
         html`<lr-csv-viewer></lr-csv-viewer>`
@@ -1265,20 +1346,50 @@ describe('lr-csv-viewer', () => {
   });
 
   describe('cell-highlight hover state', () => {
-    it('gives lr-virtual-list::part(cell-highlight) a :hover rule alongside its :focus-visible ring', async () => {
-      // jsdom/wtr don't synthesize a real :hover pseudo-class from a dispatched event, so this
-      // asserts the internal rule exists directly via the adopted stylesheet text (mirrors
-      // lr-task-list's identical hover-rule test).
+    it('changes the rendered highlight action background under real pointer hover', async () => {
       const el = (await fixture(
-        html`<lr-csv-viewer></lr-csv-viewer>`
+        html`<lr-csv-viewer
+          style="--lr-color-brand-quiet: rgb(1, 2, 3)"
+        ></lr-csv-viewer>`
       )) as LyraCsvViewer;
-      const rule = (el.shadowRoot!.adoptedStyleSheets ?? [])
-        .flatMap((sheet) => Array.from(sheet.cssRules))
-        .map((cssRule) => cssRule.cssText)
-        .find(
-          (text) => text.includes(':hover') && text.includes('cell-highlight')
+      const restore = fetchText(GRID_CSV);
+      try {
+        el.highlights = [
+          { id: 'h1', anchor: { kind: 'cell-range', range: 'A2' } },
+        ];
+        el.src = 'https://example.test/people.csv';
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('lr-virtual-list') !== null
         );
-      expect(rule).to.exist;
+        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+        await waitUntil(
+          () =>
+            list.shadowRoot!.querySelector('[part="cell-highlight-action"]') !==
+            null
+        );
+        const action = list.shadowRoot!.querySelector(
+          '[part="cell-highlight-action"]'
+        ) as HTMLElement;
+        const resting = getComputedStyle(action).backgroundColor;
+        const box = action.getBoundingClientRect();
+
+        await resetMouse();
+        await sendMouse({
+          type: 'move',
+          position: [
+            Math.round(box.left + box.width / 2),
+            Math.round(box.top + box.height / 2),
+          ],
+        });
+        await waitUntil(
+          () => getComputedStyle(action).backgroundColor !== resting,
+          'the highlighted-cell action never entered its rendered hover state'
+        );
+        expect(getComputedStyle(action).backgroundColor).to.not.equal(resting);
+      } finally {
+        await resetMouse();
+        restore();
+      }
     });
   });
 
@@ -1352,7 +1463,7 @@ it('registers a text/csv renderer that matches .csv files and renders the viewer
 
   const host = (await fixture(
     html`<div>
-      ${def!.render({
+      ${def!.render!({
         name: 'a.csv',
         mimeType: 'text/csv',
         src: 'https://example.test/a.csv',

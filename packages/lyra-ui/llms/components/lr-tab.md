@@ -6,6 +6,7 @@
 - **Class** `LyraTab`, also available unregistered from `@aceshooting/lyra-ui/components/layout/tab-group/tab.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 4 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -48,9 +49,10 @@ from the group host or an ancestor of it. Declaring one on the `<lr-tab>` itself
 element is _inside_ that button in the flattened tree, and inheritance only runs the other way.
 
 Before group hydration, an unassigned tab places itself in the public `nav` slot. The group then
-writes its internal per-tab `slot` attribute itself. A tab with no `panel` still gets a stable
-synthetic name from its position, so an unpaired tab renders a button with an empty panel rather
-than silently disappearing.
+writes its internal per-tab `slot` attribute itself. A labeled tab with no `panel` gets a stable
+synthetic name from its position; the allocator avoids every authored tab and panel name, so mixed
+paired/unpaired markup cannot collapse two tabs into one key. An unpaneled descriptor with no
+accessibility-exposed label is omitted instead of exposing the synthetic key as its spoken name.
 
 The visual close affordance is non-focusable because `<lr-tab-group>` projects this descriptor
 inside the real `role="tab"` button. Rendering another focusable button there would create a

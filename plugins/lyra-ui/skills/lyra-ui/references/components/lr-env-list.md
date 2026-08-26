@@ -6,6 +6,7 @@
 - **Class** `LyraEnvList`, also available unregistered from `@aceshooting/lyra-ui/components/data/env-list/env-list.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -24,7 +25,8 @@ allocations; the name track uses at most 40% of the available inline size.
 of at most the first 10,000 source entries; malformed records, blank names, and later duplicate
 names are skipped first-wins before render, reveal state, copy actions, and events; reassign after
 changes), `revealable: boolean = true` (reflected), `copyable: boolean = true`
-(reflected), and `label: string = ''`.
+(reflected), and `label?: string`. An omitted label uses localized `envListLabel`; an explicit empty
+string remains empty. A host `aria-label` wins by attribute presence, including when empty.
 
 **Events:** `lr-reveal-change` (frozen readonly `detail: { envName, revealed }`); `lr-copy` (frozen
 readonly `detail: { ok: true, text }`, emitted only after clipboard fulfillment, with `text` equal

@@ -176,7 +176,9 @@ it('scrolls a block-overflowing pane internally at a 320px by 160px allocation i
   await elementUpdated(element);
 
   const layout = base(element);
-  const [startPanel, endPanel] = [...layout.querySelectorAll<HTMLElement>('[part~="panel"]')];
+  const [startPanel, endPanel] = [
+    ...layout.querySelectorAll<HTMLElement>('[part~="panel"]'),
+  ] as [HTMLElement, HTMLElement];
   expect(Math.round(element.getBoundingClientRect().width)).to.equal(320);
   expect(Math.round(element.getBoundingClientRect().height)).to.equal(160);
 
@@ -227,7 +229,9 @@ it('scrolls a block-overflowing pane internally under orientation="vertical" too
   await elementUpdated(element);
 
   const layout = base(element);
-  const [startPanel] = [...layout.querySelectorAll<HTMLElement>('[part~="panel"]')];
+  const [startPanel] = [
+    ...layout.querySelectorAll<HTMLElement>('[part~="panel"]'),
+  ] as [HTMLElement];
   expect(layout.scrollHeight, 'base containment').to.be.at.most(layout.clientHeight + 1);
   expect(startPanel.scrollHeight, 'deep content actually overflows').to.be.greaterThan(
     startPanel.clientHeight,
@@ -320,8 +324,8 @@ it('supports orientation="vertical" and the vertical compatibility alias', async
     ></lr-split-panel>
   `)) as LyraSplitPanel;
 
-  expect(base(canonical).dataset.orientation).to.equal('vertical');
-  expect(base(alias).dataset.orientation).to.equal('vertical');
+  expect(base(canonical).dataset['orientation']).to.equal('vertical');
+  expect(base(alias).dataset['orientation']).to.equal('vertical');
   expect(canonical.vertical).to.be.true;
   expect(alias.orientation).to.equal('vertical');
   expect(canonical.positionInPixels).to.be.closeTo(50, 1);

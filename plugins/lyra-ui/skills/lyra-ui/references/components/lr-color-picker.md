@@ -6,6 +6,7 @@
 - **Class** `LyraColorPicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/color-picker/color-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 43 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -83,9 +84,9 @@ and:
   `{ color: string; label?: string }` objects. Any colour the picker can parse is accepted; blank
   entries are dropped. An entry that is _not_ parseable is kept in the list and still renders a
   swatch — it just paints no colour (the bare checkerboard) and clicking it does nothing, so filter
-  the palette yourself if that matters. `label` becomes the swatch's accessible name — without one
-  the raw colour string is announced. The palette container renders only while the normalized list
-  is non-empty
+  the palette yourself if that matters. `label` becomes the swatch's accessible name; a missing,
+  empty, or whitespace-only label falls back to announcing the raw colour string. The palette
+  container renders only while the normalized list is non-empty
 - `withoutFormatToggle: boolean = false` (attribute `without-format-toggle`) — removes the button
   that cycles between formats. `noFormatToggle` (`no-format-toggle`) is the Shoelace spelling and
   reaches the same behavior; either one wins

@@ -6,9 +6,10 @@
 - **Class** `LyraMarkdownCore`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/markdown/markdown-core.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 11 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -70,8 +71,9 @@ as the full class; the core route exports its own `Marked` alias.
 
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
-**CSS parts:** `content`, `heading`, `paragraph`, `list`, `code-block`, `inline-code`, `link`,
-`table`, `blockquote`, `img`, `math` — identical to `<lr-markdown>`'s own parts.
+**CSS parts:** `anchor-live-region` (the aria-hidden, non-live shadow mirror of the latest
+anchor-jump message), `content`, `heading`, `paragraph`, `list`, `code-block`, `inline-code`,
+`link`, `table`, `blockquote`, `img`, `math` — identical to `<lr-markdown>`'s own parts.
 
 **Themeable custom properties:** `--lr-code-block-tab-size` (default `2` — tab width inside a
 rendered fenced or indented `code-block`), with exactly the mechanics described under

@@ -158,7 +158,9 @@ it('keeps both picker modes inside an exact 320px RTL allocation with long unbro
       ></lr-voice-picker>
     </div>
   `)) as HTMLDivElement;
-  const [dropdown, custom] = Array.from(container.querySelectorAll('lr-voice-picker')) as LyraVoicePicker[];
+  const pickers = Array.from(container.querySelectorAll('lr-voice-picker'));
+  const dropdown = pickers[0]!;
+  const custom = pickers[1]!;
   dropdown.open = true;
   custom.click();
   await Promise.all([dropdown.updateComplete, custom.updateComplete]);
@@ -254,7 +256,7 @@ it('renders object-catalog rows with a language/description second line', async 
   const el = (await fixture(html`<lr-voice-picker .catalog=${OBJECT_CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
   el.open = true;
   await el.updateComplete;
-  const meta = rows(el)[0].querySelector('[part="option-meta"]')!;
+  const meta = rows(el)[0]!.querySelector('[part="option-meta"]')!;
   expect(meta.textContent).to.equal('en-US · Warm, narrative');
 });
 
@@ -415,7 +417,9 @@ describe('open and synthetic stale-row theme cssprops', () => {
         <lr-voice-picker value="retired-voice" .catalog=${CATALOG}></lr-voice-picker>
       </div>
     `)) as HTMLDivElement;
-    const [themed, defaulted] = Array.from(wrapper.querySelectorAll('lr-voice-picker')) as LyraVoicePicker[];
+    const pickers = Array.from(wrapper.querySelectorAll('lr-voice-picker'));
+    const themed = pickers[0]!;
+    const defaulted = pickers[1]!;
     themed.open = true;
     defaulted.open = true;
     await Promise.all([themed.updateComplete, defaulted.updateComplete]);
@@ -522,7 +526,6 @@ describe('row state feedback on the already-selected option', () => {
     const selected = await measureRow((rows) => rows.find((row) => row.getAttribute('aria-selected') === 'true')!);
     if (control === null || selected === null) {
       this.skip();
-      return;
     }
     expect(control.hover, 'an unselected row hovers to the row tint').to.equal('rgb(1, 2, 3)');
     expect(selected.hover, 'hovered selected row').to.equal(control.hover);
@@ -648,7 +651,7 @@ it('free-text filtering also matches language and description', async () => {
   el2.dispatchEvent(new Event('input', { bubbles: true }));
   await el.updateComplete;
   expect(rows(el).length).to.equal(1);
-  expect(rows(el)[0].dataset.value).to.equal('aria');
+  expect(rows(el)[0]!.dataset['value']).to.equal('aria');
 });
 
 // -- Preview -----------------------------------------------------------
@@ -1181,7 +1184,7 @@ it('per-row option-preview icons are pointer-only (tabindex=-1, aria-hidden) and
   const el = (await fixture(html`<lr-voice-picker .catalog=${OBJECT_CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
   el.open = true;
   await el.updateComplete;
-  const icon = rows(el)[0].querySelector('[part="option-preview"]') as HTMLElement;
+  const icon = rows(el)[0]!.querySelector('[part="option-preview"]') as HTMLElement;
   expect(icon.getAttribute('tabindex')).to.equal('-1');
   expect(icon.getAttribute('aria-hidden')).to.equal('true');
 
@@ -1841,7 +1844,7 @@ it('the per-row preview icon is a no-op for an entry with an empty id (defensive
   await el.updateComplete;
   let requested = false;
   el.addEventListener('lr-preview-request', () => (requested = true));
-  const icon = rows(el)[0].querySelector('[part="option-preview"]') as HTMLElement;
+  const icon = rows(el)[0]!.querySelector('[part="option-preview"]') as HTMLElement;
   icon.click();
   await el.updateComplete;
   expect(requested).to.be.false;
@@ -1952,7 +1955,7 @@ it("clicking the same row's preview icon again stops it (per-row toggle)", async
     const el = (await fixture(html`<lr-voice-picker .catalog=${OBJECT_CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
     el.open = true;
     await el.updateComplete;
-    const icon = rows(el)[0].querySelector('[part="option-preview"]') as HTMLElement;
+    const icon = rows(el)[0]!.querySelector('[part="option-preview"]') as HTMLElement;
 
     const startPromise = oneEvent(el, 'lr-preview-change');
     icon.click();
@@ -2203,14 +2206,35 @@ it("colors the combobox-input's placeholder text instead of leaving the UA defau
 
 // -- Hover feedback (mouse users get the same 'this is clickable' cue keyboard focus gives) ------
 
-it('gives the trigger a hover state', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='trigger'\]:hover/);
-});
+it('renders hover treatment on the trigger and standalone preview button', async () => {
+  const el = await fixture<LyraVoicePicker>(html`
+    <lr-voice-picker
+      value="aria"
+      style="--lr-color-brand: rgb(1, 2, 3); --lr-color-brand-quiet: rgb(4, 5, 6)"
+      .catalog=${OBJECT_CATALOG}
+    ></lr-voice-picker>
+  `);
+  const targets = [
+    { element: trigger(el), property: 'borderTopColor', expected: 'rgb(1, 2, 3)' },
+    { element: previewButton(el), property: 'backgroundColor', expected: 'rgb(4, 5, 6)' },
+  ] as const;
 
-it('gives the standalone preview-button a hover state', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='preview-button'\]:hover/);
+  for (const { element, property, expected } of targets) {
+    element.scrollIntoView({ block: 'center' });
+    const rect = element.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(
+        () => getComputedStyle(element)[property] === expected,
+        `${element.getAttribute('part')} never painted its hover treatment`,
+      );
+    } finally {
+      await resetMouse();
+    }
+  }
 });
 
 // -- overflow-x pinned alongside the listbox's overflow-y (phantom-scrollbar guard) ---------------
@@ -2870,7 +2894,7 @@ it('emits a cancelable lr-invalid alias whose cancellation cancels the native in
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
-  expect(aliases[0].cancelable, 'lr-invalid is a real veto point').to.be.true;
+  expect(aliases[0]!.cancelable, 'lr-invalid is a real veto point').to.be.true;
   expect(nativePrevented).to.deep.equal([false]);
 
   el.addEventListener('lr-invalid', (event) => event.preventDefault(), {

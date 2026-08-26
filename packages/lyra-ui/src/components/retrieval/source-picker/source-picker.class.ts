@@ -35,7 +35,9 @@ export interface LyraSourceEntry {
 }
 
 export interface LyraSourcePickerEventMap {
-  'lr-sources-change': CustomEvent<LyraEventDetailSnapshot<{ selectedSourceIds: string[] }>>;
+  'lr-sources-change': CustomEvent<
+    LyraEventDetailSnapshot<{ selectedSourceIds: string[] }>
+  >;
 }
 
 interface SourceRow {
@@ -92,6 +94,7 @@ const EMPTY_SOURCE_IDS: readonly string[] = Object.freeze([]);
  * @csspart label - The entry's label text.
  * @csspart empty - The empty state (`noData` when `sources` is empty, `noMatches` when a filter
  * empties the tree).
+ * @csspart error - A localized error shown when a nonempty source payload contains no valid rows.
  * @csspart limit - Localized fail-closed status when a cyclic, duplicate, over-depth or
  * over-budget input was truncated by the bounded source-tree normalizer.
  * @cssprop [--lr-source-picker-checked-bg] - Background of a fully-checked selection control:
@@ -142,7 +145,10 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  protected static override readonly ownedCollectionProperties = Object.freeze(['sources', 'selectedSourceIds']);
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'sources',
+    'selectedSourceIds',
+  ]);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -224,7 +230,12 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
       depth: number;
       index: number;
     }> = [];
-    stack.push({ sources: this.sourceEntries, target: roots, depth: 0, index: 0 });
+    stack.push({
+      sources: this.sourceEntries,
+      target: roots,
+      depth: 0,
+      index: 0,
+    });
     let inspected = 0;
     while (stack.length) {
       const frame = stack[stack.length - 1]!;
@@ -319,9 +330,11 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     });
   }
 
-  private checkedState(entry: LyraSourceEntry): 'true' | 'false' | 'mixed' {
+  private checkedState(
+    entry: LyraSourceEntry,
+    selectedIds: ReadonlySet<string>
+  ): 'true' | 'false' | 'mixed' {
     const leaves = this.descendantLeafIds(entry);
-    const selectedIds = new Set(this.normalizedSelectedSourceIds());
     const selected = leaves.filter((id) => selectedIds.has(id));
     if (selected.length === 0) return 'false';
     if (selected.length === leaves.length) return 'true';
@@ -458,8 +471,8 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
 
   private toggleEntry(entry: LyraSourceEntry): void {
     const leaves = this.descendantLeafIds(entry);
-    const willSelect = this.checkedState(entry) !== 'true';
     const set = new Set(this.normalizedSelectedSourceIds());
+    const willSelect = this.checkedState(entry, set) !== 'true';
     for (const id of leaves) {
       if (willSelect) set.add(id);
       else set.delete(id);
@@ -469,9 +482,9 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
 
   private toggleSelectAll(): void {
     const all = this.allLeafIds();
+    const selectedIds = new Set(this.normalizedSelectedSourceIds());
     const allSelected =
-      all.length > 0 &&
-      all.every((id) => this.normalizedSelectedSourceIds().includes(id));
+      all.length > 0 && all.every((id) => selectedIds.has(id));
     this.commitSelection(allSelected ? [] : all);
   }
 
@@ -556,8 +569,12 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     }
   };
 
-  private renderRow(row: SourceRow, active: boolean): TemplateResult {
-    const state = this.checkedState(row.entry);
+  private renderRow(
+    row: SourceRow,
+    active: boolean,
+    selectedIds: ReadonlySet<string>
+  ): TemplateResult {
+    const state = this.checkedState(row.entry, selectedIds);
     const expanded =
       row.hasChildren &&
       (this.expandedIds.has(row.entry.id) || this.isFiltering());
@@ -613,13 +630,21 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     const label =
       hostLabel === null
         ? this.accessibleLabel ??
-          (this.label == null ? this.localize('sourceListDefaultLabel') : this.label)
+          (this.label == null
+            ? this.localize('sourceListDefaultLabel')
+            : this.label)
         : this.label != null && this.label !== hostLabel
-          ? this.label
-          : this.localize('sourceListDefaultLabel');
+        ? this.label
+        : this.localize('sourceListDefaultLabel');
     const sourceModel = this.sourceModel;
     const selectedIds = this.normalizedSelectedSourceIds();
+    const selectedIdSet = new Set(selectedIds);
     if (sourceModel.roots.length === 0) {
+      if (this.sourceEntries.length > 0) {
+        return html`<div part="base" tabindex="-1">
+          <div part="error">${this.localize('valueInvalid')}</div>
+        </div>`;
+      }
       return html`<div part="base" tabindex="-1">
         <lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>
       </div>`;
@@ -631,8 +656,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     const selectAllState: 'true' | 'false' | 'mixed' =
       selectedIds.length === 0
         ? 'false'
-        : allLeaves.length > 0 &&
-          allLeaves.every((id) => selectedIds.includes(id))
+        : allLeaves.length > 0 && allLeaves.every((id) => selectedIdSet.has(id))
         ? 'true'
         : 'mixed';
 
@@ -680,7 +704,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
               @keydown=${this.onTreeKeyDown}
             >
               ${rows.map((row) =>
-                this.renderRow(row, row.entry.id === activeId)
+                this.renderRow(row, row.entry.id === activeId, selectedIdSet)
               )}
             </div>`}
         ${this.sourceModel.limited

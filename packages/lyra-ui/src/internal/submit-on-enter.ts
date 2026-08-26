@@ -22,9 +22,9 @@
  *   submit control in `form.elements`; a submission that ignores it loses `SubmitEvent.submitter`,
  *   and with it the button's own `name`/`value` entry and its `formaction`/`formmethod`/
  *   `formnovalidate` overrides. A native submitter goes through `form.requestSubmit(submitter)`;
- *   an `<lr-button>`/`<lr-icon-button>` is a form-associated custom element rather than a native
- *   submit button, so `requestSubmit()` rejects it with a `TypeError` — it is activated through its
- *   own `click()`, which runs the same submit path a real click would.
+ *   an `<lr-button>` is a form-associated custom element rather than a native submit button, so
+ *   `requestSubmit()` rejects it with a `TypeError` — it is activated through its own `click()`,
+ *   which runs the same submit path a real click would.
  * - **A submit-button-less form submits only from a single field.** The platform refuses implicit
  *   submission when a form with no default button holds more than one field that blocks it.
  *
@@ -178,10 +178,10 @@ function isSubmitControl(element: Element): boolean {
 /**
  * Whether `element` counts against the platform's "more than one field blocks implicit submission"
  * rule. Native inputs use the spec's own type list. A custom element counts unless it declares
- * itself a button (`type="button"`/`"submit"`/`"reset"`, the vocabulary `<lr-button>`/
- * `<lr-icon-button>` use) — deliberately conservative, since a wrongly-*permissive* answer submits
- * a form the platform would have left alone, while a wrongly-restrictive one only leaves Enter
- * doing what it already does today.
+ * itself a button (`type="button"`/`"submit"`/`"reset"`, the vocabulary `<lr-button>` uses) —
+ * deliberately conservative, since a wrongly-*permissive* answer submits a form the platform
+ * would have left alone, while a wrongly-restrictive one only leaves Enter doing what it already
+ * does today.
  */
 function blocksImplicitSubmission(element: Element): boolean {
   if (nativeButtonKind(element) === 'input') {

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -14,6 +15,7 @@ import {
   normalizeType,
   parseNpmPackOutput,
   parseChangesetText,
+  readPackageApi,
   validateTarEntries,
   validateTarEntryTypes,
   versionBump,
@@ -27,6 +29,40 @@ const readFixture = (name) =>
 const baseline = readFixture('baseline');
 const additive = readFixture('additive');
 const breaking = readFixture('breaking');
+
+test('reads a typed non-component package from its root declaration entries', () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'lyra-public-api-flags-'));
+  try {
+    writeFileSync(
+      path.join(root, 'package.json'),
+      `${JSON.stringify({
+        name: '@aceshooting/lyra-flags',
+        version: '2.2.0',
+        files: ['index.js', 'index.d.ts', 'standard.js', 'standard.d.ts'],
+        exports: {
+          '.': { types: './index.d.ts', default: './index.js' },
+          './standard': { types: './standard.d.ts', default: './standard.js' },
+        },
+      })}\n`,
+    );
+    writeFileSync(path.join(root, 'index.js'), 'export const flagUrl = () => undefined;\n');
+    writeFileSync(path.join(root, 'index.d.ts'), 'export declare function flagUrl(code: string): Promise<string | undefined>;\n');
+    writeFileSync(path.join(root, 'standard.js'), 'export const flagUrl = () => undefined;\n');
+    writeFileSync(
+      path.join(root, 'standard.d.ts'),
+      'export declare function flagUrl(code: string): Promise<string | undefined>;\n',
+    );
+
+    const input = readPackageApi(root);
+    const snapshot = normalizePublicApi(input);
+
+    assert.equal(input.manifest.modules.length, 0);
+    assert.ok(snapshot.entries['named-export:flagUrl']);
+    assert.ok(snapshot.entries['subpath-export:./standard:flagUrl']);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test('normalizes source ordering, descriptions, paths, and union ordering out of the API', () => {
   const reordered = structuredClone(baseline);

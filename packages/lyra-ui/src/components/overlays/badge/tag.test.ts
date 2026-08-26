@@ -305,7 +305,7 @@ describe('withRemove', () => {
     } finally {
       el.remove();
       if (descriptor) Object.defineProperty(frameWindow, 'MutationObserver', descriptor);
-      else delete (frameWindow as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+      else Reflect.deleteProperty(frameWindow, 'MutationObserver');
       frame.remove();
     }
   });

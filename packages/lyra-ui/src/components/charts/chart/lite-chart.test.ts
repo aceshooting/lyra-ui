@@ -4,6 +4,7 @@ import { LyraLiteChart } from './lite-chart.js';
 import { styles } from './lite-chart.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { resolveLyraLocale } from '../../../localization.js';
 
 it('removes the deprecated v8 padLeft/hideAxis/selectedIndex accessors — valueAxisGutter/withoutValueAxis/selectedIndices are the only surface', () => {
   const proto = LyraLiteChart.prototype as unknown as Record<string, unknown>;
@@ -12,15 +13,56 @@ it('removes the deprecated v8 padLeft/hideAxis/selectedIndex accessors — value
   expect(Object.getOwnPropertyDescriptor(proto, 'selectedIndex')).to.equal(undefined);
 });
 
-it('provides hover feedback for keyboard-focusable bars and points', () => {
-  // Pseudo-class presence is the behavior under test; synthetic pointer events do not
-  // activate browser :hover state under Web Test Runner.
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/:where\(\[part='bar'\]\):hover/);
-  expect(css).to.match(/:where\(\[part='point'\]\):hover/);
+it('renders hover feedback for keyboard-focusable bars and points', async () => {
+  for (const type of ['bar', 'line'] as const) {
+    const el = await mount(html`<lr-lite-chart
+      type=${type}
+      style="--lr-color-mix-partner: rgb(255, 255, 255); --lr-color-mix-hover: 50%;"
+      .labels=${['A']}
+      .datasets=${[{ label: 'Revenue', data: [1], color: 'rgb(0, 0, 0)' }]}
+    ></lr-lite-chart>`);
+    const mark = el.shadowRoot!.querySelector<SVGGraphicsElement>(
+      type === 'bar' ? '[part="bar"]' : '[part="point"]',
+    )!;
+    const restingFill = getComputedStyle(mark).fill;
+    const rect = mark.getBoundingClientRect();
+
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(
+        () => getComputedStyle(mark).fill !== restingFill,
+        `${type} mark never painted its hover feedback`,
+      );
+    } finally {
+      await resetMouse();
+    }
+  }
 });
 
 describe('lite chart family-contract regressions', () => {
+  it('drops dataset entries without array data while retaining a valid rendered sibling', async () => {
+    const datasets = [
+      null,
+      undefined,
+      { label: 'Missing data' },
+      { label: 'Null data', data: null },
+      { label: 'Revenue', data: [7] },
+    ] as unknown as LyraLiteChart['datasets'];
+    const el = await mount(html`<lr-lite-chart
+      show-data-table
+      .labels=${['North']}
+      .datasets=${datasets}
+    ></lr-lite-chart>`);
+
+    expect(el.datasets.map((series) => series.label)).to.deep.equal(['Revenue']);
+    expect(el.shadowRoot!.querySelectorAll('[part="bar"]')).to.have.length(1);
+    expect(el.shadowRoot!.querySelector('[part="data-table"]')!.textContent).to.contain('Revenue');
+    await expect(el).to.be.accessible();
+  });
+
   it('falls back to bar rendering for an invalid direct type write', async () => {
     const el = await mount(html`<lr-lite-chart
       .labels=${['A']}
@@ -161,7 +203,8 @@ it('stacked bar segments sit end-to-end (second segment starts where the first e
   ></lr-lite-chart>`);
   const rects = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
   expect(rects.length).to.equal(2);
-  const [a, b] = rects;
+  const a = rects[0]!;
+  const b = rects[1]!;
   const aTop = Number(a.getAttribute('y'));
   const aBottom = aTop + Number(a.getAttribute('height'));
   const bTop = Number(b.getAttribute('y'));
@@ -189,7 +232,8 @@ it('grouped (non-stacked) bars for the same category do not overlap', async () =
   ></lr-lite-chart>`);
   const rects = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
   expect(rects.length).to.equal(2);
-  const [a, b] = rects;
+  const a = rects[0]!;
+  const b = rects[1]!;
   const aLeft = Number(a.getAttribute('x'));
   const aRight = aLeft + Number(a.getAttribute('width'));
   const bLeft = Number(b.getAttribute('x'));
@@ -238,7 +282,7 @@ it('emits lr-point-click with the right detail on bar click', async () => {
   );
   const rects = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
   // Dataset B ('Tue') -> second dataset, index 1.
-  rects[3].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  rects[3]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   const { detail } = await detailPromise;
   expect(detail).to.deep.equal({ datasetIndex: 1, index: 1, label: 'Tue', value: 5 });
 });
@@ -314,7 +358,7 @@ it('leaves the multi-series table unchanged when table formatting and totals are
     'Revenue',
     'Services',
   ]);
-  const formatter = new Intl.NumberFormat(el.effectiveLocale);
+  const formatter = new Intl.NumberFormat(resolveLyraLocale(el));
   expect([...table.querySelectorAll('tbody td')].map((cell) => cell.textContent?.trim())).to.deep.equal([
     formatter.format(12.5),
     formatter.format(7.5),
@@ -476,8 +520,8 @@ it('renders no legend by default, and one legend-item per dataset when legend is
   await el.updateComplete;
   const items = el.shadowRoot!.querySelectorAll('[part="legend-item"]');
   expect(items.length).to.equal(2);
-  expect(items[0].textContent).to.contain('A');
-  expect(items[1].textContent).to.contain('B');
+  expect(items[0]!.textContent).to.contain('A');
+  expect(items[1]!.textContent).to.contain('B');
 });
 
 it('uses a series-provided color for its bar fill, and a default palette color otherwise', async () => {
@@ -490,8 +534,8 @@ it('uses a series-provided color for its bar fill, and a default palette color o
     ]}
   ></lr-lite-chart>`);
   const rects = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
-  expect(rects[0].getAttribute('fill')).to.equal('#ff0000');
-  expect(rects[1].getAttribute('fill')).to.be.a('string').and.not.equal('#ff0000');
+  expect(rects[0]!.getAttribute('fill')).to.equal('#ff0000');
+  expect(rects[1]!.getAttribute('fill')).to.be.a('string').and.not.equal('#ff0000');
 });
 
 it('carries every mark colour in a computed `color` so the hover/active mix has a base to read', async () => {
@@ -539,10 +583,10 @@ it('allows the categorical palette to be rethemed through semantic chart color v
   ></lr-lite-chart>`);
   const rects = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
   expect(styles.cssText).to.not.match(/--lr-chart-color-1\s*:/);
-  expect(rects[1].getAttribute('fill')).to.equal(
+  expect(rects[1]!.getAttribute('fill')).to.equal(
     'var(--lr-chart-color-2, var(--lr-color-chart-2))',
   );
-  expect(getComputedStyle(rects[1]).fill).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(rects[1]!).fill).to.equal('rgb(1, 2, 3)');
 });
 
 it('draws a gridline at the y=0 baseline when beginAtZero is true (the default)', async () => {
@@ -591,7 +635,7 @@ it('sets an aria-label on the svg from the dataset labels (role=group, not img, 
   const svg = el.shadowRoot!.querySelector('svg')!;
   expect(svg.getAttribute('role')).to.equal('group');
   expect(svg.getAttribute('aria-label')).to.equal(
-    new Intl.ListFormat(el.effectiveLocale, { type: 'conjunction' }).format(['A', 'B']),
+    new Intl.ListFormat(resolveLyraLocale(el), { type: 'conjunction' }).format(['A', 'B']),
   );
 });
 
@@ -759,7 +803,7 @@ it('centers each category label on its own bar group instead of a line-endpoint 
   const labels = Array.from(el.shadowRoot!.querySelectorAll('[part="axis-label"]')).filter(
     (n) => !n.hasAttribute('y1'), // exclude gridline text reuse if any
   ) as SVGTextElement[];
-  const firstBarCenter = Number(bars[0].getAttribute('x')) + Number(bars[0].getAttribute('width')) / 2;
+  const firstBarCenter = Number(bars[0]!.getAttribute('x')) + Number(bars[0]!.getAttribute('width')) / 2;
   const firstLabelX = Number(labels.find((l) => l.textContent === 'x')!.getAttribute('x'));
   expect(Math.abs(firstBarCenter - firstLabelX)).to.be.lessThan(1);
 });
@@ -867,7 +911,7 @@ it('withholds fit-mode geometry until its first ResizeObserver measurement', asy
     expect(el.shadowRoot!.querySelectorAll('[part="grid-line"]').length).to.equal(0);
     expect(el.shadowRoot!.querySelectorAll('[part="axis-label"]').length).to.equal(0);
 
-    callbacks[0](
+    callbacks[0]!(
       [{ contentBoxSize: [{ inlineSize: 320, blockSize: 280 }] } as unknown as ResizeObserverEntry],
       {} as ResizeObserver,
     );
@@ -916,7 +960,7 @@ it('reproduces the SSR fallback before enabling fit measurement during hydration
     await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="bar"]').length === 0);
     expect(el.shadowRoot!.querySelectorAll('[part="grid-line"]')).to.have.length(0);
 
-    callbacks[0](
+    callbacks[0]!(
       [{ contentBoxSize: [{ inlineSize: 320, blockSize: 280 }] } as unknown as ResizeObserverEntry],
       {} as ResizeObserver,
     );
@@ -979,7 +1023,7 @@ it('re-arms the ResizeObserver on reconnect after a disconnect, so a resize stil
     // re-renders (plotWidth/plotHeight update, moving the viewBox).
     const viewBoxBefore = svgEl.getAttribute('viewBox');
     const latestCallback = callbacks[callbacks.length - 1];
-    latestCallback(
+    latestCallback!(
       [{ contentBoxSize: [{ inlineSize: 321, blockSize: 123 }] } as unknown as ResizeObserverEntry],
       new OriginalRO(() => {}),
     );
@@ -1101,7 +1145,7 @@ it('layout="scroll" gives every bar a fixed width and lets the plot exceed the h
   const bars = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
   expect(bars.length).to.equal(30);
   // Single dataset: bar width = slot(32) * (1 - BAR_GROUP_GAP(0.2)) = 25.6.
-  expect(Number(bars[0].getAttribute('width'))).to.be.closeTo(25.6, 0.5);
+  expect(Number(bars[0]!.getAttribute('width'))).to.be.closeTo(25.6, 0.5);
 });
 
 it('barWidth (attribute "bar-width") sets the fixed per-bar width used by layout="scroll"', async () => {
@@ -1186,7 +1230,7 @@ it('keeps bars and their axis labels aligned in layout="scroll" (no drift betwee
   ></lr-lite-chart>`);
   const bars = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
   const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')] as SVGTextElement[];
-  const firstBarCenter = Number(bars[0].getAttribute('x')) + Number(bars[0].getAttribute('width')) / 2;
+  const firstBarCenter = Number(bars[0]!.getAttribute('x')) + Number(bars[0]!.getAttribute('width')) / 2;
   const firstLabelX = Number(axisLabels.find((l) => l.textContent === 'x')!.getAttribute('x'));
   expect(Math.abs(firstBarCenter - firstLabelX)).to.be.lessThan(1);
 });
@@ -1236,6 +1280,26 @@ it('maxLabels distributes labels evenly without bunching the final sampled label
     (node) => node.textContent,
   );
   expect(axisLabels).to.deep.equal(['L0', 'L3', 'L6', 'L10', 'L13', 'L16', 'L19', 'L23', 'L26', 'L29']);
+});
+
+it('applies maxLabels to the retained record sample instead of losing requested labels at the intersection', async () => {
+  const labels = Array.from({ length: 5_000 }, (_, index) => `L${index}`);
+  const el = await mount(html`<lr-lite-chart
+    type="line"
+    max-labels="10"
+    .labels=${labels}
+    .datasets=${[
+      { label: 'Revenue', data: labels.map((_, index) => index) },
+      { label: 'Cost', data: labels.map((_, index) => index / 2) },
+    ]}
+  ></lr-lite-chart>`);
+  const axisLabels = [
+    ...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]'),
+  ].map((node) => node.textContent);
+
+  expect(axisLabels).to.have.length(10);
+  expect(axisLabels[0]).to.equal('L0');
+  expect(axisLabels.at(-1)).to.equal('L4999');
 });
 
 it('keeps decimated date labels clear of each other and the y-axis ticks at narrow widths', async () => {
@@ -1390,8 +1454,15 @@ it('does not crash and still keeps the first/last label for a negative maxLabels
 it('caps an enormous finite maxLabels request at the shared 1,000-record ceiling', () => {
   const el = document.createElement('lr-lite-chart') as LyraLiteChart;
   el.maxLabels = 1_000_000;
+  const renderedIndexes = Array.from({ length: 1_000 }, (_, index) =>
+    Math.round((index * 1_000_000) / 999),
+  );
 
-  const indexes = (el as any).visibleLabelIndexes(1_000_001) as Set<number>;
+  const indexes = (el as any).visibleLabelIndexes(
+    1_000_001,
+    400,
+    renderedIndexes,
+  ) as Set<number>;
   expect(indexes.size).to.equal(1_000);
   expect(indexes.has(0)).to.equal(true);
   expect(indexes.has(1_000_000)).to.equal(true);
@@ -1449,7 +1520,7 @@ it('leaves bar/label x-position at the internal per-category formula when barX i
   const firstLabel = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')].find(
     (n) => n.textContent === 'x',
   ) as SVGTextElement;
-  const firstBarCenter = Number(bars[0].getAttribute('x')) + Number(bars[0].getAttribute('width')) / 2;
+  const firstBarCenter = Number(bars[0]!.getAttribute('x')) + Number(bars[0]!.getAttribute('width')) / 2;
   expect(Math.abs(firstBarCenter - Number(firstLabel.getAttribute('x')))).to.be.lessThan(1);
 });
 
@@ -1531,7 +1602,7 @@ it('formats the built-in bar/point label through localize() and Intl instead of 
     .datasets=${[{ label: 'S', data: [1234.5] }]}
   ></lr-lite-chart>`);
   const rect = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
-  const expected = `S, a: ${new Intl.NumberFormat(el.effectiveLocale).format(1234.5)}`;
+  const expected = `S, a: ${new Intl.NumberFormat(resolveLyraLocale(el)).format(1234.5)}`;
   expect(rect.getAttribute('aria-label')).to.equal(expected);
   expect(rect.querySelector('title')!.textContent).to.equal(expected);
 });
@@ -1581,7 +1652,7 @@ it('renders a zero-height but focusable/titled bar for a zero value by default (
   ></lr-lite-chart>`);
   const bars = el.shadowRoot!.querySelectorAll('[part="bar"]');
   expect(bars.length).to.equal(1);
-  expect(bars[0].getAttribute('tabindex')).to.equal('0');
+  expect(bars[0]!.getAttribute('tabindex')).to.equal('0');
 });
 
 // --- valueAxisGutter ------------------------------------------------------------------
@@ -1881,16 +1952,39 @@ it('scale="sqrt" produces a measurably different bar height than scale="linear" 
   // the linear fraction 25/100 = 0.25 -- sqrt boosts it well above its linear
   // height (compressing the *range* between it and the dominant 100 value,
   // which is unchanged since sqrt(100/100) === 100/100 === 1 at the max).
-  const linearHeight = Number(linearBars[1].getAttribute('height'));
-  const sqrtHeight = Number(sqrtBars[1].getAttribute('height'));
+  const linearHeight = Number(linearBars[1]!.getAttribute('height'));
+  const sqrtHeight = Number(sqrtBars[1]!.getAttribute('height'));
   expect(sqrtHeight).to.not.be.closeTo(linearHeight, 0.5);
   expect(sqrtHeight).to.be.greaterThan(linearHeight);
 
   // The dominant/max value's bar is unaffected either way (both scales
   // saturate to the full plot height at the domain max).
-  const linearMaxHeight = Number(linearBars[2].getAttribute('height'));
-  const sqrtMaxHeight = Number(sqrtBars[2].getAttribute('height'));
+  const linearMaxHeight = Number(linearBars[2]!.getAttribute('height'));
+  const sqrtMaxHeight = Number(sqrtBars[2]!.getAttribute('height'));
   expect(sqrtMaxHeight).to.be.closeTo(linearMaxHeight, 0.5);
+});
+
+it('scale="sqrt" paints a non-stacked negative bar below the shared zero baseline', async () => {
+  const el = (await fixture(
+    html`<lr-lite-chart
+      type="bar"
+      scale="sqrt"
+      .labels=${['negative', 'positive']}
+      .datasets=${[{ label: 'values', data: [-25, 100] }]}
+    ></lr-lite-chart>`,
+  )) as LyraLiteChart;
+  (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
+  (el as unknown as { plotHeight: number }).plotHeight = 150;
+  await el.updateComplete;
+
+  const bars = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
+  const negativeY = Number(bars[0]!.getAttribute('y'));
+  const negativeHeight = Number(bars[0]!.getAttribute('height'));
+  const positiveBottom =
+    Number(bars[1]!.getAttribute('y')) +
+    Number(bars[1]!.getAttribute('height'));
+  expect(negativeHeight).to.be.greaterThan(0);
+  expect(negativeY).to.be.closeTo(positiveBottom, 0.5);
 });
 
 it('scale has no effect on type="line" (regression)', async () => {
@@ -1914,7 +2008,7 @@ it('scale has no effect on type="line" (regression)', async () => {
   const sqrtPoints = [...sqrtEl.shadowRoot!.querySelectorAll('[part="point"]')] as SVGCircleElement[];
 
   linearPoints.forEach((p, i) => {
-    expect(Number(sqrtPoints[i].getAttribute('cy'))).to.be.closeTo(Number(p.getAttribute('cy')), 0.01);
+    expect(Number(sqrtPoints[i]!.getAttribute('cy'))).to.be.closeTo(Number(p.getAttribute('cy')), 0.01);
   });
 });
 
@@ -2065,7 +2159,6 @@ describe('minBarHeight', () => {
     expect(bars).to.have.length(2);
     const tinyTop = Number(bars[0]!.getAttribute('y'));
     const tinyHeight = Number(bars[0]!.getAttribute('height'));
-    const tinyBottom = tinyTop + tinyHeight;
     const bigTop = Number(bars[1]!.getAttribute('y'));
     const bigHeight = Number(bars[1]!.getAttribute('height'));
     const bigBottom = bigTop + bigHeight;
@@ -2519,7 +2612,7 @@ it('falls back to getBoundingClientRect() for plotWidth/plotHeight when a Resize
     const callback = callbacks[callbacks.length - 1];
     // No `contentBoxSize` on the entry at all -- forces the `box` lookup to be falsy so the
     // callback takes its getBoundingClientRect() fallback branch instead.
-    callback([{} as unknown as ResizeObserverEntry], new OriginalRO(() => {}));
+    callback!([{} as unknown as ResizeObserverEntry], new OriginalRO(() => {}));
     await el.updateComplete;
     expect((el as unknown as { plotWidth: number }).plotWidth).to.be.closeTo(rectBefore.width, 1);
     expect((el as unknown as { plotHeight: number }).plotHeight).to.be.closeTo(rectBefore.height, 1);
@@ -2537,7 +2630,7 @@ it('falls back to an empty label in bar mark data when the labels array has a ho
     .datasets=${[{ label: 'S', data: [1, 2] }]}
   ></lr-lite-chart>`);
   const items = el.shadowRoot!.querySelectorAll('[part="data-list"] li');
-  expect(items[0].textContent).to.equal('S, : 1 (1 of 2)');
+  expect(items[0]!.textContent).to.equal('S, : 1 (1 of 2)');
 });
 
 it('falls back to an empty label in line mark data when the labels array has a hole at that index', async () => {
@@ -2547,7 +2640,7 @@ it('falls back to an empty label in line mark data when the labels array has a h
     .datasets=${[{ label: 'S', data: [1, 2] }]}
   ></lr-lite-chart>`);
   const items = el.shadowRoot!.querySelectorAll('[part="data-list"] li');
-  expect(items[0].textContent).to.equal('S, : 1 (1 of 2)');
+  expect(items[0]!.textContent).to.equal('S, : 1 (1 of 2)');
 });
 
 // --- markAnnouncement() defensive guards --------------------------------------------------------
@@ -2662,7 +2755,7 @@ it('skips a null/non-finite value when computing the stacked domain extent, with
   ></lr-lite-chart>`);
   const bars = el.shadowRoot!.querySelectorAll('[part="bar"]');
   expect(bars.length).to.equal(1);
-  expect(bars[0].getAttribute('height')).to.not.contain('NaN');
+  expect(bars[0]!.getAttribute('height')).to.not.contain('NaN');
 });
 
 // --- emitPoint() value fallback for a dangling index -----------------------------------------
@@ -2777,7 +2870,7 @@ it('excludes null and skip-zero values from the stacked+sqrt per-category totals
   ></lr-lite-chart>`);
   const bars = el.shadowRoot!.querySelectorAll('[part="bar"]');
   expect(bars.length).to.equal(1);
-  expect(bars[0].getAttribute('height')).to.not.contain('NaN');
+  expect(bars[0]!.getAttribute('height')).to.not.contain('NaN');
 });
 
 it('handles a stacked+sqrt category whose only positive-side value is exactly zero without dividing by zero', async () => {
@@ -2849,7 +2942,7 @@ describe('lite-chart robustness regressions', () => {
         ]}
       ></lr-lite-chart>
     `);
-    const formatter = new Intl.NumberFormat(el.effectiveLocale, { maximumFractionDigits: 6 });
+    const formatter = new Intl.NumberFormat(resolveLyraLocale(el), { maximumFractionDigits: 6 });
     const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"]')].map(
       (node) => node.textContent?.trim(),
     );
@@ -3029,7 +3122,7 @@ describe('lite-chart robustness regressions', () => {
     const marks = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGGraphicsElement[];
     marks[1]!.focus();
 
-    const formatter = new Intl.NumberFormat(el.effectiveLocale);
+    const formatter = new Intl.NumberFormat(resolveLyraLocale(el));
     const region = el.shadowRoot!
       .querySelector('lr-live-region')!
       .shadowRoot!.querySelector('[part="region"]');
@@ -3394,7 +3487,7 @@ describe('lite-chart semantics and geometry', () => {
     const circles = [...el.shadowRoot!.querySelectorAll<SVGCircleElement>('[part="point"]')];
     expect(circles).to.have.length(2);
     const target = circles[0]!;
-    const points = circles.map((circle, index) => ({
+    const linePoints = circles.map((circle, index) => ({
       datasetIndex: 0,
       index,
       x: Number(circle.getAttribute('cx')),
@@ -3404,7 +3497,7 @@ describe('lite-chart semantics and geometry', () => {
     const priv = el as unknown as {
       emitNearestLinePoint: (
         event: MouseEvent,
-        points: typeof points,
+        points: typeof linePoints,
         fallbackDatasetIndex: number,
         fallbackIndex: number,
       ) => void;
@@ -3422,7 +3515,7 @@ describe('lite-chart semantics and geometry', () => {
       clientX: rect.left + rect.width / 2,
       clientY: rect.top + rect.height / 2,
     } as unknown as MouseEvent;
-    priv.emitNearestLinePoint(fakeEvent, points, 99, 99);
+    priv.emitNearestLinePoint(fakeEvent, linePoints, 99, 99);
     const detail = (await detailPromise).detail as { datasetIndex: number; index: number };
     expect(detail.datasetIndex).to.equal(0);
     expect(detail.index).to.equal(0);
@@ -3586,7 +3679,7 @@ describe('exportData', () => {
       expect(el.exportData('svg')).to.equal('');
     } finally {
       if (descriptor) Object.defineProperty(window, 'XMLSerializer', descriptor);
-      else delete (window as Window & { XMLSerializer?: typeof XMLSerializer }).XMLSerializer;
+      else Reflect.deleteProperty(window, 'XMLSerializer');
     }
   });
 
@@ -3632,9 +3725,9 @@ describe('exportData', () => {
     } finally {
       el.remove();
       if (ambientDescriptor) Object.defineProperty(window, 'XMLSerializer', ambientDescriptor);
-      else delete (window as Window & { XMLSerializer?: typeof XMLSerializer }).XMLSerializer;
+      else Reflect.deleteProperty(window, 'XMLSerializer');
       if (ownerDescriptor) Object.defineProperty(frameWindow, 'XMLSerializer', ownerDescriptor);
-      else delete (frameWindow as Window & { XMLSerializer?: typeof XMLSerializer }).XMLSerializer;
+      else Reflect.deleteProperty(frameWindow, 'XMLSerializer');
       frame.remove();
     }
   });

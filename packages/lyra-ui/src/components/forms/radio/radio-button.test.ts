@@ -2,6 +2,8 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './radio-button.js';
 import './radio.js';
 import './radio-group.js';
+import type { LyraRadioButton } from './radio-button.class.js';
+import type { LyraRadioGroup } from './radio-group.class.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 it('themes the button-content gap for both button authoring paths', async () => {
@@ -193,7 +195,7 @@ it('preserves an explicitly empty host aria-label on the internal radio owner', 
 });
 
 it('participates in a radio group alongside a plain radio', async () => {
-  const group = await fixture(html`
+  const group = await fixture<LyraRadioGroup>(html`
     <lr-radio-group name="plan" label="Plan" orientation="horizontal">
       <lr-radio-button value="free">Free</lr-radio-button>
       <lr-radio-button value="pro">Pro</lr-radio-button>
@@ -201,7 +203,8 @@ it('participates in a radio group alongside a plain radio', async () => {
     </lr-radio-group>
   `);
   await group.updateComplete;
-  const pro = group.querySelector('lr-radio-button[value="pro"]') as HTMLElement & { checked: boolean };
+  const pro = group.querySelector<LyraRadioButton>('lr-radio-button[value="pro"]');
+  if (!pro) throw new Error('The Pro radio button was not rendered.');
   const listener = oneEvent(group, 'lr-change');
   pro.click();
   const event = await listener;
@@ -237,7 +240,7 @@ it('selects on Space from the keyboard', async () => {
 });
 
 it('moves selection with the arrow keys inside a group', async () => {
-  const group = await fixture(html`
+  const group = await fixture<LyraRadioGroup>(html`
     <lr-radio-group name="plan" label="Plan" orientation="horizontal">
       <lr-radio-button value="free" checked>Free</lr-radio-button>
       <lr-radio-button value="pro">Pro</lr-radio-button>
@@ -253,7 +256,9 @@ it('moves selection with the arrow keys inside a group', async () => {
 });
 
 it('ignores Space while disabled', async () => {
-  const el = await fixture(html`<lr-radio-button value="a" disabled>Alpha</lr-radio-button>`) as HTMLElement & { checked: boolean };
+  const el = await fixture<LyraRadioButton>(
+    html`<lr-radio-button value="a" disabled>Alpha</lr-radio-button>`,
+  );
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   base.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, composed: true, cancelable: true }));
   await el.updateComplete;

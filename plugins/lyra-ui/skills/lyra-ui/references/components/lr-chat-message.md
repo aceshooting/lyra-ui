@@ -6,6 +6,7 @@
 - **Class** `LyraChatMessage`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/chat-message/chat-message.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 14 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -18,7 +19,7 @@
 A role-based message bubble _shell_ for a chat/agent conversation surface. It renders none of the
 message content itself — the default slot carries whatever a consumer wants to display (plain text,
 a `<lr-markdown>`, a custom template, anything) and this component only supplies the surrounding
-chrome: alignment/coloring by `role`, an avatar/badges header row, an optional collapse toggle, an
+chrome: alignment/coloring by `messageRole`, an avatar/badges header row, an optional collapse toggle, an
 attachments strip, and a status-aware footer (a live-updating status dot + text, the formatted
 `timestamp`, a built-in retry affordance for `status="failed"`, and an `actions` slot for everything
 else). No built-in copy button is rendered — slot a copy control into `actions` and fire
@@ -32,7 +33,7 @@ level).
   `message-role`, reflected) — identifies the author without colliding with the platform `role`
   attribute. The role-owning internal article receives the localized author name directly through
   `aria-label`; a host `aria-label` overrides it by attribute presence (including an explicitly
-  empty override). Styling exposes the same state through `data-role`; a bare `role="assistant"`
+  empty override). Styling keys off the same reflected `message-role` host attribute; a bare `role="assistant"`
   is never an authoring API.
 - `status: ChatMessageStatus = 'sent'` (`'sending' | 'sent' | 'failed' | 'streaming'`, reflected) —
   drives the footer's status dot/text, `status="failed"`'s danger treatment on the bubble, and the
@@ -85,9 +86,9 @@ properties:
 - `--lr-chat-message-bubble-color` (default `var(--lr-color-text)`) — bubble text color for those
   same roles.
 - `--lr-chat-message-user-bubble-bg` (default `var(--lr-color-brand-quiet)`) — bubble fill for
-  `data-role="user"`.
+  `message-role="user"`.
 - `--lr-chat-message-user-bubble-color` (default `var(--lr-color-text)`) — bubble text color for
-  `data-role="user"`.
+  `message-role="user"`.
 
 Prefer these over re-pointing the shared token a default happens to reference. Overriding
 `--lr-color-brand-quiet` on the host also retints `[part='collapse-button']:hover` within this same
@@ -169,8 +170,8 @@ undefined`, i.e. not the very first update) triggers the live-region announcemen
   `appendChild` after first paint still triggers native `slotchange`, so this works transparently,
   but any code that manually re-parents already-slotted nodes without a real slot-assignment change
   won't refresh the corresponding wrapper's visibility.
-- `messageRole` reflects as `message-role`; the shadow tree separately mirrors it to `data-role` for
-  component styling. Never use `[role="user"]` as author state.
+- `messageRole` reflects as `message-role`, which is also the host selector used by component
+  styling. Never use `[role="user"]` as author state.
 
 **Additional API surface:**
 

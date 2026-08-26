@@ -25,7 +25,7 @@ async function settleChildReconciliation(el: LyraDashboardGrid): Promise<void> {
 function createRealmFrame(): {
   iframe: HTMLIFrameElement;
   frameDocument: Document;
-  frameWindow: Window & typeof globalThis;
+  frameWindow: Window;
 } {
   const iframe = document.createElement("iframe");
   document.body.append(iframe);
@@ -936,7 +936,7 @@ describe("roving keyboard navigation", () => {
     await el.updateComplete;
     const [a, b] = Array.from(
       el.shadowRoot!.querySelectorAll('[part="cell"]')
-    ) as HTMLElement[];
+    ) as [HTMLElement, HTMLElement];
     expect(a.getAttribute("tabindex")).to.equal("0");
     expect(b.getAttribute("tabindex")).to.equal("-1");
     a.dispatchEvent(
@@ -1065,7 +1065,7 @@ describe("roving keyboard navigation", () => {
     const cells = Array.from(
       el.shadowRoot!.querySelectorAll('[part="cell"]')
     ) as HTMLElement[];
-    cells[0].dispatchEvent(
+    cells[0]!.dispatchEvent(
       new KeyboardEvent("keydown", {
         key: "End",
         bubbles: true,
@@ -1073,7 +1073,7 @@ describe("roving keyboard navigation", () => {
       })
     );
     await el.updateComplete;
-    expect(cells[2].getAttribute("tabindex")).to.equal("0");
+    expect(cells[2]!.getAttribute("tabindex")).to.equal("0");
   });
 
   it("flips the forward-key direction under an RTL ancestor", async () => {
@@ -1086,7 +1086,7 @@ describe("roving keyboard navigation", () => {
     await el.updateComplete;
     const [a, b] = Array.from(
       el.shadowRoot!.querySelectorAll('[part="cell"]')
-    ) as HTMLElement[];
+    ) as [HTMLElement, HTMLElement];
     a.dispatchEvent(
       new KeyboardEvent("keydown", {
         key: "ArrowLeft",

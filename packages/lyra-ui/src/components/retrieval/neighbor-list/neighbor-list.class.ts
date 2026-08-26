@@ -83,7 +83,9 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  protected static override readonly ownedCollectionProperties = Object.freeze(['rows']);
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'rows',
+  ]);
 
   static override styles = [LyraElement.styles, styles];
 
@@ -119,7 +121,9 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     );
   }
 
-  private groups(sorted: readonly LyraNeighborRow[]): LyraVirtualListGroup[] | undefined {
+  private groups(
+    sorted: readonly LyraNeighborRow[]
+  ): LyraVirtualListGroup[] | undefined {
     if (!this.groupByRelation) return undefined;
     const groups: LyraVirtualListGroup[] = [];
     const counts = new Map<string, number>();
@@ -183,14 +187,18 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
       relation: row.relation,
       direction: directionText,
     });
+    const nodeType =
+      typeof row.node.type === 'string' && row.node.type.trim() !== ''
+        ? row.node.type
+        : undefined;
     const meta = [
-      row.node.type,
+      nodeType,
       row.node.degree != null
         ? getNumberFormat(this.effectiveLocale).format(
             finiteCount(row.node.degree)
           )
         : undefined,
-    ].filter((v): v is string => !!v);
+    ].filter((v): v is string => typeof v === 'string' && v !== '');
     const metaText = getListFormat(this.effectiveLocale, {
       style: 'short',
       type: 'unit',
@@ -253,11 +261,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     }
     if (sorted.length > this.effectiveVirtualizeAt) {
       return html`
-        <div
-          part="base"
-          role=${role ?? nothing}
-          aria-label=${label ?? nothing}
-        >
+        <div part="base" role=${role ?? nothing} aria-label=${label ?? nothing}>
           <lr-virtual-list
             exportparts="row:row, node-label:node-label, direction:direction, relation:relation, node-meta:node-meta, expand-button:expand-button, group:group-header"
             .items=${sorted}
@@ -277,11 +281,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
       groups?.map((g) => [g.startIndex, g]) ?? []
     );
     return html`
-      <div
-        part="base"
-        role=${role ?? nothing}
-        aria-label=${label ?? nothing}
-      >
+      <div part="base" role=${role ?? nothing} aria-label=${label ?? nothing}>
         <div role="list">
           ${sorted.map((row, i) => {
             const group = groupsByStartIndex.get(i);

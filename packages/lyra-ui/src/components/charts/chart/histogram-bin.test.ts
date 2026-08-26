@@ -9,19 +9,19 @@ it('splits values into equal-width buckets and counts membership', () => {
 
 it('places a value equal to the maximum in the last bucket', () => {
   const buckets = binValues([0, 10], 2);
-  expect(buckets[1].count).to.equal(1);
+  expect(buckets[1]!.count).to.equal(1);
 });
 
 it('labels each bucket with its numeric range', () => {
   const buckets = binValues([0, 10], 2);
-  expect(buckets[0].label).to.match(/0\.0.*5\.0/);
+  expect(buckets[0]!.label).to.match(/0\.0.*5\.0/);
 });
 
 it('isolates numeric range labels so RTL layout cannot reverse their endpoints', () => {
   const [bucket] = binValues([0, 10], 2);
-  expect(bucket.label.startsWith('\u2066')).to.be.true;
-  expect(bucket.label.endsWith('\u2069')).to.be.true;
-  expect(bucket.label).to.contain('0.0–5.0');
+  expect(bucket!.label.startsWith('\u2066')).to.be.true;
+  expect(bucket!.label.endsWith('\u2069')).to.be.true;
+  expect(bucket!.label).to.contain('0.0–5.0');
 });
 
 it('returns an empty array for empty input', () => {
@@ -70,15 +70,15 @@ it('drops non-finite samples instead of throwing', () => {
 it('represents a constant domain as one truthful bucket', () => {
   const buckets = binValues([5, 5, 5, 5], 4);
   expect(buckets).to.have.length(1);
-  expect(buckets[0].count).to.equal(4);
-  expect(buckets[0].label).to.contain('5.0');
+  expect(buckets[0]!.count).to.equal(4);
+  expect(buckets[0]!.label).to.contain('5.0');
 });
 
 it('does not fabricate repeated zero-width ranges for an extreme constant domain', () => {
   const buckets = binValues([Number.MAX_VALUE, Number.MAX_VALUE], 1_000);
   expect(buckets).to.have.length(1);
-  expect(buckets[0].count).to.equal(2);
-  expect(buckets[0].label).to.not.contain('–');
+  expect(buckets[0]!.count).to.equal(2);
+  expect(buckets[0]!.label).to.not.contain('–');
 });
 
 it('formats bucket ranges with the requested locale', () => {

@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { html, render } from 'lit';
+import { render } from 'lit';
 import './ebook-viewer-register.js';
 import { findDocumentRenderer, loadDocumentRenderer, type DocumentFile } from '../document-viewer/registry.js';
 
@@ -20,7 +20,7 @@ it('forwards registry anchors and highlights to the lazy ebook renderer', async 
   const definition = await loadDocumentRenderer(findDocumentRenderer(file)!);
   const host = document.createElement('div');
   render(definition.render!({ ...file, anchor, highlights }) as never, host);
-  const viewer = host.querySelector('lr-ebook-viewer') as HTMLElement & {
+  const viewer = host.querySelector('lr-ebook-viewer') as unknown as HTMLElement & {
     anchor: unknown;
     highlights: unknown[];
   };

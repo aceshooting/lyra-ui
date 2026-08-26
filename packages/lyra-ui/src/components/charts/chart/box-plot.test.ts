@@ -6,6 +6,7 @@ import type { ChartJsModule } from './chart-core-loader.js';
 import { styles } from './box-plot.styles.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import type { LyraSkeleton } from '../../overlays/skeleton/skeleton.class.js';
+import { resolveLyraLocale } from '../../../localization.js';
 
 function assertiveSink(doc: Document = document): HTMLElement | null {
   return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`);
@@ -37,6 +38,19 @@ function fakeBoxPlotModule() {
   return {
     BoxPlotController: class {},
     BoxAndWiskers: class {},
+  };
+}
+
+function mediaQueryList(media: string, matches: boolean): MediaQueryList {
+  return {
+    matches,
+    media,
+    onchange: null,
+    addEventListener(): void {},
+    removeEventListener(): void {},
+    addListener(): void {},
+    removeListener(): void {},
+    dispatchEvent: () => true,
   };
 }
 
@@ -89,6 +103,33 @@ it('shows a loading skeleton and aria-busy while chart.js/the boxplot plugin loa
 });
 
 describe('box-plot family-contract regressions', () => {
+  it('drops dataset entries without array data while retaining a valid rendered sibling', async () => {
+    const datasets = [
+      null,
+      undefined,
+      { label: 'Missing data' },
+      { label: 'Null data', data: null },
+      {
+        label: 'Latency',
+        data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }],
+      },
+    ] as unknown as LyraBoxPlot['datasets'];
+    const el = (await fixture(html`<lr-box-plot
+      show-data-table
+      .labels=${['North']}
+      .datasets=${datasets}
+    ></lr-box-plot>`)) as LyraBoxPlot;
+
+    await waitUntil(() => (el as any).chart != null, 'valid sibling series never rendered', {
+      timeout: 5000,
+    });
+
+    expect(el.datasets.map((series) => series.label)).to.deep.equal(['Latency']);
+    expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+    expect(el.shadowRoot!.querySelector('[part="data-table"]')!.textContent).to.contain('Latency');
+    await expect(el).to.be.accessible();
+  });
+
   it('clones valid summaries for the peer and rejects non-monotonic five-number data', async () => {
     const source = { min: 1, q1: 2, median: 3, q3: 4, max: 5 };
     const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
@@ -109,7 +150,10 @@ describe('box-plot family-contract regressions', () => {
     el.labels = ['A'];
     el.datasets = [{ label: 'S', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
     el.formatter = ({ value, surface }) => `${surface}:${value}`;
-    expect(el.exportData('csv')).to.contain('table:3');
+    expect(el.exportData('csv')).to.contain('export:3');
+    expect(
+      (el as unknown as { boxPlotDescription(): string }).boxPlotDescription()
+    ).to.contain('spoken:3');
     const order: string[] = [];
     let detail: unknown;
     el.addEventListener('lr-datum-activate', (event) => {
@@ -167,6 +211,7 @@ it('handles empty and stale visibility-observer deliveries deterministically', (
   class ControlledIntersectionObserver implements IntersectionObserver {
     readonly root = null;
     readonly rootMargin = '0px';
+    readonly scrollMargin = '0px';
     readonly thresholds = [0];
     constructor(next: IntersectionObserverCallback) {
       callback = next;
@@ -865,6 +910,8 @@ it('resolves grid/tick/legend colors from custom --lr-chart-* values set on the 
   await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
 
   const config = (el as any).buildConfig();
+  expect(config.options.scales.x.grid.color).to.equal('rgb(1, 2, 3)');
+  expect(config.options.scales.x.ticks.color).to.equal('rgb(4, 5, 6)');
   expect(config.options.scales.y.grid.color).to.equal('rgb(1, 2, 3)');
   expect(config.options.scales.y.ticks.color).to.equal('rgb(4, 5, 6)');
   expect(config.options.scales.y.title.color).to.equal('rgb(4, 5, 6)');
@@ -921,12 +968,8 @@ it('disables Chart.js animation when the user prefers reduced motion', async () 
   await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
 
   const originalMatchMedia = window.matchMedia;
-  window.matchMedia = ((query: string) => ({
-    matches: query === '(prefers-reduced-motion: reduce)',
-    media: query,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-  })) as typeof window.matchMedia;
+  window.matchMedia = (query: string) =>
+    mediaQueryList(query, query === '(prefers-reduced-motion: reduce)');
   try {
     expect((el as any).buildConfig().options.animation).to.equal(false);
   } finally {
@@ -1062,7 +1105,7 @@ describe('box-plot robustness regressions', () => {
     await el.updateComplete;
     await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
 
-    const formatter = new Intl.NumberFormat(el.effectiveLocale);
+    const formatter = new Intl.NumberFormat(resolveLyraLocale(el));
     const table = el.shadowRoot!.querySelector('[part="data-table"] table')!;
     expect(table.querySelector('tbody th')?.textContent).to.contain(formatter.format(1));
     expect([...table.querySelectorAll('tbody td')].map((cell) => cell.textContent?.trim())).to.deep.equal([
@@ -1134,7 +1177,7 @@ describe('box-plot robustness regressions', () => {
   });
 
   it('automatically refreshes canvas colors after an ancestor theme mutation', async () => {
-    const wrapper = await fixture(html`<div><lr-box-plot></lr-box-plot></div>`);
+    const wrapper = await fixture<HTMLElement>(html`<div><lr-box-plot></lr-box-plot></div>`);
     const el = wrapper.querySelector('lr-box-plot') as LyraBoxPlot;
     el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
     await el.updateComplete;

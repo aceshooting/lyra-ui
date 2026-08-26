@@ -6,13 +6,21 @@ import './dialog.js';
 import type { LyraDialog } from './dialog.js';
 
 function getMountedDialog(): LyraDialog {
-  return document.querySelector('lr-dialog') as LyraDialog;
+  const dialog = document.querySelector<LyraDialog>('lr-dialog');
+  if (!dialog) throw new Error('expected confirm() to mount an lr-dialog');
+  return dialog;
 }
 
-function footerButtons(dialog: LyraDialog): HTMLButtonElement[] {
+function footerButtons(dialog: LyraDialog): [HTMLButtonElement, HTMLButtonElement] {
   // The buttons themselves carry slot="footer" directly (no wrapping
   // element), so the selector targets that attribute on <button> itself.
-  return Array.from(dialog.querySelectorAll('button[slot="footer"]'));
+  const buttons = Array.from(dialog.querySelectorAll<HTMLButtonElement>('button[slot="footer"]'));
+  const cancelButton = buttons[0];
+  const confirmButton = buttons[1];
+  if (!cancelButton || !confirmButton) {
+    throw new Error('expected confirm() to render cancel and confirm footer buttons');
+  }
+  return [cancelButton, confirmButton];
 }
 
 it('resolves true and removes the dialog when the confirm button is clicked', async () => {

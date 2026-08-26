@@ -29,6 +29,22 @@ function shrinkAnchorRetry(el: LyraSvgViewer): void {
 }
 
 describe('lr-svg-viewer', () => {
+  it('renders its empty state from the first update when a highlight omits its anchor', async () => {
+    const el = document.createElement('lr-svg-viewer') as LyraSvgViewer;
+    el.highlights = [{ id: 'missing-anchor' }] as unknown as LyraSvgViewer['highlights'];
+    document.body.append(el);
+    try {
+      await el.updateComplete;
+      expect(el.highlights.map((highlight) => highlight.id)).to.deep.equal([]);
+      expect(el.shadowRoot!.querySelectorAll('[part~="base"]').length).to.equal(1);
+      expect(el.shadowRoot!.querySelector('.empty-note')?.textContent).to.equal(
+        'No image to display.',
+      );
+    } finally {
+      el.remove();
+    }
+  });
+
   it('renders an empty localized state by default', async () => {
     const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
     expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No image to display.');
@@ -75,6 +91,8 @@ describe('lr-svg-viewer', () => {
         .to.equal('SVG sanitizer did not return an SVG document.');
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent)
         .to.equal('Failed to load document.');
+      expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role'))
+        .to.equal('region');
       expect(el.shadowRoot!.querySelectorAll('[role="alert"], [role="status"], [aria-live]'))
         .to.have.lengthOf(0);
     } finally {
@@ -161,12 +179,12 @@ describe('lr-svg-viewer', () => {
     }
   });
 
-  it('preserves an explicitly empty host aria-label on the stable image owner', async () => {
+  it('preserves an explicitly empty host aria-label on the idle-state region owner', async () => {
     const el = await fixture<LyraSvgViewer>(
       html`<lr-svg-viewer name="Chart" aria-label=""></lr-svg-viewer>`,
     );
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
-    expect(base.getAttribute('role')).to.equal('img');
+    expect(base.getAttribute('role')).to.equal('region');
     expect(base.hasAttribute('aria-label')).to.be.true;
     expect(base.getAttribute('aria-label')).to.equal('');
   });
@@ -331,7 +349,7 @@ describe('lr-svg-viewer', () => {
     }
   });
 
-  it('lets the host shrink below its content in a narrow flex/grid track instead of overflowing it', () => {
+  it('declares the host shrinkability contract on the :host rule', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     const hostBlock = /:host\s*{([^}]*)}/.exec(css);
     expect(hostBlock, 'expected a :host rule').to.not.equal(null);
@@ -340,7 +358,7 @@ describe('lr-svg-viewer', () => {
   });
 
   it('resolves min-inline-size/max-inline-size as live computed styles on a rendered host, not just stylesheet source text', async () => {
-    // Regression test for the same rule the cssText assertion above only proves exists in the
+    // Regression test for the same declarations the source assertion above only proves exist in the
     // stylesheet source -- a typo, or the declaration moving to a selector that no longer matches
     // the host, would not be caught there. getComputedStyle() on an actually-rendered instance
     // proves the rule is live and resolves as specified.
@@ -481,7 +499,7 @@ describe('region highlights', () => {
         targetBox.left + targetBox.width - 2,
         targetBox.top + targetBox.height / 2,
       ) as HTMLElement | null;
-      expect(hit?.dataset.highlightId).to.equal('small');
+      expect(hit?.dataset['highlightId']).to.equal('small');
     } finally {
       restore();
     }
@@ -545,6 +563,43 @@ describe('region highlights', () => {
       const first = actions[0]!.getBoundingClientRect();
       const second = actions[1]!.getBoundingClientRect();
       expect(first.bottom).to.be.at.most(second.top);
+    } finally {
+      restore();
+    }
+  });
+
+  it('honors the composite focus-ring shorthand on rendered region targets and actions', async () => {
+    const el = await fixture<LyraSvgViewer>(html`
+      <lr-svg-viewer style="--lr-focus-ring: 5px dashed rgb(1, 2, 3)"></lr-svg-viewer>
+    `);
+    const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120"></svg>');
+    try {
+      el.src = 'https://example.test/icon.svg';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+      el.highlights = [
+        { id: 'target', anchor: { kind: 'region', rect: { x: 10, y: 10, width: 20, height: 20 } } },
+      ];
+      await el.updateComplete;
+      const target = el.shadowRoot!.querySelector('[part="region-highlight-target"]') as HTMLElement;
+      target.focus();
+      expect(target.matches(':focus-visible')).to.equal(true);
+      let computed = getComputedStyle(target);
+      expect(computed.outlineStyle).to.equal('dashed');
+      expect(computed.outlineWidth).to.equal('5px');
+      expect(computed.outlineColor).to.equal('rgb(1, 2, 3)');
+
+      el.highlights = [
+        { id: 'a', anchor: { kind: 'region', rect: { x: 50, y: 50, width: 1, height: 1 } } },
+        { id: 'b', anchor: { kind: 'region', rect: { x: 51, y: 50, width: 1, height: 1 } } },
+      ];
+      await el.updateComplete;
+      const action = el.shadowRoot!.querySelector('[part="region-highlight-action"]') as HTMLElement;
+      action.focus();
+      expect(action.matches(':focus-visible')).to.equal(true);
+      computed = getComputedStyle(action);
+      expect(computed.outlineStyle).to.equal('dashed');
+      expect(computed.outlineWidth).to.equal('5px');
+      expect(computed.outlineColor).to.equal('rgb(1, 2, 3)');
     } finally {
       restore();
     }
@@ -656,7 +711,7 @@ describe('region highlights', () => {
       const regions = Array.from(el.shadowRoot!.querySelectorAll('[part="region-highlight"]')) as HTMLElement[];
       const scrolled: string[] = [];
       for (const region of regions) {
-        region.scrollIntoView = () => scrolled.push(region.dataset.id!);
+        region.scrollIntoView = () => scrolled.push(region.dataset['id']!);
       }
       const ok = await el.scrollToAnchor('h2');
       expect(ok).to.be.true;
@@ -680,7 +735,7 @@ describe('region highlights', () => {
       await el.updateComplete;
       const regions = Array.from(el.shadowRoot!.querySelectorAll('[part="region-highlight"]')) as HTMLElement[];
       const scrolled: string[] = [];
-      for (const region of regions) region.scrollIntoView = () => scrolled.push(region.dataset.id!);
+      for (const region of regions) region.scrollIntoView = () => scrolled.push(region.dataset['id']!);
 
       expect(
         await el.scrollToAnchor({ kind: 'region', page: 1, rect: { x: 50, y: 50, width: 10, height: 10 } }),
@@ -768,7 +823,7 @@ describe('anchor-target adoption', () => {
     const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
     let scrolledId: string | null = null;
     HTMLElement.prototype.scrollIntoView = function (this: HTMLElement) {
-      scrolledId = this.dataset.id ?? null;
+      scrolledId = this.dataset['id'] ?? null;
     };
     const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
     try {
@@ -802,9 +857,19 @@ describe('anchor-target adoption', () => {
     }
   });
 
-  it('renders the anchor live region so an anchor jump is announced to assistive tech', async () => {
+  it('keeps the shared anchor live region visually hidden once it carries an announcement', async () => {
     const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
-    expect(el.shadowRoot!.querySelector('[part="anchor-live-region"]')).to.exist;
+    await el.scrollToAnchor('no-such-highlight');
+    await el.updateComplete;
+    const region = el.shadowRoot!.querySelector('[part="anchor-live-region"]') as HTMLElement;
+    expect(region !== null, 'the mixin live region is rendered').to.equal(true);
+    expect(
+      (region.textContent ?? '').trim().length,
+      'the live region actually carries announcement text',
+    ).to.be.greaterThan(0);
+    const rect = region.getBoundingClientRect();
+    expect(rect.height, 'live-region block size stays clipped to 1px').to.be.at.most(1);
+    expect(rect.width, 'live-region inline size stays clipped to 1px').to.be.at.most(1);
   });
 });
 
@@ -887,7 +952,7 @@ it('registers an image/svg+xml renderer that matches .svg files and renders the 
   expect(def!.capabilities).to.deep.equal({ anchors: ['region'], search: false, textSelect: false });
 
   const host = (await fixture(
-    html`<div>${def!.render({ name: 'a.svg', mimeType: 'image/svg+xml', src: 'https://example.test/a.svg' })}</div>`,
+    html`<div>${def!.render!({ name: 'a.svg', mimeType: 'image/svg+xml', src: 'https://example.test/a.svg' })}</div>`,
   )) as HTMLElement;
   const viewer = host.querySelector('lr-svg-viewer') as LyraSvgViewer;
   expect(viewer).to.exist;

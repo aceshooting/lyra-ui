@@ -6,6 +6,7 @@
 - **Class** `LyraIconButton`, also available unregistered from `@aceshooting/lyra-ui/components/forms/icon-button/icon-button.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `dompurify` — see `llms/peers.md`
 - **Themeable via** 3 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -17,7 +18,9 @@
 
 An accessible icon-only action/link with a native `<button>` inside. It is deliberately not a
 form-associated submitter; use `<lr-button circle type="submit|reset">` with an icon-only default
-slot when a form action is required.
+slot when a form action is required. Because it is not form-associated, an ancestor
+`<fieldset disabled>` does not disable it and it is absent from `form.elements`; set `disabled`
+directly on each icon button.
 
 Its public `--lr-icon-button-*` theme inputs stay undeclared on the host, so an ancestor theme
 wrapper can override the built-in fallbacks; a value set directly on the element still wins.

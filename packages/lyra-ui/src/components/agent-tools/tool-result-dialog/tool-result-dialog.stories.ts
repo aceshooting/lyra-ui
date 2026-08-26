@@ -22,7 +22,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A full tool-call detail overlay: a status/duration header plus a `body` slot where a consumer typically places a `<lr-tab-group>` with Input/Preview/JSON/Raw panels. The component knows nothing about what is inside that slot -- it only supplies the modal chrome (focus trap, Escape/backdrop dismiss, scroll lock, a maximize toggle) around it. Long localized header content wraps within narrow allocations so the header actions remain reachable.',
+          'A full tool-call detail overlay: a status/duration header plus a `body` slot where a consumer typically places a `<lr-tab-group>` with Input/Preview/JSON/Raw panels. The component knows nothing about what is inside that slot -- it only supplies the modal chrome (focus trap, Escape dismiss, opt-in `lightDismiss`, scroll lock, a maximize toggle) around it. Long localized header content wraps within narrow allocations so the header actions remain reachable.',
       },
     },
   },
@@ -77,6 +77,18 @@ export const OpenInitially: Story = {
     <lr-tool-result-dialog .open=${context.viewMode !== 'docs'} tool-name="run_python" status="success" duration-ms="820">
       ${toolCallPanels()}
     </lr-tool-result-dialog>
+  `,
+};
+
+export const LightDismiss: Story = {
+  name: 'Opt-in light dismissal',
+  render: () => html`
+    <div>
+      <button @click=${openDialog}>Open light-dismissible result</button>
+      <lr-tool-result-dialog light-dismiss tool-name="run_python" status="success" duration-ms="820">
+        ${toolCallPanels()}
+      </lr-tool-result-dialog>
+    </div>
   `,
 };
 

@@ -63,7 +63,7 @@ describe('diagnoseLyraHydration', () => {
       expect(diagnostics[0]?.status).to.equal('unregistered');
     } finally {
       if (descriptor) Object.defineProperty(customElements, 'get', descriptor);
-      else delete (customElements as CustomElementRegistry & { get?: CustomElementRegistry['get'] }).get;
+      else Reflect.deleteProperty(customElements, 'get');
       iframe.remove();
     }
   });
@@ -406,12 +406,12 @@ describe('lyraSsrElementRenderers', () => {
     instance.connectedCallback();
 
     expect(instance.connectedCallCount).to.equal(1);
-    expect(element.children).to.deep.equal([]);
-    expect(element.childNodes).to.deep.equal([]);
-    expect((element.querySelector as () => unknown)()).to.equal(null);
-    expect((element.querySelectorAll as () => unknown)()).to.deep.equal([]);
-    expect((element.closest as () => unknown)()).to.equal(null);
-    const style = element.style as {
+    expect(element['children']).to.deep.equal([]);
+    expect(element['childNodes']).to.deep.equal([]);
+    expect((element['querySelector'] as () => unknown)()).to.equal(null);
+    expect((element['querySelectorAll'] as () => unknown)()).to.deep.equal([]);
+    expect((element['closest'] as () => unknown)()).to.equal(null);
+    const style = element['style'] as {
       getPropertyValue(): string;
       removeProperty(): string;
       setProperty(): unknown;
@@ -446,11 +446,11 @@ describe('lyraSsrElementRenderers', () => {
     instance.connectedCallback();
 
     const element = instance.element as Record<string, unknown>;
-    expect(element.children).to.equal(realChildren);
-    expect(element.querySelector).to.equal(realQuerySelector);
-    expect(element.style).to.equal(realStyle);
+    expect(element['children']).to.equal(realChildren);
+    expect(element['querySelector']).to.equal(realQuerySelector);
+    expect(element['style']).to.equal(realStyle);
     // Properties that were absent are still filled in alongside the preserved ones.
-    expect(element.childNodes).to.deep.equal([]);
-    expect((element.closest as () => unknown)()).to.equal(null);
+    expect(element['childNodes']).to.deep.equal([]);
+    expect((element['closest'] as () => unknown)()).to.equal(null);
   });
 });

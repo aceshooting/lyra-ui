@@ -8,6 +8,7 @@ import { getDisplayNames } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
+import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { styles } from './phone-input.styles.js';
 import { submitOnEnter } from '../../../internal/submit-on-enter.js';
 import {
@@ -26,7 +27,7 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_phoneInputIncomplete, LYRA_DEF
 
 export type LyraPhoneNumberStatus =
   | 'empty' | 'incomplete' | 'invalid' | 'valid';
-export type LyraPhoneInputSelectionDirection = 'forward' | 'backward' | 'none';
+export type LyraPhoneInputSelectionDirection = LyraSelectionDirection;
 export interface LyraPhoneCountry {
   /** ISO 3166-1 alpha-2 region code. */
   readonly code: string;
@@ -664,21 +665,17 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
    *  order this component documents; a bare `<lr-phone-input>` with none of them set still lands on
    *  a localized generic name rather than shipping an unnamed field to the accessibility tree, the
    *  same last-resort every sibling text-entry primitive has (`lr-input`, `lr-time-input`,
-   *  `lr-otp-input`, `lr-locale-picker`). The visible `[part='form-control-label']` cannot stand in:
-   *  it carries the native `hidden` attribute while there is no label, which removes it from the
-   *  accessibility tree entirely.
+   *  `lr-otp-input`, `lr-locale-picker`). A rendered label names the native input through its
+   *  `for` association; the generic fallback is needed only while that label is hidden.
    *
    *  Deliberately its own `phoneInputLabel` key rather than borrowing `lr-contact-viewer`'s
    *  identically-worded one: the two read the same in English today, but a locale re-wording
    *  contact-viewer's field label would otherwise silently re-label this control too. */
-  private get effectivePhoneLabel(): string {
+  private effectivePhoneLabel(hasLabel: boolean): string | typeof nothing {
     if (this.accessibleLabel !== null) return this.accessibleLabel;
-    return (
-      this.phoneLabel ||
-      this.label ||
-      this.placeholder ||
-      this.localize('phoneInputLabel')
-    );
+    if (this.phoneLabel) return this.phoneLabel;
+    if (hasLabel) return nothing;
+    return this.placeholder || this.localize('phoneInputLabel');
   }
 
   private get incompleteMessage(): string {
@@ -990,7 +987,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
             spellcheck=${this.spellcheck}
             autocapitalize=${this.autocapitalize || nothing}
             autocorrect=${this.autoCorrect || nothing}
-            aria-label=${this.effectivePhoneLabel}
+            aria-label=${this.effectivePhoneLabel(hasLabel)}
             aria-describedby=${describedBy || nothing}
             aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
             ?required=${this.required}

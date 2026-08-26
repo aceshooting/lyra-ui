@@ -33,7 +33,7 @@ function loadStylesheet(href: string): Promise<HTMLLinkElement> {
 /** Every custom property the sheet declares, in declaration order, deduplicated. */
 function declaredNames(css: string): string[] {
   const names = new Set<string>();
-  for (const match of css.matchAll(/^\s*(--lr-[a-z0-9-]+)\s*:/gm)) names.add(match[1]);
+  for (const match of css.matchAll(/^\s*(--lr-[a-z0-9-]+)\s*:/gm)) names.add(match[1]!);
   return [...names];
 }
 

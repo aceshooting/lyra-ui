@@ -283,8 +283,11 @@
     :where(a, button, input, select, textarea, summary, [tabindex]):where(
       :focus-visible
     ) {
-    outline: var(--lr-focus-ring-width, var(--lr-theme-focus-ring-width, 2px))
-      solid var(--lr-focus-ring-color, var(--lr-theme-color-focus, Highlight));
+    outline: var(
+      --lr-focus-ring,
+      var(--lr-focus-ring-width, var(--lr-theme-focus-ring-width, 2px)) solid
+        var(--lr-focus-ring-color, var(--lr-theme-color-focus, Highlight))
+    );
     outline-offset: var(
       --lr-focus-ring-offset,
       var(--lr-theme-focus-ring-offset, 2px)

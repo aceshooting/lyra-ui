@@ -61,6 +61,30 @@ it('scales font size linearly between minFontSize and maxFontSize by weight', ()
   expect(big.fontSize).to.equal(50);
 });
 
+it('normalizes a reversed explicit input domain before scaling', () => {
+  const result = layoutWordCloud(
+    [
+      { text: 'low', weight: 0 },
+      { text: 'quarter', weight: 50 },
+      { text: 'high', weight: 200 },
+    ],
+    { ...baseOptions, domain: [200, 0] },
+  );
+  expect(result.placed.find((word) => word.text === 'quarter')!.fontSize).to.equal(20);
+});
+
+it('falls back to the data-derived input domain for degenerate or non-finite endpoints', () => {
+  const words = [
+    { text: 'low', weight: 0 },
+    { text: 'middle', weight: 50 },
+    { text: 'high', weight: 100 },
+  ];
+  for (const domain of [[0, 0], [Number.NaN, 100]] as const) {
+    const result = layoutWordCloud(words, { ...baseOptions, domain });
+    expect(result.placed.find((word) => word.text === 'middle')!.fontSize).to.equal(30);
+  }
+});
+
 it('sqrt scale compresses a low-weight word toward a larger font than linear would', () => {
   const words = [
     { text: 'min', weight: 0 },

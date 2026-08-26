@@ -6,9 +6,10 @@
 - **Class** `LyraRagEvalDashboard`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -21,7 +22,7 @@ and run history. The host computes metrics and owns evaluation execution.
 **Properties:** `metrics: LyraRagEvaluationMetric[] = []` and
 `runs: LyraRagEvaluationRun[] = []`
 (attribute: false); `metricId: string = ''` (attribute `metric-id`, with the first metric used for
-display when unset/unmatched); `slice: string = ''`; `label: string = ''` (visible heading and
+display when unset/unmatched); `slice: string = ''`; `label?: string` (visible heading and
 fallback overall-region name; a non-empty host `aria-label` makes the host the sole overall owner,
 while an explicitly empty host label stays empty on the region);
 `showChart: boolean = true` (attribute `show-chart`, reflected, string-aware true-default
@@ -40,7 +41,11 @@ history, counts, rendering, or actions.
 corresponding selection properties.
 
 **CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
-`metric-selected`, `chart`, `runs`, `runs-heading`, `run`, `empty`.
+`metric-selected`, `metric-category` (the caller-supplied category rendered visibly on each metric),
+`chart`, `runs`, `runs-heading`, `run`, `empty`.
+
+**Themeable custom properties:** `--lr-rag-eval-dashboard-selected-border-color` (default
+`var(--lr-color-brand)`) — border color shared by the controlled active slice and metric.
 
 Percent values clamp to 0–1 and all numbers use `effectiveLocale`. The chart is built from the
 filtered run order; the host computes every metric and owns evaluation execution.

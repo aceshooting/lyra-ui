@@ -38,8 +38,46 @@ export const Default: Story = {
   render: () => html`<lr-word-cloud .words=${WORDS} style="height: 20rem"></lr-word-cloud>`,
 };
 
+/** The host label is forwarded to the focusable SVG application and replaces its generated name. */
+export const AuthoredAccessibleName: Story = {
+  render: () => html`
+    <lr-word-cloud
+      aria-label="Technology topics by importance"
+      .words=${WORDS}
+      style="height: 20rem"
+    ></lr-word-cloud>
+  `,
+};
+
 export const SqrtScale: Story = {
   render: () => html`<lr-word-cloud .words=${WORDS} scale="sqrt" style="height: 20rem"></lr-word-cloud>`,
+};
+
+/** Both clouds pin the same weight domain, so a weight of 50 renders at the same size even though
+ * their own highest observed weights differ. */
+export const SharedWeightDomain: Story = {
+  render: () => html`
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--lr-space-m)">
+      <lr-word-cloud
+        style="block-size: var(--lr-size-20rem)"
+        .domain=${[0, 200]}
+        .words=${[
+          { text: 'shared 50', weight: 50 },
+          { text: 'first max 100', weight: 100 },
+          { text: 'zero', weight: 0 },
+        ]}
+      ></lr-word-cloud>
+      <lr-word-cloud
+        style="block-size: var(--lr-size-20rem)"
+        .domain=${[0, 200]}
+        .words=${[
+          { text: 'shared 50', weight: 50 },
+          { text: 'second max 200', weight: 200 },
+          { text: 'zero', weight: 0 },
+        ]}
+      ></lr-word-cloud>
+    </div>
+  `,
 };
 
 export const MixedOrientation: Story = {

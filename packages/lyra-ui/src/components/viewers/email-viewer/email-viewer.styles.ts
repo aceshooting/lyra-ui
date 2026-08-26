@@ -120,7 +120,7 @@ export const styles = css`
     );
   }
   [part="attachment-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part="attachment-name"] {
@@ -155,7 +155,7 @@ export const styles = css`
     );
   }
   [part="quote-toggle"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part="quoted"] {

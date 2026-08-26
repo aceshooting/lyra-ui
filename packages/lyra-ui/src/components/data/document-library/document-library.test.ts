@@ -121,6 +121,30 @@ it("keeps the first unique nonempty document id before filtering, selection, row
   expect((await openEvent as CustomEvent).detail).to.deep.equal({ documentId: "shared" });
 });
 
+it('omits documents with a missing name or non-string tags without reserving their ids', async () => {
+  const el = await fixture<LyraDocumentLibrary>(html`
+    <lr-document-library></lr-document-library>
+  `);
+  el.documents = [
+    { id: 'shared' },
+    { id: 'bad-tags', name: 'Bad tags', tags: [null] },
+    { id: 'shared', name: 'Retained', tags: ['stable'] },
+    { id: 'neighbor', name: 'Neighbor' },
+  ] as unknown as LibraryDocument[];
+  await el.updateComplete;
+
+  expect(el.documents.map((document) => document.id)).to.deep.equal(['shared', 'neighbor']);
+  const filterEvent = oneEvent(el, 'lr-filter-change');
+  el.shadowRoot!.querySelector('lr-input')!.dispatchEvent(new CustomEvent('lr-input', {
+    detail: { value: 'neighbor' },
+    bubbles: true,
+    composed: true,
+  }));
+  expect((await filterEvent as CustomEvent).detail.matchCount).to.equal(1);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('lr-table')).to.exist;
+});
+
 it("is accessible with no documents", async () => {
   const el = await fixture(html`<lr-document-library></lr-document-library>`);
   await expect(el).to.be.accessible();
@@ -294,6 +318,35 @@ it("filters by tag facet with AND semantics across multiple selected tags", asyn
     ...table.shadowRoot!.querySelectorAll('[part="document-name"]'),
   ].map((btn) => btn.textContent!.trim());
   expect(names).to.deep.equal(["Zeta Runbook.pdf"]);
+});
+
+it('contains every undocumented tag-filter and table event at the composition boundary', async () => {
+  const el = await fixture<LyraDocumentLibrary>(html`
+    <lr-document-library .documents=${docs}></lr-document-library>
+  `);
+  const leaked: string[] = [];
+  const comboboxEvents = [
+    'lr-show',
+    'lr-after-show',
+    'lr-hide',
+    'lr-after-hide',
+    'lr-filter',
+    'lr-clear',
+    'lr-invalid',
+  ];
+  const tableEvents = ['lr-priority-columns-visibility-change'];
+  for (const name of [...comboboxEvents, ...tableEvents]) {
+    el.addEventListener(name, () => leaked.push(name));
+  }
+  const combobox = el.shadowRoot!.querySelector('lr-combobox')!;
+  for (const name of comboboxEvents) {
+    combobox.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true }));
+  }
+  const table = el.shadowRoot!.querySelector('lr-table')!;
+  for (const name of tableEvents) {
+    table.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true }));
+  }
+  expect(leaked).to.deep.equal([]);
 });
 
 it("does not render the tag filter combobox when no document declares a tag", async () => {
@@ -723,8 +776,9 @@ it("sorts the Updated column chronologically, not alphabetically by its formatte
 describe("v9 controlled and immutable contracts", () => {
   it("snapshots readonly collection inputs at assignment time", async () => {
     const inputDate = new Date("2026-01-02T00:00:00.000Z");
+    const inputDocumentTags = ["stable"];
     const inputDocuments: LibraryDocument[] = [
-      { id: "owned", name: "Owned.md", tags: ["stable"], updatedAt: inputDate },
+      { id: "owned", name: "Owned.md", tags: inputDocumentTags, updatedAt: inputDate },
     ];
     const inputSelected = ["owned"];
     const inputTags = ["stable"];
@@ -736,7 +790,7 @@ describe("v9 controlled and immutable contracts", () => {
     el.tagFilter = inputTags;
 
     inputDocuments[0]!.name = "Mutated.md";
-    inputDocuments[0]!.tags!.push("mutated");
+    inputDocumentTags.push("mutated");
     inputDocuments.length = 0;
     inputDate.setUTCFullYear(2030);
     inputSelected.length = 0;

@@ -195,7 +195,7 @@ result text (only present in that mode). `fallback-copy` — the `<lr-copy-butto
 `copyable` is set alongside the `fallback="text"` kind (only present when both are set).
 
 **Themeable custom properties:** `--lr-tool-result-view-font` (default `var(--lr-font-mono)`, the
-library's shared monospace stack, so a `--lr-theme-font-mono` override reaches it) — only used by the
+library's shared monospace stack, so a `--lr-theme-font-family-mono` override reaches it) — only used by the
 `fallback="text"` kind's `[part='fallback-text']`. Otherwise none — the component's own styling is
 deliberately minimal; all visible styling comes from whatever renderer/`<lr-skeleton>`/
 `<lr-json-viewer>`/`<lr-copy-button>` child is currently mounted.
@@ -378,6 +378,8 @@ overlay stack.
 
 - `open: boolean = false` (reflected) — whether the dialog is open; set it directly or use the
   lifecycle methods below
+- `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop-click
+  dismissal; Escape and the built-in close button remain available without it
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — a host attribute names the
   host itself, while the dialog panel remains labelled by its visible tool-name title instead of
   cloning that name. A direct property assignment made without the attribute can name the panel
@@ -393,12 +395,14 @@ overlay stack.
 void` is the reasoned API dismissal;
 `close(reason: ToolResultDialogCloseReason = 'api'): void` closes the dialog (no-op if already
 closed), emits `lr-close` with `reason`, and returns focus to whatever had it before
-the dialog opened. Built-in triggers call this with `'escape'`/`'backdrop'`/`'close-button'`; a
+the dialog opened. Built-in triggers call this with `'escape'`, `'backdrop'` when `lightDismiss` is
+enabled, or `'close-button'`; a
 consumer's own close affordance (e.g. a footer action button) should call it directly with its own
 reason string so every dismissal path funnels through the same event.
 
 **Events:** `lr-close` (`detail: ToolResultDialogCloseReason` — `'escape'|'backdrop'|
-'close-button'|'api'|string`) fired exactly once per dismissal; `lr-maximize-change` (`detail:
+'close-button'|'api'|string`) fired exactly once per dismissal (`'backdrop'` requires
+`lightDismiss`); `lr-maximize-change` (`detail:
 { readonly maximized: boolean }`, the new `maximized` state) fired when the header's
 maximize/restore toggle is clicked.
 
@@ -453,6 +457,8 @@ element, since the trigger typically lives entirely outside this component). `ma
 between the constrained modal size and a near-fullscreen size within the same open dialog and
 open/close lifecycle — unlike `<lr-widget>`'s fullscreen mode there's no separate non-modal resting
 state, so no additional scroll-lock/focus-trap bookkeeping is needed for that transition alone.
+Backdrop clicks leave the dialog open by default; add `light-dismiss` to opt in, matching
+`<lr-dialog>`, `<lr-drawer>`, and `<lr-lightbox>`.
 
 **Known gotchas:**
 
@@ -516,6 +522,8 @@ string; disabled?: boolean; disabledReason?: string }` — one selectable agent 
 **Properties:**
 
 - `open: boolean = false` (reflected) — set it directly or use the lifecycle methods below.
+- `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop-click
+  dismissal; Escape remains available without it.
 - `tools: ToolSelectDialogTool[] = []` (attribute: false) — the full set of tools a consumer offers,
   across all categories. `id` is the public identity: empty/blank ids are omitted and when provider
   data repeats one, the first occurrence wins consistently for grouping, filtering, counts,
@@ -531,7 +539,8 @@ string; disabled?: boolean; disabledReason?: string }` — one selectable agent 
   property assignment made without the attribute can name the panel.
 - `searchPlaceholder?: string` (attribute `search-placeholder`) — omission uses localized
   `searchToolsPlaceholder`; every supplied string, including `"Search tools…"` and `""`, remains
-  literal.
+  literal as placeholder copy. Empty/whitespace-only copy leaves the field visually empty while
+  its accessible name falls back to localized `searchToolsPlaceholder`.
 - `filter: ToolSelectFilter | null = null` (attribute: false) — overrides the built-in
   case-insensitive name/description substring match.
 - `autocomplete: string = ''`, `spellcheck: boolean = true`, `autocapitalize: string = ''`,
@@ -549,8 +558,10 @@ void` performs the reasoned API dismissal;
 checkbox or switch. A host can prevent a proposal while it validates or persists it, then assign
 the desired detail values after that work succeeds. `lr-close`
 (`detail: ToolSelectDialogCloseReason` — fired exactly once per dismissal, via Escape, a backdrop
-click, or a `close()` call), and no-detail `focus`/`blur` events re-dispatched when the
-internal search input gains or loses focus.
+click when `lightDismiss` is enabled, or a `close()` call), and no-detail `focus`/`blur` events
+re-dispatched when the internal search input gains or loses focus.
+Native `input`/`change` and prefixed `lr-input` implementation events from the built-in checkbox and
+switch controls stop at the dialog boundary; listen for the single aggregate `lr-change` proposal.
 
 **Slots:** `footer` — optional action buttons (e.g. a "Done" button), rendered in a bottom row. Changes
 already apply live via `lr-change`, so this slot is purely optional; only visually shown once it has
@@ -601,8 +612,8 @@ checkboxes for editing.
 
 **Known gotchas:**
 
-- No built-in footer/close button — dismissal happens via Escape, a backdrop click, or a consumer's own
-  `footer`-slotted action calling `close()` directly.
+- No built-in footer/close button — dismissal happens via Escape, an opted-in (`light-dismiss`)
+  backdrop click, or a consumer's own `footer`-slotted action calling `close()` directly.
 - A row is effectively disabled whenever _either_ its own `tool.disabled` is true _or_ the top-level
   `useDefaults` switch is on — a tool without `disabled` set can still render as a locked checkbox while
   `useDefaults` is true.
@@ -832,18 +843,22 @@ the shared quiet/brand tokens used by surrounding UI. Plus shared tokens
 </script>
 ```
 
-The package root also exports the pure `parseStackTrace(trace: string, internalPatterns: (string |
-RegExp)[]): StackGroup[]` helper (plus `DEFAULT_INTERNAL_PATTERNS`, and the `StackFrame`/
-`StackGroup` types) — the same parsing function this component's own `willUpdate()` calls, exposed
-standalone so a consumer can parse or unit-test traces without instantiating the element at all.
+The package root also exports the pure
+`parseStackTrace(trace: string, options?: StackTraceParseOptions): StackTraceParseResult` helper
+(plus `DEFAULT_INTERNAL_PATTERNS`, `STACK_TRACE_LIMITS`, and the `StackFrame`, `StackGroup`,
+`StackTraceParseOptions`, and `StackTraceParseResult` types) — the same parser this component uses,
+exposed standalone so a consumer can parse or unit-test traces without instantiating the element.
+Pass custom classifiers as `{ internalPatterns: ['node_modules/', /vendor\//] }`. The result is
+`{ groups, truncated, source }`, where `source` is the bounded raw-text fallback.
 
 **Known gotchas:**
 
 - an internal-frame run only collapses behind the `internal-toggle` when it is two or more
   consecutive internal frames; a single isolated internal frame renders as a normal `frame` button
   (there is nothing useful to fold).
-- when `trace` doesn't match any of the supported formats, `parseStackTrace()` returns `[]` and the
-  component renders the text verbatim in a `raw` part instead of silently dropping content.
+- when `trace` doesn't match any supported format, `parseStackTrace().groups` is empty and the
+  component renders the result's bounded `source` verbatim in a `raw` part instead of silently
+  dropping content.
 - every coordinate of an activatable frame must be a JavaScript safe integer. A malformed or
   overlarge location remains visible as a non-activatable raw row; if no safe frame is left, the
   component uses the verbatim `raw` fallback.
@@ -870,12 +885,15 @@ renders at the start of the action row, before Deny/Edit/Approve.
 - `ApprovalDecision = 'approved' | 'denied'` — shared final-outcome vocabulary, deliberately
   separate from `ApprovalAction`
 - `ToolApprovalDialogCloseReason = 'escape' | 'backdrop' | 'approve' | 'deny' | 'api' | string` — the
-  `lr-close` detail; `'escape'`/`'backdrop'`/`'approve'`/`'deny'` come from the dialog's own built-in
-  dismiss triggers, any other string is whatever a caller passes to `close()` directly.
+  `lr-close` detail; `'escape'`/`'approve'`/`'deny'` come from the dialog's built-in triggers,
+  `'backdrop'` requires `lightDismiss`, and any other string is whatever a caller passes to
+  `close()` directly.
 
 **Properties:**
 
 - `open: boolean = false` (reflected) — set it directly or use the lifecycle methods below
+- `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop-click
+  dismissal; Escape and the built-in decision buttons remain available without it
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — a host attribute names the
   host; the panel remains labelled by its visible heading rather than cloning the same name. A
   direct property assignment made without the attribute can name the panel
@@ -899,7 +917,7 @@ renders at the start of the action row, before Deny/Edit/Approve.
   resolution while an `lr-approve`/`lr-deny` listener has called `preventDefault()` on the
   now-cancelable event; the pending button shows `loading`, the other is `disabled` (Approve is
   also still `disabled` while an in-progress edit is invalid JSON, independent of `pending`).
-  Escape/backdrop dismissal is suppressed while `pending` is set. Finalize by calling
+  Escape and an enabled backdrop dismissal are suppressed while `pending` is set. Finalize by calling
   `close('approve'|'deny')`, or clear `.pending` back to `null` to bounce back to the undecided
   state; `pending` also resets to `null` every time the dialog re-opens.
 
@@ -914,8 +932,8 @@ closing; otherwise always followed by `lr-close` with reason `'approve'`), `lr-d
 `this.emit('lr-deny')` is called with no second argument, so per the DOM spec's `CustomEventInit`
 default, `event.detail` is `null`, not `undefined`. Cancelable, same `pending` mechanism, setting
 `pending` to `'deny'`; otherwise always followed by `lr-close` with reason `'deny'`), `lr-close`
-(`detail: ToolApprovalDialogCloseReason` — fired exactly once per dismissal, via Escape, a backdrop
-click, the Approve/Deny buttons, or a `close()` call), and no-detail `focus`/`blur` events
+(`detail: ToolApprovalDialogCloseReason` — fired exactly once per dismissal, via Escape, an opted-in
+backdrop click, the Approve/Deny buttons, or a `close()` call), and no-detail `focus`/`blur` events
 re-dispatched when the raw-JSON editor gains or loses focus.
 
 **Slots:** `footer` — optional supplementary content (e.g. a "remember this choice" checkbox),
@@ -1012,9 +1030,11 @@ shared composed-tree focus traversal used by the other modal families.
   padding/border/font/`:hover`/`:focus-visible` must move that CSS onto the re-exported
   `deny-button-base`/`approve-button-base` sub-parts instead. `edit-button` is unaffected and stays
   a raw `<button>`.
+- Backdrop clicks leave the dialog open by default; add `light-dismiss` to opt in, matching
+  `<lr-dialog>`, `<lr-drawer>`, `<lr-lightbox>`, and the sibling tool dialogs.
 - An `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while
-  its own async work is in flight — see `pending` above. While `pending` is set, Escape/backdrop
-  dismissal is suppressed, so a consumer that never resolves the pending decision leaves the
+  its own async work is in flight — see `pending` above. While `pending` is set, Escape and an
+  enabled backdrop dismissal are suppressed, so a consumer that never resolves the pending decision leaves the
   dialog open until it clears `.pending` or calls `close()` directly itself.
 
 ---
@@ -1241,10 +1261,10 @@ a JSON object, falls back to `{}` for malformed/non-object state, and does not e
   `=== undefined` fallback check.
 - additional value keys are retained and submitted (matching JSON Schema's default open-object
   behavior), but schema-valued/false `additionalProperties` is outside this renderer's subset.
-- reassign `value`/`schema` after changing them. Direct in-place mutation is resnapshotted by the
-  component's own `checkValidity()`/`reportValidity()`, but native `form.checkValidity()` and
-  submission use the last synchronized snapshot because the browser cannot observe arbitrary object
-  mutation.
+- `value` and `schema` are detached, deeply frozen assignment-time snapshots. Reassign either
+  property after changing caller-owned input; direct in-place mutation cannot alter the component,
+  and neither its own `checkValidity()`/`reportValidity()` nor native form validation resnapshots the
+  original object.
 - `lr-validity-change` fires once immediately at connect time even before any user interaction, so a
   form with an unmet required field announces `valid: false` on mount, not only after the first edit.
 
@@ -1475,9 +1495,10 @@ confirmed moves are announced through an internal `<lr-live-region>`.
 status: TaskStatus; detail?: string; children?: readonly TaskItem[] }` with `TaskStatus = 'pending' |
 'running' | 'success' | 'error'` (both exported here). `detail` is an optional secondary plain-text
 line; `children` is exactly **one** level of sub-steps — a child's own `children` is ignored with a
-`console.warn`. While `reorderable`, every top-level task and direct child must have a globally
-unique, nonempty `id`; invalid or duplicate data stays visible but fails closed, with no row
-keyboard stops or reorder requests.
+`console.warn`. Runtime non-record rows and rows without a nonempty string `id` are omitted before
+rendering, summaries, announcements, and reorder validation. While `reorderable`, every retained
+top-level task and direct child must additionally have a globally unique `id`; duplicate data stays
+visible but fails closed, with no row keyboard stops or reorder requests.
 `reorderable: boolean = false` (reflected) enables Ctrl/Cmd+ArrowUp/ArrowDown on a focused task.
 It emits a request only; the host must assign a new reordered `items` array before the task visibly
 moves or an announcement is made. `label?: string` omits into localized `taskListLabel` (`'Tasks'`
@@ -1549,9 +1570,9 @@ codes. `replace(content: string): void` synchronously replaces the parsed buffer
 string = 'terminal.log'`, `announceOutput: boolean = false` (attribute `announce-output`),
 `accessibleLabel: string = ''` (attribute `aria-label`), `highlights: readonly LyraHighlight[] = []` (attribute:
 false), and `activeHighlightId: string | null = null` (attribute: false). Empty/blank highlight ids
-and later duplicates are omitted before painting, focus ownership, active lookup, and activation events. A host `aria-label` names
-the host; the nested `role="log"` keeps the localized terminal-purpose name rather than cloning the
-same label, and an explicit empty host label never leaves the actionable log unnamed.
+and later duplicates are omitted before painting, focus ownership, active lookup, and activation
+events. A non-empty host `aria-label` is forwarded to the nested `role="log"`; an absent or explicit
+empty value uses the localized terminal-purpose fallback, so the actionable log remains named.
 `compact: boolean = false` (reflected) — tightens `[part="toolbar"]`'s padding and gap and each
 rendered line's inline padding for a terminal embedded in an already-padded transcript row, the same
 convention `<lr-task-list>` and `<lr-thinking-panel>` use; purely a density knob, the card border and
@@ -1762,7 +1783,9 @@ unset. `mode: 'live' | 'post-hoc' =
 'live'` (reflected), `follow: boolean = true` (reflected), `expanded: boolean = false` (reflected),
 `label?: string` — omission localizes `activityFeedLabel` (`'Activity'` in the built-in English
 catalog), while any supplied string is a verbatim override, including `'Activity'` under a
-non-English `.strings` catalog and `''` — `showTimestamps: boolean = false` (attribute `show-timestamps`),
+non-English `.strings` catalog and `''`. A present host `aria-label` names the owned list in both
+plain and virtualized rendering paths while `label` remains the visible header text —
+`showTimestamps: boolean = false` (attribute `show-timestamps`),
 `formatTimestamp?: (date: Date) => string` (attribute: false), `renderText?: (entry: ActivityEntry)
 => TemplateResult` (attribute: false) — overrides the default plain-text `entry-text` rendering with
 arbitrary rich content (e.g. rendered markdown, or markdown plus a trailing tool-call chip list),
@@ -1910,6 +1933,8 @@ library-wide brand tokens. Per-result status foregrounds are independently expos
 `--lr-test-results-failed-color` (default `var(--lr-color-danger)`),
 `--lr-test-results-skipped-color` (default `var(--lr-color-text-quiet)`), and
 `--lr-test-results-running-color` (default `var(--lr-color-brand)`).
+`--lr-test-results-spinner-size` (default `var(--lr-size-1em)`) controls the composed spinner's
+diameter in a running test row without requiring an override of `lr-spinner`'s token.
 
 ## `lr-confirm-bar`
 
@@ -2192,7 +2217,8 @@ string; label: string; status: AgentStatus; startedAt?: number; endedAt?: number
   are epoch milliseconds; `AgentStep.kind` is deliberately free-form (an agent's own step taxonomy is
   application-defined) — unlike `LyraSpan['kind']`'s closed union. The record and its nested step
   collection are clone-owned, bounded, and frozen; pass a new object to update it. `null` renders
-  the shared `lr-empty` `noData` state
+  the shared `lr-empty` `noData` state. A runtime summary record that has not loaded `steps` yet
+  renders with an empty task slot, and a step whose status has not arrived yet renders as pending
 - `metrics: readonly AgentRunMetric[] = []` (attribute: false) — `AgentRunMetric { id: string; label: string;
 value: string | number; variant?: BadgeVariant }` (exported here), e.g. prompt/completion token
   counts; `variant` tones `[part="metric-value"]` via `data-variant`, including the full
@@ -2329,7 +2355,9 @@ truncated?: boolean; omittedTokens?: number; redactions?: readonly ContextInspec
 end: number; reason?: string }` marks character ranges within `text` that are redaction
   placeholders; `reason` becomes the marker's `title`/accessible reason, falling back to a localized
   "Redacted". Segment `id` is the stable public identity; empty/blank ids and later duplicates are omitted before
-  meter values, rendering, copy/export serialization, and citation events are derived.
+  meter values, rendering, copy/export serialization, and citation events are derived. A valid-id
+  streaming segment whose `text` is not available yet remains visible with an empty body and empty
+  copy/export text rather than rejecting the render.
 - `total: number = 0` — the full token budget `segments` are measured against; passed straight to
   `lr-context-meter.total`
 - `label: string = ''` — accessible group name, and the embedded meter's visible caption (e.g.
@@ -2417,9 +2445,9 @@ Rubric scoring and human-review surface for comparing the runs of one evaluation
 
 Composes `lr-table` (the comparison table), `lr-rubric-form` (the review surface), and
 `lr-diff-view` (baseline↔selected output diff) rather than re-deriving any of their behavior.
-The table keeps the localized purpose-specific evaluation-runs name. A host `aria-label` on
-`<lr-eval-result>` remains the overall host name and is not cloned onto the independently
-interactive table.
+The table uses `label` or the localized purpose-specific evaluation-runs name. A host `aria-label`
+on `<lr-eval-result>` remains the overall host name and is not cloned onto the independently
+interactive table; use `label` to distinguish several comparison grids on one page.
 
 **Properties:**
 
@@ -2429,11 +2457,14 @@ model?: string; promptVersion?: string; output: string; scores?: RubricValue; re
   example. `scores`/`review` use the same `RubricValue` shape `lr-rubric-form` itself reads and
   writes, so a `TableColumn`'s `cell()` accessor and the rubric form's own `value` binding read a
   run's fields with no conversion. Empty/blank ids and later duplicate run ids are omitted before selection, diff,
-  grid, and review-event lookup
+  grid, and review-event lookup. A valid-id streaming run whose `output` has not arrived yet remains
+  selectable and supplies an empty output to the diff
 - `columns: TableColumn<EvalRunResult>[] = []` (attribute: false) — plain pass-through to
   `lr-table.columns`, not re-derived here; malformed, empty/blank, and later duplicate column keys are omitted
 - `rubricKeys: RubricKey[] = []` (attribute: false) — plain pass-through to `lr-rubric-form.keys`;
   empty/blank and later duplicate rubric keys are omitted
+- `label: string = ''` — accessible name for the independently interactive comparison grid;
+  falls back to the localized evaluation-runs name when unset
 - `selectedRunId: string | null = null` (attribute `selected-run-id`) — the run open for review and the diff's
   **new** side; falls back to `runs[0]?.id` when empty
 - `baselineRunId: string | null = null` (attribute `baseline-run-id`) — the run compared against and the
@@ -2478,7 +2509,9 @@ active? }`. `label` and `variant` customize application-defined lifecycle displa
   set; an omitted `grounding` or empty `toolTrace` renders no such section for that example. `label`
   falls back to a localized "Example {index}" (1-based, array order). Controlled and never mutated;
   empty/blank ids and later duplicate example ids are omitted before progress, disclosure state, and correlated child
-  events are derived
+  events are derived. A valid-id streaming example whose `status`, `input`, or `output` has not
+  arrived yet remains visible: status defaults to idle and either missing content payload renders
+  as empty Markdown until the host replaces the collection
 - `total: number | null = null` — the batch's expected total example count. `null` derives it from
   `examples.length`; set it explicitly while a batch is still streaming and the eventual total is
   already known. An explicit total below the current observed count is raised to `examples.length`,
@@ -2663,7 +2696,8 @@ AgentEvaluationDashboardRun[] = []` (attribute: false), where each run is `{ id,
 AgentStatusValue, metrics?: Record<string, number> }`. `AgentStatusValue` accepts either a compact
 `AgentStatusKind` string or an `AgentStatusPresentation` object (`{ kind, message?, label?,
 variant?, terminal?, active? }`), preserving explicit caller labels/messages and badge variants.
-`metricId: string | null = null`; `label: string = ''`; `showChart: boolean = true`; `chartHeight: string =
+`metricId: string | null = null`; `label?: string` — omission localizes the heading while an
+explicit empty string renders no heading/name; `showChart: boolean = true`; `chartHeight: string =
 '220px'`; `maxRenderedRuns: number = 100` (attribute `max-rendered-runs`, clamped to 1–500) bounds
 both the run list and the chart projection.
 Empty metric/run ids are omitted and later duplicates use deterministic first-occurrence-wins
@@ -2688,7 +2722,8 @@ It never executes tools or persists decisions.
 **Properties:** `requests: ToolApprovalRequest[] = []` (attribute: false), where each request is
 `{ id, toolName, args, status?: 'pending' | 'approved' | 'denied' }`;
 `selectedInvocationId: string | null = null` (attribute `selected-invocation-id`);
-`open: boolean = false`; `editable: boolean = true`; `label: string = ''`. Later duplicate request
+`open: boolean = false`; `editable: boolean = true`; `label?: string` — omission localizes the
+heading while an explicit empty string renders no heading/name. Later duplicate request
 ids and empty/blank ids are omitted before count, selection, dialog lookup, or decision events are
 derived.
 
@@ -2737,8 +2772,9 @@ typed events. Capabilities are denied unless explicitly enabled in `resource.per
 - `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`). A present
   host `aria-label` stays on the custom-element host as its overall name instead of being cloned
   inward. The iframe title uses `label`, then resource title, then the localized fallback; an
-  explicitly empty host label is preserved as an empty iframe title for this primary frame owner,
-  while a direct `accessibleLabel` property value can name it when no host attribute is present.
+  explicitly empty host label does not suppress those fallbacks, so the executable frame remains
+  named. A direct non-empty `accessibleLabel` property value names the frame when no host attribute
+  is present.
 
 **Methods:** `postHostContext(context: unknown): void` posts host state into the active frame;
 `postToolResult(requestId: string, options: McpAppToolResultOptions): void` resolves a prior tool
@@ -2805,6 +2841,7 @@ persistence.
 `versions: readonly PromptStudioVersion[] = []` is a property-only host-controlled input;
 empty/blank message and version ids are omitted and later duplicates use deterministic first-wins
 identity before rendering, editing, focus, selection, and events;
+runtime `null`/non-array values for any of the three not-yet-loaded collections render as empty;
 `selectedVersionId: string | null = null` (attribute `selected-version-id`); `label: string = ''`;
 `heading: string = ''` — visible toolbar heading, falling back to the localized Prompt Studio
 label when unset;
@@ -2879,7 +2916,8 @@ issue array after changes. `selectedPath: string | null = null` (attribute `sele
 **Exported types:** `JsonSchemaNode` covers `$ref`, type/title/description, properties/items,
 readonly required/enum/examples and oneOf/anyOf/allOf collections, and const/default while preserving unknown schema
 keywords. `SchemaValidationIssue = { path: string; message: string; severity?: 'error' | 'warning'
-| 'info' }`.
+| 'info' }`. At runtime, a Swagger-style boolean or string `required` keyword is treated as no
+JSON-Schema required-property list instead of rejecting the entire tree.
 
 **Events:** `lr-schema-select` (`{ schemaPath, schema }`, with an RFC 6901-style JSON Pointer).
 

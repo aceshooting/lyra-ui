@@ -107,8 +107,9 @@ export const ControlledSearchAndSort: Story = {
   },
 };
 
-/** Search, tag, and checkbox native/prefixed value events stop inside the component. Interact with
- * the inventory; the log receives only the documented library-level filter and selection events. */
+/** Search, tag, and checkbox native/prefixed value events plus the tag combobox's show/hide
+ * lifecycle stop inside the component. Interact with the inventory; the log receives only the
+ * documented library-level filter and selection events. */
 export const TranslatedHostEvents: Story = {
   render: () => {
     const report = (event: Event): void => {
@@ -126,6 +127,10 @@ export const TranslatedHostEvents: Story = {
         @lr-input=${report}
         @lr-change=${report}
         @change=${report}
+        @lr-show=${report}
+        @lr-after-show=${report}
+        @lr-hide=${report}
+        @lr-after-hide=${report}
       >
         <lr-document-library .documents=${documents}></lr-document-library>
         <output aria-live="polite"

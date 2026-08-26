@@ -62,6 +62,8 @@ interface ResolvedStage {
  *   text while its bar clamps to the track, carrying the extra bar-overflow part token.
  * - A comparison series of a different length pairs by index: extra comparison entries are
  *   ignored, and stages past its end simply get no comparison bar.
+ * - Malformed/non-record entries and records without a string `label` are omitted while later
+ *   valid neighbors remain in either series; caller-owned arrays are never rewritten.
  *
  * @customElement lr-funnel
  * @csspart base - The container element.
@@ -142,18 +144,52 @@ export class LyraFunnel extends LyraElement {
     }).format(ratio);
   }
 
+  private validStages(value: unknown): readonly LyraFunnelStage[] {
+    if (!Array.isArray(value)) return [];
+    const stages: LyraFunnelStage[] = [];
+    for (let index = 0; index < value.length; index += 1) {
+      try {
+        const stage: unknown = value[index];
+        if (!stage || typeof stage !== 'object' || Array.isArray(stage)) continue;
+        const record = stage as {
+          readonly label?: unknown;
+          readonly value?: unknown;
+          readonly color?: unknown;
+        };
+        if (typeof record.label !== 'string') continue;
+        stages.push(
+          Object.freeze({
+            label: record.label,
+            value:
+              typeof record.value === 'number'
+                ? finiteNumber(record.value, 0)
+                : 0,
+            ...(typeof record.color === 'string'
+              ? { color: record.color }
+              : {}),
+          })
+        );
+      } catch {
+        // Keep later valid stage records when an untyped record/getter fails.
+      }
+    }
+    return stages;
+  }
+
   /** Resolves every stage's geometry and text inputs in one pass so render stays declarative. */
   private resolveStages(): ResolvedStage[] {
-    const values = this.stages.map((stage) => finiteNumber(stage.value, 0));
+    const stages = this.validStages(this.stages);
+    const comparison = this.validStages(this.comparison);
+    const values = stages.map((stage) => finiteNumber(stage.value, 0));
     const base = values[0] ?? 0;
     // A zero or negative first stage cannot define "share of the first stage" at all: every ratio
     // would be infinite, undefined, or sign-flipped. Reporting no share is the truthful answer.
     const hasBase = base > 0;
-    const comparisonValues = this.comparison.map((stage) => finiteNumber(stage.value, 0));
+    const comparisonValues = comparison.map((stage) => finiteNumber(stage.value, 0));
     const comparisonBase = comparisonValues[0] ?? 0;
     const hasComparisonBase = comparisonBase > 0;
 
-    return this.stages.map((stage, index) => {
+    return stages.map((stage, index) => {
       const value = values[index] ?? 0;
       const previous = values[index - 1];
       const comparisonValue = comparisonValues[index];

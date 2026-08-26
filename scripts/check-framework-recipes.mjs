@@ -1,5 +1,4 @@
 import { spawn } from 'node:child_process';
-import { realpathSync } from 'node:fs';
 import {
   access,
   cp,
@@ -13,6 +12,8 @@ import {
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { isMainModule } from '../packages/lyra-ui/scripts/is-main-module.mjs';
 
 export const FRAMEWORKS = Object.freeze(['react', 'vue', 'svelte']);
 export const FRAMEWORK_PNPM_CONFIG = 'auto-install-peers=false\n';
@@ -304,9 +305,7 @@ async function main() {
   }
 }
 
-const isMain =
-  process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
-if (isMain) {
+if (isMainModule(import.meta.url)) {
   main().catch((error) => {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;

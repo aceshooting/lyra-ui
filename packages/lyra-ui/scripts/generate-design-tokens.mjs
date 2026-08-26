@@ -1,10 +1,11 @@
 #!/usr/bin/env node
+import { isMainModule } from './is-main-module.mjs';
 
 // Generates every design-tool view from tokens/canonical-tokens.json. The JSON source is authored
 // and authoritative; this script never discovers token metadata by scraping TypeScript. Runtime
 // styles are read only by `verifyRuntimeTokenParity()` as a fail-closed drift check.
 
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -19,6 +20,7 @@ const VALUE_CLASSIFICATIONS = new Set([
 
 const normalizePath = (value) => value.replaceAll('\\', '/');
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
+const publishedJson = (value) => `${JSON.stringify(value)}\n`;
 
 export function readCanonicalTokens(packageDir = defaultPackageDir) {
   return JSON.parse(readFileSync(path.join(packageDir, 'tokens', 'canonical-tokens.json'), 'utf8'));
@@ -670,7 +672,7 @@ function buildEditorInput(source) {
 export function buildDesignTokenArtifacts(source, packageDir = defaultPackageDir) {
   const repoDir = path.resolve(packageDir, '..', '..');
   return [
-    [path.join(packageDir, 'design-tokens.json'), json(buildDtcg(source))],
+    [path.join(packageDir, 'design-tokens.json'), publishedJson(buildDtcg(source))],
     [path.join(packageDir, 'src', 'styles', 'design-tokens.css'), buildCss(source)],
     [path.join(packageDir, 'src', 'styles', 'tokens-root.css'), buildRootTokensCss(source)],
     [path.join(repoDir, '.storybook', 'token-preview.generated.js'), buildPreview(source)],
@@ -702,7 +704,7 @@ export function generateDesignTokenArtifacts({ packageDir = defaultPackageDir, c
   return stale;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
+if (isMainModule(import.meta.url)) {
   const check = process.argv.includes('--check');
   try {
     generateDesignTokenArtifacts({ check });

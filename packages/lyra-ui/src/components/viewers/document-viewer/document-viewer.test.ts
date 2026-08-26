@@ -95,6 +95,16 @@ describe("registry dispatch", () => {
     expect(preview!.getAttribute("filename")).to.equal("report.pdf");
   });
 
+  it('surfaces the fallback preview render-error event on the document-viewer contract', async () => {
+    const el = await fixture<LyraDocumentViewer>(html`
+      <lr-document-viewer open mime-type="text/plain"></lr-document-viewer>
+    `);
+    const errorEvent = oneEvent(el, 'lr-render-error');
+    el.src = 'javascript:alert(1)';
+    const event = (await errorEvent) as CustomEvent<{ error: unknown }>;
+    expect(event.detail.error).to.exist;
+  });
+
   it("does not mount fallback or lazy renderer content while closed", async () => {
     let loads = 0;
     registerDocumentRenderer("application/pdf", {
@@ -558,7 +568,7 @@ describe("dialog wiring", () => {
 
 describe("accessibility", () => {
   it("is accessible when open with fallback content", async () => {
-    const el = await fixture(html`
+    const el = await fixture<LyraDocumentViewer>(html`
       <lr-document-viewer
         open
         name="report.pdf"
@@ -637,7 +647,7 @@ describe("anchor/highlights/alt widening", () => {
       id: "cite-1",
       anchor: { kind: "page" as const, page: 3 },
     };
-    const el = await fixture(html`
+    const el = await fixture<LyraDocumentViewer>(html`
       <lr-document-viewer
         open
         name="report.pdf"
@@ -696,7 +706,7 @@ describe("anchor/highlights/alt widening", () => {
     `)) as LyraDocumentViewer;
     const preview = el.shadowRoot!.querySelector(
       "lr-document-preview"
-    ) as HTMLElement & {
+    ) as unknown as HTMLElement & {
       alt?: string;
       highlights: unknown[];
     };
@@ -762,7 +772,7 @@ describe("anchor/highlights/alt widening", () => {
         mime-type="application/pdf"
         src="https://example.test/report.pdf"
       ></lr-document-viewer>
-    `)) as HTMLElement & { highlights: unknown[] };
+    `)) as HTMLElement & { highlights: unknown[]; updateComplete: Promise<boolean> };
     await el.updateComplete;
     const countAfterOpen = renderCount;
     el.highlights = [{ id: "cite-1", anchor: { kind: "page", page: 1 } }];
@@ -777,7 +787,7 @@ describe("anchor/highlights/alt widening", () => {
     registerDocumentRenderer("application/pdf", {
       render: () => html`<div>stub</div>`,
     });
-    const el = await fixture(
+    const el = await fixture<LyraDocumentViewer>(
       html`<lr-document-viewer
         open
         name="report.pdf"
@@ -795,7 +805,7 @@ describe("anchor/highlights/alt widening", () => {
       capabilities: { anchors: ["page"] },
       render: () => html`<div>stub</div>`,
     });
-    const el = await fixture(
+    const el = await fixture<LyraDocumentViewer>(
       html`<lr-document-viewer
         open
         name="report.pdf"
@@ -812,7 +822,7 @@ describe("anchor/highlights/alt widening", () => {
   });
 
   it("emits lr-anchor-result { found: false } when the file falls back to document-preview", async () => {
-    const el = await fixture(
+    const el = await fixture<LyraDocumentViewer>(
       html`<lr-document-viewer
         open
         name="unknown.bin"
@@ -830,7 +840,7 @@ describe("anchor/highlights/alt widening", () => {
       capabilities: { anchors: ["page"] },
       render: () => html`<div>stub</div>`,
     });
-    const el = await fixture(
+    const el = await fixture<LyraDocumentViewer>(
       html`<lr-document-viewer
         open
         name="report.pdf"
@@ -873,7 +883,7 @@ describe("anchor/highlights/alt widening", () => {
     registerDocumentRenderer("application/pdf", {
       render: (file) => html`<div>${file.name}</div>`,
     });
-    const el = await fixture(
+    const el = await fixture<LyraDocumentViewer>(
       html`<lr-document-viewer
         open
         name="report.pdf"

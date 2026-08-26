@@ -6,6 +6,7 @@
 - **Class** `LyraVideoPlaylist`, also available unregistered from `@aceshooting/lyra-ui/components/media/video-playlist/video-playlist.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecated part** `base` since `8.0.0`; use part `::part(video-playlist)`; removal not before `10.0.0` — The video-playlist part identifies the root component explicitly; base remains on the same root node for migration compatibility. That version is a policy floor, not a plan: `wa-video-playlist` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is.
 - **Optional peers** `dompurify` — see `llms/peers.md`
 - **Themeable via** 7 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -44,11 +45,12 @@ convenience; every enabled row is independently reachable through ordinary seque
 **Events:** internal `focus`/`blur` from a playlist row are relayed exactly once as owner-realm
 native `FocusEvent`s (bubbling and composed, preserving `relatedTarget`).
 `lr-video-change` is bubbling and composed but non-cancelable, with exact
-detail `{ previousIndex, currentIndex, video }`. `video` is a fresh detached, mutable plain-data snapshot with
+detail `{ previousIndex, currentIndex, video }`. `video` is a fresh detached, recursively frozen plain-data snapshot with
 exact shape `{ title, poster, sources, tracks }`, not the live child element. `sources` contains
 fresh `{ src, type, media }` records for the child's direct `src` and `<source>` declarations;
-`tracks` contains fresh `{ src, kind, srclang, label, default }` records. A listener may annotate or
-reshape its own event payload, but that mutation cannot alter a child or any later event snapshot.
+`tracks` contains fresh `{ src, kind, srclang, label, default }` records. A listener that needs to
+annotate or reshape the payload must create its own mutable copy; the dispatched detail and every
+nested record/array reject mutation.
 
 **Slot:** the default slot accepts direct `<lr-video>` children. Nested videos and other elements
 are not playlist items.

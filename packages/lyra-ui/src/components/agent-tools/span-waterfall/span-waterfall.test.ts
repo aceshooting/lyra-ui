@@ -16,9 +16,13 @@ const motionMatchMedia = (matches: boolean): typeof window.matchMedia =>
     ({
       matches,
       media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
       addEventListener: () => {},
       removeEventListener: () => {},
-    }) as MediaQueryList) as typeof window.matchMedia;
+      dispatchEvent: () => true,
+    }) satisfies MediaQueryList);
 
 describe('lr-span-waterfall', () => {
   it('renders one row per span in start order, regardless of hierarchy', async () => {
@@ -193,8 +197,8 @@ describe('lr-span-waterfall', () => {
     expect(bars.length).to.be.greaterThan(0);
     for (const bar of bars) {
       const rect = bar.getBoundingClientRect();
-      expect(rect.width, `${bar.dataset.id ?? ''} width`).to.be.at.least(24);
-      expect(rect.height, `${bar.dataset.id ?? ''} height`).to.be.at.least(24);
+      expect(rect.width, `${bar.dataset['id'] ?? ''} width`).to.be.at.least(24);
+      expect(rect.height, `${bar.dataset['id'] ?? ''} height`).to.be.at.least(24);
     }
   });
 
@@ -333,6 +337,31 @@ describe('lr-span-waterfall', () => {
     const el = (await fixture(html`<lr-span-waterfall .spans=${SPANS}></lr-span-waterfall>`)) as LyraSpanWaterfall;
     await el.updateComplete;
     await expect(el).to.be.accessible();
+  });
+
+  it('keeps the truncation note outside the owned role=list children and passes axe when populated past the limit', async () => {
+    const spans: LyraSpan[] = Array.from({ length: 501 }, (_, index) => ({
+      id: `span-${index}`,
+      name: `Span ${index}`,
+      kind: 'tool',
+      startMs: index,
+      endMs: index + 1,
+      status: 'success',
+    }));
+    const el = await fixture<LyraSpanWaterfall>(html`
+      <lr-span-waterfall .spans=${spans}></lr-span-waterfall>
+    `);
+    const list = el.shadowRoot!.querySelector('[role="list"]')!;
+    const limit = el.shadowRoot!.querySelector('[part="limit"]')!;
+    expect(limit.parentElement === list).to.equal(false);
+    await expect(el).to.be.accessible();
+  });
+
+  it('honors a programmatic accessibleLabel binding on the owned list', async () => {
+    const el = await fixture<LyraSpanWaterfall>(html`
+      <lr-span-waterfall .accessibleLabel=${'Deployment trace'}></lr-span-waterfall>
+    `);
+    expect(el.shadowRoot!.querySelector('[role="list"]')!.getAttribute('aria-label')).to.equal('Deployment trace');
   });
 
   describe('--lr-span-waterfall-row-active-bg', () => {

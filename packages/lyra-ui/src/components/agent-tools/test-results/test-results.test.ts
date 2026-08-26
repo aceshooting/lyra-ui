@@ -285,11 +285,11 @@ describe('lr-test-results', () => {
 
     const toggles = [...el.shadowRoot!.querySelectorAll('[part="test-expand-toggle"]')] as HTMLButtonElement[];
     expect(toggles.length).to.equal(2);
-    expect(toggles[0].getAttribute('aria-expanded'), 't0 has no manual override and should auto-expand').to.equal(
+    expect(toggles[0]!.getAttribute('aria-expanded'), 't0 has no manual override and should auto-expand').to.equal(
       'true',
     );
     expect(
-      toggles[1].getAttribute('aria-expanded'),
+      toggles[1]!.getAttribute('aria-expanded'),
       "t1's manual collapse must follow test.id, not its now-shifted position",
     ).to.equal('false');
   });
@@ -701,7 +701,7 @@ describe('lr-test-results', () => {
   });
 
   it('keeps complete status counts while reserving a failed result beyond the 1,000-row boundary', async () => {
-    const tests: TestSuiteResult['tests'] = Array.from({ length: 1_001 }, (_, index) => ({
+    const tests: Array<TestSuiteResult['tests'][number]> = Array.from({ length: 1_001 }, (_, index) => ({
       id: `passed-${index}`,
       name: `passed ${index}`,
       status: 'passed' as const,
@@ -766,7 +766,7 @@ describe('lr-test-results', () => {
     await el.updateComplete;
     const failure = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="failure"]')[1]!;
     const slot = failure.querySelector(`slot[name="${slotName}"]`) as HTMLSlotElement;
-    expect(slot.assignedElements()[0].textContent).to.equal('rich diff here');
+    expect(slot.assignedElements()[0]?.textContent).to.equal('rich diff here');
     expect(failure.querySelector('[part="failure-message"]')!.compareDocumentPosition(slot)
       & Node.DOCUMENT_POSITION_FOLLOWING).to.be.greaterThan(0);
   });
@@ -842,6 +842,30 @@ describe('lr-test-results', () => {
       const el = await pressedFixture();
       await expect(el).to.be.accessible();
     });
+  });
+
+  it('lets the component-scoped spinner-size token reach the composed running indicator', async () => {
+    const runningSuites: TestSuiteResult[] = [
+      {
+        id: 'suite',
+        name: 'Suite',
+        tests: [{ id: 'running', name: 'still running', status: 'running' }],
+      },
+    ];
+    const el = await fixture<LyraTestResults>(html`
+      <lr-test-results
+        style="--lr-test-results-spinner-size: 29px"
+        .suites=${runningSuites}
+      ></lr-test-results>
+    `);
+    const spinner = el.shadowRoot!.querySelector('lr-spinner')!;
+    await (spinner as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    const indicator = spinner.shadowRoot!.querySelector<HTMLElement>(
+      '[part~="spinner-indicator"]'
+    )!;
+
+    expect(getComputedStyle(indicator).inlineSize).to.equal('29px');
+    expect(getComputedStyle(indicator).blockSize).to.equal('29px');
   });
 
   it('exposes component-scoped state colors for counts, row statuses, and failure messages', async () => {

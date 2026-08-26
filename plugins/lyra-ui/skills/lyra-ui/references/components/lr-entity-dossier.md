@@ -6,6 +6,7 @@
 - **Class** `LyraEntityDossier`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/entity-dossier/entity-dossier.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below

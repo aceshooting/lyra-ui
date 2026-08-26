@@ -155,6 +155,73 @@ it('sizes the heaviest word larger than the lightest', async () => {
   expect(Number(alpha.getAttribute('font-size'))).to.be.greaterThan(Number(gamma.getAttribute('font-size')));
 });
 
+it('uses an explicit weight domain so comparable clouds share one input scale', async () => {
+  const sharedDomain: [number, number] = [0, 200];
+  const first = await fixture<LyraWordCloud>(html`
+    <lr-word-cloud
+      min-font-size="10"
+      max-font-size="40"
+      .domain=${sharedDomain}
+      .words=${[
+        { text: 'low-a', weight: 0 },
+        { text: 'shared-a', weight: 50 },
+        { text: 'high-a', weight: 100 },
+      ]}
+    ></lr-word-cloud>
+  `);
+  const second = await fixture<LyraWordCloud>(html`
+    <lr-word-cloud
+      min-font-size="10"
+      max-font-size="40"
+      .domain=${sharedDomain}
+      .words=${[
+        { text: 'low-b', weight: 0 },
+        { text: 'shared-b', weight: 50 },
+        { text: 'high-b', weight: 200 },
+      ]}
+    ></lr-word-cloud>
+  `);
+  const fontSize = (el: LyraWordCloud, text: string): number =>
+    Number(
+      Array.from(el.shadowRoot!.querySelectorAll('[part="word"]')).find(
+        (node) => node.textContent === text,
+      )!.getAttribute('font-size'),
+    );
+
+  expect(fontSize(first, 'shared-a')).to.equal(fontSize(second, 'shared-b'));
+});
+
+it('leaves the weight domain unset by default and keeps data-derived scaling', async () => {
+  const el = await fixture<LyraWordCloud>(html`
+    <lr-word-cloud
+      min-font-size="10"
+      max-font-size="40"
+      .words=${[
+        { text: 'low', weight: 0 },
+        { text: 'middle', weight: 50 },
+        { text: 'high', weight: 100 },
+      ]}
+    ></lr-word-cloud>
+  `);
+  const middleSize = (): number =>
+    Number(
+      Array.from(el.shadowRoot!.querySelectorAll('[part="word"]')).find(
+        (node) => node.textContent === 'middle',
+      )!.getAttribute('font-size'),
+    );
+
+  expect(el.domain).to.equal(undefined);
+  expect(middleSize()).to.equal(25);
+
+  el.domain = [0, 200];
+  await el.updateComplete;
+  expect(middleSize()).to.equal(17.5);
+
+  el.domain = undefined;
+  await el.updateComplete;
+  expect(middleSize(), 'unsetting the opt-in restores data-derived scaling').to.equal(25);
+});
+
 it('reads the font-family/font-weight tokens once per relayout, not once per word', async () => {
   const el = (await fixture(html`
     <lr-word-cloud
@@ -291,7 +358,7 @@ it('puts the composite role and generated word count on the focusable SVG only',
   expect(svgEl(el).getAttribute('aria-label')).to.equal('Word cloud of 3 words');
 });
 
-it('keeps author host semantics on the host without copying the same name to the SVG', async () => {
+it('forwards an authored host aria-label to the focusable SVG semantic owner', async () => {
   const el = (await fixture(
     html`<lr-word-cloud role="img" aria-label="Custom" .words=${WORDS}></lr-word-cloud>`
   )) as LyraWordCloud;
@@ -299,34 +366,48 @@ it('keeps author host semantics on the host without copying the same name to the
   expect(el.getAttribute('role')).to.equal('img');
   expect(el.getAttribute('aria-label')).to.equal('Custom');
   expect(svgEl(el).getAttribute('role')).to.equal('application');
-  expect(svgEl(el).getAttribute('aria-label')).to.equal('Word cloud of 3 words');
+  expect(svgEl(el).getAttribute('aria-label')).to.equal('Custom');
 
   el.words = [{ text: 'fresh', weight: 1 }];
   await el.updateComplete;
   expect(el.getAttribute('role')).to.equal('img');
   expect(el.getAttribute('aria-label')).to.equal('Custom');
-  expect(svgEl(el).getAttribute('aria-label')).to.equal('Word cloud of 1 word');
+  expect(svgEl(el).getAttribute('aria-label')).to.equal('Custom');
+  await expect(el).to.be.accessible();
 });
 
-it('honors late host role/aria-label changes while SVG ownership stays generated and distinct', async () => {
-  const el = (await fixture(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`)) as LyraWordCloud;
+it('uses host aria-label presence, including empty, and restores the localized generated name on removal', async () => {
+  const el = (await fixture(html`
+    <lr-word-cloud
+      .strings=${{
+        wordCloud: 'Nuage de {count} {word}',
+        wordCloudWord: 'mot',
+        wordCloudWords: 'mots',
+      }}
+      .words=${WORDS}
+    ></lr-word-cloud>
+  `)) as LyraWordCloud;
   await el.updateComplete;
+  expect(svgEl(el).getAttribute('aria-label')).to.equal('Nuage de 3 mots');
 
-  el.setAttribute('role', 'application');
   el.setAttribute('aria-label', 'Late custom');
   await el.updateComplete;
-  el.words = [{ text: 'fresh', weight: 1 }];
-  await el.updateComplete;
-  expect(el.getAttribute('role')).to.equal('application');
   expect(el.getAttribute('aria-label')).to.equal('Late custom');
+  expect(svgEl(el).getAttribute('aria-label')).to.equal('Late custom');
 
-  el.removeAttribute('role');
+  el.setAttribute('aria-label', 'Changed custom');
+  await el.updateComplete;
+  expect(svgEl(el).getAttribute('aria-label')).to.equal('Changed custom');
+
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(svgEl(el).getAttribute('aria-label')).to.equal('');
+
   el.removeAttribute('aria-label');
   await el.updateComplete;
-  expect(el.getAttribute('role')).to.be.null;
   expect(el.getAttribute('aria-label')).to.be.null;
   expect(svgEl(el).getAttribute('role')).to.equal('application');
-  expect(svgEl(el).getAttribute('aria-label')).to.equal('Word cloud of 1 word');
+  expect(svgEl(el).getAttribute('aria-label')).to.equal('Nuage de 3 mots');
 });
 
 it('singularizes the aria-label for exactly one word', async () => {
@@ -996,6 +1077,32 @@ it('marks the pointer-hovered word via data-hovered, and clears it on pointerlea
   svgEl(el).dispatchEvent(new PointerEvent('pointerleave', { pointerId: 1, bubbles: true, composed: true }));
   await el.updateComplete;
   expect(betaNode.hasAttribute('data-hovered')).to.be.false;
+});
+
+it('clears pointer hover when a relayout replaces the words under a stationary pointer', async () => {
+  const el = await fixture<LyraWordCloud>(html`
+    <lr-word-cloud
+      style="inline-size: 320px; block-size: 192px"
+      .words=${WORDS}
+    ></lr-word-cloud>
+  `);
+  const point = wordClientPoint(el, 'beta');
+  svgEl(el).dispatchEvent(
+    new PointerEvent('pointermove', { ...point, pointerId: 1, bubbles: true, composed: true }),
+  );
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="word"][data-hovered]')?.textContent).to.equal('beta');
+
+  el.words = [
+    { text: 'replacement-zero', weight: 10 },
+    { text: 'replacement-one', weight: 5 },
+  ];
+  await el.updateComplete;
+
+  expect(
+    el.shadowRoot!.querySelector('[part="word"][data-hovered]') == null,
+    'the replacement at the same original index must not inherit stale hover',
+  ).to.be.true;
 });
 
 it('ignores a non-navigation key without moving the keyboard cursor', async () => {

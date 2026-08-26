@@ -3,6 +3,19 @@ import './tree.js';
 import type { LyraTree } from './tree.js';
 import type { LyraTreeItem } from './tree-item.js';
 
+interface TreeTestAccess {
+  activeId: string | null;
+}
+
+function required<T>(value: T | null | undefined, context: string): T {
+  if (value == null) throw new Error(`Missing ${context}`);
+  return value;
+}
+
+function access(tree: LyraTree): TreeTestAccess {
+  return tree as unknown as TreeTestAccess;
+}
+
 it("survives keyboard navigation over slotted tree-items that carry no item", async () => {
   // `<lr-tree>`'s documented slot takes `<lr-tree-item>` elements, and `item` is `attribute: false`
   // -- so any consumer writing the tree declaratively in HTML necessarily gets nodes whose `item`
@@ -156,7 +169,7 @@ describe('tree declarative child model', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     await el.updateComplete;
     tops = [...el.querySelectorAll(':scope > lr-tree-item')] as LyraTreeItem[];
-    expect(tops.map((node) => node.item.id)).to.eql(['from-data']);
+    expect(tops.map((node) => node.item?.id)).to.eql(['from-data']);
   });
 
   it('re-homes the roving tabindex when the active slotted item is removed', async () => {
@@ -216,7 +229,10 @@ describe('tree declarative child model', () => {
     `)) as LyraTree;
     await el.updateComplete;
     const guides = el.querySelector('lr-tree-item') as LyraTreeItem;
-    const [install] = [...guides.querySelectorAll(':scope > lr-tree-item')] as LyraTreeItem[];
+    const install = required(
+      guides.querySelector<LyraTreeItem>(':scope > lr-tree-item'),
+      'nested install tree item',
+    );
     install.focus();
     install.select();
     await el.updateComplete;
@@ -373,12 +389,13 @@ describe('tree declarative child model', () => {
       </lr-tree>
     `)) as LyraTree;
     await el.updateComplete;
-    el.activeId = 'does-not-exist';
+    const internals = access(el);
+    internals.activeId = 'does-not-exist';
     await el.updateComplete;
 
     await el.collapseAll();
     await el.updateComplete;
     const alpha = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
-    expect(el.activeId).to.equal(alpha.nodeId);
+    expect(internals.activeId).to.equal(alpha.nodeId);
   });
 });

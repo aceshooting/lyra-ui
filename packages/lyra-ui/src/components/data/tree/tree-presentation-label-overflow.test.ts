@@ -1,21 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './tree.js';
-import type { LyraTree } from './tree.js';
 import type { LyraTreeItem } from './tree-item.js';
 import { configureTreeItemOwner, treeItemOwnerContext } from './tree-owner-controller.js';
-
-const data = [
-  {
-    id: '1',
-    label: 'Root',
-    badges: [{ text: '2' }],
-    children: [
-      { id: '1.1', label: 'Child A' },
-      { id: '1.2', label: 'Child B' },
-    ],
-  },
-  { id: '2', label: 'Leaf' },
-];
 
 it('truncates a long label instead of overflowing, and caps indentation at depth', async () => {
   const item = { id: 'deep', label: 'A very long label '.repeat(20) };

@@ -10,6 +10,7 @@ import type { LyraInput } from '../../forms/input/input.class.js';
 import type { LyraDateInput } from '../../forms/date-picker/date-input.class.js';
 import { styles } from './condition-builder.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { finiteNumber } from '../../../internal/numbers.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_queryBuilderAddCondition, LYRA_DEFAULT_queryBuilderBooleanFalse, LYRA_DEFAULT_queryBuilderBooleanTrue, LYRA_DEFAULT_queryBuilderCombinatorAnd, LYRA_DEFAULT_queryBuilderCombinatorLabel, LYRA_DEFAULT_queryBuilderCombinatorOr, LYRA_DEFAULT_queryBuilderEmpty, LYRA_DEFAULT_queryBuilderFieldLabel, LYRA_DEFAULT_queryBuilderFieldPlaceholder, LYRA_DEFAULT_queryBuilderLabel, LYRA_DEFAULT_queryBuilderNoFields, LYRA_DEFAULT_queryBuilderOperatorAfter, LYRA_DEFAULT_queryBuilderOperatorBefore, LYRA_DEFAULT_queryBuilderOperatorContains, LYRA_DEFAULT_queryBuilderOperatorEndsWith, LYRA_DEFAULT_queryBuilderOperatorEquals, LYRA_DEFAULT_queryBuilderOperatorGreaterThan, LYRA_DEFAULT_queryBuilderOperatorGreaterThanOrEqual, LYRA_DEFAULT_queryBuilderOperatorIn, LYRA_DEFAULT_queryBuilderOperatorIsEmpty, LYRA_DEFAULT_queryBuilderOperatorIsNotEmpty, LYRA_DEFAULT_queryBuilderOperatorLabel, LYRA_DEFAULT_queryBuilderOperatorLessThan, LYRA_DEFAULT_queryBuilderOperatorLessThanOrEqual, LYRA_DEFAULT_queryBuilderOperatorNotEquals, LYRA_DEFAULT_queryBuilderOperatorNotIn, LYRA_DEFAULT_queryBuilderOperatorOnOrAfter, LYRA_DEFAULT_queryBuilderOperatorOnOrBefore, LYRA_DEFAULT_queryBuilderOperatorPlaceholder, LYRA_DEFAULT_queryBuilderOperatorStartsWith, LYRA_DEFAULT_queryBuilderRemoveCondition, LYRA_DEFAULT_queryBuilderValueLabel, LYRA_DEFAULT_queryBuilderValuePlaceholder } from '../../../internal/default-strings.generated.js';
@@ -71,12 +72,21 @@ export interface ConditionBuilderField {
   readonly operators?: readonly ConditionBuilderOperator[];
   /** Forwarded to the rendered `lr-input` for a `string`-typed field's value cell. */
   readonly placeholder?: string;
+  /** Inclusive lower constraint. A finite number is forwarded by `type: 'number'`; a bounded date
+   * string is forwarded by `type: 'date'`. Other field types ignore it. */
+  readonly min?: number | string;
+  /** Inclusive upper constraint, with the same number/date type-dependent forwarding as `min`. */
+  readonly max?: number | string;
+  /** Positive finite step forwarded to the numeric `lr-input`; ignored by every other field type. */
+  readonly step?: number;
 }
 
 /** A single field/operator/value row. `field`/`operator` are `''` until the user has picked
  *  one — an incomplete row is a normal, valid intermediate state, not an error. `value` is
  *  `undefined` for a unary operator (`isEmpty`/`isNotEmpty`), a `string[]` for `in`/`notIn`,
- *  and a `string | number | boolean` otherwise, matching the selected field's `type`. */
+ *  and a `string | number | boolean` otherwise, matching the selected field's `type`. Those are
+ *  the valid authored shapes; incompatible controlled payloads are retained and reported through
+ *  `validationIssues` rather than silently rewritten. */
 export interface ConditionBuilderCondition {
   readonly id: string;
   readonly field: string;
@@ -86,13 +96,28 @@ export interface ConditionBuilderCondition {
 
 export type ConditionBuilderCombinator = 'and' | 'or';
 
-/** The whole builder's serializable state: a flat list of conditions combined with one
- *  top-level `combinator` — plain data, safe to persist, restore, or send to a backend as-is.
- *  This library's `lr-filter-bar` (a sibling orchestration component) follows the same
- *  controlled-plain-object-`value` shape for its own filter state. */
+/** The whole builder's plain-data state: a flat list of conditions combined with one top-level
+ *  `combinator`. It can be persisted and restored without the component repairing operator/value
+ *  disagreements; call `checkValidity()` before sending a restored model to a backend. This
+ *  library's `lr-filter-bar` follows the same controlled-plain-object-`value` shape. */
 export interface ConditionBuilderValue {
   readonly combinator: ConditionBuilderCombinator;
   readonly conditions: readonly ConditionBuilderCondition[];
+}
+
+/** Why one controlled condition is inconsistent with the current field metadata. Controlled
+ * values remain unchanged; these codes let a host decide whether and how to repair persisted data. */
+export type ConditionBuilderValidationIssueCode =
+  | 'field-unavailable'
+  | 'operator-not-allowed'
+  | 'operator-arity'
+  | 'value-type';
+
+/** One live validation result for a retained condition. At most one issue is reported per row,
+ * ordered by field, operator, arity, then value type so repairing it reveals the next boundary. */
+export interface ConditionBuilderValidationIssue {
+  readonly conditionId: string;
+  readonly code: ConditionBuilderValidationIssueCode;
 }
 
 export interface LyraConditionBuilderEventMap {
@@ -167,6 +192,12 @@ function boundedString(value: unknown): string {
   return typeof value === 'string' ? value.slice(0, MAX_TEXT) : '';
 }
 
+function optionalFiniteNumber(value: unknown, positive = false): number | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  const normalized = finiteNumber(value, 0);
+  return !positive || normalized > 0 ? normalized : undefined;
+}
+
 function normalizeOptions(value: unknown): readonly ConditionBuilderFieldOption[] {
   if (!Array.isArray(value)) return EMPTY_OPTIONS;
   const seen = new Set<string>();
@@ -204,6 +235,17 @@ function normalizeFields(value: unknown): readonly ConditionBuilderField[] {
     const placeholder = boundedString(ownValue(candidate, 'placeholder'));
     const options = normalizeOptions(ownValue(candidate, 'options'));
     const operators = normalizeOperators(ownValue(candidate, 'operators'));
+    const min = type === 'number'
+      ? optionalFiniteNumber(ownValue(candidate, 'min'))
+      : type === 'date'
+        ? boundedString(ownValue(candidate, 'min')) || undefined
+        : undefined;
+    const max = type === 'number'
+      ? optionalFiniteNumber(ownValue(candidate, 'max'))
+      : type === 'date'
+        ? boundedString(ownValue(candidate, 'max')) || undefined
+        : undefined;
+    const step = type === 'number' ? optionalFiniteNumber(ownValue(candidate, 'step'), true) : undefined;
     result.push(Object.freeze({
       name,
       type: type as ConditionBuilderFieldType,
@@ -211,6 +253,9 @@ function normalizeFields(value: unknown): readonly ConditionBuilderField[] {
       ...(placeholder ? { placeholder } : {}),
       ...(options.length > 0 ? { options } : {}),
       ...(operators ? { operators } : {}),
+      ...(min !== undefined ? { min } : {}),
+      ...(max !== undefined ? { max } : {}),
+      ...(step !== undefined ? { step } : {}),
     }));
   }
   return Object.freeze(result);
@@ -218,7 +263,7 @@ function normalizeFields(value: unknown): readonly ConditionBuilderField[] {
 
 function normalizeConditionValue(value: unknown): ConditionBuilderCondition['value'] {
   if (typeof value === 'string' || typeof value === 'boolean') return value;
-  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+  if (typeof value === 'number') return value;
   if (!Array.isArray(value)) return undefined;
   return Object.freeze(value
     .slice(0, MAX_OPTIONS)
@@ -226,7 +271,7 @@ function normalizeConditionValue(value: unknown): ConditionBuilderCondition['val
     .map((entry) => boundedString(entry)));
 }
 
-function normalizeConditionBuilderValue(value: unknown, fields: readonly ConditionBuilderField[]): ConditionBuilderValue {
+function normalizeConditionBuilderValue(value: unknown): ConditionBuilderValue {
   const record = value !== null && typeof value === 'object' && !Array.isArray(value) ? value : EMPTY_VALUE;
   const combinator = ownValue(record, 'combinator') === 'or' ? 'or' : 'and';
   const source = ownValue(record, 'conditions');
@@ -243,9 +288,7 @@ function normalizeConditionBuilderValue(value: unknown, fields: readonly Conditi
       const operator = rawOperator === '' || OPERATORS.has(rawOperator as ConditionBuilderOperator)
         ? rawOperator as ConditionBuilderOperator | ''
         : '';
-      let normalizedValue = normalizeConditionValue(ownValue(candidate, 'value'));
-      const fieldType = fields.find((entry) => entry.name === field)?.type;
-      if (fieldType === 'number' && typeof normalizedValue !== 'number') normalizedValue = undefined;
+      const normalizedValue = normalizeConditionValue(ownValue(candidate, 'value'));
       conditions.push(Object.freeze({
         id,
         field,
@@ -266,21 +309,22 @@ function normalizeConditionBuilderValue(value: unknown, fields: readonly Conditi
  * one's flat tabular field/operator/value conditions — they never share a file or a value type.
  *
  * A host supplies `fields` (the available columns, each with a `ConditionBuilderFieldType` that
- * determines its offered operators and value control) and `value` (a plain, serializable
- * `{ combinator, conditions }` object — safe to persist or send to a backend as-is, the same shape
- * convention as this package's `<lr-rubric-form>`/`<lr-filter-bar>`).
+ * determines its offered operators and value control) and `value` (a plain
+ * `{ combinator, conditions }` object whose valid snapshots can be persisted or sent to a backend,
+ * using the same shape convention as this package's `<lr-rubric-form>`/`<lr-filter-bar>`).
  * This component never mutates `fields`/`value` in place — inputs are clone-owned — and never calls
  * out to storage/network itself. It does advance its own copy of `value` on each edit and *then*
  * emits `lr-input` with the complete next state: the same "update, then emit; reassign to control"
  * round-trip `<lr-source-picker>`'s `selectedSourceIds` and `<lr-retrieval-search>`'s `filters`
  * establish. `lr-input` is not cancelable, so a host validating an edit reassigns `value` in its
- * handler rather than vetoing the change before it renders. A non-finite value on a
- * field declared as `number` normalizes to `undefined`, whether it arrives through the controlled
- * model, later field metadata, or an overflowing user-input string, so JSON never turns it into
- * an unrelated `null` condition.
+ * handler rather than vetoing the change before it renders. Controlled condition payloads are
+ * preserved when field metadata is absent, changes, or disagrees with an operator/value shape —
+ * persisted data is never silently repaired. `validationIssues`, `invalidConditionIds`,
+ * `checkValidity()`, and `reportValidity()` expose those disagreements instead. User-entered
+ * numeric text is still parsed at the control boundary, where a non-finite result becomes unset.
  * Inputs are clone-owned, bounded readonly snapshots; blank field names, option values, and
- * condition ids are omitted, duplicates use their first valid record, closed vocabulary values normalize to a safe fallback, and all event
- * details are frozen.
+ * condition ids are omitted, duplicates use their first valid record, unknown closed-vocabulary
+ * values normalize to a safe fallback, and all event details are frozen.
  *
  * **9.0 migration:** this original component was renamed from `<lr-query-builder>` /
  * `LyraQueryBuilder` / `QueryBuilder*` to the condition-specific names above. No legacy tag, class,
@@ -290,14 +334,17 @@ function normalizeConditionBuilderValue(value: unknown, fields: readonly Conditi
  * from the selected field's `type`: `<lr-input type="text">` (`string`), `<lr-input
  * type="number">` (`number`), `<lr-select>` with `True`/`False` options (`boolean`),
  * `<lr-date-input>` (`date`), `<lr-select>` (`enum`, `eq`/`neq`) or a multi-select
- * `<lr-combobox>` (`enum`, `in`/`notIn`). A unary operator (`isEmpty`/`isNotEmpty`) renders no
- * value control. `<lr-icon-button icon="trash">` removes a row; `<lr-button>` appends one.
+ * `<lr-combobox>` (`enum`, `in`/`notIn`). Date fields forward bounded `min`/`max` strings to
+ * `<lr-date-input>`; number fields forward finite `min`/`max` and positive finite `step` values to
+ * `<lr-input>`. A unary operator (`isEmpty`/`isNotEmpty`) renders no value control.
+ * `<lr-icon-button icon="trash">` removes a row; `<lr-button>` appends one.
  *
  * This is a composite query-definition control, not a single submittable form field — it
  * deliberately ships no `label`/`hint`/`errorText` chrome or native form association (the
  * `label`/`hint`/`error` triad those controls share doesn't fit a multi-row, multi-field
  * composite the way it fits one value). A host names the whole control via a plain `aria-label`
- * attribute, applied to the element that owns `role="group"`.
+ * attribute, applied to the element that owns `role="group"`. The group and each condition expose
+ * explicit `aria-invalid="true"|"false"` from the live validation result.
  *
  * @customElement lr-condition-builder
  * @event lr-input - `detail: { value }` — the full current value, after any user-driven change.
@@ -378,8 +425,8 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
   // doesn't silently drop focus to the document body.
   private pendingFocusAdd = false;
 
-  /** Frozen snapshot of at most 200 fields, 500 options/operators per field, and bounded strings.
-   * Reassign after changing it. */
+  /** Frozen snapshot of at most 200 fields, 500 options/operators per field, bounded strings, and
+   * finite type-specific number constraints. Reassign after changing it. */
   get fields(): readonly ConditionBuilderField[] {
     return this._fields;
   }
@@ -387,22 +434,20 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
     const old = this._fields;
     this._fields = normalizeFields(next);
     this.requestUpdate('fields', old);
-    const previousValue = this._value;
-    this._value = normalizeConditionBuilderValue(this._value, this._fields);
-    if (this._value !== previousValue) this.requestUpdate('value', previousValue);
   }
 
   /** The current query: one combinator plus a flat list of conditions. Controlled — assigning
    *  this directly never emits `lr-input` (that only fires for a user-driven change); see the
    *  class doc's form-association note for why this stays a plain property, not a form value.
-   *  Non-finite values for fields declared as `number` normalize to `undefined`. Assignment freezes
-   *  at most 200 conditions and 500 entries in each array-valued condition; reassign to update. */
+   *  Assignment preserves retained operator/value payloads even when they disagree with the current
+   *  field metadata; inspect `validationIssues` rather than expecting silent repair. It freezes at
+   *  most 200 conditions and 500 entries in each array-valued condition; reassign to update. */
   get value(): ConditionBuilderValue {
     return this._value;
   }
   set value(next: ConditionBuilderValue) {
     const old = this._value;
-    this._value = normalizeConditionBuilderValue(next, this._fields);
+    this._value = normalizeConditionBuilderValue(next);
     this.requestUpdate('value', old);
   }
 
@@ -419,6 +464,76 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
   private operatorsFor(field: ConditionBuilderField | undefined): readonly ConditionBuilderOperator[] {
     if (!field) return [];
     return field.operators && field.operators.length > 0 ? field.operators : defaultOperatorsForType(field.type);
+  }
+
+  private validationIssueFor(condition: ConditionBuilderCondition): ConditionBuilderValidationIssueCode | undefined {
+    if (condition.field === '' && condition.operator === '' && condition.value === undefined) return undefined;
+    const field = this._fields.find((candidate) => candidate.name === condition.field);
+    if (!field) return 'field-unavailable';
+    if (condition.operator === '') return condition.value === undefined ? undefined : 'operator-arity';
+    if (!this.operatorsFor(field).includes(condition.operator)) return 'operator-not-allowed';
+
+    if (isUnaryOperator(condition.operator)) {
+      return condition.value === undefined ? undefined : 'operator-arity';
+    }
+    if (isMultiOperator(condition.operator)) {
+      return Array.isArray(condition.value) ? undefined : 'operator-arity';
+    }
+    if (Array.isArray(condition.value)) return 'operator-arity';
+    if (condition.value === undefined) return undefined;
+
+    switch (field.type) {
+      case 'number':
+        return typeof condition.value === 'number' && Number.isFinite(condition.value)
+          ? undefined
+          : 'value-type';
+      case 'boolean':
+        return typeof condition.value === 'boolean' ? undefined : 'value-type';
+      case 'string':
+      case 'date':
+      case 'enum':
+        return typeof condition.value === 'string' ? undefined : 'value-type';
+    }
+  }
+
+  /** Live, frozen validation results for controlled conditions that disagree with the current
+   * field/operator/arity/type vocabulary. Reading this never mutates `value`. */
+  get validationIssues(): readonly ConditionBuilderValidationIssue[] {
+    const issues: ConditionBuilderValidationIssue[] = [];
+    for (const condition of this._value.conditions) {
+      const code = this.validationIssueFor(condition);
+      if (code) issues.push(Object.freeze({ conditionId: condition.id, code }));
+    }
+    return Object.freeze(issues);
+  }
+
+  /** Condition ids currently represented in `validationIssues`, in model order. */
+  get invalidConditionIds(): readonly string[] {
+    return Object.freeze(this.validationIssues.map((issue) => issue.conditionId));
+  }
+
+  /** Whether every retained controlled condition agrees with the current field metadata. */
+  checkValidity(): boolean {
+    return this.validationIssues.length === 0;
+  }
+
+  /** Reports current validity without rewriting controlled data. When invalid, focuses the first
+   * affected field/operator/value control so a caller's Apply action has a useful recovery target. */
+  reportValidity(): boolean {
+    const issue = this.validationIssues[0];
+    if (!issue) return true;
+    const row = this.conditionElement(issue.conditionId);
+    const part = issue.code === 'field-unavailable'
+      ? 'field-select'
+      : issue.code === 'operator-not-allowed'
+        ? 'operator-select'
+        : 'value';
+    let target = row?.querySelector<HTMLElement>(`[part="${part}"]`) ?? null;
+    if (!target || target.matches('span')) {
+      target = row?.querySelector<HTMLElement>('[part="operator-select"]') ?? null;
+    }
+    target?.focus();
+    return false;
   }
 
   private operatorLabel(op: ConditionBuilderOperator, type: ConditionBuilderFieldType | undefined): string {
@@ -624,6 +739,8 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
           size="s"
           aria-label=${valueLabel}
           .value=${current}
+          .min=${typeof field.min === 'string' ? field.min : ''}
+          .max=${typeof field.max === 'string' ? field.max : ''}
           ?disabled=${this.disabled}
           @change=${(event: Event) =>
             this.consumeChildEvent(event, () =>
@@ -660,6 +777,9 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
           size="s"
           aria-label=${valueLabel}
           .value=${current}
+          .min=${typeof field.min === 'number' ? field.min : undefined}
+          .max=${typeof field.max === 'number' ? field.max : undefined}
+          .step=${field.step}
           ?disabled=${this.disabled}
           @lr-input=${(event: Event) =>
             this.consumeChildEvent(event, () => {
@@ -691,11 +811,21 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
     `;
   }
 
-  private renderCondition(condition: ConditionBuilderCondition, index: number): TemplateResult {
+  private renderCondition(
+    condition: ConditionBuilderCondition,
+    index: number,
+    validationCode: ConditionBuilderValidationIssueCode | undefined,
+  ): TemplateResult {
     const field = this._fields.find((f) => f.name === condition.field);
     const operators = this.operatorsFor(field);
     return html`
-      <div part="condition" role="listitem" data-id=${condition.id}>
+      <div
+        part="condition"
+        role="listitem"
+        data-id=${condition.id}
+        data-validation-code=${validationCode ?? nothing}
+        aria-invalid=${validationCode ? 'true' : 'false'}
+      >
         <lr-select
           part="field-select"
           size="s"
@@ -742,15 +872,27 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
   override render(): TemplateResult {
     const hasFields = this._fields.length > 0;
     const value = this._value;
+    const validationIssues = this.validationIssues;
+    const issueById = new Map(validationIssues.map((issue) => [issue.conditionId, issue.code]));
     return html`
-      <div part="base" role="group" aria-label=${hostAriaLabel(this) ?? this.localize('queryBuilderLabel')}>
+      <div
+        part="base"
+        role="group"
+        aria-label=${hostAriaLabel(this) ?? this.localize('queryBuilderLabel')}
+        aria-invalid=${validationIssues.length > 0 ? 'true' : 'false'}
+      >
         ${!hasFields
           ? html`<p part="empty">${this.localize('queryBuilderNoFields')}</p>`
           : html`
               ${value.conditions.length > 1 ? this.renderCombinator(value.combinator) : nothing}
               ${value.conditions.length === 0
                 ? html`<p part="empty">${this.localize('queryBuilderEmpty')}</p>`
-                : html`<div part="conditions" role="list">${value.conditions.map((c, i) => this.renderCondition(c, i))}</div>`}
+                : html`
+                    <div part="conditions" role="list">
+                      ${value.conditions.map((condition, index) =>
+                        this.renderCondition(condition, index, issueById.get(condition.id)))}
+                    </div>
+                  `}
               <lr-button
                 part="add-button"
                 appearance="outlined"

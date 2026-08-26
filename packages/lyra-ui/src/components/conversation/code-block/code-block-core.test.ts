@@ -321,7 +321,7 @@ describe("lr-code-block-core", () => {
 
   it("keeps the current language map busy when an obsolete eager highlighter settles first", async () => {
     const languagesA = { json: jsonGrammar };
-    const languagesB = { json: { ...jsonGrammar } };
+    const languagesB = { json: [...jsonGrammar] };
     let resolveA!: (value: null) => void;
     let resolveB!: (value: null) => void;
     const promiseA = new Promise<null>((resolve) => {
@@ -485,8 +485,8 @@ describe("lr-code-block-core", () => {
     );
     expect(el.languages).not.to.equal(languages);
     expect(Object.isFrozen(el.languages)).to.be.true;
-    expect(el.languages.json).not.to.equal(jsonGrammar);
-    expect(Object.isFrozen(el.languages.json)).to.be.true;
+    expect(el.languages['json']).not.to.equal(jsonGrammar);
+    expect(Object.isFrozen(el.languages['json'])).to.be.true;
     const hl = await loadShikiHighlighterCore(
       el.languages as Record<string, ShikiLanguageInput>
     );
@@ -579,6 +579,28 @@ describe("highlight-lines", () => {
 });
 
 describe("anchor-target (line-range)", () => {
+  it('renders from the first update after malformed highlight collections are assigned', async () => {
+    const malformedCollections: readonly unknown[] = [
+      null,
+      [null],
+      'not-a-collection',
+      [{ id: 'missing-anchor' }],
+    ];
+
+    for (const malformed of malformedCollections) {
+      const el = document.createElement('lr-code-block-core') as LyraCodeBlockCore;
+      el.code = 'const ready = true;';
+      el.highlights = malformed as LyraCodeBlockCore['highlights'];
+      document.body.append(el);
+      try {
+        await el.updateComplete;
+        expect(el.shadowRoot!.querySelectorAll('[part~="pre"]').length).to.equal(1);
+      } finally {
+        el.remove();
+      }
+    }
+  });
+
   it("scrolls to the start line of a line-range anchor", async () => {
     const el = (await fixture(
       html`<lr-code-block-core code=${"a\nb\nc\nd\ne"}></lr-code-block-core>`

@@ -22,7 +22,7 @@ import '../components/utility/icon/icon.js';
  * other element in the suite renders. `pnpm test:hydration` covers the real end-to-end contract by
  * rendering each tag through `@lit-labs/ssr` and hydrating it in Chromium.
  */
-async function mountServerRendered<T extends HTMLElement>(markup: string): Promise<T> {
+async function mountServerRendered<T extends LyraElement = LyraElement>(markup: string): Promise<T> {
   const container = (await fixture(html`<div></div>`)) as HTMLDivElement & {
     setHTMLUnsafe(value: string): void;
   };
@@ -43,7 +43,7 @@ class DemoSeed extends LyraElement {
       this.requestUpdate();
     });
   }
-  render() {
+  override render() {
     this.renders++;
     return litHtml`<span>${this.slotted ? 'slotted' : 'empty'}</span>`;
   }
@@ -194,7 +194,7 @@ it('renders lr-chat-composer without adornment slots first and adopts them after
 });
 
 it('keeps lr-icon custom-content slot outside the svg so it survives HTML parsing', async () => {
-  const el = (await fixture(html`<lr-icon><path d="M0 0h24v24H0z"></path></lr-icon>`)) as HTMLElement;
+  const el = await fixture<LyraElement>(html`<lr-icon><path d="M0 0h24v24H0z"></path></lr-icon>`);
   await el.updateComplete;
 
   const slot = el.shadowRoot?.querySelector('slot');

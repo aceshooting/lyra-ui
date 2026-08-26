@@ -46,7 +46,7 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`<lr-eval-result
-    aria-label="Run comparison"
+    label="Run comparison"
     style="max-width: 48rem"
     .runs=${runs}
     .columns=${columns}
@@ -58,7 +58,7 @@ export const Default: Story = {
  *  supplies the diff's "old" side, so the split diff and the review form stay in sync. */
 export const ComparingAgainstBaseline: Story = {
   render: () => html`<lr-eval-result
-    aria-label="Run comparison"
+    label="Run comparison"
     style="max-width: 48rem"
     .runs=${runs}
     .columns=${columns}
@@ -77,7 +77,7 @@ export const NarrowContainer: Story = {
   render: () =>
     html`<lr-eval-result
       style="max-width: 320px"
-      aria-label="Run comparison"
+      label="Run comparison"
       .runs=${runs}
       .columns=${columns}
       .rubricKeys=${rubricKeys}

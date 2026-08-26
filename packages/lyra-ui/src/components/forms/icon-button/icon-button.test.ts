@@ -6,6 +6,10 @@ import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraIconButton } from './icon-button.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 
+interface WindowWithSvgElement extends Window {
+  SVGElement: typeof SVGElement;
+}
+
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-icon-button', 'type');
 
@@ -38,7 +42,8 @@ it('clones nested bare geometry with the adopted owner document SVG constructors
   const iframe = document.createElement('iframe');
   document.body.append(iframe);
   try {
-    const foreignWindow = iframe.contentWindow!;
+    const foreignWindow = iframe.contentWindow as WindowWithSvgElement | null;
+    if (!foreignWindow) throw new Error('The iframe window was unavailable.');
     const foreignDocument = iframe.contentDocument!;
     foreignDocument.body.append(foreignDocument.adoptNode(el));
     const group = foreignDocument.createElement('g');
@@ -94,14 +99,16 @@ it('keeps the visual glyph independent from the icon button hit target', async (
 
 it('renders exactly one resolved lr-icon and no stray slot wrapper for a named glyph', async () => {
   const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
-  const icons = el.shadowRoot!.querySelectorAll('lr-icon');
+  const icons = el.shadowRoot!.querySelectorAll<HTMLElement & { updateComplete: Promise<unknown> }>('lr-icon');
   expect(icons.length).to.equal(1);
-  expect(icons[0].getAttribute('name')).to.equal('close');
-  await (icons[0] as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
-  expect(icons[0].shadowRoot!.querySelector('path')!.getAttribute('d')).to.equal('m6 6 12 12M18 6 6 18');
+  const icon = icons[0];
+  if (!icon) throw new Error('The resolved icon was not rendered.');
+  expect(icon.getAttribute('name')).to.equal('close');
+  await icon.updateComplete;
+  expect(icon.shadowRoot!.querySelector('path')!.getAttribute('d')).to.equal('m6 6 12 12M18 6 6 18');
   // The glyph is not wrapped around the default slot, so slotted content is a sibling of it.
   // (Assertions stay on counts/strings -- a failed DOM-element `equal` hangs the whole file.)
-  expect(icons[0].querySelectorAll('slot').length).to.equal(0);
+  expect(icon.querySelectorAll('slot').length).to.equal(0);
   expect(el.shadowRoot!.querySelectorAll('slot').length).to.equal(1);
 });
 
@@ -225,7 +232,9 @@ it('still floors slotted content at the tappable target size on both axes', asyn
 });
 
 it('exposes --lr-icon-button-radius, defaulting to the pre-existing literal', async () => {
-  const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
+  const el = await fixture<LyraIconButton>(
+    html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`,
+  );
   const cs = getComputedStyle(el.shadowRoot!.querySelector('button')!);
   expect(cs.borderRadius).to.equal('6px');
 });
@@ -275,7 +284,9 @@ it('forwards host click() to the internal native button, not just a bare host-le
   // HTMLElement.click() already dispatches a bubbling click event on the host with no override at
   // all -- that alone doesn't prove the internal <button part="button"> was actually activated, so
   // this asserts the internal button's own click handler ran instead of the host's generic default.
-  const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
+  const el = await fixture<LyraIconButton>(
+    html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`,
+  );
   let internalClicks = 0;
   el.shadowRoot!.querySelector('button')!.addEventListener('click', () => internalClicks++);
   el.click();
@@ -295,11 +306,32 @@ it('reflects disabled synchronously on assignment, with no await', async () => {
 });
 
 it('never forwards host click() while disabled (native disabled button semantics)', async () => {
-  const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss" disabled></lr-icon-button>`);
+  const el = await fixture<LyraIconButton>(
+    html`<lr-icon-button icon="close" aria-label="Dismiss" disabled></lr-icon-button>`,
+  );
   let calls = 0;
   el.addEventListener('click', () => calls++);
   el.click();
   expect(calls).to.equal(0);
+});
+
+it('paints both native button and anchor modes as disabled', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <lr-icon-button icon="close" label="Dismiss" disabled></lr-icon-button>
+      <lr-icon-button icon="close" label="Open" href="https://example.com" disabled></lr-icon-button>
+    </div>
+  `);
+  const [buttonHost, anchorHost] = [...wrapper.querySelectorAll('lr-icon-button')] as LyraIconButton[];
+  if (!buttonHost || !anchorHost) throw new Error('Both icon-button render modes were not rendered.');
+  const expectedOpacity = getComputedStyle(buttonHost).getPropertyValue('--lr-opacity-disabled').trim();
+  const buttonStyle = getComputedStyle(buttonHost.shadowRoot!.querySelector('button')!);
+  const anchorStyle = getComputedStyle(anchorHost.shadowRoot!.querySelector('a')!);
+
+  expect(buttonStyle.opacity).to.equal(expectedOpacity);
+  expect(buttonStyle.cursor).to.equal('not-allowed');
+  expect(anchorStyle.opacity).to.equal(expectedOpacity);
+  expect(anchorStyle.cursor).to.equal('not-allowed');
 });
 
 it('is a pure icon action/link rather than a partial form submitter', async () => {

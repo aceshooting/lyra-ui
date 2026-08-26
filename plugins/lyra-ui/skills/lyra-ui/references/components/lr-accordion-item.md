@@ -6,6 +6,7 @@
 - **Class** `LyraAccordionItem`, also available unregistered from `@aceshooting/lyra-ui/components/layout/details/accordion-item.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecated part** `base` since `8.2.3`; use part `::part(accordion-item)`; removal not before `10.0.0` — The accordion-item part names the outer wrapper explicitly; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: Web Awesome still publishes its own deprecated `base` part on `wa-accordion-item`, and a mirrored tag owes its whole upstream surface, so this alias is removed only when upstream's is.
 - **Optional peers** none
 - **Themeable via** 8 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below

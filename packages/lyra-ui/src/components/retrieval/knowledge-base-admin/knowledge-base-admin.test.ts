@@ -1,7 +1,6 @@
 import { fixture, expect, html } from "@open-wc/testing";
 import "./knowledge-base-admin.js";
 import type { LyraKnowledgeBaseAdmin } from "./knowledge-base-admin.class.js";
-import { styles } from "./knowledge-base-admin.styles.js";
 
 describe("lr-knowledge-base-admin", () => {
   it("keeps an explicitly empty label distinct from an omitted one", async () => {
@@ -28,11 +27,26 @@ describe("lr-knowledge-base-admin", () => {
     ).to.equal("");
   });
 
-  it("wraps the internal [aria-selected='true'] tab rule in :where() so a consumer ::part(tab) override can win (regression)", () => {
-    const css = styles.cssText.replace(/\s+/g, " ");
-    expect(css).to.match(/\[part='tab'\]:where\(\[aria-selected='true'\]\)/);
-    // The old, over-specific unwrapped shape must be gone, not merely joined by the new one.
-    expect(css).to.not.include("[part='tab'][aria-selected='true']");
+  it("lets a consumer ::part(tab) override win on the rendered selected tab", async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <style>
+          lr-knowledge-base-admin::part(tab) {
+            color: rgb(7, 8, 9);
+            border-block-end-color: rgb(10, 11, 12);
+          }
+        </style>
+        <lr-knowledge-base-admin></lr-knowledge-base-admin>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-knowledge-base-admin") as LyraKnowledgeBaseAdmin;
+    const selected = el.shadowRoot!.querySelector<HTMLElement>(
+      '[part="tab"][aria-selected="true"]'
+    )!;
+    expect(getComputedStyle(selected).color).to.equal("rgb(7, 8, 9)");
+    expect(getComputedStyle(selected).borderBlockEndColor).to.equal(
+      "rgb(10, 11, 12)"
+    );
   });
 
   it("lets a consumer retint the selected tab via scoped cssprops (regression)", async () => {
@@ -367,8 +381,8 @@ describe("lr-knowledge-base-admin", () => {
     const details: Array<{ tab: string }> = [];
     el.addEventListener("lr-tab-change", (event) => details.push(event.detail));
 
-    (el as LyraKnowledgeBaseAdmin & { activeTab: string }).activeTab =
-      "unknown";
+    const runtimeTab = el as unknown as { activeTab: string };
+    runtimeTab.activeTab = "unknown";
     await el.updateComplete;
 
     const tabs = [

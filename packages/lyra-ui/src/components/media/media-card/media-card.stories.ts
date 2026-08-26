@@ -197,7 +197,7 @@ export const DataUriImage: Story = {
 export const InsideAChatMessage: Story = {
   name: 'Inside a rendered chat message',
   render: () => html`
-    <lr-chat-message data-role="assistant" style="max-width: 32rem;">
+    <lr-chat-message message-role="assistant" style="max-width: 32rem;">
       Here's the site photo and the summary report you asked for.
       <lr-media-card
         slot="attachments"
@@ -230,7 +230,7 @@ export const Narrow320ChatAttachments: Story = {
   render: () => html`
     <div style="display: grid; gap: var(--lr-space-l);">
       <div dir="ltr" lang="en" style="inline-size: 320px; max-inline-size: 100%;">
-        <lr-chat-message data-role="assistant">
+        <lr-chat-message message-role="assistant">
           Here is the complete installation report and the walkthrough recording for the rooftop team.
           <lr-media-card
             slot="attachments"
@@ -247,7 +247,7 @@ export const Narrow320ChatAttachments: Story = {
         </lr-chat-message>
       </div>
       <div dir="rtl" lang="ar" style="inline-size: 320px; max-inline-size: 100%;">
-        <lr-chat-message data-role="assistant">
+        <lr-chat-message message-role="assistant">
           إليك تقرير التركيب الكامل وتسجيل الجولة لفريق السطح.
           <lr-media-card
             slot="attachments"

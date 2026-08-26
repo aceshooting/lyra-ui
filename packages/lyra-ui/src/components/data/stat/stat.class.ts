@@ -7,6 +7,7 @@ import { finiteNumber } from '../../../internal/numbers.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraFrame, LyraVariant } from '../../../internal/variants.js';
+import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './stat.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -14,7 +15,7 @@ import { LYRA_DEFAULT_statTrendAnnouncement, LYRA_DEFAULT_statTrendBad, LYRA_DEF
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type StatGoodDirection = 'up' | 'down';
-export type StatOrientation = 'vertical' | 'horizontal';
+export type StatOrientation = LyraOrientation;
 export interface StatRow {
   readonly label: string;
   readonly value: string;

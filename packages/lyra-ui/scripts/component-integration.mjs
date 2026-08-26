@@ -6,7 +6,7 @@ import { gzipSync } from 'node:zlib';
 
 import { analyzeComponentDependencies, collectSources } from './check-component-dependencies.mjs';
 
-export const COMPONENT_INTEGRATION_SCHEMA_VERSION = 1;
+const COMPONENT_INTEGRATION_SCHEMA_VERSION = 1;
 
 function packageImport(module) {
   return `@aceshooting/lyra-ui/${module.replace(/^src\//, '').replace(/\.ts$/, '.js')}`;

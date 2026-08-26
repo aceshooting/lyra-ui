@@ -3,6 +3,11 @@ import './tree.js';
 import type { LyraTree, LyraTreeNodeData } from './tree.js';
 import type { LyraTreeItem } from './tree-item.js';
 
+function required<T>(value: T | undefined, context: string): T {
+  if (value === undefined) throw new Error(`Missing ${context}`);
+  return value;
+}
+
 describe('tree-item badges', () => {
   const dataWithBadges: LyraTreeNodeData[] = [
     {
@@ -57,11 +62,11 @@ describe('tree-item badges', () => {
     const node = el.querySelector('lr-tree-item') as LyraTreeItem;
     const badgeParts = [...node.shadowRoot!.querySelectorAll('[part="badge"]')] as HTMLElement[];
     expect(badgeParts.length).to.equal(3);
-    expect(badgeParts[0].textContent!.trim()).to.equal('3');
-    expect(badgeParts[1].textContent!.trim()).to.equal('M');
-    expect(badgeParts[1].dataset.tone).to.equal('brand');
-    expect(badgeParts[2].textContent!.trim()).to.equal('+2');
-    expect(badgeParts[2].dataset.tone).to.equal('success');
+    expect(required(badgeParts[0], 'first badge').textContent!.trim()).to.equal('3');
+    expect(required(badgeParts[1], 'second badge').textContent!.trim()).to.equal('M');
+    expect(required(badgeParts[1], 'second badge').dataset['tone']).to.equal('brand');
+    expect(required(badgeParts[2], 'third badge').textContent!.trim()).to.equal('+2');
+    expect(required(badgeParts[2], 'third badge').dataset['tone']).to.equal('success');
   });
 
   it('uses label as the accessible name when set, else falls back to text', async () => {
@@ -70,8 +75,10 @@ describe('tree-item badges', () => {
     await el.updateComplete;
     const node = el.querySelector('lr-tree-item') as LyraTreeItem;
     const badgeParts = [...node.shadowRoot!.querySelectorAll('[part="badge"]')] as HTMLElement[];
-    expect(badgeParts[1].getAttribute('aria-label')).to.equal('Modified'); // label wins
-    expect(badgeParts[2].getAttribute('aria-label')).to.equal('+2'); // falls back to text
+    expect(required(badgeParts[1], 'labeled badge').getAttribute('role')).to.equal('img');
+    expect(required(badgeParts[1], 'labeled badge').getAttribute('aria-label')).to.equal('Modified'); // label wins
+    expect(required(badgeParts[2], 'text-named badge').hasAttribute('role')).to.equal(false);
+    expect(required(badgeParts[2], 'text-named badge').hasAttribute('aria-label')).to.equal(false); // its text names it naturally
   });
 
   it('defaults an unset tone to neutral', async () => {
@@ -79,7 +86,7 @@ describe('tree-item badges', () => {
     el.data = [{ id: 'a', label: 'x', badges: [{ text: 'U' }] }];
     await el.updateComplete;
     const node = el.querySelector('lr-tree-item') as LyraTreeItem;
-    expect((node.shadowRoot!.querySelector('[part="badge"]') as HTMLElement).dataset.tone).to.equal('neutral');
+    expect((node.shadowRoot!.querySelector('[part="badge"]') as HTMLElement).dataset['tone']).to.equal('neutral');
   });
 
   it('lets each badge tone foreground and background be rethemed independently', async () => {
@@ -120,7 +127,7 @@ describe('tree-item badges', () => {
       ['danger', ['rgb(25, 26, 27)', 'rgb(28, 29, 30)']],
     ]);
     for (const badge of node.shadowRoot!.querySelectorAll<HTMLElement>('[part="badge"]')) {
-      const colors = expected.get(badge.dataset.tone ?? '');
+      const colors = expected.get(badge.dataset['tone'] ?? '');
       expect(getComputedStyle(badge).color).to.equal(colors?.[0]);
       expect(getComputedStyle(badge).backgroundColor).to.equal(colors?.[1]);
     }

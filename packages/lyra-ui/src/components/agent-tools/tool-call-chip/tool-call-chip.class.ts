@@ -10,7 +10,7 @@ import {
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraToolStatus } from '../../../internal/shared-unions.js';
-import { place } from '../../../internal/positioner.js';
+import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
 import { nextId } from '../../../internal/a11y.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';

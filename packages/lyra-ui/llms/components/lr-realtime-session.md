@@ -6,6 +6,7 @@
 - **Class** `LyraRealtimeSession`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/realtime-session/realtime-session.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -43,6 +44,8 @@ detail), `lr-record-error` (`{ error }`), `lr-level` (`{ level }`), and
 `lr-record-state-change` (`{ state }`). These are the child's original bubbling/composed events rather than
 parent re-emissions;
 normal Shadow DOM retargeting means a listener outside the session observes the session as `target`.
+The composed transcript's internal `lr-follow-change` event is contained and is not part of this
+session shell's public event surface.
 
 **CSS parts:** `base`, `header`, `status`, `activity`, `controls`, `connect`, `disconnect`, `mute`,
 `interrupt`, `capture`, `transcript`, `error`.

@@ -28,6 +28,10 @@ import {
   type LyraClipboardWriteOutcome,
 } from '../../../internal/clipboard.js';
 import {
+  activateNonmodalOverlay,
+  type OverlayHandle,
+} from '../../../internal/nonmodal-overlay-manager.js';
+import {
   aggregateValues,
   columnId,
   columnValue,
@@ -356,6 +360,13 @@ function normalizedGroupBy(
  * duplicate row identities are omitted first-wins; without it, row object occurrence is stable
  * across reorder. `selectedRowKeys`/`expandedRowKeys` are the canonical controlled fields, while
  * mirrored `selectedKeys`/`expandedKeys` remain compatibility aliases.
+ * The filter, all-columns, and per-column disclosures are mutually exclusive and register with
+ * the shared topmost overlay router; Escape closes the active disclosure and returns focus to its
+ * trigger.
+ * Pagination uses one page-local ARIA row model in client and server modes: the header occupies
+ * row one, current-page display and expanded-detail rows start at row two, and `aria-rowcount`
+ * covers that current page plus the header. A server `total` drives `pageCount` and the pager but
+ * does not inflate `aria-rowcount` without corresponding dataset-global `aria-rowindex` values.
  *
  * @customElement lr-data-grid
  * @slot empty - Content rendered when the source has no rows.
@@ -451,6 +462,12 @@ function normalizedGroupBy(
  * @cssprop [--border-radius=var(--lr-radius)] - Outer and control corner radius.
  * @cssprop [--border-width=var(--lr-border-width-thin)] - Grid and cell border width.
  * @cssprop [--cell-padding=var(--lr-space-m)] - Header, cell, and footer padding.
+ * @cssprop [--lr-data-grid-cell-color=inherit] - Text colour of body cells.
+ * @cssprop [--lr-data-grid-cell-link-color=var(--lr-color-brand)] - Colour of anchors returned by
+ *   a column formatter or row detail renderer. These render inside the grid's shadow root, beyond
+ *   the reach of page CSS. Set `revert` to restore the user-agent default.
+ * @cssprop [--lr-data-grid-cell-link-hover-color=var(--lr-data-grid-cell-link-color,var(--lr-color-brand))] -
+ *   Colour of those anchors on hover, focus-visible, and active interaction.
  * @cssprop [--focus-ring=var(--lr-focus-ring-width) solid var(--lr-focus-ring-color)] - Focus ring.
  * @cssprop [--header-background=var(--lr-color-surface-raised)] - Header background.
  * @cssprop [--header-row-height=var(--lr-size-3-5rem)] - Header-row minimum height.
@@ -841,6 +858,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   private resizeSession?: ResizeSession;
   private columnDragSession?: ColumnDragSession;
   private columnDragSequence = 0;
+  private managedOverlay?: OverlayHandle;
+  private managedOverlayOwner: string | null = null;
   private lastSelectedIndex = -1;
   private isMounting = true;
   /** Handle on the shared light-DOM live region announcements actually go through -- a region
@@ -860,6 +879,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   }
 
   override disconnectedCallback(): void {
+    this.managedOverlay?.deactivate({ restoreFocus: false });
+    this.managedOverlay = undefined;
+    this.managedOverlayOwner = null;
     this.requestGeneration += 1;
     this.requestController?.abort();
     this.requestController = undefined;
@@ -1001,7 +1023,104 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       const delayed = changed.has('filters') || changed.has('searchTerm');
       this.scheduleServerRequest(delayed);
     }
+    this.syncManagedOverlay();
     this.isMounting = false;
+  }
+
+  private get currentManagedOverlayOwner(): string | null {
+    if (this.columnsMenuOpen) return 'columns';
+    if (this.activeFilterColumn !== null) return `filter:${this.activeFilterColumn}`;
+    if (this.activeColumnMenu !== null) return `column:${this.activeColumnMenu}`;
+    return null;
+  }
+
+  private managedOverlayElements(owner: string): {
+    readonly panel: HTMLElement | null;
+    readonly trigger: HTMLElement | null;
+  } {
+    if (owner === 'columns') {
+      const container = this.renderRoot.querySelector<HTMLElement>('[part="columns-menu"]');
+      return {
+        panel: container?.querySelector<HTMLElement>('[role="group"]') ?? null,
+        trigger: container?.querySelector<HTMLElement>('button') ?? null,
+      };
+    }
+    const separator = owner.indexOf(':');
+    const kind = owner.slice(0, separator);
+    const columnIdValue = owner.slice(separator + 1);
+    const header = [...this.renderRoot.querySelectorAll<HTMLElement>(
+      '[part~="header-cell"][data-column-id]'
+    )].find((candidate) => candidate.getAttribute('data-column-id') === columnIdValue);
+    if (!header) return { panel: null, trigger: null };
+    if (kind === 'filter') {
+      return {
+        panel: header.querySelector<HTMLElement>('[part="filter-panel"]'),
+        trigger: header.querySelector<HTMLElement>('[part="filter-button"]'),
+      };
+    }
+    return {
+      panel: header.querySelector<HTMLElement>('[part="column-menu"] [role="group"]'),
+      trigger: header.querySelector<HTMLElement>('[part="column-menu-button"]'),
+    };
+  }
+
+  private dismissManagedOverlay(owner: string): void {
+    if (owner === 'columns' && this.columnsMenuOpen) this.columnsMenuOpen = false;
+    else if (owner.startsWith('filter:') && this.activeFilterColumn === owner.slice(7)) {
+      this.activeFilterColumn = null;
+    } else if (owner.startsWith('column:') && this.activeColumnMenu === owner.slice(7)) {
+      this.activeColumnMenu = null;
+    }
+  }
+
+  private syncManagedOverlay(): void {
+    const owner = this.currentManagedOverlayOwner;
+    if (
+      owner !== null &&
+      owner === this.managedOverlayOwner &&
+      this.managedOverlay?.isActive() &&
+      this.managedOverlayElements(owner).panel
+    ) return;
+    this.managedOverlay?.deactivate({ restoreFocus: owner === null });
+    this.managedOverlay = undefined;
+    this.managedOverlayOwner = null;
+    if (owner === null || !this.isConnected) return;
+    const { panel } = this.managedOverlayElements(owner);
+    if (!panel) return;
+    this.managedOverlayOwner = owner;
+    this.managedOverlay = activateNonmodalOverlay({
+      host: this,
+      panel: () => this.managedOverlayElements(owner).panel,
+      onEscape: () => this.dismissManagedOverlay(owner),
+      restoreFocusTo: () => this.managedOverlayElements(owner).trigger,
+    });
+  }
+
+  private toggleColumnsPanel(): void {
+    const next = !this.columnsMenuOpen;
+    this.columnsMenuOpen = next;
+    if (next) {
+      this.activeFilterColumn = null;
+      this.activeColumnMenu = null;
+    }
+  }
+
+  private toggleFilterPanel(id: string): void {
+    const next = this.activeFilterColumn === id ? null : id;
+    this.activeFilterColumn = next;
+    if (next !== null) {
+      this.columnsMenuOpen = false;
+      this.activeColumnMenu = null;
+    }
+  }
+
+  private toggleColumnPanel(id: string): void {
+    const next = this.activeColumnMenu === id ? null : id;
+    this.activeColumnMenu = next;
+    if (next !== null) {
+      this.columnsMenuOpen = false;
+      this.activeFilterColumn = null;
+    }
   }
 
   /** Send `text` to assistive tech. It goes to the shared light-DOM region -- appended as a new
@@ -1664,15 +1783,21 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       ({ column }) => column.flex !== 0
     );
     if (flexible.length === 0) return;
+    const flexValues = flexible.map(({ column }) =>
+      finiteRange(column.flex ?? 1, 1, 0)
+    );
+    const flexScale = flexValues.reduce(
+      (largest, value) => Math.max(largest, value),
+      0
+    );
+    const scaledFlex = flexValues.map((value) =>
+      flexScale > 0 ? value / flexScale : value
+    );
     const totalFlex =
-      flexible.reduce(
-        (sum, { column }) => sum + finiteRange(column.flex ?? 1, 1, 0),
-        0
-      ) || flexible.length;
+      scaledFlex.reduce((sum, value) => sum + value, 0) || flexible.length;
     const next = new Map(this.columnWidths);
-    for (const { column, id } of flexible) {
-      const share =
-        available * (finiteRange(column.flex ?? 1, 1, 0) / totalFlex);
+    for (const [index, { column, id }] of flexible.entries()) {
+      const share = available * ((scaledFlex[index] ?? 0) / totalFlex);
       const { minimum, maximum } = this.columnBounds(column);
       next.set(id, finiteRange(share, minimum, minimum, maximum));
     }
@@ -1905,6 +2030,14 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     return this.selectionMode !== 'none';
   }
 
+  /** ARIA columns and every row-spanning cell share this one selection-column adjustment. */
+  private get ariaColumnCount(): number {
+    return Math.max(
+      1,
+      this.visibleColumns.length + (this.selectionEnabled ? 1 : 0)
+    );
+  }
+
   private rowIsSelectable(row: Row): boolean {
     return this.selectionEnabled && (this.selectableRows?.(row) ?? true);
   }
@@ -2001,26 +2134,36 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     return result;
   }
 
-  private groupKey(parent: string, id: string, value: unknown): string {
-    return `group:${parent}:${id}:${this.groupValueKey(value)}`;
+  /** Object-valued grouping callbacks may return a fresh object on every projection. The lowest
+   * stable member identity keeps that group's key repeatable while still separating structurally
+   * equal object buckets, which cannot share a row. */
+  private groupMemberKey(rows: readonly Row[]): string {
+    let first: string | undefined;
+    for (const row of rows) {
+      const identity = this.rowIdentity(row);
+      if (identity === undefined) continue;
+      const candidate = `${typeof identity}:${safeText(identity)}`;
+      if (first === undefined || candidate < first) first = candidate;
+    }
+    return first ?? 'unknown';
   }
 
-  /** Primitive group values can use their serialized value; object-valued groups need identity
-   * because distinct records commonly stringify to the same `[object Object]` text. */
-  private readonly groupObjectIds = new WeakMap<object, number>();
-  private nextGroupObjectId = 0;
-
-  private groupValueKey(value: unknown): string {
-    if ((typeof value === 'object' && value !== null) || typeof value === 'function') {
-      const object = value as object;
-      let id = this.groupObjectIds.get(object);
-      if (id === undefined) {
-        id = this.nextGroupObjectId++;
-        this.groupObjectIds.set(object, id);
-      }
-      return `object:${id}`;
+  private groupKey(
+    parent: string,
+    id: string,
+    value: unknown,
+    rows: readonly Row[]
+  ): string {
+    const valueType = typeof value;
+    if (
+      (valueType === 'object' && value !== null) ||
+      valueType === 'function'
+    ) {
+      return `group:${parent}:${id}:${valueType}:member:${this.groupMemberKey(
+        rows
+      )}`;
     }
-    return `${typeof value}:${safeText(value)}`;
+    return `group:${parent}:${id}:${valueType}:${safeText(value)}`;
   }
 
   private topLevelGroupBuckets(
@@ -2068,7 +2211,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         buckets.set(value, bucket);
       }
       for (const [value, bucket] of buckets) {
-        const key = this.groupKey(parent, entry.id, value);
+        const key = this.groupKey(parent, entry.id, value, bucket);
         result.push({
           kind: 'group',
           key,
@@ -2164,7 +2307,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     }
     const result: DisplayItem<Row>[] = [];
     for (const [value, bucket] of buckets) {
-      const key = this.groupKey(parent, entry.id, value);
+      const key = this.groupKey(parent, entry.id, value, bucket);
       result.push({
         kind: 'group',
         key,
@@ -2574,6 +2717,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     indeterminate: boolean;
   } {
     const own = arrayHasKey(this.selectedKeys, item.key);
+    if (this.selectionMode !== 'multiple')
+      return { checked: own, indeterminate: false };
     const descendants = this.descendantRows(item.row).filter((row) =>
       this.rowIsSelectable(row)
     );
@@ -2871,7 +3016,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     }
     const rtlMultiplier = this.effectiveDirection === 'rtl' ? -1 : 1;
     if (
-      event.ctrlKey &&
+      (event.ctrlKey || event.metaKey) &&
       event.key.toLowerCase() === 'a' &&
       this.selectionMode === 'multiple'
     ) {
@@ -2879,7 +3024,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       event.preventDefault();
       return;
     }
-    if (event.ctrlKey && event.key.toLowerCase() === 'c') {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'c') {
       this.copySelectedRows();
       event.preventDefault();
       return;
@@ -2926,11 +3071,13 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       this.focusCell(rowPosition + 1, columnPosition);
       event.preventDefault();
     } else if (event.key === 'Home') {
-      this.focusCell(event.ctrlKey ? -1 : rowPosition, 0);
+      this.focusCell(event.ctrlKey || event.metaKey ? -1 : rowPosition, 0);
       event.preventDefault();
     } else if (event.key === 'End') {
       this.focusCell(
-        event.ctrlKey ? this.displayItems.length - 1 : rowPosition,
+        event.ctrlKey || event.metaKey
+          ? this.displayItems.length - 1
+          : rowPosition,
         this.visibleColumns.length - 1
       );
       event.preventDefault();
@@ -3027,9 +3174,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                 <button
                   type="button"
                   aria-expanded=${this.columnsMenuOpen ? 'true' : 'false'}
-                  @click=${() => {
-                    this.columnsMenuOpen = !this.columnsMenuOpen;
-                  }}
+                  @click=${() => this.toggleColumnsPanel()}
                 >
                   ${this.localize('showAllColumns')}
                 </button>
@@ -3121,9 +3266,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           aria-label=${menuLabel}
           aria-controls=${menuId}
           aria-expanded=${open ? 'true' : 'false'}
-          @click=${() => {
-            this.activeColumnMenu = open ? null : id;
-          }}
+          @click=${() => this.toggleColumnPanel(id)}
         >
           <span aria-hidden="true">⋮</span>
         </button>
@@ -3134,7 +3277,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                 role="group"
                 aria-label=${menuLabel}
                 @keydown=${(event: KeyboardEvent) => {
-                  if (event.key !== 'Escape') return;
+                  if (event.key !== 'Escape' || event.defaultPrevented) return;
                   this.activeColumnMenu = null;
                   event.preventDefault();
                   const trigger = (
@@ -3285,10 +3428,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                       aria-expanded=${this.activeFilterColumn === id
                         ? 'true'
                         : 'false'}
-                      @click=${() => {
-                        this.activeFilterColumn =
-                          this.activeFilterColumn === id ? null : id;
-                      }}
+                      @click=${() => this.toggleFilterPanel(id)}
                     >
                       <span aria-hidden="true">⌕</span>
                     </button>
@@ -3475,10 +3615,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
               <div
                 part="row-detail"
                 role="gridcell"
-                aria-colspan=${Math.max(
-                  1,
-                  this.visibleColumns.length + selectionOffset
-                )}
+                aria-colspan=${this.ariaColumnCount}
               >
                 ${this.rowDetail(item.row)}
               </div>
@@ -3515,10 +3652,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         <div
           part="group-value"
           role="gridcell"
-          aria-colspan=${Math.max(
-            1,
-            this.visibleColumns.length + (this.selectionEnabled ? 1 : 0)
-          )}
+          aria-colspan=${this.ariaColumnCount}
           tabindex=${this.focusedRow === rowPosition ? '0' : '-1'}
           data-focus-cell
           data-row-position=${rowPosition}
@@ -3598,7 +3732,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           <div
             part="empty"
             role="gridcell"
-            aria-colspan=${Math.max(1, this.visibleColumns.length)}
+            aria-colspan=${this.ariaColumnCount}
           >
             <slot name="empty">${this.localize('noData')}</slot>
           </div>
@@ -3611,7 +3745,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           <div
             part="no-results"
             role="gridcell"
-            aria-colspan=${Math.max(1, this.visibleColumns.length)}
+            aria-colspan=${this.ariaColumnCount}
           >
             <slot name="no-results">${this.localize('noMatches')}</slot>
           </div>
@@ -3842,10 +3976,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         ).length
       : 0;
     const rowCount = Math.max(1, this.displayItems.length + detailCount) + 1;
-    const columnCount = Math.max(
-      1,
-      this.visibleColumns.length + (this.selectionEnabled ? 1 : 0)
-    );
+    const columnCount = this.ariaColumnCount;
     const role =
       this.childRows || normalizedGroupBy(this.groupBy).length > 0
         ? 'treegrid'

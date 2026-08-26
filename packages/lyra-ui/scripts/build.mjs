@@ -2,10 +2,15 @@ import { chmod, cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { compactBuildCss } from './compact-build-css.mjs';
+import { compactBuildDeclarations } from './compact-build-declarations.mjs';
 import { compactBuildJavaScript } from './compact-build-js.mjs';
 import { checkLocalizationSlices } from './check-localization-slices.mjs';
 import { createMigrationRuntimeInventory } from './migrate-wa.mjs';
-import { normalizeMixinDeclarations } from './normalize-mixin-declarations.mjs';
+import {
+  assertNormalizedMixinCount,
+  normalizeMixinDeclarations,
+} from './normalize-mixin-declarations.mjs';
 import { stripCssComments } from './strip-css-comments.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -34,9 +39,17 @@ await new Promise((resolve, reject) => {
 });
 
 const normalizedMixins = await normalizeMixinDeclarations(join(packageDir, 'dist'));
+assertNormalizedMixinCount(normalizedMixins, 20);
 console.log(
   `Published mixin declarations normalized: ${normalizedMixins.replacements} base declaration(s) ` +
     `across ${normalizedMixins.filesChanged} file(s).`,
+);
+
+const compactedDeclarations = await compactBuildDeclarations(join(packageDir, 'dist'));
+console.log(
+  `Published declarations compacted: ${compactedDeclarations.beforeBytes.toLocaleString('en')} -> ` +
+    `${compactedDeclarations.afterBytes.toLocaleString('en')} bytes across ` +
+    `${compactedDeclarations.files} modules.`,
 );
 
 await cp(join(packageDir, 'src', 'theme.css'), join(packageDir, 'dist', 'theme.css'));
@@ -64,6 +77,13 @@ console.log(
     `${strippedCss.filesChanged} of ${strippedCss.files} modules.`,
 );
 
+const compactedCss = await compactBuildCss(join(packageDir, 'dist'));
+console.log(
+  `Published CSS compacted: ${compactedCss.removedBytes.toLocaleString('en')} bytes from ` +
+    `${compactedCss.templates.toLocaleString('en')} templates and ` +
+    `${compactedCss.stylesheets.toLocaleString('en')} stylesheets.`,
+);
+
 // The public migration executable is deliberately assembled from only its two runtime modules
 // and a compact, prevalidated migration projection. Publishing scripts/ wholesale would expose
 // contributor-only maintenance helpers, while publishing the 4+ MiB public-surface inventory
@@ -86,6 +106,14 @@ await writeFile(
   'utf8',
 );
 await chmod(join(migrationCliDir, 'migrate-wa.mjs'), 0o755);
+
+const compactedMigrationCli = await compactBuildJavaScript(migrationCliDir);
+console.log(
+  `Published migration CLI compacted: ` +
+    `${compactedMigrationCli.beforeBytes.toLocaleString('en')} -> ` +
+    `${compactedMigrationCli.afterBytes.toLocaleString('en')} bytes across ` +
+    `${compactedMigrationCli.files} modules.`,
+);
 
 await checkLocalizationSlices(packageDir);
 console.log('Unbundled localization slice imports and public fallback catalog verified.');

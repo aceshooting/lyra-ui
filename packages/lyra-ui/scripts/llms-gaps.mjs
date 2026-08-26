@@ -14,7 +14,7 @@ import {
   validateSourceContractBaseline,
 } from './llms-source-contracts.mjs';
 
-export const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
 // Inherited from LyraElement / the FormAssociated mixin and documented once in llms/shared.md,
 // never restated per component. Components that re-declare one as a thin override still count as
@@ -115,7 +115,7 @@ export function exportedContractNames(file, source, declarationName) {
 }
 
 /** Returns every exact inline-code signature that declares `name`, never a call/example mention. */
-export function contractDeclarationBlocks(text, name, kind) {
+function contractDeclarationBlocks(text, name, kind) {
   const matches = [];
   const pattern = new RegExp(
     '(?<!`)`' + escapePattern(name) + '(?=[\\s({<])([^`]*)`(?!`)',
@@ -144,7 +144,7 @@ export function contractDeclarationBlock(text, name, kind) {
 }
 
 /** Returns every authored public-utility bullet owned by `moduleName`. */
-export function utilityContractBlocks(text, moduleName) {
+function utilityContractBlocks(text, moduleName) {
   const markers = [...text.matchAll(
     new RegExp(`^- \\*\\*\\\`${escapePattern(moduleName)}\\\`(?:[^\\n]*)`, 'gm'),
   )];
@@ -159,7 +159,7 @@ export function utilityContractBlocks(text, moduleName) {
 }
 
 /** Returns one uniquely owned utility bullet, or empty when it is missing/duplicated. */
-export function utilityContractBlock(text, moduleName) {
+function utilityContractBlock(text, moduleName) {
   const blocks = utilityContractBlocks(text, moduleName);
   return blocks.length === 1 ? blocks[0] : '';
 }
@@ -494,7 +494,7 @@ export function collectGaps(
   return gaps;
 }
 
-export { FAMILIES, tagFactsFor };
+export { FAMILIES };
 
 function tagFactsFor() {
   const manifest = JSON.parse(readFileSync(path.join(packageDir, 'custom-elements.json'), 'utf8'));

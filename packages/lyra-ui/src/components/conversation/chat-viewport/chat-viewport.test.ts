@@ -1,11 +1,11 @@
-import { fixture, expect, html, oneEvent } from "@open-wc/testing";
+import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./chat-viewport.js";
 import "../chat-message/chat-message.js";
 import "../../layout/virtual-list/virtual-list.js";
 import type { LyraChatViewport } from "./chat-viewport.js";
 import type { LyraVirtualList } from "../../layout/virtual-list/virtual-list.class.js";
-import { styles } from "./chat-viewport.styles.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
+import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 function sinkElement(
   politeness: "polite" | "assertive",
@@ -192,10 +192,7 @@ it("announces slot additions when MutationObserver is unavailable", async () => 
     ]);
   } finally {
     if (descriptor) Object.defineProperty(window, "MutationObserver", descriptor);
-    else
-      delete (window as Window & {
-        MutationObserver?: typeof MutationObserver;
-      }).MutationObserver;
+    else Reflect.deleteProperty(window, "MutationObserver");
   }
 });
 
@@ -869,12 +866,16 @@ describe("scrollToBottom()", () => {
 
   it('forces behavior "auto" under prefers-reduced-motion', async () => {
     const originalMatchMedia = window.matchMedia;
-    window.matchMedia = ((query: string) => ({
-      matches: query === "(prefers-reduced-motion: reduce)",
-      media: query,
-      addEventListener: () => {},
-      removeEventListener: () => {},
-    })) as typeof window.matchMedia;
+    window.matchMedia = (query: string) => {
+      const nativeQuery = originalMatchMedia.call(window, query);
+      return new Proxy(nativeQuery, {
+        get(target, property) {
+          if (property === 'matches') return query === "(prefers-reduced-motion: reduce)";
+          const value = Reflect.get(target, property, target);
+          return typeof value === 'function' ? value.bind(target) : value;
+        },
+      });
+    };
     try {
       const el = (await fixture(
         html`<lr-chat-viewport style="block-size:100px"
@@ -1012,9 +1013,42 @@ describe("jump pill", () => {
     expect(document.activeElement?.id).to.equal("newer-chat-focus");
   });
 
-  it("gives jump-pill a hover state", () => {
-    const css = styles.cssText.replace(/\s+/g, " ");
-    expect(css).to.match(/\[part='jump-pill'\]:hover/);
+  it("renders the jump-pill hover state", async () => {
+    const el = await fixture<LyraChatViewport>(html`
+      <lr-chat-viewport
+        .follow=${false}
+        style="block-size:100px; --lr-color-brand-quiet: rgb(1, 2, 3)"
+      >
+        ${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}
+      </lr-chat-viewport>
+    `);
+    await el.updateComplete;
+    const pill = el.shadowRoot!.querySelector<HTMLElement>('[part="jump-pill"]')!;
+    el.scrollIntoView({ block: "center" });
+    const center = (): [number, number] => {
+      const rect = pill.getBoundingClientRect();
+      return [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ];
+    };
+    await waitUntil(() => {
+      const hit = el.shadowRoot!.elementFromPoint(...center());
+      return hit === pill || (hit != null && pill.contains(hit));
+    }, "the jump pill never became hit-testable");
+    try {
+      await sendMouse({
+        type: "move",
+        position: center(),
+      });
+      await waitUntil(
+        () => pill.matches(":hover"),
+        "the real pointer never hovered the jump pill",
+      );
+      expect(getComputedStyle(pill).backgroundColor).to.equal("rgb(1, 2, 3)");
+    } finally {
+      await resetMouse();
+    }
   });
 
   it('shows "Jump to latest" when there is no positive unread count', async () => {
@@ -1055,6 +1089,32 @@ describe("unread divider (slotted mode)", () => {
       "m2"
     );
     expect(parseFloat(divider.style.top)).to.equal(80); // 2 rows * 40px
+  });
+
+  it("updates both unread-divider names after a strings override", async () => {
+    const el = (await fixture(
+      html`<lr-chat-viewport style="block-size:200px" unread-start-index="2"
+        >${Array.from({ length: 5 }, (_, i) => row(`m${i}`))}</lr-chat-viewport
+      >`
+    )) as LyraChatViewport;
+    await el.updateComplete;
+    await nextFrame();
+
+    const semanticBoundary = el.querySelector(
+      "[data-lr-chat-viewport-unread-boundary]"
+    ) as HTMLElement;
+    expect(semanticBoundary.getAttribute("aria-label")).to.equal("New messages");
+
+    el.strings = { newMessages: "Unread updates" };
+    await el.updateComplete;
+
+    const divider = el.shadowRoot!.querySelector(
+      '[part="unread-divider"]'
+    ) as HTMLElement;
+    expect(divider.textContent?.trim()).to.equal("Unread updates");
+    expect(semanticBoundary.getAttribute("aria-label")).to.equal(
+      "Unread updates"
+    );
   });
 
   it("repositions the divider for a post-mount unreadStartIndex change within a single update", async () => {
@@ -1537,16 +1597,16 @@ it("is accessible populated with real chat messages, an unread divider, and a fa
       follow="false"
     >
       <lr-chat-message
-        data-role="user"
+        message-role="user"
         .timestamp=${new Date("2024-05-01T10:00:00Z")}
         >Hello there</lr-chat-message
       >
       <lr-chat-message
-        data-role="assistant"
+        message-role="assistant"
         .timestamp=${new Date("2024-05-01T10:00:05Z")}
         >Hi! How can I help?</lr-chat-message
       >
-      <lr-chat-message data-role="user" status="failed"
+      <lr-chat-message message-role="user" status="failed"
         >Did this send?</lr-chat-message
       >
     </lr-chat-viewport>`
@@ -1554,6 +1614,11 @@ it("is accessible populated with real chat messages, an unread divider, and a fa
   el.follow = false;
   await el.updateComplete;
   await nextFrame();
+  expect(
+    [...el.querySelectorAll('lr-chat-message')].map((message) =>
+      message.getAttribute('message-role')
+    )
+  ).to.deep.equal(['user', 'assistant', 'user']);
   expect(el.shadowRoot!.querySelector('[part="unread-divider"]')).to.exist;
   const failed = el.querySelector('lr-chat-message[status="failed"]')!;
   expect(failed.shadowRoot!.querySelector('[part="retry-button"]')).to.exist;

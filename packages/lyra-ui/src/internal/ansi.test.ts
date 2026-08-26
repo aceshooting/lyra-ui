@@ -15,8 +15,8 @@ describe('createAnsiParser', () => {
     const parser = createAnsiParser();
     const segments = parser.push('hello world');
     expect(segments).to.have.lengthOf(1);
-    expect(segments[0].text).to.equal('hello world');
-    expect(segments[0].styles).to.deep.equal({
+    expect(segments[0]!.text).to.equal('hello world');
+    expect(segments[0]!.styles).to.deep.equal({
       bold: false,
       dim: false,
       italic: false,
@@ -37,7 +37,7 @@ describe('createAnsiParser', () => {
   it('maps a named foreground color (SGR 31 = red) to the red terminal color var', () => {
     const parser = createAnsiParser();
     const segments = parser.push('\x1b[31mred text');
-    expect(segments[0].styles.fg).to.equal('var(--lr-terminal-color-red)');
+    expect(segments[0]!.styles.fg).to.equal('var(--lr-terminal-color-red)');
   });
 
   it('maps a bright background color (SGR 104 = bright blue bg)', () => {
@@ -45,37 +45,37 @@ describe('createAnsiParser', () => {
     const segments = parser.push('\x1b[104mtext');
     // Background codes read the SEPARATE background set: it is solved against the panel's default
     // text rather than against the panel, because one set cannot be legible in both roles.
-    expect(segments[0].styles.bg).to.equal('var(--lr-terminal-bg-bright-blue)');
+    expect(segments[0]!.styles.bg).to.equal('var(--lr-terminal-bg-bright-blue)');
   });
 
   it('resolves 256-color (38;5;n) to the named var for n < 16 and rgb() for n >= 16', () => {
     const parser = createAnsiParser();
     const low = parser.push('\x1b[38;5;1mlow');
-    expect(low[0].styles.fg).to.equal('var(--lr-terminal-color-red)');
+    expect(low[0]!.styles.fg).to.equal('var(--lr-terminal-color-red)');
     const cube = createAnsiParser().push('\x1b[38;5;196mcube');
-    expect(cube[0].styles.fg).to.equal('rgb(255, 0, 0)');
+    expect(cube[0]!.styles.fg).to.equal('rgb(255, 0, 0)');
     const gray = createAnsiParser().push('\x1b[38;5;244mgray');
-    expect(gray[0].styles.fg).to.match(/^rgb\(\d+, \d+, \d+\)$/);
+    expect(gray[0]!.styles.fg).to.match(/^rgb\(\d+, \d+, \d+\)$/);
   });
 
   it('resolves truecolor (38;2;r;g;b) to a literal rgb()', () => {
     const parser = createAnsiParser();
     const segments = parser.push('\x1b[38;2;10;20;30mtruecolor');
-    expect(segments[0].styles.fg).to.equal('rgb(10, 20, 30)');
+    expect(segments[0]!.styles.fg).to.equal('rgb(10, 20, 30)');
   });
 
   it('applies multiple SGR params in one sequence (1;31)', () => {
     const parser = createAnsiParser();
     const segments = parser.push('\x1b[1;31mboldred');
-    expect(segments[0].styles.bold).to.be.true;
-    expect(segments[0].styles.fg).to.equal('var(--lr-terminal-color-red)');
+    expect(segments[0]!.styles.bold).to.be.true;
+    expect(segments[0]!.styles.fg).to.equal('var(--lr-terminal-color-red)');
   });
 
   it('ignores an unknown SGR param without throwing or altering other state', () => {
     const parser = createAnsiParser();
     expect(() => parser.push('\x1b[5mblink-not-supported')).to.not.throw();
     const segments = createAnsiParser().push('\x1b[5;31mtext');
-    expect(segments[0].styles.fg).to.equal('var(--lr-terminal-color-red)');
+    expect(segments[0]!.styles.fg).to.equal('var(--lr-terminal-color-red)');
   });
 
   it('strips a non-SGR CSI sequence (cursor move) without emitting it as text', () => {
@@ -101,8 +101,8 @@ describe('createAnsiParser', () => {
     const first = parser.push('plain\x1b[3');
     expect(first.map((s) => s.text).join('')).to.equal('plain');
     const second = parser.push('1mred');
-    expect(second[0].styles.fg).to.equal('var(--lr-terminal-color-red)');
-    expect(second[0].text).to.equal('red');
+    expect(second[0]!.styles.fg).to.equal('var(--lr-terminal-color-red)');
+    expect(second[0]!.text).to.equal('red');
   });
 
   it('buffers a bare trailing ESC split from the rest of its sequence across two push() calls', () => {
@@ -111,8 +111,8 @@ describe('createAnsiParser', () => {
     expect(first.map((s) => s.text).join('')).to.equal('text');
     const second = parser.push('[31mfoo');
     expect(second).to.have.length(1);
-    expect(second[0].text).to.equal('foo');
-    expect(second[0].styles.fg).to.equal('var(--lr-terminal-color-red)');
+    expect(second[0]!.text).to.equal('foo');
+    expect(second[0]!.styles.fg).to.equal('var(--lr-terminal-color-red)');
   });
 
   it('buffers an OSC sequence split across two push() calls', () => {
@@ -194,27 +194,27 @@ describe('createAnsiParser', () => {
     parser.push('\x1b[1;31mbold-red\x1b[3');
     parser.reset();
     const segments = parser.push('plain');
-    expect(segments[0].styles).to.deep.equal({
+    expect(segments[0]!.styles).to.deep.equal({
       bold: false,
       dim: false,
       italic: false,
       underline: false,
       inverse: false,
     });
-    expect(segments[0].text).to.equal('plain');
+    expect(segments[0]!.text).to.equal('plain');
   });
 
   it('applies dim/italic/underline/inverse (SGR 2/3/4/7) and clears each with its own reset code', () => {
     const parser = createAnsiParser();
     const on = parser.push('\x1b[2;3;4;7mstyled');
-    expect(on[0].styles).to.deep.include({
+    expect(on[0]!.styles).to.deep.include({
       dim: true,
       italic: true,
       underline: true,
       inverse: true,
     });
     const off = parser.push('\x1b[22;23;24;27mplain');
-    expect(off[0].styles).to.deep.include({
+    expect(off[0]!.styles).to.deep.include({
       bold: false,
       dim: false,
       italic: false,
@@ -224,16 +224,16 @@ describe('createAnsiParser', () => {
   });
 
   it('maps the full 30-37/40-47 and 90-97/100-107 named color ranges', () => {
-    expect(createAnsiParser().push('\x1b[37mwhite')[0].styles.fg).to.equal(
+    expect(createAnsiParser().push('\x1b[37mwhite')[0]!.styles.fg).to.equal(
       'var(--lr-terminal-color-white)',
     );
-    expect(createAnsiParser().push('\x1b[47mwhite-bg')[0].styles.bg).to.equal(
+    expect(createAnsiParser().push('\x1b[47mwhite-bg')[0]!.styles.bg).to.equal(
       'var(--lr-terminal-bg-white)',
     );
-    expect(createAnsiParser().push('\x1b[90mbright-black')[0].styles.fg).to.equal(
+    expect(createAnsiParser().push('\x1b[90mbright-black')[0]!.styles.fg).to.equal(
       'var(--lr-terminal-color-bright-black)',
     );
-    expect(createAnsiParser().push('\x1b[107mbright-white-bg')[0].styles.bg).to.equal(
+    expect(createAnsiParser().push('\x1b[107mbright-white-bg')[0]!.styles.bg).to.equal(
       'var(--lr-terminal-bg-bright-white)',
     );
   });
@@ -241,23 +241,23 @@ describe('createAnsiParser', () => {
   it('clears fg/bg back to the default color on SGR 39/49', () => {
     const parser = createAnsiParser();
     const colored = parser.push('\x1b[31;41mtext');
-    expect(colored[0].styles.fg).to.equal('var(--lr-terminal-color-red)');
+    expect(colored[0]!.styles.fg).to.equal('var(--lr-terminal-color-red)');
     // Same SGR name, different role, therefore a different token -- 31 and 41 no longer resolve to
     // one shared value, which is what made an explicit background unreadable.
-    expect(colored[0].styles.bg).to.equal('var(--lr-terminal-bg-red)');
+    expect(colored[0]!.styles.bg).to.equal('var(--lr-terminal-bg-red)');
     const cleared = parser.push('\x1b[39;49mtext');
-    expect(cleared[0].styles.fg).to.be.undefined;
-    expect(cleared[0].styles.bg).to.be.undefined;
+    expect(cleared[0]!.styles.fg).to.be.undefined;
+    expect(cleared[0]!.styles.bg).to.be.undefined;
   });
 
   it('resolves 256-color background (48;5;n) the same way as foreground', () => {
     const segments = createAnsiParser().push('\x1b[48;5;196mbg');
-    expect(segments[0].styles.bg).to.equal('rgb(255, 0, 0)');
+    expect(segments[0]!.styles.bg).to.equal('rgb(255, 0, 0)');
   });
 
   it('resolves truecolor background (48;2;r;g;b) to a literal rgb()', () => {
     const segments = createAnsiParser().push('\x1b[48;2;1;2;3mbg');
-    expect(segments[0].styles.bg).to.equal('rgb(1, 2, 3)');
+    expect(segments[0]!.styles.bg).to.equal('rgb(1, 2, 3)');
   });
 
   it('treats an empty SGR parameter list as the standard reset', () => {
@@ -266,7 +266,7 @@ describe('createAnsiParser', () => {
 
     const segments = parser.push('\x1b[mplain');
 
-    expect(segments[0].styles).to.deep.equal({
+    expect(segments[0]!.styles).to.deep.equal({
       bold: false,
       dim: false,
       italic: false,
@@ -281,16 +281,16 @@ describe('createAnsiParser', () => {
       '\x1b[38:2;31mred\x1b[38;2;999999999999999999999999;300;20mclamped',
     );
 
-    expect(segments[0].styles.fg).to.equal('var(--lr-terminal-color-red)');
-    expect(segments[1].styles.fg).to.equal('rgb(0, 255, 20)');
+    expect(segments[0]!.styles.fg).to.equal('var(--lr-terminal-color-red)');
+    expect(segments[1]!.styles.fg).to.equal('rgb(0, 255, 20)');
   });
 
   it('fails an out-of-range 256-color index closed to the role-matching default token', () => {
     const foreground = createAnsiParser().push('\x1b[38;5;256mtext');
     const background = createAnsiParser().push('\x1b[48;5;256mtext');
 
-    expect(foreground[0].styles.fg).to.equal('var(--lr-terminal-color-black)');
-    expect(background[0].styles.bg).to.equal('var(--lr-terminal-bg-black)');
+    expect(foreground[0]!.styles.fg).to.equal('var(--lr-terminal-color-black)');
+    expect(background[0]!.styles.bg).to.equal('var(--lr-terminal-bg-black)');
   });
 
   it('resumes after an overlong OSC terminated by ST in a later chunk', () => {

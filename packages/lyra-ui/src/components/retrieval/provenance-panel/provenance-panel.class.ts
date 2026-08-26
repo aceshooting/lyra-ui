@@ -31,9 +31,10 @@ import {
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import type { LyraScoreThresholds } from '../graph/graph.class.js';
+import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_provenanceChunks, LYRA_DEFAULT_provenanceCommunities, LYRA_DEFAULT_provenanceEmpty, LYRA_DEFAULT_provenanceEntities, LYRA_DEFAULT_provenancePanelLabel, LYRA_DEFAULT_provenanceRelationships, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_provenanceChunks, LYRA_DEFAULT_provenanceCommunities, LYRA_DEFAULT_provenanceEmpty, LYRA_DEFAULT_provenanceEntities, LYRA_DEFAULT_provenancePanelLabel, LYRA_DEFAULT_provenanceRelationships, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraProvenance {
@@ -115,7 +116,6 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
     ...super.defaultStrings,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
@@ -127,7 +127,6 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
     provenanceEntities: LYRA_DEFAULT_provenanceEntities,
     provenancePanelLabel: LYRA_DEFAULT_provenancePanelLabel,
     provenanceRelationships: LYRA_DEFAULT_provenanceRelationships,
-    restore: LYRA_DEFAULT_restore,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
   };
@@ -141,7 +140,8 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
   static override styles = [LyraElement.styles, styles];
 
   /** Provenance model whose entity, relationship, community, and chunk sections are rendered. */
-  @property({ attribute: false }) provenance: Readonly<LyraProvenance> | null = null;
+  @property({ attribute: false }) provenance: Readonly<LyraProvenance> | null =
+    null;
   /** `lr-graph` `nodeTypes` pass-through; resolves each `entity.type` for the entity chips' `typeLabel`. */
   @property({ attribute: false }) types: readonly LyraNodeTypeStyle[] = [];
   /** Score boundaries forwarded to the composed chunk inspector. */
@@ -200,10 +200,28 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
 
   override render(): TemplateResult {
     const p = this.provenance;
-    const entities = p?.entities ?? [];
-    const relationships = p?.relationships ?? [];
-    const communities = p?.communities ?? [];
-    const chunks = p?.chunks ?? [];
+    const entities = firstByRetrievalIdentity(
+      Array.isArray(p?.entities) ? p.entities : [],
+      (entity) => entity?.id
+    );
+    const relationships = (
+      Array.isArray(p?.relationships) ? p.relationships : []
+    ).filter(
+      (
+        relationship
+      ): relationship is Readonly<{ path: readonly LyraPathElement[] }> =>
+        relationship !== null &&
+        typeof relationship === 'object' &&
+        Array.isArray(relationship.path)
+    );
+    const communities = firstByRetrievalIdentity(
+      Array.isArray(p?.communities) ? p.communities : [],
+      (community) => community?.id
+    );
+    const chunks = firstByRetrievalIdentity(
+      Array.isArray(p?.chunks) ? p.chunks : [],
+      (chunk) => chunk?.id
+    );
     const allEmpty =
       entities.length === 0 &&
       relationships.length === 0 &&

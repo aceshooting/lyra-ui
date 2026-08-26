@@ -1,9 +1,10 @@
+import { isMainModule } from './is-main-module.mjs';
+
 // Chai preserves actual/expected values for its failure report. When either value is a live DOM
 // object, Web Test Runner's cross-process structured clone can fail or hang the whole test file.
 // Resolve real TypeScript types when possible and conservatively recognize DOM-producing syntax
 // when TypeScript 7 reports a selector expression as `any`/`unknown`/error. Tests must compare a
 // boolean or stable primitive projection instead of handing Chai a live node.
-import { realpathSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -446,5 +447,4 @@ export function runTestAssertionPolicy({
   }
 }
 
-const isMain = process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
-if (isMain) runTestAssertionPolicy();
+if (isMainModule(import.meta.url)) runTestAssertionPolicy();

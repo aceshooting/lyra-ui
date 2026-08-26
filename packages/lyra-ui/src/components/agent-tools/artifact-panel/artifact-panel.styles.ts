@@ -69,12 +69,15 @@ export const styles = css`
     padding: var(--lr-space-2xs) var(--lr-space-s); cursor: pointer;
   }
   [part='restore-button']:hover, [part='copy-button']:hover, [part='download-button']:hover,
-  [part='view-button']:hover { background: var(--lr-color-brand-quiet); color: var(--lr-color-brand); }
+  [part='view-button']:hover:not([aria-pressed='true']) {
+    background: var(--lr-color-brand-quiet);
+    color: var(--lr-color-brand);
+  }
   /* Pressed pushes the hovered tint a further --lr-color-mix-active toward --lr-color-mix-partner,
      which follows the text colour, so it reads as a distinctly deeper step than hover in both
      themes. */
   [part='restore-button']:active, [part='copy-button']:active, [part='download-button']:active,
-  [part='view-button']:active {
+  [part='view-button']:active:not([aria-pressed='true']) {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='restore-button']:focus-visible, [part='copy-button']:focus-visible,

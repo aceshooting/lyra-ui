@@ -6,8 +6,9 @@
 - **Class** `LyraFlag`, also available unregistered from `@aceshooting/lyra-ui/components/media/flag/flag.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
-- **Optional peers** `@aceshooting/lyra-flags` — see `llms/peers.md`
+- **Optional peers** none
 - **Themeable via** 3 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -65,6 +66,9 @@ code with `data-unresolved`. **The two are deliberately distinct:** a dissolved 
 unrecognized territory in a longitudinal dataset is *data*, not a defect, so it renders the neutral
 fallback (occupying its normal footprint in a table or card grid) rather than localized error
 wording that reads to a user as a bug. Style the two states apart with those attributes.
+The built-in `fallback-image` uses the same full-frame sizing, `object-fit`, circle clipping, and
+forced-colors inset boundary as the resolved `image`; replacing it with slotted fallback content
+leaves that content's presentation under the caller's control.
 
 **Themeable custom properties:** `--lr-flag-radius` (default `calc(var(--lr-radius) * 0.33)` —
 rectangular corner radius), `--lr-flag-aspect-ratio` (default `4 / 3`), and

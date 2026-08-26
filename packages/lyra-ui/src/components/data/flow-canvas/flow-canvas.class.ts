@@ -13,6 +13,7 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { layeredLayout } from '../../../internal/layered-layout.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
+import { isActionableElement } from '../../../internal/focus-navigation.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { tag } from '../../../internal/prefix.js';
 import type { LyraOrientation, LyraToolStatus } from '../../../internal/shared-unions.js';
@@ -204,6 +205,8 @@ function isHtmlElement(value: EventTarget): value is HTMLElement {
  * @csspart edge-list - A visually hidden list of dangling or otherwise unrenderable edges.
  * @csspart overlay-rail - A top or bottom wrapping rail that prevents opposite-corner companions
  *   from overlapping in narrow allocations.
+ * @cssprop [--lr-canvas-reserved-height=var(--lr-size-24rem)] - Default host block size, shared
+ *   with the pre-upgrade reservation stylesheet. An explicit outer `block-size` still wins.
  * @cssprop [--lr-flow-canvas-grid-size=var(--lr-size-0-5rem)] - Dotted background spacing. The
  *   `grid` property supplies the fallback when this hook is unset; an element or ancestor hook
  *   takes precedence.
@@ -954,7 +957,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
    *  this canvas's own `position` convention (see `render()`'s `translate(x,y)` and
    *  `[part='node']`'s `inset-block-start/inline-start: 0`) is a top-left corner -- `nodeSize()`
    *  is used to convert between the two in both directions (`fixedPositions` in, the returned map
-   *  out). */
+   *  out). Negative or larger-than-safe-integer centers stay caller-controlled/rendered but are
+   *  omitted from the bounded layout utility's fixed-anchor input. */
   private runAutoLayoutIfNeeded(): void {
     const unpositioned = this.nodes.filter((n) => !n.position);
     if (unpositioned.length === 0) {
@@ -973,8 +977,13 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     const fixedPositions = new Map<string, { x: number; y: number }>();
     for (const n of this.nodes) {
       if (!n.position) continue;
+      if (n.position.x < 0 || n.position.y < 0) continue;
       const size = this.nodeSize(n.id);
       const center = { x: n.position.x + size.width / 2, y: n.position.y + size.height / 2 };
+      if (
+        !Number.isSafeInteger(Math.trunc(center.x)) ||
+        !Number.isSafeInteger(Math.trunc(center.y))
+      ) continue;
       fixedPositions.set(n.id, swap ? { x: center.y, y: center.x } : center);
     }
     const result = layeredLayout({
@@ -1555,15 +1564,16 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   private onNodeClick(event: MouseEvent, node: FlowNode): void {
     const currentTarget = event.currentTarget;
-    if (currentTarget instanceof Element) {
-      for (const entry of event.composedPath()) {
-        if (entry === currentTarget) break;
-        if (entry instanceof Element && entry.matches(
-          'button, a[href], input, select, textarea, [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"], [contenteditable="true"]',
-        )) {
-          event.stopPropagation();
-          return;
-        }
+    for (const entry of event.composedPath()) {
+      if (entry === currentTarget) break;
+      if (
+        entry &&
+        typeof entry === 'object' &&
+        (entry as Node).nodeType === 1 &&
+        isActionableElement(entry as Element)
+      ) {
+        event.stopPropagation();
+        return;
       }
     }
     this.onNodeActivate(node, event.ctrlKey || event.metaKey);
@@ -2319,6 +2329,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     return html`<div part="base" role="region" aria-label=${this.accessibleLabel ?? this.localize('flowCanvasLabel')}>
       <div
         part="viewport"
+        ?data-empty=${isEmpty}
         role="group"
         tabindex="0"
         aria-label=${this.accessibleLabel ??

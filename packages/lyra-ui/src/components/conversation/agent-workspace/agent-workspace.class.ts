@@ -325,6 +325,10 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     if (event.detail.messageId) this.emit('lr-message-retry', { messageId: event.detail.messageId });
   };
 
+  private stopOwnedEvent(event: Event): void {
+    event.stopPropagation();
+  }
+
   private renderMessage(message: ChatMessage): TemplateResult {
     return html`
       <lr-chat-message
@@ -337,7 +341,14 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
       >
         ${message.parts?.length
           ? html`<lr-message-parts .parts=${message.parts}></lr-message-parts>`
-          : html`<lr-markdown .content=${message.text ?? ''}></lr-markdown>`}
+          : html`<lr-markdown
+              .content=${message.text ?? ''}
+              @lr-render-error=${this.stopOwnedEvent}
+              @lr-link-click=${this.stopOwnedEvent}
+              @lr-highlight-activate=${this.stopOwnedEvent}
+              @lr-text-select=${this.stopOwnedEvent}
+              @lr-anchor-result=${this.stopOwnedEvent}
+            ></lr-markdown>`}
       </lr-chat-message>
     `;
   }

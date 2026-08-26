@@ -32,13 +32,13 @@ interface OwnedAnimationFrame {
   handle: number;
 }
 
-interface PushToTalkWindow extends Window {
+type PushToTalkWindow = Window & {
   MediaRecorder: typeof MediaRecorder;
   Blob: typeof Blob;
   Uint8Array: Uint8ArrayConstructor;
   AudioContext?: typeof AudioContext;
   webkitAudioContext?: typeof AudioContext;
-}
+};
 
 function isPushToTalkSupported(owner: Window | null): owner is PushToTalkWindow {
   const runtime = owner as PushToTalkWindow | null;
@@ -91,7 +91,7 @@ export interface LyraPushToTalkEventMap {
  * `lr-record-stop`). `state` is a read-only lifecycle reflected to the `data-state` attribute (not
  * `state`, avoiding any ambiguity with a native form-control `state`): `'idle' | 'requesting' |
  * 'denied' | 'recording' | 'error'`. A host-level `aria-label` (set on `<lr-push-to-talk>` itself)
- * overrides the computed trigger label.
+ * overrides the computed trigger label by attribute presence, including an explicit empty value.
  *
  * @customElement lr-push-to-talk
  * @slot microphone-icon - Replaces the default mic glyph. Decorative: assigned content is inert
@@ -106,8 +106,9 @@ export interface LyraPushToTalkEventMap {
  *   — `durationMs` excludes the `requesting` phase.
  * @event lr-record-cancel - The take was discarded via `cancel()`/Escape — no detail, and
  *   `lr-record-stop` never fires for this take.
- * @event lr-record-error - The capture request failed. `detail: { error: DOMException | Error }` —
- *   `NotAllowedError` transitions `state` to `'denied'`, anything else to `'error'`.
+ * @event lr-record-error - A permission request, recorder construction/start, or active recorder
+ *   failed. `detail: { error: DOMException | Error }` — `NotAllowedError` transitions `state` to
+ *   `'denied'`, anything else to `'error'`.
  * @event lr-level - `detail: { level: number }` (0-1 RMS amplitude), opt-in via `level-events`,
  *   rAF-throttled, only while `state === 'recording'`.
  * @event lr-record-state-change - `detail: { state: PushToTalkState }` — fires on every recording
@@ -535,15 +536,16 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
 
   private startLevelMeter(stream: MediaStream, owner: PushToTalkWindow): void {
     const AudioCtxCtor = owner.AudioContext ?? owner.webkitAudioContext;
-    if (!AudioCtxCtor) return;
-    const audioCtx = new AudioCtxCtor();
-    this.audioCtx = audioCtx;
-    const source = audioCtx.createMediaStreamSource(stream);
-    this.analyser = audioCtx.createAnalyser();
-    this.analyser.fftSize = 256;
-    source.connect(this.analyser);
-    this.levelData = new owner.Uint8Array(this.analyser.frequencyBinCount);
-    this.sampleLevel(owner);
+      if (!AudioCtxCtor) return;
+      const audioCtx = new AudioCtxCtor();
+      this.audioCtx = audioCtx;
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      this.analyser = analyser;
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      this.levelData = new owner.Uint8Array(analyser.frequencyBinCount);
+      this.sampleLevel(owner);
   }
 
   private sampleLevel(owner: PushToTalkWindow): void {
@@ -680,7 +682,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     // carries no role, so its `aria-label` is otherwise inert, but a caller supplying one clearly
     // intends it to name the interactive control inside.
     const override = this.getAttribute('aria-label');
-    if (override) return override;
+    if (override !== null) return override;
     if (this.mode === 'hold') return this.localize('pushToTalkHold');
     return this._state === 'recording' ? this.localize('pushToTalkStop') : this.localize('pushToTalkStart');
   }

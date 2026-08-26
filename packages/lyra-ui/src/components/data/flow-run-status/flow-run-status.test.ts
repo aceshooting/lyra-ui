@@ -4,7 +4,6 @@ import '../flow-minimap/flow-minimap.js';
 import './flow-run-status.js';
 import type { LyraFlowRunStatus } from './flow-run-status.js';
 import type { LyraFlowCanvas, FlowNode, FlowRunDecorations } from '../flow-canvas/flow-canvas.js';
-import { styles } from './flow-run-status.styles.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
@@ -162,7 +161,7 @@ it('owns a deeply frozen decoration snapshot and omits invalid lifecycle states'
 
   expect(overlay.decorations).to.deep.equal({ fetch: { status: 'running', detail: 'original' } });
   expect(Object.isFrozen(overlay.decorations)).to.be.true;
-  expect(Object.isFrozen(overlay.decorations.fetch)).to.be.true;
+  expect(Object.isFrozen(overlay.decorations['fetch'])).to.be.true;
   expect(overlay.shadowRoot!.querySelectorAll('[part="count"]')).to.have.lengthOf(1);
 });
 
@@ -272,7 +271,9 @@ it('lets each summary-count status color be rethemed independently', async () =>
   ]);
   for (const count of overlay.shadowRoot!.querySelectorAll<HTMLElement>('[part="count"]')) {
     const dot = count.querySelector('.tone-dot') as HTMLElement;
-    expect(getComputedStyle(dot).backgroundColor).to.equal(expected.get(count.dataset.status));
+    expect(getComputedStyle(dot).backgroundColor).to.equal(
+      expected.get(count.dataset['status'] ?? '')!
+    );
   }
 });
 

@@ -12,7 +12,11 @@ import {
   type OverlayHandle,
 } from '../../../internal/overlay-manager.js';
 import { nextId, hasRealContent } from '../../../internal/a11y.js';
-import { place, trackRect } from '../../../internal/positioner.js';
+import {
+  deferredPlaceReady as place,
+  deferredTrackRect as trackRect,
+  type DeferredOperationHandle,
+} from '../../../internal/anchored-overlay-runtime.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteInteger, finiteNumber, finiteRange } from '../../../internal/numbers.js';
@@ -441,9 +445,10 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
   @state() private unanchored = false;
   @state() private hasSlotContent = false;
+  private spotlightPositioned = false;
 
   private overlay?: OverlayHandle;
-  private placeCleanup?: () => void;
+  private placeCleanup?: DeferredOperationHandle;
   private spotlightCleanup?: () => void;
   private interactiveKeyboardTarget?: HTMLElement;
   private interactiveKeyboardDocument?: Document;
@@ -493,6 +498,17 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       this.activeTargetSnapshot = step ? this.resolveTarget(step) : null;
       this.unanchored = step ? !this.activeTargetSnapshot : false;
     }
+    if (
+      this.open &&
+      (changed.has('open') ||
+        changed.has('activeIndex') ||
+        changed.has('steps') ||
+        changed.has('placement') ||
+        changed.has('distance') ||
+        changed.has('spotlightPadding'))
+    ) {
+      this.spotlightPositioned = false;
+    }
   }
 
   // Runs after render so the manager can resolve the (possibly just-swapped, per keyed()) panel,
@@ -504,18 +520,16 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     if (this.open && (activationChanged || geometryChanged)) {
       const preserveInteractiveTargetFocus = changed.has('steps') && this.canPreserveInteractiveTargetFocus();
       const overlayChanged = this.activateOverlayInternal();
-      if (
+      const shouldFocus =
         changed.has('open') ||
         changed.has('activeIndex') ||
         overlayChanged ||
-        (changed.has('steps') && !preserveInteractiveTargetFocus)
-      ) {
-        this.overlay?.focusInitial();
-      }
-      this.activateStep({
+        (changed.has('steps') && !preserveInteractiveTargetFocus);
+      const placement = this.activateStep({
         scroll: activationChanged,
         announceMissing: activationChanged,
       });
+      if (shouldFocus) this.focusAfterPlacement(placement);
     }
   }
 
@@ -541,8 +555,8 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
         this.unanchored = step ? !this.activeTargetSnapshot : false;
         await this.updateComplete;
         if (!this.isConnected || !this.open) return;
-        this.overlay?.focusInitial();
-        this.activateStep({ scroll: true, announceMissing: true });
+        const placement = this.activateStep({ scroll: true, announceMissing: true });
+        this.focusAfterPlacement(placement);
       });
     }
   }
@@ -664,10 +678,12 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   // `unanchored` is already correctly derived for this render by willUpdate() (see its own doc)
   // by the time this runs, so the freshly queried popover already reflects the right
   // anchored/unanchored shape -- no separate corrective re-render/await round-trip needed here.
-  private activateStep(options: { scroll: boolean; announceMissing: boolean }): void {
+  private activateStep(
+    options: { scroll: boolean; announceMissing: boolean },
+  ): DeferredOperationHandle | undefined {
     this.disposePositioning();
     const step = this.steps[this.activeIndex];
-    if (!step) return;
+    if (!step) return undefined;
     const target = this.activeTargetSnapshot;
 
     if (!target?.isConnected) {
@@ -680,11 +696,11 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
           }),
         );
       }
-      return;
+      return undefined;
     }
 
     const popover = this.renderRoot.querySelector('[part="popover"]') as HTMLElement | null;
-    if (!popover) return;
+    if (!popover) return undefined;
 
     if (options.scroll) {
       const ownerWindow = target.ownerDocument.defaultView;
@@ -710,6 +726,26 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       this.interactiveKeyboardDocument.addEventListener('keydown', this.onInteractiveScopeKeyDown, true);
     }
     this.spotlightCleanup = trackRect(target, (rect) => this.paintSpotlight(rect, padding, interactive));
+    return this.placeCleanup;
+  }
+
+  private focusAfterPlacement(placement: DeferredOperationHandle | undefined): void {
+    if (!placement) {
+      this.overlay?.focusInitial();
+      return;
+    }
+    void placement.ready.then((positioned) => {
+      if (this.placeCleanup !== placement || !this.open || !this.isConnected) return;
+      if (positioned) {
+        this.overlay?.focusInitial();
+        return;
+      }
+      // A modal tour cannot remain as a focus-trapping scrim with an unavailable hidden panel.
+      // This is structural teardown, not a user-requested end reason, so it bypasses the
+      // cancelable end lifecycle just like losing the component itself does.
+      this.open = false;
+      this.deactivateOverlayInternal();
+    });
   }
 
   private paintSpotlight(rect: DOMRect, padding: number, interactive: boolean): void {
@@ -733,10 +769,39 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       spotlight.style.top = `${y}px`;
       spotlight.style.width = `${width}px`;
       spotlight.style.height = `${height}px`;
+      spotlight.hidden = false;
     }
     if (backdrop) {
       backdrop.style.clipPath = interactive ? keyholeClipPath(x, y, width, height) : '';
     }
+    this.spotlightPositioned = true;
+  }
+
+  private resetSpotlightGeometry(): void {
+    this.spotlightPositioned = false;
+    const cutout = this.renderRoot?.querySelector(
+      '[part="backdrop"] .cutout',
+    ) as SVGRectElement | null;
+    const spotlight = this.renderRoot?.querySelector(
+      '[part="spotlight"]',
+    ) as HTMLElement | null;
+    const backdrop = this.renderRoot?.querySelector(
+      '[part="backdrop"]',
+    ) as SVGSVGElement | null;
+    if (cutout) {
+      cutout.setAttribute('x', '0');
+      cutout.setAttribute('y', '0');
+      cutout.setAttribute('width', '0');
+      cutout.setAttribute('height', '0');
+    }
+    if (spotlight) {
+      spotlight.hidden = true;
+      spotlight.style.removeProperty('left');
+      spotlight.style.removeProperty('top');
+      spotlight.style.removeProperty('width');
+      spotlight.style.removeProperty('height');
+    }
+    backdrop?.style.removeProperty('clip-path');
   }
 
   private disposePositioning(): void {
@@ -744,6 +809,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     this.placeCleanup = undefined;
     this.spotlightCleanup?.();
     this.spotlightCleanup = undefined;
+    this.resetSpotlightGeometry();
     this.interactiveKeyboardDocument?.removeEventListener('keydown', this.onInteractiveScopeKeyDown, true);
     this.interactiveKeyboardDocument = undefined;
     this.interactiveKeyboardTarget = undefined;
@@ -918,7 +984,11 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
               <rect class="scrim" x="0" y="0" width="100%" height="100%" mask="url(#${this.maskId})"></rect>
             `}
       </svg>
-      <div part="spotlight" aria-hidden="true" ?hidden=${this.unanchored}></div>
+      <div
+        part="spotlight"
+        aria-hidden="true"
+        ?hidden=${this.unanchored || !this.spotlightPositioned}
+      ></div>
       ${keyed(
         JSON.stringify([this.activeIndex, step.stepId]),
         html`

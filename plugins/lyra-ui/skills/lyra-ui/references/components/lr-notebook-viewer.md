@@ -6,9 +6,10 @@
 - **Class** `LyraNotebookViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/notebook-viewer/notebook-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 20 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 21 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -25,6 +26,11 @@ plain preformatted text. A code cell's `execute_result`/`display_data` outputs p
 same shared `internal/ansi.ts` parser `lr-terminal` uses — a traceback keeps its coloring instead of
 showing raw `ESC[` sequences. Sanitizing raw HTML/SVG output markup lazy-loads the
 optional peer `dompurify`; without it, the output renders a localized notice instead of raw markup.
+Sanitized `text/html` output uses the passive-document profile: anchors, form controls, and custom
+elements are unwrapped to ordinary text/children where safe, remote navigation/resource attributes
+are removed, and only inline base64 raster image sources render. Sanitized `image/svg+xml` output
+is likewise network-silent and non-interactive: animation is removed and only same-document
+fragment references or inline base64 raster image references survive.
 Cells are virtualized through `lr-virtual-list`. `node-path` anchors resolve `path[0]` as a cell
 index; `fragment` anchors resolve a cell's own `id`. No execution, no kernels, no editing, no
 ipywidgets.
@@ -85,9 +91,11 @@ tone), `cell-highlighted-success`, `cell-highlighted-warning`, `cell-highlighted
 scrollable preformatted surface for a raw cell), `outputs`, `output`
 (`data-output-type`, `data-stream`), `output-error` (added alongside `output` on a stderr stream or
 an error output), `error-output-label` (the label introducing an error output's traceback),
-`output-toggle`, `error`, `spinner`. The highlight/active state variants are separate part _names_
-rather than attribute selectors, because Shadow Parts forbids an attribute selector after
-`::part()`.
+`output-toggle`, `error`, `spinner`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror
+of the latest anchor-jump message; the spoken copy is appended to the shared document-level polite
+sink only while the viewer and its composed ancestors are exposed to the accessibility tree). The
+highlight/active state variants are separate part _names_ rather than attribute selectors, because
+Shadow Parts forbids an attribute selector after `::part()`.
 The document-level spinner always includes visible localized loading text alongside its decorative
 ring; the text remains understandable without CSS or animation and the ring stops under reduced
 motion.

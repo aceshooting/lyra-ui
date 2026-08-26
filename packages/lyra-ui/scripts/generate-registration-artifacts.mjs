@@ -1,8 +1,10 @@
+import { isMainModule } from './is-main-module.mjs';
+
 // Generates the component-registration imports for the two compatibility entries
 // (`src/all.ts`, `src/ssr/all.ts`), the root-registration allowlist, and package.json#sideEffects
 // from the authoritative component inventory. The package root (`src/lyra.ts`) is deliberately
 // registration-free and is not written by this script: its named exports stay curated by hand.
-import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deriveSideEffects, generateSideEffects } from './generate-side-effects.mjs';
@@ -278,6 +280,6 @@ function run(argv) {
   return 0;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
+if (isMainModule(import.meta.url)) {
   process.exitCode = run(process.argv.slice(2));
 }

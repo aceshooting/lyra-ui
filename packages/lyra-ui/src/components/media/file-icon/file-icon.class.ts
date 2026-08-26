@@ -150,9 +150,10 @@ export class LyraFileIcon extends LyraElement {
       ? this.localize('fileTypeWithSize', undefined, { label: renderedLabel, size: sizeText })
       : renderedLabel;
     const accessibleLabel = hostAriaLabel(this) ?? fallbackLabel;
-    const descriptionId = metadata.provenance === 'consumer' && metadata.description
-      ? 'metadata-description'
-      : undefined;
+    const descriptionId =
+      this.mode === 'label' && metadata.provenance === 'consumer' && metadata.description
+        ? 'metadata-description'
+        : undefined;
     return html`
       <span
         part="base"

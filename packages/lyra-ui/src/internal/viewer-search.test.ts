@@ -15,14 +15,14 @@ function localizeStub(key: string, _fallback: string | undefined, values?: Recor
     viewerSearchActiveMatch: 'Match {current} of {total}',
   };
   const message = templates[key] ?? key;
-  const count = values?.count;
+  const count = values?.['pluralCount'] ?? values?.['count'];
   let text: string;
   if (typeof message === 'string') {
     text = message;
   } else if (typeof count === 'number') {
-    text = message[new Intl.PluralRules('en').select(count)] ?? message.other!;
+    text = message[new Intl.PluralRules('en').select(count)] ?? message['other']!;
   } else {
-    text = message.other!;
+    text = message['other']!;
   }
   for (const [k, v] of Object.entries(values ?? {})) text = text.replace(`{${k}}`, String(v));
   return text;
@@ -37,7 +37,7 @@ describe('announceSearchResult', () => {
         done();
       },
     });
-    announceSearchResult(localizeStub, announcer, 0, -1);
+    announceSearchResult(localizeStub, announcer, 'en', 0, -1);
   });
 
   it('announces a singular match-count phrase before any navigation', (done) => {
@@ -48,7 +48,7 @@ describe('announceSearchResult', () => {
         done();
       },
     });
-    announceSearchResult(localizeStub, announcer, 1, -1);
+    announceSearchResult(localizeStub, announcer, 'en', 1, -1);
   });
 
   it('announces a plural match-count phrase before any navigation', (done) => {
@@ -59,7 +59,7 @@ describe('announceSearchResult', () => {
         done();
       },
     });
-    announceSearchResult(localizeStub, announcer, 3, -1);
+    announceSearchResult(localizeStub, announcer, 'en', 3, -1);
   });
 
   it('announces the active-match position once navigation has started', (done) => {
@@ -70,6 +70,21 @@ describe('announceSearchResult', () => {
         done();
       },
     });
-    announceSearchResult(localizeStub, announcer, 5, 1);
+    announceSearchResult(localizeStub, announcer, 'en', 5, 1);
+  });
+
+  it('formats every interpolated search number in the effective locale', (done) => {
+    const locale = 'ar-EG';
+    const numberFormat = new Intl.NumberFormat(locale);
+    const announcer = new Announcer({
+      throttleMs: 1,
+      onFlush: (text) => {
+        expect(text).to.equal(
+          `Match ${numberFormat.format(2)} of ${numberFormat.format(1234)}`,
+        );
+        done();
+      },
+    });
+    announceSearchResult(localizeStub, announcer, locale, 1234, 1);
   });
 });

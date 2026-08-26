@@ -18,7 +18,7 @@ export const SURFACE_SECTIONS = [
   'native',
 ];
 
-export const MAPPING_CLASSIFICATIONS = ['exact', 'rewritten', 'warning-required', 'conceptual-only', 'unsupported'];
+const MAPPING_CLASSIFICATIONS = ['exact', 'rewritten', 'warning-required', 'conceptual-only', 'unsupported'];
 
 export const ACCESSIBILITY_PROFILE_SECTIONS = [
   'semantics',
@@ -30,7 +30,7 @@ export const ACCESSIBILITY_PROFILE_SECTIONS = [
   'motion',
 ];
 
-export const ACCESSIBILITY_BEHAVIOR_VOCABULARY = Object.freeze({
+const ACCESSIBILITY_BEHAVIOR_VOCABULARY = Object.freeze({
   semantics: Object.freeze([
     'alert',
     'article',
@@ -149,7 +149,7 @@ export const ACCESSIBILITY_BEHAVIOR_VOCABULARY = Object.freeze({
   ]),
 });
 
-export const ACCESSIBILITY_COMPARISON_STATUSES = [
+const ACCESSIBILITY_COMPARISON_STATUSES = [
   'equivalent',
   'target-additive',
   'not-applicable',
@@ -912,7 +912,7 @@ function moduleExportDeclaration(index, module, entry) {
  * remains on every entry as identity/evidence while mapped comparison requires the public name,
  * kind, and signature.
  */
-export function normalizeComponentModuleExports(
+function normalizeComponentModuleExports(
   manifest,
   componentModulePath,
   { ecosystem, additionalModules = [] },

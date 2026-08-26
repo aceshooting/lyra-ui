@@ -2,8 +2,9 @@ export default {
   workspaces: {
     '.': {
       entry: [
-        'scripts/*.mjs',
         '.storybook/{main,preview,manager,story-theme}.js',
+        // TypeScript resolves this declaration as the authored contract for theme-contract.js.
+        '.storybook/theme-contract.d.ts',
         '.storybook/**/*.mdx',
       ],
       project: ['scripts/**/*.mjs', '.storybook/**/*.{js,mdx,css}'],
@@ -30,7 +31,12 @@ export default {
         'src/**/*.test.ts',
         'src/**/*.stories.ts',
         'type-tests/**/*.ts',
-        'scripts/*.mjs',
+        // Maintainer CLIs invoked from shell/docs rather than a package.json script.
+        'scripts/generate-chart-palette.mjs',
+        'scripts/generate-palette.mjs',
+        'scripts/generate-terminal-palette.mjs',
+        'scripts/llms-gap-report.mjs',
+        'scripts/scaffold-translation.mjs',
         'scripts/fixtures/migrate-wa/*.{svelte,vue}',
         '*.config.js',
       ],
@@ -41,11 +47,8 @@ export default {
         'type-tests/**/*.ts',
         '*.config.js',
       ],
-      // Injected by Web Test Runner's browser harness; it is not a filesystem module.
-      ignoreUnresolved: ['/__web-dev-server__web-socket.js'],
     },
     'packages/lyra-flags': {
-      entry: ['scripts/*.mjs'],
       project: ['scripts/**/*.mjs', '*.js'],
     },
   },

@@ -6,6 +6,7 @@
 - **Class** `LyraEmojiPicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/emoji-picker/emoji-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `emoji-picker-element-data` — see `llms/peers.md`
 - **Themeable via** 15 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -40,8 +41,9 @@ Groups returned by the built-in loader carry private provenance, letting their f
 headings follow `registerLyraLocale()`/`.strings` without exposing localization keys as consumer
 data. Empty (the default, before the auto-loader
 resolves) renders just the search input and the empty state. `accessibleLabel` (`aria-label`)
-forwards a host-supplied accessible name to the internal `role="listbox"` grid; empty falls back to
-the localized default grid label. `label: string = ''` — visible label rendered above the
+forwards a host-supplied accessible name to the internal `role="listbox"` grid. Only omission falls
+back to the visible label or localized default; an explicit `aria-label=""` remains empty.
+`label: string = ''` — visible label rendered above the
 search/grid; unset renders no label chrome. When `label` (or the `label` slot) is set and
 `accessibleLabel`/a host `aria-label` is not, the grid's accessible name switches from the
 localized default to `aria-labelledby` pointing at the visible label. `hint: string = ''` —

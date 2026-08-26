@@ -6,6 +6,7 @@
 - **Class** `LyraModelSelect`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/model-select/model-select.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 15 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -37,8 +38,9 @@ focus move.
 - `LyraCatalog<T extends LyraCatalogEntry = LyraCatalogEntry> = readonly string[] | readonly T[]`
   — a homogeneous catalog shared by model-select, voice-picker, and composed controls. String
   shorthand uses the same string for both id and label; readonly tuples/arrays are accepted. Ids
-  must be nonempty and unique: malformed rows and later duplicates are omitted first-wins before
-  mode selection, rendering, focus reconciliation, selection, or preview lookup.
+  must be nonempty and unique and object rows require a nonblank string label: malformed rows and
+  later duplicates are omitted first-wins before mode selection, rendering, focus reconciliation,
+  selection, or preview lookup.
 - `LyraModelCatalogEntry extends LyraCatalogEntry { icon?: string }` — one model row. An
   optional literal `icon` (for example, an emoji) renders decoratively before `label`; it does not
   change the option's accessible name.

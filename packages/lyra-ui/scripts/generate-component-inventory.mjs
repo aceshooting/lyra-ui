@@ -1,9 +1,11 @@
+import { isMainModule } from './is-main-module.mjs';
+
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseSync } from 'oxc-parser';
 
 import { buildMirrorMap } from './migrate-wa.mjs';
-import { stripComments } from './check-form-associated.mjs';
 import { expandManifestInheritance } from './manifest-compact.mjs';
 import { readTypeAliases } from './editor-type-values.mjs';
 import {
@@ -83,6 +85,91 @@ function resolveTypeScriptImport(importer, specifier) {
   );
 }
 
+/** Visit every ESTree-compatible node below `node`, including TypeScript-specific nodes. */
+function visitNodes(node, visitor) {
+  if (!node || typeof node !== 'object') return;
+  if (typeof node.type === 'string') visitor(node);
+  for (const [key, value] of Object.entries(node)) {
+    if (key === 'parent' || key === 'type' || key === 'start' || key === 'end') continue;
+    if (Array.isArray(value)) {
+      for (const child of value) visitNodes(child, visitor);
+    } else if (value && typeof value === 'object') visitNodes(value, visitor);
+  }
+}
+
+/** Runtime module specifiers only; comments, examples, strings and type-only edges never count. */
+export function runtimeModuleSpecifiers(source, file = 'component.ts') {
+  const parsed = parseSync(file, source);
+  if (parsed.errors.length > 0) {
+    const detail = parsed.errors.slice(0, 3).map((error) => error.message).join('; ');
+    throw new Error(`${file}: optional-peer parser failed: ${detail}`);
+  }
+  const specifiers = [];
+  for (const statement of parsed.program.body) {
+    if (statement.type === 'ImportDeclaration' && typeof statement.source?.value === 'string') {
+      if (statement.importKind === 'type') continue;
+      const runtimeBindings = statement.specifiers.filter(
+        (specifier) => specifier.type !== 'ImportSpecifier' || specifier.importKind !== 'type'
+      );
+      if (statement.specifiers.length > 0 && runtimeBindings.length === 0) continue;
+      specifiers.push(statement.source.value);
+    } else if (
+      (statement.type === 'ExportNamedDeclaration' || statement.type === 'ExportAllDeclaration') &&
+      typeof statement.source?.value === 'string'
+    ) {
+      if (statement.exportKind === 'type') continue;
+      if (
+        statement.type === 'ExportNamedDeclaration' &&
+        statement.specifiers.length > 0 &&
+        statement.specifiers.every((specifier) => specifier.exportKind === 'type')
+      ) continue;
+      specifiers.push(statement.source.value);
+    }
+  }
+  visitNodes(parsed.program, (node) => {
+    if (node.type !== 'ImportExpression') return;
+    if (node.source?.type === 'Literal' && typeof node.source.value === 'string') {
+      specifiers.push(node.source.value);
+    } else if (
+      node.source?.type === 'TemplateLiteral' &&
+      node.source.expressions.length === 0 &&
+      node.source.quasis.length === 1
+    ) {
+      specifiers.push(node.source.quasis[0].value.cooked);
+    }
+  });
+  return specifiers;
+}
+
+const CAPABILITY_GATED_REGISTRATIONS = new Map([
+  [
+    path.join(packageDir, 'src/components/utility/icon/icon.ts'),
+    new Set(['src', 'library', 'iconLibrary']),
+  ],
+  [
+    path.join(packageDir, 'src/components/forms/icon-button/icon-button.ts'),
+    new Set(['src', 'library', 'iconLibrary']),
+  ],
+]);
+
+function rootCapabilityNames(component, rootFile) {
+  const names = new Set((component.surface?.properties ?? []).map(({ name }) => name));
+  if (names.size > 0) return names;
+  const classFile = rootFile.replace(/\.ts$/, '.class.ts');
+  if (!fs.existsSync(classFile)) return names;
+  const parsed = parseSync(classFile, fs.readFileSync(classFile, 'utf8'));
+  if (parsed.errors.length > 0) return names;
+  visitNodes(parsed.program, (node) => {
+    if (
+      (node.type === 'PropertyDefinition' || node.type === 'AccessorProperty' || node.type === 'MethodDefinition') &&
+      node.key?.type === 'Identifier'
+    ) {
+      names.add(node.key.name);
+    }
+  });
+  return names;
+}
+
 /**
  * Root registration follows the component's reviewed optional-peer policy, never the generated
  * allowlist. Peer-free components are safe to enroll automatically. A new peer-bearing component
@@ -123,120 +210,33 @@ export function rootRegistrationPredecessorTag(tag) {
   return tag === 'lr-geojson-viewer' ? 'lr-geojson-view' : null;
 }
 
-function runtimeSpecifiersOf(source) {
-  return [
-    ...source.matchAll(
-      /\b(?:import|export)\s+(?!type\b)[^;]*?\bfrom\s*['"](\.[^'"]+)['"]/g
-    ),
-    ...source.matchAll(/\bimport\s*['"](\.[^'"]+)['"]/g),
-    ...source.matchAll(/\bimport\s*\(\s*['"](\.[^'"]+)['"]\s*\)/g),
-  ];
-}
-
-/** True for another component's own registration entry (calls `defineElement`) reached from a
- * traversal root -- used to recognize a composed child, never the root itself. */
-function isComponentRegistrationFile(file, rootFile) {
-  if (file === rootFile || !file.startsWith(path.join(packageDir, 'src', 'components')))
-    return false;
-  try {
-    return /\bdefineElement\s*\(/.test(fs.readFileSync(file, 'utf8'));
-  } catch {
-    return false;
-  }
-}
-
-// <lr-icon>/<lr-icon-button> are composed purely for a fixed, author-inaccessible decorative
-// glyph in most parents (a literal `name="..."`/`icon="..."` with no `library`/`src` binding), so
-// their own optional peer (dompurify, used only to sanitize a remotely resolved icon) is not a
-// prerequisite for those parents. A parent that forwards an author-settable `library`/`src` value
-// into the composed icon DOES reach that remote-resolution path (a registered `library` resolver
-// and a direct `src` fetch converge on the same sanitized fetch in icon.class.ts), so it inherits
-// the peer. This is a derived rule rather than a fixed root allowlist so it also covers any future
-// component that composes either primitive.
-const DECORATIVE_ICON_MODULES = [
-  'src/components/utility/icon/icon.ts',
-  'src/components/forms/icon-button/icon-button.ts',
-];
-const CAPABILITY_FORWARDING_PATTERN = /\b(?:library|src)\s*=\s*\$\{/;
-
-/** True when the root's OWN implementation (its class file and any shared/internal module it
- * reaches -- never a composed child's own implementation) forwards an author-settable `library`
- * or `src` value into a template binding, which is what lets a consumer reach a composed icon's
- * remote-resolution capability through the root's public API. */
-function rootForwardsIconCapability(rootFile) {
-  const seen = new Set();
-  const queue = [rootFile];
-  while (queue.length) {
-    const file = queue.pop();
-    if (!file || seen.has(file) || !fs.existsSync(file)) continue;
-    seen.add(file);
-    if (isComponentRegistrationFile(file, rootFile)) continue;
-    const source = stripComments(fs.readFileSync(file, 'utf8'));
-    if (CAPABILITY_FORWARDING_PATTERN.test(source)) return true;
-    for (const match of runtimeSpecifiersOf(source)) {
-      const resolved = resolveTypeScriptImport(file, match[1]);
-      if (resolved) queue.push(resolved);
-    }
-  }
-  return false;
-}
-
-// <lr-flag>'s real dynamic `import('@aceshooting/lyra-flags')` lives in flag-peer.ts, a
-// deliberately separate opt-in registration entry (its own JSDoc: "Import this entry explicitly
-// when that feature is used") that the default registration graph never reaches from flag.ts --
-// so no amount of reachable-import traversal will ever find it, comment-stripped or not. Before
-// stripComments() this attribution instead fell out by accident, matching a `from
-// '@aceshooting/lyra-flags/...'` code sample inside a JSDoc `@example` in flag.class.ts, which
-// happened to reach the right answer for the wrong reason. The peer is still genuinely required
-// here -- <lr-flag> cannot render its documented flag artwork without it, and its own runtime
-// error message tells the caller to install it -- so this is recorded as an explicit, reviewed
-// attribution rather than left to fall out of a comment grep. <lr-locale-picker> composes
-// <lr-flag> in its own template (see its registration module's `import '../../media/flag/flag.js'`)
-// to render a flag next to each locale option, so it inherits the same reviewed attribution.
-const EXPLICIT_OPTIONAL_PEER_ATTRIBUTIONS = new Map([
-  ['src/components/media/flag/flag.ts', ['@aceshooting/lyra-flags']],
-  ['src/components/forms/locale-picker/locale-picker.ts', ['@aceshooting/lyra-flags']],
-]);
-
 export function optionalPeersForComponent(component, packageJson) {
   const peers = Object.keys(packageJson.peerDependencies ?? {}).filter(
     (peer) => packageJson.peerDependenciesMeta?.[peer]?.optional === true
   );
-  const found = new Set(
-    (EXPLICIT_OPTIONAL_PEER_ATTRIBUTIONS.get(component.registrationModule) ?? []).filter(
-      (peer) => peers.includes(peer)
-    )
-  );
+  const found = new Set();
   const seen = new Set();
   const rootFile = path.join(packageDir, component.registrationModule);
   const queue = [rootFile];
-
-  const decorativeIconModules = new Set(
-    DECORATIVE_ICON_MODULES.map((modulePath) => path.join(packageDir, modulePath))
-  );
-  let forwardsIconCapability;
+  const capabilities = rootCapabilityNames(component, rootFile);
+  const skipsCapabilityGatedRegistration = (file) => {
+    if (file === rootFile) return false;
+    const required = CAPABILITY_GATED_REGISTRATIONS.get(file);
+    return Boolean(required && ![...required].some((name) => capabilities.has(name)));
+  };
 
   while (queue.length) {
     const file = queue.pop();
     if (!file || seen.has(file) || !fs.existsSync(file)) continue;
     seen.add(file);
-    if (file !== rootFile && decorativeIconModules.has(file)) {
-      forwardsIconCapability ??= rootForwardsIconCapability(rootFile);
-      if (!forwardsIconCapability) continue;
-    }
-    const source = stripComments(fs.readFileSync(file, 'utf8'));
-    for (const peer of peers) {
-      const escaped = peer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      if (
-        new RegExp(`(?:from\\s+|import\\()\\s*['"]${escaped}(?:/|['"])`).test(
-          source
-        )
-      )
-        found.add(peer);
-    }
-    for (const match of runtimeSpecifiersOf(source)) {
-      const resolved = resolveTypeScriptImport(file, match[1]);
-      if (resolved) queue.push(resolved);
+    const source = fs.readFileSync(file, 'utf8');
+    for (const specifier of runtimeModuleSpecifiers(source, file)) {
+      for (const peer of peers) {
+        if (specifier === peer || specifier.startsWith(`${peer}/`)) found.add(peer);
+      }
+      if (!specifier.startsWith('.')) continue;
+      const resolved = resolveTypeScriptImport(file, specifier);
+      if (resolved && !skipsCapabilityGatedRegistration(resolved)) queue.push(resolved);
     }
   }
   return [...found].sort();
@@ -6005,19 +6005,20 @@ const STATIC_VALIDATOR_TYPE_EQUIVALENCE_TARGETS = new Map([
 ]);
 
 // Chart.js 4.5.1's `ChartType = keyof ChartTypeRegistry` is the same eight built-in controller
-// names exposed by `LyraChartType` on the generic chart. Each typed wrapper deliberately locks its
-// public type to the controller named by its tag, preventing configuration and renderer identity
-// from diverging. Keep every mirrored tag explicit so new chart families never inherit this review.
+// names exposed by `LyraChartType`. Mirrored typed wrappers keep that writable vocabulary while
+// supplying a tag-specific default; only the Lyra-original histogram locks its controller, and it
+// has no upstream mapping here. Keep every mirrored tag explicit so new chart families never
+// inherit this review.
 const CHART_TYPE_EQUIVALENCE_TARGETS = new Map([
-  ['wa-bar-chart', "'bar'"],
-  ['wa-bubble-chart', "'bubble'"],
+  ['wa-bar-chart', 'LyraChartType'],
+  ['wa-bubble-chart', 'LyraChartType'],
   ['wa-chart', 'LyraChartType'],
-  ['wa-doughnut-chart', "'doughnut'"],
-  ['wa-line-chart', "'line'"],
-  ['wa-pie-chart', "'pie'"],
-  ['wa-polar-area-chart', "'polarArea'"],
-  ['wa-radar-chart', "'radar'"],
-  ['wa-scatter-chart', "'scatter'"],
+  ['wa-doughnut-chart', 'LyraChartType'],
+  ['wa-line-chart', 'LyraChartType'],
+  ['wa-pie-chart', 'LyraChartType'],
+  ['wa-polar-area-chart', 'LyraChartType'],
+  ['wa-radar-chart', 'LyraChartType'],
+  ['wa-scatter-chart', 'LyraChartType'],
 ]);
 
 function reviewedTypeEquivalences(upstreamTag) {
@@ -6562,6 +6563,12 @@ const REVIEWED_CSS_DEFAULT_EQUIVALENCE_GROUPS = new Map([
   [
     'wa-time-input',
     [
+      [
+        '--column-item-height',
+        '2.25em',
+        'calc(var(--lr-size-1em)*2.25)',
+      ],
+      ['--column-width', '3em', 'calc(var(--lr-size-1em)*3)'],
       [
         '--hide-duration',
         'var(--wa-transition-fast)',
@@ -7631,10 +7638,7 @@ function serialize(inventory) {
   return `${JSON.stringify(inventory, null, 2)}\n`;
 }
 
-if (
-  process.argv[1] &&
-  fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))
-) {
+if (isMainModule(import.meta.url)) {
   try {
     const options = parseArguments(process.argv.slice(2));
     const inventory = generateInventory(options);

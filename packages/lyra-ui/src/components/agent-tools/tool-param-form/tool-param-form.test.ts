@@ -8,6 +8,7 @@ import type {
 } from './tool-param-form.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import type { LyraSelect } from '../../forms/select/select.class.js';
 
 it('provides rendered hover feedback for native text and number controls', async () => {
   const el = await fixture<LyraToolParamForm>(html`
@@ -90,7 +91,7 @@ it('renders one control per property, in schema key order, matched to its type',
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
   const fields = el.shadowRoot!.querySelectorAll('[part="field"]');
   expect(fields.length).to.equal(4);
-  expect(Array.from(fields).map((f) => (f as HTMLElement).dataset.key)).to.deep.equal([
+  expect(Array.from(fields).map((f) => (f as HTMLElement).dataset['key'])).to.deep.equal([
     'city',
     'units',
     'days',
@@ -176,8 +177,8 @@ it('falls back to schema default for a field missing from value, without mutatin
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
   const daysInput = field(el, 'days').querySelector('input') as HTMLInputElement;
   expect(daysInput.value).to.equal('3');
-  expect(el.value.days).to.be.undefined;
-  expect(el.effectiveValue.days).to.equal(3);
+  expect(el.value['days']).to.be.undefined;
+  expect(el.effectiveValue['days']).to.equal(3);
 });
 
 it('renders an explicit value over the schema default', async () => {
@@ -239,7 +240,7 @@ it('resets a boolean field to unset via its empty select option, removing it fro
   const el = (await fixture(
     html`<lr-tool-param-form .schema=${basicSchema} .value=${{ notify: true }}></lr-tool-param-form>`,
   )) as LyraToolParamForm;
-  expect(el.value.notify).to.be.true;
+  expect(el.value['notify']).to.be.true;
   const select = field(el, 'notify').querySelector('lr-select') as HTMLElement & { value: string };
 
   setTimeout(() => {
@@ -562,7 +563,7 @@ it('treats a required boolean as property presence, so false and true are both v
     properties: { confirm: { type: 'boolean', default: false } },
   };
   el.value = {};
-  expect(el.effectiveValue.confirm).to.be.false;
+  expect(el.effectiveValue['confirm']).to.be.false;
   expect(el.checkValidity()).to.be.true;
 });
 
@@ -587,7 +588,7 @@ it('accepts empty strings, zero, and false when their required properties are pr
   expect(el.checkValidity()).to.be.true;
 
   el.value = { text: undefined, count: 0, enabled: false };
-  expect(el.errors.text).to.equal('This field is required.');
+  expect(el.errors['text']).to.equal('This field is required.');
   expect(el.checkValidity()).to.be.false;
 });
 
@@ -610,14 +611,14 @@ it('validates every supported property type and string enum even when fields are
   )) as LyraToolParamForm;
 
   expect(el.errors).to.have.keys(['text', 'amount', 'count', 'enabled', 'mode']);
-  expect(el.errors.text).to.equal('Must be a string.');
-  expect(el.errors.amount).to.equal('Must be a finite number.');
-  expect(el.errors.count).to.equal('Must be a whole number.');
-  expect(el.errors.enabled).to.equal('Must be a boolean.');
-  expect(el.errors.mode).to.equal('Must be one of: fast or safe.');
-  expect(el.internals.validity.typeMismatch).to.be.true;
-  expect(el.internals.validity.stepMismatch).to.be.true;
-  expect(el.internals.validity.customError).to.be.true;
+  expect(el.errors['text']).to.equal('Must be a string.');
+  expect(el.errors['amount']).to.equal('Must be a finite number.');
+  expect(el.errors['count']).to.equal('Must be a whole number.');
+  expect(el.errors['enabled']).to.equal('Must be a boolean.');
+  expect(el.errors['mode']).to.equal('Must be one of: fast or safe.');
+  expect(el.validity.typeMismatch).to.be.true;
+  expect(el.validity.stepMismatch).to.be.true;
+  expect(el.validity.customError).to.be.true;
   expect(el.checkValidity()).to.be.false;
 
   el.value = { text: '', amount: 0, count: 2, enabled: false, mode: 'fast' };
@@ -630,7 +631,7 @@ it('validates every supported property type and string enum even when fields are
   }).to.throw(TypeError);
   el.value = { ...el.value, enabled: 'no' };
   expect(el.checkValidity()).to.be.false;
-  expect(el.errors.enabled).to.equal('Must be a boolean.');
+  expect(el.errors['enabled']).to.equal('Must be a boolean.');
 });
 
 it('localizes validation messages via .strings, leaving English default output unchanged elsewhere', async () => {
@@ -656,10 +657,10 @@ it('localizes validation messages via .strings, leaving English default output u
     ></lr-tool-param-form>`,
   )) as LyraToolParamForm;
 
-  expect(el.errors.text).to.equal('Doit être une chaîne.');
-  expect(el.errors.amount).to.equal('Doit être un nombre fini.');
-  expect(el.errors.count).to.equal('Doit être un nombre entier.');
-  expect(el.errors.enabled).to.equal('Doit être un booléen.');
+  expect(el.errors['text']).to.equal('Doit être une chaîne.');
+  expect(el.errors['amount']).to.equal('Doit être un nombre fini.');
+  expect(el.errors['count']).to.equal('Doit être un nombre entier.');
+  expect(el.errors['enabled']).to.equal('Doit être un booléen.');
 });
 
 it('localizes the unsupported-field-type and schema-shape messages via .strings, with interpolation', async () => {
@@ -673,7 +674,7 @@ it('localizes the unsupported-field-type and schema-shape messages via .strings,
       .strings=${{ unsupportedFieldType: 'Type de champ non pris en charge : "{type}".' }}
     ></lr-tool-param-form>`,
   )) as LyraToolParamForm;
-  expect(el.errors.nested).to.equal('Type de champ non pris en charge : "object".');
+  expect(el.errors['nested']).to.equal('Type de champ non pris en charge : "object".');
   await el.updateComplete;
   expect(field(el, 'nested').querySelector('.unsupported')!.textContent).to.equal(
     'Type de champ non pris en charge : "object".',
@@ -708,7 +709,7 @@ it('falls back to {} when value is set to null', async () => {
   el.value = null as unknown as Record<string, unknown>;
   await el.updateComplete;
   expect(el.value).to.deep.equal({});
-  expect(el.errors.city).to.equal('This field is required.');
+  expect(el.errors['city']).to.equal('This field is required.');
 });
 
 it('flags a non-numeric value on an integer field as a type mismatch, not merely a step mismatch', async () => {
@@ -719,8 +720,8 @@ it('flags a non-numeric value on an integer field as a type mismatch, not merely
   const el = (await fixture(
     html`<lr-tool-param-form .schema=${schema} .value=${{ count: 'not-a-number' }}></lr-tool-param-form>`,
   )) as LyraToolParamForm;
-  expect(el.errors.count).to.equal('Must be a whole number.');
-  expect(el.internals.validity.typeMismatch).to.be.true;
+  expect(el.errors['count']).to.equal('Must be a whole number.');
+  expect(el.validity.typeMismatch).to.be.true;
   expect(el.checkValidity()).to.be.false;
 });
 
@@ -733,11 +734,11 @@ it('surfaces a form-level required error for a key listed in required but absent
   const el = (await fixture(html`<lr-tool-param-form .schema=${schema}></lr-tool-param-form>`)) as LyraToolParamForm;
   // No rendered field exists for "ghost" -- it isn't a schema property -- yet it still blocks validity.
   expect((field(el, 'ghost')) === null).to.equal(true);
-  expect(el.errors.ghost).to.equal('This field is required.');
+  expect(el.errors['ghost']).to.equal('This field is required.');
   expect(el.checkValidity()).to.be.false;
 
   el.value = { city: 'Paris', ghost: 'anything' };
-  expect(el.errors.ghost).to.be.undefined;
+  expect(el.errors['ghost']).to.be.undefined;
   expect(el.checkValidity()).to.be.true;
 });
 
@@ -865,7 +866,13 @@ it('contains nested control input/change aliases and emits only the form-level l
     new CustomEvent('lr-option-change', { bubbles: true, composed: true }),
   );
 
-  const booleanSelect = field(el, 'confirm').querySelector('lr-select') as HTMLElement & { value: string };
+  const booleanSelect = field(el, 'confirm').querySelector<LyraSelect>('lr-select');
+  if (!booleanSelect) throw new Error('Expected the boolean select to render.');
+  await booleanSelect.show();
+  await booleanSelect.hide();
+  booleanSelect.querySelector('lr-option')!.dispatchEvent(
+    new CustomEvent('lr-option-change', { bubbles: true, composed: true }),
+  );
   booleanSelect.value = 'true';
   booleanSelect.dispatchEvent(new CustomEvent('lr-change', { bubbles: true, composed: true }));
   await el.updateComplete;
@@ -894,11 +901,11 @@ it('rejects non-finite numbers and schema defaults that do not match their decla
     html`<lr-tool-param-form .schema=${schema} .value=${{ amount: Infinity }}></lr-tool-param-form>`,
   )) as LyraToolParamForm;
 
-  expect(el.errors.amount).to.equal('Must be a finite number.');
-  expect(el.errors.count).to.equal('Must be a whole number.');
+  expect(el.errors['amount']).to.equal('Must be a finite number.');
+  expect(el.errors['count']).to.equal('Must be a whole number.');
 
   el.value = { amount: Number.NaN, count: 2 };
-  expect(el.errors.amount).to.equal('Must be a finite number.');
+  expect(el.errors['amount']).to.equal('Must be a finite number.');
   expect(el.checkValidity()).to.be.false;
 });
 
@@ -912,8 +919,8 @@ it('supports primitive const so a must-confirm boolean is distinct from required
     html`<lr-tool-param-form .schema=${schema} .value=${{ confirm: false }}></lr-tool-param-form>`,
   )) as LyraToolParamForm;
 
-  expect(el.errors.confirm).to.equal('Must equal true.');
-  expect(el.internals.validity.customError).to.be.true;
+  expect(el.errors['confirm']).to.equal('Must equal true.');
+  expect(el.validity.customError).to.be.true;
   expect(el.checkValidity()).to.be.false;
   await el.updateComplete;
   const booleanSelect = field(el, 'confirm').querySelector('lr-select') as HTMLElement & { required: boolean };
@@ -931,13 +938,13 @@ it('handles circular and BigInt values without throwing, omits unsafe FormData, 
   `)) as HTMLFormElement;
   const el = form.querySelector('lr-tool-param-form') as LyraToolParamForm;
   const circular: Record<string, unknown> = {};
-  circular.self = circular;
+  circular['self'] = circular;
 
   expect(() => {
     el.value = circular;
   }).not.to.throw();
   expect(el.formError).to.equal('Value must be JSON-serializable.');
-  expect(el.internals.validity.customError).to.be.true;
+  expect(el.validity.customError).to.be.true;
   expect(el.checkValidity()).to.be.false;
   expect(new FormData(form).has('args')).to.be.false;
 
@@ -961,7 +968,7 @@ it('publishes serialization-only validity under base without fabricating a field
   const el = (await fixture(html`<lr-tool-param-form></lr-tool-param-form>`)) as LyraToolParamForm;
   await el.updateComplete;
   const circular: Record<string, unknown> = {};
-  circular.self = circular;
+  circular['self'] = circular;
 
   let changed = oneEvent(el, 'lr-validity-change');
   el.value = circular;
@@ -985,7 +992,7 @@ it('fails closed for malformed root schemas without retaining form data', async 
 
   el.schema = { type: 'array', properties: {} } as unknown as FlatToolParamSchema;
   expect(el.formError).to.equal('Schema must describe an object.');
-  expect(el.internals.validity.customError).to.be.true;
+  expect(el.validity.customError).to.be.true;
   expect(new FormData(form).has('args')).to.be.false;
 
   el.schema = { type: 'object' } as unknown as FlatToolParamSchema;
@@ -1077,8 +1084,8 @@ it('renders a visible fallback note for an unsupported nested object property in
   } as unknown as FlatToolParamSchema;
   const el = (await fixture(html`<lr-tool-param-form .schema=${weirdSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
   expect(field(el, 'nested').querySelector('.unsupported')).to.exist;
-  expect(el.errors.nested).to.equal('Unsupported field type "object".');
-  expect(el.internals.validity.customError).to.be.true;
+  expect(el.errors['nested']).to.equal('Unsupported field type "object".');
+  expect(el.validity.customError).to.be.true;
   expect(el.checkValidity()).to.be.false;
 });
 
@@ -1106,7 +1113,7 @@ it('flags a fractional value on an integer field as invalid, independent of requ
   });
   const ev = await oneEvent(el, 'lr-input');
   expect(ev.detail.value.days).to.equal(3.5);
-  expect(el.errors.days).to.equal('Must be a whole number.');
+  expect(el.errors['days']).to.equal('Must be a whole number.');
   expect(el.checkValidity()).to.be.false;
   expect(el.reportValidity()).to.be.false;
 });
@@ -1905,7 +1912,7 @@ describe('bounded hostile input snapshots', () => {
     el.value = { oversized };
 
     expect(el.validity.customError).to.equal(true);
-    expect(Object.keys(el.value.oversized as object)).to.have.length(10_000);
+    expect(Object.keys(el.value['oversized'] as object)).to.have.length(10_000);
   });
 
   it('bounds deeply nested and oversized array values without retaining live input', () => {

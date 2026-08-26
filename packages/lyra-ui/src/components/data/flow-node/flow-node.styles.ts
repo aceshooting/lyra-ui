@@ -137,6 +137,11 @@ export const styles = css`
   :host(:focus-within) [part='toolbar'] {
     opacity: 1;
   }
+  @media (hover: none), (pointer: coarse) {
+    [part='toolbar'] {
+      opacity: 1;
+    }
+  }
   .card[data-pulse] {
     animation: lr-flow-node-pulse var(--lr-duration-ambient) var(--lr-easing-emphasized) infinite;
   }

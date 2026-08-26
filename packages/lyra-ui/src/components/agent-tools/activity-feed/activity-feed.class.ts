@@ -4,7 +4,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import type { LyraTranscriptMode } from '../../../internal/shared-unions.js';
-import { nextId } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getDateTimeFormat, getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
@@ -121,7 +121,7 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * @csspart header - The clickable header (`<button>`).
  * @csspart status-dot - The decorative mode indicator dot; pulses while `mode="live"`.
  * @csspart label - The header's title text — `label`, or its localized default when `label` is
- *   left at `'Activity'`.
+ *   omitted.
  * @csspart summary - The header's one-line ticker (`live`) or completed-count summary
  *   (`post-hoc`).
  * @csspart toggle - The chevron indicator inside the header.
@@ -201,7 +201,9 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   @property({ type: Boolean, reflect: true }) expanded = false;
 
   /** Optional header-text override. Omission localizes `activityFeedLabel`; any supplied string,
-   *  including `'Activity'` or `''`, is rendered verbatim. */
+   *  including `'Activity'` or `''`, is rendered verbatim. A host `aria-label`, when present, names
+   *  the owned list in both the plain and virtualized rendering paths while this remains the visible
+   *  header text. */
   @property() label?: string;
 
   /** Trailing `<time datetime>` per entry, default `hour:minute` in `effectiveLocale`. */
@@ -480,6 +482,10 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     this.setFollowFromUser(atBottom);
   };
 
+  private stopOwnedEvent = (event: Event): void => {
+    event.stopPropagation();
+  };
+
   private normalizedTimestamp(value: Date | string | undefined): Date | undefined {
     if (value === undefined) return undefined;
     const date = value instanceof Date ? value : new Date(value);
@@ -505,7 +511,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   override render(): TemplateResult {
     const entries = this.normalizedEntries;
     const label = this.label == null ? this.localize('activityFeedLabel') : this.label;
-    const ariaLabel = label;
+    const ariaLabel = hostAriaLabel(this) ?? label;
     const headerText = this.mode === 'live' ? (entries[entries.length - 1]?.text ?? '') : this.completedStepsSummary();
     const virtualized = this.isVirtualized;
 
@@ -541,6 +547,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
                 .keyFunction=${(item: unknown) => (item as ActivityEntry).id}
                 aria-label=${ariaLabel}
                 @lr-visible-range-change=${this.onVirtualListRangeChanged}
+                @lr-virtual-scroll=${this.stopOwnedEvent}
               ></lr-virtual-list>`
             : repeat(entries, (entry) => entry.id, (entry) => this.entryTemplate(entry, true))}
         </div>

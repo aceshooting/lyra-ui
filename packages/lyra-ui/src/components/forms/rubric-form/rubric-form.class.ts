@@ -164,6 +164,15 @@ function scoreDomain(key: ScoreRubricKey): { min: number; max: number; step: num
   return { min, max, step };
 }
 
+function isSegmentedScoreKey(key: ScoreRubricKey): boolean {
+  if (key.step !== undefined && (!Number.isFinite(key.step) || key.step <= 0)) return false;
+  if (Number.isFinite(key.min) && Number.isFinite(key.max) && key.max! < key.min!) return false;
+  const { min, max, step } = scoreDomain(key);
+  if (!Number.isInteger(min) || !Number.isInteger(max) || !Number.isInteger(step)) return false;
+  const count = (max - min) / step;
+  return Number.isInteger(count) && count >= 0 && count <= 10;
+}
+
 function canonicalScore(value: unknown, key: ScoreRubricKey): number | undefined {
   if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
   const { min, max, step } = scoreDomain(key);
@@ -173,21 +182,28 @@ function canonicalScore(value: unknown, key: ScoreRubricKey): number | undefined
 }
 
 function normalizeRubricValue(value: unknown, keys: readonly RubricKey[]): RubricValue {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return {};
-  const source = value as Record<string, unknown>;
+  const source = value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : EMPTY_VALUE;
   const normalized: Record<string, number | string | readonly string[] | undefined> = {};
   for (const key of keys) {
     let entry: unknown;
+    let hasEntry = false;
     try {
-      if (!Object.prototype.hasOwnProperty.call(source, key.key)) continue;
-      entry = source[key.key];
+      hasEntry = Object.prototype.hasOwnProperty.call(source, key.key);
+      if (hasEntry) entry = source[key.key];
     } catch {
       continue;
     }
     if (key.type === 'score') {
-      const score = canonicalScore(entry, key);
+      const { min, max } = scoreDomain(key);
+      const score = canonicalScore(
+        hasEntry ? entry : isSegmentedScoreKey(key) ? undefined : min + (max - min) / 2,
+        key,
+      );
       if (score !== undefined) normalized[key.key] = score;
     } else if (key.type === 'category') {
+      if (!hasEntry) continue;
       const allowed = (key.options ?? []).map((option) => option.value);
       if (key.multiple) {
         if (!Array.isArray(entry)) continue;
@@ -205,7 +221,7 @@ function normalizeRubricValue(value: unknown, keys: readonly RubricKey[]): Rubri
       } else if (typeof entry === 'string' && entry !== '' && allowed.includes(entry)) {
         normalized[key.key] = entry;
       }
-    } else if (key.type === 'comment' && typeof entry === 'string') {
+    } else if (key.type === 'comment' && hasEntry && typeof entry === 'string') {
       normalized[key.key] = entry;
     }
   }
@@ -241,8 +257,10 @@ export interface LyraRubricFormEventMap {
  * The exported key model is a readonly discriminated union. Live/default/restored values are
  * canonicalized once against that current schema before render, validity, events, or FormData:
  * scores clamp/snap to their domain, categories retain only declared option occurrences,
- * comments require strings, and undeclared fields are discarded. `defaultValue` is the explicit
- * reset baseline; reads return defensive snapshots.
+ * comments require strings, and undeclared fields are discarded. A wide slider score without a
+ * supplied default records its rendered, snapped midpoint in both the default and live value;
+ * segmented scores remain unselected. `defaultValue` is the explicit reset baseline; reads return
+ * defensive snapshots.
  *
  * Optional native `<form>` participation is implemented via `ElementInternals`
  * attached directly (this component's value is a whole object, not a plain
@@ -635,12 +653,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   }
 
   private isSegmentedScore(k: ScoreRubricKey): boolean {
-    if (k.step !== undefined && (!Number.isFinite(k.step) || k.step <= 0)) return false;
-    if (Number.isFinite(k.min) && Number.isFinite(k.max) && k.max! < k.min!) return false;
-    const { min, max, step } = scoreDomain(k);
-    if (!Number.isInteger(min) || !Number.isInteger(max) || !Number.isInteger(step)) return false;
-    const count = (max - min) / step;
-    return Number.isInteger(count) && count >= 0 && count <= 10;
+    return isSegmentedScoreKey(k);
   }
 
   private scoreValues(k: ScoreRubricKey): number[] {
@@ -907,6 +920,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
         .items=${items}
         .value=${value}
         label=${accessibleLabel}
+        @lr-input=${this.stopChildEvent}
         @lr-change=${(e: CustomEvent<{ value: string }>) => {
           e.stopPropagation();
           this.setFieldValue(k.key, Number(e.detail.value));
@@ -927,6 +941,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
       ?disabled=${disabled}
       @input=${this.stopChildEvent}
       @change=${this.stopChildEvent}
+      @lr-input=${this.stopChildEvent}
       @lr-change=${(e: CustomEvent<{ value: number }>) => {
         e.stopPropagation();
         this.setFieldValue(k.key, e.detail.value);
@@ -951,6 +966,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
         ?required=${Boolean(k.required)}
         @input=${this.stopChildEvent}
         @change=${this.stopChildEvent}
+        @lr-input=${this.stopChildEvent}
         @lr-change=${(e: CustomEvent<{ value: string[] }>) => {
           e.stopPropagation();
           this.setFieldValue(k.key, e.detail.value);
@@ -983,6 +999,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
         e.stopPropagation();
         this.setFieldValue(k.key, (e.target as LyraSelect).value);
       }}
+      @lr-input=${this.stopChildEvent}
       @lr-change=${this.stopChildEvent}
     >
       <span slot="label" part="label">${label}</span>

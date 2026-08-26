@@ -1,7 +1,17 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 
 const componentsRoot = join(process.cwd(), 'src', 'components');
+const internalRoot = join(process.cwd(), 'src', 'internal');
+
+// These files are the reviewed source of the raw token values that every other stylesheet must
+// consume. Shared structural styles remain in scope; only value-definition modules are exempt.
+const internalTokenDefinitionFiles = new Set([
+  join(internalRoot, 'sizes.styles.ts'),
+  join(internalRoot, 'specialist-tokens.styles.ts'),
+  join(internalRoot, 'tokens.styles.ts'),
+  join(internalRoot, 'tokens', 'palette.styles.ts'),
+]);
 
 // Web Awesome's public data-grid variables intentionally retain their unprefixed spelling so a
 // consumer migration remains a mechanical tag rename. This is a closed, path-scoped compatibility
@@ -93,12 +103,18 @@ const classCssPropertyDeclarationExemptions = new Set([
 ]);
 
 function styleFiles(directory) {
+  if (!existsSync(directory)) return [];
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const file = join(directory, entry.name);
     if (entry.isDirectory()) return styleFiles(file);
     return entry.name.endsWith('.styles.ts') ? [file] : [];
   });
 }
+
+const policyStyleFiles = () => [
+  ...styleFiles(componentsRoot),
+  ...styleFiles(internalRoot).filter((file) => !internalTokenDefinitionFiles.has(file)),
+];
 
 function stripComments(source) {
   return source.replace(/\/\*[\s\S]*?\*\//g, (comment) =>
@@ -127,7 +143,7 @@ const semanticProperty =
   /^\s*(?:font-size|--[\w-]*font-size|font-weight|line-height|z-index|border(?:-[\w]+)*-radius)\s*:\s*([^;]+)/;
 const customProperty = /^\s*(--[A-Za-z][A-Za-z0-9-]*)\s*:/;
 
-for (const file of styleFiles(componentsRoot)) {
+for (const file of policyStyleFiles()) {
   const source = stripComments(readFileSync(file, 'utf8'));
   const publicCssProperties = documentedCssProperties(file);
 
@@ -258,6 +274,6 @@ if (findings.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    `Style policy passed for ${styleFiles(componentsRoot).length} style files.`
+    `Style policy passed for ${policyStyleFiles().length} style files.`
   );
 }

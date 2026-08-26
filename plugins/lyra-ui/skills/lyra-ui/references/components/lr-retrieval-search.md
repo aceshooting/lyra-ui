@@ -6,6 +6,7 @@
 - **Class** `LyraRetrievalSearch`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/retrieval-search/retrieval-search.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -29,9 +30,11 @@ at the same size tier, so the toolbar row renders as one flush line.
 - `mode: LyraRetrievalMode = 'hybrid'` — `LyraRetrievalMode = RetrievalQuery['mode'] = 'vector' |
 'keyword' | 'hybrid'`, re-exported here rather than redefined
 - `filters: Record<string, unknown> = {}` (attribute: false) — arbitrary metadata filters, rendered
-  as removable `"{key}: {value}"` chips. Controlled
+  as removable `"{key}: {value}"` chips. A non-record runtime value normalizes to an empty record.
+  Controlled
 - `scope: string[] = []` (attribute: false) — source-scope ids/labels this query is restricted to,
-  rendered as removable chips alongside `filters`. Controlled
+  rendered as removable chips alongside `filters`. A non-array runtime value normalizes empty;
+  blank entries and duplicates are omitted first-wins. Controlled
 - `loading: boolean = false` (reflected) — host-driven busy flag; this component cannot know when a
   request resolves
 - `errorText: string = ''` (attribute `error-text`) — last failed search's message, shown verbatim
@@ -43,8 +46,8 @@ at the same size tier, so the toolbar row renders as one flush line.
   through the shared polite light-DOM region; initial and reconnect content is not replayed
 - `placeholder: string = ''` — falls back to the localized generic "Search" placeholder, which also
   becomes the field's accessible name
-- `label: string = ''` — fallback name for the `role="search"` landmark; falls back to a localized
-  default
+- `label?: string` — fallback name for the `role="search"` landmark; omission uses the localized
+  retrieval-search label, while an explicit empty string stays empty
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
   the host attribute is absent, overrides the search-landmark name. A non-empty authored host
   `aria-label` makes the host the sole overall owner, so the inner shell omits its duplicate

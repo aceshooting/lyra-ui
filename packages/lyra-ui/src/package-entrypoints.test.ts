@@ -11,6 +11,8 @@ type PackageEntrypointImports = {
   importRoot: EntrypointImport;
   importAll: EntrypointImport;
   importLocalization: EntrypointImport;
+  importPersianLocale: EntrypointImport;
+  importHebrewLocale: EntrypointImport;
   importEmpty: EntrypointImport;
   importEmptyClass: EntrypointImport;
   importCsv: EntrypointImport;
@@ -88,7 +90,7 @@ it('registers nothing from the root, exactly one tag from a granular entry, and 
 
     // 1. The root carries the named/type surface WITHOUT registering the library.
     const root = await entrypoints.importRoot();
-    expect(typeof root.LyraEmpty).to.equal('function');
+    expect(typeof root['LyraEmpty']).to.equal('function');
     expect(definedAmong(registry, packageTags).join(',')).to.equal('');
 
     // Representative exact and wildcard subpaths resolve without registering a component.
@@ -97,31 +99,33 @@ it('registers nothing from the root, exactly one tag from a granular entry, and 
     const helperEntry = await entrypoints.importCsv();
     const utilities = await entrypoints.importUtilities();
     const positioner = await entrypoints.importPositioner();
-    expect(typeof localization.registerLyraLocale).to.equal('function');
-    expect(typeof localization.setLyraLocale).to.equal('function');
-    expect(typeof localization.resolveLyraString).to.equal('function');
-    expect(typeof localization.getLyraLocale).to.equal('function');
-    expect(typeof localization.getLyraLocaleDirection).to.equal('function');
-    expect(localization.getLyraLocaleDirection('en')).to.equal('ltr');
-    expect(typeof localization.getRegisteredLyraLocales).to.equal('function');
-    expect(typeof localization.subscribeLyraLocaleRegistry).to.equal('function');
-    expect(typeof localization.resolveLyraLocale).to.equal('function');
-    expect(typeof localization.resolveLyraDirection).to.equal('function');
-    expect(typeof localization.LYRA_DEFAULT_STRINGS).to.equal('object');
-    expect(typeof root.LyraElement).to.equal('function');
-    expect(typeof root.groupByRecency).to.equal('function');
-    expect(typeof classEntry.LyraEmpty).to.equal('function');
-    expect(typeof helperEntry.buildCsv).to.equal('function');
-    expect(typeof utilities.FormAssociated).to.equal('function');
-    expect(typeof utilities.groupByRecency).to.equal('function');
-    expect(typeof utilities.LyraElement).to.equal('function');
-    expect(typeof positioner.place).to.equal('function');
+    expect(typeof localization['registerLyraLocale']).to.equal('function');
+    expect(typeof localization['setLyraLocale']).to.equal('function');
+    expect(typeof localization['resolveLyraString']).to.equal('function');
+    expect(typeof localization['getLyraLocale']).to.equal('function');
+    const getLocaleDirection = localization['getLyraLocaleDirection'];
+    expect(typeof getLocaleDirection).to.equal('function');
+    if (typeof getLocaleDirection !== 'function') throw new Error('Missing getLyraLocaleDirection export');
+    expect(getLocaleDirection('en')).to.equal('ltr');
+    expect(typeof localization['getRegisteredLyraLocales']).to.equal('function');
+    expect(typeof localization['subscribeLyraLocaleRegistry']).to.equal('function');
+    expect(typeof localization['resolveLyraLocale']).to.equal('function');
+    expect(typeof localization['resolveLyraDirection']).to.equal('function');
+    expect(typeof localization['LYRA_DEFAULT_STRINGS']).to.equal('object');
+    expect(typeof root['LyraElement']).to.equal('function');
+    expect(typeof root['groupByRecency']).to.equal('function');
+    expect(typeof classEntry['LyraEmpty']).to.equal('function');
+    expect(typeof helperEntry['buildCsv']).to.equal('function');
+    expect(typeof utilities['FormAssociated']).to.equal('function');
+    expect(typeof utilities['groupByRecency']).to.equal('function');
+    expect(typeof utilities['LyraElement']).to.equal('function');
+    expect(typeof positioner['place']).to.equal('function');
     expect(definedAmong(registry, packageTags).join(',')).to.equal('');
 
     // 2. A granular registration entry registers EXACTLY its own tag -- and registers the very
     //    class the root re-exports, which a `typeof` check could not distinguish from a duplicate.
     await entrypoints.importEmpty();
-    expect(registry.get('lr-empty') === root.LyraEmpty).to.be.true;
+    expect(registry.get('lr-empty') === root['LyraEmpty']).to.be.true;
     expect(definedAmong(registry, packageTags).join(',')).to.equal('lr-empty');
 
     // 3. `all.js` is the documented compatibility path for the pre-8 root side effect: the whole
@@ -137,13 +141,26 @@ it('registers nothing from the root, exactly one tag from a granular entry, and 
 });
 
 it('resolves Persian and Hebrew locale subpaths and executes their registration side effects', async () => {
-  const localization = await import('@aceshooting/lyra-ui/localization.js');
-  await import('@aceshooting/lyra-ui/translations/fa.js');
-  await import('@aceshooting/lyra-ui/translations/he.js');
-  expect(localization.getRegisteredLyraLocales()).to.include('fa');
-  expect(localization.getRegisteredLyraLocales()).to.include('he');
+  // Keep package self-references in the server-served fixture: WTR's node-resolve plugin validates
+  // the exports map there, while the build-independent strict test-type gate never needs dist/.
+  const entrypointFixturePath: string = new URL(
+    '../test/package-entrypoints-realm.js',
+    import.meta.url,
+  ).href;
+  const entrypoints = (await import(entrypointFixturePath)) as unknown as PackageEntrypointImports;
+  const localization = await entrypoints.importLocalization();
+  await entrypoints.importPersianLocale();
+  await entrypoints.importHebrewLocale();
+  const getRegisteredLyraLocales = localization['getRegisteredLyraLocales'];
+  expect(typeof getRegisteredLyraLocales).to.equal('function');
+  if (typeof getRegisteredLyraLocales !== 'function') {
+    throw new Error('Missing getRegisteredLyraLocales export');
+  }
+  expect(getRegisteredLyraLocales()).to.include('fa');
+  expect(getRegisteredLyraLocales()).to.include('he');
 
-  const manifest = (await import('/package.json')) as unknown as { sideEffects: string[] };
+  const packageManifestPath = '/package.json';
+  const manifest = (await import(packageManifestPath)) as unknown as { sideEffects: string[] };
   for (const entry of [
     './dist/translations/fa.js',
     './dist/translations/he.js',
@@ -166,7 +183,8 @@ it('does not publish src/internal as a deep-import subpath', async () => {
   // `check:packed-consumer`.
   // Imported rather than fetched: this runner serves `.json` transformed into an ES module, so a
   // raw `fetch().json()` gets JavaScript source back and throws.
-  const manifest = (await import('/package.json')) as unknown as { exports: Record<string, unknown> };
+  const packageManifestPath = '/package.json';
+  const manifest = (await import(packageManifestPath)) as unknown as { exports: Record<string, unknown> };
   const internalKeys = Object.keys(manifest.exports).filter((key) => key.startsWith('./internal'));
   expect(internalKeys.join(', ')).to.equal('');
   // ...and the curated replacements really are declared, so the boundary has a documented door.

@@ -24,7 +24,7 @@ function parsedColor(value: string): [number, number, number, number] {
   return [channels[0] ?? 0, channels[1] ?? 0, channels[2] ?? 0, channels[3] ?? 1];
 }
 
-function relativeLuminance([red, green, blue]: readonly number[]): number {
+function relativeLuminance([red = 0, green = 0, blue = 0]: readonly number[]): number {
   const linear = [red, green, blue].map((channel) => {
     const normalized = channel / 255;
     return normalized <= 0.04045
@@ -44,6 +44,16 @@ function contrastRatio(foreground: string, overlay: string): number {
   const lighter = Math.max(foregroundLuminance, backgroundLuminance);
   const darker = Math.min(foregroundLuminance, backgroundLuminance);
   return (lighter + 0.05) / (darker + 0.05);
+}
+
+interface TestVideoState {
+  playbackRate: number;
+  fullscreen: boolean;
+  pictureInPicture: boolean;
+}
+
+function testState(el: LyraVideo): TestVideoState {
+  return el as unknown as TestVideoState;
 }
 
 async function hover(target: HTMLElement): Promise<void> {
@@ -307,7 +317,7 @@ describe('lr-video public contract', () => {
     expect(el.currentTime).to.equal(5);
     el.currentTime = 7;
     await el.updateComplete;
-    expect(el.getVideoElement().currentTime).to.equal(7);
+    expect(nativeVideo(el).currentTime).to.equal(7);
     expect(el.getAttribute('currenttime'), 'the public attribute is not reflected from IDL writes').to.equal('3');
 
     el.muted = true;
@@ -454,10 +464,10 @@ describe('lr-video public contract', () => {
       nativeVideo(el).dispatchEvent(new Event(type));
       expect(received.length).to.equal(1);
       expect(received[0] instanceof Event).to.be.true;
-      expect(received[0].constructor === Event).to.be.true;
-      expect(received[0].bubbles).to.be.false;
-      expect(received[0].composed).to.be.false;
-      expect(received[0].cancelable).to.be.false;
+      expect(received[0]!.constructor === Event).to.be.true;
+      expect(received[0]!.bubbles).to.be.false;
+      expect(received[0]!.composed).to.be.false;
+      expect(received[0]!.cancelable).to.be.false;
     });
   }
 
@@ -1029,7 +1039,7 @@ describe('lr-video public contract', () => {
       await aTimeout(0);
       const internal = el as unknown as { thumbnailCues: Array<{ src: string }> };
       expect(internal.thumbnailCues.length).to.equal(1);
-      expect(internal.thumbnailCues[0].src).to.equal('https://example.test/new.jpg');
+      expect(internal.thumbnailCues[0]!.src).to.equal('https://example.test/new.jpg');
     } finally {
       window.fetch = originalFetch;
     }
@@ -1595,7 +1605,7 @@ describe('lr-video control surface', () => {
     expect(media.playbackRate).to.equal(2);
     media.dispatchEvent(new Event('ratechange'));
     await el.updateComplete;
-    expect(el.playbackRate).to.equal(2);
+    expect(testState(el).playbackRate).to.equal(2);
   });
 
   it('renders exactly one selected rate option, splicing in an off-preset playbackRate reached via a native ratechange', async () => {
@@ -1615,7 +1625,7 @@ describe('lr-video control surface', () => {
     media.dispatchEvent(new Event('ratechange'));
     await el.updateComplete;
 
-    expect(el.playbackRate).to.equal(1.9);
+    expect(testState(el).playbackRate).to.equal(1.9);
     const select = el.shadowRoot!.querySelector<HTMLSelectElement>('[data-control="rate"]')!;
     const options = [...select.options];
     const selected = options.filter((option) => option.selected);
@@ -1722,9 +1732,9 @@ describe('lr-video control surface', () => {
       Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: wrapper });
       document.dispatchEvent(new Event('fullscreenchange'));
       await el.updateComplete;
-      expect(el.fullscreen).to.equal(wrapper !== null);
+      expect(testState(el).fullscreen).to.equal(wrapper !== null);
 
-      if (el.fullscreen) {
+      if (testState(el).fullscreen) {
         button(el, 'fullscreen')!.click();
         await el.updateComplete;
         expect(fullscreenExits).to.equal(1);
@@ -1733,7 +1743,7 @@ describe('lr-video control surface', () => {
       Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: null });
       document.dispatchEvent(new Event('fullscreenchange'));
       await el.updateComplete;
-      expect(el.fullscreen).to.equal(false);
+      expect(testState(el).fullscreen).to.equal(false);
 
       button(el, 'picture-in-picture')!.click();
       await el.updateComplete;
@@ -1742,7 +1752,7 @@ describe('lr-video control surface', () => {
       Object.defineProperty(document, 'pictureInPictureElement', { configurable: true, value: nativeVideo(el) });
       document.dispatchEvent(new Event('enterpictureinpicture'));
       await el.updateComplete;
-      expect(el.pictureInPicture).to.equal(true);
+      expect(testState(el).pictureInPicture).to.equal(true);
 
       button(el, 'picture-in-picture')!.click();
       await el.updateComplete;
@@ -1751,7 +1761,7 @@ describe('lr-video control surface', () => {
       Object.defineProperty(document, 'pictureInPictureElement', { configurable: true, value: null });
       document.dispatchEvent(new Event('leavepictureinpicture'));
       await el.updateComplete;
-      expect(el.pictureInPicture).to.equal(false);
+      expect(testState(el).pictureInPicture).to.equal(false);
     } finally {
       restoreOwnProperty(document, 'fullscreenEnabled', fsEnabled);
       restoreOwnProperty(document, 'pictureInPictureEnabled', pipEnabled);
@@ -2163,7 +2173,7 @@ describe('lr-video coverage gap-filling', () => {
         Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: wrapper });
         document.dispatchEvent(new Event('fullscreenchange'));
         await el.updateComplete;
-        expect(el.fullscreen).to.be.true;
+        expect(testState(el).fullscreen).to.be.true;
         expect(button(el, 'fullscreen')?.getAttribute('aria-label')).to.equal('Exit fullscreen');
 
         button(el, 'fullscreen')!.click();

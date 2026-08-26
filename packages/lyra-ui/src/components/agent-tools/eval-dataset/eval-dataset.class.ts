@@ -477,6 +477,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
           @change=${this.stopOwnedEvent}
           @focus=${this.stopOwnedEvent}
           @blur=${this.stopOwnedEvent}
+          @lr-sort-request=${this.stopOwnedEvent}
           @lr-priority-columns-visibility-change=${this.stopOwnedEvent}
           @lr-row-expand-toggle=${this.stopOwnedEvent}
           @lr-load-more=${this.stopOwnedEvent}

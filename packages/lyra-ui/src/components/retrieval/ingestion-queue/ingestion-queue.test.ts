@@ -1,33 +1,33 @@
-import { fixture, expect, html, oneEvent } from "@open-wc/testing";
-import { render } from "lit";
-import "./ingestion-queue.js";
+import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { render } from 'lit';
+import './ingestion-queue.js';
 import type {
   LyraIngestionQueue,
   IngestionQueueItem,
-} from "./ingestion-queue.js";
-import type { LyraVirtualList } from "../../layout/virtual-list/virtual-list.class.js";
-import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
+} from './ingestion-queue.js';
+import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-ingestion-queue', 'virtualize-threshold');
 
-function sinkElement(politeness: "polite" | "assertive"): HTMLElement | null {
+function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
   return document.querySelector<HTMLElement>(
     `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`
   );
 }
 
-function sinkTexts(politeness: "polite" | "assertive"): string[] {
+function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
   const element = sinkElement(politeness);
   return element
-    ? Array.from(element.children).map((child) => child.textContent ?? "")
+    ? Array.from(element.children).map((child) => child.textContent ?? '')
     : [];
 }
 
 function item(
   overrides: Partial<IngestionQueueItem> &
-    Pick<IngestionQueueItem, "id" | "stage">
+    Pick<IngestionQueueItem, 'id' | 'stage'>
 ): IngestionQueueItem {
   return {
     document: { id: overrides.id, name: `Doc ${overrides.id}` },
@@ -61,7 +61,9 @@ it('keeps an explicitly empty label distinct from an omitted one', async () => {
     html`<lr-ingestion-queue></lr-ingestion-queue>`
   )) as LyraIngestionQueue;
   expect(
-    omitted.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')
+    omitted
+      .shadowRoot!.querySelector('[part~="base"]')!
+      .getAttribute('aria-label')
   ).to.equal('Ingestion queue');
 
   const explicitEmpty = (await fixture(
@@ -69,26 +71,28 @@ it('keeps an explicitly empty label distinct from an omitted one', async () => {
   )) as LyraIngestionQueue;
   expect(explicitEmpty.label).to.equal('');
   expect(
-    explicitEmpty.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')
+    explicitEmpty
+      .shadowRoot!.querySelector('[part~="base"]')!
+      .getAttribute('aria-label')
   ).to.equal('');
 });
 
-it("renders the built-in lr-empty state with no items", async () => {
+it('renders the built-in lr-empty state with no items', async () => {
   const el = (await fixture(
     html`<lr-ingestion-queue></lr-ingestion-queue>`
   )) as LyraIngestionQueue;
-  const empty = el.shadowRoot!.querySelector("lr-empty");
+  const empty = el.shadowRoot!.querySelector('lr-empty');
   expect(empty).to.exist;
-  expect(empty!.getAttribute("heading")).to.equal("No documents queued");
+  expect(empty!.getAttribute('heading')).to.equal('No documents queued');
   expect(
-    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("role")
-  ).to.equal("region");
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')
+  ).to.equal('region');
   expect(
-    el.shadowRoot!.querySelector('[part="list"]')!.getAttribute("role")
+    el.shadowRoot!.querySelector('[part="list"]')!.getAttribute('role')
   ).to.equal(null);
 });
 
-it("is accessible in the empty state", async () => {
+it('is accessible in the empty state', async () => {
   const el = (await fixture(
     html`<lr-ingestion-queue></lr-ingestion-queue>`
   )) as LyraIngestionQueue;
@@ -107,33 +111,33 @@ it('omits ingestion rows without a usable document record before rendering', asy
   await el.updateComplete;
 
   expect(el.shadowRoot!.querySelectorAll('[part="item"]')).to.have.length(1);
-  expect(el.shadowRoot!.querySelector('[part="item-name"]')!.textContent).to.contain(
-    'Doc valid',
-  );
+  expect(
+    el.shadowRoot!.querySelector('[part="item-name"]')!.textContent
+  ).to.contain('Doc valid');
 });
 
-it("clips horizontal overflow from long queue metadata", async () => {
+it('clips horizontal overflow from long queue metadata', async () => {
   const el = (await fixture(
     html`<lr-ingestion-queue
-      .items=${[item({ id: "1", stage: "failed", error: "x".repeat(500) })]}
+      .items=${[item({ id: '1', stage: 'failed', error: 'x'.repeat(500) })]}
     ></lr-ingestion-queue>`
   )) as LyraIngestionQueue;
   const list = el.shadowRoot!.querySelector('[part="list"]') as HTMLElement;
   const error = el.shadowRoot!.querySelector(
     '[part="item-error"]'
   ) as HTMLElement;
-  expect(getComputedStyle(list).overflowX).to.be.oneOf(["clip", "hidden"]);
-  expect(getComputedStyle(error).overflowWrap).to.equal("anywhere");
+  expect(getComputedStyle(list).overflowX).to.be.oneOf(['clip', 'hidden']);
+  expect(getComputedStyle(error).overflowWrap).to.equal('anywhere');
 });
 
-it("formats chunk progress and attempt counts with the effective locale", async () => {
+it('formats chunk progress and attempt counts with the effective locale', async () => {
   const el = (await fixture(html`
     <lr-ingestion-queue
       lang="ar-u-nu-arab"
       .items=${[
         item({
-          id: "1",
-          stage: "embedding",
+          id: '1',
+          stage: 'embedding',
           chunkCount: 1234,
           embeddedChunkCount: 1000,
           attempts: 2,
@@ -142,18 +146,18 @@ it("formats chunk progress and attempt counts with the effective locale", async 
     ></lr-ingestion-queue>
   `)) as LyraIngestionQueue;
   const meta = el.shadowRoot!.querySelector('[part="item-meta"]')!;
-  expect(meta.textContent).to.include("١٬٢٣٤");
-  expect(meta.textContent).to.include("١٬٠٠٠");
-  expect(meta.textContent).to.include("٢");
+  expect(meta.textContent).to.include('١٬٢٣٤');
+  expect(meta.textContent).to.include('١٬٠٠٠');
+  expect(meta.textContent).to.include('٢');
 });
 
-describe("populated rows", () => {
+describe('populated rows', () => {
   it('renders one [part="item"] row per item, carrying data-stage, name, and a stage badge', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
         .items=${[
-          item({ id: "1", stage: "queued" }),
-          item({ id: "2", stage: "embedding" }),
+          item({ id: '1', stage: 'queued' }),
+          item({ id: '2', stage: 'embedding' }),
         ]}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
@@ -161,30 +165,30 @@ describe("populated rows", () => {
       ...el.shadowRoot!.querySelectorAll('[part="item"]'),
     ] as HTMLElement[];
     expect(rows.length).to.equal(2);
-    expect(rows[0]!.dataset.stage).to.equal("queued");
-    expect(rows[1]!.dataset.stage).to.equal("embedding");
+    expect(rows[0]!.dataset['stage']).to.equal('queued');
+    expect(rows[1]!.dataset['stage']).to.equal('embedding');
     expect(
       rows[0]!.querySelector('[part="item-name"]')!.textContent!.trim()
-    ).to.equal("Doc 1");
-    const badge0 = rows[0]!.querySelector("lr-badge")!;
-    expect(badge0.getAttribute("variant")).to.equal("neutral");
-    expect(badge0.textContent!.trim()).to.equal("Queued");
-    const badge1 = rows[1]!.querySelector("lr-badge")!;
-    expect(badge1.getAttribute("variant")).to.equal("brand");
-    expect(badge1.textContent!.trim()).to.equal("Embedding");
+    ).to.equal('Doc 1');
+    const badge0 = rows[0]!.querySelector('lr-badge')!;
+    expect(badge0.getAttribute('variant')).to.equal('neutral');
+    expect(badge0.textContent!.trim()).to.equal('Queued');
+    const badge1 = rows[1]!.querySelector('lr-badge')!;
+    expect(badge1.getAttribute('variant')).to.equal('brand');
+    expect(badge1.textContent!.trim()).to.equal('Embedding');
   });
 
-  it("maps every stage to its localized label and badge variant", async () => {
-    const stages: Array<[IngestionQueueItem["stage"], string, string]> = [
-      ["queued", "neutral", "Queued"],
-      ["uploading", "brand", "Uploading"],
-      ["extracting", "brand", "Extracting text"],
-      ["chunking", "brand", "Chunking"],
-      ["embedding", "brand", "Embedding"],
-      ["indexing", "brand", "Indexing"],
-      ["done", "success", "Done"],
-      ["failed", "danger", "Failed"],
-      ["cancelled", "neutral", "Cancelled"],
+  it('maps every stage to its localized label and badge variant', async () => {
+    const stages: Array<[IngestionQueueItem['stage'], string, string]> = [
+      ['queued', 'neutral', 'Queued'],
+      ['uploading', 'brand', 'Uploading'],
+      ['extracting', 'brand', 'Extracting text'],
+      ['chunking', 'brand', 'Chunking'],
+      ['embedding', 'brand', 'Embedding'],
+      ['indexing', 'brand', 'Indexing'],
+      ['done', 'success', 'Done'],
+      ['failed', 'danger', 'Failed'],
+      ['cancelled', 'neutral', 'Cancelled'],
     ];
     const el = (await fixture(
       html`<lr-ingestion-queue
@@ -192,66 +196,103 @@ describe("populated rows", () => {
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
     const badges = [
-      ...el.shadowRoot!.querySelectorAll("lr-badge"),
+      ...el.shadowRoot!.querySelectorAll('lr-badge'),
     ] as HTMLElement[];
     stages.forEach(([, variant, label], i) => {
-      expect(badges[i]!.getAttribute("variant")).to.equal(variant);
+      expect(badges[i]!.getAttribute('variant')).to.equal(variant);
       expect(badges[i]!.textContent!.trim()).to.equal(label);
     });
   });
 
-  it("shows a progress indicator only for active (non-queued, non-terminal) stages", async () => {
-    const el = (await fixture(
-      html`<lr-ingestion-queue
-        .items=${[
-          item({ id: "1", stage: "queued" }),
-          item({ id: "2", stage: "uploading", progress: 40 }),
-          item({ id: "3", stage: "done" }),
-          item({ id: "4", stage: "failed" }),
-          item({ id: "5", stage: "cancelled" }),
-        ]}
-      ></lr-ingestion-queue>`
-    )) as LyraIngestionQueue;
+  it('renders missing and unrecognized stages as a localized inert unknown state', async () => {
+    const el = await fixture<LyraIngestionQueue>(html`
+      <lr-ingestion-queue></lr-ingestion-queue>
+    `);
+    (el as unknown as { items: unknown }).items = [
+      {
+        id: 'missing',
+        document: { id: 'missing-document', name: 'Missing stage' },
+      },
+      {
+        id: 'future',
+        document: { id: 'future-document', name: 'Future stage' },
+        stage: 'vectorizing',
+      },
+    ];
+    await el.updateComplete;
+
     const rows = [
-      ...el.shadowRoot!.querySelectorAll('[part="item"]'),
-    ] as HTMLElement[];
-    expect(rows[0]!.querySelector("lr-progress-bar") == null).to.be.true;
-    expect(rows[1]!.querySelector("lr-progress-bar")).to.exist;
-    expect(rows[2]!.querySelector("lr-progress-bar") == null).to.be.true;
-    expect(rows[3]!.querySelector("lr-progress-bar") == null).to.be.true;
-    expect(rows[4]!.querySelector("lr-progress-bar") == null).to.be.true;
+      ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]'),
+    ];
+    expect(rows.map((row) => row.dataset['stage'])).to.deep.equal([
+      'unknown',
+      'unknown',
+    ]);
+    for (const row of rows) {
+      const badge = row.querySelector('lr-badge')!;
+      expect(badge.variant).to.equal('neutral');
+      expect(badge.textContent?.trim()).to.equal('Unknown stage');
+      expect(row.querySelector('[part="item-progress"]') === null).to.equal(
+        true
+      );
+      expect(row.querySelector('[part="item-actions"]') === null).to.equal(
+        true
+      );
+    }
   });
 
-  it("passes a numeric progress value through, and marks indeterminate when progress is unset", async () => {
+  it('shows a progress indicator only for active (non-queued, non-terminal) stages', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
         .items=${[
-          item({ id: "1", stage: "uploading", progress: 62 }),
-          item({ id: "2", stage: "chunking" }),
+          item({ id: '1', stage: 'queued' }),
+          item({ id: '2', stage: 'uploading', progress: 40 }),
+          item({ id: '3', stage: 'done' }),
+          item({ id: '4', stage: 'failed' }),
+          item({ id: '5', stage: 'cancelled' }),
         ]}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
     const rows = [
       ...el.shadowRoot!.querySelectorAll('[part="item"]'),
     ] as HTMLElement[];
-    const bar0 = rows[0]!.querySelector("lr-progress-bar") as HTMLElement & {
+    expect(rows[0]!.querySelector('lr-progress-bar') == null).to.be.true;
+    expect(rows[1]!.querySelector('lr-progress-bar')).to.exist;
+    expect(rows[2]!.querySelector('lr-progress-bar') == null).to.be.true;
+    expect(rows[3]!.querySelector('lr-progress-bar') == null).to.be.true;
+    expect(rows[4]!.querySelector('lr-progress-bar') == null).to.be.true;
+  });
+
+  it('passes a numeric progress value through, and marks indeterminate when progress is unset', async () => {
+    const el = (await fixture(
+      html`<lr-ingestion-queue
+        .items=${[
+          item({ id: '1', stage: 'uploading', progress: 62 }),
+          item({ id: '2', stage: 'chunking' }),
+        ]}
+      ></lr-ingestion-queue>`
+    )) as LyraIngestionQueue;
+    const rows = [
+      ...el.shadowRoot!.querySelectorAll('[part="item"]'),
+    ] as HTMLElement[];
+    const bar0 = rows[0]!.querySelector('lr-progress-bar') as HTMLElement & {
       value: number;
       indeterminate: boolean;
     };
     expect(bar0.value).to.equal(62);
     expect(bar0.indeterminate).to.be.false;
-    const bar1 = rows[1]!.querySelector("lr-progress-bar") as HTMLElement & {
+    const bar1 = rows[1]!.querySelector('lr-progress-bar') as HTMLElement & {
       indeterminate: boolean;
     };
     expect(bar1.indeterminate).to.be.true;
   });
 
-  it("shows chunk count only once chunkCount is set", async () => {
+  it('shows chunk count only once chunkCount is set', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
         .items=${[
-          item({ id: "1", stage: "chunking" }),
-          item({ id: "2", stage: "embedding", chunkCount: 12 }),
+          item({ id: '1', stage: 'chunking' }),
+          item({ id: '2', stage: 'embedding', chunkCount: 12 }),
         ]}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
@@ -262,30 +303,30 @@ describe("populated rows", () => {
       .true;
     expect(
       rows[1]!.querySelector('[part="item-chunk-count"]')!.textContent!.trim()
-    ).to.equal("12 chunks");
+    ).to.equal('12 chunks');
   });
 
-  it("pluralizes the chunk count (singular at 1)", async () => {
+  it('pluralizes the chunk count (singular at 1)', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
-        .items=${[item({ id: "1", stage: "embedding", chunkCount: 1 })]}
+        .items=${[item({ id: '1', stage: 'embedding', chunkCount: 1 })]}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
     expect(
       el
         .shadowRoot!.querySelector('[part="item-chunk-count"]')!
         .textContent!.trim()
-    ).to.equal("1 chunk");
+    ).to.equal('1 chunk');
   });
 
   it('shows "N of M chunks embedded" only once both chunkCount and embeddedChunkCount are set', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
         .items=${[
-          item({ id: "1", stage: "embedding", chunkCount: 10 }),
+          item({ id: '1', stage: 'embedding', chunkCount: 10 }),
           item({
-            id: "2",
-            stage: "embedding",
+            id: '2',
+            stage: 'embedding',
             chunkCount: 10,
             embeddedChunkCount: 4,
           }),
@@ -301,7 +342,7 @@ describe("populated rows", () => {
       rows[1]!
         .querySelector('[part="item-embedding-status"]')!
         .textContent!.trim()
-    ).to.equal("4 of 10 chunks embedded");
+    ).to.equal('4 of 10 chunks embedded');
   });
 
   it('isolates the meta text parts from bidi reordering under dir="rtl"', async () => {
@@ -310,8 +351,8 @@ describe("populated rows", () => {
         dir="rtl"
         .items=${[
           item({
-            id: "1",
-            stage: "embedding",
+            id: '1',
+            stage: 'embedding',
             chunkCount: 10,
             embeddedChunkCount: 4,
             attempts: 2,
@@ -320,25 +361,23 @@ describe("populated rows", () => {
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
     for (const part of [
-      "item-chunk-count",
-      "item-embedding-status",
-      "item-attempts",
+      'item-chunk-count',
+      'item-embedding-status',
+      'item-attempts',
     ]) {
       const target = el.shadowRoot!.querySelector(
         `[part="${part}"]`
       ) as HTMLElement;
-      expect(getComputedStyle(target).unicodeBidi, part).to.equal(
-        "plaintext"
-      );
+      expect(getComputedStyle(target).unicodeBidi, part).to.equal('plaintext');
     }
   });
 
-  it("shows the attempt count only once attempts is greater than 0", async () => {
+  it('shows the attempt count only once attempts is greater than 0', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
         .items=${[
-          item({ id: "1", stage: "failed" }),
-          item({ id: "2", stage: "failed", attempts: 2 }),
+          item({ id: '1', stage: 'failed' }),
+          item({ id: '2', stage: 'failed', attempts: 2 }),
         ]}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
@@ -348,15 +387,15 @@ describe("populated rows", () => {
     expect(rows[0]!.querySelector('[part="item-attempts"]') == null).to.be.true;
     expect(
       rows[1]!.querySelector('[part="item-attempts"]')!.textContent!.trim()
-    ).to.equal("Attempt 2");
+    ).to.equal('Attempt 2');
   });
 
-  it("renders historical failure detail without mounting it as a fresh alert", async () => {
+  it('renders historical failure detail without mounting it as a fresh alert', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
         .items=${[
-          item({ id: "1", stage: "failed" }),
-          item({ id: "2", stage: "failed", error: "Unsupported file type" }),
+          item({ id: '1', stage: 'failed' }),
+          item({ id: '2', stage: 'failed', error: 'Unsupported file type' }),
         ]}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
@@ -365,88 +404,88 @@ describe("populated rows", () => {
     ] as HTMLElement[];
     expect(rows[0]!.querySelector('[part="item-error"]') == null).to.be.true;
     const error = rows[1]!.querySelector('[part="item-error"]') as HTMLElement;
-    expect(error.textContent!.trim()).to.equal("Unsupported file type");
-    expect(error.hasAttribute("role")).to.be.false;
+    expect(error.textContent!.trim()).to.equal('Unsupported file type');
+    expect(error.hasAttribute('role')).to.be.false;
     const live = el.shadowRoot!.querySelector(
       '[part="failure-live"]'
     ) as HTMLElement;
     // The retained part is a styling/inspection mirror only -- a live region inside a shadow root
     // is not reliably announced, and leaving it live would double-announce where it *is* honored.
-    expect(live.getAttribute("role")).to.equal(null);
-    expect(live.getAttribute("aria-live")).to.equal(null);
-    expect(live.getAttribute("aria-hidden")).to.equal("true");
-    expect(live.textContent!.trim()).to.equal("");
+    expect(live.getAttribute('role')).to.equal(null);
+    expect(live.getAttribute('aria-live')).to.equal(null);
+    expect(live.getAttribute('aria-hidden')).to.equal('true');
+    expect(live.textContent!.trim()).to.equal('');
   });
 
-  it("announces only failures that transition or are added after mount", async () => {
+  it('announces only failures that transition or are added after mount', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
-        .items=${[item({ id: "1", stage: "queued" })]}
+        .items=${[item({ id: '1', stage: 'queued' })]}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
     const liveText = () =>
       el
         .shadowRoot!.querySelector('[part="failure-live"]')!
         .textContent!.trim();
-    expect(liveText()).to.equal("");
+    expect(liveText()).to.equal('');
 
     el.items = [
-      item({ id: "1", stage: "failed", error: "Unsupported file type" }),
+      item({ id: '1', stage: 'failed', error: 'Unsupported file type' }),
     ];
     await el.updateComplete;
-    expect(liveText()).to.equal("Unsupported file type");
+    expect(liveText()).to.equal('Unsupported file type');
 
     el.items = [
-      item({ id: "1", stage: "failed", error: "Unsupported file type" }),
-      item({ id: "2", stage: "failed", error: "Network unavailable" }),
+      item({ id: '1', stage: 'failed', error: 'Unsupported file type' }),
+      item({ id: '2', stage: 'failed', error: 'Network unavailable' }),
     ];
     await el.updateComplete;
-    expect(liveText()).to.equal("Network unavailable");
+    expect(liveText()).to.equal('Network unavailable');
   });
 
-  it("routes fresh failures into the shared light-DOM assertive sink", async () => {
+  it('routes fresh failures into the shared light-DOM assertive sink', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
-        .items=${[item({ id: "1", stage: "queued" })]}
+        .items=${[item({ id: '1', stage: 'queued' })]}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
     expect(
-      sinkTexts("assertive"),
-      "mounting must not announce a resting state"
+      sinkTexts('assertive'),
+      'mounting must not announce a resting state'
     ).to.deep.equal([]);
 
     el.items = [
-      item({ id: "1", stage: "failed", error: "Unsupported file type" }),
+      item({ id: '1', stage: 'failed', error: 'Unsupported file type' }),
     ];
     await el.updateComplete;
-    expect(sinkTexts("assertive")).to.deep.equal(["Unsupported file type"]);
+    expect(sinkTexts('assertive')).to.deep.equal(['Unsupported file type']);
   });
 
-  it("announces an identical repeat failure again instead of silently rewriting one text node", async () => {
+  it('announces an identical repeat failure again instead of silently rewriting one text node', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
-        .items=${[item({ id: "1", stage: "queued" })]}
+        .items=${[item({ id: '1', stage: 'queued' })]}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
 
     el.items = [
-      item({ id: "1", stage: "failed", error: "Network unavailable" }),
+      item({ id: '1', stage: 'failed', error: 'Network unavailable' }),
     ];
     await el.updateComplete;
-    el.items = [item({ id: "1", stage: "queued" })];
+    el.items = [item({ id: '1', stage: 'queued' })];
     await el.updateComplete;
     el.items = [
-      item({ id: "1", stage: "failed", error: "Network unavailable" }),
+      item({ id: '1', stage: 'failed', error: 'Network unavailable' }),
     ];
     await el.updateComplete;
 
     expect(
-      sinkTexts("assertive"),
-      "an identical repeat must be a second addition so assistive tech reads it again"
-    ).to.deep.equal(["Network unavailable", "Network unavailable"]);
+      sinkTexts('assertive'),
+      'an identical repeat must be a second addition so assistive tech reads it again'
+    ).to.deep.equal(['Network unavailable', 'Network unavailable']);
   });
 
-  it("ref-counts the shared assertive sink away once the last queue disconnects", async () => {
+  it('ref-counts the shared assertive sink away once the last queue disconnects', async () => {
     const first = (await fixture(
       html`<lr-ingestion-queue></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
@@ -454,27 +493,27 @@ describe("populated rows", () => {
       html`<lr-ingestion-queue></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
     expect(
-      sinkElement("assertive") !== null,
-      "a connected queue holds the sink"
+      sinkElement('assertive') !== null,
+      'a connected queue holds the sink'
     ).to.be.true;
     first.remove();
     expect(
-      sinkElement("assertive") !== null,
-      "a still-connected queue keeps it mounted"
+      sinkElement('assertive') !== null,
+      'a still-connected queue keeps it mounted'
     ).to.be.true;
     second.remove();
-    expect(sinkElement("assertive") === null, "the last disconnect unmounts it")
+    expect(sinkElement('assertive') === null, 'the last disconnect unmounts it')
       .to.be.true;
   });
 });
 
-describe("retry/cancel affordances", () => {
+describe('retry/cancel affordances', () => {
   it('renders a retry button only for stage="failed"', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
         .items=${[
-          item({ id: "1", stage: "uploading" }),
-          item({ id: "2", stage: "failed" }),
+          item({ id: '1', stage: 'uploading' }),
+          item({ id: '2', stage: 'failed' }),
         ]}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
@@ -485,15 +524,15 @@ describe("retry/cancel affordances", () => {
     expect(rows[1]!.querySelector('[part="retry-button"]')).to.exist;
   });
 
-  it("renders a cancel button for every non-terminal stage, and none for done/failed/cancelled", async () => {
+  it('renders a cancel button for every non-terminal stage, and none for done/failed/cancelled', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
         .items=${[
-          item({ id: "1", stage: "queued" }),
-          item({ id: "2", stage: "uploading" }),
-          item({ id: "3", stage: "done" }),
-          item({ id: "4", stage: "failed" }),
-          item({ id: "5", stage: "cancelled" }),
+          item({ id: '1', stage: 'queued' }),
+          item({ id: '2', stage: 'uploading' }),
+          item({ id: '3', stage: 'done' }),
+          item({ id: '4', stage: 'failed' }),
+          item({ id: '5', stage: 'cancelled' }),
         ]}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
@@ -507,44 +546,44 @@ describe("retry/cancel affordances", () => {
     expect(rows[4]!.querySelector('[part="cancel-button"]') == null).to.be.true;
   });
 
-  it("fires lr-retry with { itemId, attempt } on click, attempt = (attempts ?? 0) + 1", async () => {
+  it('fires lr-retry with { itemId, attempt } on click, attempt = (attempts ?? 0) + 1', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
-        .items=${[item({ id: "1", stage: "failed", attempts: 2 })]}
+        .items=${[item({ id: '1', stage: 'failed', attempts: 2 })]}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
-    const firing = oneEvent(el, "lr-retry");
+    const firing = oneEvent(el, 'lr-retry');
     (
       el.shadowRoot!.querySelector('[part="retry-button"]') as HTMLButtonElement
     ).click();
     const event = await firing;
     expect((event as CustomEvent).detail).to.deep.equal({
-      itemId: "1",
+      itemId: '1',
       attempt: 3,
     });
   });
 
-  it("defaults attempt to 1 when the item has never been retried", async () => {
+  it('defaults attempt to 1 when the item has never been retried', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
-        .items=${[item({ id: "1", stage: "failed" })]}
+        .items=${[item({ id: '1', stage: 'failed' })]}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
-    const firing = oneEvent(el, "lr-retry");
+    const firing = oneEvent(el, 'lr-retry');
     (
       el.shadowRoot!.querySelector('[part="retry-button"]') as HTMLButtonElement
     ).click();
     const event = await firing;
     expect((event as CustomEvent).detail).to.deep.equal({
-      itemId: "1",
+      itemId: '1',
       attempt: 1,
     });
   });
 
-  it("emits retry attempts from the same nonnegative finite-integer normalization used by the UI", async () => {
+  it('emits retry attempts from the same nonnegative finite-integer normalization used by the UI', async () => {
     const cases = [
       { attempts: -4, displayed: null, next: 1 },
-      { attempts: 2.8, displayed: "Attempt 2", next: 3 },
+      { attempts: 2.8, displayed: 'Attempt 2', next: 3 },
       { attempts: Number.POSITIVE_INFINITY, displayed: null, next: 1 },
     ];
 
@@ -554,7 +593,7 @@ describe("retry/cancel affordances", () => {
           .items=${[
             item({
               id: `attempt-${String(testCase.attempts)}`,
-              stage: "failed",
+              stage: 'failed',
               attempts: testCase.attempts,
             }),
           ]}
@@ -562,7 +601,7 @@ describe("retry/cancel affordances", () => {
       )) as LyraIngestionQueue;
       const attempts = el.shadowRoot!.querySelector('[part="item-attempts"]');
       expect(attempts?.textContent.trim() ?? null).to.equal(testCase.displayed);
-      const pending = oneEvent(el, "lr-retry");
+      const pending = oneEvent(el, 'lr-retry');
       (
         el.shadowRoot!.querySelector(
           '[part="retry-button"]'
@@ -572,30 +611,30 @@ describe("retry/cancel affordances", () => {
     }
   });
 
-  it("fires lr-cancel with { itemId } on click", async () => {
+  it('fires lr-cancel with { itemId } on click', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
-        .items=${[item({ id: "9", stage: "embedding" })]}
+        .items=${[item({ id: '9', stage: 'embedding' })]}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
-    const firing = oneEvent(el, "lr-cancel");
+    const firing = oneEvent(el, 'lr-cancel');
     (
       el.shadowRoot!.querySelector(
         '[part="cancel-button"]'
       ) as HTMLButtonElement
     ).click();
     const event = await firing;
-    expect((event as CustomEvent).detail).to.deep.equal({ itemId: "9" });
+    expect((event as CustomEvent).detail).to.deep.equal({ itemId: '9' });
   });
 
-  it("gives the retry/cancel buttons an accessible name that includes the document name", async () => {
+  it('gives the retry/cancel buttons an accessible name that includes the document name', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
         .items=${[
           item({
-            id: "1",
-            stage: "failed",
-            document: { id: "1", name: "Q3 report.pdf" },
+            id: '1',
+            stage: 'failed',
+            document: { id: '1', name: 'Q3 report.pdf' },
           }),
         ]}
       ></lr-ingestion-queue>`
@@ -603,20 +642,20 @@ describe("retry/cancel affordances", () => {
     const retry = el.shadowRoot!.querySelector(
       '[part="retry-button"]'
     ) as HTMLButtonElement;
-    expect(retry.getAttribute("aria-label")).to.equal("Retry Q3 report.pdf");
+    expect(retry.getAttribute('aria-label')).to.equal('Retry Q3 report.pdf');
   });
 
-  it("keeps compact retry/cancel targets at the live hit-area token override", async () => {
+  it('keeps compact retry/cancel targets at the live hit-area token override', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
         style="--lr-icon-button-size: 52px"
         .items=${[
-          item({ id: "1", stage: "failed" }),
-          item({ id: "2", stage: "queued" }),
+          item({ id: '1', stage: 'failed' }),
+          item({ id: '2', stage: 'queued' }),
         ]}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
-    for (const part of ["retry-button", "cancel-button"]) {
+    for (const part of ['retry-button', 'cancel-button']) {
       const target = el.shadowRoot!.querySelector(
         `[part="${part}"]`
       ) as HTMLElement;
@@ -627,105 +666,105 @@ describe("retry/cancel affordances", () => {
   });
 });
 
-describe("accessible name", () => {
+describe('accessible name', () => {
   it('defaults the region name to the localized "Ingestion queue"', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
-        .items=${[item({ id: "1", stage: "queued" })]}
+        .items=${[item({ id: '1', stage: 'queued' })]}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
     expect(
-      el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
-    ).to.equal("Ingestion queue");
+      el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
+    ).to.equal('Ingestion queue');
   });
 
-  it("lets the label property override the default name", async () => {
+  it('lets the label property override the default name', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
         label="Uploads"
-        .items=${[item({ id: "1", stage: "queued" })]}
+        .items=${[item({ id: '1', stage: 'queued' })]}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
     expect(
-      el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
-    ).to.equal("Uploads");
+      el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
+    ).to.equal('Uploads');
   });
 
-  it("keeps a non-empty host name as the sole overall owner", async () => {
+  it('keeps a non-empty host name as the sole overall owner', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
         aria-label="Custom name"
         label="Uploads"
-        .items=${[item({ id: "1", stage: "queued" })]}
+        .items=${[item({ id: '1', stage: 'queued' })]}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
-    expect(el.getAttribute("aria-label")).to.equal("Custom name");
+    expect(el.getAttribute('aria-label')).to.equal('Custom name');
     expect(
-      el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
+      el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
     ).to.equal(null);
     expect(
-      el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("role")
+      el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')
     ).to.equal(null);
   });
 
-  it("keeps one nonvirtual owner across explicit-empty and dynamic host naming", async () => {
+  it('keeps one nonvirtual owner across explicit-empty and dynamic host naming', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
         aria-label="Author queue"
         label="Uploads"
-        .items=${[item({ id: "1", stage: "queued" })]}
+        .items=${[item({ id: '1', stage: 'queued' })]}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
     const ownerName = () =>
       el
         .shadowRoot!.querySelector<HTMLElement>('[part="base"]')!
-        .getAttribute("aria-label");
+        .getAttribute('aria-label');
     const listName = () =>
       el
         .shadowRoot!.querySelector<HTMLElement>('[part="list"]')!
-        .getAttribute("aria-label");
-    expect(el.getAttribute("aria-label")).to.equal("Author queue");
+        .getAttribute('aria-label');
+    expect(el.getAttribute('aria-label')).to.equal('Author queue');
     expect(ownerName()).to.equal(null);
     expect(listName()).to.equal(null);
 
-    el.setAttribute("aria-label", "");
+    el.setAttribute('aria-label', '');
     await el.updateComplete;
-    expect(el.getAttribute("aria-label")).to.equal("");
-    expect(ownerName()).to.equal("");
+    expect(el.getAttribute('aria-label')).to.equal('');
+    expect(ownerName()).to.equal('');
     expect(listName()).to.equal(null);
 
-    el.setAttribute("aria-label", "Revised queue");
+    el.setAttribute('aria-label', 'Revised queue');
     await el.updateComplete;
-    expect(el.getAttribute("aria-label")).to.equal("Revised queue");
+    expect(el.getAttribute('aria-label')).to.equal('Revised queue');
     expect(ownerName()).to.equal(null);
 
-    el.removeAttribute("aria-label");
+    el.removeAttribute('aria-label');
     await el.updateComplete;
-    expect(el.getAttribute("aria-label")).to.equal(null);
-    expect(ownerName()).to.equal("Uploads");
+    expect(el.getAttribute('aria-label')).to.equal(null);
+    expect(ownerName()).to.equal('Uploads');
     expect(listName()).to.equal(null);
   });
 });
 
-describe(".strings overrides", () => {
-  it("lets .strings override the empty-state heading", async () => {
+describe('.strings overrides', () => {
+  it('lets .strings override the empty-state heading', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
-        .strings=${{ ingestionQueueEmpty: "Rien en attente" }}
+        .strings=${{ ingestionQueueEmpty: 'Rien en attente' }}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
     expect(
-      el.shadowRoot!.querySelector("lr-empty")!.getAttribute("heading")
-    ).to.equal("Rien en attente");
+      el.shadowRoot!.querySelector('lr-empty')!.getAttribute('heading')
+    ).to.equal('Rien en attente');
   });
 
-  it("lets .strings override the retry and cancel verbs", async () => {
+  it('lets .strings override the retry and cancel verbs', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
-        .strings=${{ retry: "Réessayer", cancel: "Annuler" }}
+        .strings=${{ retry: 'Réessayer', cancel: 'Annuler' }}
         .items=${[
-          item({ id: "1", stage: "failed" }),
-          item({ id: "2", stage: "embedding" }),
+          item({ id: '1', stage: 'failed' }),
+          item({ id: '2', stage: 'embedding' }),
         ]}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
@@ -734,32 +773,32 @@ describe(".strings overrides", () => {
     ] as HTMLElement[];
     expect(
       rows[0]!.querySelector('[part="retry-button"] span')!.textContent
-    ).to.equal("Réessayer");
+    ).to.equal('Réessayer');
     expect(
       rows[1]!.querySelector('[part="cancel-button"] span')!.textContent
-    ).to.equal("Annuler");
+    ).to.equal('Annuler');
   });
 });
 
-describe("virtualization", () => {
+describe('virtualization', () => {
   it('renders a plain [part="list"] at or below virtualizeAt', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
         virtualize-at="5"
         .items=${[
-          item({ id: "1", stage: "queued" }),
-          item({ id: "2", stage: "queued" }),
+          item({ id: '1', stage: 'queued' }),
+          item({ id: '2', stage: 'queued' }),
         ]}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
     expect(el.shadowRoot!.querySelector('[part="list"]')).to.exist;
-    expect(el.shadowRoot!.querySelector("lr-virtual-list") == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('lr-virtual-list') == null).to.be.true;
   });
 
-  it("switches to an internal lr-virtual-list above virtualizeAt, wired with items/keyFunction", async () => {
+  it('switches to an internal lr-virtual-list above virtualizeAt, wired with items/keyFunction', async () => {
     const items = [
-      item({ id: "1", stage: "queued" }),
-      item({ id: "2", stage: "uploading" }),
+      item({ id: '1', stage: 'queued' }),
+      item({ id: '2', stage: 'uploading' }),
     ];
     const el = (await fixture(
       html`<lr-ingestion-queue
@@ -767,14 +806,15 @@ describe("virtualization", () => {
         .items=${items}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
-    const virtualList = el.shadowRoot!.querySelector(
-      "lr-virtual-list"
-    ) as (LyraVirtualList & {
-      keyFunction: (item: unknown, index: number) => string | number;
-      renderItem: (item: unknown, index: number) => unknown;
-    }) | null;
+    const virtualList = el.shadowRoot!.querySelector('lr-virtual-list') as
+      | (LyraVirtualList & {
+          keyFunction: (item: unknown, index: number) => string | number;
+          renderItem: (item: unknown, index: number) => unknown;
+        })
+      | null;
     expect(virtualList).to.exist;
-    expect(el.shadowRoot!.querySelector('[part="list"]') === virtualList).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="list"]') === virtualList).to.be
+      .true;
     expect(virtualList!.items).to.deep.equal(items);
     expect(virtualList!.items).to.not.equal(items);
     expect(Object.isFrozen(virtualList!.items)).to.equal(true);
@@ -786,10 +826,10 @@ describe("virtualization", () => {
   // AND switched the comparison from `>=` to `>`, so `="2"` now means the same thing here as it
   // does on <lr-chunk-inspector>, <lr-retrieval-results> and <lr-neighbor-list>: exactly 2 items
   // stay a plain list, the 3rd one switches to the virtual list.
-  it("treats virtualize-at as an exclusive bound and no longer answers to virtualize-threshold", async () => {
+  it('treats virtualize-at as an exclusive bound and no longer answers to virtualize-threshold', async () => {
     const two = [
-      item({ id: "1", stage: "queued" }),
-      item({ id: "2", stage: "queued" }),
+      item({ id: '1', stage: 'queued' }),
+      item({ id: '2', stage: 'queued' }),
     ];
     const el = (await fixture(
       html`<lr-ingestion-queue
@@ -797,18 +837,18 @@ describe("virtualization", () => {
         .items=${two}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
-    expect("virtualizeThreshold" in el).to.equal(false);
+    expect('virtualizeThreshold' in el).to.equal(false);
     expect(
-      el.shadowRoot!.querySelectorAll("lr-virtual-list").length,
-      "exactly at the bound"
+      el.shadowRoot!.querySelectorAll('lr-virtual-list').length,
+      'exactly at the bound'
     ).to.equal(0);
     expect(el.shadowRoot!.querySelectorAll('[part="list"]').length).to.equal(1);
 
-    el.items = [...two, item({ id: "3", stage: "queued" })];
+    el.items = [...two, item({ id: '3', stage: 'queued' })];
     await el.updateComplete;
     expect(
-      el.shadowRoot!.querySelectorAll("lr-virtual-list").length,
-      "one past the bound"
+      el.shadowRoot!.querySelectorAll('lr-virtual-list').length,
+      'one past the bound'
     ).to.equal(1);
 
     // The retired attribute is inert: it must not resurrect the old threshold through Lit's
@@ -821,67 +861,67 @@ describe("virtualization", () => {
     )) as LyraIngestionQueue;
     expect(stale.virtualizeAt).to.equal(100);
     expect(
-      stale.shadowRoot!.querySelectorAll("lr-virtual-list").length
+      stale.shadowRoot!.querySelectorAll('lr-virtual-list').length
     ).to.equal(0);
     await nextFrame();
   });
 
-  it("keeps explicit-empty host naming distinct from the inner region and virtual list", async () => {
+  it('keeps explicit-empty host naming distinct from the inner region and virtual list', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
         aria-label="Author queue"
         label="Uploads"
         virtualize-at="0"
-        .items=${[item({ id: "1", stage: "queued" })]}
+        .items=${[item({ id: '1', stage: 'queued' })]}
       ></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
     const virtualList =
-      el.shadowRoot!.querySelector<LyraVirtualList>("lr-virtual-list")!;
+      el.shadowRoot!.querySelector<LyraVirtualList>('lr-virtual-list')!;
     await virtualList.updateComplete;
     const semanticNames = () => [
       el
         .shadowRoot!.querySelector<HTMLElement>('[part="base"]')!
-        .getAttribute("aria-label"),
-      virtualList.getAttribute("aria-label"),
+        .getAttribute('aria-label'),
+      virtualList.getAttribute('aria-label'),
       virtualList
         .shadowRoot!.querySelector<HTMLElement>('[part="base"]')!
-        .getAttribute("aria-label"),
+        .getAttribute('aria-label'),
     ];
-    expect(el.getAttribute("aria-label")).to.equal("Author queue");
+    expect(el.getAttribute('aria-label')).to.equal('Author queue');
     expect(semanticNames()).to.deep.equal([null, null, null]);
 
-    el.setAttribute("aria-label", "");
+    el.setAttribute('aria-label', '');
     await el.updateComplete;
     await virtualList.updateComplete;
-    expect(el.getAttribute("aria-label")).to.equal("");
-    expect(semanticNames()).to.deep.equal(["", null, null]);
+    expect(el.getAttribute('aria-label')).to.equal('');
+    expect(semanticNames()).to.deep.equal(['', null, null]);
 
-    el.removeAttribute("aria-label");
+    el.removeAttribute('aria-label');
     await el.updateComplete;
     await virtualList.updateComplete;
-    expect(semanticNames()).to.deep.equal(["Uploads", null, null]);
+    expect(semanticNames()).to.deep.equal(['Uploads', null, null]);
     await nextFrame();
   });
 
-  it("exports every styled virtualized row part so a consumer stylesheet reaches them", async () => {
+  it('exports every styled virtualized row part so a consumer stylesheet reaches them', async () => {
     // Row markup is rendered inside <lr-virtual-list>'s own shadow root, two hops from a consumer:
     // without exportparts on that element, lr-ingestion-queue::part(item) matches nothing at all.
     const names = [
-      "item",
-      "item-header",
-      "item-name",
+      'item',
+      'item-header',
+      'item-name',
       'item-stage',
-      "item-progress",
-      "item-meta",
+      'item-progress',
+      'item-meta',
       'item-chunk-count',
       'item-embedding-status',
       'item-attempts',
-      "item-error",
-      "item-actions",
-      "retry-button",
-      "cancel-button",
+      'item-error',
+      'item-actions',
+      'retry-button',
+      'cancel-button',
     ];
-    const style = document.createElement("style");
+    const style = document.createElement('style');
     style.textContent = names
       .map(
         (name, i) =>
@@ -889,7 +929,7 @@ describe("virtualization", () => {
             i + 1
           }px; }`
       )
-      .join("\n");
+      .join('\n');
     document.head.append(style);
     try {
       const el = (await fixture(
@@ -897,18 +937,18 @@ describe("virtualization", () => {
           virtualize-at="1"
           .items=${[
             item({
-              id: "1",
-              stage: "failed",
-              error: "Boom",
+              id: '1',
+              stage: 'failed',
+              error: 'Boom',
               attempts: 1,
               chunkCount: 4,
               embeddedChunkCount: 2,
             }),
-            item({ id: "2", stage: "uploading", progress: 30 }),
+            item({ id: '2', stage: 'uploading', progress: 30 }),
           ]}
         ></lr-ingestion-queue>`
       )) as LyraIngestionQueue;
-      const list = el.shadowRoot!.querySelector("lr-virtual-list")!;
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
       await nextFrame();
       const rows = [
         ...list.shadowRoot!.querySelectorAll('[part="item"]'),
@@ -929,62 +969,62 @@ describe("virtualization", () => {
     }
   });
 
-  it("renders row content identically through the internal lr-virtual-list renderItem callback", async () => {
+  it('renders row content identically through the internal lr-virtual-list renderItem callback', async () => {
     // Real virtualized row layout isn't reliably assertable without real browser viewport
     // sizing, so -- matching <lr-activity-feed>'s own equivalent test -- this invokes the
     // internal lr-virtual-list's .renderItem callback directly against a scratch container.
     const el = (await fixture(
       html`<lr-ingestion-queue virtualize-at="1"></lr-ingestion-queue>`
     )) as LyraIngestionQueue;
-    const target = item({ id: "1", stage: "failed", error: "Boom" });
-    el.items = [target, item({ id: "2", stage: "queued" })];
+    const target = item({ id: '1', stage: 'failed', error: 'Boom' });
+    el.items = [target, item({ id: '2', stage: 'queued' })];
     await el.updateComplete;
     const virtualList = el.shadowRoot!.querySelector(
-      "lr-virtual-list"
+      'lr-virtual-list'
     ) as unknown as {
       renderItem: (item: unknown, index: number) => unknown;
     };
-    const container = document.createElement("div");
+    const container = document.createElement('div');
     render(
       virtualList.renderItem(target, 0) as ReturnType<typeof html>,
       container
     );
     expect(
       container.querySelector('[part="item-name"]')!.textContent!.trim()
-    ).to.equal("Doc 1");
+    ).to.equal('Doc 1');
     expect(
       container.querySelector('[part="item-error"]')!.textContent!.trim()
-    ).to.equal("Boom");
+    ).to.equal('Boom');
     // Rendered outside the internal virtual-list's own role="listitem" row wrapper here, so this
     // component's own item div deliberately omits a redundant role in that mode.
-    expect(container.querySelector('[part="item"]')!.hasAttribute("role")).to.be
+    expect(container.querySelector('[part="item"]')!.hasAttribute('role')).to.be
       .false;
     await nextFrame();
   });
 });
 
-it("is accessible with a populated, mixed-stage queue", async () => {
+it('is accessible with a populated, mixed-stage queue', async () => {
   const el = (await fixture(
     html`<lr-ingestion-queue
       .items=${[
-        item({ id: "1", stage: "queued" }),
-        item({ id: "2", stage: "uploading", progress: 30 }),
+        item({ id: '1', stage: 'queued' }),
+        item({ id: '2', stage: 'uploading', progress: 30 }),
         item({
-          id: "3",
-          stage: "embedding",
+          id: '3',
+          stage: 'embedding',
           chunkCount: 10,
           embeddedChunkCount: 4,
         }),
         item({
-          id: "4",
-          stage: "done",
+          id: '4',
+          stage: 'done',
           chunkCount: 10,
           embeddedChunkCount: 10,
         }),
         item({
-          id: "5",
-          stage: "failed",
-          error: "Unsupported file type",
+          id: '5',
+          stage: 'failed',
+          error: 'Unsupported file type',
           attempts: 1,
         }),
       ]}
@@ -1015,6 +1055,8 @@ it('omits blank and later duplicate item ids before counts, virtualization, rend
   ).to.equal(first.document.name);
 
   const cancelled = oneEvent(el, 'lr-cancel');
-  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="cancel-button"]')!.click();
+  el.shadowRoot!.querySelector<HTMLButtonElement>(
+    '[part="cancel-button"]'
+  )!.click();
   expect((await cancelled).detail).to.deep.equal({ itemId: 'same' });
 });

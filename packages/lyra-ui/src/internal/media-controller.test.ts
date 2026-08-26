@@ -602,9 +602,9 @@ describe('native media capability predicates', () => {
       restoreExitFullscreen();
       restorePip();
       if (fullscreenDescriptor) Object.defineProperty(document, 'fullscreenEnabled', fullscreenDescriptor);
-      else delete (document as Document & { fullscreenEnabled?: boolean }).fullscreenEnabled;
+      else Reflect.deleteProperty(document, 'fullscreenEnabled');
       if (pipDescriptor) Object.defineProperty(document, 'pictureInPictureEnabled', pipDescriptor);
-      else delete (document as Document & { pictureInPictureEnabled?: boolean }).pictureInPictureEnabled;
+      else Reflect.deleteProperty(document, 'pictureInPictureEnabled');
     }
   });
 

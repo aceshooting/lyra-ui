@@ -1,7 +1,6 @@
-import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './mind-map.js';
 import type { LyraMindMap, LyraTopic } from './mind-map.js';
-import { styles } from './mind-map.styles.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
@@ -1062,9 +1061,9 @@ it('coalesces rapid resize notifications and skips a no-op repeat with an unchan
     cancelled.push(handle);
   }) as typeof window.cancelAnimationFrame;
   try {
-    const el = (await fixture(
+    await fixture(
       html`<lr-mind-map></lr-mind-map>`
-    )) as LyraMindMap;
+    );
     expect(notify, 'a resize observer was armed').to.be.a('function');
 
     notify!([], {} as ResizeObserver); // no entry -- the optional-chained contentRect falls back to ''
@@ -1451,34 +1450,52 @@ describe('lifecycle super calls', () => {
     )) as LyraMindMap;
     // The immediate prototype of an instance is LyraElement.prototype -- the exact object
     // `super.willUpdate()` resolves against from inside this component's own override.
-    const proto = Object.getPrototypeOf(Object.getPrototypeOf(el)) as Record<
-      string,
-      unknown
-    >;
-    const originalWillUpdate = proto.willUpdate as
-      | ((changed: unknown) => void)
-      | undefined;
+    const proto = Object.getPrototypeOf(Object.getPrototypeOf(el)) as unknown as {
+      willUpdate(this: unknown, changed: unknown): void;
+    };
+    const originalWillUpdate = proto.willUpdate;
     let willUpdateCalls = 0;
     proto.willUpdate = function (this: unknown, changed: unknown) {
       willUpdateCalls++;
-      return originalWillUpdate?.call(this, changed);
+      return originalWillUpdate.call(this, changed);
     };
     try {
       el.topics = topics;
       await el.updateComplete;
       expect(willUpdateCalls).to.be.greaterThan(0);
     } finally {
-      delete proto.willUpdate;
+      proto.willUpdate = originalWillUpdate;
     }
   });
 });
 
 describe('hover feedback on [part="node"]', () => {
-  // :hover cannot be synthesized in this test runner (no real pointer), so per this repo's
-  // documented exception for genuinely-unsynthesizable pseudo-classes, this asserts against the
-  // stylesheet source instead of a rendered/computed effect.
-  it("declares a [part='node']:hover rule, giving mouse users the same 'clickable' feedback keyboard users get from the drawn focus ring", () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part=["']node["']\]:hover/);
+  it('paints the configured node halo under a real pointer', async () => {
+    const el = await fixture<LyraMindMap>(html`
+      <lr-mind-map
+        style="inline-size: 320px; block-size: 320px; --lr-mind-map-node-hover-halo: rgb(1, 2, 3)"
+        .topics=${topics}
+      ></lr-mind-map>
+    `);
+    const node = el.shadowRoot!.querySelector<SVGGElement>('[part="node"]')!;
+    const circle = node.querySelector<SVGCircleElement>('circle')!;
+    el.scrollIntoView({ block: 'center', inline: 'center' });
+    await aTimeout(0);
+    const rect = node.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => getComputedStyle(circle).stroke === 'rgb(1, 2, 3)',
+        'the mind-map node hover halo never painted'
+      );
+    } finally {
+      await resetMouse();
+    }
   });
 });

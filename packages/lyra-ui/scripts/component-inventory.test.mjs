@@ -27,6 +27,7 @@ import {
   accessibilityProfileCatalog,
   migrationParityMetadata,
   optionalPeersForComponent,
+  runtimeModuleSpecifiers,
   reviewedAccessibilityMetadata,
   reviewedMethodEdgeParity,
   reviewedMigrationDecision,
@@ -52,6 +53,7 @@ import {
   webTypesValue,
 } from './editor-type-values.mjs';
 import { cssPropertyDescription } from './editor-css-descriptions.mjs';
+import { webTypesElementContributions } from './editor-web-types.mjs';
 import { generateManifest } from './generate-manifest.mjs';
 import {
   compactManifest,
@@ -1419,7 +1421,7 @@ test('the CEM default-value projection keeps the attribute public without publis
   }
 });
 
-test('the CEM chart projection reports each runtime-locked subclass literal type contract', async () => {
+test('the CEM chart projection preserves writable chart vocabularies and narrows only the runtime-locked histogram', async () => {
   const plugin = cemConfig.plugins.find(
     ({ name }) => name === 'lr-locked-chart-type-defaults'
   );
@@ -1428,7 +1430,7 @@ test('the CEM chart projection reports each runtime-locked subclass literal type
     'the locked chart type projection plugin is installed'
   );
 
-  const lockedTypes = new Map([
+  const defaultTypes = new Map([
     ['lr-bar-chart', 'bar'],
     ['lr-bubble-chart', 'bubble'],
     ['lr-doughnut-chart', 'doughnut'],
@@ -1438,6 +1440,16 @@ test('the CEM chart projection reports each runtime-locked subclass literal type
     ['lr-radar-chart', 'radar'],
     ['lr-scatter-chart', 'scatter'],
   ]);
+  const chartTypeValues = [
+    { name: 'line' },
+    { name: 'bar' },
+    { name: 'scatter' },
+    { name: 'pie' },
+    { name: 'doughnut' },
+    { name: 'radar' },
+    { name: 'polarArea' },
+    { name: 'bubble' },
+  ];
   const declaration = (tagName) => ({
     kind: 'class',
     name: tagName,
@@ -1466,7 +1478,8 @@ test('the CEM chart projection reports each runtime-locked subclass literal type
       {
         path: 'synthetic.ts',
         declarations: [
-          ...[...lockedTypes.keys()].map(declaration),
+          ...[...defaultTypes.keys()].map(declaration),
+          declaration('lr-histogram'),
           declaration('lr-chart'),
           declaration('lr-lite-chart'),
         ],
@@ -1476,31 +1489,71 @@ test('the CEM chart projection reports each runtime-locked subclass literal type
 
   plugin.packageLinkPhase({ customElementsManifest: synthetic });
   const aliases = readTypeAliases(path.join(packageDir, 'src'));
-  for (const [tagName, type] of lockedTypes) {
+  for (const [tagName, type] of defaultTypes) {
     const projected = synthetic.modules[0].declarations.find(
       (candidate) => candidate.tagName === tagName
     );
     const member = projected.members.find(({ name }) => name === 'type');
     const attribute = projected.attributes.find(({ name }) => name === 'type');
     assert.equal(member.default, `'${type}'`, `${tagName} member default`);
-    assert.equal(member.type.text, `'${type}'`, `${tagName} member type`);
+    assert.equal(member.type.text, 'LyraChartType', `${tagName} member type`);
     assert.equal(
       attribute.default,
       `'${type}'`,
       `${tagName} attribute default`
     );
-    assert.equal(attribute.type.text, `'${type}'`, `${tagName} attribute type`);
+    assert.equal(attribute.type.text, 'LyraChartType', `${tagName} attribute type`);
     assert.deepEqual(
       htmlDataValues(attribute.type.text, aliases),
-      [{ name: type }],
+      chartTypeValues,
       `${tagName} HTML editor value`
     );
     assert.deepEqual(
       webTypesValue(attribute.type.text, aliases),
-      { type: [`'${type}'`] },
+      {
+        type: [
+          "'line'",
+          "'bar'",
+          "'scatter'",
+          "'pie'",
+          "'doughnut'",
+          "'radar'",
+          "'polarArea'",
+          "'bubble'",
+        ],
+      },
       `${tagName} web-types value`
     );
   }
+  const histogram = synthetic.modules[0].declarations.find(
+    (candidate) => candidate.tagName === 'lr-histogram'
+  );
+  assert.equal(
+    histogram.members.find(({ name }) => name === 'type').type.text,
+    "'bar'"
+  );
+  assert.equal(
+    histogram.members.find(({ name }) => name === 'type').default,
+    "'bar'"
+  );
+  assert.equal(
+    histogram.attributes.find(({ name }) => name === 'type').type.text,
+    "'bar'"
+  );
+  assert.deepEqual(
+    htmlDataValues(
+      histogram.attributes.find(({ name }) => name === 'type').type.text,
+      aliases
+    ),
+    [{ name: 'bar' }]
+  );
+  assert.deepEqual(
+    webTypesValue(
+      histogram.attributes.find(({ name }) => name === 'type').type.text,
+      aliases
+    ),
+    { type: ["'bar'"] }
+  );
   for (const tagName of ['lr-chart', 'lr-lite-chart']) {
     const untouched = synthetic.modules[0].declarations.find(
       (candidate) => candidate.tagName === tagName
@@ -1528,14 +1581,14 @@ test('the CEM chart projection reports each runtime-locked subclass literal type
   assert.deepEqual(synthetic, once, 'running the projection twice is a no-op');
 
   const liveManifest = (await generateManifest({ write: false })).manifest;
-  for (const [tagName, type] of lockedTypes) {
+  for (const [tagName, type] of defaultTypes) {
     const projected = liveManifest.modules
       .flatMap((module) => module.declarations ?? [])
       .find((candidate) => candidate.tagName === tagName);
     const member = projected.members.find(({ name }) => name === 'type');
     const attribute = projected.attributes.find(({ name }) => name === 'type');
     assert.equal(member.default, `'${type}'`, `${tagName} live member default`);
-    assert.equal(member.type.text, `'${type}'`, `${tagName} live member type`);
+    assert.equal(member.type.text, 'LyraChartType', `${tagName} live member type`);
     assert.equal(
       attribute.default,
       `'${type}'`,
@@ -1543,10 +1596,41 @@ test('the CEM chart projection reports each runtime-locked subclass literal type
     );
     assert.equal(
       attribute.type.text,
-      `'${type}'`,
+      'LyraChartType',
       `${tagName} live attribute type`
     );
+    assert.deepEqual(
+      htmlDataValues(attribute.type.text, aliases),
+      chartTypeValues,
+      `${tagName} live HTML editor values`
+    );
   }
+  const liveHistogram = liveManifest.modules
+    .flatMap((module) => module.declarations ?? [])
+    .find((candidate) => candidate.tagName === 'lr-histogram');
+  assert.equal(
+    liveHistogram.members.find(({ name }) => name === 'type').type.text,
+    "'bar'",
+    'lr-histogram live member type'
+  );
+  assert.equal(
+    liveHistogram.members.find(({ name }) => name === 'type').default,
+    "'bar'",
+    'lr-histogram live member default'
+  );
+  assert.equal(
+    liveHistogram.attributes.find(({ name }) => name === 'type').type.text,
+    "'bar'",
+    'lr-histogram live attribute type'
+  );
+  assert.deepEqual(
+    htmlDataValues(
+      liveHistogram.attributes.find(({ name }) => name === 'type').type.text,
+      aliases
+    ),
+    [{ name: 'bar' }],
+    'lr-histogram live HTML editor value'
+  );
 });
 
 test('chart optional-peer attribution follows only reachable loader capabilities', () => {
@@ -1566,7 +1650,47 @@ test('chart optional-peer attribution follows only reachable loader capabilities
   );
 });
 
-test('a composed icon child only contributes its own optional peer when the parent forwards the capability that reaches it', () => {
+test('comment examples do not create optional-peer prerequisites', () => {
+  const packageJson = readJson('package.json');
+  const peersFor = (registrationModule) =>
+    optionalPeersForComponent({ registrationModule }, packageJson);
+
+  assert.deepEqual(
+    peersFor('src/components/forms/phone-input/phone-input.ts'),
+    [],
+    'phone-input accepts a consumer-built adapter but imports no phone-number peer itself'
+  );
+  assert.deepEqual(
+    peersFor('src/components/media/flag/flag.ts'),
+    [],
+    'flag-peer entry points, not the base flag registration, import the flags package'
+  );
+  assert.deepEqual(
+    peersFor('src/components/forms/locale-picker/locale-picker.ts'),
+    [],
+    'locale-picker remains usable without the separately registered flags package'
+  );
+});
+
+test('optional-peer parsing ignores imports written only in comments, examples, strings, and types', () => {
+  assert.deepEqual(
+    runtimeModuleSpecifiers(
+      `
+        /** @example import('comment-only-peer/example') */
+        // import value from 'line-comment-peer';
+        const prose = "import('string-only-peer')";
+        import type { TypeOnly } from 'type-only-peer';
+        export type { OtherType } from 'export-type-only-peer';
+        import { runtime } from 'runtime-peer/subpath';
+        const lazy = () => import('lazy-runtime-peer');
+      `,
+      'optional-peer-fixture.ts'
+    ),
+    ['runtime-peer/subpath', 'lazy-runtime-peer']
+  );
+});
+
+test('composed registrations inherit optional peers only when the parent forwards their capability', () => {
   const packageJson = readJson('package.json');
   const peersFor = (registrationModule) =>
     optionalPeersForComponent({ registrationModule }, packageJson);
@@ -1577,80 +1701,22 @@ test('a composed icon child only contributes its own optional peer when the pare
   assert.deepEqual(
     peersFor('src/components/media/video/video.ts'),
     ['dompurify'],
-    'video forwards iconLibrary into its composed icon, so it inherits the sanitizer peer that reaches'
+    'video forwards iconLibrary to every composed icon and therefore retains sanitizer capability'
   );
   assert.deepEqual(
     peersFor('src/components/media/video-playlist/video-playlist.ts'),
     ['dompurify'],
-    'video-playlist forwards iconLibrary the same way and inherits the same peer'
+    'video-playlist forwards iconLibrary through its composed video and icons'
   );
-
-  // Negative case: command-palette and condition-builder compose <lr-icon>/<lr-icon-button> with a
-  // literal, author-fixed glyph (`name="search"`, `icon="trash"`) and never forward `library`/`src`,
-  // so the remote-fetch-and-sanitize path is unreachable through their own public API.
   assert.deepEqual(
     peersFor('src/components/layout/command-palette/command-palette.ts'),
     [],
-    'command-palette renders a fixed decorative search glyph and never forwards library/src'
+    'a fixed built-in search glyph does not expose the icon remote-source capability'
   );
   assert.deepEqual(
     peersFor('src/components/data/condition-builder/condition-builder.ts'),
     [],
-    'condition-builder renders a fixed decorative trash glyph and never forwards library/src'
-  );
-});
-
-test('a JSDoc @example mentioning an optional peer import never attributes that peer', () => {
-  const packageJson = readJson('package.json');
-  const peersFor = (registrationModule) =>
-    optionalPeersForComponent({ registrationModule }, packageJson);
-
-  const phoneInputClassSource = fs.readFileSync(
-    path.join(packageDir, 'src/components/forms/phone-input/phone-input.class.ts'),
-    'utf8'
-  );
-  assert.match(
-    phoneInputClassSource,
-    /import\('libphonenumber-js\/min'\)/,
-    'this test is only meaningful while the reachable graph still carries the comment-only example it guards against'
-  );
-
-  assert.deepEqual(
-    peersFor('src/components/forms/phone-input/phone-input.ts'),
-    [],
-    'lr-phone-input takes a consumer-built adapter and never imports libphonenumber-js itself -- ' +
-      'the only reachable text matching the peer regex is a JSDoc @example, which must not attribute the peer'
-  );
-});
-
-test('lr-flag and lr-locale-picker retain an explicit, reviewed @aceshooting/lyra-flags attribution', () => {
-  const packageJson = readJson('package.json');
-  const peersFor = (registrationModule) =>
-    optionalPeersForComponent({ registrationModule }, packageJson);
-
-  // The real dynamic `import('@aceshooting/lyra-flags')` lives in flag-peer.ts, a deliberately
-  // separate opt-in registration entry that the default registration graph never reaches from
-  // flag.ts -- so nothing in the reachable-import traversal itself, comment-stripped or not,
-  // would ever attribute the peer to <lr-flag> by walking imports alone.
-  const flagPeerSource = fs.readFileSync(
-    path.join(packageDir, 'src/components/media/flag/flag-peer.ts'),
-    'utf8'
-  );
-  assert.match(
-    flagPeerSource,
-    /import\('@aceshooting\/lyra-flags'\)/,
-    'this test is only meaningful while the real dynamic import stays in the opt-in peer entry, unreached by default registration'
-  );
-
-  assert.deepEqual(
-    peersFor('src/components/media/flag/flag.ts'),
-    ['@aceshooting/lyra-flags'],
-    '<lr-flag> cannot render its documented flag artwork without the peer -- this is a deliberate, reviewed attribution'
-  );
-  assert.deepEqual(
-    peersFor('src/components/forms/locale-picker/locale-picker.ts'),
-    ['@aceshooting/lyra-flags'],
-    '<lr-locale-picker> composes <lr-flag> to render a flag next to each locale option and inherits the same reviewed attribution'
+    'a fixed built-in remove glyph does not expose the icon-button remote-source capability'
   );
 });
 
@@ -1788,6 +1854,33 @@ test('the live CEM records the pinned Shoelace caret reflection contract', () =>
   assert.equal(attribute.fieldName, 'caret');
 });
 
+test('the raw CEM exposes lr-archive-viewer inherited localization inputs', async () => {
+  const declaration = (await generateManifest({ write: false })).manifest.modules
+    .flatMap((module) => module.declarations ?? [])
+    .find(({ tagName }) => tagName === 'lr-archive-viewer');
+
+  assert.ok(declaration, 'lr-archive-viewer is present in the generated manifest');
+  assert.deepEqual(
+    declaration.members
+      .filter(({ name }) => name === 'locale' || name === 'strings')
+      .map(({ name }) => name),
+    ['locale', 'strings'],
+    'JetBrains property completion includes both inherited localization inputs'
+  );
+  assert.equal(
+    declaration.attributes.find(({ name }) => name === 'locale')?.fieldName,
+    'locale',
+    'HTML editor completion includes the inherited locale attribute'
+  );
+  assert.deepEqual(
+    webTypesElementContributions(declaration).js.properties
+      .filter(({ name }) => name === 'locale' || name === 'strings')
+      .map(({ name }) => name),
+    ['locale', 'strings'],
+    'the web-types projection exposes both inherited localization properties'
+  );
+});
+
 test('the CEM inherited-member projection repairs only reviewed runtime inheritance gaps', () => {
   const plugin = cemConfig.plugins.find(
     ({ name }) => name === 'lr-inherited-public-member-contracts'
@@ -1799,27 +1892,73 @@ test('the CEM inherited-member projection repairs only reviewed runtime inherita
   assert.deepEqual(
     [...INHERITED_PUBLIC_MEMBER_CONTRACTS],
     [
+      [
+        'lr-archive-viewer',
+        { sourceClass: 'LyraElement', members: ['locale', 'strings'] },
+      ],
       ['lr-drawer', { sourceTag: 'lr-dialog', members: ['modal'] }],
-    [
-      'lr-geojson-view',
-      {
-        sourceTag: 'lr-geojson-viewer',
-        events: ['lr-anchor-result'],
-      },
-    ],
-    [
-      'lr-tag',
-      {
-        sourceTag: 'lr-badge',
-        members: ['size', 'variant'],
-        memberTypes: { variant: 'TagVariant' },
-      },
-    ],
-  ]
-);
+      [
+        'lr-geojson-view',
+        {
+          sourceTag: 'lr-geojson-viewer',
+          events: ['lr-anchor-result'],
+        },
+      ],
+      [
+        'lr-tag',
+        {
+          sourceTag: 'lr-badge',
+          members: ['size', 'variant'],
+          memberTypes: { variant: 'TagVariant' },
+        },
+      ],
+    ]
+  );
 
   const synthetic = {
     modules: [
+      {
+        path: 'internal/lyra-element.ts',
+        declarations: [
+          {
+            kind: 'class',
+            name: 'LyraElement',
+            members: [
+              {
+                kind: 'field',
+                name: 'locale',
+                type: { text: 'string' },
+                attribute: 'locale',
+                reflects: true,
+              },
+              {
+                kind: 'field',
+                name: 'strings',
+                type: { text: 'LyraLocaleStrings' },
+              },
+            ],
+            attributes: [
+              {
+                name: 'locale',
+                fieldName: 'locale',
+                type: { text: 'string' },
+              },
+            ],
+          },
+        ],
+      },
+      {
+        path: 'archive-viewer.class.ts',
+        declarations: [
+          {
+            kind: 'class',
+            name: 'LyraArchiveViewer',
+            tagName: 'lr-archive-viewer',
+            members: [],
+            attributes: [],
+          },
+        ],
+      },
       {
         path: 'dialog.class.ts',
         declarations: [
@@ -1948,6 +2087,24 @@ test('the CEM inherited-member projection repairs only reviewed runtime inherita
   };
 
   plugin.packageLinkPhase({ customElementsManifest: synthetic });
+  const archive = synthetic.modules.find(
+    ({ path }) => path === 'archive-viewer.class.ts'
+  ).declarations[0];
+  assert.deepEqual(
+    archive.members.map(({ name }) => name),
+    ['locale', 'strings']
+  );
+  assert.deepEqual(archive.attributes, [
+    {
+      name: 'locale',
+      fieldName: 'locale',
+      type: { text: 'string' },
+      inheritedFrom: {
+        name: 'LyraElement',
+        module: 'internal/lyra-element.ts',
+      },
+    },
+  ]);
   const drawer = synthetic.modules.find(
     ({ path }) => path === 'drawer.class.ts'
   ).declarations[0];
@@ -2028,6 +2185,22 @@ test('the CEM inherited-member projection repairs only reviewed runtime inherita
     () => plugin.packageLinkPhase({ customElementsManifest: malformedEvent }),
     /lr-geojson-view: inherited-member projection requires lr-geojson-viewer#lr-anchor-result/,
     'an event rename cannot silently leave stale alias metadata behind'
+  );
+
+  const malformedLocalization = structuredClone(synthetic);
+  malformedLocalization.modules.find(
+    ({ path }) => path === 'internal/lyra-element.ts'
+  ).declarations[0].members = [];
+  malformedLocalization.modules.find(
+    ({ path }) => path === 'archive-viewer.class.ts'
+  ).declarations[0].members = [];
+  assert.throws(
+    () =>
+      plugin.packageLinkPhase({
+        customElementsManifest: malformedLocalization,
+      }),
+    /lr-archive-viewer: inherited-member projection requires LyraElement\.locale/,
+    'a shared localization rename cannot silently leave stale archive metadata behind'
   );
 });
 
@@ -5259,30 +5432,19 @@ test('reviewed type equivalences stay exact per upstream tag and public member',
     hasTypeRule('wa-chart', 'attribute', 'type', 'ChartType', 'LyraChartType'),
     'the pinned Chart.js registry alias review is limited to the mirrored chart tags'
   );
-  for (const [upstreamTag, type] of [
-    ['wa-bar-chart', 'bar'],
-    ['wa-bubble-chart', 'bubble'],
-    ['wa-doughnut-chart', 'doughnut'],
-    ['wa-line-chart', 'line'],
-    ['wa-pie-chart', 'pie'],
-    ['wa-polar-area-chart', 'polarArea'],
-    ['wa-radar-chart', 'radar'],
-    ['wa-scatter-chart', 'scatter'],
+  for (const upstreamTag of [
+    'wa-bar-chart',
+    'wa-bubble-chart',
+    'wa-doughnut-chart',
+    'wa-line-chart',
+    'wa-pie-chart',
+    'wa-polar-area-chart',
+    'wa-radar-chart',
+    'wa-scatter-chart',
   ]) {
     assert.ok(
-      hasTypeRule(upstreamTag, 'attribute', 'type', 'ChartType', `'${type}'`),
-      `${upstreamTag} maps Chart.js's controller union to its runtime-locked literal`
-    );
-    assert.equal(
-      hasTypeRule(
-        upstreamTag,
-        'attribute',
-        'type',
-        'ChartType',
-        'LyraChartType'
-      ),
-      false,
-      `${upstreamTag} must not widen a locked chart type back to the full union`
+      hasTypeRule(upstreamTag, 'attribute', 'type', 'ChartType', 'LyraChartType'),
+      `${upstreamTag} maps Chart.js's controller union to its writable Lyra equivalent`
     );
   }
   assert.ok(
@@ -6349,6 +6511,13 @@ test('the raw CEM projects complete effective wrapper and source-only mixin surf
   }
 
   assert.equal(DOCUMENT_ANCHOR_TARGET_TAGS.length, 22);
+  assert.deepEqual(DOCUMENT_ANCHOR_TARGET_CONTRACT.cssParts, [
+    {
+      name: 'anchor-live-region',
+      description:
+        'The aria-hidden, non-live shadow mirror of the latest anchor-jump message.',
+    },
+  ]);
   for (const tag of DOCUMENT_ANCHOR_TARGET_TAGS) {
     const declaration = declarations.get(tag);
     assert.ok(declaration, `${tag} is present`);
@@ -6399,6 +6568,16 @@ test('the raw CEM projects complete effective wrapper and source-only mixin surf
         method?.return?.type?.text,
         contract.returnType,
         `${tag}.${name} return`
+      );
+    }
+    for (const contract of DOCUMENT_ANCHOR_TARGET_CONTRACT.cssParts) {
+      const part = declaration.cssParts?.find(
+        (entry) => entry.name === contract.name
+      );
+      assert.equal(
+        part?.description,
+        contract.description,
+        `${tag}::part(${contract.name}) description`
       );
     }
     const eventNames = new Set(

@@ -7,8 +7,8 @@ import type { LyraHighlight } from '../document-viewer/anchors.js';
 import { supportsCustomHighlights } from '../../../internal/text-highlights.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
 import { MINIMAL_DOCX_BASE64 } from './fixtures/minimal-docx-fixture.js';
-import { styles } from './docx-viewer.styles.js';
 import { HIGHLIGHT_SNAPSHOT_LIMIT } from '../../../internal/anchor-target.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function base64ToArrayBuffer(base64: string): ArrayBuffer {
   const binary = atob(base64);
@@ -20,7 +20,7 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
 function stubFetch(
   buffer: ArrayBuffer,
   ok = true,
-  view: Window & typeof globalThis = window,
+  view: Window = window,
 ): () => void {
   const original = view.fetch;
   view.fetch = (() => Promise.resolve({ ok, status: ok ? 200 : 500, statusText: ok ? 'OK' : 'Server Error', arrayBuffer: () => Promise.resolve(buffer) } as Response)) as typeof view.fetch;
@@ -82,6 +82,19 @@ function activeHighlightPainted(el: LyraDocxViewer): boolean {
 }
 
 describe('lr-docx-viewer', () => {
+  it('renders its empty state from the first update when a highlight omits its anchor', async () => {
+    const el = document.createElement('lr-docx-viewer') as LyraDocxViewer;
+    el.highlights = [{ id: 'missing-anchor' }] as unknown as LyraDocxViewer['highlights'];
+    document.body.append(el);
+    try {
+      await el.updateComplete;
+      expect(el.highlights.map((highlight) => highlight.id)).to.deep.equal([]);
+      expect(el.shadowRoot!.querySelectorAll('[part~="base"]').length).to.equal(1);
+    } finally {
+      el.remove();
+    }
+  });
+
   it('renders an empty localized state by default', async () => {
     const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
     expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No document to display.');
@@ -664,8 +677,8 @@ describe('scrollToAnchor (fragment)', () => {
       throw new Error('ambient CSS.escape must not be used');
     };
     (ownerWindow.CSS as unknown as { escape?: typeof CSS.escape }).escape = undefined;
-    window.matchMedia = (() => ({ matches: false })) as typeof window.matchMedia;
-    ownerWindow.matchMedia = (() => ({ matches: true })) as typeof ownerWindow.matchMedia;
+    window.matchMedia = (() => ({ matches: false })) as unknown as typeof window.matchMedia;
+    ownerWindow.matchMedia = (() => ({ matches: true })) as unknown as typeof ownerWindow.matchMedia;
     let behavior: ScrollBehavior | undefined;
     heading.scrollIntoView = (options) => {
       behavior = typeof options === 'object' ? options.behavior : undefined;
@@ -819,6 +832,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
       range.setStart(textNode, offset);
       range.setEnd(textNode, offset + 'world'.length);
       const rect = range.getClientRects()[0];
+      if (rect === undefined) throw new Error('Expected a client rect for the highlighted text');
 
       const listener = oneEvent(el, 'lr-highlight-activate');
       paragraph.dispatchEvent(
@@ -876,6 +890,28 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
       const eventPromise = oneEvent(el, 'lr-highlight-activate');
       action!.click();
       expect((await eventPromise).detail).to.deep.equal({ highlightId: 'ada' });
+    } finally {
+      restore();
+    }
+  });
+
+  it('honors the composite focus-ring shorthand on a rendered highlight action', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Ada wrote the first program.</p>');
+    try {
+      el.style.setProperty('--lr-focus-ring', '5px dashed rgb(1, 2, 3)');
+      el.highlights = [{
+        id: 'ada',
+        label: 'Ada passage',
+        anchor: { kind: 'text-quote', quote: 'Ada wrote' },
+      }];
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="highlight-action"]') !== null);
+      const action = el.shadowRoot!.querySelector('[part="highlight-action"]') as HTMLButtonElement;
+      action.focus();
+      expect(action.matches(':focus-visible')).to.equal(true);
+      const computed = getComputedStyle(action);
+      expect(computed.outlineStyle).to.equal('dashed');
+      expect(computed.outlineWidth).to.equal('5px');
+      expect(computed.outlineColor).to.equal('rgb(1, 2, 3)');
     } finally {
       restore();
     }
@@ -1109,7 +1145,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
         getRangeAt: () => range,
         isCollapsed: false,
         rangeCount: 1,
-      })) as typeof window.getSelection;
+      })) as unknown as typeof window.getSelection;
       const listener = oneEvent(el, 'lr-text-select');
       (paragraph as HTMLElement).dispatchEvent(new MouseEvent('pointerup', { bubbles: true, composed: true }));
       const event = (await listener) as CustomEvent<{ text: string; anchor: unknown }>;
@@ -1156,7 +1192,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
         getRangeAt: () => range,
         isCollapsed: false,
         rangeCount: 1,
-      })) as typeof frameWindow.getSelection;
+      })) as unknown as typeof frameWindow.getSelection;
       const events: CustomEvent[] = [];
       el.addEventListener('lr-text-select', (event) => events.push(event as CustomEvent));
       try {
@@ -1305,7 +1341,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     class AmbientHighlight extends Set<Range> {
       priority = 0;
     }
-    const cssWithHighlights = Object.create(ambientCssValue ?? null) as CSS & {
+    const cssWithHighlights = Object.create(ambientCssValue ?? null) as typeof window.CSS & {
       highlights: Map<string, AmbientHighlight>;
     };
     Object.defineProperty(cssWithHighlights, 'highlights', { value: new Map() });
@@ -1406,7 +1442,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     }
   });
 
-  it('resolves a non-accent tone through the carrier the hover/active mix reads', async () => {
+  it('resolves a non-accent tone through the carrier and visibly mixes it on pointer hover', async () => {
     // Each tone sets one private carrier that the resting background and the hover/active mixes all
     // read, instead of declaring `background` per tone -- a per-tone background is invisible to the
     // generic mark[data-lr-highlight-tone]:hover rule, which is why the hover used to be a
@@ -1422,19 +1458,27 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
         '[part="content"] mark[data-lr-highlight-tone="success"]',
       );
       expect(toned !== null).to.equal(true);
-      expect(getComputedStyle(toned!).backgroundColor).to.equal('rgb(10, 20, 30)');
+      const resting = getComputedStyle(toned!).backgroundColor;
+      expect(resting).to.equal('rgb(10, 20, 30)');
+      const box = toned!.getBoundingClientRect();
+      await resetMouse();
+      await sendMouse({
+        type: 'move',
+        position: [
+          Math.round(box.left + box.width / 2),
+          Math.round(box.top + box.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => getComputedStyle(toned!).backgroundColor !== resting,
+        'the fallback highlight mark never entered its rendered hover state',
+      );
+      expect(getComputedStyle(toned!).backgroundColor).to.not.equal(resting);
     } finally {
+      await resetMouse();
       restore();
       (globalThis as { Highlight?: unknown }).Highlight = originalHighlight;
     }
-  });
-
-  it('gives the clickable <mark>-wrap highlight fallback a :hover rule matching its cursor:pointer affordance', () => {
-    // Browser test runners don't synthesize a real :hover pseudo-class from a dispatched event
-    // (same constraint documented at tabs.test.ts's identical stylesheet-source check), so this
-    // asserts against the parsed stylesheet rather than a forced pseudo-state.
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/mark\[data-lr-highlight-tone\]:hover/);
   });
 
   it('does not activate a highlight when a click misses every painted range', async () => {

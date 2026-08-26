@@ -40,6 +40,19 @@ for (const [tag, expectedType] of TAGS_WITH_TYPE) {
     expect(el.chart.config.type).to.equal(nextType);
   });
 
+  it(`${tag} accepts a non-default type from declarative markup`, async () => {
+    const nextType = expectedType === 'line' ? 'bar' : 'line';
+    const el = (await fixture(`<${tag} type="${nextType}"></${tag}>`)) as any;
+    el.datasets = [{ label: 'x', data: [1, 2, 3] }];
+    await el.updateComplete;
+    await waitUntil(
+      () => el.chart != null && el.chart.config.type === nextType,
+      `${tag} did not apply its declarative writable type`,
+      { timeout: 2000 },
+    );
+    expect(el.type).to.equal(nextType);
+  });
+
   it(`${tag} is accessible`, async () => {
     const el = (await fixture(`<${tag}></${tag}>`)) as any;
     el.setAttribute('aria-label', `${tag} accessible name`);

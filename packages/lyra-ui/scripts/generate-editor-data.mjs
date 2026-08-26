@@ -43,6 +43,7 @@ const manifestPath = join(packageDir, 'custom-elements.json');
 const htmlDataPath = join(packageDir, 'vscode-html-data.json');
 const cssDataPath = join(packageDir, 'vscode-css-data.json');
 const webTypesPath = join(packageDir, 'web-types.json');
+const publishedJson = (value) => `${JSON.stringify(value)}\n`;
 
 const manifest = expandManifestInheritance(JSON.parse(readFileSync(manifestPath, 'utf8')));
 const pkg = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8'));
@@ -200,7 +201,7 @@ const htmlData = {
   })),
 };
 
-writeFileSync(htmlDataPath, `${JSON.stringify(htmlData, null, 2)}\n`);
+writeFileSync(htmlDataPath, publishedJson(htmlData));
 
 // --- css.customData ------------------------------------------------------------------------------
 // custom-elements.json scopes each `--lr-*` custom property to the component(s) that document
@@ -235,7 +236,7 @@ const cssData = {
   })),
 };
 
-writeFileSync(cssDataPath, `${JSON.stringify(cssData, null, 2)}\n`);
+writeFileSync(cssDataPath, publishedJson(cssData));
 
 // --- web-types.json (JetBrains WebStorm/IntelliJ) -----------------------------------------------
 // Companion to the two files above -- same source data, WebStorm/IntelliJ's format instead of VS
@@ -279,7 +280,7 @@ const webTypes = {
   },
 };
 
-writeFileSync(webTypesPath, `${JSON.stringify(webTypes, null, 2)}\n`);
+writeFileSync(webTypesPath, publishedJson(webTypes));
 
 const webTypesElements = webTypes.contributions.html.elements;
 const countTags = (predicate) => webTypesElements.filter(predicate).length;

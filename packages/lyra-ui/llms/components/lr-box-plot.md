@@ -6,6 +6,7 @@
 - **Class** `LyraBoxPlot`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/box-plot.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `@sgratzl/chartjs-chart-boxplot`, `chart.js` — see `llms/peers.md`
 - **Themeable via** 12 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -23,7 +24,8 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 - `datasets: readonly LyraBoxPlotSeries[] = []` (attribute: false) — each series contains readonly
   `LyraBoxPlotSummary { min, q1, median, q3, max }` values. Summaries must be finite and ordered
   `min <= q1 <= median <= q3 <= max`; invalid entries are omitted and caller objects are never
-  passed to the mutating peer.
+  passed to the mutating peer. A runtime series whose required `data` member is not an array is
+  dropped while valid siblings continue to render.
 - `hiddenDatasets?: readonly number[]` (attribute: false) — complete controlled visibility snapshot
   for the DOM legend. `undefined` leaves every box series visible; `[]` likewise explicitly makes
   every series visible, while a defined canonical list of zero-based indexes hides those series.
@@ -44,7 +46,10 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 - `label: string | null = null`, `description: string | null = null` — canonical accessible name
   and description; host `aria-label` wins by presence, including an explicit empty string
 - `formatter?: LyraChartFormatter`, `valueFormatter?: LyraChartValueFormatter` — numeric axis,
-  tooltip, table, summary, and export formatting; the context-object formatter takes precedence
+  tooltip, table, summary, and export formatting. The context-object formatter receives the
+  family-wide `spoken` surface for the generated summary and `export` for CSV cells; the legacy
+  positional formatter continues to receive `table` for both compatibility paths. The
+  context-object formatter takes precedence
 - `showDataTable: boolean = false` (attribute `show-data-table`) — reveals the accessible data table
 - `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
   localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*

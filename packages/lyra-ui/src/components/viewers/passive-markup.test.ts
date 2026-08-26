@@ -22,6 +22,21 @@ describe('sanitizePassiveMarkup', () => {
     expect(template.content.textContent).to.contain('custom text');
   });
 
+  it('strips shadow-part styling hooks without removing passive content or ordinary data attributes', () => {
+    const clean = sanitizePassiveMarkup(
+      DOMPurify,
+      '<p part="error body" exportparts="base:error" data-record-id="42">Ordinary content</p>',
+      document,
+    );
+    const template = document.createElement('template');
+    template.innerHTML = clean;
+    const paragraph = template.content.querySelector('p')!;
+    expect(paragraph.hasAttribute('part')).to.equal(false);
+    expect(paragraph.hasAttribute('exportparts')).to.equal(false);
+    expect(paragraph.getAttribute('data-record-id')).to.equal('42');
+    expect(paragraph.textContent).to.equal('Ordinary content');
+  });
+
   it('retains only unescaped local SVG fragment references', () => {
     const clean = sanitizePassiveMarkup(DOMPurify, `
       <svg>

@@ -502,7 +502,7 @@ export const styles = css`
      [data-active] -- the aria-activedescendant highlight -- so an arrow-keyed selected option
      showed nothing. The selected row keeps its affordance either way: that rule paints
      border-color/color/font-weight. */
-  [part="option"]:hover,
+  [part="option"]:where(:not([aria-disabled="true"])):hover,
   [part="option"][data-active] {
     /* Per-component indirection with a var() fallback to the shared brand-quiet token -- as in
        lr-command-palette/lr-notebook-viewer -- so this row state is rethemeable without hijacking
@@ -512,7 +512,7 @@ export const styles = css`
   /* Pressed row. Pointer-down commits the selection and closes the listbox, so this is the last
      frame the user sees and has to read deeper than the hover it replaces. Mixes the same row tint
      (consumer override included) toward --lr-color-mix-partner. */
-  [part="option"]:active {
+  [part="option"]:where(:not([aria-disabled="true"])):active {
     background: color-mix(
       in oklab,
       var(--lr-select-option-active-bg, var(--lr-color-brand-quiet)),

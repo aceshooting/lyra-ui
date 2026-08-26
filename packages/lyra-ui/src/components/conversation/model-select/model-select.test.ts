@@ -1,8 +1,7 @@
-import { fixture, expect, oneEvent, html } from "@open-wc/testing";
+import { fixture, expect, oneEvent, html, waitUntil } from "@open-wc/testing";
 import { resetMouse, sendMouse } from "@web/test-runner-commands";
 import "./model-select.js";
 import type { LyraModelSelect } from "./model-select.js";
-import { styles } from "./model-select.styles.js";
 
 const CATALOG = ["llama3.1", "mistral", "qwen2.5-coder"];
 const OBJECT_CATALOG = [
@@ -220,7 +219,7 @@ it("treats each string in a plain string[] catalog as both id and label", async 
   )) as LyraModelSelect;
   el.open = true;
   await el.updateComplete;
-  expect(rows(el)[0].textContent).to.contain("llama3.1");
+    expect(rows(el)[0]!.textContent).to.contain("llama3.1");
 });
 
 it("renders id/label object catalog rows by their label", async () => {
@@ -229,8 +228,29 @@ it("renders id/label object catalog rows by their label", async () => {
   )) as LyraModelSelect;
   el.open = true;
   await el.updateComplete;
-  expect(rows(el)[0].textContent).to.contain("GPT-4.1");
-  expect(rows(el)[0].dataset.value).to.equal("gpt-4.1");
+    expect(rows(el)[0]!.textContent).to.contain("GPT-4.1");
+    expect(rows(el)[0]!.dataset["value"]).to.equal("gpt-4.1");
+});
+
+it("drops catalog records whose required label is missing, null, empty, or blank", async () => {
+  const el = (await fixture(html`
+    <lr-model-select
+      .catalog=${[
+        { id: "missing" },
+        { id: "null", label: null },
+        { id: "empty", label: "" },
+        { id: "blank", label: "   " },
+        { id: "valid", label: "Valid model" },
+      ] as unknown as Array<{ id: string; label: string }>}
+    ></lr-model-select>
+  `)) as LyraModelSelect;
+  el.open = true;
+  await el.updateComplete;
+
+    expect([...rows(el)].map((row) => row.dataset["value"])).to.deep.equal([
+    "valid",
+  ]);
+  await expect(el).to.be.accessible();
 });
 
 it("renders optional catalog icons decoratively in both listbox modes", async () => {
@@ -277,7 +297,7 @@ it("opens the closed dropdown by clicking the trigger and selects an option, emi
 
   let detail: { value: string; inCatalog: boolean } | undefined;
   el.addEventListener("lr-change", (e) => (detail = (e as CustomEvent).detail));
-  setTimeout(() => rows(el)[1].click());
+    setTimeout(() => rows(el)[1]!.click());
   await oneEvent(el, "lr-change");
   expect(el.value).to.equal("mistral");
   expect(el.open).to.be.false;
@@ -508,8 +528,8 @@ it("shows a synthetic, distinctly-marked row for a stale value not present in th
 
   const all = rows(el);
   expect(all.length).to.equal(4);
-  const synthetic = all[all.length - 1];
-  expect(synthetic.dataset.value).to.equal("ancient-model");
+    const synthetic = all[all.length - 1]!;
+    expect(synthetic.dataset["value"]).to.equal("ancient-model");
   expect(synthetic.hasAttribute("data-synthetic")).to.be.true;
   expect(synthetic.querySelector('[part="option-badge"]')).to.exist;
   // The trigger label still shows the stale value's text, unmarked.
@@ -585,9 +605,11 @@ describe("component-scoped geometry cssprops", () => {
         ></lr-model-select>
       </div>
     `)) as HTMLDivElement;
-    const [closed, freeText] = Array.from(
+    const selects = Array.from(
       themed.querySelectorAll("lr-model-select")
     ) as LyraModelSelect[];
+    const closed = selects[0]!;
+    const freeText = selects[1]!;
     closed.open = true;
     freeText.open = true;
     await Promise.all([closed.updateComplete, freeText.updateComplete]);
@@ -658,7 +680,7 @@ it('localizes the synthetic-row "not in catalog" badge via this.localize(), not 
   )) as LyraModelSelect;
   el.open = true;
   await el.updateComplete;
-  const synthetic = rows(el)[rows(el).length - 1];
+    const synthetic = rows(el)[rows(el).length - 1]!;
   expect(
     synthetic.querySelector('[part="option-badge"]')!.textContent
   ).to.equal("absent du catalogue");
@@ -673,7 +695,7 @@ it('defaults to English "not in catalog" when no strings override is set', async
   )) as LyraModelSelect;
   el.open = true;
   await el.updateComplete;
-  const synthetic = rows(el)[rows(el).length - 1];
+    const synthetic = rows(el)[rows(el).length - 1]!;
   expect(
     synthetic.querySelector('[part="option-badge"]')!.textContent
   ).to.equal("not in catalog");
@@ -702,7 +724,7 @@ it("filters suggestions by id/label substring, case-insensitively, as the user t
 
   const visible = rows(el);
   expect(visible.length).to.equal(1);
-  expect(visible[0].textContent).to.contain("qwen2.5-coder");
+    expect(visible[0]!.textContent).to.contain("qwen2.5-coder");
 });
 
 it("shows the localized empty-listbox message when no suggestions match the typed query", async () => {
@@ -862,7 +884,7 @@ it("shows a synthetic suggestion for a stale value in free-text mode", async () 
 
   const all = rows(el);
   const synthetic = Array.from(all).find(
-    (r) => r.dataset.value === "ancient-model"
+      (r) => r.dataset["value"] === "ancient-model"
   );
   expect(synthetic != null).to.equal(true);
   expect(synthetic!.hasAttribute("data-synthetic")).to.be.true;
@@ -1199,7 +1221,7 @@ describe("shared listbox (onListboxClick)", () => {
       "lr-change",
       (e) => (detail = (e as CustomEvent).detail)
     );
-    setTimeout(() => rows(el)[0].click());
+      setTimeout(() => rows(el)[0]!.click());
     await oneEvent(el, "lr-change");
     expect(el.value).to.equal("mistral");
     expect(detail).to.deep.equal({ value: "mistral", inCatalog: true });
@@ -2138,12 +2160,13 @@ describe("native event relays", () => {
     );
 
     expect(events).to.have.lengthOf(1);
-    expect(events[0] instanceof InputEvent).to.be.true;
-    expect(events[0].target === el && events[0].bubbles && events[0].composed)
-      .to.be.true;
-    expect(events[0].data).to.equal("m");
-    expect(events[0].inputType).to.equal("insertText");
-    expect(events[0].isComposing).to.be.true;
+      const relayed = events[0]!;
+      expect(relayed instanceof InputEvent).to.be.true;
+      expect(relayed.target === el && relayed.bubbles && relayed.composed)
+        .to.be.true;
+      expect(relayed.data).to.equal("m");
+      expect(relayed.inputType).to.equal("insertText");
+      expect(relayed.isComposing).to.be.true;
   });
 });
 
@@ -2202,28 +2225,53 @@ it("renders the combobox-input's placeholder in the live quiet-text token color"
 
 // -- Hover states (mouse-modality parity with the focus ring) --------------
 
-it("gives the closed-dropdown trigger a :hover rule, matching its own :focus-visible affordance", () => {
-  const css = styles.cssText.replace(/\s+/g, " ");
-  expect(css).to.match(/\[part=["']trigger["']\]\)?:hover/);
+it("renders the closed-dropdown trigger hover treatment", async () => {
+  const el = await fixture<LyraModelSelect>(html`
+    <lr-model-select
+      style="--lr-color-brand-quiet: rgb(1, 2, 3)"
+      .catalog=${CATALOG}
+    ></lr-model-select>
+  `);
+  const trigger = el.shadowRoot!.querySelector<HTMLElement>('[part="trigger"]')!;
+  trigger.scrollIntoView({ block: "center" });
+  const rect = trigger.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: "move",
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    await waitUntil(
+      () => getComputedStyle(trigger).backgroundColor === "rgb(1, 2, 3)",
+      "the model-select trigger hover background never appeared",
+    );
+  } finally {
+    await resetMouse();
+  }
 });
 
 describe("--lr-model-select-option-active-bg", () => {
-  it("retints a hovered/active option row via the cssprop, not just the bare shared token", async () => {
+  it("retints the keyboard-active option row via the cssprop, not just the bare shared token", async () => {
     const el = (await fixture(
-      html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`
+      html`<lr-model-select
+        style="--lr-model-select-option-active-bg: rgb(10, 20, 30)"
+        .catalog=${CATALOG}
+      ></lr-model-select>`
     )) as LyraModelSelect;
     el.open = true;
     await el.updateComplete;
-    el.style.setProperty(
-      "--lr-model-select-option-active-bg",
-      "rgb(10, 20, 30)"
+    trigger(el).dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowDown",
+        bubbles: true,
+        cancelable: true,
+      })
     );
-    const row = rows(el)[0];
-    // [data-active] shares the same declaration as :hover in the stylesheet (comma-separated) --
-    // real :hover can't be forced from test JS without an actual pointer move, so this exercises
-    // the identical rule via its keyboard-active twin.
-    row.setAttribute("data-active", "");
-    expect(getComputedStyle(row).backgroundColor).to.equal("rgb(10, 20, 30)");
+    await el.updateComplete;
+    const active = el.shadowRoot!.querySelector<HTMLElement>(
+      '[part="option"][data-active]'
+    )!;
+    expect(active).to.exist;
+    expect(getComputedStyle(active).backgroundColor).to.equal("rgb(10, 20, 30)");
   });
 
   it("renders byte-identically to the shared token default when unset", async () => {
@@ -2232,7 +2280,7 @@ describe("--lr-model-select-option-active-bg", () => {
     )) as LyraModelSelect;
     el.open = true;
     await el.updateComplete;
-    const row = rows(el)[0];
+      const row = rows(el)[0]!;
     row.setAttribute("data-active", "");
     const before = getComputedStyle(row).backgroundColor;
     el.style.setProperty(
@@ -2587,10 +2635,9 @@ describe("row state feedback on the already-selected option", () => {
     const selected = await measureRow(
       (rows) => rows.find((row) => row.getAttribute("aria-selected") === "true")!
     );
-    if (control === null || selected === null) {
-      this.skip();
-      return;
-    }
+      if (control === null || selected === null) {
+        this.skip();
+      }
     expect(control.hover, "an unselected row hovers to the row tint").to.equal(
       "rgb(1, 2, 3)"
     );
@@ -3174,7 +3221,7 @@ it("emits a cancelable lr-invalid alias whose cancellation cancels the native in
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
-  expect(aliases[0].cancelable, "lr-invalid is a real veto point").to.be.true;
+    expect(aliases[0]!.cancelable, "lr-invalid is a real veto point").to.be.true;
   expect(nativePrevented).to.deep.equal([false]);
 
   el.addEventListener("lr-invalid", (event) => event.preventDefault(), {

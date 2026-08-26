@@ -6,6 +6,7 @@
 - **Class** `LyraEvalResult`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/eval-result/eval-result.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
 - **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -19,9 +20,9 @@ Rubric scoring and human-review surface for comparing the runs of one evaluation
 
 Composes `lr-table` (the comparison table), `lr-rubric-form` (the review surface), and
 `lr-diff-view` (baseline↔selected output diff) rather than re-deriving any of their behavior.
-The table keeps the localized purpose-specific evaluation-runs name. A host `aria-label` on
-`<lr-eval-result>` remains the overall host name and is not cloned onto the independently
-interactive table.
+The table uses `label` or the localized purpose-specific evaluation-runs name. A host `aria-label`
+on `<lr-eval-result>` remains the overall host name and is not cloned onto the independently
+interactive table; use `label` to distinguish several comparison grids on one page.
 
 **Properties:**
 
@@ -31,11 +32,14 @@ model?: string; promptVersion?: string; output: string; scores?: RubricValue; re
   example. `scores`/`review` use the same `RubricValue` shape `lr-rubric-form` itself reads and
   writes, so a `TableColumn`'s `cell()` accessor and the rubric form's own `value` binding read a
   run's fields with no conversion. Empty/blank ids and later duplicate run ids are omitted before selection, diff,
-  grid, and review-event lookup
+  grid, and review-event lookup. A valid-id streaming run whose `output` has not arrived yet remains
+  selectable and supplies an empty output to the diff
 - `columns: TableColumn<EvalRunResult>[] = []` (attribute: false) — plain pass-through to
   `lr-table.columns`, not re-derived here; malformed, empty/blank, and later duplicate column keys are omitted
 - `rubricKeys: RubricKey[] = []` (attribute: false) — plain pass-through to `lr-rubric-form.keys`;
   empty/blank and later duplicate rubric keys are omitted
+- `label: string = ''` — accessible name for the independently interactive comparison grid;
+  falls back to the localized evaluation-runs name when unset
 - `selectedRunId: string | null = null` (attribute `selected-run-id`) — the run open for review and the diff's
   **new** side; falls back to `runs[0]?.id` when empty
 - `baselineRunId: string | null = null` (attribute `baseline-run-id`) — the run compared against and the

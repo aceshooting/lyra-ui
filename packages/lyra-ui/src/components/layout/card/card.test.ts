@@ -274,7 +274,7 @@ describe("lr-card", () => {
     `)) as HTMLElement;
     const [shortCard, tallCard] = Array.from(
       wrapper.querySelectorAll("lr-card")
-    ) as LyraCard[];
+    ) as [LyraCard, LyraCard];
     await shortCard.updateComplete;
     await tallCard.updateComplete;
 
@@ -451,7 +451,7 @@ describe("lr-card", () => {
   it("gives every linked card action presentation without a redundant actionable flag", async () => {
     const el = (await fixture(html`<lr-card href="/report">Report</lr-card>`)) as LyraCard;
     const anchor = el.shadowRoot!.querySelector<HTMLAnchorElement>('a[part="base"]')!;
-    expect(anchor.dataset.actionable).to.equal("true");
+    expect(anchor.dataset['actionable']).to.equal("true");
     expect(getComputedStyle(anchor).cursor).to.equal("pointer");
   });
 
@@ -936,12 +936,12 @@ it('inherits independent appearance and interactive-state paint from an ancestor
     </div>
   `);
   const cards = wrapper.querySelectorAll<LyraCard>('lr-card');
-  expect(getComputedStyle(base(cards[0])).backgroundColor).to.equal('rgb(1, 2, 3)');
-  expect(getComputedStyle(base(cards[1])).backgroundColor).to.equal('rgb(4, 5, 6)');
-  expect(getComputedStyle(base(cards[2])).borderInlineStartColor).to.equal('rgb(7, 8, 9)');
+  expect(getComputedStyle(base(cards[0]!)).backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(base(cards[1]!)).backgroundColor).to.equal('rgb(4, 5, 6)');
+  expect(getComputedStyle(base(cards[2]!)).borderInlineStartColor).to.equal('rgb(7, 8, 9)');
 
-  const target = base(cards[3]);
-  cards[3].style.setProperty('--lr-transition-fast', '0ms');
+  const target = base(cards[3]!);
+  cards[3]!.style.setProperty('--lr-transition-fast', '0ms');
   target.scrollIntoView();
   const rect = target.getBoundingClientRect();
   try {

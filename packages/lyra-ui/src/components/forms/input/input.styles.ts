@@ -183,7 +183,7 @@ export const styles = css`
     border-radius: var(--lr-radius);
     background: none;
     cursor: pointer;
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-input-action-color, var(--lr-color-text-quiet));
     padding: var(--lr-space-xs);
     /* This button appears only once the field has a value or is clearable-eligible, so an unscaled
        --lr-icon-button-size floor would grow a field shorter than 40px. min() caps it at the tier's

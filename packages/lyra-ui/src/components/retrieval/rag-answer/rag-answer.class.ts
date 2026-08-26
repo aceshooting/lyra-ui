@@ -251,6 +251,10 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
       this.emit('lr-citation-select', { citation, section: 'grounding' });
   };
 
+  private stopOwnedEvent(event: Event): void {
+    event.stopPropagation();
+  }
+
   private presentationState(): LyraRagAnswerState {
     if (this.errorText) return 'error';
     if (this.loading) return 'loading';
@@ -314,7 +318,14 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
       ${this.answer || this.hasSlot('answer')
         ? html`<div part="answer">
             <slot name="answer"
-              ><lr-markdown .content=${this.answer}></lr-markdown
+              ><lr-markdown
+                .content=${this.answer}
+                @lr-render-error=${this.stopOwnedEvent}
+                @lr-link-click=${this.stopOwnedEvent}
+                @lr-highlight-activate=${this.stopOwnedEvent}
+                @lr-text-select=${this.stopOwnedEvent}
+                @lr-anchor-result=${this.stopOwnedEvent}
+              ></lr-markdown
             ></slot>
           </div>`
         : nothing}

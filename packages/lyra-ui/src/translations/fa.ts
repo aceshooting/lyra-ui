@@ -346,6 +346,8 @@ const strings: LyraLocaleStrings = {
     'برچسب‌های داده در دسترس نیستند، اما نمودار اصلی همچنان در دسترس است.',
   chartStackTotalsUnavailable:
     'جمع‌های پشته‌ای در دسترس نیستند، اما نمودار اصلی همچنان در دسترس است.',
+  chartAnnotationsUnavailable:
+    'حاشیه‌نویسی‌های نمودار در دسترس نیستند، اما نمودار اصلی همچنان در دسترس است.',
   chart: 'نمودار',
   chartTypeLine: 'خطی',
   chartTypeBar: 'میله‌ای',
@@ -746,6 +748,7 @@ const strings: LyraLocaleStrings = {
   emailViewerSubject: 'موضوع',
   emailViewerDate: 'تاریخ',
   emailViewerAttachments: 'پیوست‌ها',
+  emailViewerUnnamedAttachment: 'پیوست بدون نام',
   emailViewerNoSubject: '(بدون موضوع)',
   emailViewerOpenAttachment: 'باز کردن {filename}',
   emailViewerShowQuoted: 'نمایش متن نقل‌قول‌شده',
@@ -1257,6 +1260,7 @@ const strings: LyraLocaleStrings = {
   ingestionStageDone: 'انجام شد',
   ingestionStageFailed: 'ناموفق',
   ingestionStageCancelled: 'لغو شد',
+  ingestionStageUnknown: 'مرحله ناشناخته',
   ingestionQueueLabel: 'صف ورود داده',
   ingestionQueueEmpty: 'هیچ سندی در صف نیست',
   documentLibraryFreshnessFresh: 'تازه',
@@ -1301,6 +1305,7 @@ const strings: LyraLocaleStrings = {
   drilldownDocuments: 'اسناد',
   drilldownRuns: 'اجراهای عامل',
   drilldownEmpty: 'هیچ موردی انتخاب نشده است',
+  drilldownUntitledNode: 'مرحله بدون عنوان',
   evaluationRunStatusIdle: 'بیکار',
   evaluationRunStatusWaitingInput: 'در انتظار ورودی',
   evaluationRunStatusWaitingApproval: 'در انتظار تأیید',

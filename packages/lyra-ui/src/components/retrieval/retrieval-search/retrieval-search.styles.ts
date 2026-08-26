@@ -42,8 +42,7 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     font-weight: var(--lr-font-weight-semibold);
     cursor: pointer;
-    transition:
-      background-color var(--lr-transition-fast),
+    transition: background-color var(--lr-transition-fast),
       border-color var(--lr-transition-fast);
   }
   /* filter: brightness() multiplies every channel of the subtree, so it dragged the button's own
@@ -51,10 +50,18 @@ export const styles = css`
      themed to pure white or pure black. A background mix toward --lr-color-mix-partner, which
      tracks the text color, always moves, and moves only the fill. */
   [part='submit']:hover {
-    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand),
+      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+    );
   }
   [part='submit']:active {
-    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: color-mix(
+      in oklab,
+      var(--lr-color-brand),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   [part='submit']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -64,6 +71,16 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     border-color: var(--lr-color-border);
+  }
+  :host([loading]) [part='submit']:hover {
+    background: var(--lr-color-surface-raised);
+  }
+  :host([loading]) [part='submit']:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-color-surface-raised),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
   }
   [part='filters'] {
     display: flex;

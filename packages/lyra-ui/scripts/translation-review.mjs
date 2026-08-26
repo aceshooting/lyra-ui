@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 
-export const TRANSLATION_REVIEW_SCHEMA_VERSION = 1;
-export const TRANSLATION_REVIEW_SCHEMA_PATH = './translation-reviews.schema.json';
+const TRANSLATION_REVIEW_SCHEMA_VERSION = 1;
+const TRANSLATION_REVIEW_SCHEMA_PATH = './translation-reviews.schema.json';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -43,7 +43,7 @@ function validDate(value) {
   return !Number.isNaN(date.valueOf()) && date.toISOString().startsWith(value);
 }
 
-export function englishIdenticalMessagePaths(englishEntries, translatedEntries) {
+function englishIdenticalMessagePaths(englishEntries, translatedEntries) {
   const english = new Map(englishEntries);
   const identical = [];
 

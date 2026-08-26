@@ -13,6 +13,11 @@ type Story = StoryObj;
 
 const source = 'name\tstatus\nAda\tActive\nGrace\tActive';
 const src = `data:text/tab-separated-values,${encodeURIComponent(source)}`;
+const pageSource = [
+  'name\tstatus',
+  ...Array.from({ length: 80 }, (_, index) => `Person ${index + 1}\tActive`),
+].join('\n');
+const pageSrc = `data:text/tab-separated-values,${encodeURIComponent(pageSource)}`;
 
 export const Default: Story = { render: () => html`<lr-dataset-viewer src=${src} name="People"></lr-dataset-viewer>` };
 export const Empty: Story = { render: () => html`<lr-dataset-viewer></lr-dataset-viewer>` };
@@ -39,4 +44,16 @@ export const RecoverableParserDiagnostics: Story = {
  *  sticky header row stays visible and legible above the virtualized body at that width. */
 export const Narrow320: Story = {
   render: () => html`<div style="max-width:320px"><lr-dataset-viewer src=${src} name="People"></lr-dataset-viewer></div>`,
+};
+
+/** Hands an uncapped dataset's sticky header to the document scrollport. Use the default `self`
+ *  mode instead when horizontal containment is more important than page-level sticky behavior. */
+export const PageScrolling: Story = {
+  render: () => html`
+    <lr-dataset-viewer
+      src=${pageSrc}
+      name="Page-scrolling people"
+      scroll-mode="page"
+    ></lr-dataset-viewer>
+  `,
 };

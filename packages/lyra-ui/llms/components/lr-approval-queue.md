@@ -6,6 +6,7 @@
 - **Class** `LyraApprovalQueue`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/approval-queue/approval-queue.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.2.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 11 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
@@ -21,7 +22,8 @@ It never executes tools or persists decisions.
 **Properties:** `requests: ToolApprovalRequest[] = []` (attribute: false), where each request is
 `{ id, toolName, args, status?: 'pending' | 'approved' | 'denied' }`;
 `selectedInvocationId: string | null = null` (attribute `selected-invocation-id`);
-`open: boolean = false`; `editable: boolean = true`; `label: string = ''`. Later duplicate request
+`open: boolean = false`; `editable: boolean = true`; `label?: string` — omission localizes the
+heading while an explicit empty string renders no heading/name. Later duplicate request
 ids and empty/blank ids are omitted before count, selection, dialog lookup, or decision events are
 derived.
 

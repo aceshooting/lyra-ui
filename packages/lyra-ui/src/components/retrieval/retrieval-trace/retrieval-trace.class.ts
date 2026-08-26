@@ -105,6 +105,12 @@ function hasEvidence(
   );
 }
 
+function validChunks(evidence: RetrievalStageEvidence | undefined): RetrievalChunk[] {
+  return Array.isArray(evidence?.chunks)
+    ? evidence.chunks.filter(isValidRetrievalChunk)
+    : [];
+}
+
 function toLyraChunk(chunk: RetrievalChunk): LyraChunk {
   return {
     id: chunk.id,
@@ -225,9 +231,9 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
   }
 
   private stageLabel(stage: RetrievalStage): string {
-    if (stage.label) return stage.label;
+    if (typeof stage.label === 'string' && stage.label) return stage.label;
     const entry = STAGE_LABEL[stage.kind];
-    return entry ? this.localize(entry.key) : stage.label || String(stage.kind);
+    return entry ? this.localize(entry.key) : String(stage.kind);
   }
 
   private toSpans(): LyraSpan[] {

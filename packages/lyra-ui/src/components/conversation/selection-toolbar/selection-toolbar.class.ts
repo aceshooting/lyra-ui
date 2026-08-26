@@ -221,6 +221,12 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (
+      this.copyFailed &&
+      (changed.has('text') || (changed.has('open') && this.open))
+    ) {
+      this.copyFailed = false;
+    }
     if (!changed.has('actions')) return;
     const active = deepActiveElementIn(this.ownerDocument);
     const toolbar = this.toolbar;

@@ -2,7 +2,6 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './env-list.js';
 import type { LyraEnvList } from './env-list.js';
-import { styles } from './env-list.styles.js';
 
 describe('lr-env-list', () => {
   it('defaults to revealable=true and copyable=true', async () => {
@@ -71,9 +70,9 @@ describe('lr-env-list', () => {
     )) as LyraEnvList;
     await el.updateComplete;
     const values = [...el.shadowRoot!.querySelectorAll('[part="value"]')] as HTMLElement[];
-    expect(values[0].querySelector('[aria-hidden="true"]')!.textContent).to.equal('•'.repeat(8));
-    expect(values[1].querySelector('[aria-hidden="true"]')!.textContent).to.equal('•'.repeat(8));
-    expect(values[0].dataset.masked).to.equal('true');
+    expect(values[0]!.querySelector('[aria-hidden="true"]')!.textContent).to.equal('•'.repeat(8));
+    expect(values[1]!.querySelector('[aria-hidden="true"]')!.textContent).to.equal('•'.repeat(8));
+    expect(values[0]!.dataset['masked']).to.equal('true');
   });
 
   it('exposes the localized hidden-value meaning as text and hides decorative mask glyphs', async () => {
@@ -97,7 +96,7 @@ describe('lr-env-list', () => {
       html`<lr-env-list .entries=${[{ name: 'X', value: 'plainish' }]}></lr-env-list>`,
     )) as LyraEnvList;
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector('[part="value"]') as HTMLElement).dataset.masked).to.equal('true');
+    expect((el.shadowRoot!.querySelector('[part="value"]') as HTMLElement).dataset['masked']).to.equal('true');
   });
 
   it('renders a non-secret value in plain text', async () => {
@@ -107,7 +106,7 @@ describe('lr-env-list', () => {
     await el.updateComplete;
     const value = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
     expect(value.textContent!.trim()).to.equal('production');
-    expect(value.dataset.masked).to.equal('false');
+    expect(value.dataset['masked']).to.equal('false');
   });
 
   it('reveal toggle flips masking and emits lr-reveal-change, keyed by name and surviving value-only updates', async () => {
@@ -142,11 +141,11 @@ describe('lr-env-list', () => {
     await el.updateComplete;
     (el.shadowRoot!.querySelector('[part="reveal-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector('[part="value"]') as HTMLElement).dataset.masked).to.equal('false');
+    expect((el.shadowRoot!.querySelector('[part="value"]') as HTMLElement).dataset['masked']).to.equal('false');
 
     el.revealable = false;
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelector('[part="value"]') as HTMLElement).dataset.masked).to.equal('true');
+    expect((el.shadowRoot!.querySelector('[part="value"]') as HTMLElement).dataset['masked']).to.equal('true');
     expect(el.shadowRoot!.querySelectorAll('[part="reveal-button"]').length).to.equal(0);
   });
 
@@ -341,7 +340,7 @@ describe('lr-env-list', () => {
     await el.updateComplete;
     // A new entry named "A" after "B" got re-added -- pruned reveal state means it's masked again.
     const values = [...el.shadowRoot!.querySelectorAll('[part="value"]')] as HTMLElement[];
-    expect(values[1].dataset.masked).to.equal('true');
+    expect(values[1]!.dataset['masked']).to.equal('true');
   });
 
   it('renders lr-empty when entries is empty', async () => {
@@ -391,10 +390,33 @@ describe('lr-env-list', () => {
     });
   });
 
-  it('gives reveal-button and copy-button a hover state', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='reveal-button'\]:hover/);
-    expect(css).to.match(/\[part='copy-button'\]:hover/);
+  it('renders the reveal-button and copy-button hover state', async () => {
+    const el = await fixture<LyraEnvList>(html`
+      <lr-env-list
+        style="--lr-color-brand-quiet: rgb(1, 2, 3)"
+        .entries=${[{ name: 'API_KEY', value: 'secret', secret: true }]}
+      ></lr-env-list>
+    `);
+    const buttons = [
+      el.shadowRoot!.querySelector<HTMLElement>('[part="reveal-button"]')!,
+      el.shadowRoot!.querySelector<HTMLElement>('[part="copy-button"]')!,
+    ];
+
+    for (const button of buttons) {
+      const rect = button.getBoundingClientRect();
+      try {
+        await sendMouse({
+          type: 'move',
+          position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+        });
+        await waitUntil(
+          () => getComputedStyle(button).backgroundColor === 'rgb(1, 2, 3)',
+          `${button.getAttribute('part')} never painted its hover background`,
+        );
+      } finally {
+        await resetMouse();
+      }
+    }
   });
 
   it('fully resets native button foreground and chrome for an explicit dark theme', async () => {

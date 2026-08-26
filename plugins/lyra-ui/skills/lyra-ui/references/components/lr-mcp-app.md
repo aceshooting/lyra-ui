@@ -6,6 +6,7 @@
 - **Class** `LyraMcpApp`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/mcp-app/mcp-app.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 4 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -37,8 +38,9 @@ typed events. Capabilities are denied unless explicitly enabled in `resource.per
 - `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`). A present
   host `aria-label` stays on the custom-element host as its overall name instead of being cloned
   inward. The iframe title uses `label`, then resource title, then the localized fallback; an
-  explicitly empty host label is preserved as an empty iframe title for this primary frame owner,
-  while a direct `accessibleLabel` property value can name it when no host attribute is present.
+  explicitly empty host label does not suppress those fallbacks, so the executable frame remains
+  named. A direct non-empty `accessibleLabel` property value names the frame when no host attribute
+  is present.
 
 **Methods:** `postHostContext(context: unknown): void` posts host state into the active frame;
 `postToolResult(requestId: string, options: McpAppToolResultOptions): void` resolves a prior tool

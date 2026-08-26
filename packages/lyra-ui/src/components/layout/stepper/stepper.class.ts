@@ -23,6 +23,7 @@ export interface LyraStepItem {
   /** Stable business identity for this step. Duplicate IDs are valid occurrences and are
    * disambiguated by their zero-based collection index. */
   stepId: string;
+  /** Nonblank text used as the step button's visible and accessible name. */
   label: string;
   /** Progress state. Availability is independent so a disabled step retains its progress. */
   state: LyraStepState;
@@ -86,6 +87,7 @@ function snapshotSteps(value: unknown): readonly Readonly<LyraStepItem>[] {
         stepId.length === 0 ||
         stepId !== stepId.trim() ||
         typeof label !== 'string' ||
+        label.trim() === '' ||
         typeof state !== 'string' ||
         !STEP_STATES.has(state as LyraStepState) ||
         (disabled !== undefined && typeof disabled !== 'boolean') ||

@@ -1,5 +1,5 @@
 import { fixture, expect, html, waitUntil, aTimeout, oneEvent } from '@open-wc/testing';
-import { resetMouse, sendMouse } from '@web/test-runner-commands';
+import { resetMouse, sendKeys, sendMouse } from '@web/test-runner-commands';
 import './chart.js';
 import './doughnut-chart.js';
 import {
@@ -8,11 +8,11 @@ import {
   type LyraChartAnnotation,
   type LyraChartSeries,
 } from './chart.js';
-import { styles } from './chart.styles.js';
 import { loadChartAndZoom } from './chart-feature-loader.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import type { LyraSkeleton } from '../../overlays/skeleton/skeleton.class.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+import { resolveLyraLocale } from '../../../localization.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-chart', 'horizontal');
@@ -30,6 +30,19 @@ function announcementTexts(
 ): string[] {
   const sink = announcementSink(doc, politeness);
   return sink ? Array.from(sink.children).map((child) => child.textContent ?? '') : [];
+}
+
+function mediaQueryList(media: string, matches: boolean): MediaQueryList {
+  return {
+    matches,
+    media,
+    onchange: null,
+    addEventListener(): void {},
+    removeEventListener(): void {},
+    addListener(): void {},
+    removeListener(): void {},
+    dispatchEvent: () => true,
+  };
 }
 
 it('shows a loading skeleton and aria-busy while chart.js loads, then swaps to the canvas', async () => {
@@ -63,6 +76,30 @@ it('shows a loading skeleton and aria-busy while chart.js loads, then swaps to t
 });
 
 describe('bounded chart surface regressions', () => {
+  it('drops malformed simplified dataset entries while retaining valid rendered series', async () => {
+    const datasets = [
+      null,
+      undefined,
+      42,
+      { label: 'Empty series' },
+      { label: 'Revenue', data: [7] },
+    ] as unknown as readonly LyraChartSeries[];
+    const el = (await fixture(html`<lr-chart
+      show-data-table
+      .labels=${['North']}
+      .datasets=${datasets}
+    ></lr-chart>`)) as LyraChart;
+
+    await waitUntil(() => (el as any).chart != null, 'valid sibling series never rendered', {
+      timeout: 5000,
+    });
+
+    expect(el.datasets.map((series) => series.label)).to.deep.equal(['Empty series', 'Revenue']);
+    expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+    expect(el.shadowRoot!.querySelector('[part="data-table"]')!.textContent).to.contain('Revenue');
+    await expect(el).to.be.accessible();
+  });
+
   it('normalizes invalid closed-set and nested numeric writes before building peer config', async () => {
     const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
     (el as unknown as { grid: string }).grid = 'diagonal';
@@ -462,14 +499,14 @@ it('appends streamed category data, caps numeric series, and preserves point ser
   el.appendData('C', [3], 2.9);
 
   expect(el.labels).to.deep.equal(['B', 'C']);
-  expect(el.datasets[0].data).to.deep.equal([2, 3]);
-  expect(el.datasets[1].data).to.deep.equal([null, null]);
-  expect(el.datasets[2].points).to.equal(points);
+  expect(el.datasets[0]!.data).to.deep.equal([2, 3]);
+  expect(el.datasets[1]!.data).to.deep.equal([null, null]);
+  expect(el.datasets[2]!.points).to.equal(points);
 
   el.appendData('D', [4, 5], Number.POSITIVE_INFINITY);
   expect(el.labels).to.deep.equal(['B', 'C', 'D']);
-  expect(el.datasets[0].data).to.deep.equal([2, 3, 4]);
-  expect(el.datasets[1].data).to.deep.equal([null, null, 5]);
+  expect(el.datasets[0]!.data).to.deep.equal([2, 3, 4]);
+  expect(el.datasets[1]!.data).to.deep.equal([null, null, 5]);
 });
 
 it('exports mixed data and point series as spreadsheet-safe CSV', () => {
@@ -1146,8 +1183,8 @@ it('redraws when a config callback is replaced even though its surrounding data 
 it('does not serialize circular or BigInt config values while building the Chart.js config', () => {
   const el = document.createElement('lr-chart') as LyraChart;
   const circular: Record<string, unknown> = { options: {} };
-  circular.self = circular;
-  circular.count = 1n;
+  circular['self'] = circular;
+  circular['count'] = 1n;
   el.config = circular as never;
 
   let config: any;
@@ -1275,21 +1312,30 @@ it('renders independent hover and pressed theme hooks for each chart control sur
   }
 });
 
-it("routes [part='canvas']:hover's outline width through a scoped --lr-chart-canvas-hover-outline-width token, defaulting to today's --lr-border-width-thin value", () => {
-  // Only the pseudo-class assertion belongs here as cssText -- :hover can't be synthesized on a
-  // real fixture, mirroring the reset-zoom-button hover-state test above. Before this token
-  // existed, the rule referenced the shared `--lr-border-width-thin` design token directly, so a
-  // consumer overriding it to retint just this hover outline would also resize every other
-  // `--lr-border-width-thin` consumer across the whole page -- an unrelated ripple, the same
-  // failure mode `--lr-chart-grid-color`/`-tick-color`/etc.'s own indirection (documented at the
-  // top of chart.styles.ts) already avoids.
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  const hoverBlock = /\[part='canvas'\]:hover\s*\{([^}]*)\}/.exec(css);
-  expect(hoverBlock, "expected a [part='canvas']:hover rule").to.not.equal(null);
-  const body = hoverBlock![1]!;
-  expect(body).to.match(
-    /outline:\s*var\(--lr-chart-canvas-hover-outline-width,\s*var\(--lr-border-width-thin\)\)/,
-  );
+it("routes [part='canvas']:hover's rendered outline through the scoped width and color tokens", async () => {
+  const el = (await fixture(html`
+    <lr-chart
+      style="--lr-chart-canvas-hover-outline-width: 7px; --lr-chart-grid-color: rgb(1, 2, 3);"
+      .labels=${['A', 'B']}
+      .datasets=${[{ label: 'Revenue', data: [1, 2] }]}
+    ></lr-chart>
+  `)) as LyraChart;
+  await waitUntil(() => (el as any).chart != null, 'chart.js never initialized');
+  const canvas = el.shadowRoot!.querySelector<HTMLElement>('[part="canvas"]')!;
+  const rect = canvas.getBoundingClientRect();
+
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    await waitUntil(() => {
+      const computed = getComputedStyle(canvas);
+      return computed.outlineWidth === '7px' && computed.outlineColor === 'rgb(1, 2, 3)';
+    }, 'the rendered canvas hover outline never picked up the scoped tokens');
+  } finally {
+    await resetMouse();
+  }
 });
 
 it('actually inherits the surrounding font on a rendered reset-zoom-button, not just in the stylesheet source', async () => {
@@ -1642,6 +1688,33 @@ it('keeps the core chart usable and announces localized data-label and stack-tot
   expect(announcementTexts(document, 'assertive')).to.deep.equal(warningTexts);
 });
 
+it('keeps the core chart usable and announces a localized warning when the annotation peer is unavailable', async () => {
+  const mod = await import('chart.js');
+  const el = document.createElement('lr-chart') as LyraChart;
+  el.labels = ['A'];
+  el.datasets = [{ label: 'Revenue', data: [1] }];
+  el.annotations = [{ value: 1, label: 'SLO' }];
+  (el as unknown as { strings: Record<string, string> }).strings = {
+    chartAnnotationsUnavailable: 'Annotations add-on unavailable; chart remains usable.',
+  };
+  (el as any).loadLibrary = () => Promise.resolve(mod);
+  (el as any).loadAnnotationFeature = () =>
+    Promise.resolve({ kind: 'feature-unavailable', mod });
+  const wrapper = await fixture(html`<div></div>`);
+  wrapper.append(el);
+  await waitUntil(() => (el as any).chart != null, 'core chart never initialized');
+  await waitUntil(
+    () => el.shadowRoot?.querySelector('[part="feature-warning"]') != null,
+    'optional annotation warning never rendered'
+  );
+
+  const warning = el.shadowRoot!.querySelector('[part="feature-warning"]')!.textContent!.trim();
+  expect(warning).to.equal('Annotations add-on unavailable; chart remains usable.');
+  expect((el as any).chart != null).to.equal(true);
+  expect(el.shadowRoot!.querySelectorAll('canvas')).to.have.length(1);
+  expect(announcementTexts(document, 'assertive')).to.include(warning);
+});
+
 it('renders the reset-zoom-button part and emits `lr-zoom` once `onZoomComplete` fires, then again on `resetZoom()`', async () => {
   const el = (await fixture(html`<lr-chart zoom></lr-chart>`)) as LyraChart;
   el.type = 'line';
@@ -1698,12 +1771,8 @@ it('disables Chart.js animation when the user prefers reduced motion', async () 
   await waitUntil(() => (el as any).chart != null);
 
   const originalMatchMedia = window.matchMedia;
-  window.matchMedia = ((query: string) => ({
-    matches: query === '(prefers-reduced-motion: reduce)',
-    media: query,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-  })) as typeof window.matchMedia;
+  window.matchMedia = (query: string) =>
+    mediaQueryList(query, query === '(prefers-reduced-motion: reduce)');
   try {
     expect((el as any).buildConfig().options.animation).to.equal(false);
   } finally {
@@ -1720,12 +1789,7 @@ it('leaves Chart.js animation at its own default when the user has no reduced-mo
   await waitUntil(() => (el as any).chart != null);
 
   const originalMatchMedia = window.matchMedia;
-  window.matchMedia = ((query: string) => ({
-    matches: false,
-    media: query,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-  })) as typeof window.matchMedia;
+  window.matchMedia = (query: string) => mediaQueryList(query, false);
   try {
     expect((el as any).buildConfig().options.animation).to.equal(undefined);
   } finally {
@@ -1773,16 +1837,30 @@ it('uses `height` as a private fallback without overwriting the public --lr-char
   expect(getComputedStyle(el).height).to.equal('280px');
 });
 
-it('gives [part=reset-zoom-button] a token-driven :focus-visible outline, like every other interactive control', () => {
-  const css = styles.cssText;
-  const focusVisibleBlock = /\[part=['"]?reset-zoom-button['"]?]:focus-visible\s*{([^}]*)}/.exec(css);
-  expect(focusVisibleBlock, 'expected a [part="reset-zoom-button"]:focus-visible rule').to.not.equal(
-    null,
-  );
-  const focusBody = focusVisibleBlock![1];
-  expect(focusBody).to.include('var(--lr-focus-ring-width)');
-  expect(focusBody).to.include('var(--lr-focus-ring-color)');
-  expect(focusBody).to.include('outline-offset: var(--lr-focus-ring-offset)');
+it('renders the reset-zoom-button focus-visible outline from the focus-ring tokens', async () => {
+  const el = (await fixture(html`
+    <lr-chart
+      zoom
+      style="--lr-focus-ring-width: 6px; --lr-focus-ring-color: rgb(4, 5, 6); --lr-focus-ring-offset: 3px;"
+      .labels=${['A', 'B']}
+      .datasets=${[{ label: 'Revenue', data: [1, 2] }]}
+    ></lr-chart>
+  `)) as LyraChart;
+  await waitUntil(() => (el as any).chart != null, 'chart.js never initialized');
+  (el as any).zoomed = true;
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="reset-zoom-button"]')!;
+
+  await sendKeys({ press: 'Tab' });
+  button.focus();
+  await waitUntil(() => {
+    const computed = getComputedStyle(button);
+    return (
+      computed.outlineWidth === '6px' &&
+      computed.outlineColor === 'rgb(4, 5, 6)' &&
+      computed.outlineOffset === '3px'
+    );
+  }, 'the rendered reset-zoom focus ring never picked up the focus tokens');
 });
 
 it('resolves grid/tick/legend/tooltip colors from custom --lr-chart-* values set on the host', async () => {
@@ -2169,8 +2247,8 @@ it('builds scales for the config-overridden effective type, not the attribute ty
   )) as LyraChart;
   await aTimeout(50);
   const chart = (el as unknown as { chart?: { options: { scales?: Record<string, unknown> } } }).chart;
-  expect(chart?.options.scales?.r).to.exist;
-  expect(chart?.options.scales?.x).to.not.exist;
+  expect(chart?.options.scales?.['r']).to.exist;
+  expect(chart?.options.scales?.['x']).to.not.exist;
 });
 
 it('actually suppresses the tooltip for a noTooltip series via plugin-level filtering', async () => {
@@ -2229,7 +2307,7 @@ it('localizes the data table header and per-row fallback label via this.localize
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
   const headerCells = [...el.shadowRoot!.querySelectorAll('table th')];
-  expect(headerCells[0].textContent).to.equal('Catégorie');
+  expect(headerCells[0]!.textContent).to.equal('Catégorie');
   const rowHeader = el.shadowRoot!.querySelector('tbody th') as HTMLElement;
   expect(rowHeader.textContent).to.equal('Point 1');
 });
@@ -2242,7 +2320,7 @@ it('defaults to English "Category"/"Point N" when no strings override is set', a
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
   const headerCells = [...el.shadowRoot!.querySelectorAll('table th')];
-  expect(headerCells[0].textContent).to.equal('Category');
+  expect(headerCells[0]!.textContent).to.equal('Category');
   const rowHeader = el.shadowRoot!.querySelector('tbody th') as HTMLElement;
   expect(rowHeader.textContent).to.equal('Point 1');
 });
@@ -2461,6 +2539,7 @@ it('falls back to visible=true when an IntersectionObserver entry lacks isInters
     const callback = callbacks[callbacks.length - 1];
     // An empty entries array -- entries[0] is undefined, so `entries[0]?.isIntersecting` is
     // undefined too, forcing the `?? true` fallback rather than a real observed boolean.
+    if (!callback) throw new Error('Expected the chart visibility observer callback');
     callback([], new OriginalIO(() => {}));
     expect((el as any).visible).to.equal(true);
   } finally {
@@ -3162,7 +3241,7 @@ it('locale-formats generated table values, row ordinals, and summary counts', as
     await el.updateComplete;
     await waitUntil(() => (el as any).chart != null);
 
-    const formatter = new Intl.NumberFormat(el.effectiveLocale);
+    const formatter = new Intl.NumberFormat(resolveLyraLocale(el));
     const table = el.shadowRoot!.querySelector('[part="data-table"] table')!;
     expect(table.querySelector('tbody th')?.textContent).to.contain(formatter.format(1));
     expect(table.querySelector('tbody td')?.textContent).to.equal(formatter.format(1234.5));
@@ -3715,7 +3794,7 @@ describe('effective chart contract', () => {
 
     const canvas = el.shadowRoot!.querySelector('canvas')!;
     expect(canvas.getAttribute('role')).to.equal('application');
-    expect(canvas.getAttribute('aria-roledescription')).to.equal(el.localize('chart'));
+    expect(canvas.getAttribute('aria-roledescription')).to.equal('Chart');
   });
 
   it('keeps a visible fallback table and a long wrapping legend in normal document flow', async () => {
@@ -4303,12 +4382,8 @@ describe('coverage: color resolution and forced-colors defensive fallbacks', () 
     await waitUntil(() => (bar as any).chart != null);
 
     const originalMatchMedia = window.matchMedia;
-    window.matchMedia = ((query: string) => ({
-      matches: query === '(forced-colors: active)',
-      media: query,
-      addEventListener: () => {},
-      removeEventListener: () => {},
-    })) as typeof window.matchMedia;
+    window.matchMedia = (query: string) =>
+      mediaQueryList(query, query === '(forced-colors: active)');
     try {
       const arrayDs = (el as any).buildConfig().data.datasets[0];
       expect(Array.isArray(arrayDs.backgroundColor)).to.be.true;
@@ -4781,7 +4856,10 @@ describe('coverage: legend/tooltip/table label fallbacks and misc guards', () =>
 
   it('legendTextFor() falls back to the plain label when the dataset has no finite values or the formatted value is unchanged', () => {
     const el = document.createElement('lr-chart') as LyraChart;
-    el.valueFormatter = (value) => value;
+    const runtimeFormatter = el as unknown as {
+      valueFormatter: (value: number) => number | string;
+    };
+    runtimeFormatter.valueFormatter = (value) => value;
     expect((el as any).legendTextFor({ label: 'Empty', data: [] }, 0)).to.equal('Empty');
     expect((el as any).legendTextFor({ label: 'Same', data: [10] }, 0)).to.equal('Same');
   });
@@ -4857,6 +4935,31 @@ describe("scaleType: logarithmic value axis", () => {
     expect(el.scaleType).to.equal("logarithmic");
     expect(scales["y"]?.type, "value axis goes log").to.equal("logarithmic");
     expect(scales["x"]?.type, "the categorical axis stays categorical").to.equal("category");
+  });
+
+  it('updates an already-mounted value axis when only scaleType changes', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.labels = ['a', 'b'];
+    el.datasets = [{ label: 'values', data: [1, 100] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart?.scales?.y != null);
+    const chart = (el as any).chart;
+    expect(chart.scales.y.type).to.equal('linear');
+    const originalUpdate = chart.update.bind(chart);
+    let updateCalls = 0;
+    chart.update = (...args: unknown[]) => {
+      updateCalls += 1;
+      return originalUpdate(...args);
+    };
+
+    try {
+      el.scaleType = 'logarithmic';
+      await el.updateComplete;
+      expect(updateCalls).to.be.greaterThan(0);
+      expect(chart.scales.y.type).to.equal('logarithmic');
+    } finally {
+      chart.update = originalUpdate;
+    }
   });
 
   it("suppresses beginAtZero on a logarithmic axis, which cannot place zero", async () => {
@@ -5008,6 +5111,35 @@ describe("declarative annotations", () => {
       "and still renders normally"
     ).to.exist;
   });
+
+  it('removes live annotation paint when only annotations is cleared', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.labels = ['a', 'b'];
+    el.datasets = [{ label: 'values', data: [1, 2] }];
+    el.annotations = [{ axis: 'y', value: 1, label: 'threshold' }];
+    await el.updateComplete;
+    const liveAnnotationCount = (): number =>
+      Object.keys((el as any).chart?.options?.plugins?.annotation?.annotations ?? {}).length;
+    await waitUntil(() => liveAnnotationCount() === 1, 'live annotation paint loads', {
+      timeout: 4000,
+    });
+    const chart = (el as any).chart;
+    const originalUpdate = chart.update.bind(chart);
+    let updateCalls = 0;
+    chart.update = (...args: unknown[]) => {
+      updateCalls += 1;
+      return originalUpdate(...args);
+    };
+
+    try {
+      el.annotations = [];
+      await el.updateComplete;
+      expect(updateCalls).to.be.greaterThan(0);
+      expect(liveAnnotationCount()).to.equal(0);
+    } finally {
+      chart.update = originalUpdate;
+    }
+  });
 });
 
 describe("formatter surfaces: export and spoken", () => {
@@ -5069,7 +5201,7 @@ describe("formatter surfaces: export and spoken", () => {
       el as unknown as { datumDisplayValue: (value: unknown) => string }
     ).datumDisplayValue(1234);
     expect(spoken, "unchanged default").to.equal(
-      new Intl.NumberFormat(el.effectiveLocale).format(1234)
+      new Intl.NumberFormat(resolveLyraLocale(el)).format(1234)
     );
   });
 });
@@ -5139,6 +5271,17 @@ describe('data-table disclosure', () => {
 
     expect(toggleButton(el)!.getAttribute('aria-expanded')).to.equal('true');
     expect(tableWrapper(el).hasAttribute('data-visually-hidden')).to.be.false;
+  });
+
+  it('keeps the disclosure immediately above the table when expansion makes the table visible', async () => {
+    const el = await chartWith(html`<lr-chart show-data-table data-table-toggle></lr-chart>`);
+    const buttonRect = toggleButton(el)!.getBoundingClientRect();
+    const tableRect = tableWrapper(el).getBoundingClientRect();
+
+    expect(
+      buttonRect.bottom,
+      'the auto-placed toggle must not move below its explicitly placed table'
+    ).to.be.at.most(tableRect.top + 1);
   });
 
   it('gives the generated cell buttons a tab stop only while the table is visible', async () => {
@@ -5412,7 +5555,7 @@ describe('bounded chart fallback paths', () => {
       expect(() => (el as any).armReducedMotionWatcher()).to.not.throw();
     } finally {
       if (descriptor) Object.defineProperty(window, 'matchMedia', descriptor);
-      else delete (window as Window & { matchMedia?: typeof matchMedia }).matchMedia;
+      else Reflect.deleteProperty(window, 'matchMedia');
     }
 
     (el as any).loading = false;

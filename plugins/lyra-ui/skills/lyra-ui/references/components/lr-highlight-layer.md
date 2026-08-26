@@ -6,6 +6,7 @@
 - **Class** `LyraHighlightLayer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/highlight-layer/highlight-layer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -24,7 +25,8 @@ positioned ancestor.
 to be nonempty and the first item retained when IDs repeat; `activeHighlightId: string | null = null`
 (attribute `active-highlight-id`), and `interactive: boolean = true` (reflected) — gates click/keyboard
 activation. A rectangle is eligible only when `x`/`y`/`width`/`height` are finite numbers and both
-dimensions are nonnegative; invalid rectangles are omitted from paint, focus, and activation. When
+dimensions are nonnegative; an item with a missing/non-array `rects` collection and each invalid
+rectangle are omitted from paint, focus, and activation. When
 `interactive=false`, the base is `aria-hidden` pure paint with no group role, accessible name, or
 controls. If every rectangle is invalid, no shadow subtree is rendered.
 

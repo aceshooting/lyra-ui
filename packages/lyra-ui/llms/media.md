@@ -89,6 +89,9 @@ code with `data-unresolved`. **The two are deliberately distinct:** a dissolved 
 unrecognized territory in a longitudinal dataset is *data*, not a defect, so it renders the neutral
 fallback (occupying its normal footprint in a table or card grid) rather than localized error
 wording that reads to a user as a bug. Style the two states apart with those attributes.
+The built-in `fallback-image` uses the same full-frame sizing, `object-fit`, circle clipping, and
+forced-colors inset boundary as the resolved `image`; replacing it with slotted fallback content
+leaves that content's presentation under the caller's control.
 
 **Themeable custom properties:** `--lr-flag-radius` (default `calc(var(--lr-radius) * 0.33)` —
 rectangular corner radius), `--lr-flag-aspect-ratio` (default `4 / 3`), and
@@ -398,7 +401,11 @@ peer's `resize()` when that allocation changes.
   ascending, bounded to 64, and filtered to finite values carrying a CSS-parsable color; fewer than
   two usable stops render no bar at all, since a one-stop "gradient" is a flat block that describes
   nothing. Each stop sits at its true proportion of the value range, so the bar shows the ramp the
-  expression actually produces rather than evenly spacing unevenly-spaced values. Part names
+  expression actually produces rather than evenly spacing unevenly-spaced values. A logarithmic
+  choropleth renders bounded samples of the same exponential interpolation in the gradient rather
+  than showing a misleading CSS-linear ramp. In development, independently authored
+  `legendGradient` and `choropleth.stops` arrays that disagree produce a once-per-page warning;
+  assigning the same stops (or deriving both from one source) avoids drift. Part names
   (`legend-gradient`, `legend-lo`, `legend-hi`) mirror `lr-heatmap`'s gradient legend, and the bar
   is `aria-hidden`/`inert` with the captions carrying the meaning. Mirrors under RTL
 - `legendGradientLoLabel: string | null = null` (attribute `legend-gradient-lo-label`),
@@ -436,7 +443,9 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
   legend, and would render two regions in the same advertised band as visibly different colours
   (`legendGradient` covers the opposite case, a gradient legend). `stepBaseColor` is the colour for
   values below the first threshold, which `['step', …]` requires; it defaults to the first stop's own
-  colour, so a legend whose first band starts at the data minimum needs no extra configuration
+  colour, so a legend whose first band starts at the data minimum needs no extra configuration.
+  Stop colors and `stepBaseColor` accept CSS custom-property references; Lyra resolves them from
+  the live host cascade before passing the expression to MapLibre's WebGL renderer.
 - `markers: LyraMapMarker[] = []` (attribute: false) — `LyraMapMarker { id?: string; lngLat:
 [number, number]; color?: string; label?: string; unsafeHtml?: string }`; an explicit `id` is
   trimmed and must be nonempty, and the first marker for an explicit ID wins. Markers are reconciled
@@ -452,8 +461,9 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
   are excluded; an explicitly supplied `label` remains the more predictable accessible name. A
   marker whose `color` changes for a persisting `id`
   can't be recolored in place (no `Marker.setColor()`) and is torn down/reconstructed instead — see
-  gotchas. Entries with non-finite coordinates or latitude outside `[-90, 90]` are skipped without
-  aborting valid siblings. `color` is used only when the browser accepts it as CSS `color`;
+  gotchas. Entries with non-finite coordinates, latitude outside `[-90, 90]`, or a runtime
+  non-string `label` are skipped without aborting valid siblings. `color` is used only when the
+  browser accepts it as CSS `color`;
   declaration breaks and `url()` paint servers fall back to MapLibre's default marker color.
   Every retained marker is a named `role="button"` tab stop, including one without a popup. Click,
   Enter, and Space emit `lr-map-marker-activate`; Space suppresses its page-scroll default while
@@ -549,7 +559,10 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   peer's own matrix math, and the canvas never painting again — a blank map, with nothing thrown at
   the call site to attribute it to. This property applies the same call, then reads the camera back
   and reverts (restoring zoom and centre) if it did not survive, so the worst case is an
-  unconstrained map plus a dev-mode warning. A malformed box is rejected rather than clamped
+  unconstrained map plus a dev-mode warning. The defensive camera snapshots are inside the same
+  failure boundary, so a peer whose damaged transform already throws from `getZoom()` or
+  `getCenter()` is also reduced to an unconstrained map instead of leaking through Lit's update.
+  A malformed box is rejected rather than clamped
 
 **Choropleth and `dataLayers` updates are diffed before they reach the peer.** `setData()`
 unconditionally re-tiles and repaints an entire source, which is invisible on a static map and
@@ -635,6 +648,8 @@ shadow chrome live; raw caught errors are never exposed.
 
 **Themeable custom properties:**
 
+- `--lr-map-height` (default `var(--lr-size-24rem)`) — host block size, shared with the optional
+  pre-upgrade reservation stylesheet. An explicit outer `block-size` still wins.
 - `--lr-map-choropleth-fill-opacity` (default `0.75`) — fill opacity for the declarative
   `choropleth` layer and polygon fills in every `dataLayers` entry. It intentionally inherits from
   an ancestor, so one scoped declaration rethemes every nested map without setting each host.
@@ -1087,7 +1102,7 @@ allocated inline size with a 16:9 aspect ratio by default (override `aspect-rati
   a token cut by the source ceiling is ignored, and later source text cannot affect the controls.
 - `withoutControls: boolean = false`, `withoutInteraction: boolean = false`, and
   `withThemeSync: boolean = false` (reflected attributes `without-controls`,
-  `without-interaction`, `with-theme-sync`) — respectively remove the toolbar, remove pointer and
+  `without-interaction`, `with-theme-sync`) — respectively remove the zoom controls, remove pointer and
   sequential-keyboard iframe interaction by making the browsing context native `inert`, and opt
   into best-effort same-origin theme sync. The inert frame also refuses programmatic focus/click
   and carries no unsupported `aria-disabled` claim.
@@ -1107,11 +1122,13 @@ removed in v9. They were never part of the registration, root, or documented com
 configure the corresponding public properties instead of depending on sink-policy internals.
 
 **Methods:** `zoomIn()` selects the nearest configured level above the current value;
-`zoomOut()` selects the nearest below it. The toolbar also accepts `+`/`=` and `-`/`_` while one
+`zoomOut()` selects the nearest below it. The control group also accepts `+`/`=` and `-`/`_` while one
 of its controls has focus. `focus(options?)`, `blur()`, and `click()` forward to the internal
 iframe — the component's primary interactive surface — only while the component is connected and
 interaction is enabled. Under `without-interaction` they are deliberate no-ops rather than an
-escape around native `inert`; the two-button zoom toolbar has no single primary action.
+escape around native `inert`; the two-button zoom-control group has no single primary action. Both
+buttons are ordinary independent Tab stops inside a labelled `role="group"`; the container does not
+claim the roving-arrow-key contract of an ARIA toolbar.
 
 **Slots:** `zoom-in-icon` and `zoom-out-icon` replace the decorative control glyphs. Their
 flattened subtrees are always inert and hidden from assistive technology, so use an SVG or glyph
@@ -1136,7 +1153,7 @@ property and applied to the internal iframe scale; and `--lr-zoomable-frame-cont
 for its active color.
 
 **RTL behavior:** the scaled iframe is a physical canvas and remains pinned to physical top-left in
-both directions. Its zoom controls remain logical interface chrome, so RTL places the toolbar at
+both directions. Its zoom controls remain logical interface chrome, so RTL places the control group at
 inline-end (the physical left edge).
 
 **Security and theme sync:** the iframe always keeps a `sandbox` attribute. The secure Lyra default
@@ -1184,7 +1201,10 @@ import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe compon
 
 **Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update zoom and emit `lr-zoom-change`
 (`detail: { zoom }`). `resetZoom()` preserves pan; `resetView()` also scrolls the viewport to the
-origin. The viewport accepts `+`/`=`, `-`/`_`, and `0`, without consuming keys from a slotted editor.
+origin. Reset reaches 100% exactly whenever it is within `minZoom`/`maxZoom`; it is not quantized to
+the nearest `zoomStep`. The viewport accepts `+`/`=`, `-`/`_`, and `0`, without consuming keys from
+a slotted editor. The three zoom buttons are independently tabbable inside a labelled `group`; the
+container does not claim toolbar arrow-key navigation.
 
 **Slots:** default — inspected content, ignored while `src` renders an image.
 
@@ -1605,8 +1625,9 @@ capability as a row.
 - `capabilities: readonly LyraAttachmentCapability[] = ['files']` (property only, no attribute) —
   which capabilities to offer, in display order. `LyraAttachmentCapability = 'files' | 'image' |
 'camera' | 'audio'`; `LyraFileBackedCapability = 'files' | 'image'` (the two that actually open
-  the file picker). Writes are normalized to a frozen, deduplicated, at-most-four entry snapshot;
-  hostile/invalid collections fail closed to the default.
+  the file picker). Writes inspect at most the first 64 candidates and normalize to a frozen,
+  deduplicated, at-most-four entry snapshot. Unknown values and duplicates do not consume that
+  four-entry output budget; hostile/invalid collections fail closed to the default.
 - `accept: string = ''` — a native-file-input-style accept string (e.g. `'image/*'` or
   `'.pdf,.docx'`), forwarded to the hidden file input for the `files`/`image` capabilities. `image`
   defaults it to `'image/*'` unless this prop overrides it; `files` always uses it as-is (empty
@@ -2220,7 +2241,9 @@ text.
 embedded `lr-pan-zoom`), forwarded aliases `frame-viewport`, `frame-content`, `frame-controls`,
 `rotation-frame` (the axis-swapped 90°/270° layout footprint), `image-wrapper`, `image`,
 `highlight-layer`, `highlight` (carries `data-tone`/`data-active`), `highlight-label`,
-`annotation-box`, and `error`.
+`annotation-box`, `error`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror of the
+latest anchor-jump message; the spoken copy is appended to the shared document-level polite sink
+only while the viewer and its composed ancestors are exposed to the accessibility tree).
 
 `error` is ordinary localized visible text, not a shadow live region. A fresh post-mount image
 failure or transition to an unsafe source appends the localized message to the document's
@@ -2368,7 +2391,10 @@ root, so no selection binding is installed.
 `data-match`, `data-active-match`), `cue-current` (added alongside `cue` on the row the playhead is
 inside), `cue-match` (added alongside `cue` on a row matching the current search query),
 `cue-active-match` (added alongside `cue`/`cue-match` on the row holding the current match),
-`cue-time`, `cue-speaker`, `cue-text`, and `error`.
+`cue-time`, `cue-speaker`, `cue-text`, `error`, and `anchor-live-region` (an aria-hidden, non-live
+shadow mirror of the latest anchor-jump message; the spoken copy is appended to the shared
+document-level polite sink only while the viewer and its composed ancestors are exposed to the
+accessibility tree).
 
 `error` is ordinary localized visible text, not a shadow live region. A fresh post-mount native,
 playback, or unsafe-source failure appends the localized message to the document's pre-mounted
@@ -2573,11 +2599,12 @@ convenience; every enabled row is independently reachable through ordinary seque
 **Events:** internal `focus`/`blur` from a playlist row are relayed exactly once as owner-realm
 native `FocusEvent`s (bubbling and composed, preserving `relatedTarget`).
 `lr-video-change` is bubbling and composed but non-cancelable, with exact
-detail `{ previousIndex, currentIndex, video }`. `video` is a fresh detached, mutable plain-data snapshot with
+detail `{ previousIndex, currentIndex, video }`. `video` is a fresh detached, recursively frozen plain-data snapshot with
 exact shape `{ title, poster, sources, tracks }`, not the live child element. `sources` contains
 fresh `{ src, type, media }` records for the child's direct `src` and `<source>` declarations;
-`tracks` contains fresh `{ src, kind, srclang, label, default }` records. A listener may annotate or
-reshape its own event payload, but that mutation cannot alter a child or any later event snapshot.
+`tracks` contains fresh `{ src, kind, srclang, label, default }` records. A listener that needs to
+annotate or reshape the payload must create its own mutable copy; the dispatched detail and every
+nested record/array reject mutation.
 
 **Slot:** the default slot accepts direct `<lr-video>` children. Nested videos and other elements
 are not playlist items.

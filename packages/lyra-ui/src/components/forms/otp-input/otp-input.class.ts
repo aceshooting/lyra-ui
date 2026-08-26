@@ -9,6 +9,7 @@ import { setCustomState } from '../../../internal/custom-states.js';
 import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
 import { findImplicitSubmitter, isNativeSubmitter, submitOnEnter } from '../../../internal/submit-on-enter.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
+import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { styles } from './otp-input.styles.js';
 import {
   dispatchNativeEvent,
@@ -27,7 +28,7 @@ export type OtpInputType = 'numeric' | 'alpha' | 'alphanumeric';
 /** Case transform applied as characters are entered. */
 export type OtpInputCase = 'preserve' | 'upper' | 'lower';
 /** Direction of the native compact-string selection exposed by the host editing facade. */
-export type OtpInputSelectionDirection = 'forward' | 'backward' | 'none';
+export type OtpInputSelectionDirection = LyraSelectionDirection;
 /** Segment fill treatment, including the OTP-specific joined `contained` treatment. */
 export type OtpInputAppearance =
   | Extract<LyraAppearance, 'outlined' | 'filled' | 'filled-outlined'> | 'contained';
@@ -803,7 +804,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   private renderSegment(index: number, invalid: boolean): TemplateResult {
     const char = this.segmentValues[index] ?? '';
     const filled = char !== '';
-    const active = this.focused && !this.effectiveDisabled && !this.readonly && index === this.activeSegmentIndex;
+    const active = this.focused && !this.effectiveDisabled && index === this.activeSegmentIndex;
     const masked = filled && this.mask;
     const placeholderMask = !filled && this.withMask;
     const parts = ['segment'];

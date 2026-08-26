@@ -30,6 +30,7 @@ import { LYRA_DEFAULT_progress } from '../../../internal/default-strings.generat
  * slots. When nothing is slotted, the fallback content is the formatted percentage while
  * determinate and `show-value` is set (`''` otherwise, and always `''` while `indeterminate`) --
  * the same value contract as `<lr-progress-bar>`'s `showValue`.
+ * @slot label - Named alias for the optional center label, matching `<lr-progress-bar>`.
  * @csspart base - Compatibility name for the progress wrapper; use `progress-ring`.
  * @csspart progress-ring - The progress wrapper. It is the same node as `base`.
  * @csspart track - The SVG track.
@@ -148,18 +149,25 @@ export class LyraProgressRing extends LyraElement {
 
   private computeVisibleLabelText(): string {
     const renderRoot = this.renderRoot as ParentNode | undefined;
-    const slot = renderRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
+    const slots = renderRoot?.querySelectorAll<HTMLSlotElement>(
+      'slot:not([name]), slot[name="label"]',
+    );
     const lightDomNodes = (this as unknown as { childNodes?: NodeListOf<ChildNode> }).childNodes;
-    // assignedNodes({flatten:true}) returns the slot's FALLBACK children when nothing is
-    // assigned, and this slot's fallback is the formatted percent -- so an unslotted ring would
-    // name itself "40%" and the localized 'progress' name (plus any registerLyraLocale override)
-    // would be permanently unreachable. Only consumer-assigned content may name the control.
-    const nodes = slot
-      ? slot.assignedNodes().length > 0
-        ? slot.assignedNodes({ flatten: true })
-        : []
+    // assignedNodes({flatten:true}) returns a slot's FALLBACK children when nothing is assigned,
+    // and the default slot's fallback is the formatted percent -- so an unslotted ring would name
+    // itself "40%" and the localized 'progress' name (plus any registerLyraLocale override) would
+    // be permanently unreachable. Only consumer-assigned content in either label slot may name
+    // the control.
+    const nodes = slots && slots.length > 0
+      ? [...slots].flatMap((slot) =>
+          slot.assignedNodes().length > 0 ? slot.assignedNodes({ flatten: true }) : [],
+        )
       : Array.from(lightDomNodes ?? []).filter(
-          (node) => node.nodeType !== 1 || ((node as Element).getAttribute('slot') ?? '') === '',
+          (node) => {
+            if (node.nodeType !== 1) return true;
+            const slotName = (node as Element).getAttribute('slot') ?? '';
+            return slotName === '' || slotName === 'label';
+          },
         );
     return joinAccessibleVisibleText(nodes);
   }
@@ -218,7 +226,7 @@ export class LyraProgressRing extends LyraElement {
         <circle part="indicator" cx="50" cy="50" r=${radius} stroke-width="10"
           stroke-dasharray=${circumference} stroke-dashoffset=${offset}></circle>
       </svg>
-      <span part="label"><slot @slotchange=${this.onLabelSlotChange}>${this.indeterminate || !this.showValue ? '' : this.formattedPercent}</slot></span>
+      <span part="label"><slot @slotchange=${this.onLabelSlotChange}>${this.indeterminate || !this.showValue ? '' : this.formattedPercent}</slot><slot name="label" @slotchange=${this.onLabelSlotChange}></slot></span>
     </div>`;
   }
 }

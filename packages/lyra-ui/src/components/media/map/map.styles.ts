@@ -5,7 +5,7 @@ export const styles = css`
     display: block;
     position: relative;
     inline-size: 100%;
-    block-size: var(--lr-size-24rem);
+    block-size: var(--lr-map-height, var(--lr-size-24rem));
   }
   [part='base'] {
     position: relative;
@@ -185,7 +185,7 @@ export const styles = css`
     color: var(--lr-map-popup-close-button-active-color, var(--lr-color-brand));
   }
   .maplibregl-popup-close-button:where(:focus-visible) {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
   /* Mirrors docx-viewer.styles.ts's identical [part='error'] treatment for the same
@@ -390,7 +390,7 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
   }
   .maplibregl-ctrl-attrib-button:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
   /* Remove the native <summary> disclosure marker (the stray "▼") on the compact-toggle button. */

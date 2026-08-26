@@ -36,6 +36,7 @@
     "generate": "node scripts/generate-index.mjs",
     "optimize": "node scripts/optimize-flags.mjs",
     "build-compact": "node scripts/build-compact.mjs",
+    "check:public-api": "node ../lyra-ui/scripts/public-api-diff.mjs --current .",
     "test": "node scripts/test.mjs",
     "prepack": "pnpm run generate"
   },
@@ -73,10 +74,10 @@
     },
     "./flags/*": "./flags/*"
   },
-  "packageManager": "pnpm@11.22.0",
+  "packageManager": "pnpm@11.24.0",
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",
     "sharp": "^0.35.3",
-    "svgo": "^4.0.2"
+    "svgo": "^4.1.0"
   }
 }

@@ -17,6 +17,7 @@ import './components/agent-tools/policy-summary/policy-summary.js';
 import './components/agent-tools/prompt-studio/prompt-studio.js';
 import './components/agent-tools/schema-viewer/schema-viewer.js';
 import './components/agent-tools/span-waterfall/span-waterfall.js';
+import './components/agent-tools/stack-trace/stack-trace.js';
 import './components/agent-tools/subagent-panel/subagent-panel.js';
 import './components/agent-tools/task-list/task-list.js';
 import './components/agent-tools/test-results/test-results.js';
@@ -66,7 +67,10 @@ import './components/layout/virtual-list/virtual-list.js';
 import type { LyraMessageFeedback } from './components/conversation/message-feedback/message-feedback.js';
 import type { LyraVoicePicker } from './components/conversation/voice-picker/voice-picker.js';
 import type { LyraJsonSchemaViewer } from './components/agent-tools/schema-viewer/schema-viewer.js';
-import type { LyraToolParamForm } from './components/agent-tools/tool-param-form/tool-param-form.js';
+import type {
+  LyraToolParamForm,
+  ToolParamFormProperty,
+} from './components/agent-tools/tool-param-form/tool-param-form.js';
 import type {
   LyraVirtualList,
   LyraVirtualListIndexedSource,
@@ -191,6 +195,7 @@ export const APP_IDENTITY_ARRAY_PROPERTY_CASES: readonly CollectionPropertyCase[
 export const APP_BESPOKE_ARRAY_PROPERTY_CASES: readonly BespokeCollectionPropertyCase[] =
   Object.freeze([
     { tag: 'lr-stat', property: 'rows', limit: 10_000, makeEntry: (index) => ({ label: String(index), value: String(index) }) },
+    { tag: 'lr-stack-trace', property: 'internalPatterns', limit: 10_000, makeEntry: (index) => new RegExp(`vendor-${index}`) },
     { tag: 'lr-file-tree', property: 'nodes', limit: 10_000, makeEntry: (index) => ({ path: `/file-${index}` }) },
     { tag: 'lr-condition-builder', property: 'fields', limit: 200, makeEntry: (index) => ({ name: String(index), type: 'string' }) },
     { tag: 'lr-table', property: 'columns', limit: 10_000, makeEntry: (index) => ({ key: String(index), label: String(index), cell: () => '' }) },
@@ -260,26 +265,38 @@ describe('original component collection ownership contracts', () => {
   for (const { tag, property } of APP_OWNED_ARRAY_PROPERTY_CASES) {
     it(`${tag}.${property} owns a bounded, recursively frozen array snapshot`, () => {
       const element = createDynamicElement(tag);
-      const source = [{ label: 'first', nested: { values: [1, 2] } }];
+      // `data` keeps this shared adversarial row valid for the two chart-series accessors. Their
+      // domain normalizers correctly reject a record with no array payload before the ownership
+      // assertions can observe it.
+      const source = [{ label: 'first', data: [1, 2], nested: { values: [1, 2] } }];
 
       element[property] = source;
       source[0]!.label = 'changed';
+      source[0]!.data.push(3);
       source[0]!.nested.values.push(3);
-      source.push({ label: 'later', nested: { values: [] } });
+      source.push({ label: 'later', data: [], nested: { values: [] } });
 
       const snapshot = element[property] as readonly {
         readonly label: string;
+        readonly data: readonly number[];
         readonly nested: { readonly values: readonly number[] };
       }[];
       expect(snapshot).not.to.equal(source);
       expect(snapshot.map((entry) => entry.label)).to.deep.equal(['first']);
+      expect(snapshot[0]!.data).to.deep.equal([1, 2]);
       expect(snapshot[0]!.nested.values).to.deep.equal([1, 2]);
       expect(Object.isFrozen(snapshot)).to.equal(true);
       expect(Object.isFrozen(snapshot[0])).to.equal(true);
+      expect(Object.isFrozen(snapshot[0]!.data)).to.equal(true);
       expect(Object.isFrozen(snapshot[0]!.nested)).to.equal(true);
       expect(Object.isFrozen(snapshot[0]!.nested.values)).to.equal(true);
 
-      element[property] = Array.from({ length: COLLECTION_LIMIT + 5 }, (_, index) => index);
+      element[property] = Array.from(
+        { length: COLLECTION_LIMIT + 5 },
+        (_, index) => property === 'datasets'
+          ? { label: String(index), data: [index] }
+          : index,
+      );
       expect((element[property] as readonly unknown[]).length).to.equal(COLLECTION_LIMIT);
       expect(Object.isFrozen(element[property])).to.equal(true);
     });
@@ -486,7 +503,10 @@ describe('original component collection ownership contracts', () => {
   it('owns and bounds tool-param schema and value collection paths', () => {
     const element = createDynamicElement('lr-tool-param-form') as unknown as LyraToolParamForm;
     const choices = Array.from({ length: 505 }, (_, index) => String(index));
-    const properties = Object.fromEntries(
+    const properties: Record<string, {
+      type: ToolParamFormProperty['type'];
+      enum?: string[];
+    }> = Object.fromEntries(
       Array.from({ length: 105 }, (_, index) => [
         `field-${index}`,
         { type: 'string', ...(index === 0 ? { enum: choices } : {}) },
@@ -564,7 +584,7 @@ describe('original component collection ownership contracts', () => {
       html`<lr-json-schema-viewer .schema=${schema}></lr-json-schema-viewer>`,
     )) as LyraJsonSchemaViewer;
     schema.required.push('later');
-    schema.properties.query.type.push('number');
+    schema.properties['query'].type.push('number');
 
     const pending = oneEvent(element, 'lr-schema-select');
     (element.shadowRoot!.querySelector('[data-path="/properties/query"]') as HTMLButtonElement).click();
@@ -575,7 +595,7 @@ describe('original component collection ownership contracts', () => {
 
     expect(event.detail.schemaPath).to.equal('/properties/query');
     expect(event.detail.schema.type).to.deep.equal(['string', 'null']);
-    expect(event.detail.schema).not.to.equal(element.schema!.properties!.query);
+    expect(event.detail.schema).not.to.equal(element.schema!.properties!['query']);
     expect(Object.isFrozen(event.detail)).to.equal(true);
     expect(Object.isFrozen(event.detail.schema)).to.equal(true);
     expect(Object.isFrozen(event.detail.schema.type)).to.equal(true);

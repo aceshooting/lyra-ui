@@ -177,7 +177,7 @@ it("uses bounded immutable realm-neutral snapshots and skips hostile structured 
   expect(el.path).to.have.length(1);
   expect(el.path[0]!.label).to.equal("Safe label");
   expect(el.path[0]!.evidence![0]!.title).to.equal("Safe title");
-  expect(el.path[0]!.entities![0]!.properties!.score).to.equal(4);
+  expect(el.path[0]!.entities![0]!.properties!['score']).to.equal(4);
   expect(Object.isFrozen(el.path)).to.equal(true);
   expect(Object.isFrozen(el.path[0])).to.equal(true);
   expect(Object.isFrozen(el.path[0]!.evidence)).to.equal(true);
@@ -412,20 +412,55 @@ it("renders one lr-breadcrumb-item per path node, marking only the last as curre
   const el = await populated();
   const items = el.shadowRoot!.querySelectorAll("lr-breadcrumb-item");
   expect(items.length).to.equal(2);
-  expect(items[0].hasAttribute("current")).to.be.false;
-  expect(items[1].hasAttribute("current")).to.be.true;
-  expect(items[0].textContent!.trim()).to.equal("Q3 revenue anomaly");
-  expect(items[1].textContent!.trim()).to.equal("EMEA region");
+  expect(items[0]!.hasAttribute("current")).to.be.false;
+  expect(items[1]!.hasAttribute("current")).to.be.true;
+  expect(items[0]!.textContent!.trim()).to.equal("Q3 revenue anomaly");
+  expect(items[1]!.textContent!.trim()).to.equal("EMEA region");
+});
+
+it('renders localized breadcrumb text for blank non-current and current node labels', async () => {
+  const el = (await fixture(
+    html`<lr-drilldown-panel></lr-drilldown-panel>`
+  )) as LyraDrilldownPanel;
+  el.path = [
+    { nodeId: 'root', label: '' },
+    { nodeId: 'current', label: '   ' },
+  ];
+  await el.updateComplete;
+
+  const crumbs = [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('lr-breadcrumb-item'),
+  ];
+  expect(crumbs.length).to.equal(2);
+  expect(crumbs.map((crumb) => crumb.textContent?.trim())).to.deep.equal([
+    'Untitled step',
+    'Untitled step',
+  ]);
+  const firstBase = crumbs[0]!.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const flattenedText = [...firstBase.querySelectorAll<HTMLSlotElement>('slot')]
+    .flatMap((slot) => slot.assignedNodes({ flatten: true }))
+    .map((node) => node.textContent ?? '')
+    .join('')
+    .trim();
+  expect(flattenedText.length).to.be.greaterThan(0);
+  await expect(el).to.be.accessible();
+
+  el.strings = { drilldownUntitledNode: 'Unnamed level' };
+  await el.updateComplete;
+  expect(crumbs.map((crumb) => crumb.textContent?.trim())).to.deep.equal([
+    'Unnamed level',
+    'Unnamed level',
+  ]);
 });
 
 it("renders a clickable button for every non-current step and plain text (no button) for the current step", async () => {
   const el = await populated();
   const items = el.shadowRoot!.querySelectorAll("lr-breadcrumb-item");
-  expect(items[0].shadowRoot!.querySelector('button[part~="base"]')).to.exist;
-  expect(items[0].getAttribute("exportparts")).to.equal(
+  expect(items[0]!.shadowRoot!.querySelector('button[part~="base"]')).to.exist;
+  expect(items[0]!.getAttribute("exportparts")).to.equal(
     "base: breadcrumb-button"
   );
-  expect(items[1].shadowRoot!.querySelector('button[part~="base"]') == null).to
+  expect(items[1]!.shadowRoot!.querySelector('button[part~="base"]') == null).to
     .be.true;
 });
 
@@ -1487,5 +1522,5 @@ it("clamps a negative entity degree to zero instead of dropping it", async () =>
   const entityCard = el.shadowRoot!.querySelector(
     "lr-entity-card"
   ) as LyraEntityCard;
-  expect(entityCard.entity.degree).to.equal(0);
+  expect(entityCard.entity!.degree).to.equal(0);
 });

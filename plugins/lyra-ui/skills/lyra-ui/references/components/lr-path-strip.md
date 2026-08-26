@@ -6,6 +6,7 @@
 - **Class** `LyraPathStrip`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/path-strip/path-strip.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -24,7 +25,8 @@ path finding, no branching, no per-element popovers.
 - `path: LyraPathElement[] = []` (attribute: false) — a flat alternating sequence:
   `{ kind: 'node'; node: LyraEntity } | { kind: 'edge'; relation: string; directed?: boolean;
 reverse?: boolean }`
-- `label: string = ''` — fallback name for the stable group. A non-empty host `aria-label` makes
+- `label?: string` — fallback name for the stable group. Omission uses the localized path label. A
+  non-empty host `aria-label` makes
   the host the sole overall owner; an explicitly empty host label stays empty on the group
 
 **Events:** `lr-entity-activate` (`detail: { entityId, occurrenceIndex }`, a node element activated),

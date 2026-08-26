@@ -35,7 +35,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Fields and the controlled condition model are normalized into bounded frozen snapshots (200 outer rows and 500 options/operators or array-valued condition entries). Blank field names, option values, and condition IDs are omitted; later duplicates are first-wins, and removal details use `conditionId`. Create and reassign a new array or record after changes; model event details are detached and frozen.',
+          'Fields and the controlled condition model are cloned into bounded frozen snapshots (200 outer rows and 500 options/operators or array-valued condition entries). Retained operator/value payloads are preserved even when field metadata disagrees; inspect `validationIssues` or call `checkValidity()`/`reportValidity()` instead of expecting silent repair. Blank field names, option values, and condition IDs are omitted; later duplicates are first-wins, and removal details use `conditionId`.',
       },
     },
   },
@@ -79,8 +79,8 @@ export const EveryFieldType: Story = {
     ></lr-condition-builder>`,
 };
 
-/** Provider data containing a non-finite numeric condition fails closed to an unset number rather
- * than displaying blank while retaining an Infinity that JSON would persist as null. */
+/** A non-finite persisted number is retained instead of silently rewritten. The row and root expose
+ * `aria-invalid="true"`, and `validationIssues` reports `value-type` so an Apply action can stop. */
 export const NonFiniteNumberModel: Story = {
   render: () => html`
     <lr-condition-builder
@@ -89,6 +89,33 @@ export const NonFiniteNumberModel: Story = {
       .value=${{
         combinator: 'and',
         conditions: [{ id: 'overflow', field: 'age', operator: 'gt', value: Number.POSITIVE_INFINITY }],
+      } satisfies ConditionBuilderValue}
+    ></lr-condition-builder>
+  `,
+};
+
+/** Type-specific field constraints flow to the existing composed controls: ISO date bounds to
+ * `lr-date-input`, finite numeric bounds and positive finite step to `lr-input`. */
+export const ConstrainedFields: Story = {
+  render: () => html`
+    <lr-condition-builder
+      style="max-width: 42rem"
+      .fields=${[
+        { name: 'age', label: 'Age', type: 'number', min: 18, max: 65, step: 1 },
+        {
+          name: 'createdAt',
+          label: 'Created',
+          type: 'date',
+          min: '2026-01-01',
+          max: '2026-12-31',
+        },
+      ] satisfies ConditionBuilderField[]}
+      .value=${{
+        combinator: 'and',
+        conditions: [
+          { id: 'age', field: 'age', operator: 'gte', value: 21 },
+          { id: 'created', field: 'createdAt', operator: 'gte', value: '2026-06-01' },
+        ],
       } satisfies ConditionBuilderValue}
     ></lr-condition-builder>
   `,

@@ -177,6 +177,7 @@ async function useDeterministicMapStyle(el: LyraGeojsonView): Promise<void> {
   const Canvas = owner.defaultView!.HTMLCanvasElement;
   const originalGetContext = Canvas.prototype.getContext;
   Canvas.prototype.getContext = function (
+    this: HTMLCanvasElement,
     contextId: string,
     ...args: unknown[]
   ) {
@@ -209,7 +210,7 @@ async function constructMapBeforeStyleLoad(el: LyraGeojsonView): Promise<{
   map: HTMLElement & { map?: DeferredStyleMap };
   instance: DeferredStyleMap;
 }> {
-  const map = el.shadowRoot!.querySelector('lr-map') as HTMLElement & {
+  const map = el.shadowRoot!.querySelector('lr-map') as unknown as HTMLElement & {
     mapStyle: unknown;
     loadLibrary: () => Promise<{ Map: typeof DeferredStyleMap }>;
     map?: DeferredStyleMap;
@@ -219,6 +220,7 @@ async function constructMapBeforeStyleLoad(el: LyraGeojsonView): Promise<{
   const Canvas = owner.defaultView!.HTMLCanvasElement;
   const originalGetContext = Canvas.prototype.getContext;
   Canvas.prototype.getContext = function (
+    this: HTMLCanvasElement,
     contextId: string,
     ...args: unknown[]
   ) {
@@ -486,6 +488,38 @@ describe('missing maplibre-gl peer', () => {
 });
 
 describe('document renderer contract', () => {
+  it('reports found:false for generated GeoJSON output because its metadata and map surfaces have no ids', async () => {
+    stubFetch({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [10, 20] },
+      properties: { feature: 'target' },
+    });
+    const el = await fixture<LyraGeoJsonViewer>(
+      html`<lr-geojson-viewer></lr-geojson-viewer>`,
+    );
+    (
+      el as unknown as { forceMissingMaplibreForTesting: boolean }
+    ).forceMissingMaplibreForTesting = true;
+    el.src = GEOJSON_URL;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="metadata"]') !== null,
+    );
+    const timing = el as unknown as {
+      anchorTimeoutMs: number;
+      anchorRetryIntervalMs: number;
+    };
+    timing.anchorTimeoutMs = 20;
+    timing.anchorRetryIntervalMs = 2;
+    expect(
+      el.shadowRoot!.querySelector('[part="metadata"]')!.hasAttribute('id'),
+    ).to.equal(false);
+    const resultEvent = oneEvent(el, 'lr-anchor-result');
+    expect(
+      await el.scrollToAnchor({ kind: 'fragment', id: 'feature' }),
+    ).to.equal(false);
+    expect((await resultEvent).detail).to.deep.equal({ found: false });
+  });
+
   it('forwards anchor/highlights and advertises the implemented text capabilities', () => {
     const definition = getDefaultDocumentRendererRegistry().get(
       'application/geo+json'
@@ -840,7 +874,7 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
     expect(
       el.shadowRoot!.querySelector('[part="status"]')!.textContent
     ).to.equal('1 feature');
-    const map = el.shadowRoot!.querySelector('lr-map') as HTMLElement & {
+    const map = el.shadowRoot!.querySelector('lr-map') as unknown as HTMLElement & {
       center: [number, number];
       zoom: number;
     };
@@ -861,7 +895,7 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
     expect(
       el.shadowRoot!.querySelector('[part="status"]')!.textContent
     ).to.equal('1 feature');
-    const map = el.shadowRoot!.querySelector('lr-map') as HTMLElement & {
+    const map = el.shadowRoot!.querySelector('lr-map') as unknown as HTMLElement & {
       center: [number, number];
       zoom: number;
     };
@@ -891,7 +925,7 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
       'geojson-view never reached the loaded state',
       { timeout: 2000 }
     );
-    const map = el.shadowRoot!.querySelector('lr-map') as HTMLElement & {
+    const map = el.shadowRoot!.querySelector('lr-map') as unknown as HTMLElement & {
       center: [number, number];
       zoom: number;
     };
@@ -1359,7 +1393,7 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
       'map branch never rendered',
       { timeout: 2000 }
     );
-    const map = el.shadowRoot!.querySelector('lr-map') as HTMLElement & {
+    const map = el.shadowRoot!.querySelector('lr-map') as unknown as HTMLElement & {
       center: [number, number];
       zoom: number;
     };
@@ -1601,7 +1635,7 @@ describe('fetch lifecycle edge cases', () => {
         'the second fetch never started'
       );
       // Resolve the newer (second) request first and let it fully settle into the loaded state.
-      resolvers[1](
+      resolvers[1]!(
         new Response(JSON.stringify(FEATURE_COLLECTION), { status: 200 })
       );
       await waitUntil(
@@ -1613,7 +1647,7 @@ describe('fetch lifecycle edge cases', () => {
         el.shadowRoot!.querySelector('[part="status"]')!.textContent;
       // Now resolve the stale (first, superseded) request; its captured generation no longer
       // matches, so it must be dropped instead of overwriting the newer loaded state.
-      resolvers[0](
+      resolvers[0]!(
         new Response(JSON.stringify({ not: 'geojson' }), { status: 200 })
       );
       await new Promise((resolve) => setTimeout(resolve, 20));
@@ -1685,7 +1719,7 @@ describe('fetch lifecycle edge cases', () => {
       init?: RequestInit
     ) => {
       fetchCalled = true;
-      observedSignal = init?.signal;
+      observedSignal = init?.signal ?? undefined;
       return new Promise<Response>(() => {}); // the assertion only needs the call shape, not the resolution
     }) as typeof fetch;
     (

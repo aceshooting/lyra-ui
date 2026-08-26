@@ -6,6 +6,7 @@
 - **Class** `LyraSkeleton`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/skeleton/skeleton.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 2 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -23,7 +24,8 @@ with `text`/`circle`/`rect` geometry and opt-in `pulse`/`sheen` effects.
 - `shape: 'text'|'circle'|'rect' = 'text'` (reflected) — the canonical geometry vocabulary;
   exported as `LyraSkeletonShape`. The former `variant` property/attribute and `SkeletonVariant`
   type are removed in v9; use `shape` and `LyraSkeletonShape`.
-- `effect: 'pulse'|'sheen'|'none' = 'none'` (reflected) — animation is opt-in. **Changed in
+- `effect: 'pulse'|'sheen'|'none' = 'none'` (not reflected; the live value is exposed as
+  `data-effect` on `[part="base"]`) — animation is opt-in. **Changed in
   8.0.0:** the Lyra default was `pulse`; set `effect="pulse"` to preserve that motion explicitly.
 - `width?: string`
 - `height?: string`
@@ -34,6 +36,8 @@ with `text`/`circle`/`rect` geometry and opt-in `pulse`/`sheen` effects.
 - `announce: boolean = false` (reflected) — opt one meaningful placeholder into `role="status"`
   and localized hidden text. The false default preserves the decorative bare Web Awesome/Shoelace
   skeleton contract and prevents repeated placeholders from producing duplicate announcements.
+  An author-supplied host role remains authoritative; the component adds and removes the status
+  role only when it owns that opt-in role.
 
 **Events:** none.
 

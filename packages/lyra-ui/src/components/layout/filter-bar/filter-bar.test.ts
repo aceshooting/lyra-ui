@@ -55,6 +55,10 @@ function control(el: LyraFilterBar, filterId: string): HTMLElement {
   ) as HTMLElement;
 }
 
+function effectiveLocaleOf(el: LyraFilterBar): string {
+  return (el as unknown as { readonly effectiveLocale: string }).effectiveLocale;
+}
+
 /** The native `<input>` inside a `'text'` filter's composed `<lr-input>`. */
 async function nativeInput(
   el: LyraFilterBar,
@@ -284,7 +288,8 @@ describe("custom filters", () => {
       start: number;
       end: number;
     };
-    await (range as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+    await (range as unknown as HTMLElement & { updateComplete: Promise<unknown> })
+      .updateComplete;
 
     const handle = range.shadowRoot!.querySelector(
       '[part="handle-start"]'
@@ -293,8 +298,8 @@ describe("custom filters", () => {
     handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
     handle.dispatchEvent(new KeyboardEvent("keyup", { key: "ArrowRight", bubbles: true }));
     const input = (await inputPromise) as CustomEvent<LyraFilterBarInputDetail>;
-    expect(input.detail.value.window).to.equal("21/80");
-    expect(el.value.window).to.equal("21/80");
+    expect(input.detail.value['window']).to.equal("21/80");
+    expect(el.value['window']).to.equal("21/80");
 
     const chip = el.shadowRoot!.querySelector('[part="chip"]') as HTMLElement;
     chip.dispatchEvent(
@@ -333,7 +338,7 @@ describe("custom filters", () => {
     expect(input.detail.value).to.deep.equal({ reviewers: ["Ada", "Lin"] });
     expect(el.value).to.deep.equal({ reviewers: ["Ada", "Lin"] });
     const chip = el.shadowRoot!.querySelector('[part="chip"]') as HTMLElement;
-    const display = new Intl.ListFormat(el.effectiveLocale, {
+    const display = new Intl.ListFormat(effectiveLocaleOf(el), {
       style: "long",
       type: "conjunction",
     }).format(["Ada", "Lin"]);
@@ -547,6 +552,26 @@ describe("filters setter validation", () => {
     expect(el.filters.map((f) => f.filterId)).to.deep.equal(["good"]);
   });
 
+  it("drops built-in definitions whose label is missing or non-string", async () => {
+    const filters = [
+      { filterId: "bad-select", type: "select", options: [] },
+      { filterId: "bad-combo", label: 42, type: "combobox", options: [] },
+      { filterId: "bad-text", type: "text" },
+      { filterId: "bad-date", type: "date" },
+      { filterId: "good", label: "Good", type: "select", options: [] },
+    ] as unknown as LyraFilterBarFilterDefinition[];
+    const el = await fixture<LyraFilterBar>(
+      html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
+    );
+
+    expect(el.filters.map((definition) => definition.filterId)).to.deep.equal(["good"]);
+    expect(
+      Array.from(el.shadowRoot!.querySelectorAll("[data-filter-id]"), (field) =>
+        field.getAttribute("data-filter-id")
+      )
+    ).to.deep.equal(["good"]);
+  });
+
   it("drops a custom definition with no adapter, keeping well-formed ones", async () => {
     const filters = [
       {
@@ -682,10 +707,10 @@ describe("filters setter validation", () => {
     const metadata = (el.filters[0] as unknown as { metadata: Record<string, unknown> }).metadata;
     expect(accessorReads).to.equal(0);
     expect(Object.hasOwn(metadata, 'revokedMetadata')).to.be.false;
-    expect((metadata.lengthTrap as unknown[]).length).to.equal(0);
-    expect((metadata.indexTrap as unknown[]).length).to.equal(0);
-    expect((metadata.sparse as unknown[]).length).to.equal(0);
-    expect(Object.keys(metadata.wide as object).length).to.equal(10_000);
+    expect((metadata['lengthTrap'] as unknown[]).length).to.equal(0);
+    expect((metadata['indexTrap'] as unknown[]).length).to.equal(0);
+    expect((metadata['sparse'] as unknown[]).length).to.equal(0);
+    expect(Object.keys(metadata['wide'] as object).length).to.equal(10_000);
   });
 });
 
@@ -721,7 +746,7 @@ it('normalizes hostile controlled-value descriptors without invoking accessors',
     },
   });
   el.value = { tags: indexTrap };
-  expect(el.value.tags).to.equal(undefined);
+  expect(el.value['tags']).to.equal(undefined);
 
   let accessorReads = 0;
   const accessorValue: Record<string, unknown> = {};
@@ -747,7 +772,7 @@ it('normalizes hostile controlled-value descriptors without invoking accessors',
     },
   });
   el.value = { tags: mixed, status: undefined };
-  expect(el.value.tags).to.deep.equal(['kept']);
+  expect(el.value['tags']).to.deep.equal(['kept']);
   expect(accessorReads).to.equal(0);
 
   el.value = { status: {} as never };
@@ -881,7 +906,7 @@ it('ignores disabled and stale chip-removal callbacks', async () => {
   el.disabled = true;
   await el.updateComplete;
   chip.dispatchEvent(new CustomEvent('lr-remove', { bubbles: true, composed: true }));
-  expect(el.value.status).to.equal('open');
+  expect(el.value['status']).to.equal('open');
 
   el.disabled = false;
   el.filters = [];
@@ -940,7 +965,7 @@ describe("value getter/setter (URL/state serialization contract)", () => {
     el.value = { status: "open" };
     const snapshot = el.value;
     expect(Object.isFrozen(snapshot)).to.equal(true);
-    expect(el.value.status).to.equal("open");
+    expect(el.value['status']).to.equal("open");
   });
 
   it("clones string-array fields at setter, getter, and lr-input boundaries", async () => {
@@ -951,11 +976,11 @@ describe("value getter/setter (URL/state serialization contract)", () => {
 
     el.value = { tags: assigned };
     assigned.push("billing");
-    expect(el.value.tags).to.deep.equal(["urgent"]);
+    expect(el.value['tags']).to.deep.equal(["urgent"]);
 
     const snapshot = el.value;
-    expect(Object.isFrozen(snapshot.tags)).to.equal(true);
-    expect(el.value.tags).to.deep.equal(["urgent"]);
+    expect(Object.isFrozen(snapshot['tags'])).to.equal(true);
+    expect(el.value['tags']).to.deep.equal(["urgent"]);
 
     const combo = control(el, "tags") as HTMLElement & { value: string[] };
     const inputPromise = oneEvent(el, "lr-input");
@@ -964,8 +989,8 @@ describe("value getter/setter (URL/state serialization contract)", () => {
     const input = (await inputPromise) as CustomEvent<LyraFilterBarInputDetail>;
 
     expect(Object.isFrozen(input.detail.value)).to.equal(true);
-    expect(Object.isFrozen(input.detail.value.tags)).to.equal(true);
-    expect(el.value.tags).to.deep.equal(["billing"]);
+    expect(Object.isFrozen(input.detail.value['tags'])).to.equal(true);
+    expect(el.value['tags']).to.deep.equal(["billing"]);
   });
 });
 
@@ -998,7 +1023,7 @@ describe("lr-input (filter edits)", () => {
     combo.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
     const ev = (await promise) as CustomEvent<LyraFilterBarInputDetail>;
     expect(ev.detail.filterId).to.equal("tags");
-    expect(ev.detail.value.tags).to.deep.equal(["urgent"]);
+    expect(ev.detail.value['tags']).to.deep.equal(["urgent"]);
   });
 
   it("emits lr-input on a committed date-range change, carrying the ISO range string", async () => {
@@ -1013,7 +1038,7 @@ describe("lr-input (filter edits)", () => {
       new Event("change", { bubbles: true, composed: true })
     );
     const ev = (await promise) as CustomEvent<LyraFilterBarInputDetail>;
-    expect(ev.detail.value.range).to.equal("2026-01-01/2026-01-31");
+    expect(ev.detail.value['range']).to.equal("2026-01-01/2026-01-31");
   });
 
   for (const [filterId, expectedValue] of [
@@ -1052,8 +1077,8 @@ describe("lr-input (filter edits)", () => {
       await el.updateComplete;
 
       expect(filterInputs.length).to.equal(1);
-      expect(filterInputs[0].filterId).to.equal(filterId);
-      expect(filterInputs[0].value[filterId]).to.deep.equal(expectedValue);
+      expect(filterInputs[0]!.filterId).to.equal(filterId);
+      expect(filterInputs[0]!.value[filterId]).to.deep.equal(expectedValue);
       expect(childChanges).to.equal(0);
       expect(nativeInputs).to.equal(1);
       expect(nativeChanges).to.equal(1);
@@ -1099,9 +1124,9 @@ describe("active-filter chips", () => {
       el.shadowRoot!.querySelectorAll('[part="chip"]')
     ) as HTMLElement[];
     expect(chips.length).to.equal(2);
-    expect(chips[0].textContent!.trim()).to.equal("Status: Open");
-    expect(chips[1].textContent!.trim()).to.equal(
-      `Tags: ${new Intl.ListFormat(el.effectiveLocale, {
+    expect(chips[0]!.textContent!.trim()).to.equal("Status: Open");
+    expect(chips[1]!.textContent!.trim()).to.equal(
+      `Tags: ${new Intl.ListFormat(effectiveLocaleOf(el), {
         style: "long",
         type: "conjunction",
       }).format(["Urgent", "Billing"])}`
@@ -1129,7 +1154,7 @@ describe("active-filter chips", () => {
     const chips = Array.from(
       el.shadowRoot!.querySelectorAll('[part="chip"]')
     ) as HTMLElement[];
-    const formatter = new Intl.DateTimeFormat(el.effectiveLocale, {
+    const formatter = new Intl.DateTimeFormat(effectiveLocaleOf(el), {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -1174,7 +1199,7 @@ describe("active-filter chips", () => {
       result.setUTCFullYear(year, month - 1, day);
       return result;
     };
-    const formatter = new Intl.DateTimeFormat(el.effectiveLocale, {
+    const formatter = new Intl.DateTimeFormat(effectiveLocaleOf(el), {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -1198,14 +1223,14 @@ describe("active-filter chips", () => {
     const chips = [
       ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="chip"]'),
     ];
-    expect(chips[0].textContent).to.contain(
-      new Intl.ListFormat(el.effectiveLocale, {
+    expect(chips[0]!.textContent).to.contain(
+      new Intl.ListFormat(effectiveLocaleOf(el), {
         style: "long",
         type: "conjunction",
       }).format(["Urgent", "Billing"])
     );
-    expect(chips[1].textContent).to.contain(
-      new Intl.DateTimeFormat(el.effectiveLocale, {
+    expect(chips[1]!.textContent).to.contain(
+      new Intl.DateTimeFormat(effectiveLocaleOf(el), {
         year: "numeric",
         month: "short",
         day: "numeric",
@@ -1549,8 +1574,20 @@ describe("reset()", () => {
   it("restores every filter to its own defaultValue (or unset), clears touched state, and emits lr-input then lr-reset", async () => {
     const defaultTags = ["urgent"];
     const filtersWithDefault: LyraFilterBarFilterDefinition[] = [
-      { ...basicFilters[0], defaultValue: "open" },
-      { ...basicFilters[1], defaultValue: defaultTags },
+      {
+        ...(basicFilters[0]! as Extract<
+          LyraFilterBarFilterDefinition,
+          { type: 'select' }
+        >),
+        defaultValue: "open",
+      },
+      {
+        ...(basicFilters[1]! as Extract<
+          LyraFilterBarFilterDefinition,
+          { type: 'combobox' }
+        >),
+        defaultValue: defaultTags,
+      },
     ];
     const el = (await fixture(
       html`<lr-filter-bar .filters=${filtersWithDefault}></lr-filter-bar>`
@@ -1568,7 +1605,7 @@ describe("reset()", () => {
     expect(resetEvent.detail.value).to.deep.equal({ status: "open", tags: ["urgent"] });
     expect(el.value).to.deep.equal({ status: "open", tags: ["urgent"] });
     defaultTags.push("billing");
-    expect(el.value.tags).to.deep.equal(["urgent"]);
+    expect(el.value['tags']).to.deep.equal(["urgent"]);
   });
 
   it("is a no-op while disabled", async () => {
@@ -1651,7 +1688,9 @@ describe("disabled", () => {
   });
 
   it("does not treat a disabled focusout as a required filter interaction, but preserves enabled focusout", async () => {
-    const builtInTypes: LyraFilterBarFilterDefinition["type"][] = [
+    const builtInTypes: Array<
+      'select' | 'combobox' | 'date' | 'date-range' | 'text'
+    > = [
       "select",
       "combobox",
       "date",
@@ -1660,15 +1699,28 @@ describe("disabled", () => {
     ];
 
     for (const type of builtInTypes) {
-      const filters: LyraFilterBarFilterDefinition[] = [
-        {
-          filterId: "required",
-          label: "Required",
-          type,
-          required: true,
-          options: [{ value: "yes", label: "Yes" }],
-        },
-      ];
+      const baseDefinition = {
+        filterId: "required",
+        label: "Required",
+        required: true,
+      } as const;
+      let definition: LyraFilterBarFilterDefinition;
+      switch (type) {
+        case 'select':
+        case 'combobox':
+          definition = {
+            ...baseDefinition,
+            type,
+            options: [{ value: "yes", label: "Yes" }],
+          };
+          break;
+        case 'date':
+        case 'date-range':
+        case 'text':
+          definition = { ...baseDefinition, type };
+          break;
+      }
+      const filters: LyraFilterBarFilterDefinition[] = [definition];
       const el = (await fixture(
         html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
       )) as LyraFilterBar;
@@ -2012,7 +2064,7 @@ describe("'text' free-text filters", () => {
       placeholder: "Search logs",
       debounce: 60,
     },
-    textFilters[1],
+    textFilters[1]!,
   ];
 
   it("composes an lr-input for a text filter, forwarding label/placeholder to its own chrome", async () => {
@@ -2081,7 +2133,7 @@ describe("'text' free-text filters", () => {
     const values: string[] = [];
     el.addEventListener("lr-input", (e) =>
       values.push(
-        String((e as CustomEvent<LyraFilterBarInputDetail>).detail.value.q)
+        String((e as CustomEvent<LyraFilterBarInputDetail>).detail.value['q'])
       )
     );
 
@@ -2389,7 +2441,13 @@ describe("'text' free-text filters", () => {
         placeholder: "Search logs",
         debounce: 60,
       },
-      { ...textFilters[1], required: true },
+      {
+        ...(textFilters[1]! as Extract<
+          LyraFilterBarFilterDefinition,
+          { type: 'select' }
+        >),
+        required: true,
+      },
     ];
     const el = (await fixture(
       html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
@@ -2545,7 +2603,7 @@ describe("date-range presets", () => {
 
     const ev = (await promise) as CustomEvent<LyraFilterBarInputDetail>;
     expect(ev.detail.filterId).to.equal("period");
-    expect(ev.detail.value.period).to.equal("2026-08-13/2026-08-19");
+    expect(ev.detail.value['period']).to.equal("2026-08-13/2026-08-19");
     expect(ev.detail.appliedPreset?.label).to.equal("Last 7 days");
   });
 
@@ -2569,7 +2627,7 @@ describe("date-range presets", () => {
     input.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
 
     const ev = (await promise) as CustomEvent<LyraFilterBarInputDetail>;
-    expect(ev.detail.value.period).to.equal("2026-01-01/2026-01-31");
+    expect(ev.detail.value['period']).to.equal("2026-01-01/2026-01-31");
     expect(ev.detail.appliedPreset).to.equal(undefined);
   });
 

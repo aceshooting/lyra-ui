@@ -73,7 +73,7 @@ export const styles = css`
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='rate-select']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   .rate-select-chevron {
@@ -112,7 +112,7 @@ export const styles = css`
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='timeline']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='timeline'][aria-disabled='true'] {
@@ -170,7 +170,7 @@ export const styles = css`
     outline-offset: calc(-1 * var(--lr-border-width-medium));
   }
   [part='timeline-marker']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='transcript'] {
@@ -219,7 +219,7 @@ export const styles = css`
     outline: var(--lr-border-width-medium) solid var(--lr-av-player-cue-active-match-color, var(--lr-color-warning));
   }
   lr-virtual-list::part(cue):focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
   lr-virtual-list::part(cue-time) {

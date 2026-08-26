@@ -76,7 +76,7 @@ export const styles = css`
   [part="fit-control"]:focus-visible,
   [part="rotate-button"]:focus-visible,
   [part="annotate-toggle"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   .fit-control-chevron {
@@ -276,7 +276,7 @@ export const styles = css`
     );
   }
   [part="highlight"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part="highlight-label"] {

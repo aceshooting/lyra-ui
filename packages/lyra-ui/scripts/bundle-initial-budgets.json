@@ -8,7 +8,25 @@
     "dist/components/utility/icon/icon.js"
   ],
   "$marginalGzipKb": {
+    "dist/components/agent-tools/tool-call-chip/tool-call-chip.js": 4,
+    "dist/components/conversation/model-select/model-select.js": 13,
+    "dist/components/conversation/usage-badge/usage-badge.js": 3,
+    "dist/components/conversation/voice-picker/voice-picker.js": 15,
+    "dist/components/forms/color-picker/color-picker.js": 20,
     "dist/components/forms/combobox/combobox.js": 24,
-    "dist/components/overlays/overlay/popover.js": 12
+    "dist/components/forms/date-picker/date-input.js": 28,
+    "dist/components/forms/input/time-input.js": 22,
+    "dist/components/forms/locale-picker/locale-picker.js": 16,
+    "dist/components/forms/select/select.js": 21,
+    "dist/components/layout/app-rail/app-rail-item.js": 3,
+    "dist/components/layout/menu/menu.js": 9,
+    "dist/components/overlays/overlay/popover.js": 12,
+    "dist/components/overlays/overlay/tooltip.js": 14,
+    "dist/components/overlays/popup/popup.js": 4,
+    "dist/components/retrieval/citation-badge/citation-badge.js": 3,
+    "dist/components/retrieval/entity-chip/entity-chip.js": 2,
+    "dist/components/utility/export-button/export-button.js": 5,
+    "dist/components/utility/mention-popover/mention-popover.js": 4,
+    "dist/components/utility/tour/tour.js": 11
   }
 }

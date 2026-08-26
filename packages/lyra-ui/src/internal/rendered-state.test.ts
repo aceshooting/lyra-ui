@@ -3,7 +3,7 @@ import { hasRenderedLayoutBox, RenderedStateController } from './rendered-state.
 
 function createRenderedHost(): { wrapper: HTMLDivElement; host: HTMLDivElement } {
   const wrapper = document.createElement('div');
-  wrapper.dataset.renderedStateTest = '';
+  wrapper.dataset['renderedStateTest'] = '';
   const host = document.createElement('div');
   host.style.display = 'block';
   host.style.inlineSize = '10px';
@@ -213,7 +213,7 @@ it('does not read layout for unrelated document mutations', async () => {
 
 it('observes hidden-state changes on composed ancestors inside a shadow root', async () => {
   const outer = document.createElement('section');
-  outer.dataset.renderedStateTest = '';
+  outer.dataset['renderedStateTest'] = '';
   const shadow = outer.attachShadow({ mode: 'open' });
   const wrapper = document.createElement('div');
   const host = document.createElement('div');

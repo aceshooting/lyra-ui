@@ -1,5 +1,7 @@
+import { isMainModule } from './is-main-module.mjs';
+
 import { spawnSync } from 'node:child_process';
-import { readFileSync, realpathSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -11,6 +13,7 @@ const POLICY_ENTRYPOINT = 'pnpm run contract-policy';
 const LINT_SUFFIX = [
   'tsc --noEmit -p tsconfig.json',
   'pnpm run test:types',
+  'pnpm run check:test-types',
 ];
 
 // Durations are rounded observations from a representative hosted CI run. Keeping only the
@@ -33,6 +36,7 @@ const COMMAND_WEIGHTS = new Map([
   ['pnpm run check:component-metadata', 5],
   ['tsc --noEmit -p tsconfig.json', 5],
   ['pnpm run test:types', 5],
+  ['pnpm run check:test-types', 5],
 ]);
 
 const PNPM_RUN_COMMAND = /^pnpm run ([A-Za-z0-9:_-]+)$/u;
@@ -121,7 +125,9 @@ export function buildLintInventory(scripts) {
       `lint must end with the exact static type-check suffix: ${LINT_SUFFIX.join(' && ')}.`,
     );
   }
-  validatePnpmCommand(LINT_SUFFIX[1], scripts, 'lint type-test suffix');
+  for (const command of LINT_SUFFIX.slice(1)) {
+    validatePnpmCommand(command, scripts, 'lint type-test suffix');
+  }
 
   return [...policyCommands, ...LINT_SUFFIX].map((command, index) => ({
     ordinal: index + 1,
@@ -278,9 +284,7 @@ export function readPackageScripts(directory = packageDirectory) {
   return packageJson.scripts;
 }
 
-const isMain =
-  process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
-if (isMain) {
+if (isMainModule(import.meta.url)) {
   const configuration = parseLintShardArguments(process.argv.slice(2));
   process.exitCode = runLintShard(readPackageScripts(), configuration);
 }

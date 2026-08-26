@@ -26,10 +26,10 @@ it('snapshots a global default and resolves defensive copies before exact cleanu
   const cleanup = setDefaultAnimation('test.global', configured);
   try {
     const first = getAnimation(el, 'test.global', { dir: 'ltr' });
-    expect(first.keyframes[1]?.opacity).to.equal(0.75);
+    expect(first.keyframes[1]?.['opacity']).to.equal(0.75);
     expect(first.options.duration).to.equal(125);
 
-    (configured.keyframes as Keyframe[])[1]!.opacity = 0.2;
+    (configured.keyframes as Keyframe[])[1]!['opacity'] = 0.2;
     (configured.options as KeyframeAnimationOptions).duration = 300;
     expect(Object.isFrozen(first)).to.be.true;
     expect(Object.isFrozen(first.keyframes)).to.be.true;
@@ -38,7 +38,7 @@ it('snapshots a global default and resolves defensive copies before exact cleanu
     expect(Reflect.set(first.keyframes[1]!, 'opacity', 0.1)).to.be.false;
     expect(Reflect.set(first.options, 'duration', 999)).to.be.false;
     const second = getAnimation(el, 'test.global', { dir: 'ltr' });
-    expect(second.keyframes[1]?.opacity).to.equal(0.75);
+    expect(second.keyframes[1]?.['opacity']).to.equal(0.75);
     expect(second.options.duration).to.equal(125);
   } finally {
     cleanup();
@@ -52,7 +52,7 @@ it('keeps stacked global cleanup order-safe when an older cleanup runs first', (
   const cleanupFirst = setDefaultAnimation('test.stack', animation(0.25));
   const cleanupSecond = setDefaultAnimation('test.stack', animation(0.5));
   cleanupFirst();
-  expect(getAnimation(el, 'test.stack', { dir: 'ltr' }).keyframes[1]?.opacity).to.equal(0.5);
+  expect(getAnimation(el, 'test.stack', { dir: 'ltr' }).keyframes[1]?.['opacity']).to.equal(0.5);
   cleanupSecond();
   expect(getAnimation(el, 'test.stack', { dir: 'ltr' }).keyframes).to.deep.equal([]);
 });
@@ -65,9 +65,9 @@ it('uses a weak per-element override ahead of the global default and preserves i
   el.remove();
   document.body.append(el);
   try {
-    expect(getAnimation(el, 'test.instance', { dir: 'ltr' }).keyframes[1]?.opacity).to.equal(0.8);
+    expect(getAnimation(el, 'test.instance', { dir: 'ltr' }).keyframes[1]?.['opacity']).to.equal(0.8);
     instanceCleanup();
-    expect(getAnimation(el, 'test.instance', { dir: 'ltr' }).keyframes[1]?.opacity).to.equal(0.25);
+    expect(getAnimation(el, 'test.instance', { dir: 'ltr' }).keyframes[1]?.['opacity']).to.equal(0.25);
   } finally {
     instanceCleanup();
     globalCleanup();
@@ -102,8 +102,8 @@ it('selects rtlKeyframes live and merges an override with the component fallback
   try {
     const ltr = getAnimation(el, 'test.rtl', { dir: 'ltr', fallback });
     const rtl = getAnimation(el, 'test.rtl', { dir: 'rtl', fallback });
-    expect(ltr.keyframes[0]?.transform).to.equal('translateX(-1px)');
-    expect(rtl.keyframes[0]?.transform).to.equal('translateX(1px)');
+    expect(ltr.keyframes[0]?.['transform']).to.equal('translateX(-1px)');
+    expect(rtl.keyframes[0]?.['transform']).to.equal('translateX(1px)');
     expect(rtl.options).to.include({ duration: 180, easing: 'ease-out', fill: 'both' });
   } finally {
     cleanup();
@@ -121,7 +121,7 @@ it('flattens registered motion under reduced motion while retaining the resolved
   }));
   try {
     const reduced = getAnimation(el, 'test.reduced', { dir: 'ltr' });
-    expect(reduced.keyframes.at(-1)?.opacity).to.equal(1);
+    expect(reduced.keyframes.at(-1)?.['opacity']).to.equal(1);
     expect(reduced.options).to.include({ delay: 0, duration: 0, endDelay: 0, iterations: 1 });
 
     const optedOut = getAnimation(el, 'test.reduced', { dir: 'ltr', respectReducedMotion: false });
@@ -135,7 +135,7 @@ it('flattens registered motion under reduced motion while retaining the resolved
 it('uses an explicit fallback without registering it globally', () => {
   const el = document.createElement('div');
   const fallback = animation(0.6, { duration: 90 });
-  expect(getAnimation(el, 'test.fallback', { dir: 'ltr', fallback }).keyframes[1]?.opacity).to.equal(0.6);
+  expect(getAnimation(el, 'test.fallback', { dir: 'ltr', fallback }).keyframes[1]?.['opacity']).to.equal(0.6);
   expect(getAnimation(document.createElement('div'), 'test.fallback', { dir: 'ltr' }).keyframes).to.deep.equal([]);
 });
 
@@ -151,7 +151,7 @@ it('fails a structurally malformed JavaScript override closed to the caller fall
       dir: 'ltr',
       fallback: animation(0.4, { duration: 70 }),
     });
-    expect(resolved.keyframes[1]?.opacity).to.equal(0.4);
+    expect(resolved.keyframes[1]?.['opacity']).to.equal(0.4);
     expect(resolved.options.duration).to.equal(70);
   } finally {
     cleanup();
@@ -171,7 +171,7 @@ it('fails oversized logical-direction keyframe collections closed before retaini
     try {
       const resolved = getAnimation(el, `test.bounded.${name}`, { dir: 'rtl', fallback });
       expect(resolved.keyframes.length).to.equal(2);
-      expect(resolved.keyframes[1]?.opacity).to.equal(0.3);
+      expect(resolved.keyframes[1]?.['opacity']).to.equal(0.3);
       expect(resolved.options.duration).to.equal(55);
     } finally {
       cleanup();
@@ -193,7 +193,7 @@ it('fails an oversized animation-options record closed instead of retaining an u
       dir: 'ltr',
       fallback: animation(0.35, { duration: 60 }),
     });
-    expect(resolved.keyframes[1]?.opacity).to.equal(0.35);
+    expect(resolved.keyframes[1]?.['opacity']).to.equal(0.35);
     expect(resolved.options.duration).to.equal(60);
   } finally {
     cleanup();
@@ -213,7 +213,7 @@ it('fails an oversized keyframe record closed instead of retaining an unbounded 
       dir: 'ltr',
       fallback: animation(0.25, { duration: 50 }),
     });
-    expect(resolved.keyframes[1]?.opacity).to.equal(0.25);
+    expect(resolved.keyframes[1]?.['opacity']).to.equal(0.25);
     expect(resolved.options.duration).to.equal(50);
   } finally {
     cleanup();
@@ -262,7 +262,7 @@ it('fails hostile registration getters and keyframe spreads closed to the caller
     }).not.to.throw();
     try {
       const resolved = getAnimation(el, `test.hostile.${name}`, { dir: 'ltr', fallback });
-      expect(resolved.keyframes[1]?.opacity).to.equal(0.45);
+      expect(resolved.keyframes[1]?.['opacity']).to.equal(0.45);
       expect(resolved.options.duration).to.equal(75);
     } finally {
       cleanup?.();
@@ -335,7 +335,7 @@ it('infers rtl direction from computed style when no explicit dir option is pass
   });
   try {
     const resolved = getAnimation(el, 'test.inferred-rtl');
-    expect(resolved.keyframes[0]?.transform).to.equal('translateX(1px)');
+    expect(resolved.keyframes[0]?.['transform']).to.equal('translateX(1px)');
   } finally {
     cleanup();
     el.remove();
@@ -353,7 +353,7 @@ it('falls back to the dir attribute when the element has no browsing-context win
   });
   try {
     const resolved = getAnimation(el, 'test.inert-dir');
-    expect(resolved.keyframes[0]?.opacity).to.equal(1);
+    expect(resolved.keyframes[0]?.['opacity']).to.equal(1);
   } finally {
     cleanup();
   }
@@ -412,16 +412,17 @@ it('skips a shadowed inactive middle registration when resolving through a three
   const cleanupC = setDefaultAnimation('test.three-stack', animation(0.3));
   cleanupB();
   try {
-    expect(getAnimation(el, 'test.three-stack', { dir: 'ltr' }).keyframes[1]?.opacity).to.equal(0.3);
+    expect(getAnimation(el, 'test.three-stack', { dir: 'ltr' }).keyframes[1]?.['opacity']).to.equal(0.3);
     cleanupC();
-    expect(getAnimation(el, 'test.three-stack', { dir: 'ltr' }).keyframes[1]?.opacity).to.equal(0.1);
+    expect(getAnimation(el, 'test.three-stack', { dir: 'ltr' }).keyframes[1]?.['opacity']).to.equal(0.1);
   } finally {
     cleanupA();
   }
 });
 
 it('reads own enumerable properties from non-plain-object keyframes and options', () => {
-  class CustomKeyframe {
+  class CustomKeyframe implements Keyframe {
+    [property: string]: string | number | null | undefined;
     opacity = 0.42;
   }
   class CustomOptions {
@@ -434,7 +435,7 @@ it('reads own enumerable properties from non-plain-object keyframes and options'
   });
   try {
     const resolved = getAnimation(el, 'test.custom-prototype', { dir: 'ltr', respectReducedMotion: false });
-    expect(resolved.keyframes[0]?.opacity).to.equal(0.42);
+    expect(resolved.keyframes[0]?.['opacity']).to.equal(0.42);
     expect(resolved.options.duration).to.equal(88);
   } finally {
     cleanup();
@@ -450,7 +451,7 @@ it('fails a sparse keyframe array closed instead of silently compacting the hole
       dir: 'ltr',
       fallback: animation(0.15, { duration: 40 }),
     });
-    expect(resolved.keyframes[1]?.opacity).to.equal(0.15);
+    expect(resolved.keyframes[1]?.['opacity']).to.equal(0.15);
   } finally {
     cleanup();
   }
@@ -496,7 +497,7 @@ it('fails a hostile rtlKeyframes or top-level options accessor closed without in
     const cleanup = setDefaultAnimation(`test.hostile-accessor.${name}`, candidate);
     try {
       const resolved = getAnimation(el, `test.hostile-accessor.${name}`, { dir: 'rtl', fallback });
-      expect(resolved.keyframes[1]?.opacity).to.equal(0.5);
+      expect(resolved.keyframes[1]?.['opacity']).to.equal(0.5);
       expect(resolved.options.duration).to.equal(80);
     } finally {
       cleanup();
@@ -522,7 +523,7 @@ it('does not throw when the caller options object itself has hostile property ge
     expect(() => {
       resolved = getAnimation(el, 'test.hostile-options-bag', hostileOptions);
     }).not.to.throw();
-    expect(resolved?.keyframes[1]?.opacity).to.equal(0.55);
+    expect(resolved?.keyframes[1]?.['opacity']).to.equal(0.55);
   } finally {
     cleanup();
   }
@@ -566,7 +567,7 @@ it('snapshots hostile animation records inertly and resolves the caller fallback
         fallback,
         respectReducedMotion: false,
       });
-      expect(resolved.keyframes[1]?.opacity).to.equal(0.61);
+      expect(resolved.keyframes[1]?.['opacity']).to.equal(0.61);
       expect(resolved.options.duration).to.equal(73);
     } finally {
       cleanup?.();

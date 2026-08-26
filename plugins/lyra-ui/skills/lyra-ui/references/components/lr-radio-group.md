@@ -7,6 +7,7 @@
 - **Class** `LyraRadioGroup`, also available unregistered from `@aceshooting/lyra-ui/components/forms/radio/radio-group.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 11 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -35,6 +36,10 @@ authoritative through each option's `effectiveSize`/`effectiveName`, but never r
 authored public properties or attributes; late child writes are restored immediately on removal or
 reparenting.
 
+When renaming `<sl-radio-group>` manually, set `name="option"` if the old markup relied on
+Shoelace's implicit form-data key. Lyra deliberately defaults `name` to empty; the bundled migration
+codemod inserts the compatibility value automatically.
+
 The group is the sole aggregate form-associated owner. A non-empty selected value contributes one
 `name=value` entry; owned radios suppress their own entries and validity while a standalone radio
 continues to participate independently. `form`, `getForm()`, `labels`, native validity, external
@@ -42,6 +47,9 @@ form ownership, fieldset disablement, reset, and session restoration all live on
 `value` is non-reflecting live state; `defaultValue`/the `value` attribute is the current reset
 default and cannot overwrite a dirty selection. Reset restores that current default, and session
 restore selects the stored value silently even when it arrives before the radio children.
+A required but pristine group keeps `aria-invalid="false"` on its internal radiogroup; the value
+error is projected only after interaction or a native validity check (`checkValidity()`,
+`reportValidity()`, or form-level validation), while explicit error chrome is immediate.
 
 **Events:** per owned selection — including keyboard activation — the group emits, in order,
 a bubbling/composed `InputEvent` named `input`, `lr-input`, a bubbling/composed `Event` named

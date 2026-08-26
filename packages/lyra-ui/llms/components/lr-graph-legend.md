@@ -6,6 +6,7 @@
 - **Class** `LyraGraphLegend`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/graph-legend/graph-legend.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -24,9 +25,10 @@ same event-decoupled contract every sibling in this family follows.
 
 - `types: LyraNodeTypeStyle[] = []` (attribute: false) — `{ id: string; label: string; color?:
 string; shape?: 'circle' | 'square' | 'diamond' }`, the shared `lr-graph.nodeTypes` entry shape. A color is used only
-  when valid for CSS `color`; declaration breaks and `url()` fall back to the categorical palette
+  when valid for CSS `color`; declaration breaks and `url()` fall back to the categorical palette.
+  Rows require nonblank string `id` and `label` values, with later duplicate ids omitted first-wins
 - `counts?: Record<string, number>` (attribute: false) — optional per-type count shown alongside the
-  label
+  label; values are rendered as finite nonnegative integers (invalid or negative values become zero)
 - `hiddenTypes: string[] = []` (attribute: false) — controlled; the host assigns this back from
   `lr-visibility-change`
 - `interactive: boolean = true` (reflected) — renders each row as a toggle `<button>`; `false` renders

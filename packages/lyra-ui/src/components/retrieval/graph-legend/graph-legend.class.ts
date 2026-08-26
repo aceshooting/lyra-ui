@@ -2,7 +2,10 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, svg, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { canonicalIdentityList, firstByRetrievalIdentity } from '../retrieval-identity.js';
+import {
+  canonicalIdentityList,
+  firstByRetrievalIdentity,
+} from '../retrieval-identity.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './graph-legend.styles.js';
@@ -12,6 +15,7 @@ import {
 } from '../retrieval-semantic-owner.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { finiteCount } from '../../../internal/numbers.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import {
   acquireAnnouncementSink,
@@ -29,7 +33,9 @@ export interface LyraGraphLegendVisibilityDetail {
 }
 
 export interface LyraGraphLegendEventMap {
-  'lr-visibility-change': CustomEvent<LyraEventDetailSnapshot<LyraGraphLegendVisibilityDetail>>;
+  'lr-visibility-change': CustomEvent<
+    LyraEventDetailSnapshot<LyraGraphLegendVisibilityDetail>
+  >;
 }
 
 const PALETTE_SIZE = 8;
@@ -57,6 +63,8 @@ const FALLBACK_PALETTE = [
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Rows without a nonblank string `id` and `label`, plus later duplicate ids, are omitted so an
+ * untyped payload cannot create an unnamed interactive filter.
  *
  * @customElement lr-graph-legend
  * @event lr-visibility-change - `detail: { hiddenTypes }` — the complete updated array, fired
@@ -86,7 +94,11 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  protected static override readonly ownedCollectionProperties = Object.freeze(['types', 'hiddenTypes', 'counts']);
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'types',
+    'hiddenTypes',
+    'counts',
+  ]);
 
   static override styles = [
     LyraElement.styles,
@@ -183,7 +195,12 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   }
 
   override render(): TemplateResult {
-    const types = firstByRetrievalIdentity(this.types, (type) => type?.id);
+    const types = firstByRetrievalIdentity(
+      this.types,
+      (type) => type?.id
+    ).filter(
+      (type) => typeof type?.label === 'string' && type.label.trim().length > 0
+    );
     const groupLabel = retrievalSemanticLabel(
       this,
       this.label || this.localize('graphLegendLabel')
@@ -215,7 +232,9 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
             <span part="label">${type.label}</span>
             ${count != null
               ? html`<span part="count"
-                  >${getNumberFormat(this.effectiveLocale).format(count)}</span
+                  >${getNumberFormat(this.effectiveLocale).format(
+                    finiteCount(count)
+                  )}</span
                 >`
               : nothing}
           `;

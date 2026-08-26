@@ -6,6 +6,7 @@
 - **Class** `LyraBadge`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/badge/badge.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -17,9 +18,10 @@
 ## `lr-badge` and `lr-tag`
 
 Compact status labels. `LyraTag` extends `LyraBadge`, so the two share one visual contract; `lr-tag`
-adds tag semantics and an optional remove affordance. The `lr-badge` light-DOM host is the single
-`role="status"` owner of its projected label. `lr-tag` deliberately opts out of that inherited
-status role, including during SSR/hydration, because a removable keyword is not a live status.
+adds tag semantics and an optional remove affordance. Both are static text by default, matching the
+mirrored upstreams and avoiding repeated announcements when a category badge is re-rendered.
+Authors can opt a genuinely changing badge into live semantics with `role="status"`; that and every
+other author-supplied role remain authoritative across updates, hydration, and reconnect.
 
 **Visual break in 8.0.0 — a badge is no longer a pill by default.** Both components used to render
 fully-rounded ends unconditionally. `--lr-badge-radius` now defaults to `var(--lr-radius)` (a rounded

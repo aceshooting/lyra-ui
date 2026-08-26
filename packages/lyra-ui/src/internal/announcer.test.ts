@@ -443,7 +443,7 @@ it('bounds the shared sink and batches every handle onto one pending sweep timer
   let nextHandle = 400;
   ownerWindow.setTimeout = ((handler: TimerHandler) => {
     const handle = ++nextHandle;
-    if (typeof handler === 'function') callbacks.set(handle, handler);
+    if (typeof handler === 'function') callbacks.set(handle, () => handler());
     return handle;
   }) as typeof ownerWindow.setTimeout;
   ownerWindow.clearTimeout = ((handle?: number) => {
@@ -577,7 +577,7 @@ it('schedules and cancels message sweeps with the sink document timer realm', as
   let nextHandle = 90;
   ownerWindow.setTimeout = ((handler: TimerHandler) => {
     const handle = ++nextHandle;
-    if (typeof handler === 'function') callbacks.set(handle, handler);
+    if (typeof handler === 'function') callbacks.set(handle, () => handler());
     return handle;
   }) as typeof ownerWindow.setTimeout;
   ownerWindow.clearTimeout = ((handle?: number) => {
@@ -624,7 +624,7 @@ it('reschedules a shared sweep when a newly announced message expires sooner', a
   let nextHandle = 200;
   ownerWindow.setTimeout = ((handler: TimerHandler) => {
     const handle = ++nextHandle;
-    if (typeof handler === 'function') callbacks.set(handle, handler);
+    if (typeof handler === 'function') callbacks.set(handle, () => handler());
     return handle;
   }) as typeof ownerWindow.setTimeout;
   ownerWindow.clearTimeout = ((handle?: number) => {

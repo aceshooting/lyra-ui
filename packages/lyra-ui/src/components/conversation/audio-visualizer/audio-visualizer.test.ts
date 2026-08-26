@@ -67,12 +67,16 @@ async function settleRaf(el: LyraAudioVisualizer, frames = 20): Promise<void> {
  *  callback, using the same "replace window.matchMedia entirely" technique as motion.test.ts. */
 async function withForcedReducedMotion(fn: () => Promise<void>): Promise<void> {
   const original = window.matchMedia;
-  window.matchMedia = ((query: string) => ({
-    matches: query === '(prefers-reduced-motion: reduce)',
-    media: query,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-  })) as typeof window.matchMedia;
+  window.matchMedia = (query: string) => {
+    const nativeQuery = original.call(window, query);
+    return new Proxy(nativeQuery, {
+      get(target, property) {
+        if (property === 'matches') return query === '(prefers-reduced-motion: reduce)';
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+  };
   try {
     await fn();
   } finally {
@@ -1311,15 +1315,20 @@ function toComputedColor(rawColorValue: string): string {
 function relativeLuminance(color: string): number {
   const channels = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/u.exec(color);
   if (!channels) throw new Error(`unparseable computed colour: ${color}`);
-  const [r, g, b] = [1, 2, 3].map((index) => {
-    const channel = Number(channels[index]) / 255;
+  const rgb = [1, 2, 3].map((index) => {
+    const channel = Number(channels[index]!) / 255;
     return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
   });
+  const r = rgb[0]!;
+  const g = rgb[1]!;
+  const b = rgb[2]!;
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
 function contrastRatio(a: string, b: string): number {
-  const [lighter, darker] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x);
+  const values = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x);
+  const lighter = values[0]!;
+  const darker = values[1]!;
   return (lighter + 0.05) / (darker + 0.05);
 }
 

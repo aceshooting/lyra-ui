@@ -6,6 +6,7 @@
 - **Class** `LyraButton`, also available unregistered from `@aceshooting/lyra-ui/components/forms/button/button.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 9 parts, 31 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -80,8 +81,10 @@ unsafe/unparseable `href` falls back to the native `<button>`.
 - `size: LyraSize = 'm'` (reflected) — the shared control ladder. `'2xs'` is the tightest tier,
   below `'xs'`, for dense chrome; `'m'` is the standard one. Both spellings of every tier are
   accepted — `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large` — and the same ladder drives
-  `lr-input`/`lr-select`/`lr-combobox`/`lr-date-input`, so same-`size` controls share a height by
-  construction rather than by two lists agreeing
+  `lr-input`/`lr-select`/`lr-combobox`/`lr-date-input`, so same-`size` controls share density and
+  minimum-height tokens rather than separate scales. That is not a blanket pixel-height promise:
+  content and nested action hit-target floors can make a composed control such as `lr-date-input`
+  taller
 - `pill: boolean = false` (reflected) — fully rounded ends. It changes the private radius default
   to `--lr-radius-pill` rather than declaring a radius on `[part="base"]`, so an inherited or
   direct `--lr-button-radius` remains authoritative. `appearance="link"` renders with zero chrome,
@@ -233,14 +236,17 @@ The per-`size` `min-block-size` floors are `--lr-button-size-2xs`, `--lr-button-
 `--lr-button-size-s`, `--lr-button-size-m`, `--lr-button-size-l` and
 `--lr-button-size-xl`. Each defaults to the matching tier of the shared form-control ladder
 (`--lr-form-control-height-2xs` … `-xl`, i.e. 1.25rem, 1.5rem, 1.875rem, 2.5rem, 3rem, 3.5rem), so a
-button is the same height as an input, select, combobox or date input of the same tier _by
-construction_ rather than by two hand-maintained lists agreeing — which is exactly how they drifted
-apart before 8.0.0. Each is read only by its own tier (`--lr-button-size-s` also serves
-`size="small"`, and so on for the other two aliases), and all are ignored by `appearance="link"`.
+button shares the same minimum-height ladder as sibling form controls rather than relying on a
+second hand-maintained list — which is exactly how the scales drifted apart before 8.0.0. This is
+density/floor parity, not guaranteed pixel-height parity: content and nested actions can make a
+composed control such as `lr-date-input` taller. Each token is read only by its own tier
+(`--lr-button-size-s` also serves `size="small"`, and so on for the other two aliases), and all are
+ignored by `appearance="link"`.
 Retheming `--lr-theme-form-control-height-*` moves every control on the ladder together.
 Circle and automatically detected icon-only buttons add the shared `--lr-icon-button-size` floor
 on both axes, so the compact `2xs`/`xs` tiers cannot collapse those standalone targets below 40px.
-Ordinary labelled buttons keep the exact shared form-control ladder heights above.
+Ordinary single-line labelled buttons keep the exact ladder heights above unless their content
+requires more room.
 
 `--lr-button-gap` (default `--lr-form-control-gap`, the gap between the icon/label and any slotted
 content) does not vary by tier. `--lr-button-radius` (default `--lr-form-control-radius`, the corner

@@ -6,6 +6,7 @@
 - **Class** `LyraJsonSchemaViewer`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `9.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 14 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -28,7 +29,8 @@ issue array after changes. `selectedPath: string | null = null` (attribute `sele
 **Exported types:** `JsonSchemaNode` covers `$ref`, type/title/description, properties/items,
 readonly required/enum/examples and oneOf/anyOf/allOf collections, and const/default while preserving unknown schema
 keywords. `SchemaValidationIssue = { path: string; message: string; severity?: 'error' | 'warning'
-| 'info' }`.
+| 'info' }`. At runtime, a Swagger-style boolean or string `required` keyword is treated as no
+JSON-Schema required-property list instead of rejecting the entire tree.
 
 **Events:** `lr-schema-select` (`{ schemaPath, schema }`, with an RFC 6901-style JSON Pointer).
 

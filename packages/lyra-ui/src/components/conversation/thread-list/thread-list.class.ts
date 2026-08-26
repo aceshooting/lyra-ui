@@ -30,6 +30,7 @@ import { LYRA_DEFAULT_archiveConversation, LYRA_DEFAULT_deleteConversation, LYRA
 
 export interface LyraChatThread {
   id: string;
+  /** Required display/search text. Runtime records without a string title are omitted. */
   title: string;
   excerpt?: string;
   timestamp?: LyraTimestamp;
@@ -229,10 +230,10 @@ function rehydrateThreadTimestamp(
  * @csspart pin-glyph - The small pin indicator shown in a pinned row's `meta` slot (data mode).
  * @csspart group-header - A date/custom group header in data mode.
  * @csspart group-sticky - `sticky-groups` only: the pinned copy of the current group's header,
- *   exported from the internal `lr-virtual-list`'s sticky layer. It wraps a full copy of the
- *   `group-header`/`group-toggle`/`group-label`/`group-icon` markup (which therefore styles both the
- *   real header row and the pinned copy), and carries `aria-hidden` — style it for the pinned band
- *   itself, e.g. a shadow or a border under the band.
+ *   exported from the internal `lr-virtual-list`'s sticky layer. It repeats the `group-header`,
+ *   `group-label`, and `group-icon` visuals but is `aria-hidden`, inert, and pointer-transparent;
+ *   the real row remains the sole `group-toggle`. Style this part for the pinned band itself, e.g.
+ *   a shadow or a border under the band.
  * @csspart group-toggle - The controlled group expand/collapse button.
  * @csspart group-label - The group label inside `group-toggle`.
  * @csspart group-adornment - Optional rich `renderGroupAdornment` output beside the toggle.
@@ -431,8 +432,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    *  while its rows are in view, pushing it off as the next group's header arrives. Group headers
    *  are ordinary virtualized rows, so this renders a `aria-hidden` copy of the header into
    *  `lr-virtual-list`'s sticky layer (`[part="group-sticky"]`) — the real row keeps the
-   *  `role="heading"` semantics and the tab order, and the copy stays clickable so the pinned
-   *  toggle still requests a collapse. Default `false` leaves rendering exactly as it is without
+   *  `role="heading"`, focus, and collapse-action ownership, while the copy is presentational,
+   *  inert, and pointer-transparent. Default `false` leaves rendering exactly as it is without
    *  this feature; `grouping="none"` has no headers to pin, so it is a no-op there. */
   @property({ type: Boolean, attribute: 'sticky-groups', reflect: true })
   stickyGroups = false;
@@ -574,7 +575,12 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     const seen = new Set<string>();
     return this.threads.filter((thread) => {
       if (thread === null || typeof thread !== 'object') return false;
-      if (typeof thread.id !== 'string' || thread.id.trim().length === 0 || seen.has(thread.id)) return false;
+      if (
+        typeof thread.id !== 'string' ||
+        thread.id.trim().length === 0 ||
+        typeof thread.title !== 'string' ||
+        seen.has(thread.id)
+      ) return false;
       seen.add(thread.id);
       return true;
     });
@@ -1063,10 +1069,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     `;
   }
 
-  /** The header markup for one group. The `sticky` copy is identical except that it carries no
-   *  heading semantics: `lr-virtual-list` renders it `aria-hidden` into its sticky layer, so the
-   *  real row below stays the single exposed heading for the group -- a `role="heading"` here would
-   *  be a second one the moment both are in the DOM at once. */
+  /** The header markup for one group. The `sticky` copy repeats only the visual label/glyph:
+   *  `lr-virtual-list` renders it `aria-hidden` and inert, so the real row remains the group's sole
+   *  heading and collapse action. */
   private renderGroupHeader(
     item: Extract<ThreadListItem, { kind: 'group' }>,
     options: { sticky?: boolean } = {}
@@ -1079,29 +1084,37 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         role=${options.sticky ? nothing : 'heading'}
         aria-level=${options.sticky ? nothing : '2'}
       >
-        <button
-          type="button"
-          part="group-toggle"
-          tabindex=${options.sticky ? '-1' : nothing}
-          aria-expanded=${item.collapsed ? 'false' : 'true'}
-          aria-label=${this.localize(
-            item.collapsed ? 'threadGroupExpand' : 'threadGroupCollapse',
-            undefined,
-            {
-              label: item.label,
-            }
-          )}
-          @click=${() =>
-            this.emit('lr-group-toggle', {
-              groupId: item.id,
-              collapsed: nextCollapsed,
-            })}
-        >
-          <span part="group-icon" aria-hidden="true"
-            >${item.collapsed ? '+' : '−'}</span
-          >
-          <span part="group-label">${item.label}</span>
-        </button>
+        ${options.sticky
+          ? html`
+              <span part="group-icon" aria-hidden="true"
+                >${item.collapsed ? '+' : '−'}</span
+              >
+              <span part="group-label">${item.label}</span>
+            `
+          : html`
+              <button
+                type="button"
+                part="group-toggle"
+                aria-expanded=${item.collapsed ? 'false' : 'true'}
+                aria-label=${this.localize(
+                  item.collapsed ? 'threadGroupExpand' : 'threadGroupCollapse',
+                  undefined,
+                  {
+                    label: item.label,
+                  }
+                )}
+                @click=${() =>
+                  this.emit('lr-group-toggle', {
+                    groupId: item.id,
+                    collapsed: nextCollapsed,
+                  })}
+              >
+                <span part="group-icon" aria-hidden="true"
+                  >${item.collapsed ? '+' : '−'}</span
+                >
+                <span part="group-label">${item.label}</span>
+              </button>
+            `}
         ${!options.sticky && item.adornment
           ? html`<span part="group-adornment">${item.adornment}</span>`
           : nothing}

@@ -339,6 +339,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
     'Data labels are unavailable, but the core chart remains available.',
   chartStackTotalsUnavailable:
     'Stack totals are unavailable, but the core chart remains available.',
+  chartAnnotationsUnavailable:
+    'Chart annotations are unavailable, but the core chart remains available.',
   chart: 'Chart',
   chartTypeLine: 'Line',
   chartTypeBar: 'Bar',
@@ -735,6 +737,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   emailViewerSubject: 'Subject',
   emailViewerDate: 'Date',
   emailViewerAttachments: 'Attachments',
+  emailViewerUnnamedAttachment: 'Unnamed attachment',
   emailViewerNoSubject: '(no subject)',
   emailViewerOpenAttachment: 'Open {filename}',
   emailViewerShowQuoted: 'Show quoted text',
@@ -1247,6 +1250,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   ingestionStageDone: 'Done',
   ingestionStageFailed: 'Failed',
   ingestionStageCancelled: 'Cancelled',
+  ingestionStageUnknown: 'Unknown stage',
   ingestionQueueLabel: 'Ingestion queue',
   ingestionQueueEmpty: 'No documents queued',
   documentLibraryFreshnessFresh: 'Fresh',
@@ -1290,6 +1294,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   drilldownDocuments: 'Documents',
   drilldownRuns: 'Agent runs',
   drilldownEmpty: 'No item selected',
+  drilldownUntitledNode: 'Untitled step',
   evaluationRunStatusIdle: 'Idle',
   evaluationRunStatusWaitingInput: 'Waiting for input',
   evaluationRunStatusWaitingApproval: 'Waiting for approval',

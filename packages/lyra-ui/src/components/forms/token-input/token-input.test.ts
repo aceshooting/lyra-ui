@@ -14,6 +14,11 @@ function tokenLabels(el: LyraTokenInput): HTMLElement[] {
     el.shadowRoot!.querySelectorAll('[part="token-label"]')
   ) as HTMLElement[];
 }
+function tokenLabel(el: LyraTokenInput, index: number): HTMLElement {
+  const label = tokenLabels(el)[index];
+  if (!label) throw new Error(`Missing token label at index ${index}.`);
+  return label;
+}
 function editor(el: LyraTokenInput): HTMLInputElement | null {
   return el.shadowRoot!.querySelector(
     '[part="token-editor"]'
@@ -168,7 +173,7 @@ it("contains composed inline-editor events while relaying its public focus lifec
     <div><lr-token-input editable .value=${["alpha"]}></lr-token-input></div>
   `)) as HTMLDivElement;
   const el = parent.querySelector("lr-token-input") as LyraTokenInput;
-  tokenLabels(el)[0]!.click();
+  tokenLabel(el, 0).click();
   await el.updateComplete;
   const field = editor(el)!;
   let inputs = 0;
@@ -236,7 +241,7 @@ it("relays an inline-editor focus and blur once through the host", async () => {
   parent.addEventListener("focus", (event) => lifecycleEvents.push(event));
   parent.addEventListener("blur", (event) => lifecycleEvents.push(event));
 
-  tokenLabels(el)[0]!.click();
+  tokenLabel(el, 0).click();
   await el.updateComplete;
   outside.focus();
   await Promise.resolve();
@@ -1029,7 +1034,7 @@ it("forwards editing-assistance attributes to the draft input and inline token e
   expect(draft.getAttribute("autocapitalize")).to.equal("off");
   expect(draft.getAttribute("autocorrect")).to.equal("off");
 
-  tokenLabels(el)[0].click();
+  tokenLabel(el, 0).click();
   await el.updateComplete;
   const tokenEditor = editor(el)!;
   expect(tokenEditor.spellcheck).to.be.false;
@@ -1067,7 +1072,7 @@ it('renders the explicit "on" attribute vocabulary on both the draft input and a
     'an explicit markup attribute must render the "on" value, not omit the attribute'
   ).to.equal('on');
 
-  tokenLabels(el)[0].click();
+  tokenLabel(el, 0).click();
   await el.updateComplete;
   expect(editor(el)!.getAttribute('autocorrect')).to.equal('on');
 });
@@ -1619,7 +1624,7 @@ describe("editable tokens", () => {
     const el = (await fixture(
       html`<lr-token-input editable .value=${[RULE]}></lr-token-input>`
     )) as LyraTokenInput;
-    const [label] = tokenLabels(el);
+    const label = tokenLabel(el, 0);
     expect(label.textContent).to.equal(RULE);
     label.click();
     await el.updateComplete;
@@ -1639,7 +1644,7 @@ describe("editable tokens", () => {
       html`<lr-token-input editable .value=${["alpha"]}></lr-token-input>`
     )) as LyraTokenInput;
     for (const key of ["Enter", " ", "F2"]) {
-      const event = press(tokenLabels(el)[0], key);
+      const event = press(tokenLabel(el, 0), key);
       await el.updateComplete;
       expect(editor(el) != null, `${key} must open the editor`).to.equal(true);
       expect(event.defaultPrevented, `${key} must not also scroll or submit`).to
@@ -1653,7 +1658,7 @@ describe("editable tokens", () => {
     const el = (await fixture(
       html`<lr-token-input editable .value=${[RULE, "other"]}></lr-token-input>`
     )) as LyraTokenInput;
-    tokenLabels(el)[0].click();
+    tokenLabel(el, 0).click();
     await el.updateComplete;
     const field = editor(el)!;
     typeInto(field, "Bash(git diff:*)");
@@ -1679,7 +1684,7 @@ describe("editable tokens", () => {
     const el = (await fixture(
       html`<lr-token-input editable .value=${[RULE, "other"]}></lr-token-input>`
     )) as LyraTokenInput;
-    tokenLabels(el)[0].click();
+    tokenLabel(el, 0).click();
     await el.updateComplete;
     const field = editor(el)!;
     typeInto(field, "Bash(git diff:*)");
@@ -1704,7 +1709,7 @@ describe("editable tokens", () => {
     const el = (await fixture(
       html`<lr-token-input editable .value=${["alpha"]}></lr-token-input>`
     )) as LyraTokenInput;
-    tokenLabels(el)[0].click();
+    tokenLabel(el, 0).click();
     await el.updateComplete;
     const field = editor(el)!;
     let changes = 0;
@@ -1725,7 +1730,7 @@ describe("editable tokens", () => {
     const el = (await fixture(
       html`<lr-token-input editable .value=${["alpha"]}></lr-token-input>`
     )) as LyraTokenInput;
-    tokenLabels(el)[0].click();
+    tokenLabel(el, 0).click();
     await el.updateComplete;
     const field = editor(el)!;
     typeInto(field, "beta");
@@ -1766,7 +1771,7 @@ describe("editable tokens", () => {
     const el = (await fixture(
       html`<lr-token-input editable .value=${["alpha"]}></lr-token-input>`
     )) as LyraTokenInput;
-    tokenLabels(el)[0].click();
+    tokenLabel(el, 0).click();
     await el.updateComplete;
     typeInto(editor(el)!, "beta");
     const main = el.shadowRoot!.querySelector("#input") as HTMLInputElement;
@@ -1792,7 +1797,7 @@ describe("editable tokens", () => {
     const el = (await fixture(
       html`<lr-token-input editable .value=${["alpha"]}></lr-token-input>`
     )) as LyraTokenInput;
-    tokenLabels(el)[0].click();
+    tokenLabel(el, 0).click();
     await el.updateComplete;
     typeInto(editor(el)!, "beta");
     let emitted = 0;
@@ -1821,7 +1826,7 @@ describe("editable tokens", () => {
     for (const name of ["input", "change", "lr-token-edit"])
       el.addEventListener(name, () => emitted++);
 
-    tokenLabels(el)[0].click();
+    tokenLabel(el, 0).click();
     await el.updateComplete;
     typeInto(editor(el)!, "fieldset-edit");
     fieldset.disabled = true;
@@ -1831,7 +1836,7 @@ describe("editable tokens", () => {
 
     fieldset.disabled = false;
     await el.updateComplete;
-    tokenLabels(el)[0].click();
+    tokenLabel(el, 0).click();
     await el.updateComplete;
     typeInto(editor(el)!, "disconnect-edit");
     typeInto(
@@ -1860,7 +1865,7 @@ describe("editable tokens", () => {
     el.addEventListener("change", () => changes++);
     typeInto(main, "gamma");
     main.dispatchEvent(new Event("blur"));
-    tokenLabels(el)[0].click();
+    tokenLabel(el, 0).click();
     await el.updateComplete;
     expect(el.value).to.deep.equal(["alpha", "gamma"]);
     expect(
@@ -1874,7 +1879,7 @@ describe("editable tokens", () => {
     const el = (await fixture(
       html`<lr-token-input editable .value=${["alpha"]}></lr-token-input>`
     )) as LyraTokenInput;
-    tokenLabels(el)[0].click();
+    tokenLabel(el, 0).click();
     await el.updateComplete;
     const field = editor(el)!;
     let emitted = 0;
@@ -1896,7 +1901,7 @@ describe("editable tokens", () => {
     const el = (await fixture(
       html`<lr-token-input editable .value=${["alpha"]}></lr-token-input>`
     )) as LyraTokenInput;
-    tokenLabels(el)[0].click();
+    tokenLabel(el, 0).click();
     await el.updateComplete;
     let outer = 0;
     const onKeyDown = (): void => void outer++;
@@ -1916,7 +1921,7 @@ describe("editable tokens", () => {
         .value=${["alpha", "beta"]}
       ></lr-token-input>`
     )) as LyraTokenInput;
-    tokenLabels(el)[1].click();
+    tokenLabel(el, 1).click();
     await el.updateComplete;
     let emitted = 0;
     for (const name of ["input", "change", "lr-token-edit"])
@@ -1933,7 +1938,7 @@ describe("editable tokens", () => {
 
     el.allowDuplicates = true;
     await el.updateComplete;
-    tokenLabels(el)[1].click();
+    tokenLabel(el, 1).click();
     await el.updateComplete;
     typeInto(editor(el)!, "alpha");
     press(editor(el)!, "Enter");
@@ -1945,7 +1950,7 @@ describe("editable tokens", () => {
     const el = (await fixture(
       html`<lr-token-input editable .value=${["alpha"]}></lr-token-input>`
     )) as LyraTokenInput;
-    tokenLabels(el)[0].click();
+    tokenLabel(el, 0).click();
     await el.updateComplete;
     typeInto(editor(el)!, "   ");
     press(editor(el)!, "Enter");
@@ -1962,9 +1967,9 @@ describe("editable tokens", () => {
       0, -1, -1,
     ]);
 
-    press(tokenLabels(el)[0], "ArrowRight");
+    press(tokenLabel(el, 0), "ArrowRight");
     await el.updateComplete;
-    press(tokenLabels(el)[1], "ArrowRight");
+    press(tokenLabel(el, 1), "ArrowRight");
     await el.updateComplete;
     expect(tokenLabels(el).map((label) => label.tabIndex)).to.deep.equal([
       -1, -1, 0,
@@ -1986,14 +1991,14 @@ describe("editable tokens", () => {
         .value=${['alpha', 'beta', 'gamma']}
       ></lr-token-input>
     `)) as LyraTokenInput;
-    tokenLabels(el)[2]!.focus();
-    expect(el.shadowRoot!.activeElement === tokenLabels(el)[2]).to.equal(true);
+    tokenLabel(el, 2).focus();
+    expect(el.shadowRoot!.activeElement === tokenLabel(el, 2)).to.equal(true);
 
     el.value = ['alpha', 'beta'];
     await el.updateComplete;
 
-    expect(el.shadowRoot!.activeElement === tokenLabels(el)[1]).to.equal(true);
-    expect(tokenLabels(el)[1]!.textContent).to.equal('beta');
+    expect(el.shadowRoot!.activeElement === tokenLabel(el, 1)).to.equal(true);
+    expect(tokenLabel(el, 1).textContent).to.equal('beta');
   });
 
   it('moves real focus to the nearest remove action when a pristine default shrinks', async () => {
@@ -2020,8 +2025,8 @@ describe("editable tokens", () => {
     const el = (await fixture(html`
       <lr-token-input editable .value=${['alpha', 'beta']}></lr-token-input>
     `)) as LyraTokenInput;
-    tokenLabels(el)[1]!.focus();
-    expect(el.shadowRoot!.activeElement === tokenLabels(el)[1]).to.equal(true);
+    tokenLabel(el, 1).focus();
+    expect(el.shadowRoot!.activeElement === tokenLabel(el, 1)).to.equal(true);
 
     // Both synchronous, same task: the shrink captures a 'label' repair target, then editable
     // turns off before that repair is applied in `updated()`, so no token-label part exists
@@ -2051,7 +2056,7 @@ describe("editable tokens", () => {
     `);
     const el = wrapper.querySelector('lr-token-input') as LyraTokenInput;
     const outside = wrapper.querySelector('button')!;
-    tokenLabels(el)[1]!.focus();
+    tokenLabel(el, 1).focus();
 
     el.value = ['alpha'];
     outside.focus();
@@ -2068,12 +2073,12 @@ describe("editable tokens", () => {
     `);
     const el = wrapper.querySelector("lr-token-input") as LyraTokenInput;
     await el.updateComplete;
-    press(tokenLabels(el)[0], "ArrowLeft");
+    press(tokenLabel(el, 0), "ArrowLeft");
     await el.updateComplete;
     expect(tokenLabels(el).map((label) => label.tabIndex)).to.deep.equal([
       -1, 0,
     ]);
-    press(tokenLabels(el)[1], "ArrowRight");
+    press(tokenLabel(el, 1), "ArrowRight");
     await el.updateComplete;
     expect(tokenLabels(el).map((label) => label.tabIndex)).to.deep.equal([
       0, -1,
@@ -2084,13 +2089,13 @@ describe("editable tokens", () => {
     const el = (await fixture(
       html`<lr-token-input editable .value=${["a", "b", "c"]}></lr-token-input>`
     )) as LyraTokenInput;
-    press(tokenLabels(el)[0], "ArrowRight");
+    press(tokenLabel(el, 0), "ArrowRight");
     await el.updateComplete;
     expect(tokenLabels(el).map((label) => label.tabIndex)).to.deep.equal([
       -1, 0, -1,
     ]);
 
-    const back = press(tokenLabels(el)[1], "ArrowLeft");
+    const back = press(tokenLabel(el, 1), "ArrowLeft");
     await el.updateComplete;
     expect(back.defaultPrevented).to.be.true;
     expect(tokenLabels(el).map((label) => label.tabIndex)).to.deep.equal([
@@ -2098,7 +2103,7 @@ describe("editable tokens", () => {
     ]);
     expect(el.shadowRoot!.activeElement!.textContent).to.equal("a");
 
-    const end = press(tokenLabels(el)[0], "End");
+    const end = press(tokenLabel(el, 0), "End");
     await el.updateComplete;
     expect(end.defaultPrevented).to.be.true;
     expect(tokenLabels(el).map((label) => label.tabIndex)).to.deep.equal([
@@ -2106,7 +2111,7 @@ describe("editable tokens", () => {
     ]);
     expect(el.shadowRoot!.activeElement!.textContent).to.equal("c");
 
-    const home = press(tokenLabels(el)[2], "Home");
+    const home = press(tokenLabel(el, 2), "Home");
     await el.updateComplete;
     expect(home.defaultPrevented).to.be.true;
     expect(tokenLabels(el).map((label) => label.tabIndex)).to.deep.equal([
@@ -2129,17 +2134,17 @@ describe("editable tokens", () => {
     expect(
       tokenLabels(el).map((label) => label.getAttribute("aria-disabled"))
     ).to.deep.equal(["true", "true"]);
-    tokenLabels(el)[0].focus();
+    tokenLabel(el, 0).focus();
     expect(
       el.shadowRoot!.activeElement?.getAttribute("part") ?? ""
     ).to.not.equal("token-label");
-    press(tokenLabels(el)[0], "Enter");
+    press(tokenLabel(el, 0), "Enter");
     await el.updateComplete;
     expect(
       editor(el) === null,
       "Enter must not open an editor while disabled"
     ).to.equal(true);
-    press(tokenLabels(el)[0], "ArrowRight");
+    press(tokenLabel(el, 0), "ArrowRight");
     await el.updateComplete;
     expect(
       tokenLabels(el).map((label) => label.hasAttribute("tabindex"))
@@ -2154,7 +2159,7 @@ describe("editable tokens", () => {
       tokenLabels(el).map((label) => label.getAttribute("aria-disabled"))
     ).to.deep.equal(["false", "false"]);
 
-    tokenLabels(el)[1].focus();
+    tokenLabel(el, 1).focus();
     await el.updateComplete;
     el.disabled = true;
     await el.updateComplete;
@@ -2176,7 +2181,7 @@ describe("editable tokens", () => {
     `)) as HTMLFormElement;
     const fieldset = form.querySelector("fieldset") as HTMLFieldSetElement;
     const el = form.querySelector("lr-token-input") as LyraTokenInput;
-    tokenLabels(el)[1].focus();
+    tokenLabel(el, 1).focus();
     await el.updateComplete;
 
     fieldset.disabled = true;
@@ -2209,7 +2214,7 @@ describe("editable tokens", () => {
         .value=${["alpha"]}
       ></lr-token-input>
     `)) as LyraTokenInput;
-    const label = tokenLabels(el)[0];
+    const label = tokenLabel(el, 0);
     const rect = label.getBoundingClientRect();
     try {
       await sendMouse({
@@ -2247,7 +2252,7 @@ describe("editable tokens", () => {
         .value=${["alpha"]}
       ></lr-token-input>
     `)) as LyraTokenInput;
-    const label = tokenLabels(el)[0];
+    const label = tokenLabel(el, 0);
     let remove = el.shadowRoot!.querySelector('[part="remove"]') as HTMLElement;
     const center = (target: HTMLElement): [number, number] => {
       const rect = target.getBoundingClientRect();
@@ -2302,7 +2307,7 @@ describe("editable tokens", () => {
         .value=${["alpha", "beta", "gamma"]}
       ></lr-token-input>`
     )) as LyraTokenInput;
-    tokenLabels(el)[1].click(); // open the editor on 'beta'
+    tokenLabel(el, 1).click(); // open the editor on 'beta'
     await el.updateComplete;
     typeInto(editor(el)!, "uncommitted-edit");
     const removeButtons = el.shadowRoot!.querySelectorAll('[part="remove"]');
@@ -2322,7 +2327,7 @@ describe("editable tokens", () => {
     const el = (await fixture(
       html`<lr-token-input editable .value=${["alpha"]}></lr-token-input>`
     )) as LyraTokenInput;
-    tokenLabels(el)[0].click();
+    tokenLabel(el, 0).click();
     await el.updateComplete;
     const field = editor(el)!;
     press(field, "Escape"); // closes the editor (state updates synchronously; DOM not yet re-rendered)
@@ -2343,7 +2348,7 @@ describe("editable tokens", () => {
     const el = (await fixture(
       html`<lr-token-input editable .value=${["alpha"]}></lr-token-input>`
     )) as LyraTokenInput;
-    const label = tokenLabels(el)[0];
+    const label = tokenLabel(el, 0);
     const removeBtn = el.shadowRoot!.querySelector(
       '[part="remove"]'
     ) as HTMLButtonElement;
@@ -2361,7 +2366,7 @@ describe("editable tokens", () => {
     const el = (await fixture(
       html`<lr-token-input editable .value=${["alpha"]}></lr-token-input>`
     )) as LyraTokenInput;
-    const label = tokenLabels(el)[0];
+    const label = tokenLabel(el, 0);
     el.value = []; // synchronous mutation; the stale `label` node is still live in the shadow DOM
     press(label, "ArrowRight"); // must not throw or resurrect a roving index into an empty list
     await el.updateComplete;
@@ -2376,7 +2381,7 @@ describe("editable tokens", () => {
         .value=${["alpha", "beta"]}
       ></lr-token-input>`
     )) as LyraTokenInput;
-    tokenLabels(el)[0].click();
+    tokenLabel(el, 0).click();
     await el.updateComplete;
     typeInto(editor(el)!, "");
     press(editor(el)!, "Backspace");
@@ -2392,7 +2397,7 @@ describe("editable tokens", () => {
         .value=${["alpha"]}
       ></lr-token-input>`
     )) as LyraTokenInput;
-    tokenLabels(el)[0].click();
+    tokenLabel(el, 0).click();
     await el.updateComplete;
     expect(editor(el) != null).to.equal(true);
     typeInto(editor(el)!, "beta");
@@ -2415,7 +2420,7 @@ describe("editable tokens", () => {
         .value=${["alpha"]}
       ></lr-token-input>`
     )) as LyraTokenInput;
-    tokenLabels(el)[0].click();
+    tokenLabel(el, 0).click();
     await el.updateComplete;
     expect(editor(el) === null).to.equal(true);
   });
@@ -2424,7 +2429,7 @@ describe("editable tokens", () => {
     const el = (await fixture(
       html`<lr-token-input editable .value=${['alpha']}></lr-token-input>`
     )) as LyraTokenInput;
-    tokenLabels(el)[0].click();
+    tokenLabel(el, 0).click();
     await el.updateComplete;
     const field = editor(el)!;
     typeInto(field, 'beta');
@@ -2446,7 +2451,7 @@ describe("editable tokens", () => {
     const el = (await fixture(
       html`<lr-token-input editable .value=${['alpha']}></lr-token-input>`
     )) as LyraTokenInput;
-    tokenLabels(el)[0].click();
+    tokenLabel(el, 0).click();
     await el.updateComplete;
     const field = editor(el)!;
     let relayed = 0;
@@ -2465,7 +2470,7 @@ describe("editable tokens", () => {
     const el = (await fixture(
       html`<lr-token-input editable .value=${['alpha']}></lr-token-input>`
     )) as LyraTokenInput;
-    tokenLabels(el)[0].click();
+    tokenLabel(el, 0).click();
     await el.updateComplete;
     const field = editor(el)!;
     let hostFocuses = 0;
@@ -2483,12 +2488,12 @@ describe("editable tokens", () => {
     const el = (await fixture(
       html`<lr-token-input editable .value=${["alpha"]}></lr-token-input>`
     )) as LyraTokenInput;
-    expect(tokenLabels(el)[0].getAttribute("aria-label")).to.equal(
+    expect(tokenLabel(el, 0).getAttribute("aria-label")).to.equal(
       "Edit alpha"
     );
     el.strings = { tokenInputEditWithContext: "Modifier {label}" };
     await el.updateComplete;
-    expect(tokenLabels(el)[0].getAttribute("aria-label")).to.equal(
+    expect(tokenLabel(el, 0).getAttribute("aria-label")).to.equal(
       "Modifier alpha"
     );
   });
@@ -2501,7 +2506,7 @@ describe("editable tokens", () => {
         .value=${[RULE, "other"]}
       ></lr-token-input>`
     )) as LyraTokenInput;
-    tokenLabels(el)[0].click();
+    tokenLabel(el, 0).click();
     await el.updateComplete;
     expect(
       editor(el) != null,

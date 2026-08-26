@@ -1,3 +1,5 @@
+import { isMainModule } from './is-main-module.mjs';
+
 // Part-reachability checker: three static rules over src/components that catch `::part()`-related
 // CSS which parses fine, ships fine, and never matches anything. All three bug classes are invisible
 // to tsc, to the style policy, and to any test that inspects stylesheet *text* rather than the
@@ -610,7 +612,6 @@ function run() {
   }
 }
 
-const isMain = process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url));
-if (isMain) run();
+if (isMainModule(import.meta.url)) run();
 
 export { run, stripJsComments };

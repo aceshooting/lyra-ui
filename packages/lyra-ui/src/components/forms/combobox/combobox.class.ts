@@ -22,6 +22,7 @@ import { submitOnEnter } from '../../../internal/submit-on-enter.js';
 import { finiteCount, finiteDuration } from '../../../internal/numbers.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
+import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { styles } from './combobox.styles.js';
 import type { LyraOption } from './option.class.js';
 import './option.class.js';
@@ -182,7 +183,7 @@ export type ComboboxSource = (
   query: string,
   options: { signal: AbortSignal; limit: number }
 ) => Promise<readonly ComboboxSourceRow[] | ComboboxSourceResult>;
-export type LyraComboboxSelectionDirection = 'forward' | 'backward' | 'none';
+export type LyraComboboxSelectionDirection = LyraSelectionDirection;
 
 const MAX_SOURCE_ROWS = 2_000;
 const MAX_SOURCE_TEXT_UNITS = 250_000;
@@ -706,6 +707,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   private _sourceWarmed = false;
   private _selectedLabelCache = new Map<string, string>();
   private _selectedRowCache = new Map<string, ComboboxSourceRow>();
+  /** A structured selection assigned before local options or async rows became available. */
+  private pendingSelectedRowValues?: string[];
   // Rebuilt once per render (in render(), before renderRows()) from the
   // currently-visible row set -- backs the delegated listbox click/mousedown
   // handlers' data-value lookup below, instead of each option row closing
@@ -1044,7 +1047,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     if (
       !this._sourceWarmed &&
       this.source &&
-      this._selected.length &&
+      (this._selected.length > 0 ||
+        (this.pendingSelectedRowValues?.length ?? 0) > 0) &&
       this.asyncRows.length === 0
     ) {
       this._sourceWarmed = true;
@@ -1209,7 +1213,12 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     return this._sourceTruncated;
   }
 
-  /** Structured rows corresponding to the current selection, including opaque async-row data. */
+  /** Structured rows corresponding to the current selection, including opaque async-row data.
+   * Assigning rows from the current local or async source maps their stable `value` fields back to
+   * controlled selection. Detached values are ignored, duplicates collapse, single mode keeps the
+   * first row, and the write is silent like `value`. A property binding that arrives before local
+   * options or async rows is deferred until that source resolves. Read rows remain detached
+   * snapshots. */
   get selectedRows(): ComboboxSourceRow[] {
     return this._selected
       .map(
@@ -1220,6 +1229,34 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       )
       .filter((row): row is ComboboxSourceRow => row != null)
       .map((row) => ({ ...row }));
+  }
+
+  set selectedRows(next: readonly ComboboxSourceRow[]) {
+    const values: string[] = [];
+    const seen = new Set<string>();
+    if (Array.isArray(next)) {
+      for (const candidate of next) {
+        let value: unknown;
+        try {
+          value = candidate?.value;
+        } catch {
+          continue;
+        }
+        if (typeof value !== 'string' || seen.has(value)) continue;
+        seen.add(value);
+        values.push(value);
+      }
+    }
+    if (values.length > 0 && this.selectionSourceRows.length === 0) {
+      this.pendingSelectedRowValues = values;
+      if (this.source && this.isConnected) {
+        this._sourceWarmed = true;
+        this.runSource('');
+      }
+      return;
+    }
+    this.pendingSelectedRowValues = undefined;
+    this.applySelectedRowValues(values);
   }
 
   /** Shared with every other form control: disabled (own or fieldset-cascaded) bars validation. */
@@ -1557,6 +1594,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     // lazily on the next render rather than serving a stale adornment.
     this.adornmentClones = new WeakMap();
     this.normalizeActiveIndex();
+    this.applyPendingSelectedRows();
     if (!this._defaultCaptured) {
       this._defaultCaptured = true;
       // Seed the initial selection — and the reset default — from
@@ -1738,21 +1776,57 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     return resolved;
   }
 
+  private rowForOption(option: LyraOption): ComboboxSourceRow {
+    const adornments = this.adornmentsFor(option);
+    return {
+      value: option.value,
+      label: option.label,
+      sub: option.sub || undefined,
+      dotColor: option.dotColor || undefined,
+      group: option.group || undefined,
+      disabled: option.disabled,
+      ...(adornments.start === undefined ? {} : { start: adornments.start }),
+      ...(adornments.end === undefined ? {} : { end: adornments.end }),
+    };
+  }
+
+  private get selectionSourceRows(): ComboboxSourceRow[] {
+    return this.source
+      ? this.asyncRows
+      : this.options.map((option) => this.rowForOption(option));
+  }
+
+  private applySelectedRowValues(values: readonly string[]): void {
+    const rowsByValue = new Map<string, ComboboxSourceRow>();
+    for (const row of this.selectionSourceRows) {
+      if (!rowsByValue.has(row.value)) rowsByValue.set(row.value, row);
+    }
+    const rows = values
+      .map((value) => rowsByValue.get(value))
+      .filter((row): row is ComboboxSourceRow => row !== undefined);
+    const limited = this.multiple ? rows : rows.slice(0, 1);
+    this.value = this.multiple
+      ? limited.map((row) => row.value)
+      : limited[0]?.value ?? '';
+    for (const row of limited) this._selectedRowCache.set(row.value, row);
+  }
+
+  private applyPendingSelectedRows(acceptEmptySource = false): boolean {
+    if (
+      this.pendingSelectedRowValues === undefined ||
+      (!acceptEmptySource && this.selectionSourceRows.length === 0)
+    ) {
+      return false;
+    }
+    const values = this.pendingSelectedRowValues;
+    this.pendingSelectedRowValues = undefined;
+    this.applySelectedRowValues(values);
+    return true;
+  }
+
   private get effectiveRows(): ComboboxSourceRow[] {
     if (this.source) return this.asyncRows;
-    return this.filtered.map((o) => {
-      const adornments = this.adornmentsFor(o);
-      return {
-        value: o.value,
-        label: o.label,
-        sub: o.sub || undefined,
-        dotColor: o.dotColor || undefined,
-        group: o.group || undefined,
-        disabled: o.disabled,
-        ...(adornments.start === undefined ? {} : { start: adornments.start }),
-        ...(adornments.end === undefined ? {} : { end: adornments.end }),
-      };
-    });
+    return this.filtered.map((option) => this.rowForOption(option));
   }
 
   /** Synthetic action shown only when the current nonempty query has no exact label/value match. */
@@ -2406,6 +2480,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
           this.asyncRows = normalized.rows;
           this.sourceFailed = false;
           this.normalizeActiveIndex();
+          this.applyPendingSelectedRows(true);
           const selected = new Set(this._selected);
           for (const row of normalized.rows) {
             if (selected.has(row.value))

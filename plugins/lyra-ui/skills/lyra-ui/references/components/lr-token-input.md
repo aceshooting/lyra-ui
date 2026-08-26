@@ -6,6 +6,7 @@
 - **Class** `LyraTokenInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/token-input/token-input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -15,9 +16,10 @@
 
 ## `lr-token-input`
 
-An editable form-associated token list. Enter, comma, or blur commits a token; Backspace removes
-the last token. `value` is a readonly owned `readonly string[]` snapshot and repeated values are
-submitted under `name`; mutate a new array and reassign it to change the list.
+An editable form-associated token list. Enter, comma, Tab, or blur commits a token; Tab is not
+prevented, so focus still advances normally. Backspace removes the last token. `value` is a
+readonly owned `readonly string[]` snapshot and repeated values are submitted under `name`; mutate
+a new array and reassign it to change the list.
 
 **Properties:** live, non-reflecting `value`, reflected `defaultValue` (attribute `value`, encoded
 as a JSON string array), `customError` (`custom-error`), `label`, `hint`, `errorText`

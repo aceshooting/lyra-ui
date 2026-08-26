@@ -377,6 +377,11 @@ class LyraNotebookViewerBase extends LyraElement<LyraNotebookViewerEventMap> {}
  * Sanitizing raw HTML/SVG
  * output markup lazy-loads the optional peer dependency `dompurify` via `dompurify-loader.ts`; when
  * that peer isn't installed, the output renders a localized notice instead of raw markup.
+ * Sanitized `text/html` output uses the passive-document profile: anchors, form controls, and
+ * custom elements are unwrapped to ordinary text/children where safe, remote navigation/resource
+ * attributes are removed, and only inline base64 raster image sources render. Sanitized
+ * `image/svg+xml` output is likewise network-silent and non-interactive: animation is removed and
+ * only same-document fragment references or inline base64 raster image references survive.
  *
  * Cells are virtualized through `<lr-virtual-list>` so a notebook with many cells stays cheap to
  * scroll. `node-path` anchors resolve `path[0]` as a cell index; `fragment` anchors resolve a cell's
@@ -1008,7 +1013,14 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     }
     if (data['application/json']) {
       const parsed = typeof data['application/json'] === 'string' ? JSON.parse(joinText(data['application/json'])) : data['application/json'];
-      return html`<div part="output" data-output-type=${output.output_type}><lr-json-viewer .data=${parsed} collapsed-depth="1"></lr-json-viewer></div>`;
+      return html`<div part="output" data-output-type=${output.output_type}><lr-json-viewer
+        .data=${parsed}
+        collapsed-depth="1"
+        @lr-copy=${this.stopOwnedEvent}
+        @lr-error=${this.stopOwnedEvent}
+        @lr-copy-error=${this.stopOwnedEvent}
+        @lr-search-change=${this.stopOwnedEvent}
+      ></lr-json-viewer></div>`;
     }
     if (data['text/plain']) return this.renderTextOutput(key, joinText(data['text/plain']));
     return html`<div part="output" data-output-type=${output.output_type}>${this.localize('notebookViewerUnrenderedOutput')}</div>`;
@@ -1116,9 +1128,28 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
       <div part="cell-gutter">${c.cell_type === 'code' ? inCount : ''}</div>
       <div part="cell-source">
         ${c.cell_type === 'markdown'
-          ? html`<lr-markdown .content=${joinSource(c.source)} html-mode="sanitize"></lr-markdown>`
+          ? html`<lr-markdown
+              .content=${joinSource(c.source)}
+              html-mode="sanitize"
+              @lr-render-error=${this.stopOwnedEvent}
+              @lr-link-click=${this.stopOwnedEvent}
+              @lr-highlight-activate=${this.stopOwnedEvent}
+              @lr-text-select=${this.stopOwnedEvent}
+              @lr-anchor-result=${this.stopOwnedEvent}
+            ></lr-markdown>`
           : c.cell_type === 'code'
-            ? html`<lr-code-block .code=${joinSource(c.source)} language=${this.notebookLanguage()} line-numbers></lr-code-block>`
+            ? html`<lr-code-block
+                .code=${joinSource(c.source)}
+                language=${this.notebookLanguage()}
+                line-numbers
+                @lr-copy=${this.stopOwnedEvent}
+                @lr-error=${this.stopOwnedEvent}
+                @lr-copy-error=${this.stopOwnedEvent}
+                @lr-toggle-request=${this.stopOwnedEvent}
+                @lr-toggle=${this.stopOwnedEvent}
+                @lr-line-activate=${this.stopOwnedEvent}
+                @lr-text-select=${this.stopOwnedEvent}
+              ></lr-code-block>`
             : html`<pre part="raw-source" tabindex="0">${joinSource(c.source)}</pre>`}
         ${c.cell_type === 'code' && c.outputs?.length
           ? html`<div part="outputs">${c.outputs.map((o, i) => this.renderOutput(index, o, i))}</div>`
@@ -1133,7 +1164,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
       : '';
   }
 
-  private stopVirtualListEvent(event: Event): void {
+  private stopOwnedEvent(event: Event): void {
     event.stopPropagation();
   }
 
@@ -1155,8 +1186,8 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
             .renderItem=${this.renderCell}
             .keyFunction=${(item: unknown, i: number) => (item as NotebookCell).id ?? i}
             .activeItemId=${this.activeCellIndex ?? ''}
-            @lr-visible-range-change=${this.stopVirtualListEvent}
-            @lr-virtual-scroll=${this.stopVirtualListEvent}
+            @lr-visible-range-change=${this.stopOwnedEvent}
+            @lr-virtual-scroll=${this.stopOwnedEvent}
           ></lr-virtual-list>`
         : this.loadState.kind === 'loading'
           ? renderViewerLoading(this.localize('loadingDocument'))

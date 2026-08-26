@@ -6,6 +6,7 @@
 - **Class** `LyraNodePalette`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/node-palette/node-palette.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 10 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -23,11 +24,15 @@ with a `droppable` canvas on the `FLOW_PALETTE_MIME_TYPE` drag payload shape.
 
 **Properties:**
 
-- `items: PaletteItem[] = []` (attribute: false) — `PaletteItem { type: string; label: string;
+- `items: LyraPaletteItem[] = []` (attribute: false) — `LyraPaletteItem { type: string; label: string;
 description?: string; category?: string; keywords?: string[]; icon?: unknown; disabled?: boolean }`;
   `type` is the `FlowNode.type` a placement/drop creates, `category` groups items under
-  first-appearance-ordered headings, `disabled` renders an item visible but not draggable/placeable
-- `label: string = ''` — accessible name for the search field/listbox
+  first-appearance-ordered headings, `disabled` renders an item visible but not draggable/placeable.
+  A non-array value is treated as empty. Rows require nonblank string `type` and `label` values;
+  malformed optional `description`, `category`, `keywords`, or `disabled` values omit only that row,
+  preserving later valid entries
+- `label?: string` — accessible name for the search field/listbox; omission uses the localized
+  palette label, while an explicit empty string stays empty
 - `reorderable: boolean = false` (reflected) — opts into Ctrl/Cmd+ArrowUp/ArrowDown keyboard
   reordering of the catalog. Unset, no `lr-reorder` is ever emitted and Ctrl/Cmd+Arrow keeps
   behaving exactly like a plain Arrow press

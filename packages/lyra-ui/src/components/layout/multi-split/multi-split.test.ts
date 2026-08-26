@@ -5,6 +5,7 @@ import {
   elementUpdated,
   oneEvent,
 } from "@open-wc/testing";
+import { sendMouse } from '@web/test-runner-commands';
 import "./multi-split.js";
 import type { LyraMultiSplit } from "./multi-split.js";
 import { styles } from "./multi-split.styles.js";
@@ -160,7 +161,7 @@ function installMatchMediaStub(initialWidth: number): {
 
   window.matchMedia = ((query: string) => {
     const match = /\(max-width:\s*([\d.]+)px\)/.exec(query);
-    const max = match ? Number.parseFloat(match[1]) : Number.NaN;
+    const max = match ? Number.parseFloat(match[1]!) : Number.NaN;
     const entry = {
       media: query,
       max,
@@ -264,15 +265,15 @@ it("resizes via keyboard on a divider and emits lr-resize", async () => {
     '[part="divider"]'
   ) as HTMLElement;
   expect(divider.getAttribute("role")).to.equal("separator");
-  const before = el.sizes[0];
+  const before = el.sizes[0]!;
   let detail: { sizes: number[] } | undefined;
   el.addEventListener("lr-resize", (e) => (detail = (e as CustomEvent).detail));
   divider.dispatchEvent(
     new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
   );
   await elementUpdated(el);
-  expect(el.sizes[0]).to.be.greaterThan(before);
-  expect(detail!.sizes[0]).to.equal(el.sizes[0]);
+  expect(el.sizes[0]!).to.be.greaterThan(before);
+  expect(detail!.sizes[0]!).to.equal(el.sizes[0]!);
 });
 
 it("emits a cancelable resize request before the committed event and keeps direct sizes assignments silent", async () => {
@@ -417,19 +418,19 @@ it('mirrors ArrowRight/ArrowLeft under dir="rtl", since panels reorder visually 
   const divider = el.shadowRoot!.querySelector(
     '[part="divider"]'
   ) as HTMLElement;
-  const before = el.sizes[0];
+  const before = el.sizes[0]!;
 
   divider.dispatchEvent(
     new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
   );
   await elementUpdated(el);
-  expect(el.sizes[0]).to.be.lessThan(before);
+  expect(el.sizes[0]!).to.be.lessThan(before);
 
   divider.dispatchEvent(
     new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
   );
   await elementUpdated(el);
-  expect(el.sizes[0]).to.equal(before);
+  expect(el.sizes[0]!).to.equal(before);
 });
 
 it('does not swap ArrowUp/ArrowDown for vertical orientation under dir="rtl" (direction only affects the horizontal inline axis)', async () => {
@@ -443,12 +444,12 @@ it('does not swap ArrowUp/ArrowDown for vertical orientation under dir="rtl" (di
   const divider = el.shadowRoot!.querySelector(
     '[part="divider"]'
   ) as HTMLElement;
-  const before = el.sizes[0];
+  const before = el.sizes[0]!;
   divider.dispatchEvent(
     new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
   );
   await elementUpdated(el);
-  expect(el.sizes[0]).to.be.greaterThan(before);
+  expect(el.sizes[0]!).to.be.greaterThan(before);
 });
 
 it('mirrors pointer-drag direction under dir="rtl" so it grows the panel under the pointer', async () => {
@@ -469,7 +470,7 @@ it('mirrors pointer-drag direction under dir="rtl" so it grows the panel under t
   });
   divider.setPointerCapture = () => {};
 
-  const before = el.sizes[0];
+  const before = el.sizes[0]!;
   divider.dispatchEvent(
     new PointerEvent("pointerdown", {
       bubbles: true,
@@ -482,7 +483,7 @@ it('mirrors pointer-drag direction under dir="rtl" so it grows the panel under t
   window.dispatchEvent(
     new PointerEvent("pointermove", { pointerId: 1, clientX: 150 })
   );
-  expect(el.sizes[0]).to.be.lessThan(before);
+  expect(el.sizes[0]!).to.be.lessThan(before);
   window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
 });
 
@@ -515,7 +516,7 @@ it("ignores secondary mouse and pen button drags while keeping concurrent touch 
     { pointerId: 94, pointerType: "mouse", button: 2 },
     { pointerId: 95, pointerType: "pen", button: 2 },
   ]) {
-    dividers[0].dispatchEvent(
+    dividers[0]!.dispatchEvent(
       new PointerEvent("pointerdown", {
         bubbles: true,
         pointerId,
@@ -532,7 +533,7 @@ it("ignores secondary mouse and pen button drags while keeping concurrent touch 
   expect(el.sizes).to.deep.equal(before);
   expect(resizeEvents).to.equal(0);
 
-  dividers[0].dispatchEvent(
+  dividers[0]!.dispatchEvent(
     new PointerEvent("pointerdown", {
       bubbles: true,
       pointerId: 96,
@@ -541,7 +542,7 @@ it("ignores secondary mouse and pen button drags while keeping concurrent touch 
       clientX: 100,
     })
   );
-  dividers[1].dispatchEvent(
+  dividers[1]!.dispatchEvent(
     new PointerEvent("pointerdown", {
       bubbles: true,
       pointerId: 97,
@@ -556,7 +557,7 @@ it("ignores secondary mouse and pen button drags while keeping concurrent touch 
   window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 97 }));
 
   expect(captured).to.deep.equal([96, 97]);
-  expect(el.sizes[0]).to.be.greaterThan(before[0]!);
+  expect(el.sizes[0]!).to.be.greaterThan(before[0]!);
   expect(el.sizes[2]).to.be.lessThan(before[2]!);
   expect(resizeEvents).to.equal(2);
 });
@@ -766,7 +767,7 @@ it("clamps panel sizes to the configured minimum", async () => {
     new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
   );
   await elementUpdated(el);
-  expect(el.sizes[0]).to.equal(20);
+  expect(el.sizes[0]!).to.equal(20);
 });
 
 it("rejects infeasible aggregate minimums, reports the issue, and keeps resizing usable", async () => {
@@ -796,12 +797,12 @@ it("rejects infeasible aggregate minimums, reports the issue, and keeps resizing
     '[part="divider"]'
   ) as HTMLElement;
   expect(divider.getAttribute("aria-valuemin")).to.equal("33");
-  const before = el.sizes[0];
+  const before = el.sizes[0]!;
   divider.dispatchEvent(
     new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
   );
   await elementUpdated(el);
-  expect(el.sizes[0]).to.be.greaterThan(before);
+  expect(el.sizes[0]!).to.be.greaterThan(before);
 });
 
 it("is accessible", async () => {
@@ -900,8 +901,8 @@ it("restores surviving panel sizes by panelId when the persisted panel count cha
   )) as LyraMultiSplit;
   await elementUpdated(el);
 
-  expect(el.sizes[0]).to.be.closeTo(50, 0.001);
-  expect(el.sizes[1]).to.be.closeTo(100 / 6, 0.001);
+  expect(el.sizes[0]!).to.be.closeTo(50, 0.001);
+  expect(el.sizes[1]!).to.be.closeTo(100 / 6, 0.001);
   expect(el.sizes[2]).to.be.closeTo(100 / 3, 0.001);
 });
 
@@ -1141,8 +1142,8 @@ it("resolves CSS-length defaultSizes entries against the measured container widt
     </lr-multi-split>
   `);
   await el.updateComplete;
-  expect(el.sizes[0]).to.be.closeTo(40, 1);
-  expect(el.sizes[1]).to.be.closeTo(60, 1);
+  expect(el.sizes[0]!).to.be.closeTo(40, 1);
+  expect(el.sizes[1]!).to.be.closeTo(60, 1);
 });
 
 it("resolves mixed numeric and percent-string defaultSizes against its measured allocation", async () => {
@@ -1159,8 +1160,8 @@ it("resolves mixed numeric and percent-string defaultSizes against its measured 
 
   // A bare number is a percentage of the measured container, while a `%` string is resolved as
   // the same percentage in pixel space before the mixed list is normalized back to public sizes.
-  expect(el.sizes[0]).to.be.closeTo(25, 1e-6);
-  expect(el.sizes[1]).to.be.closeTo(75, 1e-6);
+  expect(el.sizes[0]!).to.be.closeTo(25, 1e-6);
+  expect(el.sizes[1]!).to.be.closeTo(75, 1e-6);
 });
 
 it("still accepts a pure-number defaultSizes array unchanged (unset-regression)", async () => {
@@ -1219,7 +1220,7 @@ it("switches the resize axis from its own inline-size breakpoint and reports the
     await elementUpdated(el);
     expect(spy.callbacks.length).to.equal(1);
 
-    fireCollapseResize(spy.callbacks[0], 320);
+    fireCollapseResize(spy.callbacks[0]!, 320);
     await elementUpdated(el);
     expect(el.effectiveOrientation).to.equal("vertical");
     expect(el.getAttribute("data-effective-orientation")).to.equal("vertical");
@@ -1227,15 +1228,15 @@ it("switches the resize axis from its own inline-size breakpoint and reports the
       '[part="divider"]'
     ) as HTMLElement;
     expect(divider.getAttribute("aria-orientation")).to.equal("horizontal");
-    const before = el.sizes[0];
+    const before = el.sizes[0]!;
     divider.dispatchEvent(
       new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
     );
     await elementUpdated(el);
-    expect(el.sizes[0]).to.be.greaterThan(before);
+    expect(el.sizes[0]!).to.be.greaterThan(before);
 
     const changed = oneEvent(el, "lr-multi-split-orientation-change");
-    fireCollapseResize(spy.callbacks[0], 700);
+    fireCollapseResize(spy.callbacks[0]!, 700);
     expect((await changed).detail).to.deep.equal({ orientation: "horizontal" });
     await elementUpdated(el);
     expect(el.effectiveOrientation).to.equal("horizontal");
@@ -1363,14 +1364,14 @@ it("accepts a rem orientation breakpoint, crossing at the same width as the equi
     expect(el.orientationBreakpoint).to.equal("31.25rem");
     expect(spy.callbacks.length).to.equal(1);
 
-    fireCollapseResize(spy.callbacks[0], 501);
+    fireCollapseResize(spy.callbacks[0]!, 501);
     await elementUpdated(el);
     expect(el.effectiveOrientation).to.equal("horizontal");
     expect(el.getAttribute("data-effective-orientation")).to.equal(
       "horizontal"
     );
 
-    fireCollapseResize(spy.callbacks[0], 499);
+    fireCollapseResize(spy.callbacks[0]!, 499);
     await elementUpdated(el);
     expect(el.effectiveOrientation).to.equal("vertical");
     expect(el.getAttribute("data-effective-orientation")).to.equal("vertical");
@@ -1394,10 +1395,10 @@ it("keeps the bare-number orientation breakpoint working from both the attribute
     await elementUpdated(el);
     expect(spy.callbacks.length).to.equal(1);
 
-    fireCollapseResize(spy.callbacks[0], 899);
+    fireCollapseResize(spy.callbacks[0]!, 899);
     await elementUpdated(el);
     expect(el.effectiveOrientation).to.equal("vertical");
-    fireCollapseResize(spy.callbacks[0], 901);
+    fireCollapseResize(spy.callbacks[0]!, 901);
     await elementUpdated(el);
     expect(el.effectiveOrientation).to.equal("horizontal");
 
@@ -1405,11 +1406,11 @@ it("keeps the bare-number orientation breakpoint working from both the attribute
     el.orientationBreakpoint = 900;
     await elementUpdated(el);
     expect(el.effectiveOrientation).to.equal("horizontal");
-    fireCollapseResize(spy.callbacks[0], 899);
+    fireCollapseResize(spy.callbacks[0]!, 899);
     await elementUpdated(el);
     expect(el.effectiveOrientation).to.equal("vertical");
     expect(el.getAttribute("data-effective-orientation")).to.equal("vertical");
-    fireCollapseResize(spy.callbacks[0], 901);
+    fireCollapseResize(spy.callbacks[0]!, 901);
     await elementUpdated(el);
     expect(el.effectiveOrientation).to.equal("horizontal");
   } finally {
@@ -1433,13 +1434,13 @@ it("re-resolves a rem orientation breakpoint per measurement, so a root font-siz
     await elementUpdated(el);
 
     // 20rem === 320px here, so 400px is still above the breakpoint.
-    fireCollapseResize(spy.callbacks[0], 400);
+    fireCollapseResize(spy.callbacks[0]!, 400);
     await elementUpdated(el);
     expect(el.effectiveOrientation).to.equal("horizontal");
 
     // 20rem === 640px now: the *same* measured width is suddenly below it.
     document.documentElement.style.fontSize = "32px";
-    fireCollapseResize(spy.callbacks[0], 400);
+    fireCollapseResize(spy.callbacks[0]!, 400);
     await elementUpdated(el);
     expect(el.effectiveOrientation).to.equal("vertical");
     expect(el.getAttribute("data-effective-orientation")).to.equal("vertical");
@@ -1477,7 +1478,7 @@ it("treats an unparseable orientation breakpoint as unset (no observation, no ef
     el.orientationBreakpoint = "500px";
     await elementUpdated(el);
     expect(spy.callbacks.length).to.equal(1);
-    fireCollapseResize(spy.callbacks[0], 320);
+    fireCollapseResize(spy.callbacks[0]!, 320);
     await elementUpdated(el);
     expect(el.effectiveOrientation).to.equal("vertical");
     expect(el.getAttribute("data-effective-orientation")).to.equal("vertical");
@@ -1499,12 +1500,12 @@ it("supports vertical orientation with vertical arrow keys", async () => {
   const divider = el.shadowRoot!.querySelector(
     '[part="divider"]'
   ) as HTMLElement;
-  const before = el.sizes[0];
+  const before = el.sizes[0]!;
   divider.dispatchEvent(
     new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
   );
   await elementUpdated(el);
-  expect(el.sizes[0]).to.be.greaterThan(before);
+  expect(el.sizes[0]!).to.be.greaterThan(before);
 });
 
 it("applies flex styles and interleaving order to panels", async () => {
@@ -1517,7 +1518,7 @@ it("applies flex styles and interleaving order to panels", async () => {
   )) as LyraMultiSplit;
   await elementUpdated(el);
 
-  const [panelA, panelB, panelC] = [...el.children] as HTMLElement[];
+  const [panelA, panelB, panelC] = [...el.children] as [HTMLElement, HTMLElement, HTMLElement];
   expect(panelA.style.flex).to.include("%");
   // Panels sit at even order values (0, 2, 4…); dividers (rendered in the
   // shadow root) take the odd slots (1, 3…) in between, so flexbox
@@ -1547,7 +1548,7 @@ for (const direction of ["ltr", "rtl"] as const) {
     const divider = el.shadowRoot!.querySelector(
       '[part="divider"]'
     ) as HTMLElement;
-    const [panelA, panelB] = [...el.children] as HTMLElement[];
+    const [panelA, panelB] = [...el.children] as [HTMLElement, HTMLElement];
     const baseRect = base.getBoundingClientRect();
     const dividerRect = divider.getBoundingClientRect();
     const aRect = panelA.getBoundingClientRect();
@@ -1607,7 +1608,7 @@ it("reserves a contained vertical divider gutter and paints only its center", as
   const divider = el.shadowRoot!.querySelector(
     '[part="divider"]'
   ) as HTMLElement;
-  const [panelA, panelB] = [...el.children] as HTMLElement[];
+  const [panelA, panelB] = [...el.children] as [HTMLElement, HTMLElement];
   const baseRect = base.getBoundingClientRect();
   const dividerRect = divider.getBoundingClientRect();
 
@@ -1750,9 +1751,9 @@ it("computes aria-valuemax per divider from its two adjacent panels for 3+ panel
   ] as HTMLElement[];
   expect(dividers.length).to.equal(2);
   // divider 0 sits between panels 0 and 1: max = 50 + 30 - 10 = 70 (not 100 - 10 = 90)
-  expect(dividers[0].getAttribute("aria-valuemax")).to.equal("70");
+  expect(dividers[0]!.getAttribute("aria-valuemax")).to.equal("70");
   // divider 1 sits between panels 1 and 2: max = 30 + 20 - 10 = 40 (not 90)
-  expect(dividers[1].getAttribute("aria-valuemax")).to.equal("40");
+  expect(dividers[1]!.getAttribute("aria-valuemax")).to.equal("40");
 });
 
 it("reports each divider's achievable ARIA range from both adjacent panel constraints", async () => {
@@ -1852,13 +1853,13 @@ it("lets a keyboard resize climb out of a sub-min starting size instead of getti
   );
   await elementUpdated(el);
   // Clamps straight to `min` instead of leaving the panel stuck at 5+2=7.
-  expect(el.sizes[0]).to.equal(10);
+  expect(el.sizes[0]!).to.equal(10);
 
   divider.dispatchEvent(
     new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
   );
   await elementUpdated(el);
-  expect(el.sizes[0]).to.equal(12);
+  expect(el.sizes[0]!).to.equal(12);
 });
 
 it("rejects a stale persisted layout that violates a since-raised min, falling back to an equal split", async () => {
@@ -1882,8 +1883,8 @@ it("rejects a stale persisted layout that violates a since-raised min, falling b
   )) as LyraMultiSplit;
   await elementUpdated(el);
 
-  expect(el.sizes[0]).to.equal(50);
-  expect(el.sizes[1]).to.equal(50);
+  expect(el.sizes[0]!).to.equal(50);
+  expect(el.sizes[1]!).to.equal(50);
 });
 
 it("preserves and restores custom panel proportions across an appended-then-removed panel", async () => {
@@ -1923,7 +1924,7 @@ it("preserves and restores custom panel proportions across an appended-then-remo
 
   expect(el.sizes.length).to.equal(4);
   const original = [10, 40, 30, 20];
-  el.sizes.forEach((s, i) => expect(s).to.be.closeTo(original[i], 0.001));
+  el.sizes.forEach((s, i) => expect(s).to.be.closeTo(original[i]!, 0.001));
 });
 
 it("keeps two concurrent pointer drags on different dividers independent (scoped by pointerId)", async () => {
@@ -1946,14 +1947,14 @@ it("keeps two concurrent pointer drags on different dividers independent (scoped
   ] as HTMLElement[];
   dividers.forEach((d) => (d.setPointerCapture = () => {}));
 
-  dividers[0].dispatchEvent(
+  dividers[0]!.dispatchEvent(
     new PointerEvent("pointerdown", {
       bubbles: true,
       pointerId: 1,
       clientX: 100,
     })
   );
-  dividers[2].dispatchEvent(
+  dividers[2]!.dispatchEvent(
     new PointerEvent("pointerdown", {
       bubbles: true,
       pointerId: 2,
@@ -1968,7 +1969,7 @@ it("keeps two concurrent pointer drags on different dividers independent (scoped
     new PointerEvent("pointermove", { pointerId: 2, clientX: 340 })
   );
 
-  expect(el.sizes[0]).to.be.greaterThan(25);
+  expect(el.sizes[0]!).to.be.greaterThan(25);
   expect(el.sizes[2]).to.be.greaterThan(25);
 
   window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
@@ -1993,13 +1994,13 @@ it("keeps sizes summing to 100 when two adjacent dividers are dragged concurrent
     { value: 300, configurable: true }
   );
   (
-    dividers[0] as unknown as { setPointerCapture(id: number): void }
+    dividers[0]! as unknown as { setPointerCapture(id: number): void }
   ).setPointerCapture = () => {};
   (
-    dividers[1] as unknown as { setPointerCapture(id: number): void }
+    dividers[1]! as unknown as { setPointerCapture(id: number): void }
   ).setPointerCapture = () => {};
-  pointerDown(dividers[0], 1, 100);
-  pointerDown(dividers[1], 2, 200);
+  pointerDown(dividers[0]!, 1, 100);
+  pointerDown(dividers[1]!, 2, 200);
   pointerMove(1, 130); // drag divider 0 right, growing panel 1
   pointerMove(2, 170); // drag divider 1 left, also growing panel 1
   await el.updateComplete;
@@ -2031,8 +2032,8 @@ it("composes two adjacent concurrent drags correctly when each pointer fires mul
   // moves -- exactly the sequence that contaminates pointer 2's `appliedDelta`
   // under the buggy "absolute since drag-start" formula,
   // even though a single-move-per-pointer test never observes it.
-  pointerDown(dividers[0], 1, 100);
-  pointerDown(dividers[1], 2, 300);
+  pointerDown(dividers[0]!, 1, 100);
+  pointerDown(dividers[1]!, 2, 300);
 
   pointerMove(1, 108); // pointer 1 requests +4%
   pointerMove(2, 312); // pointer 2 requests +6%
@@ -2047,8 +2048,8 @@ it("composes two adjacent concurrent drags correctly when each pointer fires mul
   // (30 - 11 = 19), and the shared panel1 absorbs both (30 - 7 + 11 = 34).
   // The buggy formula instead yields [47, 38, 15] here -- still summing to
   // 100 (so a "sums to 100" assertion alone would miss it), but wrong.
-  expect(el.sizes[0]).to.be.closeTo(47, 1e-9);
-  expect(el.sizes[1]).to.be.closeTo(34, 1e-9);
+  expect(el.sizes[0]!).to.be.closeTo(47, 1e-9);
+  expect(el.sizes[1]!).to.be.closeTo(34, 1e-9);
   expect(el.sizes[2]).to.be.closeTo(19, 1e-9);
   const total = el.sizes.reduce((s, n) => s + n, 0);
   expect(total).to.be.closeTo(100, 1e-9);
@@ -2085,14 +2086,14 @@ it("returns to the exact starting sizes after a drag saturates a bound and then 
   window.dispatchEvent(
     new PointerEvent("pointermove", { pointerId: 1, clientX: 150 })
   );
-  expect(el.sizes[0]).to.equal(90);
+  expect(el.sizes[0]!).to.equal(90);
 
   // Reverse partway: still saturated, since the pointer hasn't crossed back
   // under the threshold that would un-clamp it.
   window.dispatchEvent(
     new PointerEvent("pointermove", { pointerId: 1, clientX: 145 })
   );
-  expect(el.sizes[0]).to.equal(90);
+  expect(el.sizes[0]!).to.equal(90);
 
   // Return the pointer to its exact starting position: the panel must land
   // back on its exact starting size. A buggy `appliedDelta` that tracks the
@@ -2101,8 +2102,8 @@ it("returns to the exact starting sizes after a drag saturates a bound and then 
   window.dispatchEvent(
     new PointerEvent("pointermove", { pointerId: 1, clientX: 100 })
   );
-  expect(el.sizes[0]).to.equal(50);
-  expect(el.sizes[1]).to.equal(50);
+  expect(el.sizes[0]!).to.equal(50);
+  expect(el.sizes[1]!).to.equal(50);
 
   window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
 });
@@ -2190,7 +2191,7 @@ it("routes an adopted divider drag through its owner window and removes that rea
   ) => {
     if (type.startsWith("pointer") || type === "lostpointercapture")
       removedPointerTypes.push(type);
-    originalRemoveEventListener.call(frameWindow, type, listener, options);
+    if (listener) originalRemoveEventListener.call(frameWindow, type, listener, options);
   }) as typeof frameWindow.removeEventListener;
 
   try {
@@ -2224,7 +2225,7 @@ it("routes an adopted divider drag through its owner window and removes that rea
         clientX: 140,
       })
     );
-    expect(el.sizes[0]).to.be.greaterThan(initial[0]!);
+    expect(el.sizes[0]!).to.be.greaterThan(initial[0]!);
     const resized = [...el.sizes];
 
     document.adoptNode(el);
@@ -2303,8 +2304,8 @@ it("commits sizes to localStorage exactly once on pointerup, not just via keyboa
   expect(JSON.parse(stored!)).to.deep.equal({
     version: 1,
     panels: [
-      { panelId: "first", size: el.sizes[0] },
-      { panelId: "second", size: el.sizes[1] },
+      { panelId: "first", size: el.sizes[0]! },
+      { panelId: "second", size: el.sizes[1]! },
     ],
   });
   expect(persistenceCommits).to.equal(1);
@@ -2326,7 +2327,7 @@ it("commits a resize without writing to localStorage when no storage-key is conf
     new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
   );
   await elementUpdated(el);
-  expect(el.sizes[0]).to.be.greaterThan(50);
+  expect(el.sizes[0]!).to.be.greaterThan(50);
 
   const persistedKeys: string[] = [];
   for (let i = 0; i < localStorage.length; i++) {
@@ -2473,7 +2474,7 @@ it("renders a clamp()-based flex-basis for a panel with panelConstraints, leavin
   el.sizes = [30, 70];
   el.panelConstraints = [{ minPx: 40, maxPx: 200 }, null];
   await elementUpdated(el);
-  const [panelA, panelB] = [...el.children] as HTMLElement[];
+  const [panelA, panelB] = [...el.children] as [HTMLElement, HTMLElement];
   expect(panelA.style.flex).to.equal("0 1 clamp(40px, 30%, 200px)");
   expect(panelB.style.flex).to.equal("0 1 70%");
 });
@@ -2491,7 +2492,7 @@ it("applies a maxPercent-only constraint and gives its freed share to an unconst
   el.panelConstraints = [{ maxPercent: 30 }, null];
   await elementUpdated(el);
 
-  const [panelA, panelB] = [...el.children] as HTMLElement[];
+  const [panelA, panelB] = [...el.children] as [HTMLElement, HTMLElement];
   expect(panelA.style.flex).to.equal("0 1 clamp(0px, 50%, 30%)");
   expect(panelB.style.flex).to.equal("0 1 70%");
 });
@@ -2508,7 +2509,7 @@ it("redistributes an unconstrained sibling into space freed by a maxPx-clamped p
   el.sizes = [50, 50];
   el.panelConstraints = [{ minPx: 150, maxPx: 440 }, null];
   await elementUpdated(el);
-  const [panelA, panelB] = [...el.children] as HTMLElement[];
+  const [panelA, panelB] = [...el.children] as [HTMLElement, HTMLElement];
   expect(panelA.style.flex).to.equal("0 1 clamp(150px, 50%, 440px)");
   // Panel A's 50% share clamps down to (440/1920)*100%; panel B (no
   // constraint) absorbs exactly the freed difference. The browser
@@ -2587,7 +2588,7 @@ it("does not redistribute when the container is too narrow to measure (container
   el.sizes = [30, 70];
   el.panelConstraints = [{ minPx: 40, maxPx: 200 }, null];
   await elementUpdated(el);
-  const [panelA, panelB] = [...el.children] as HTMLElement[];
+  const [panelA, panelB] = [...el.children] as [HTMLElement, HTMLElement];
   expect(panelA.style.flex).to.equal("0 1 clamp(40px, 30%, 200px)");
   expect(panelB.style.flex).to.equal("0 1 70%");
 });
@@ -2602,7 +2603,7 @@ it("falls back to sentinel px bounds when a constraint only specifies one side",
   el.sizes = [30, 70];
   el.panelConstraints = [{ minPx: 40 }];
   await elementUpdated(el);
-  const [panelA] = [...el.children] as HTMLElement[];
+  const [panelA] = [...el.children] as [HTMLElement];
   // The browser may re-serialize a large px literal (e.g. `1000000px` ->
   // `1e+06px`) when normalizing the `flex` shorthand, so parse the numeric
   // value out instead of asserting an exact fallback string.
@@ -2644,7 +2645,7 @@ it("stops a drag at a px-derived min bound instead of the plain percent min", as
   window.dispatchEvent(
     new PointerEvent("pointermove", { pointerId: 1, clientX: -1000 })
   );
-  expect(el.sizes[0]).to.equal(30);
+  expect(el.sizes[0]!).to.equal(30);
   window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
 });
 
@@ -2674,7 +2675,7 @@ it("stops a drag at a px-derived max bound on the dragged panel", async () => {
   window.dispatchEvent(
     new PointerEvent("pointermove", { pointerId: 1, clientX: 1000 })
   );
-  expect(el.sizes[0]).to.equal(30);
+  expect(el.sizes[0]!).to.equal(30);
   window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
 });
 
@@ -2699,7 +2700,7 @@ it("stops keyboard-driven resizing at a px-derived min bound instead of the plai
     );
   }
   await elementUpdated(el);
-  expect(el.sizes[0]).to.equal(30);
+  expect(el.sizes[0]!).to.equal(30);
 });
 
 it("clamps pointer and keyboard resizing to percent-only panel bounds", async () => {
@@ -2728,7 +2729,7 @@ it("clamps pointer and keyboard resizing to percent-only panel bounds", async ()
   window.dispatchEvent(
     new PointerEvent("pointermove", { pointerId: 11, clientX: -1000 })
   );
-  expect(el.sizes[0]).to.equal(30);
+  expect(el.sizes[0]!).to.equal(30);
   window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 11 }));
 
   for (let i = 0; i < 20; i++) {
@@ -2737,7 +2738,7 @@ it("clamps pointer and keyboard resizing to percent-only panel bounds", async ()
     );
   }
   await elementUpdated(el);
-  expect(el.sizes[0]).to.equal(50);
+  expect(el.sizes[0]!).to.equal(50);
   expect((el.children[0] as HTMLElement).style.flex).to.include(
     "clamp(30%, 50%, 50%)"
   );
@@ -2763,7 +2764,7 @@ it("combines px and percent bounds using the stricter lower and upper limits", a
     );
   }
   await elementUpdated(el);
-  expect(el.sizes[0]).to.equal(35);
+  expect(el.sizes[0]!).to.equal(35);
   expect((el.children[0] as HTMLElement).style.flex).to.include(
     "max(10%, 280px, 20%)"
   );
@@ -2796,7 +2797,7 @@ it("combines maxPx and maxPercent using the stricter (smaller) of the two effect
   window.dispatchEvent(
     new PointerEvent("pointermove", { pointerId: 1, clientX: 1000 })
   );
-  expect(el.sizes[0]).to.equal(30);
+  expect(el.sizes[0]!).to.equal(30);
   window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
   await elementUpdated(el);
 
@@ -2870,7 +2871,7 @@ it("keeps a constrained panel pinned between its px bounds when the container is
     );
   }
   await elementUpdated(el);
-  expect(el.sizes[0]).to.equal(30);
+  expect(el.sizes[0]!).to.equal(30);
 
   // Container grows: the same fixed 60px is now a smaller share, so the
   // percent floor drops with it — the panel stays pinned to 60px, not 30%.
@@ -2879,7 +2880,7 @@ it("keeps a constrained panel pinned between its px bounds when the container is
     new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
   );
   await elementUpdated(el);
-  expect(el.sizes[0]).to.equal(28);
+  expect(el.sizes[0]!).to.equal(28);
 });
 
 it("does not overflow its container by the dividers' own width in the default (uncollapsed) state", async () => {
@@ -2992,9 +2993,9 @@ it('defaults collapse to "none", leaving dividers enabled with explicit aria-dis
   await elementUpdated(el);
   expect(el.collapse).to.equal("none");
   expect(el.hasAttribute("data-collapse-state")).to.be.false;
-  const [panelA, panelB] = [...el.children] as HTMLElement[];
-  expect(panelA.dataset.collapseState).to.equal(undefined);
-  expect(panelB.dataset.collapseState).to.equal(undefined);
+  const [panelA, panelB] = [...el.children] as [HTMLElement, HTMLElement];
+  expect(panelA.dataset["collapseState"]).to.equal(undefined);
+  expect(panelB.dataset["collapseState"]).to.equal(undefined);
   const divider = el.shadowRoot!.querySelector(
     '[part="divider"]'
   ) as HTMLElement;
@@ -3075,14 +3076,14 @@ it('clamps the collapse="start" panel (index 0) to rail-width and marks it via d
     await elementUpdated(el);
     expect(spy.callbacks.length).to.equal(1);
 
-    fireCollapseResize(spy.callbacks[0], 500); // between floatBreakpoint(400) and railBreakpoint(640)
+    fireCollapseResize(spy.callbacks[0]!, 500); // between floatBreakpoint(400) and railBreakpoint(640)
     await elementUpdated(el);
 
-    const [panelA, panelB] = [...el.children] as HTMLElement[];
+    const [panelA, panelB] = [...el.children] as [HTMLElement, HTMLElement];
     expect(el.collapseState).to.equal("rail");
     expect(panelA.style.flex).to.equal("0 0 3.5rem");
-    expect(panelA.dataset.collapseState).to.equal("rail");
-    expect(panelB.dataset.collapseState).to.equal(undefined);
+    expect(panelA.dataset["collapseState"]).to.equal("rail");
+    expect(panelB.dataset["collapseState"]).to.equal(undefined);
     // The other pane fills whatever room the rail-clamped pane no longer takes.
     expect(panelB.style.flex).to.include("1 0%");
     expect(el.getAttribute("data-collapse-state")).to.equal("rail");
@@ -3165,10 +3166,10 @@ it("honors a sibling panel's own panelConstraints while its neighbor is rail-col
     await elementUpdated(el);
     expect(spy.callbacks.length).to.equal(1);
 
-    fireCollapseResize(spy.callbacks[0], 500); // between floatBreakpoint(400) and railBreakpoint(640) -> rail
+    fireCollapseResize(spy.callbacks[0]!, 500); // between floatBreakpoint(400) and railBreakpoint(640) -> rail
     await elementUpdated(el);
 
-    const [panelA, panelB] = [...el.children] as HTMLElement[];
+    const [panelA, panelB] = [...el.children] as [HTMLElement, HTMLElement];
     expect(el.collapseState).to.equal("rail");
     expect(panelA.style.flex).to.equal("0 0 3.5rem");
     // Panel B still honors its own [40px, 120px] constraint instead of
@@ -3190,13 +3191,13 @@ it('resolves collapse="end" to the LAST panel, including for 3+ panels', async (
       >`
     )) as LyraMultiSplit;
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 500);
+    fireCollapseResize(spy.callbacks[0]!, 500);
     await elementUpdated(el);
 
-    const [panelA, panelB, panelC] = [...el.children] as HTMLElement[];
-    expect(panelA.dataset.collapseState).to.equal(undefined);
-    expect(panelB.dataset.collapseState).to.equal(undefined);
-    expect(panelC.dataset.collapseState).to.equal("rail");
+    const [panelA, panelB, panelC] = [...el.children] as [HTMLElement, HTMLElement, HTMLElement];
+    expect(panelA.dataset["collapseState"]).to.equal(undefined);
+    expect(panelB.dataset["collapseState"]).to.equal(undefined);
+    expect(panelC.dataset["collapseState"]).to.equal("rail");
     expect(panelC.style.flex).to.equal("0 0 3.5rem");
   } finally {
     spy.restore();
@@ -3214,11 +3215,11 @@ it('resolves collapse="start"/"end" to the same physical panel indices (0 / last
       >`
     )) as LyraMultiSplit;
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 500);
+    fireCollapseResize(spy.callbacks[0]!, 500);
     await elementUpdated(el);
-    const [panelA, , panelC] = [...el.children] as HTMLElement[];
-    expect(panelA.dataset.collapseState).to.equal("rail");
-    expect(panelC.dataset.collapseState).to.equal(undefined);
+    const [panelA, , panelC] = [...el.children] as [HTMLElement, HTMLElement, HTMLElement];
+    expect(panelA.dataset["collapseState"]).to.equal("rail");
+    expect(panelC.dataset["collapseState"]).to.equal(undefined);
   } finally {
     spy.restore();
   }
@@ -3233,11 +3234,11 @@ it('resolves collapse="start"/"end" to the same physical panel indices (0 / last
       >`
     )) as LyraMultiSplit;
     await elementUpdated(el);
-    fireCollapseResize(spyEnd.callbacks[0], 500);
+    fireCollapseResize(spyEnd.callbacks[0]!, 500);
     await elementUpdated(el);
-    const [panelA, , panelC] = [...el.children] as HTMLElement[];
-    expect(panelA.dataset.collapseState).to.equal(undefined);
-    expect(panelC.dataset.collapseState).to.equal("rail");
+    const [panelA, , panelC] = [...el.children] as [HTMLElement, HTMLElement, HTMLElement];
+    expect(panelA.dataset["collapseState"]).to.equal(undefined);
+    expect(panelC.dataset["collapseState"]).to.equal("rail");
   } finally {
     spyEnd.restore();
   }
@@ -3259,17 +3260,17 @@ it("transitions collapseState across both breakpoints (wide -> rail -> floating)
     )) as LyraMultiSplit;
     await elementUpdated(el);
 
-    fireCollapseResize(spy.callbacks[0], 800); // >= railBreakpoint(640) -> wide
+    fireCollapseResize(spy.callbacks[0]!, 800); // >= railBreakpoint(640) -> wide
     await elementUpdated(el);
     expect(el.collapseState).to.equal("wide");
     expect(el.hasAttribute("data-collapse-state")).to.be.false;
 
-    fireCollapseResize(spy.callbacks[0], 500); // floatBreakpoint(400) <= 500 < railBreakpoint(640) -> rail
+    fireCollapseResize(spy.callbacks[0]!, 500); // floatBreakpoint(400) <= 500 < railBreakpoint(640) -> rail
     await elementUpdated(el);
     expect(el.collapseState).to.equal("rail");
     expect(el.getAttribute("data-collapse-state")).to.equal("rail");
 
-    fireCollapseResize(spy.callbacks[0], 300); // < floatBreakpoint(400) -> floating
+    fireCollapseResize(spy.callbacks[0]!, 300); // < floatBreakpoint(400) -> floating
     await elementUpdated(el);
     expect(el.collapseState).to.equal("floating");
     expect(el.getAttribute("data-collapse-state")).to.equal("floating");
@@ -3280,7 +3281,7 @@ it("transitions collapseState across both breakpoints (wide -> rail -> floating)
     el.open = true;
     await elementUpdated(el);
 
-    const [panelA, panelB] = [...el.children] as HTMLElement[];
+    const [panelA, panelB] = [...el.children] as [HTMLElement, HTMLElement];
     // position/inset-* are stylesheet-owned now (see multi-split.styles.ts's
     // `::slotted([data-collapse-state='floating'])` rule), not inline -- assert
     // the rendered result, not implementation.
@@ -3294,7 +3295,7 @@ it("transitions collapseState across both breakpoints (wide -> rail -> floating)
     // lifted out of the flex flow entirely.
     expect(panelB.style.flex).to.include("1 0%");
 
-    fireCollapseResize(spy.callbacks[0], 800); // back to wide
+    fireCollapseResize(spy.callbacks[0]!, 800); // back to wide
     await elementUpdated(el);
     expect(el.collapseState).to.equal("wide");
     expect(computedA.position).to.equal("static");
@@ -3317,7 +3318,7 @@ it("fires lr-multi-split-collapse-change only on an actual collapseState transit
     // Establish a known baseline before attaching the listener, so this
     // assertion doesn't depend on whatever real width the fixture happened
     // to render at.
-    fireCollapseResize(spy.callbacks[0], 800);
+    fireCollapseResize(spy.callbacks[0]!, 800);
     await elementUpdated(el);
 
     const events: string[] = [];
@@ -3325,13 +3326,13 @@ it("fires lr-multi-split-collapse-change only on an actual collapseState transit
       events.push((e as CustomEvent<{ state: string }>).detail.state)
     );
 
-    fireCollapseResize(spy.callbacks[0], 500); // wide -> rail: transition
+    fireCollapseResize(spy.callbacks[0]!, 500); // wide -> rail: transition
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 550); // still rail: no transition
+    fireCollapseResize(spy.callbacks[0]!, 550); // still rail: no transition
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 300); // rail -> floating: transition
+    fireCollapseResize(spy.callbacks[0]!, 300); // rail -> floating: transition
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 350); // still floating: no transition
+    fireCollapseResize(spy.callbacks[0]!, 350); // still floating: no transition
     await elementUpdated(el);
 
     expect(events).to.deep.equal(["rail", "floating"]);
@@ -3350,7 +3351,7 @@ it("disables dragging (pointer and keyboard) on the divider adjacent to the coll
       >`
     )) as LyraMultiSplit;
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 300); // floating
+    fireCollapseResize(spy.callbacks[0]!, 300); // floating
     await elementUpdated(el);
 
     const divider = el.shadowRoot!.querySelector(
@@ -3395,23 +3396,23 @@ it("leaves a non-adjacent divider fully draggable while a different pane is coll
       >`
     )) as LyraMultiSplit;
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 300); // floating; panel 0 ("start") collapses
+    fireCollapseResize(spy.callbacks[0]!, 300); // floating; panel 0 ("start") collapses
     await elementUpdated(el);
 
     const dividers = [
       ...el.shadowRoot!.querySelectorAll('[part="divider"]'),
     ] as HTMLElement[];
     // divider[0] sits between panel0/panel1 -- adjacent to the collapsed panel0.
-    expect(dividers[0].getAttribute("aria-disabled")).to.equal("true");
+    expect(dividers[0]!.getAttribute("aria-disabled")).to.equal("true");
     // divider[1] sits between panel1/panel2 -- not adjacent, stays enabled.
-    expect(dividers[1].getAttribute("aria-disabled")).to.equal("false");
+    expect(dividers[1]!.getAttribute("aria-disabled")).to.equal("false");
 
-    const before = el.sizes[1];
-    dividers[1].dispatchEvent(
+    const before = el.sizes[1]!;
+    dividers[1]!.dispatchEvent(
       new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
     );
     await elementUpdated(el);
-    expect(el.sizes[1]).to.be.greaterThan(before);
+    expect(el.sizes[1]!).to.be.greaterThan(before);
   } finally {
     spy.restore();
   }
@@ -3427,7 +3428,7 @@ it('reverts to plain wide/percent styling and clears data-collapse-state when co
       >`
     )) as LyraMultiSplit;
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 300); // floating
+    fireCollapseResize(spy.callbacks[0]!, 300); // floating
     await elementUpdated(el);
     expect(el.getAttribute("data-collapse-state")).to.equal("floating");
 
@@ -3435,8 +3436,8 @@ it('reverts to plain wide/percent styling and clears data-collapse-state when co
     await elementUpdated(el);
 
     expect(el.hasAttribute("data-collapse-state")).to.be.false;
-    const [panelA] = [...el.children] as HTMLElement[];
-    expect(panelA.dataset.collapseState).to.equal(undefined);
+    const [panelA] = [...el.children] as [HTMLElement];
+    expect(panelA.dataset["collapseState"]).to.equal(undefined);
     expect(panelA.style.position).to.equal("");
     expect(panelA.style.flex).to.include("%");
 
@@ -3459,7 +3460,7 @@ it('resets collapseState to "wide" from willUpdate(), not updated(), so switchin
       >`
     )) as LyraMultiSplit;
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 300); // floating
+    fireCollapseResize(spy.callbacks[0]!, 300); // floating
     await elementUpdated(el);
     expect(el.collapseState).to.equal("floating");
 
@@ -3521,13 +3522,13 @@ it('anchors the floating overlay to inset-inline-end for collapse="end" (vs. ins
       >`
     )) as LyraMultiSplit;
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 300); // floating
+    fireCollapseResize(spy.callbacks[0]!, 300); // floating
     // Reveal the hidden-by-default drawer (see multi-split.class.ts's class doc) so its
     // geometry below is actually applied.
     el.open = true;
     await elementUpdated(el);
 
-    const [panelA, panelB] = [...el.children] as HTMLElement[];
+    const [panelA, panelB] = [...el.children] as [HTMLElement, HTMLElement];
     // position/inset-* are stylesheet-owned now (see multi-split.styles.ts), not
     // inline -- assert the rendered result, not implementation.
     expect(getComputedStyle(panelA).position).to.equal("static");
@@ -3568,11 +3569,11 @@ it('lets a consumer override the floating drawer\'s position/inset geometry with
       >
     `)) as LyraMultiSplit;
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 300); // floating
+    fireCollapseResize(spy.callbacks[0]!, 300); // floating
     el.open = true;
     await elementUpdated(el);
 
-    const [panelA] = [...el.children] as HTMLElement[];
+    const [panelA] = [...el.children] as [HTMLElement];
     expect(panelA.style.insetBlock, "no owned inline style to fight").to.equal(
       ""
     );
@@ -3600,9 +3601,9 @@ it("honors a custom rail-width for the rail state", async () => {
       >`
     )) as LyraMultiSplit;
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 500);
+    fireCollapseResize(spy.callbacks[0]!, 500);
     await elementUpdated(el);
-    const [panelA] = [...el.children] as HTMLElement[];
+    const [panelA] = [...el.children] as [HTMLElement];
     expect(panelA.style.flex).to.equal("0 0 4rem");
   } finally {
     spy.restore();
@@ -3628,7 +3629,7 @@ it("honors custom rail-breakpoint/float-breakpoint attributes", async () => {
     expect(el.railBreakpoint).to.equal("900");
     expect(el.floatBreakpoint).to.equal("600");
 
-    fireCollapseResize(spy.callbacks[0], 700); // between 600 and 900 -> rail
+    fireCollapseResize(spy.callbacks[0]!, 700); // between 600 and 900 -> rail
     await elementUpdated(el);
     expect(el.getAttribute("data-collapse-state")).to.equal("rail");
   } finally {
@@ -3677,7 +3678,25 @@ it("clamps a negative min to 0 rather than a nonsensical negative floor", async 
     new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })
   );
   await elementUpdated(el);
-  expect(el.sizes[0]).to.be.at.least(0);
+  expect(el.sizes[0]!).to.be.at.least(0);
+});
+
+it('moves a divider directly to both achievable extremes with Home and End', async () => {
+  const el = (await fixture(html`
+    <lr-multi-split min="10"><div>A</div><div>B</div></lr-multi-split>
+  `)) as LyraMultiSplit;
+  await elementUpdated(el);
+  el.sizes = [50, 50];
+  await elementUpdated(el);
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+
+  divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+  await elementUpdated(el);
+  expect(el.sizes.map(Math.round)).to.deep.equal([10, 90]);
+
+  divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+  await elementUpdated(el);
+  expect(el.sizes.map(Math.round)).to.deep.equal([90, 10]);
 });
 
 it("honors custom rail-breakpoint/float-breakpoint attributes with an invalid/inverted pair sanitized", async () => {
@@ -3695,11 +3714,11 @@ it("honors custom rail-breakpoint/float-breakpoint attributes with an invalid/in
     await elementUpdated(el);
 
     // railBreakpoint falls back to its own 640 default, still above the valid floatBreakpoint(600).
-    fireCollapseResize(spy.callbacks[0], 620); // between 600 (float) and the sanitized 640 (rail) default
+    fireCollapseResize(spy.callbacks[0]!, 620); // between 600 (float) and the sanitized 640 (rail) default
     await elementUpdated(el);
     expect(el.getAttribute("data-collapse-state")).to.equal("rail");
 
-    fireCollapseResize(spy.callbacks[0], 300); // below floatBreakpoint(600)
+    fireCollapseResize(spy.callbacks[0]!, 300); // below floatBreakpoint(600)
     await elementUpdated(el);
     expect(el.getAttribute("data-collapse-state")).to.equal("floating");
   } finally {
@@ -3725,7 +3744,7 @@ it("never gets permanently stuck in floating for an inverted rail/float pair -- 
     // match floatBreakpoint(600) rather than staying inverted, so a comfortably wide container still
     // resolves to 'wide' (never stuck reporting 'floating'/'rail' regardless of width). 'wide' has no
     // `data-collapse-state` attribute at all (only a genuinely collapsed state sets one).
-    fireCollapseResize(spy.callbacks[0], 2000);
+    fireCollapseResize(spy.callbacks[0]!, 2000);
     await elementUpdated(el);
     expect(el.collapseState).to.equal("wide");
     expect(el.hasAttribute("data-collapse-state")).to.be.false;
@@ -3746,7 +3765,7 @@ it("pins a forced collapseState across a subsequent resize, ignoring measurement
       >`
     )) as LyraMultiSplit;
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 500); // rail baseline
+    fireCollapseResize(spy.callbacks[0]!, 500); // rail baseline
     await elementUpdated(el);
     expect(el.collapseState).to.equal("rail");
 
@@ -3754,7 +3773,7 @@ it("pins a forced collapseState across a subsequent resize, ignoring measurement
     await elementUpdated(el);
     expect(el.collapseState).to.equal("wide");
 
-    fireCollapseResize(spy.callbacks[0], 300); // would normally -> floating
+    fireCollapseResize(spy.callbacks[0]!, 300); // would normally -> floating
     await elementUpdated(el);
     expect(el.collapseState).to.equal("wide"); // still pinned
   } finally {
@@ -3772,7 +3791,7 @@ it('releases a forced collapseState back to measurement-derived state via the "a
       >`
     )) as LyraMultiSplit;
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 800); // wide baseline
+    fireCollapseResize(spy.callbacks[0]!, 800); // wide baseline
     await elementUpdated(el);
 
     el.collapseState = "floating"; // force
@@ -3786,7 +3805,7 @@ it('releases a forced collapseState back to measurement-derived state via the "a
     expect(el.collapseState).to.equal("wide");
 
     // Automatic tracking resumed: a subsequent resize takes effect again.
-    fireCollapseResize(spy.callbacks[0], 300);
+    fireCollapseResize(spy.callbacks[0]!, 300);
     await elementUpdated(el);
     expect(el.collapseState).to.equal("floating");
   } finally {
@@ -3804,7 +3823,7 @@ it("fires lr-multi-split-collapse-change on a forced assignment and on release-t
       >`
     )) as LyraMultiSplit;
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 800); // wide baseline
+    fireCollapseResize(spy.callbacks[0]!, 800); // wide baseline
     await elementUpdated(el);
 
     const events: string[] = [];
@@ -3840,7 +3859,7 @@ it("reflects collapseState to a collapse-state attribute", async () => {
       >`
     )) as LyraMultiSplit;
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 500); // rail
+    fireCollapseResize(spy.callbacks[0]!, 500); // rail
     await elementUpdated(el);
     expect(el.getAttribute("collapse-state")).to.equal("rail");
 
@@ -3866,10 +3885,10 @@ it("defaults open to false: the floating pane renders nothing (hidden, out of th
     await elementUpdated(el);
     expect(el.open).to.be.false;
 
-    fireCollapseResize(spy.callbacks[0], 300); // floating
+    fireCollapseResize(spy.callbacks[0]!, 300); // floating
     await elementUpdated(el);
 
-    const [panelA] = [...el.children] as HTMLElement[];
+    const [panelA] = [...el.children] as [HTMLElement];
     expect(panelA.hidden).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="backdrop"]') === null).to.equal(
       true
@@ -3894,13 +3913,13 @@ it("reveals the floating pane and renders a backdrop once open is set to true", 
       >`
     )) as LyraMultiSplit;
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 300); // floating
+    fireCollapseResize(spy.callbacks[0]!, 300); // floating
     await elementUpdated(el);
 
     el.open = true;
     await elementUpdated(el);
 
-    const [panelA] = [...el.children] as HTMLElement[];
+    const [panelA] = [...el.children] as [HTMLElement];
     expect(panelA.hidden).to.be.false;
     // position is stylesheet-owned now (see multi-split.styles.ts) -- assert the
     // rendered result, not implementation.
@@ -3908,6 +3927,33 @@ it("reveals the floating pane and renders a backdrop once open is set to true", 
     expect(el.shadowRoot!.querySelector('[part="backdrop"]') === null).to.equal(
       false
     );
+  } finally {
+    spy.restore();
+  }
+});
+
+it('inerts sibling panes behind an open floating drawer while leaving the drawer interactive', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(html`
+      <lr-multi-split
+        collapse="start"
+        style="inline-size: 300px; block-size: 200px"
+      ><div><button>Drawer action</button></div><div><button>Behind action</button></div></lr-multi-split>
+    `)) as LyraMultiSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0]!, 300);
+    await elementUpdated(el);
+    el.open = true;
+    await elementUpdated(el);
+
+    const [drawer, behind] = [...el.children] as [HTMLElement, HTMLElement];
+    expect(drawer.inert).to.equal(false);
+    expect(behind.inert).to.equal(true);
+
+    el.open = false;
+    await elementUpdated(el);
+    expect(behind.inert).to.equal(false);
   } finally {
     spy.restore();
   }
@@ -3926,7 +3972,7 @@ it("moves focus into the floating pane when opened", async () => {
       >`
     )) as LyraMultiSplit;
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 300); // floating
+    fireCollapseResize(spy.callbacks[0]!, 300); // floating
     await elementUpdated(el);
     const first = el.querySelector("button") as HTMLButtonElement;
 
@@ -3952,13 +3998,13 @@ it("traps Tab focus within the floating pane while open, wrapping last->first an
       >`
     )) as LyraMultiSplit;
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 300); // floating
+    fireCollapseResize(spy.callbacks[0]!, 300); // floating
     el.open = true;
     await elementUpdated(el);
 
     const [first, last] = [
       ...el.querySelectorAll("button"),
-    ] as HTMLButtonElement[];
+    ] as [HTMLButtonElement, HTMLButtonElement];
     last.focus();
     const tabForward = new KeyboardEvent("keydown", {
       key: "Tab",
@@ -3996,7 +4042,7 @@ it("closes the floating drawer on Escape", async () => {
       >`
     )) as LyraMultiSplit;
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 300); // floating
+    fireCollapseResize(spy.callbacks[0]!, 300); // floating
     el.open = true;
     await elementUpdated(el);
 
@@ -4021,11 +4067,37 @@ it("closes the floating drawer on backdrop click", async () => {
       >`
     )) as LyraMultiSplit;
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 300); // floating
+    fireCollapseResize(spy.callbacks[0]!, 300); // floating
     el.open = true;
     await elementUpdated(el);
 
     (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
+    await elementUpdated(el);
+    expect(el.open).to.be.false;
+  } finally {
+    spy.restore();
+  }
+});
+
+it('closes the floating drawer when a real pointer targets its inert backdrop', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(html`
+      <lr-multi-split
+        collapse="start"
+        style="inline-size: 300px; block-size: 200px"
+      ><div>A</div><div>B</div></lr-multi-split>
+    `)) as LyraMultiSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0]!, 300);
+    el.open = true;
+    await elementUpdated(el);
+
+    const rect = el.getBoundingClientRect();
+    await sendMouse({
+      type: 'click',
+      position: [Math.floor(rect.right - 4), Math.floor(rect.top + rect.height / 2)],
+    });
     await elementUpdated(el);
     expect(el.open).to.be.false;
   } finally {
@@ -4045,7 +4117,7 @@ it("restores the still-active floating overlay and its scroll lock across a disc
       >`
     )) as LyraMultiSplit;
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 300); // floating
+    fireCollapseResize(spy.callbacks[0]!, 300); // floating
     el.open = true;
     await elementUpdated(el);
     expect(el.shadowRoot!.querySelector('[part="backdrop"]') === null).to.equal(
@@ -4062,7 +4134,7 @@ it("restores the still-active floating overlay and its scroll lock across a disc
     expect(el.shadowRoot!.querySelector('[part="backdrop"]') === null).to.equal(
       false
     );
-    const [panelA] = [...el.children] as HTMLElement[];
+    const [panelA] = [...el.children] as [HTMLElement];
     // position is stylesheet-owned now (see multi-split.styles.ts) -- assert the
     // rendered result, not implementation.
     expect(getComputedStyle(panelA).position).to.equal("absolute");
@@ -4089,7 +4161,7 @@ it("re-registers a fresh floating overlay on reconnect instead of resuming when 
       >`
     )) as LyraMultiSplit;
     await elementUpdated(el);
-    fireCollapseResize(spy.callbacks[0], 300); // floating
+    fireCollapseResize(spy.callbacks[0]!, 300); // floating
     el.open = true;
     await elementUpdated(el);
 
@@ -4455,11 +4527,11 @@ describe("collapse breakpoints as CSS lengths", () => {
       `)) as LyraMultiSplit;
       await elementUpdated(el);
 
-      fireCollapseResize(spy.callbacks[0], 68.75 * root + 1);
+      fireCollapseResize(spy.callbacks[0]!, 68.75 * root + 1);
       await elementUpdated(el);
       expect(el.collapseState, "above the rem breakpoint").to.equal("wide");
 
-      fireCollapseResize(spy.callbacks[0], 68.75 * root - 1);
+      fireCollapseResize(spy.callbacks[0]!, 68.75 * root - 1);
       await elementUpdated(el);
       expect(el.collapseState, "below the rem breakpoint").to.equal("rail");
       expect(el.getAttribute("data-collapse-state")).to.equal("rail");
@@ -4487,17 +4559,17 @@ describe("collapse breakpoints as CSS lengths", () => {
       await elementUpdated(el);
 
       // Deliberately not the 640/400 defaults, so a value that silently fell back would fail here.
-      fireCollapseResize(spy.callbacks[0], 1000);
+      fireCollapseResize(spy.callbacks[0]!, 1000);
       await elementUpdated(el);
       expect(el.collapseState, "below the 1200px rail breakpoint").to.equal(
         "rail"
       );
 
-      fireCollapseResize(spy.callbacks[0], 20 * root + 1);
+      fireCollapseResize(spy.callbacks[0]!, 20 * root + 1);
       await elementUpdated(el);
       expect(el.collapseState).to.equal("rail");
 
-      fireCollapseResize(spy.callbacks[0], 20 * root - 1);
+      fireCollapseResize(spy.callbacks[0]!, 20 * root - 1);
       await elementUpdated(el);
       expect(el.collapseState).to.equal("floating");
     } finally {
@@ -4516,20 +4588,20 @@ describe("collapse breakpoints as CSS lengths", () => {
       `)) as LyraMultiSplit;
       await elementUpdated(el);
       // The documented 640/400 defaults, unchanged by the widening.
-      fireCollapseResize(spy.callbacks[0], 641);
+      fireCollapseResize(spy.callbacks[0]!, 641);
       await elementUpdated(el);
       expect(el.collapseState).to.equal("wide");
-      fireCollapseResize(spy.callbacks[0], 639);
+      fireCollapseResize(spy.callbacks[0]!, 639);
       await elementUpdated(el);
       expect(el.collapseState).to.equal("rail");
-      fireCollapseResize(spy.callbacks[0], 399);
+      fireCollapseResize(spy.callbacks[0]!, 399);
       await elementUpdated(el);
       expect(el.collapseState).to.equal("floating");
 
       // A numeric property assignment stays a plain number.
       el.railBreakpoint = 800;
       await elementUpdated(el);
-      fireCollapseResize(spy.callbacks[0], 700);
+      fireCollapseResize(spy.callbacks[0]!, 700);
       await elementUpdated(el);
       expect(el.collapseState).to.equal("rail");
     } finally {
@@ -4554,19 +4626,19 @@ describe("collapse breakpoints as CSS lengths", () => {
       `)) as LyraMultiSplit;
       await elementUpdated(el);
 
-      fireCollapseResize(spy.callbacks[0], 700);
+      fireCollapseResize(spy.callbacks[0]!, 700);
       await elementUpdated(el);
       expect(
         el.collapseState,
         "above the default 640 rail breakpoint"
       ).to.equal("wide");
-      fireCollapseResize(spy.callbacks[0], 500);
+      fireCollapseResize(spy.callbacks[0]!, 500);
       await elementUpdated(el);
       expect(
         el.collapseState,
         "below the default 640 rail breakpoint"
       ).to.equal("rail");
-      fireCollapseResize(spy.callbacks[0], 300);
+      fireCollapseResize(spy.callbacks[0]!, 300);
       await elementUpdated(el);
       expect(
         el.collapseState,
@@ -4641,7 +4713,7 @@ describe("collapseBreakpointBasis", () => {
         >
       `)) as LyraMultiSplit;
       await elementUpdated(el);
-      fireCollapseResize(spy.callbacks[0], 100); // would be 'floating' under container basis
+      fireCollapseResize(spy.callbacks[0]!, 100); // would be 'floating' under container basis
       await elementUpdated(el);
       expect(el.collapseState).to.equal("wide");
     } finally {
@@ -4775,7 +4847,7 @@ describe("collapseBreakpointBasis", () => {
       await elementUpdated(el);
       expect(el.collapseState).to.equal("rail");
 
-      fireCollapseResize(spy.callbacks[0], 1000);
+      fireCollapseResize(spy.callbacks[0]!, 1000);
       await elementUpdated(el);
       expect(el.collapseState, "still viewport-driven").to.equal("rail");
 
@@ -4829,7 +4901,7 @@ describe("ordered panel ownership", () => {
     `)) as LyraMultiSplit;
     await elementUpdated(el);
     const slot = el.shadowRoot!.querySelector("slot")!;
-    const [panelA, panelB] = [...el.children] as HTMLElement[];
+    const [panelA, panelB] = [...el.children] as [HTMLElement, HTMLElement];
 
     // A framework can write while the panel is owned. The component adopts
     // that as the eventual release baseline, then reasserts its live layout.
@@ -4927,8 +4999,8 @@ describe("ordered panel ownership", () => {
     ).to.deep.equal(["c", "d"]);
     // Neither "c" nor "d" existed in the previous identity set, so there is no retained size to
     // scale from -- the reconciliation falls back to an equal split instead of a 0/0 or NaN result.
-    expect(el.sizes[0]).to.be.closeTo(50, 1e-6);
-    expect(el.sizes[1]).to.be.closeTo(50, 1e-6);
+    expect(el.sizes[0]!).to.be.closeTo(50, 1e-6);
+    expect(el.sizes[1]!).to.be.closeTo(50, 1e-6);
   });
 
   it("releases and reacquires exact panel state across disconnect/reconnect", async () => {

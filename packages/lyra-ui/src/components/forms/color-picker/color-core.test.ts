@@ -31,7 +31,7 @@ describe('color-core conversions', () => {
       const back = hsvToRgb(h, s, v);
       return [Math.round(back.r), Math.round(back.g), Math.round(back.b)];
     };
-    for (const rgb of [
+    const colors: ReadonlyArray<readonly [number, number, number]> = [
       [255, 0, 0],
       [255, 255, 0],
       [0, 255, 0],
@@ -41,7 +41,8 @@ describe('color-core conversions', () => {
       [128, 128, 128],
       [0, 0, 0],
       [255, 255, 255],
-    ] as const) {
+    ];
+    for (const rgb of colors) {
       expect(roundTrip(...rgb), rgb.join(',')).to.deep.equal([...rgb]);
     }
     // A max of zero has no chroma to divide by, so saturation must resolve to zero, not NaN.

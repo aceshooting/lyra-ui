@@ -6,6 +6,7 @@
 - **Class** `LyraActivityFeed`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/activity-feed/activity-feed.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 17 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -32,7 +33,9 @@ unset. `mode: 'live' | 'post-hoc' =
 'live'` (reflected), `follow: boolean = true` (reflected), `expanded: boolean = false` (reflected),
 `label?: string` — omission localizes `activityFeedLabel` (`'Activity'` in the built-in English
 catalog), while any supplied string is a verbatim override, including `'Activity'` under a
-non-English `.strings` catalog and `''` — `showTimestamps: boolean = false` (attribute `show-timestamps`),
+non-English `.strings` catalog and `''`. A present host `aria-label` names the owned list in both
+plain and virtualized rendering paths while `label` remains the visible header text —
+`showTimestamps: boolean = false` (attribute `show-timestamps`),
 `formatTimestamp?: (date: Date) => string` (attribute: false), `renderText?: (entry: ActivityEntry)
 => TemplateResult` (attribute: false) — overrides the default plain-text `entry-text` rendering with
 arbitrary rich content (e.g. rendered markdown, or markdown plus a trailing tool-call chip list),

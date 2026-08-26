@@ -6,6 +6,7 @@
 - **Class** `LyraAppRailItem`, also available unregistered from `@aceshooting/lyra-ui/components/layout/app-rail/app-rail-item.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecated attribute** `active` since `11.2.0`; use attribute `current`; removal not before `13.0.0` — The attribute half of the restored `active` property alias. `active` was this member's original public name in both forms; the rename to `current` was never announced, so markup that already wrote `<lr-app-rail-item active>` stopped marking the item current with no error. Shares the property record's compatibility window because it is the same correction.
 - **Deprecated property** `active` since `11.2.0`; use property `current`; removal not before `13.0.0` — `active` was this property's original public name and was documented as such when it shipped. It was renamed to `current` with no changelog entry, no alias and no deprecation record, so every shipped consumer's `.active=` binding silently became a dead expando -- a Lit property binding on a custom element is untyped, so nothing in a consumer's type check, test suite or build could see it. The measured downstream effect was an app rail with no current-item indicator and a permanent aria-current="false". Restoring the name is a correction, not a new API, so the compatibility window runs long: this alias is what shipped consumers already wrote.
 - **Optional peers** none
@@ -41,8 +42,8 @@ persist its committed `widthPx` yourself. Listen for the preceding cancelable
 `lr-rail-resize-request` event when a host needs to veto a proposed width.
 `preferredMode` separately lets a host manually prefer `'full'`/`'icon-only'` for the non-mobile
 breakpoint axis (e.g. a user's own collapse toggle) while `mobile-breakpoint` continues to be tracked
-automatically regardless — it's only consulted while `mode` isn't force-pinned via the `mode`
-accessor itself, which still takes full priority.
+automatically regardless — it's only consulted while `forceMode` is `'auto'` or unset; an explicit
+`forceMode` value takes full priority.
 
 **Properties:**
 
@@ -63,9 +64,9 @@ accessor itself, which still takes full priority.
   rail switches from `'icon-only'` to `'mobile'`. Should be smaller than `iconOnlyBreakpoint` to
   produce all three states as the viewport narrows.
 - `open: boolean = false` (reflected) — whether the mobile floating overlay is shown. Only meaningful
-  while `mode` is `'mobile'` — the value is preserved (not reset) while another mode is active, but
-  no overlay chrome renders until `mode` is `'mobile'` again. Set this directly, or use the built-in
-  toggle button — there is no separate `show()`/`hide()` pair.
+  while `mode` is `'mobile'`; leaving mobile mode closes it so a later mobile transition cannot
+  restore a stale modal. Set this directly, or use the built-in toggle button — there is no separate
+  `show()`/`hide()` pair.
 - `label?: string` — optional accessible name for the rail's navigation landmark and mobile dialog.
   Every nonempty supplied string is honored literally; only absence/empty uses the localized
   navigation fallback. A host-level `aria-label` attribute (including an explicit empty value)
@@ -73,8 +74,8 @@ accessor itself, which still takes full priority.
 - `preferredMode?: 'full' | 'icon-only' | null` (attribute `preferred-mode`) — manually prefers
   `'full'` or `'icon-only'` for the non-mobile breakpoint axis, while `mobile-breakpoint` continues to
   be tracked automatically regardless — e.g. a user's manual collapse toggle that should still yield
-  to a genuinely too-narrow-for-any-inline-rail viewport. Only consulted while `mode` isn't
-  force-pinned via its own accessor (see above) — that continues to take full priority, unchanged.
+  to a genuinely too-narrow-for-any-inline-rail viewport. Only consulted while `forceMode` is
+  `'auto'` or unset (see above); an explicit `forceMode` value takes full priority.
   Unset (the default, `null`) reproduces the original breakpoint-only behavior exactly.
 - `hideToggle: boolean = false` (reflected, attribute `hide-toggle`) — suppresses the built-in mobile
   `[part='toggle']` hamburger/close button entirely, for a consumer that already owns an external
@@ -183,14 +184,15 @@ fallback at its exact state rule and preserves the previous brand or active-mix 
 ```
 
 ```ts
-rail.mode = "icon-only"; // force a presentation regardless of viewport width
-rail.mode = "auto"; // release the force, resume live breakpoint tracking
+rail.forceMode = "icon-only"; // force a presentation regardless of viewport width
+rail.forceMode = "auto"; // release the force, resume live breakpoint tracking
 ```
 
 The package root also exports a pure `computeAppRailMode(iconOnlyMatches: boolean, mobileMatches:
-boolean, preferredMode?: 'full' | 'icon-only' | null): AppRailMode` resolver (plus the
-`AppRailMode`/`AppRailModeInput`/`AppRailModeChangeDetail`/`AppRailToggleDetail`/`AppRailResizeDetail`
-types) — the same logic the element's internal `matchMedia` listeners call, exposed standalone so a
+boolean, preferredMode?: 'full' | 'icon-only' | null): LyraAppRailMode` resolver (plus the
+`LyraAppRailMode`/`LyraAppRailModeInput`/`LyraAppRailPreferredMode`/`LyraAppRailPersistField`/
+`LyraAppRailModeChangeDetail`/`LyraAppRailToggleDetail`/`LyraAppRailResizeDetail` types) — the same
+logic the element's internal `matchMedia` listeners call, exposed standalone so a
 consumer can compute or unit-test the same resolution without a real browser window. `mobileMatches`
 wins over everything else when true (the viewport is narrower than both breakpoints at once);
 otherwise `preferredMode` (when set) wins over `iconOnlyMatches`.
@@ -206,15 +208,14 @@ component only lays out whatever is slotted and can't inspect or fix up a consum
 
 **Known gotchas:**
 
-- `mode`'s setter accepts the wider `AppRailModeInput` (including the `'auto'` sentinel) but the
-  getter's return type is the narrower `AppRailMode` — assigning `'auto'` is a one-way instruction,
-  not a value read back later; there is no `isForced`-style property to check whether the rail is
-  currently locked to a mode or tracking the viewport.
+- `mode` is the readonly `LyraAppRailMode` result. `forceMode` accepts the non-mobile
+  `LyraAppRailPreferredMode` values plus the `'auto'` release sentinel, so whether the rail is
+  pinned or tracking the viewport remains directly observable.
 - reassigning `icon-only-breakpoint`/`mobile-breakpoint` after first render tears down and rebuilds
-  the `matchMedia` listeners, but does not itself un-force a previously-forced `mode` — if a consumer
-  set `mode = 'icon-only'`, changing the breakpoints won't resume auto-tracking until `mode = 'auto'`
-  is set explicitly.
-- leaving `'mobile'` mode while `open` (via a breakpoint crossing or a forced `mode` reassignment)
+  the `matchMedia` listeners, but does not itself clear `forceMode` — if a consumer set
+  `forceMode = 'icon-only'`, changing the breakpoints won't resume auto-tracking until
+  `forceMode = 'auto'` is set explicitly.
+- leaving `'mobile'` mode while `open` (via a breakpoint crossing or a `forceMode` reassignment)
   auto-closes the overlay through the same path as the toggle button, so `lr-toggle` still fires
   and the scroll lock/focus trap still release normally — a consumer listening only for explicit
   toggle-button clicks would miss this closure.

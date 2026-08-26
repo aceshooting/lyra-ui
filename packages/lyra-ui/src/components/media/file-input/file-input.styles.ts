@@ -226,7 +226,7 @@ export const styles = css`
     );
   }
   [part~="base"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   :host(:disabled) [part~="base"] {
@@ -327,7 +327,7 @@ export const styles = css`
     );
   }
   [part="remove-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part="remove-button"]:disabled {

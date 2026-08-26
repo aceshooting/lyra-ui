@@ -169,8 +169,8 @@ function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
  * @cssprop [--lr-callout-padding=var(--lr-form-control-padding-inline,var(--lr-space-m))] - Padding of the panel, on
  *   both axes. Its private default follows the shared ladder's inline-padding knob: a panel's
  *   block rhythm is generous like a control's inline padding, not tight like its block padding
- *   (which exists to fit text inside a fixed control height). `inline` removes that private
- *   default entirely; an inherited or direct public value remains authoritative.
+ *   (which exists to fit text inside a fixed control height). This hook applies to the panel
+ *   treatment; `inline` intentionally forces host padding to zero.
  * @cssprop [--lr-callout-gap=var(--lr-space-s)] - Space between the icon, the content, and the
  *   close action. Deliberately does not vary by `size`: it separates three adjacent boxes rather
  *   than setting the panel's density, and shrinking it at the small tiers only crowds them.

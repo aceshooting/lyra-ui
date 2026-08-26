@@ -213,9 +213,9 @@ it('announces only later meaningful heading/description changes and deduplicates
 });
 
 it('does not announce updates while the host or a composed ancestor is hidden', async () => {
-  const wrapper = await fixture(html`
+  const wrapper = (await fixture(html`
     <section><lr-empty heading="Initial empty state"></lr-empty></section>
-  `);
+  `)) as HTMLElement;
   const el = wrapper.querySelector('lr-empty') as LyraEmpty;
   await el.updateComplete;
   await Promise.resolve();
@@ -427,6 +427,18 @@ it('does not collapse the icon wrapper when icon content is slotted', async () =
   )) as LyraEmpty;
   const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
   expect(icon.hasAttribute('hidden')).to.be.false;
+});
+
+it('keeps meaningful default-slot text visible after slot reconciliation', async () => {
+  const el = (await fixture(
+    html`<lr-empty heading="No results">🔍</lr-empty>`,
+  )) as LyraEmpty;
+  const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+  const slot = icon.querySelector('slot') as HTMLSlotElement;
+
+  expect(slot.assignedNodes({ flatten: true }).map((node) => node.textContent).join('')).to.equal('🔍');
+  expect(icon.hasAttribute('hidden')).to.be.false;
+  expect(getComputedStyle(icon).display).to.not.equal('none');
 });
 
 it('collapses the actions wrapper when no actions content is provided', async () => {
@@ -681,7 +693,7 @@ it('lets the heading slot override the heading attribute instead of concatenatin
   const slot = el.shadowRoot!.querySelector('slot[name="heading"]') as HTMLSlotElement;
   const assigned = slot.assignedElements({ flatten: true });
   expect(assigned.length).to.equal(1);
-  expect(assigned[0].textContent).to.equal('rich [[x]]');
+  expect(assigned[0]?.textContent).to.equal('rich [[x]]');
 });
 
 it('lets the description slot override the description attribute instead of concatenating both', async () => {
@@ -691,7 +703,7 @@ it('lets the description slot override the description attribute instead of conc
   const slot = el.shadowRoot!.querySelector('slot[name="description"]') as HTMLSlotElement;
   const assigned = slot.assignedElements({ flatten: true });
   expect(assigned.length).to.equal(1);
-  expect(assigned[0].textContent).to.equal('rich');
+  expect(assigned[0]?.textContent).to.equal('rich');
 });
 
 it('applies compact styling to [part="base"] and [part="heading"] when compact', async () => {

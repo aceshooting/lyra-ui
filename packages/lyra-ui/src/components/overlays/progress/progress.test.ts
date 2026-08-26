@@ -448,6 +448,30 @@ it('uses visible consumer labels in the accessible names of both progress roles'
   expect(barBase.getAttribute('aria-label')).to.equal('Upload documents');
 });
 
+it('projects the progress-ring label slot and keeps its accessible text live', async () => {
+  const el = (await fixture(html`
+    <lr-progress-ring value="25"><strong slot="label">Uploading files</strong></lr-progress-ring>
+  `)) as LyraProgressRing;
+  const role = el.shadowRoot!.querySelector<HTMLElement>('[role="progressbar"]')!;
+  const label = el.querySelector<HTMLElement>('[slot="label"]')!;
+  const namedSlots = el.shadowRoot!.querySelectorAll<HTMLSlotElement>('slot[name="label"]');
+
+  expect(namedSlots.length).to.equal(1);
+  expect(
+    namedSlots[0]!
+      .assignedNodes({ flatten: true })
+      .map((node) => node.textContent ?? '')
+      .join('')
+      .trim(),
+  ).to.equal('Uploading files');
+  expect(role.getAttribute('aria-label')).to.equal('Uploading files');
+
+  label.textContent = 'Finishing upload';
+  await Promise.resolve();
+  await el.updateComplete;
+  expect(role.getAttribute('aria-label')).to.equal('Finishing upload');
+});
+
 it('can render the indeterminate ring before a browser render root exists', () => {
   const el = document.createElement('lr-progress-ring') as LyraProgressRing;
   el.indeterminate = true;
@@ -620,7 +644,7 @@ it('constructs progress label observers in the adopted owner realm', async () =>
     if (observerDescriptor) {
       Object.defineProperty(frameWindow, 'MutationObserver', observerDescriptor);
     } else {
-      delete (frameWindow as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+      Reflect.deleteProperty(frameWindow, 'MutationObserver');
     }
     frame.remove();
   }
@@ -761,6 +785,9 @@ it('normalizes value/max and resolves the accessible name identically for the ba
     <lr-progress-ring label="Mapped" accessible-label="Explicit"></lr-progress-ring>
   </div>`);
   const namedRoles = [...named.querySelectorAll('lr-progress-bar, lr-progress-ring')];
+  await Promise.all(
+    namedRoles.map((element) => (element as LyraProgressBar | LyraProgressRing).updateComplete),
+  );
   const names = (): (string | null)[] =>
     namedRoles.map(
       (element) =>

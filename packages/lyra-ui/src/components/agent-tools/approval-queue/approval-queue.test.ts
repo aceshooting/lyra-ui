@@ -220,9 +220,10 @@ describe('lr-approval-queue', () => {
       <lr-approval-queue .requests=${mixed}></lr-approval-queue>
     `);
     await el.updateComplete;
-    const [pending, resolved] = [
-      ...el.shadowRoot!.querySelectorAll('[part="request"]'),
-    ] as HTMLButtonElement[];
+    const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="request"]')];
+    const pending = buttons[0];
+    const resolved = buttons[1];
+    if (!pending || !resolved) throw new Error('Expected one pending and one resolved approval row.');
     // The IDL flag was already true while the row looked and felt exactly like a pending one, so
     // everything below asserts the rendered result instead.
     expect(pending.disabled).to.be.false;

@@ -5,7 +5,7 @@ export const styles = css`
     display: block;
     position: relative;
     inline-size: 100%;
-    block-size: 100%;
+    block-size: var(--lr-canvas-reserved-height, var(--lr-size-24rem));
     min-inline-size: 0;
     min-block-size: 0;
     overflow: hidden;
@@ -191,6 +191,8 @@ export const styles = css`
     position: absolute;
     inset-block-start: 0;
     inset-inline-start: 0;
+    inline-size: 100%;
+    block-size: 100%;
     transform-origin: 0 0;
     will-change: transform;
   }
@@ -206,6 +208,9 @@ export const styles = css`
   }
   [part='viewport'][data-panning] [part='background'] {
     cursor: grabbing;
+  }
+  [part='viewport'][data-empty] .world {
+    pointer-events: none;
   }
   :host([locked]) [part='background'] {
     cursor: default;

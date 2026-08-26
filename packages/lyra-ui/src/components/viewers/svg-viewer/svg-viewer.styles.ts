@@ -132,7 +132,7 @@ export const styles = css`
     );
   }
   [part="region-highlight-target"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part="region-highlight"]:where([data-active]) {
@@ -166,7 +166,7 @@ export const styles = css`
     );
   }
   [part="region-highlight-action"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
 `;

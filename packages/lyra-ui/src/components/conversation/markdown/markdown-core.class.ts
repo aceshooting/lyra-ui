@@ -272,15 +272,13 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
    *  bounded-cost plain text and Markdown parsing resumes only for the final false transition;
    *  the host remains `aria-busy="true"` so assistive technology knows the rendered document is
    *  not final.
-   *  Reflects so a consumer can also target `lr-markdown[streaming]`. */
+   *  Reflects so a consumer can also target `lr-markdown-core[streaming]`. */
   @property({ type: Boolean, reflect: true }) override streaming = false;
 
-  /** Syntax-highlights fenced code blocks via the same optional `shiki` peer `<lr-code-block>`
-   *  uses. `true` (the default) upgrades every fenced block from plain `<pre><code>` once the peer
-   *  is available -- a pure upgrade, not a behavior change gated on opt-in, since it's itself gated
-   *  transparently by whether `shiki` is installed at all (an app that never installs it sees
-   *  byte-identical output to today). Set `false` to keep plain output even when `shiki` is
-   *  installed. No effect while `streaming` is `true` -- see that property's own doc. */
+  /** Syntax-highlights fenced code blocks through the fine-grained Shiki core loader when
+   *  `languages` supplies the matching grammar. The empty default language map means no fenced
+   *  block is highlighted; set `false` to keep plain output even when grammars are supplied. No
+   *  effect while `streaming` is `true` -- see that property's own doc. */
   @property({
     attribute: 'highlight-code',
     converter: trueDefaultBooleanConverter,

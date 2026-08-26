@@ -6,9 +6,10 @@
 - **Class** `LyraCalendarViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/calendar-viewer/calendar-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `ical.js` — see `llms/peers.md`
-- **Themeable via** 10 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -25,7 +26,9 @@ the exclusive boundary it represents (14–17 renders as 14–16). No HTML is in
 `max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
 precedence over `name` by attribute presence, including an explicitly empty value. `highlights`,
 `activeHighlightId`, `anchor`, and
-`anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
+`anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract. Fragment
+resolution is an exact DOM `id` lookup, but generated event markup defines no fragment ids, so a
+fragment jump reports `found: false`. Use a text-quote anchor for event content.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on rendered event text and emit `lr-search-change`/`lr-anchor-result`.
@@ -46,7 +49,9 @@ passive and cannot be activated.
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base`, `body`, `event-list`, `event`, `event-summary`, `event-time`, `event-location`,
-`event-description`, `spinner`, and `error`.
+`event-description`, `spinner`, `error`, and `anchor-live-region` (an aria-hidden, non-live shadow
+mirror of the latest anchor-jump message; the spoken copy is appended to the shared document-level
+polite sink only while the viewer and its composed ancestors are exposed to the accessibility tree).
 
 **Themeable custom properties:** `--lr-calendar-viewer-max-height` (default `none`) — maximum block
 size of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
@@ -57,4 +62,5 @@ size of `[part="body"]`; also settable via the `max-height` property, which writ
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the calendar. The accepted model is further
 capped at 250 events and 2 MiB of rendered event text; this keeps the complete accepted document in
-the DOM so search, selection and anchors remain truthful without the former 10,000-event eager tree.
+the DOM so search, selection and text-quote anchors remain truthful without the former 10,000-event
+eager tree.

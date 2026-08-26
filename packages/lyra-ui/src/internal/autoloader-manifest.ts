@@ -226,7 +226,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/forms/combobox/combobox.class.js').then((module) => module.LyraCombobox),
   },
   'lr-command-palette': {
-    optionalPeers: ['dompurify'],
+    optionalPeers: [],
     load: () => import('../components/layout/command-palette/command-palette.class.js').then((module) => module.LyraCommandPalette),
   },
   'lr-commit-card': {
@@ -242,7 +242,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/agent-tools/compare-panel/compare-panel.class.js').then((module) => module.LyraComparePanel),
   },
   'lr-condition-builder': {
-    optionalPeers: ['dompurify'],
+    optionalPeers: [],
     load: () => import('../components/data/condition-builder/condition-builder.class.js').then((module) => module.LyraConditionBuilder),
   },
   'lr-confirm-bar': {
@@ -426,7 +426,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/layout/filter-bar/filter-bar.class.js').then((module) => module.LyraFilterBar),
   },
   'lr-flag': {
-    optionalPeers: ['@aceshooting/lyra-flags'],
+    optionalPeers: [],
     load: () => import('../components/media/flag/flag.class.js').then((module) => module.LyraFlag),
   },
   'lr-flow-canvas': {
@@ -594,7 +594,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/utility/live-region/live-region.class.js').then((module) => module.LyraLiveRegion),
   },
   'lr-locale-picker': {
-    optionalPeers: ['@aceshooting/lyra-flags'],
+    optionalPeers: [],
     load: () => import('../components/forms/locale-picker/locale-picker.class.js').then((module) => module.LyraLocalePicker),
   },
   'lr-map': {
@@ -722,7 +722,7 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/viewers/pdf-viewer/pdf-viewer.class.js').then((module) => module.LyraPdfViewer),
   },
   'lr-phone-input': {
-    optionalPeers: ['@aceshooting/lyra-flags', 'libphonenumber-js'],
+    optionalPeers: [],
     load: () => import('../components/forms/phone-input/phone-input.class.js').then((module) => module.LyraPhoneInput),
   },
   'lr-pie-chart': {
@@ -1110,11 +1110,11 @@ export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, Autoloade
     load: () => import('../components/conversation/usage-badge/usage-badge.class.js').then((module) => module.LyraUsageBadge),
   },
   'lr-video': {
-    optionalPeers: [],
+    optionalPeers: ['dompurify'],
     load: () => import('../components/media/video/video.class.js').then((module) => module.LyraVideo),
   },
   'lr-video-playlist': {
-    optionalPeers: [],
+    optionalPeers: ['dompurify'],
     load: () => import('../components/media/video-playlist/video-playlist.class.js').then((module) => module.LyraVideoPlaylist),
   },
   'lr-virtual-list': {

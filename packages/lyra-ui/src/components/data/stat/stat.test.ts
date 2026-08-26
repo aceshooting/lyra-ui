@@ -2,9 +2,9 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import './stat.js';
 import type { LyraStat } from './stat.js';
-import { styles } from './stat.styles.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { sendKeys } from '@web/test-runner-commands';
 
 it('renders label, value, and unit', async () => {
   const el = (await fixture(html`<lr-stat label="Revenue" value="12.4" unit="k€"></lr-stat>`)) as LyraStat;
@@ -264,7 +264,7 @@ it('lets the caption slot override the caption attribute instead of concatenatin
   const slot = el.shadowRoot!.querySelector('slot[name="caption"]') as HTMLSlotElement;
   const assigned = slot.assignedElements({ flatten: true });
   expect(assigned.length).to.equal(1);
-  expect(assigned[0].textContent).to.equal('rich');
+  expect(assigned[0]!.textContent).to.equal('rich');
 });
 
 it('defaults goodDirection to "up": a negative trend renders data-polarity="bad"', async () => {
@@ -660,8 +660,8 @@ it('applies the exactValue tooltip/focusability independently per row', async ()
   const rowValues = Array.from(el.shadowRoot!.querySelectorAll('[part="row-value"]'));
   expect(rowValues.map((el) => el.hasAttribute('title'))).to.deep.equal([false, true, false]);
   expect(rowValues.map((el) => el.hasAttribute('tabindex'))).to.deep.equal([false, true, false]);
-  expect(rowValues[1].getAttribute('title')).to.equal('1,204');
-  expect(rowValues[1].getAttribute('tabindex')).to.equal('0');
+  expect(rowValues[1]!.getAttribute('title')).to.equal('1,204');
+  expect(rowValues[1]!.getAttribute('tabindex')).to.equal('0');
 });
 
 it('reflects emphasis onto the host attribute and adds an accent border to the base part', async () => {
@@ -729,26 +729,73 @@ it('shows the exact value as a title tooltip on the headline value, and makes it
   expect(valueEl.getAttribute('tabindex')).to.equal('0');
 });
 
-it("gives [part='value']/[part='row-value'] a token-driven :focus-visible outline, since exactValue makes them keyboard-focusable", () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include(
-    "[part='value']:focus-visible, [part='row-value']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }"
-  );
+it("renders [part='value']/[part='row-value'] focus rings from the focus tokens", async () => {
+  const el = (await fixture(html`
+    <lr-stat
+      value="$1.2K"
+      exact-value="$1,204.37"
+      style="--lr-focus-ring-width: 6px; --lr-focus-ring-color: rgb(1, 2, 3); --lr-focus-ring-offset: 4px"
+    ></lr-stat>
+  `)) as LyraStat;
+  el.rows = [{ label: 'Tokens', value: '1.2K', exactValue: '1,204' }];
+  await el.updateComplete;
+  const targets = [
+    el.shadowRoot!.querySelector<HTMLElement>('[part="value"]')!,
+    el.shadowRoot!.querySelector<HTMLElement>('[part="row-value"]')!,
+  ];
+
+  for (const target of targets) {
+    await sendKeys({ press: 'Tab' });
+    target.focus();
+    await waitUntil(() => {
+      const computed = getComputedStyle(target);
+      return (
+        computed.outlineWidth === '6px' &&
+        computed.outlineColor === 'rgb(1, 2, 3)' &&
+        computed.outlineOffset === '4px'
+      );
+    }, `${target.getAttribute('part')} never painted its keyboard focus ring`);
+  }
 });
 
-it("gives the same focusable [part='value']/[part='row-value'] a mouse-user :hover affordance, wrapped in :where() so a consumer ::part(value):hover / ::part(row-value):hover override wins without !important", async () => {
+it('renders the help cursor only while an exact-value headline or row is hovered', async () => {
   const el = (await fixture(html`<lr-stat value="$1.2K" exact-value="$1,204.37"></lr-stat>`)) as LyraStat;
-  const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
-    .flatMap((sheet) => Array.from(sheet.cssRules))
-    .map((rule) => rule.cssText.replace(/"/g, "'"))
-    .find((text) => text.includes(':hover') && text.includes("[part='value'][tabindex]"));
-  expect(internalRule).to.contain(':where(');
-  expect(internalRule).to.contain('cursor: help');
-});
+  el.rows = [
+    { label: 'Exact', value: '1.2K', exactValue: '1,204' },
+    { label: 'Rounded only', value: '900' },
+  ];
+  await el.updateComplete;
+  const exactTargets = [
+    el.shadowRoot!.querySelector<HTMLElement>('[part="value"]')!,
+    el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row-value"]')[0]!,
+  ];
 
-it('scopes the value/row-value hover affordance to the focusable ([tabindex]) state only', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include(":where([part='value'][tabindex]):hover, :where([part='row-value'][tabindex]):hover");
+  for (const target of exactTargets) {
+    target.scrollIntoView({ block: 'center' });
+    const rect = target.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(() => getComputedStyle(target).cursor === 'help');
+    } finally {
+      await resetMouse();
+    }
+  }
+
+  const roundedOnly = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row-value"]')[1]!;
+  roundedOnly.scrollIntoView({ block: 'center' });
+  const rect = roundedOnly.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(roundedOnly).cursor).to.not.equal('help');
+  } finally {
+    await resetMouse();
+  }
 });
 
 it('associates the focusable value with its label via aria-labelledby', async () => {
@@ -828,7 +875,7 @@ it('lets the sub slot override the sub attribute instead of concatenating both',
   const slot = el.shadowRoot!.querySelector('slot[name="sub"]') as HTMLSlotElement;
   const assigned = slot.assignedElements({ flatten: true });
   expect(assigned.length).to.equal(1);
-  expect(assigned[0].textContent).to.equal('rich');
+  expect(assigned[0]!.textContent).to.equal('rich');
 });
 
 it('hides the sub part when unset', async () => {
@@ -923,15 +970,6 @@ it('drops border, background, padding and the block-size stretch under frame="pl
   expect(getComputedStyle(base).blockSize).to.not.equal('200px');
 });
 
-it('orders :host([frame="plain"]) after :host([compact]) so the equal-specificity padding reset wins', () => {
-  const css = styles.cssText;
-  const compactAt = css.indexOf(':host([compact])');
-  const plainAt = css.indexOf(":host([frame='plain'])");
-  expect(compactAt).to.be.greaterThan(-1);
-  expect(plainAt).to.be.greaterThan(-1);
-  expect(plainAt).to.be.greaterThan(compactAt);
-});
-
 it('lets plain win over compact when both are set (equal specificity, source order decides)', async () => {
   const el = (await fixture(html`<lr-stat compact frame="plain" label="Revenue" value="12.4"></lr-stat>`)) as LyraStat;
   const s = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
@@ -996,31 +1034,27 @@ it('inherits linked hover/pressed hooks while direct host values still win', asy
   }
 });
 
-it("wraps the internal [part='base'][href]:hover rule in :where() so a consumer ::part(base):hover override wins without !important", async () => {
-  const el = (await fixture(html` <lr-stat label="Memories" value="128" href="/memories"></lr-stat> `)) as LyraStat;
-  const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
-    .flatMap((sheet) => Array.from(sheet.cssRules))
-    .map((rule) => rule.cssText.replace(/"/g, "'"))
-    .find((text) => text.includes(':hover') && text.includes("[part='base'][href]") && !text.includes(':host'));
-  expect(internalRule).to.contain(':where(');
-});
-
 it('keeps the focus ring on a linked plain stat (an outline needs no border)', async () => {
   const el = (await fixture(html`<lr-stat
     frame="plain"
     label="Memories"
     value="128"
     href="/memories"
+    style="--lr-focus-ring-width: 6px; --lr-focus-ring-color: rgb(1, 2, 3); --lr-focus-ring-offset: 4px"
   ></lr-stat>`)) as LyraStat;
   expect(el.frame).to.equal('plain');
   const anchor = el.shadowRoot!.querySelector('[part="base"]') as HTMLAnchorElement;
   expect(anchor.localName).to.equal('a');
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include(
-    "[part='base'][href]:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }"
-  );
+  await sendKeys({ press: 'Tab' });
   anchor.focus();
-  expect(el.shadowRoot!.activeElement?.getAttribute('href')).to.equal('/memories');
+  await waitUntil(() => {
+    const computed = getComputedStyle(anchor);
+    return (
+      computed.outlineWidth === '6px' &&
+      computed.outlineColor === 'rgb(1, 2, 3)' &&
+      computed.outlineOffset === '4px'
+    );
+  }, 'the linked plain stat never painted its keyboard focus ring');
 });
 
 it('puts value, unit and caption on one baseline row under orientation="horizontal"', async () => {

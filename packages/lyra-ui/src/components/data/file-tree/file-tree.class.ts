@@ -31,7 +31,15 @@ export interface FileTreeNode {
 
 const MAX_FILE_TREE_NODES = 10_000;
 const MAX_FILE_TREE_DEPTH = 64;
-export const GIT_STATUSES = new Set<GitStatus>(['added', 'modified', 'deleted', 'renamed', 'untracked', 'conflicted', 'ignored']);
+export const GIT_STATUSES: ReadonlySet<GitStatus> = new Set<GitStatus>([
+  'added',
+  'modified',
+  'deleted',
+  'renamed',
+  'untracked',
+  'conflicted',
+  'ignored',
+]);
 
 interface FileTreeDraft {
   readonly fields: Omit<FileTreeNode, 'children'>;

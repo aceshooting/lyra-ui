@@ -3,7 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 installFormControlLabelSupport();
-import { place } from '../../../internal/positioner.js';
+import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
@@ -55,7 +55,7 @@ export interface LyraLocaleEntry {
   readonly tag: string;
   /** Overrides `localeNativeName(tag)` when given. */
   readonly label?: string;
-  /** ISO 3166-1 alpha-2 country code (e.g. `'lb'`) overriding this row's `<lr-flag>` derivation
+  /** ISO 3166-1 alpha-2 or alpha-3 country code (e.g. `'lb'` or `'lbn'`) overriding this row's `<lr-flag>` derivation
    *  -- when given, the row renders `<lr-flag country={country}>` instead of the default
    *  `<lr-flag language={tag}>`. Unset (the default) keeps today's tag-derived flag. Ignored
    *  while `showFlags` is `false`. */

@@ -1,7 +1,8 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import './chunk-inspector.js';
 import type { LyraChunkInspector, LyraChunk } from './chunk-inspector.js';
-import { styles } from './chunk-inspector.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const chunks: LyraChunk[] = [
   { id: 'c1', text: 'Radium and polonium were both discovered by Marie and Pierre Curie in 1898.', score: 0.92, sourceId: 's1', title: 'curie-bio.pdf', page: 3 },
@@ -148,10 +149,7 @@ it('hands the virtual list a stable items array and key function across unrelate
   const el = (await fixture(html`<lr-chunk-inspector virtualize-at="3"></lr-chunk-inspector>`)) as LyraChunkInspector;
   el.chunks = many;
   await el.updateComplete;
-  const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
-    items: unknown[];
-    keyFunction?: (item: unknown) => string;
-  };
+  const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
   const firstItems = list.items;
   const firstKeyFunction = list.keyFunction;
 
@@ -510,11 +508,42 @@ describe('row styling across both rendering paths', () => {
   });
 });
 
-it('gives open-button and toggle hover/focus-visible', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  for (const part of ['open-button', 'toggle']) {
-    expect(css, `${part} hover`).to.match(new RegExp(`\\[part~='${part}'\\]:hover`));
-    expect(css, `${part} focus-visible`).to.match(new RegExp(`\\[part~='${part}'\\]:focus-visible[^{]*\\{[^}]*outline:`));
+it('renders open-button and toggle hover/focus-visible feedback', async () => {
+  const el = await fixture<LyraChunkInspector>(html`
+    <lr-chunk-inspector
+      style="--lr-focus-ring-width: 6px; --lr-focus-ring-color: rgb(4, 5, 6)"
+      .chunks=${[chunks[0]!]}
+    ></lr-chunk-inspector>
+  `);
+  const targets = ['open-button', 'toggle'].map(
+    (part) => el.shadowRoot!.querySelector<HTMLElement>(`[part~="${part}"]`)!
+  );
+
+  for (const target of targets) {
+    target.scrollIntoView({ block: 'center' });
+    const rect = target.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => getComputedStyle(target).textDecorationLine.includes('underline'),
+        `${target.getAttribute('part')} never painted its hover underline`
+      );
+    } finally {
+      await resetMouse();
+    }
+
+    await sendKeys({ press: 'Tab' });
+    target.focus();
+    await waitUntil(() => {
+      const computed = getComputedStyle(target);
+      return computed.outlineWidth === '6px' && computed.outlineColor === 'rgb(4, 5, 6)';
+    }, `${target.getAttribute('part')} never painted its keyboard focus ring`);
   }
 });
 

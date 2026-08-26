@@ -354,6 +354,8 @@ const strings: LyraLocaleStrings = {
     'Подписи данных недоступны, но основная диаграмма остаётся доступной.',
   chartStackTotalsUnavailable:
     'Итоги накопления недоступны, но основная диаграмма остаётся доступной.',
+  chartAnnotationsUnavailable:
+    'Аннотации диаграммы недоступны, но основная диаграмма остаётся доступной.',
   chart: 'Диаграмма',
   chartTypeLine: 'Линейная',
   chartTypeBar: 'Столбчатая',
@@ -761,6 +763,7 @@ const strings: LyraLocaleStrings = {
   emailViewerSubject: 'Тема',
   emailViewerDate: 'Дата',
   emailViewerAttachments: 'Вложения',
+  emailViewerUnnamedAttachment: 'Вложение без имени',
   emailViewerNoSubject: '(без темы)',
   emailViewerOpenAttachment: 'Открыть {filename}',
   emailViewerShowQuoted: 'Показать цитируемый текст',
@@ -1284,6 +1287,7 @@ const strings: LyraLocaleStrings = {
   ingestionStageDone: 'Готово',
   ingestionStageFailed: 'Сбой',
   ingestionStageCancelled: 'Отменено',
+  ingestionStageUnknown: 'Неизвестный этап',
   ingestionQueueLabel: 'Очередь обработки',
   ingestionQueueEmpty: 'В очереди нет документов',
   documentLibraryFreshnessFresh: 'Актуально',
@@ -1328,6 +1332,7 @@ const strings: LyraLocaleStrings = {
   drilldownDocuments: 'Документы',
   drilldownRuns: 'Запуски агентов',
   drilldownEmpty: 'Элемент не выбран',
+  drilldownUntitledNode: 'Шаг без названия',
   evaluationRunStatusIdle: 'Ожидание',
   evaluationRunStatusWaitingInput: 'Ожидает ввода',
   evaluationRunStatusWaitingApproval: 'Ожидает подтверждения',

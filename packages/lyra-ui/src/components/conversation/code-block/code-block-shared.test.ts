@@ -2,13 +2,16 @@ import { render } from "lit";
 import { expect } from "@open-wc/testing";
 import {
   CodeBlockInteractionController,
+  codeBlockActiveHighlightLineSet,
   codeBlockEventLine,
+  codeBlockLineHighlightSet,
   codeBlockLineTransformer,
   parseHighlightLines,
   renderCodeBlockPlainCode,
   restoreCodeBlockLineFocus,
   scrollCodeBlockToAnchor,
 } from "./code-block-shared.js";
+import type { LyraHighlight } from '../../viewers/document-viewer/anchors.js';
 
 describe("parseHighlightLines", () => {
   it("parses a single range", () => {
@@ -60,6 +63,37 @@ describe("parseHighlightLines", () => {
   });
 });
 
+describe('malformed highlight boundaries', () => {
+  const malformedCollections: readonly unknown[] = [
+    null,
+    [null],
+    'not-a-collection',
+    [{ id: 'missing-anchor' }],
+  ];
+
+  for (const malformed of malformedCollections) {
+    const label = malformed === null ? 'null' : JSON.stringify(malformed);
+
+    it(`ignores ${label} while building the merged line-highlight set`, () => {
+      const result = codeBlockLineHighlightSet(
+        '',
+        malformed as readonly LyraHighlight[],
+        10,
+      );
+      expect(result.size).to.equal(0);
+    });
+
+    it(`ignores ${label} while building the active-highlight set`, () => {
+      const result = codeBlockActiveHighlightLineSet(
+        malformed as readonly LyraHighlight[],
+        'missing-anchor',
+        10,
+      );
+      expect(result.size).to.equal(0);
+    });
+  }
+});
+
 describe("codeBlockLineTransformer", () => {
   it('normalizes scalar and absent pre classes while removing shiki tabindex', () => {
     const transformer = codeBlockLineTransformer({
@@ -75,14 +109,14 @@ describe("codeBlockLineTransformer", () => {
     const array = { properties: { class: ['language-js', 7] } as Record<string, unknown> };
     const absent = { properties: {} as Record<string, unknown> };
 
-    transformer.pre(scalar);
-    transformer.pre(array);
-    transformer.pre(absent);
+    transformer.pre!(scalar);
+    transformer.pre!(array);
+    transformer.pre!(absent);
 
-    expect(scalar.properties.class).to.deep.equal(['language-ts', 'line-numbers']);
+    expect(scalar.properties['class']).to.deep.equal(['language-ts', 'line-numbers']);
     expect(scalar.properties).not.to.have.property('tabindex');
-    expect(array.properties.class).to.deep.equal(['language-js', '7', 'line-numbers']);
-    expect(absent.properties.class).to.deep.equal(['line-numbers']);
+    expect(array.properties['class']).to.deep.equal(['language-js', '7', 'line-numbers']);
+    expect(absent.properties['class']).to.deep.equal(['line-numbers']);
   });
 
   it("stamps data-line, data-highlighted, and part on a highlighted line node", () => {
@@ -96,10 +130,10 @@ describe("codeBlockLineTransformer", () => {
       lineNumberText: String,
     });
     const node = { properties: {} as Record<string, unknown> };
-    transformer.line(node, 2);
+    transformer.line!(node, 2);
     expect(node.properties["data-line"]).to.equal("2");
     expect(node.properties["data-highlighted"]).to.equal("");
-    expect(node.properties.part).to.deep.equal(["line-highlight"]);
+    expect(node.properties['part']).to.deep.equal(["line-highlight"]);
   });
 
   it("does not stamp part on a non-highlighted line", () => {
@@ -113,8 +147,8 @@ describe("codeBlockLineTransformer", () => {
       lineNumberText: String,
     });
     const node = { properties: {} as Record<string, unknown> };
-    transformer.line(node, 5);
-    expect(node.properties.part).to.equal(undefined);
+    transformer.line!(node, 5);
+    expect(node.properties['part']).to.equal(undefined);
     expect(node.properties["data-highlighted"]).to.equal(undefined);
   });
 
@@ -129,7 +163,7 @@ describe("codeBlockLineTransformer", () => {
       lineNumberText: String,
     });
     const node = { properties: {} as Record<string, unknown> };
-    transformer.line(node, 3);
+    transformer.line!(node, 3);
     expect(node.properties["data-active"]).to.equal("");
   });
 
@@ -147,24 +181,24 @@ describe("codeBlockLineTransformer", () => {
       properties: {} as Record<string, unknown>,
       children: [] as unknown[],
     };
-    transformer.line(node, 2);
-    expect(node.properties.part).to.equal(undefined);
-    expect(node.properties.role).to.equal(undefined);
+    transformer.line!(node, 2);
+    expect(node.properties['part']).to.equal(undefined);
+    expect(node.properties['role']).to.equal(undefined);
     const gutter = node.children[0] as {
       tagName: string;
       properties: Record<string, unknown>;
       children: unknown[];
     };
     expect(gutter.tagName).to.equal("button");
-    expect(gutter.properties.part).to.deep.equal(["line-button"]);
-    expect(gutter.properties.tabindex).to.equal("0");
+    expect(gutter.properties['part']).to.deep.equal(["line-button"]);
+    expect(gutter.properties['tabindex']).to.equal("0");
     expect(gutter.properties["aria-label"]).to.equal("Line 2");
     const source = node.children[1] as {
       tagName: string;
       properties: Record<string, unknown>;
     };
     expect(source.tagName).to.equal("span");
-    expect(source.properties.class).to.deep.equal(["line-source"]);
+    expect(source.properties['class']).to.deep.equal(["line-source"]);
   });
 });
 
@@ -203,9 +237,9 @@ describe("renderCodeBlockPlainCode", () => {
     });
     const lines = container.querySelectorAll(".line");
     expect(lines).to.have.lengthOf(2);
-    expect(lines[0].tagName).to.equal("SPAN");
-    expect(lines[0].getAttribute("data-line")).to.equal("1");
-    expect(lines[1].getAttribute("data-line")).to.equal("2");
+    expect(lines[0]!.tagName).to.equal("SPAN");
+    expect(lines[0]!.getAttribute("data-line")).to.equal("1");
+    expect(lines[1]!.getAttribute("data-line")).to.equal("2");
   });
 
   it("renders a separately named gutter button and keeps source text outside it", () => {
@@ -224,11 +258,11 @@ describe("renderCodeBlockPlainCode", () => {
     });
     const buttons = container.querySelectorAll("button.line-gutter");
     expect(buttons).to.have.lengthOf(3);
-    expect(buttons[0].getAttribute("tabindex")).to.equal("-1");
-    expect(buttons[1].getAttribute("tabindex")).to.equal("0");
-    expect(buttons[1].getAttribute("part")).to.equal("line-button");
-    expect(buttons[1].getAttribute("aria-label")).to.equal("Line 2");
-    expect(buttons[1].closest(".line")?.getAttribute("part")).to.equal(
+    expect(buttons[0]!.getAttribute("tabindex")).to.equal("-1");
+    expect(buttons[1]!.getAttribute("tabindex")).to.equal("0");
+    expect(buttons[1]!.getAttribute("part")).to.equal("line-button");
+    expect(buttons[1]!.getAttribute("aria-label")).to.equal("Line 2");
+    expect(buttons[1]!.closest(".line")?.getAttribute("part")).to.equal(
       "line-highlight"
     );
   });
@@ -251,7 +285,7 @@ describe("renderCodeBlockPlainCode", () => {
     });
     const buttons = container.querySelectorAll("button.line-gutter");
     (buttons[1] as HTMLButtonElement).click();
-    buttons[0].dispatchEvent(
+    buttons[0]!.dispatchEvent(
       new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
     );
     expect(activated).to.deep.equal([2]);
@@ -260,14 +294,19 @@ describe("renderCodeBlockPlainCode", () => {
 });
 
 describe("owner-realm line interactions", () => {
-  const matchMedia = (matches: boolean): typeof window.matchMedia =>
-    ((query: string) =>
-      ({
-        matches,
-        media: query,
-        addEventListener: () => {},
-        removeEventListener: () => {},
-      } as MediaQueryList)) as typeof window.matchMedia;
+  const matchMedia = (ownerWindow: Window, matches: boolean): typeof window.matchMedia => {
+    const originalMatchMedia = ownerWindow.matchMedia;
+    return (query: string) => {
+      const nativeQuery = originalMatchMedia.call(ownerWindow, query);
+      return new Proxy(nativeQuery, {
+        get(target, property) {
+          if (property === 'matches') return matches;
+          const value = Reflect.get(target, property, target);
+          return typeof value === 'function' ? value.bind(target) : value;
+        },
+      });
+    };
+  };
 
   function anchorHost(ownerDocument: Document): {
     host: Parameters<typeof scrollCodeBlockToAnchor>[0];
@@ -303,8 +342,8 @@ describe("owner-realm line interactions", () => {
     const originalOwnerMatchMedia = ownerWindow.matchMedia;
     const { host, readBehavior } = anchorHost(frame.contentDocument!);
     try {
-      window.matchMedia = matchMedia(false);
-      ownerWindow.matchMedia = matchMedia(true);
+      window.matchMedia = matchMedia(window, false);
+      ownerWindow.matchMedia = matchMedia(ownerWindow, true);
       expect(
         await scrollCodeBlockToAnchor(host, { kind: "line-range", start: 1 })
       ).to.be.true;
@@ -322,7 +361,7 @@ describe("owner-realm line interactions", () => {
     const originalMatchMedia = window.matchMedia;
     const { host, readBehavior } = anchorHost(ownerlessDocument);
     try {
-      window.matchMedia = matchMedia(false);
+      window.matchMedia = matchMedia(window, false);
       expect(ownerlessDocument.defaultView === null).to.be.true;
       expect(
         await scrollCodeBlockToAnchor(host, { kind: "line-range", start: 1 })
@@ -356,9 +395,9 @@ describe("owner-realm line interactions", () => {
   });
 
   it('does not steal focus from an external control during line restoration', () => {
-    const host = document.createElement('div') as HTMLElement & { readonly renderRoot: ShadowRoot };
-    const root = host.attachShadow({ mode: 'open' });
-    Object.defineProperty(host, 'renderRoot', { value: root });
+    const element = document.createElement('div');
+    const root = element.attachShadow({ mode: 'open' });
+    const host = Object.assign(element, { renderRoot: root });
     const line = document.createElement('button');
     line.dataset['line'] = '1';
     line.setAttribute('part', 'line-button');
@@ -376,17 +415,14 @@ describe("owner-realm line interactions", () => {
   });
 
   it('routes delegated gutter key events through roving focus', async () => {
-    const host = document.createElement('div') as HTMLElement & {
-      renderRoot: ShadowRoot;
-      updateComplete: Promise<boolean>;
-      code: string;
-      collapsed: boolean;
-    };
-    const root = host.attachShadow({ mode: 'open' });
-    Object.defineProperty(host, 'renderRoot', { value: root });
-    host.updateComplete = Promise.resolve(true);
-    host.code = 'first\nsecond';
-    host.collapsed = false;
+    const element = document.createElement('div');
+    const root = element.attachShadow({ mode: 'open' });
+    const host = Object.assign(element, {
+      renderRoot: root,
+      updateComplete: Promise.resolve(true),
+      code: 'first\nsecond',
+      collapsed: false,
+    });
     const first = document.createElement('button');
     const second = document.createElement('button');
     for (const [index, button] of [first, second].entries()) {

@@ -328,6 +328,7 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
           part="transcript"
           .sessionId=${this.sessionId}
           .entries=${this.entries}
+          @lr-follow-change=${this.containNativeEvent}
         ></lr-transcript-feed>
       </section>
     `;

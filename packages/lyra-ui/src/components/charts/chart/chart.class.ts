@@ -51,7 +51,7 @@ export type { LyraChartLegendVisibilityChangeDetail } from './chart-legend-visib
 import { sampleChartTableIndexes } from './chart-table-sampling.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_liteChartMarkSummary, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_resetZoom, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartAnnotationsUnavailable, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_liteChartMarkSummary, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_resetZoom, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -353,6 +353,23 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/** The simplified surface tolerates an omitted label/data payload, but never a non-record row. */
+function isChartSeriesRecord(value: unknown): value is LyraChartSeries {
+  try {
+    return isPlainObject(value);
+  } catch {
+    return false;
+  }
+}
+
+function normalizeChartSeries(value: unknown): readonly LyraChartSeries[] {
+  try {
+    return Object.freeze(Array.isArray(value) ? value.filter(isChartSeriesRecord) : []);
+  } catch {
+    return Object.freeze([]);
+  }
+}
+
 // Keys that would let a JSON-sourced `config` (e.g. parsed from an API
 // response) reach up through the merge and mutate `Object.prototype` —
 // skipped unconditionally regardless of `base`'s own shape.
@@ -625,6 +642,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     chart: LYRA_DEFAULT_chart,
+    chartAnnotationsUnavailable: LYRA_DEFAULT_chartAnnotationsUnavailable,
     chartAxisTotal: LYRA_DEFAULT_chartAxisTotal,
     chartBubblePointCoordinates: LYRA_DEFAULT_chartBubblePointCoordinates,
     chartCategory: LYRA_DEFAULT_chartCategory,
@@ -693,7 +711,20 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   @property({ converter: { fromAttribute: (value) => normalizeChartType(value) } })
   type: LyraChartType = 'bar';
   @property({ attribute: false }) labels: string[] = [];
-  @property({ attribute: false }) datasets: readonly LyraChartSeries[] = [];
+  private _datasets: readonly LyraChartSeries[] = Object.freeze([]);
+  private datasetsSource: unknown = this._datasets;
+  /** Simplified chart series. Non-record entries are dropped while valid sibling series remain. */
+  @property({ attribute: false })
+  get datasets(): readonly LyraChartSeries[] {
+    return this._datasets;
+  }
+  set datasets(value: readonly LyraChartSeries[]) {
+    if (Object.is(value, this.datasetsSource) || Object.is(value, this._datasets)) return;
+    const previous = this._datasets;
+    this._datasets = normalizeChartSeries(value);
+    this.datasetsSource = value;
+    this.requestUpdate('datasets', previous);
+  }
   /**
    * Complete controlled visibility state for DOM legend toggles. `undefined` (the default) honors
    * each effective dataset's `hidden` configuration; a defined array wins over those defaults, and
@@ -750,8 +781,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * `chartjs-plugin-zoom` and unlike `chartjs-plugin-datalabels`: it draws nothing unless a chart
    * supplies annotation options, so the registration is unobservable to charts that set none, and
    * registration is also what installs the plugin's own element defaults. Without the peer
-   * installed the chart still renders and a single console warning explains the no-op — the same
-   * fail-closed contract `data-labels` uses.
+   * installed the chart still renders; a console warning plus a localized visible warning and
+   * light-DOM announcement explain the no-op — the same fail-closed contract `data-labels` uses.
    *
    * Entries are included in the generated accessible description, mirroring `lr-heatmap`.
    */
@@ -1177,13 +1208,15 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   // warning/reset-control change instead.
   private zoomFeatureState: ChartFeatureState = 'idle';
   private dataLabelsFeatureState: ChartFeatureState = 'idle';
+  private annotationFeatureState: ChartFeatureState = 'idle';
   // The resolved `chartjs-plugin-datalabels` plugin object, registered
   // PER-INSTANCE via this chart's own `config.plugins` (not globally — a global
   // registration would draw labels on, and break, every other chart on the
   // page). `undefined` until the peer loads (or if it's not installed).
   private dataLabelsPlugin?: DataLabelsPlugin;
-  // The resolved `chartjs-plugin-annotation` plugin object, attached PER-INSTANCE for the same
-  // reason as the data-labels plugin above: Chart.js's registry is a page-wide singleton.
+  // The resolved `chartjs-plugin-annotation` plugin object. Its loader registers the plugin
+  // globally because annotation draws nothing without per-chart options and needs registry-owned
+  // element defaults; this reference tracks feature availability for this instance.
   private annotationPlugin?: AnnotationPlugin;
 
   @state() private zoomed = false;
@@ -1354,6 +1387,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     this.loadGeneration += 1;
     this.zoomLoadGeneration += 1;
     this.dataLabelsLoadGeneration += 1;
+    this.annotationLoadGeneration += 1;
     this.discardChart(false);
     this.builtPlugins = [];
     this.intersectionObserver?.disconnect();
@@ -1477,6 +1511,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       if (this.dataLabels) messages.push(this.localize('chartDataLabelsUnavailable'));
       if (this.stackTotals) messages.push(this.localize('chartStackTotalsUnavailable'));
     }
+    if (this.needsAnnotations && this.annotationFeatureState === 'unavailable') {
+      messages.push(this.localize('chartAnnotationsUnavailable'));
+    }
     return messages;
   }
 
@@ -1504,8 +1541,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private requestAnnotationFeature(): void {
     const generation = ++this.annotationLoadGeneration;
     if (!this.needsAnnotations) {
+      this.annotationFeatureState = 'idle';
       return;
     }
+    this.annotationFeatureState = 'loading';
     void this.loadAnnotationFeature().then((result) => {
       if (generation !== this.annotationLoadGeneration || !this.isConnected || !this.needsAnnotations) {
         return;
@@ -1513,6 +1552,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       if (result.kind !== 'core-unavailable' && !this.loading && !this.chartJsModule) {
         this.chartJsModule = result.mod;
       }
+      this.annotationFeatureState = result.kind === 'available' ? 'available' : 'unavailable';
       this.applyAnnotationPlugin(result.kind === 'available' ? result.plugin : undefined);
       this.requestUpdate();
     });
@@ -1708,6 +1748,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       'legendPosition',
       'min',
       'max',
+      'scaleType',
+      'annotations',
       'plugins',
       'autoLegendPosition',
       'valueFormatter',

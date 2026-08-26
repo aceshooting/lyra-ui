@@ -352,7 +352,7 @@ it('fails closed when a public virtual anchor rejects positioning', async () => 
   };
   window.addEventListener('unhandledrejection', onUnhandled);
 
-  let stop = () => undefined;
+  let stop: () => void = () => {};
   try {
     stop = place(
       {
@@ -418,8 +418,8 @@ it('fails closed before committing placement when hover-bridge geometry throws',
   };
   window.addEventListener('unhandledrejection', onUnhandled);
 
-  let stop = () => undefined;
-  let stopUnsynced = () => undefined;
+  let stop: () => void = () => {};
+  let stopUnsynced: () => void = () => {};
   try {
     stop = place(
       {
@@ -494,8 +494,8 @@ it('does not release newer external dimensions after a synced replacement rolls 
 
   const anchorRect = new DOMRect(100, 100, 50, 20);
   let geometryReads = 0;
-  let stopFailed = () => undefined;
-  let stopUnsynced = () => undefined;
+  let stopFailed: () => void = () => {};
+  let stopUnsynced: () => void = () => {};
   try {
     stopFailed = place(
       {
@@ -553,8 +553,8 @@ it('does not claim external dimensions written before a synced replacement commi
   const anchorRect = new DOMRect(100, 100, 50, 20);
   let geometryReads = 0;
   let replacementPlacements = 0;
-  let stopReplacement = () => undefined;
-  let stopUnsynced = () => undefined;
+  let stopReplacement: () => void = () => {};
+  let stopUnsynced: () => void = () => {};
   try {
     stopReplacement = place(
       {
@@ -690,7 +690,7 @@ it('synchronously restores open middleware writes when placement is disposed', a
   let geometryReads = 0;
   let beforeStop: ReturnType<typeof snapshot> | undefined;
   let afterStop: ReturnType<typeof snapshot> | undefined;
-  let stop = () => undefined;
+  let stop: () => void = () => {};
 
   stop = place(
     {
@@ -764,7 +764,7 @@ it('does not swallow an exception deliberately thrown by onPlaced', async functi
   };
   const failure = new Error('consumer onPlaced failure');
   let failureThrown = false;
-  let stop = () => undefined;
+  let stop: () => void = () => {};
   const unhandled: unknown[] = [];
   const onUnhandled = (event: PromiseRejectionEvent) => {
     unhandled.push(event.reason);

@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { loadEmojiData, loadEmojiDataCached, clearEmojiDataCache } from './emoji-data-loader.js';
+import { loadEmojiData, clearEmojiDataCache } from './emoji-data-loader.js';
 
 afterEach(() => {
   clearEmojiDataCache();
@@ -81,8 +81,10 @@ it('falls back to the bare numeric id for an unknown group id, leaving localizat
   // `<lr-emoji-picker>`'s own `groupLabel()` is what localizes an unrecognized built-in group id, via
   // the `emojiPickerGroupUnknown` DEFAULT_STRINGS key. See emoji-picker.test.ts for that coverage.
   const result = await loadEmojiData(() => Promise.resolve([{ emoji: '🛸', group: 42, annotation: 'flying saucer' }]));
-  expect('labelKey' in result![0]).to.be.false;
-  expect(result![0].label).to.equal('42');
+  const group = result?.[0];
+  if (!group) throw new Error('The unknown emoji group was not loaded.');
+  expect('labelKey' in group).to.be.false;
+  expect(group.label).to.equal('42');
 });
 
 it('fails closed (null + warning) for a malformed peer module, distinct from a genuinely empty one', async () => {

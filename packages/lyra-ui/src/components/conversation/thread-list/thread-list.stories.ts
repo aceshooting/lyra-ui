@@ -460,10 +460,9 @@ export const FillsItsContainer: Story = {
 };
 
 /** `sticky-groups` pins the current date group's header to the top of the scroll viewport while its
- *  rows are in view, and pushes it off as the next group's header arrives. The pinned copy stays
- *  clickable -- its toggle requests the same `lr-group-toggle` collapse as the real header row --
- *  while the real row keeps the heading semantics and the tab order. Style the pinned band itself
- *  through `::part(group-sticky)`. */
+ *  rows are in view, and pushes it off as the next group's header arrives. The pinned copy is a
+ *  pointer-transparent visual label; the real header row keeps the heading semantics, tab order,
+ *  and collapse action. Style the pinned band itself through `::part(group-sticky)`. */
 export const StickyGroups: Story = {
   render: () => {
     const many: LyraChatThread[] = [

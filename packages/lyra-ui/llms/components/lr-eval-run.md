@@ -6,6 +6,7 @@
 - **Class** `LyraEvalRun`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/evaluation-run/evaluation-run.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `9.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 24 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -40,7 +41,9 @@ active? }`. `label` and `variant` customize application-defined lifecycle displa
   set; an omitted `grounding` or empty `toolTrace` renders no such section for that example. `label`
   falls back to a localized "Example {index}" (1-based, array order). Controlled and never mutated;
   empty/blank ids and later duplicate example ids are omitted before progress, disclosure state, and correlated child
-  events are derived
+  events are derived. A valid-id streaming example whose `status`, `input`, or `output` has not
+  arrived yet remains visible: status defaults to idle and either missing content payload renders
+  as empty Markdown until the host replaces the collection
 - `total: number | null = null` — the batch's expected total example count. `null` derives it from
   `examples.length`; set it explicitly while a batch is still streaming and the eventual total is
   already known. An explicit total below the current observed count is raised to `examples.length`,

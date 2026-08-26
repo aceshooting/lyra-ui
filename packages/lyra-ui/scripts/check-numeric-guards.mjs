@@ -21,9 +21,11 @@ import { fileURLToPath } from 'node:url';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const componentsRoot = path.join(packageDir, 'src', 'components');
+const internalRoot = path.join(packageDir, 'src', 'internal');
 
 const GUARD_HELPERS = ['finiteNumber', 'finiteRange', 'finiteInteger', 'finiteCount', 'finiteDuration'];
-const GUARD_IMPORT_RE = /import\s*\{([^}]*)\}\s*from\s*['"][^'"]*\/internal\/numbers(?:\.js)?['"]/g;
+const GUARD_IMPORT_RE =
+  /import\s*\{([^}]*)\}\s*from\s*['"][^'"]*(?:\/internal\/|\.\/)numbers(?:\.js)?['"]/g;
 const GUARD_CALL_RE = /\bfinite(?:Number|Range|Integer|Count|Duration)\s*\(/g;
 const EXEMPT_RE = /^\s*\/\/\s*numeric-guard-exempt:\s*(.+?)\s*$/;
 
@@ -39,7 +41,12 @@ function walk(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const fullPath = path.join(directory, entry.name);
     if (entry.isDirectory()) return walk(fullPath);
-    return entry.name.endsWith('.class.ts') ? [fullPath] : [];
+    return entry.name.endsWith('.ts') &&
+      !entry.name.endsWith('.test.ts') &&
+      !entry.name.endsWith('.stories.ts') &&
+      !entry.name.endsWith('.d.ts')
+      ? [fullPath]
+      : [];
   });
 }
 
@@ -185,14 +192,14 @@ function exemptionReason(lines, siteLine) {
   return null;
 }
 
-const classFiles = walk(componentsRoot).sort();
+const sourceFiles = [...walk(componentsRoot), ...walk(internalRoot)].sort();
 
 const flagged = [];
 const exempted = [];
 let guardedCount = 0;
 let totalCount = 0;
 
-for (const file of classFiles) {
+for (const file of sourceFiles) {
   const source = fs.readFileSync(file, 'utf8');
   const lines = source.split('\n');
   const lineAt = makeLineLookup(source);
@@ -237,7 +244,7 @@ for (const file of classFiles) {
 }
 
 console.log(
-  `Numeric guard check: ${totalCount} \`type: Number\` propert${totalCount === 1 ? 'y' : 'ies'} found across ${classFiles.length} component class files.`,
+  `Numeric guard check: ${totalCount} \`type: Number\` propert${totalCount === 1 ? 'y' : 'ies'} found across ${sourceFiles.length} component and internal source files.`,
 );
 console.log(`  guarded (helper usage detected): ${guardedCount}`);
 console.log(`  exempted (numeric-guard-exempt comment): ${exempted.length}`);
@@ -261,4 +268,3 @@ if (flagged.length > 0) {
 } else {
   console.log('\nNumeric guard check passed.');
 }
-

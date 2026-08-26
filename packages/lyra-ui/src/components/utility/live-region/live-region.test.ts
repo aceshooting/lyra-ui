@@ -111,7 +111,7 @@ it('normalizes unsupported mode attributes and untyped property writes', async (
 
   el.mode = 'assertive';
   await el.updateComplete;
-  (el as unknown as Record<string, unknown>).mode = 'urgent';
+  (el as unknown as Record<string, unknown>)['mode'] = 'urgent';
   await el.updateComplete;
   expect(el.mode).to.equal('polite');
   expect(el.getAttribute('mode')).to.equal('polite');
@@ -359,7 +359,7 @@ it('rebinds throttling timers to the adopted document window', async () => {
   const callbacks = new Map<number, () => void>();
   const clears: number[] = [];
   ownerWindow.setTimeout = ((handler: TimerHandler) => {
-    if (typeof handler === 'function') callbacks.set(61, handler);
+    if (typeof handler === 'function') callbacks.set(61, () => handler());
     return 61;
   }) as typeof ownerWindow.setTimeout;
   ownerWindow.clearTimeout = ((handle?: number) => {

@@ -9,10 +9,9 @@ export const styles = css`
        variable opts out for compact inline compositions. */
     --_lr-button-width: 100%;
     /* The size scale comes from the shared form-control ladder (internal/sizes.styles.ts, loaded
-       ahead of this sheet by button.class.ts), so a button and a same-tier
-       lr-input/lr-select/lr-combobox/lr-date-input match by construction, not by two
-       hand-maintained lists agreeing -- how they drifted before 8.0.0. The per-tier names survive
-       as override points. */
+       ahead of this sheet by button.class.ts), so a button shares each same-tier control's
+       minimum-height floor instead of maintaining a second list. Content and nested action floors
+       can still make a composed control taller. The per-tier names survive as override points. */
     --_lr-button-size-2xs: var(--lr-form-control-height-2xs);
     --_lr-button-size-xs: var(--lr-form-control-height-xs);
     --_lr-button-size-s: var(--lr-form-control-height-s);

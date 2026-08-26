@@ -38,6 +38,7 @@ import type {
   LyraChartValueFormatter,
   LyraChartValueFormatterContext,
   LyraChartDatumActivateDetail,
+  LyraChartFormatSurface,
   LyraChartFormatter,
 } from './chart.class.js';
 import {
@@ -62,6 +63,27 @@ export interface LyraBoxPlotSeries {
   readonly label: string;
   readonly data: readonly LyraBoxPlotSummary[];
   readonly color?: string;
+}
+
+function isBoxPlotSeries(value: unknown): value is LyraBoxPlotSeries {
+  try {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      !Array.isArray(value) &&
+      Array.isArray((value as { data?: unknown }).data)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function normalizeBoxPlotSeries(value: unknown): readonly LyraBoxPlotSeries[] {
+  try {
+    return Object.freeze(Array.isArray(value) ? value.filter(isBoxPlotSeries) : []);
+  } catch {
+    return Object.freeze([]);
+  }
 }
 
 // Defensive JS-side fallbacks for themeColors() below, mirroring the
@@ -338,7 +360,17 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   }
 
   @property({ attribute: false }) labels: readonly string[] = [];
-  @property({ attribute: false }) datasets: readonly LyraBoxPlotSeries[] = [];
+  private _datasets: readonly LyraBoxPlotSeries[] = Object.freeze([]);
+  /** Series with an array `data` payload. Malformed entries are dropped without hiding siblings. */
+  @property({ attribute: false })
+  get datasets(): readonly LyraBoxPlotSeries[] {
+    return this._datasets;
+  }
+  set datasets(value: readonly LyraBoxPlotSeries[]) {
+    const previous = this._datasets;
+    this._datasets = normalizeBoxPlotSeries(value);
+    this.requestUpdate('datasets', previous);
+  }
   /** Complete controlled legend visibility state. `undefined` keeps the default all-visible state. */
   @property({ attribute: false }) hiddenDatasets?: readonly number[];
   @property({ type: Boolean }) legend = false;
@@ -782,6 +814,10 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
           },
         },
         scales: {
+          x: {
+            ticks: { color: theme.tick },
+            grid: { color: theme.grid },
+          },
           y: {
             position: this.effectiveDirection === 'rtl' ? 'right' : 'left',
             beginAtZero: this.beginAtZero,
@@ -838,9 +874,15 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     if (this.legend) this.requestUpdate();
   }
 
-  private formatValue(value: number, context: LyraChartValueFormatterContext): string {
-    return this.formatter?.({ value, surface: context }) ??
-      this.valueFormatter?.(value, context) ??
+  private formatValue(value: number, surface: LyraChartFormatSurface): string {
+    const legacyContext: LyraChartValueFormatterContext | undefined =
+      surface === 'export' || surface === 'spoken'
+        ? 'table'
+        : surface === 'visual'
+          ? undefined
+          : surface;
+    return this.formatter?.({ value, surface }) ??
+      (legacyContext ? this.valueFormatter?.(value, legacyContext) : undefined) ??
       getNumberFormat(this.effectiveLocale).format(value);
   }
 
@@ -866,11 +908,11 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
         rows.push([
           this.labels[index] ?? '',
           series.label,
-          this.formatValue(point.min, 'table'),
-          this.formatValue(point.q1, 'table'),
-          this.formatValue(point.median, 'table'),
-          this.formatValue(point.q3, 'table'),
-          this.formatValue(point.max, 'table'),
+          this.formatValue(point.min, 'export'),
+          this.formatValue(point.q1, 'export'),
+          this.formatValue(point.median, 'export'),
+          this.formatValue(point.q3, 'export'),
+          this.formatValue(point.max, 'export'),
         ].map(escapeCsvField).join(','));
       });
     });
@@ -909,8 +951,8 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       return this.localize('boxPlotSeriesSummary', undefined, {
         label: series.label,
         count: getNumberFormat(this.effectiveLocale).format(count),
-        min: this.formatValue(min, 'table'),
-        max: this.formatValue(max, 'table'),
+        min: this.formatValue(min, 'spoken'),
+        max: this.formatValue(max, 'spoken'),
         trend,
       });
     });

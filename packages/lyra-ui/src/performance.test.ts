@@ -16,7 +16,12 @@ import type { LyraLiteChart, LyraLiteChartSeries } from './components/charts/cha
 import type { LyraHeatmap } from './components/data/heatmap/heatmap.js';
 import type { LyraTable, TableColumn } from './components/data/table/table.js';
 import type { LyraGraph, LyraGraphNode, LyraGraphLink } from './components/retrieval/graph/graph.js';
-import type { LyraFlowCanvas, FlowNode, FlowEdge, FlowRunDecorations } from './components/data/flow-canvas/flow-canvas.js';
+import type {
+  LyraFlowCanvas,
+  FlowNode,
+  FlowEdge,
+  FlowRunDecoration,
+} from './components/data/flow-canvas/flow-canvas.js';
 import type { LyraMindMap, LyraTopic } from './components/retrieval/mind-map/mind-map.js';
 import type { LyraNotebookViewer } from './components/viewers/notebook-viewer/notebook-viewer.js';
 import type { LyraDatasetViewer } from './components/viewers/dataset-viewer/dataset-viewer.js';
@@ -198,7 +203,7 @@ function report(name: string, result: BenchmarkResult): void {
 
 it('keeps virtual-list updates within the large-list budget', async () => {
   const host = (await fixture(html`<lr-virtual-list style="height: 320px; width: 640px"></lr-virtual-list>`)) as LyraVirtualList;
-  host.rowHeight = '32';
+  host.rowHeight = 32;
   host.overscan = 4;
   host.renderItem = (item) => html`<span>${item}</span>`;
   const items = Array.from({ length: 10_000 }, (_, index) => `row-${index}`);
@@ -256,10 +261,10 @@ it('keeps heatmap data churn within the matrix budget', async () => {
 it('keeps table row churn within the large-table budget', async () => {
   const host = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Record<string, string>>;
   const columns: TableColumn<Record<string, string>>[] = [
-    { key: 'id', label: 'ID', sticky: true, cell: (row) => row.id },
-    { key: 'name', label: 'Name', cell: (row) => row.name },
-    { key: 'status', label: 'Status', cell: (row) => row.status },
-    { key: 'value', label: 'Value', cell: (row) => row.value },
+    { key: 'id', label: 'ID', sticky: 'start', cell: (row) => row['id'] },
+    { key: 'name', label: 'Name', cell: (row) => row['name'] },
+    { key: 'status', label: 'Status', cell: (row) => row['status'] },
+    { key: 'value', label: 'Value', cell: (row) => row['value'] },
   ];
   const rows = Array.from({ length: 1_000 }, (_, index) => ({
     id: `${index}`,
@@ -391,7 +396,7 @@ it('keeps flow-canvas decoration churn within the large-flow budget', async func
     host,
     (iteration) => {
       const status = iteration % 2 === 0 ? 'running' : 'success';
-      const decorations: FlowRunDecorations = {};
+      const decorations: Record<string, FlowRunDecoration> = {};
       for (const node of nodes) decorations[node.id] = { status, progress: iteration / 5 };
       host.decorations = decorations;
     },
@@ -408,7 +413,15 @@ it('keeps flow-canvas decoration churn within the large-flow budget', async func
  *  breadth-first, so the tree stays balanced (depth ~log_branching(count)) instead of one long
  *  chain. Mirrors a realistic large mind map (many shallow branches), not a graph's dense mesh. */
 function buildMindMapTopics(count: number, branching: number): LyraTopic[] {
-  const nodes: LyraTopic[] = Array.from({ length: count }, (_, index) => ({ id: `t${index}`, label: `Topic ${index}` }));
+  interface MutableTopic {
+    id: string;
+    label: string;
+    children?: MutableTopic[];
+  }
+  const nodes: MutableTopic[] = Array.from(
+    { length: count },
+    (_, index) => ({ id: `t${index}`, label: `Topic ${index}` }),
+  );
   for (let i = 1; i < count; i++) {
     const parent = nodes[Math.floor((i - 1) / branching)]!;
     (parent.children ??= []).push(nodes[i]!);
@@ -439,7 +452,10 @@ it('keeps mind-map topic churn within the large-map budget', async () => {
 /** A Jupyter-notebook-shaped (nbformat 4.x) document alternating markdown/code cells, each code
  *  cell carrying a small stdout output -- a realistic notebook size (tens of cells), not
  *  `notebook-viewer.class.ts`'s hard MAX_CELLS=2000 safety ceiling. */
-function buildNotebook(cellCount: number, revision = 0): { nbformat: number; nbformat_minor: number; metadata: Record<string, unknown>; cells: Record<string, unknown>[] } {
+function buildNotebook(
+  cellCount: number,
+  revision = 0,
+): Exclude<LyraNotebookViewer['notebook'], string | undefined> {
   return {
     nbformat: 4,
     nbformat_minor: 5,

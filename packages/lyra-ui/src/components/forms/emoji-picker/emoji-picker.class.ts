@@ -3,7 +3,7 @@ import { property, state, query } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
-import { nextId } from '../../../internal/a11y.js';
+import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import {
   acquireAnnouncementSink,
@@ -352,8 +352,8 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     this.requestUpdate('groups', old);
   }
 
-  /** Accessible name forwarded from the host to the internal emoji listbox. Empty falls back to
-   *  the localized default grid label. */
+  /** Accessible name forwarded from the host to the internal emoji listbox. Omission falls back
+   *  to the visible label or localized default; an explicitly empty host attribute stays empty. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
 
   /** Visual size — scales the emoji glyph and preferred item box while keeping the interactive
@@ -1170,6 +1170,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const describedBy = [hasError ? this.errorId : '', hasHint ? this.hintId : ''].filter(Boolean).join(' ');
     const invalid = this.touched && !this.internals.validity.valid;
+    const gridLabel = hostAriaLabel(this);
     return html`
       <div part="form-control">
         <div part="form-control-label" id=${this.labelId} ?hidden=${!hasLabel}>
@@ -1195,8 +1196,8 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
             part="grid"
             id=${this.gridId}
             role="listbox"
-            aria-label=${this.accessibleLabel || (hasLabel ? nothing : this.localize('emojiPickerGridLabel'))}
-            aria-labelledby=${!this.accessibleLabel && hasLabel ? this.labelId : nothing}
+            aria-label=${gridLabel ?? (hasLabel ? nothing : this.localize('emojiPickerGridLabel'))}
+            aria-labelledby=${gridLabel === null && hasLabel ? this.labelId : nothing}
             aria-describedby=${describedBy || nothing}
             aria-required=${this.required ? 'true' : 'false'}
             aria-invalid=${invalid ? 'true' : 'false'}
@@ -1205,8 +1206,18 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
           >
             ${items.length === 0
               ? this.peerLoadFailed
-                ? html`<div part="load-error">${this.localize('emojiPickerLoadError')}</div>`
-                : html`<div part="empty">${this.localize('emojiPickerEmpty')}</div>`
+                ? html`<div
+                    part="load-error"
+                    role="option"
+                    aria-selected="false"
+                    aria-disabled="true"
+                  >${this.localize('emojiPickerLoadError')}</div>`
+                : html`<div
+                    part="empty"
+                    role="option"
+                    aria-selected="false"
+                    aria-disabled="true"
+                  >${this.localize('emojiPickerEmpty')}</div>`
               : this.isVirtualized
                 ? this.renderVirtualRows()
                 : this.filteredGroups.map(

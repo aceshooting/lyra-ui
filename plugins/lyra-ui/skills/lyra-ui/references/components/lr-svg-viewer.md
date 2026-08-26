@@ -6,9 +6,10 @@
 - **Class** `LyraSvgViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/svg-viewer/svg-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify` — see `llms/peers.md`
-- **Themeable via** 16 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -73,8 +74,9 @@ rendered region highlight), `region-highlight` (one region highlight, `data-tone
 (one action in that list),
 `frame-viewport`/`frame-content`/`frame-controls`/`frame-zoom-in`/`frame-zoom-out`/`frame-reset`
 (forwarded from the internal `<lr-pan-zoom>` while `zoomable`).
-The passive rendered image owns `role="img"`; the body upgrades to a named `region` only when zoom
-controls or interactive region highlights are present. The spinner always includes visible
+Passive loaded SVG content owns `role="img"`. Idle, loading, and error states instead use a named
+`region`, keeping their descendant state text in the accessibility tree; zoom controls or
+interactive region highlights likewise use a region. The spinner always includes visible
 localized loading text alongside its decorative ring, and the ring stops under reduced motion.
 
 **Themeable custom properties:** `--lr-svg-viewer-max-height` (default `none`) — maximum block size

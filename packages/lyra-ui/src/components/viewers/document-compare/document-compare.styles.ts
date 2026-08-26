@@ -44,7 +44,7 @@ export const styles = css`
   }
   [part="pane-old"]:focus-visible,
   [part="pane-new"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
   /* no-pressed-state: each pane is a role='region' scroll container with tabindex='0' and no

@@ -6,9 +6,10 @@
 - **Class** `LyraXmlViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/xml-viewer/xml-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -56,7 +57,8 @@ whose anchor is a `node-path` this document resolves tints its element row — `
 is the entry's own `label` when supplied, otherwise a localized "Highlight n of m". `activeHighlightId`
 adds `data-active-highlight` to the matching row. Entries are deduplicated by `id`; an entry whose
 anchor kind or path this document cannot resolve is dropped whole rather than painted at some
-coarser granularity, and an entry inside a collapsed subtree paints once that subtree is expanded.
+coarser granularity; missing and non-array `path` values are included in that invalid case. An entry
+inside a collapsed subtree paints once that subtree is expanded.
 Painting retains at most 100 resolved entries from a 1,000-entry candidate window; an active entry
 anywhere in the bounded 10,000-record host snapshot is placed first inside both ceilings.
 
@@ -83,7 +85,9 @@ tree, rather than resolving indistinguishably from the bare element path),
 `toggle` (an element's expand/collapse button on nodes with renderable children; its collapsed
 chevron mirrors under effective RTL direction), `highlight-action` (the focusable button a resolved
 `highlights` entry adds to its element row), `toggle-placeholder` (the empty toggle-column spacer on
-leaf rows), `error`, `spinner`.
+leaf rows), `error`, `spinner`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror of
+the latest anchor-jump message; the spoken copy is appended to the shared document-level polite sink
+only while the viewer and its composed ancestors are exposed to the accessibility tree).
 The spinner always includes visible localized loading text alongside its decorative ring; the text
 remains understandable without CSS or animation and the ring stops under reduced motion.
 

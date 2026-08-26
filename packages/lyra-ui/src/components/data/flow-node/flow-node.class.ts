@@ -28,7 +28,8 @@ const DEFAULT_OUTPUTS: readonly FlowHandle[] = Object.freeze([Object.freeze({ id
  * @slot - Body content.
  * @slot icon - Leading header glyph.
  * @slot header - Replaces the built-in heading row entirely.
- * @slot toolbar - Action row at the block-end edge.
+ * @slot toolbar - Action row at the block-end edge. Always visible on coarse-pointer/no-hover
+ *   devices; pointer-hover and focus-within reveal it elsewhere.
  * @csspart base - The row wrapping the input handles, the card, and the output handles. Carries no
  *   card chrome of its own — style the card itself through the `card` part.
  * @csspart card - The bordered, filled node card.

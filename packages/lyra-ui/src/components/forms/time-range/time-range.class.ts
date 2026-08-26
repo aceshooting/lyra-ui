@@ -124,7 +124,8 @@ export interface LyraTimeRangeEventMap {
  * Optionally paired with a row of discrete presets (`presets`) — e.g. "Last
  * 7 days" / "Last 30 days" — rendered above the track; picking one is just a
  * shortcut that sets both handles at once, the continuous brush underneath
- * is unaffected and both interaction modes coexist.
+ * is unaffected and both interaction modes coexist. `appliedPreset` preserves which shortcut
+ * produced the current range without guessing from numeric equality.
  *
  * Form-associated for the `<fieldset disabled>` cascade and for validation, not for a submitted
  * value: it attaches `ElementInternals` (like `<lr-combobox>`'s minimal pattern, rather than the
@@ -191,9 +192,10 @@ export interface LyraTimeRangeEventMap {
  *   control back to pristine, so this stops matching until the user acts again — `invalid` itself
  *   is unaffected, since a `setCustomValidity()` error survives a reset.
  * @cssprop [--lr-time-range-preset-active-bg=var(--lr-color-brand)] - Background of the active
- *   preset button (`[data-active]`, i.e. the preset whose range matches the current value). Declared
- *   as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor
- *   recolors only the active preset without hijacking the library-wide `--lr-color-brand` token.
+ *   preset button (`[data-active]`, i.e. the preset whose button produced the current range).
+ *   Declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an
+ *   ancestor recolors only the active preset without hijacking the library-wide
+ *   `--lr-color-brand` token.
  * @cssprop [--lr-time-range-preset-active-border-color=var(--lr-color-brand)] - Border color of the
  *   active preset button.
  * @cssprop [--lr-time-range-preset-active-color=var(--lr-color-on-brand)] - Text color of the active
@@ -284,13 +286,16 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   /**
    * Optional discrete presets rendered as a `[part="presets"]` button row
    * above the track. Purely additive: leaving this empty (the default)
-   * renders nothing extra and leaves the continuous brush untouched.
+   * renders nothing extra and leaves the continuous brush untouched. Assignments become frozen
+   * owned snapshots. Reassigning the exposed snapshot is a no-op; replacing the collection clears
+   * `appliedPreset` because the previously selected object is no longer exposed.
    */
   private _presets: readonly TimeRangePreset[] = Object.freeze([]);
   @property({ attribute: false })
   get presets(): readonly TimeRangePreset[] { return this._presets; }
   set presets(next: readonly TimeRangePreset[]) {
     const previous = this._presets;
+    if (next === previous) return;
     const snapshots: TimeRangePreset[] = [];
     if (Array.isArray(next)) {
       for (let index = 0; index < Math.min(next.length, 256); index += 1) {
@@ -306,8 +311,28 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
         }
       }
     }
+    this._appliedPreset = undefined;
     this._presets = Object.freeze(snapshots);
     this.requestUpdate('presets', previous);
+  }
+
+  private _appliedPreset?: TimeRangePreset;
+
+  /**
+   * The preset whose button produced the current `start`/`end` pair, or `undefined` before a
+   * preset is selected and after a manual handle move, a controlled endpoint change away from
+   * that preset, a preset-collection replacement, or a form reset. Read it inside an
+   * `input`/`change` or `lr-input`/`lr-change` handler; preset application updates this identity
+   * before dispatching the synchronous event pair. No-op endpoint and preset-snapshot writes
+   * preserve it.
+   *
+   * Numeric equality deliberately does not infer identity. Two presets can resolve to the same
+   * range, and a manual drag can land on exactly the same values, while only a preset click means
+   * the caller should persist that relative shortcut. The returned object is the frozen snapshot
+   * exposed through `presets`.
+   */
+  get appliedPreset(): TimeRangePreset | undefined {
+    return this._appliedPreset;
   }
 
   private _disabled = false;
@@ -463,6 +488,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   setCustomValidity(message: string): void {
     this.validityController.setCustomValidity(message ?? '');
     this.reflectValidityStates();
+    this.requestUpdate();
   }
 
   get disabled(): boolean {
@@ -537,6 +563,8 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
    * listening for `lr-change` does not see one. Read `start`/`end` in a `reset` listener instead.
    */
   formResetCallback(): void {
+    const hadAppliedPreset = this._appliedPreset !== undefined;
+    this._appliedPreset = undefined;
     const { lo, hi } = this.domain();
     const declaredStart = this.declaredHandleValue('start', lo);
     const declaredEnd = this.declaredHandleValue('end', hi);
@@ -551,6 +579,9 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     this.abortActiveGestures();
     this.hasInteracted = false;
     this.reflectValidityStates();
+    // A selected preset can already equal the declared defaults, leaving start/end unchanged and
+    // therefore unable to schedule the render that removes its identity-backed active state.
+    if (hadAppliedPreset) this.requestUpdate();
   }
 
   override disconnectedCallback(): void {
@@ -683,6 +714,9 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     const clamped = this.clamp(handle, value);
     const previous = handle === 'start' ? this.start : this.end;
     if (clamped === previous) return false;
+    // A real handle move is manual even when a later move in the same gesture returns to exactly
+    // the preset's numbers. Clear before emitting so handlers never observe stale provenance.
+    this._appliedPreset = undefined;
     if (handle === 'start') this.start = clamped;
     else this.end = clamped;
     // A handle that actually moved is an interaction the instant it happens, the same way a
@@ -700,10 +734,10 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
    * Deliberately bypasses `setValue()`/`clamp()` — a preset is an explicit
    * discrete jump to the caller's own exact numbers, not a stepped nudge, so
    * routing it through `clamp()`'s step-grid rounding would silently round
-   * a preset's values away from what the caller specified (and desync the
-   * active-button match in render(), which compares against these exact
-   * numbers). Only the domain bounds and the start<=end invariant apply
-   * here, not `step`. Both handles are also assigned before either event
+   * a preset's values away from what the caller specified (and move the
+   * selected range away from the exact numbers the caller supplied). Only
+   * the domain bounds and the start<=end invariant apply here, not `step`.
+   * Both handles are also assigned before either event
    * fires — routing them through two sequential `setValue()` calls instead
    * would emit an extra lr-input whose detail still held the stale
    * pre-preset value for whichever handle hadn't been assigned yet.
@@ -711,7 +745,15 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   private applyPreset(preset: TimeRangePreset): void {
     if (this.liveDisabled) return;
     const { start: nextStart, end: nextEnd } = this.normalizePreset(preset);
-    if (nextStart === this.start && nextEnd === this.end) return;
+    const previousPreset = this._appliedPreset;
+    // Set BEFORE the events below, matching date-picker/date-input: event handlers need the
+    // identity of the commit they are handling, not the previous shortcut. This also records a
+    // click whose normalized values already equal the current range without inventing value events.
+    this._appliedPreset = preset;
+    if (nextStart === this.start && nextEnd === this.end) {
+      if (previousPreset !== preset) this.requestUpdate();
+      return;
+    }
     this.start = nextStart;
     this.end = nextEnd;
     this.markInteracted();
@@ -725,6 +767,15 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     const start = finiteRange(preset.start, lo, lo, hi);
     const end = finiteRange(preset.end, hi, lo, hi);
     return { start: Math.min(start, end), end: Math.max(start, end) };
+  }
+
+  /** Drop preset provenance after an external value change, without inferring it on equality. */
+  private reconcileAppliedPreset(): void {
+    if (!this._appliedPreset) return;
+    const normalized = this.normalizePreset(this._appliedPreset);
+    if (normalized.start !== this.start || normalized.end !== this.end) {
+      this._appliedPreset = undefined;
+    }
   }
 
   private onKeyDown = (handle: TimeRangeHandle, e: KeyboardEvent): void => {
@@ -970,6 +1021,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
       if (changed.has('start') && changed.has('end') && Number.isFinite(start) && Number.isFinite(end)) {
         this.start = Math.min(start, end);
         this.end = Math.max(start, end);
+        this.reconcileAppliedPreset();
         return;
       }
       if (Number.isFinite(start)) this.start = start;
@@ -994,6 +1046,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     ) {
       this.end = Math.max(this.end, this.start);
     }
+    this.reconcileAppliedPreset();
   }
 
   override render(): TemplateResult {
@@ -1015,8 +1068,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
       ${this.presets.length > 0
         ? html`<div part="presets">
             ${this.presets.map((preset) => {
-              const normalized = this.normalizePreset(preset);
-              const active = normalized.start === this.start && normalized.end === this.end;
+              const active = preset === this._appliedPreset;
               return html`<button
                 part="preset-button"
                 type="button"
@@ -1047,6 +1099,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
           tabindex=${this.effectiveDisabled ? '-1' : '0'}
           aria-label=${this.startLabel ?? this.localize('rangeStart')}
           aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
+          aria-invalid=${this.internals.validity.valid ? 'false' : 'true'}
           aria-valuemin=${startBounds.min}
           aria-valuemax=${startBounds.max}
           aria-valuenow=${startValue ?? nothing}
@@ -1066,6 +1119,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
           tabindex=${this.effectiveDisabled ? '-1' : '0'}
           aria-label=${this.endLabel ?? this.localize('rangeEnd')}
           aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
+          aria-invalid=${this.internals.validity.valid ? 'false' : 'true'}
           aria-valuemin=${endBounds.min}
           aria-valuemax=${endBounds.max}
           aria-valuenow=${endValue ?? nothing}

@@ -135,6 +135,10 @@ export interface LyraDateRangePreset {
   readonly end?: string;
 }
 
+function isDateRangePresetRecord(value: unknown): value is LyraDateRangePreset {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 /**
  * `<lr-date-picker>` — an inline month-grid calendar for picking a single date
  * or a date range. Mirrors the core `<wa-date-picker>` API under `lr-`.
@@ -304,14 +308,24 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
    *
    * Range mode only — a preset names two dates, so it has no meaning for a single-date picker and
    * is ignored there rather than rendering a row that cannot do anything. Unset renders nothing at
-   * all, so an existing picker is unchanged.
+   * all, so an existing picker is unchanged. Non-array runtime assignments normalize to the same
+   * empty collection instead of reaching the render path.
    *
    * Applying one commits the range exactly as a two-click selection would (clamped to `min`/`max`,
    * then `input` followed by `change`), so a consumer's existing change handling needs no special
    * case. The active preset carries `aria-pressed="true"` and `data-active`, mirroring
    * `<lr-time-range>`'s already-shipped preset row.
    */
-  @property({ attribute: false }) presets: readonly LyraDateRangePreset[] = Object.freeze([]);
+  private _presets: readonly LyraDateRangePreset[] = Object.freeze([]);
+  @property({ attribute: false })
+  get presets(): readonly LyraDateRangePreset[] {
+    return this._presets;
+  }
+  set presets(next: readonly LyraDateRangePreset[]) {
+    const old = this._presets;
+    this._presets = Array.isArray(next) ? next : Object.freeze([]);
+    this.requestUpdate('presets', old);
+  }
 
   private _appliedPreset?: LyraDateRangePreset;
 
@@ -441,9 +455,14 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     return normalizeView(this.view);
   }
 
+  /** Parsed range view of `value`. Writes share `valueAsRange` normalization and stay silent. */
   get selection(): DateRange {
     const parts = this.value.split('/');
     return { from: parseISO(parts[0] ?? ''), to: parseISO(parts[1] ?? '') };
+  }
+
+  set selection(next: DateRange) {
+    this.valueAsRange = next;
   }
 
   /** Date view of a single-mode value. Writes serialize to local ISO and are silent. */
@@ -1663,9 +1682,10 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
 
   /** The quick-range row. Range mode only -- see `presets`. */
   private renderPresets(): TemplateResult | typeof nothing {
-    if (this.effectiveMode !== 'range' || this.presets.length === 0) return nothing;
+    const presets = this.presets.filter(isDateRangePresetRecord);
+    if (this.effectiveMode !== 'range' || presets.length === 0) return nothing;
     return html`<div part="presets">
-      ${this.presets.map((preset) => {
+      ${presets.map((preset) => {
         const resolved = this.resolvePresetRange(preset);
         const active =
           resolved !== null

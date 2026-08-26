@@ -24,7 +24,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Nodes, edges, selected ids, and decoration records are detached, deeply frozen, and bounded at assignment (10,000 outer entries plus finite nested-data budgets); reassign a collection after changes. Node and edge collections use unique nonempty first-wins ids before layout or interaction, and controlled selections retain only unique nonblank identities in the current canonical model. Activation and move events expose domain-named nodeId/edgeId fields.',
+          'Nodes, edges, selected ids, and decoration records are detached, deeply frozen, and bounded at assignment (10,000 outer entries plus finite nested-data budgets); reassign a collection after changes. Node and edge collections use unique nonempty first-wins ids before layout or interaction, and controlled selections retain only unique nonblank identities in the current canonical model. Explicit positions remain caller-controlled; negative or larger-than-safe-integer centers render but are not passed to bounded auto-layout as fixed anchors. Activation and move events expose domain-named nodeId/edgeId fields.',
       },
     },
   },

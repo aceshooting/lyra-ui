@@ -6,9 +6,10 @@
 - **Class** `LyraArchiveViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/archive-viewer/archive-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -35,9 +36,10 @@ virtualized row into view. Queries are capped at 4,096 code units and each pass 
 code units; `matchCountExact: false` reports a ceiling-truncated lower bound. `scrollToAnchor()` resolves text-quote and fragment anchors and emits
 `lr-anchor-result`. A fragment id is the exact ZIP entry path. A text quote resolves within one
 complete entry path; both forms first mount the absolute virtualized row and only then perform the
-shared DOM-level anchor resolution. A jump whose archive is replaced by a concurrent `src`
-reassignment mid-flight, or whose row cannot be located after the wait, reports `found: false`
-rather than a phantom success.
+shared DOM-level anchor resolution. Rendered rows intentionally do not expose entry paths as DOM
+ids; the fragment mapping is resolved against archive metadata. A jump whose archive is replaced
+by a concurrent `src` reassignment mid-flight, or whose row cannot be located after the wait,
+reports `found: false` rather than a phantom success.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or parsing fails;
 `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) from search,
@@ -48,8 +50,11 @@ entry path; and `lr-anchor-result` (`detail: { found }`) after anchor resolution
 are passive and cannot be activated.
 
 **CSS parts:** `base`, `body`, `entry`, `entry-icon`, `entry-name`, `entry-name-dir`, `entry-size`,
-`highlight` (the `<mark>` fallback for a painted entry-path quote), `spinner`, and `error`. A
-directory row's name element carries both `entry-name` and
+`highlight` (the `<mark>` fallback for a painted entry-path quote), `spinner`, `error`, and
+`anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest anchor-jump message; the
+spoken copy is appended to the shared document-level polite sink only while the viewer and its
+composed ancestors are exposed to the accessibility tree). A directory row's name element carries
+both `entry-name` and
 `entry-name-dir` (a part list), so `::part(entry-name-dir)` selects only directory names while
 `::part(entry-name)` still selects every name. Entry rows are rendered into the embedded
 `<lr-virtual-list>`'s own shadow root and forwarded with `exportparts`, so

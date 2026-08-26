@@ -1,4 +1,4 @@
-import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './otp-input.js';
 import '../button/button.js';
 import type { LyraOtpInput } from './otp-input.class.js';
@@ -7,6 +7,15 @@ const controlOf = (el: Element): HTMLInputElement =>
   el.shadowRoot!.querySelector('[part="control"]') as HTMLInputElement;
 const segmentsOf = (el: Element): HTMLElement[] =>
   [...el.shadowRoot!.querySelectorAll('[part~="segment"]')] as HTMLElement[];
+const requiredItem = <T>(items: ArrayLike<T>, index: number, description: string): T => {
+  const item = items[index];
+  if (item === undefined) {
+    throw new Error(`Expected ${description} at index ${index}.`);
+  }
+  return item;
+};
+const segmentOf = (el: Element, index = 0): HTMLElement =>
+  requiredItem(segmentsOf(el), index, 'OTP segment');
 const fieldOf = (el: Element): HTMLElement => el.shadowRoot!.querySelector('[part~="segments"]') as HTMLElement;
 const partOf = (el: Element, name: string): HTMLElement =>
   el.shadowRoot!.querySelector(`[part~="${name}"]`) as HTMLElement;
@@ -20,7 +29,7 @@ it('inherits public segment paint and radius across an appearance fallback', asy
     </div>
   `);
   const el = wrapper.querySelector('lr-otp-input') as LyraOtpInput;
-  const segment = segmentsOf(el)[0];
+  const segment = segmentOf(el);
   const computed = getComputedStyle(segment);
   expect(computed.backgroundColor).to.equal('rgb(1, 2, 3)');
   expect(computed.borderTopColor).to.equal('rgb(4, 5, 6)');
@@ -119,9 +128,10 @@ it('emits one cancelable lr-invalid alias when a validity check fails', async ()
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
-  expect(aliases[0].target === el).to.equal(true);
-  expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
-  expect(aliases[0].cancelable).to.be.true;
+  const alias = requiredItem(aliases, 0, 'invalid alias event');
+  expect(alias.target === el).to.equal(true);
+  expect(alias.bubbles && alias.composed).to.be.true;
+  expect(alias.cancelable).to.be.true;
 });
 
 it('forwards preventDefault() on lr-invalid to the native invalid event', async () => {
@@ -135,8 +145,9 @@ it('forwards preventDefault() on lr-invalid to the native invalid event', async 
 
   expect(el.checkValidity()).to.be.false;
   expect(natives).to.have.lengthOf(1);
-  expect(natives[0].cancelable, 'the native invalid event is cancelable').to.be.true;
-  expect(natives[0].defaultPrevented).to.be.true;
+  const native = requiredItem(natives, 0, 'native invalid event');
+  expect(native.cancelable, 'the native invalid event is cancelable').to.be.true;
+  expect(native.defaultPrevented).to.be.true;
 });
 
 it('leaves the native invalid event alone when the lr-invalid alias is not cancelled', async () => {
@@ -146,7 +157,7 @@ it('leaves the native invalid event alone when the lr-invalid alias is not cance
 
   expect(el.checkValidity()).to.be.false;
   expect(natives).to.have.lengthOf(1);
-  expect(natives[0].defaultPrevented).to.be.false;
+  expect(requiredItem(natives, 0, 'native invalid event').defaultPrevented).to.be.false;
 });
 
 it('bars constraint validation while disabled or fieldset-disabled, not only while readonly', async () => {
@@ -212,8 +223,9 @@ it('derives segments and separators from format, overriding length', async () =>
   expect(el.effectiveLength).to.equal(6);
   const separators = el.shadowRoot!.querySelectorAll('[part~="segment-literal"]');
   expect(separators).to.have.lengthOf(1);
-  expect(separators[0].getAttribute('part')!.split(/\s+/)).to.include.members(['separator', 'segment-literal']);
-  expect(separators[0].textContent).to.equal('-');
+  const separator = requiredItem(separators, 0, 'format separator');
+  expect(separator.getAttribute('part')!.split(/\s+/)).to.include.members(['separator', 'segment-literal']);
+  expect(separator.textContent).to.equal('-');
 });
 
 it('treats a nonempty format with no segment markers as unset and falls back to length', async () => {
@@ -357,11 +369,11 @@ it('supports the mapped appearances and shared size ladder', async () => {
   expect(filled.appearance).to.equal('filled');
   expect(filledOutlined.appearance).to.equal('filled-outlined');
   expect(contained.appearance).to.equal('contained');
-  expect(getComputedStyle(segmentsOf(filled)[0]).backgroundColor).to.not.equal(
-    getComputedStyle(segmentsOf(outlined)[0]).backgroundColor
+  expect(getComputedStyle(segmentOf(filled)).backgroundColor).to.not.equal(
+    getComputedStyle(segmentOf(outlined)).backgroundColor
   );
-  expect(segmentsOf(filled)[0].getBoundingClientRect().height).to.be.greaterThan(
-    segmentsOf(outlined)[0].getBoundingClientRect().height
+  expect(segmentOf(filled).getBoundingClientRect().height).to.be.greaterThan(
+    segmentOf(outlined).getBoundingClientRect().height
   );
   expect(getComputedStyle(fieldOf(contained)).gap).to.equal('0px');
   expect(getComputedStyle(fieldOf(contained)).borderStyle).to.equal('solid');
@@ -379,10 +391,10 @@ it('uses standalone m fallbacks while an unset size inherits a nested outer size
   `);
   const nested = outer.querySelector('lr-otp-input') as LyraOtpInput;
   await nested.updateComplete;
-  const standaloneStyle = getComputedStyle(segmentsOf(standalone)[0]);
-  const explicitStyle = getComputedStyle(segmentsOf(explicitMedium)[0]);
-  const outerStyle = getComputedStyle(segmentsOf(outer)[0]);
-  const nestedStyle = getComputedStyle(segmentsOf(nested)[0]);
+  const standaloneStyle = getComputedStyle(segmentOf(standalone));
+  const explicitStyle = getComputedStyle(segmentOf(explicitMedium));
+  const outerStyle = getComputedStyle(segmentOf(outer));
+  const nestedStyle = getComputedStyle(segmentOf(nested));
 
   expect(standalone.size).to.equal('m');
   expect(standalone.hasAttribute('size')).to.equal(false);
@@ -407,8 +419,8 @@ it('lets explicit same-default m property and attribute writes override inherite
     </lr-otp-input>
   `);
   const inners = outer.querySelectorAll<LyraOtpInput>('lr-otp-input');
-  const propertyOverride = inners[0];
-  const attributeOverride = inners[1];
+  const propertyOverride = requiredItem(inners, 0, 'property-size override');
+  const attributeOverride = requiredItem(inners, 1, 'attribute-size override');
   await propertyOverride.updateComplete;
   await attributeOverride.updateComplete;
 
@@ -419,9 +431,9 @@ it('lets explicit same-default m property and attribute writes override inherite
 
   expect(propertyOverride.getAttribute('size')).to.equal('m');
   expect(attributeOverride.getAttribute('size')).to.equal('m');
-  const propertyStyle = getComputedStyle(segmentsOf(propertyOverride)[0]);
-  const attributeStyle = getComputedStyle(segmentsOf(attributeOverride)[0]);
-  const outerStyle = getComputedStyle(segmentsOf(outer)[0]);
+  const propertyStyle = getComputedStyle(segmentOf(propertyOverride));
+  const attributeStyle = getComputedStyle(segmentOf(attributeOverride));
+  const outerStyle = getComputedStyle(segmentOf(outer));
   expect(propertyStyle.fontSize).to.equal(attributeStyle.fontSize);
   expect(propertyStyle.borderRadius).to.equal(attributeStyle.borderRadius);
   expect(getComputedStyle(propertyOverride).getPropertyValue('--lr-form-control-height').trim()).to.equal('73px');
@@ -437,15 +449,15 @@ it('restores inherited size context when an explicit size attribute is removed',
   `);
   const nested = outer.querySelector('lr-otp-input') as LyraOtpInput;
   await nested.updateComplete;
-  const explicitFontSize = getComputedStyle(segmentsOf(nested)[0]).fontSize;
+  const explicitFontSize = getComputedStyle(segmentOf(nested)).fontSize;
 
   nested.removeAttribute('size');
   await nested.updateComplete;
 
   expect(nested.size).to.equal('m');
   expect(nested.hasAttribute('size')).to.equal(false);
-  const restoredStyle = getComputedStyle(segmentsOf(nested)[0]);
-  const outerStyle = getComputedStyle(segmentsOf(outer)[0]);
+  const restoredStyle = getComputedStyle(segmentOf(nested));
+  const outerStyle = getComputedStyle(segmentOf(outer));
   expect(restoredStyle.fontSize).to.equal(outerStyle.fontSize);
   expect(restoredStyle.borderRadius).to.equal(outerStyle.borderRadius);
   expect(restoredStyle.fontSize).to.not.equal(explicitFontSize);
@@ -459,7 +471,7 @@ it('tracks dynamic ancestor size changes while its own size stays unset', async 
   `);
   const nested = outer.querySelector('lr-otp-input') as LyraOtpInput;
   await nested.updateComplete;
-  const initialStyle = getComputedStyle(segmentsOf(nested)[0]);
+  const initialStyle = getComputedStyle(segmentOf(nested));
   const initialFontSize = initialStyle.fontSize;
   const initialRadius = initialStyle.borderRadius;
   const initialHeight = getComputedStyle(nested).getPropertyValue('--lr-form-control-height').trim();
@@ -468,8 +480,8 @@ it('tracks dynamic ancestor size changes while its own size stays unset', async 
   await outer.updateComplete;
 
   expect(nested.hasAttribute('size')).to.equal(false);
-  const nestedStyle = getComputedStyle(segmentsOf(nested)[0]);
-  const outerStyle = getComputedStyle(segmentsOf(outer)[0]);
+  const nestedStyle = getComputedStyle(segmentOf(nested));
+  const outerStyle = getComputedStyle(segmentOf(outer));
   const nestedHeight = getComputedStyle(nested).getPropertyValue('--lr-form-control-height').trim();
   const outerHeight = getComputedStyle(outer).getPropertyValue('--lr-form-control-height').trim();
   expect(nestedStyle.fontSize).to.equal(outerStyle.fontSize);
@@ -490,7 +502,7 @@ it('applies the mapped segment custom properties while retaining the Lyra mask a
       style="--mask-char: '*'; --segment-size: 4rem; --segment-gap: 1rem; --segment-border-radius: 1rem;"
     ></lr-otp-input>
   `);
-  const [first] = segmentsOf(el);
+  const first = segmentOf(el);
   expect(maskGlyphOf(first)).to.equal('*');
   expect(first.getBoundingClientRect().width).to.be.closeTo(64, 1);
   expect(first.getBoundingClientRect().height).to.be.closeTo(64, 1);
@@ -505,7 +517,7 @@ it('uses the pinned 2.5em default independently of the shared control-height tok
       style="--lr-form-control-font-size: 20px; --lr-form-control-height: 7rem;"
     ></lr-otp-input>
   `);
-  const segment = segmentsOf(el)[0];
+  const segment = segmentOf(el);
   const style = getComputedStyle(segment);
   const expected = Number.parseFloat(style.fontSize) * 2.5;
   expect(segment.getBoundingClientRect().width).to.be.closeTo(expected, 1);
@@ -520,7 +532,7 @@ it('honors a compact segment-size exactly while keeping the combined input targe
     <lr-otp-input label="Extra small" length="1" size="xs"></lr-otp-input>
   `);
   const medium = await fixture<LyraOtpInput>(html` <lr-otp-input label="Medium" length="1" size="m"></lr-otp-input> `);
-  const cellRect = segmentsOf(compact)[0].getBoundingClientRect();
+  const cellRect = segmentOf(compact).getBoundingClientRect();
   const targetRect = fieldOf(compact).getBoundingClientRect();
   const inputRect = controlOf(compact).getBoundingClientRect();
   expect(cellRect.width).to.be.closeTo(16, 1);
@@ -529,8 +541,8 @@ it('honors a compact segment-size exactly while keeping the combined input targe
   expect(targetRect.height).to.be.at.least(40);
   expect(inputRect.width).to.be.closeTo(targetRect.width, 1);
   expect(inputRect.height).to.be.closeTo(targetRect.height, 1);
-  expect(segmentsOf(medium)[0].getBoundingClientRect().height).to.be.greaterThan(
-    segmentsOf(xs)[0].getBoundingClientRect().height
+  expect(segmentOf(medium).getBoundingClientRect().height).to.be.greaterThan(
+    segmentOf(xs).getBoundingClientRect().height
   );
 });
 
@@ -553,7 +565,7 @@ it('contains a long RTL fixed-cell row in a 320px allocation while keeping every
   expect(el.getBoundingClientRect().width).to.be.at.most(wrapperRect.width);
   expect(row.clientWidth).to.be.at.most(320);
   expect(row.scrollWidth).to.be.greaterThan(row.clientWidth);
-  expect(cells[0].getBoundingClientRect().left).to.be.at.least(rowRect.left - 1);
+  expect(requiredItem(cells, 0, 'first overflow segment').getBoundingClientRect().left).to.be.at.least(rowRect.left - 1);
 
   row.scrollLeft = row.scrollWidth;
   await aTimeout(0);
@@ -731,7 +743,7 @@ it('clears fixed cells with Backspace and Delete without shifting trailing chara
   expect(el.value).to.equal('124');
   expect(activeIndexOf(el)).to.equal(1);
   expect(inputs).to.have.lengthOf(1);
-  expect(inputs[0].inputType).to.equal('deleteContentBackward');
+  expect(requiredItem(inputs, 0, 'backspace input event').inputType).to.equal('deleteContentBackward');
 
   key(el, 'Delete');
   await el.updateComplete;
@@ -739,7 +751,7 @@ it('clears fixed cells with Backspace and Delete without shifting trailing chara
   expect(el.value).to.equal('14');
   expect(activeIndexOf(el)).to.equal(1);
   expect(inputs).to.have.lengthOf(2);
-  expect(inputs[1].inputType).to.equal('deleteContentForward');
+  expect(requiredItem(inputs, 1, 'delete input event').inputType).to.equal('deleteContentForward');
 
   key(el, 'Backspace');
   await el.updateComplete;
@@ -915,7 +927,7 @@ it('clears a select-all range with either deletion key in one input operation', 
       deletionKey
     ).to.deep.equal(['', '', '', '']);
     expect(inputs, deletionKey).to.have.lengthOf(1);
-    expect(inputs[0].inputType).to.equal(
+    expect(requiredItem(inputs, 0, `${deletionKey} input event`).inputType).to.equal(
       deletionKey === 'Backspace' ? 'deleteContentBackward' : 'deleteContentForward'
     );
     expect(clears, deletionKey).to.equal(1);
@@ -971,9 +983,10 @@ it('emits one native change when a fixed-cell keyboard edit settles on blur', as
   el.blur();
 
   expect(changes).to.have.lengthOf(1);
-  expect(changes[0].target === el).to.equal(true);
-  expect(changes[0].bubbles && changes[0].composed).to.equal(true);
-  expect(changes[0].cancelable).to.equal(false);
+  const change = requiredItem(changes, 0, 'settled change event');
+  expect(change.target === el).to.equal(true);
+  expect(change.bubbles && change.composed).to.equal(true);
+  expect(change.cancelable).to.equal(false);
 });
 
 it('submits its owning form exactly once on Enter, leaving the keystroke uncancelled', async () => {
@@ -1218,9 +1231,9 @@ it('fills an empty field from a full sanitized paste with one input and one comp
   expect(el.value).to.equal('1234');
   expect(segmentsOf(el).map((segment) => segment.textContent)).to.deep.equal(['1', '2', '3', '4']);
   expect(inputs).to.have.lengthOf(1);
-  expect(inputs[0].inputType).to.equal('insertFromPaste');
+  expect(requiredItem(inputs, 0, 'paste input event').inputType).to.equal('insertFromPaste');
   expect(completions).to.have.lengthOf(1);
-  expect(completions[0].detail.value).to.equal('1234');
+  expect(requiredItem(completions, 0, 'completion event').detail.value).to.equal('1234');
 });
 
 it('emits completion and autosubmits only on an incomplete-to-complete transition', async () => {
@@ -1461,11 +1474,12 @@ it('relays exactly one non-composing native InputEvent with its editing payload 
   );
 
   expect(events).to.have.lengthOf(1);
-  expect(events[0] instanceof InputEvent).to.be.true;
-  expect(events[0].target === el && events[0].bubbles && events[0].composed).to.be.true;
-  expect(events[0].data).to.equal('7');
-  expect(events[0].inputType).to.equal('insertText');
-  expect(events[0].isComposing).to.be.false;
+  const event = requiredItem(events, 0, 'relayed input event');
+  expect(event instanceof InputEvent).to.be.true;
+  expect(event.target === el && event.bubbles && event.composed).to.be.true;
+  expect(event.data).to.equal('7');
+  expect(event.inputType).to.equal('insertText');
+  expect(event.isComposing).to.be.false;
 });
 
 it('relays exactly one host-target native non-cancelable change event', async () => {
@@ -1477,10 +1491,11 @@ it('relays exactly one host-target native non-cancelable change event', async ()
   controlOf(el).dispatchEvent(new Event('change', { bubbles: true, composed: true }));
 
   expect(events).to.have.lengthOf(1);
-  expect(events[0] instanceof Event).to.be.true;
-  expect(events[0].target === el).to.equal(true);
-  expect(events[0].bubbles && events[0].composed).to.be.true;
-  expect(events[0].cancelable).to.be.false;
+  const event = requiredItem(events, 0, 'relayed change event');
+  expect(event instanceof Event).to.be.true;
+  expect(event.target === el).to.equal(true);
+  expect(event.bubbles && event.composed).to.be.true;
+  expect(event.cancelable).to.be.false;
 });
 
 it('does not emit lr-complete while the code is short', async () => {
@@ -1568,13 +1583,14 @@ it('masks the displayed characters without changing the value', async () => {
   await type(el, '1234');
   expect(el.value).to.equal('1234');
   const filled = segmentsOf(el);
-  expect(filled[0].textContent).to.equal('');
-  expect(filled[0].getAttribute('part')!.split(/\s+/)).to.include('masked');
+  const first = requiredItem(filled, 0, 'first filled segment');
+  expect(first.textContent).to.equal('');
+  expect(first.getAttribute('part')!.split(/\s+/)).to.include('masked');
 });
 
 it('renders the mask glyph in empty segments when with-mask is set on its own', async () => {
   const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="PIN" length="4" with-mask></lr-otp-input>`);
-  const [first] = segmentsOf(el);
+  const first = segmentOf(el);
   expect(first.getAttribute('part')!.split(/\s+/)).to.include('placeholder-mask');
   // Rendered result, not stylesheet text: an empty segment must actually paint the glyph, so the
   // field reads as a fixed-length code before any entry.
@@ -1591,14 +1607,16 @@ it('keeps entered characters visible when with-mask is set without mask', async 
   const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="PIN" length="4" with-mask></lr-otp-input>`);
   await type(el, '12');
   const segments = segmentsOf(el);
-  expect(segments[0].textContent).to.equal('1');
-  expect(maskGlyphOf(segments[0]), 'filled segment').to.equal('');
-  expect(maskGlyphOf(segments[2]), 'empty segment').to.equal('•');
+  const first = requiredItem(segments, 0, 'first visible segment');
+  const third = requiredItem(segments, 2, 'third visible segment');
+  expect(first.textContent).to.equal('1');
+  expect(maskGlyphOf(first), 'filled segment').to.equal('');
+  expect(maskGlyphOf(third), 'empty segment').to.equal('•');
 });
 
 it('keeps empty segments blank when with-mask is not set', async () => {
   const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="PIN" length="4" mask></lr-otp-input>`);
-  const [first] = segmentsOf(el);
+  const first = segmentOf(el);
   expect(first.getAttribute('part')!.split(/\s+/)).to.not.include('placeholder-mask');
   expect(maskGlyphOf(first), 'empty segment without with-mask').to.equal('');
 });
@@ -1607,8 +1625,8 @@ it('paints the mask glyph on filled segments too', async () => {
   const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="PIN" length="4" mask with-mask></lr-otp-input>`);
   await type(el, '12');
   const segments = segmentsOf(el);
-  expect(maskGlyphOf(segments[0]), 'filled segment').to.equal('•');
-  expect(maskGlyphOf(segments[2]), 'still-empty segment').to.equal('•');
+  expect(maskGlyphOf(requiredItem(segments, 0, 'first masked segment')), 'filled segment').to.equal('•');
+  expect(maskGlyphOf(requiredItem(segments, 2, 'third masked segment')), 'still-empty segment').to.equal('•');
 });
 
 it('honours a custom mask glyph on both filled and empty segments', async () => {
@@ -1617,8 +1635,8 @@ it('honours a custom mask glyph on both filled and empty segments', async () => 
   `);
   await type(el, '1');
   const segments = segmentsOf(el);
-  expect(maskGlyphOf(segments[0]), 'filled segment').to.equal('*');
-  expect(maskGlyphOf(segments[1]), 'empty segment').to.equal('*');
+  expect(maskGlyphOf(requiredItem(segments, 0, 'first custom-mask segment')), 'filled segment').to.equal('*');
+  expect(maskGlyphOf(requiredItem(segments, 1, 'second custom-mask segment')), 'empty segment').to.equal('*');
 });
 
 it('dims the segments and disables the control inside a disabled fieldset', async () => {
@@ -1643,7 +1661,7 @@ it('dims the segments and disables the control inside a disabled fieldset', asyn
   el.click();
   el.focus();
   expect(delegatedCalls, 'fieldset disablement gates host click/focus delegation').to.equal(0);
-  const [first] = segmentsOf(el);
+  const first = segmentOf(el);
   expect(Number(getComputedStyle(first).opacity), 'segment opacity').to.be.lessThan(1);
   expect(getComputedStyle(controlOf(el)).cursor, 'control cursor').to.equal('not-allowed');
 });
@@ -1651,7 +1669,7 @@ it('dims the segments and disables the control inside a disabled fieldset', asyn
 it('dims the segments for its own disabled attribute too', async () => {
   const el = await fixture<LyraOtpInput>(html`<lr-otp-input label="Code" length="4" disabled></lr-otp-input>`);
   expect(controlOf(el).disabled).to.equal(true);
-  expect(Number(getComputedStyle(segmentsOf(el)[0]).opacity), 'segment opacity').to.be.lessThan(1);
+  expect(Number(getComputedStyle(segmentOf(el)).opacity), 'segment opacity').to.be.lessThan(1);
   expect(getComputedStyle(controlOf(el)).cursor, 'control cursor').to.equal('not-allowed');
 });
 
@@ -1663,6 +1681,28 @@ it('marks the next segment active only while focused', async () => {
   await el.updateComplete;
   const active = segmentsOf(el).findIndex((s) => s.getAttribute('part')!.includes('active'));
   expect(active).to.equal(2);
+});
+
+it('shows a visible focus indicator while readonly', async () => {
+  const el = await fixture<LyraOtpInput>(html`
+    <lr-otp-input readonly value="1234" label="Code" style="--lr-transition-fast: 0s"></lr-otp-input>
+  `);
+  const segments = segmentsOf(el);
+  for (const segment of segments) segment.style.transition = 'none';
+  const unfocusedShadows = segments.map((segment) => getComputedStyle(segment).boxShadow);
+
+  el.focus();
+  await waitUntil(
+    () => el.shadowRoot!.activeElement === controlOf(el),
+    'the readonly native control did not receive focus',
+  );
+  await waitUntil(() => activeIndexOf(el) >= 0, 'no visible segment reflected readonly focus');
+
+  const activeIndex = activeIndexOf(el);
+  const activeSegment = requiredItem(segments, activeIndex, 'active readonly segment');
+  const activeStyle = getComputedStyle(activeSegment);
+  expect(activeStyle.boxShadow).to.not.equal(unfocusedShadows[activeIndex]);
+  expect(activeStyle.boxShadow).to.not.equal('none');
 });
 
 it('relays one native focus/blur pair from the real input, and never lr-focus/lr-blur', async () => {
@@ -1752,7 +1792,7 @@ it('applies label/hint attribute precedence and error-slot precedence without co
   expect(labelSlot.hidden).to.equal(true);
   expect(hintSlot.hidden).to.equal(true);
   expect(errorSlot.hidden).to.equal(false);
-  expect(errorSlot.assignedElements()[0].textContent).to.equal('Slot error');
+  expect(requiredItem(errorSlot.assignedElements(), 0, 'assigned error element').textContent).to.equal('Slot error');
   expect(controlOf(el).getAttribute('aria-labelledby')).to.equal(label.id);
   expect(controlOf(el).getAttribute('aria-describedby')!.split(/\s+/)).to.include.members([error.id, hint.id]);
   expect(controlOf(el).getAttribute('aria-invalid')).to.equal('true');
@@ -1774,7 +1814,7 @@ it('uses populated label, hint, and error slots as the accessible chrome when at
     const part = partOf(el, name);
     const slot = part.querySelector('slot') as HTMLSlotElement;
     expect(slot.hidden, `${name} slot is rendered`).to.equal(false);
-    expect(slot.assignedElements()[0].textContent).to.equal(`Slot ${name}`);
+    expect(requiredItem(slot.assignedElements(), 0, `assigned ${name} element`).textContent).to.equal(`Slot ${name}`);
   }
   expect(controlOf(el).hasAttribute('aria-label')).to.equal(false);
   expect(controlOf(el).getAttribute('aria-labelledby')).to.equal(partOf(el, 'label').id);

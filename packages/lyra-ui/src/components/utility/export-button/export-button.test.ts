@@ -1,16 +1,24 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './export-button.js';
 import type {
   LyraExportButton,
   LyraExportFormatDescriptor,
 } from './export-button.js';
-import { styles } from './export-button.styles.js';
 
 const rows = [{ id: 'a', name: 'Alpha' }];
 const columns = [
   { key: 'id', label: 'ID' },
   { key: 'name', label: 'Name' },
 ];
+
+async function waitForOpenMenu(el: LyraExportButton): Promise<HTMLElement> {
+  const menu = el.shadowRoot!.querySelector('[part="menu"]') as HTMLElement;
+  await waitUntil(
+    () => menu.ownerDocument.defaultView?.getComputedStyle(menu).visibility === 'visible',
+    'menu placement did not settle',
+  );
+  return menu;
+}
 
 it('fails closed to frozen empty choices when formats is assigned a non-array value', async () => {
   const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
@@ -34,10 +42,41 @@ it('omits descriptors without nonblank labels and stays inert for an empty forma
 
   el.formats = [];
   await el.updateComplete;
-  let exported = false;
-  el.addEventListener('lr-export', () => (exported = true));
-  (el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement).click();
-  expect(exported).to.be.false;
+  const emitted: string[] = [];
+  for (const type of ['lr-export', 'lr-export-complete', 'lr-export-error', 'lr-show', 'lr-hide']) {
+    el.addEventListener(type, () => emitted.push(type));
+  }
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  expect(trigger.disabled).to.be.true;
+  trigger.click();
+  el.click();
+  trigger.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+  expect(emitted).to.deep.equal([]);
+});
+
+it('disables the trigger and emits nothing when every configured format is rejected', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  (el as unknown as { formats: unknown }).formats = [
+    { formatId: '', label: 'Missing id' },
+    { formatId: '   ', label: 'Blank id' },
+    { formatId: 'xlsx', label: '' },
+    { formatId: 'pdf', label: '   ' },
+    null,
+    42,
+  ];
+  await el.updateComplete;
+
+  expect(el.formats).to.deep.equal([]);
+  const emitted: string[] = [];
+  for (const type of ['lr-export', 'lr-export-complete', 'lr-export-error', 'lr-show', 'lr-hide']) {
+    el.addEventListener(type, () => emitted.push(type));
+  }
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  expect(trigger.disabled).to.be.true;
+  trigger.click();
+  el.click();
+  trigger.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+  expect(emitted).to.deep.equal([]);
 });
 
 it('emits lr-export then lr-export-complete for a single format', async () => {
@@ -127,10 +166,10 @@ it('owns frozen collection snapshots instead of retaining caller-owned arrays', 
   sourceFormats.push({ formatId: 'pdf', label: 'PDF' });
   sourceColumns[0]!.label = 'Mutated';
   sourceFormats[0]!.label = 'Mutated';
-  sourceRows[0]!.id = 'mutated';
+  sourceRows[0]!['id'] = 'mutated';
 
   expect(el.rows.length).to.equal(1);
-  expect(el.rows[0]!.id).to.equal('a');
+  expect(el.rows[0]!['id']).to.equal('a');
   expect(el.columns.map((column) => column.label)).to.deep.equal(['ID']);
   expect(el.formats.map((format) => (typeof format === 'string' ? format : format.label))).to.deep.equal(['Excel']);
   expect(Object.isFrozen(el.rows)).to.equal(true);
@@ -166,6 +205,7 @@ it('preserves focus ownership when loading/disabled invalidates the focused cont
   await el.updateComplete;
   (el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement).click();
   await el.updateComplete;
+  await waitForOpenMenu(el);
   const item = el.shadowRoot!.querySelector('[part="menu-item"]') as HTMLButtonElement;
   item.focus();
 
@@ -210,6 +250,7 @@ it('preserves focus ownership when the owner realm exposes focus through a recei
   await el.updateComplete;
   el.open = true;
   await el.updateComplete;
+  await waitForOpenMenu(el);
   const item = el.shadowRoot!.querySelector('[part="menu-item"]') as HTMLButtonElement;
   item.focus();
 
@@ -278,7 +319,7 @@ it('reflects open as a host attribute so the menu becomes visible', async () => 
   trigger.click();
   await el.updateComplete;
   expect(el.hasAttribute('open')).to.be.true;
-  const menu = el.shadowRoot!.querySelector('[part="menu"]') as HTMLElement;
+  const menu = await waitForOpenMenu(el);
   expect(getComputedStyle(menu).visibility).to.equal('visible');
 });
 
@@ -343,6 +384,7 @@ it('rescues focus from an iframe-realm menu row when disabled after adoption bef
     await el.updateComplete;
     el.open = true;
     await el.updateComplete;
+    await waitForOpenMenu(el);
     const row = el.shadowRoot!.querySelector('[part="menu-item"]') as HTMLButtonElement;
     row.focus();
     expect(el.shadowRoot!.activeElement === row).to.equal(true);
@@ -760,6 +802,7 @@ it('shows a focus ring on menu items via :focus-visible', async () => {
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
   trigger.click();
   await el.updateComplete;
+  await waitForOpenMenu(el);
   const menuItem = el.shadowRoot!.querySelector('[part="menu-item"]') as HTMLButtonElement;
   menuItem.focus();
   await el.updateComplete;
@@ -795,6 +838,7 @@ it('opens the menu and focuses the first item on ArrowDown from the trigger', as
 
   expect(el.open).to.be.true;
   const items = Array.from(el.shadowRoot!.querySelectorAll('[part="menu-item"]')) as HTMLButtonElement[];
+  await waitUntil(() => el.shadowRoot!.activeElement === items[0], 'first menu item was not focused');
   expect((el.shadowRoot!.activeElement) === (items[0])).to.equal(true);
 });
 
@@ -810,6 +854,10 @@ it('opens the menu and focuses the last item on ArrowUp from the trigger', async
 
   expect(el.open).to.be.true;
   const items = Array.from(el.shadowRoot!.querySelectorAll('[part="menu-item"]')) as HTMLButtonElement[];
+  await waitUntil(
+    () => el.shadowRoot!.activeElement === items[items.length - 1],
+    'last menu item was not focused',
+  );
   expect((el.shadowRoot!.activeElement) === (items[items.length - 1])).to.equal(true);
 });
 
@@ -822,21 +870,22 @@ it('moves focus between open menu items with ArrowDown/ArrowUp, and jumps with H
   await el.updateComplete;
 
   const items = Array.from(el.shadowRoot!.querySelectorAll('[part="menu-item"]')) as HTMLButtonElement[];
+  await waitUntil(() => el.shadowRoot!.activeElement === items[0], 'first menu item was not focused');
   expect((el.shadowRoot!.activeElement) === (items[0])).to.equal(true);
 
-  items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+  items[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
   await el.updateComplete;
   expect((el.shadowRoot!.activeElement) === (items[1])).to.equal(true);
 
-  items[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, composed: true }));
+  items[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, composed: true }));
   await el.updateComplete;
   expect((el.shadowRoot!.activeElement) === (items[0])).to.equal(true);
 
-  items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
+  items[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
   await el.updateComplete;
   expect((el.shadowRoot!.activeElement) === (items[items.length - 1])).to.equal(true);
 
-  items[items.length - 1].dispatchEvent(
+  items[items.length - 1]!.dispatchEvent(
     new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true }),
   );
   await el.updateComplete;
@@ -848,6 +897,7 @@ it('transfers focus to a surviving menu item when the focused format is removed'
   el.formats = ['csv', 'json'];
   el.open = true;
   await el.updateComplete;
+  await waitForOpenMenu(el);
   const items = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="menu-item"]')];
   items[1]!.focus();
   expect((el.shadowRoot!.activeElement) === (items[1])).to.equal(true);
@@ -865,6 +915,7 @@ it('returns focus to the trigger when an open menu collapses to a single format'
   el.formats = ['csv', 'json'];
   el.open = true;
   await el.updateComplete;
+  await waitForOpenMenu(el);
   const item = el.shadowRoot!.querySelector('[part="menu-item"]') as HTMLButtonElement;
   item.focus();
 
@@ -984,17 +1035,32 @@ it('gives the trigger and menu items the shared minimum hit area', async () => {
   }
 });
 
-it('bounds and wraps a long format menu within the positioner available inline size', () => {
-  const css = styles.cssText
-    .replace(/\s+/g, ' ')
-    .replace(/\(\s+/g, '(')
-    .replace(/\s+\)/g, ')');
-  expect(css).to.include(
-    'max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-20rem), var(--lr-positioner-available-inline-size, 100vw));',
-  );
-  expect(css).to.include('overflow-wrap: anywhere;');
-  expect(css).to.include("[part='menu-item'] { display: flex; flex-direction: column;");
-  expect(css).to.include('box-sizing: border-box;');
+it('bounds and wraps a long rendered format menu within the popover viewport clamp', async () => {
+  const el = await fixture<LyraExportButton>(html`
+    <lr-export-button
+      open
+      style="--lr-popover-viewport-clamp: 100px; --lr-transition-fast: 0s"
+      .formats=${[
+        {
+          formatId: 'long',
+          label: 'AnExceptionallyLongUnbrokenExportFormatLabel',
+          description: 'AnExceptionallyLongUnbrokenExportFormatDescription',
+        },
+        { formatId: 'other', label: 'Other format' },
+      ]}
+    ></lr-export-button>
+  `);
+  const menu = await waitForOpenMenu(el);
+  const item = menu.querySelector<HTMLElement>('[part="menu-item"]')!;
+  const label = item.querySelector<HTMLElement>('[part="format-label"]')!;
+  const description = item.querySelector<HTMLElement>('[part="format-description"]')!;
+  expect(menu.getBoundingClientRect().width).to.be.at.most(100.5);
+  expect(getComputedStyle(menu).boxSizing).to.equal('border-box');
+  expect(getComputedStyle(item).display).to.equal('flex');
+  expect(getComputedStyle(item).flexDirection).to.equal('column');
+  expect(getComputedStyle(item).boxSizing).to.equal('border-box');
+  expect(getComputedStyle(label).overflowWrap).to.equal('anywhere');
+  expect(getComputedStyle(description).overflowWrap).to.equal('anywhere');
 });
 
 describe('label localization', () => {
@@ -1034,41 +1100,20 @@ describe('label localization', () => {
     el.label = '';
     await el.updateComplete;
     expect(trigger.textContent!.trim()).to.equal('');
+    expect(trigger.getAttribute('aria-label')).to.equal('Exporter');
+    await expect(el).to.be.accessible();
+
+    el.label = '   ';
+    await el.updateComplete;
+    expect(el.label).to.equal('   ');
+    expect(trigger.textContent!.trim()).to.equal('');
+    expect(trigger.getAttribute('aria-label')).to.equal('Exporter');
+
+    el.removeAttribute('label');
+    await el.updateComplete;
+    expect(trigger.textContent!.trim()).to.equal('Exporter');
+    expect(trigger.getAttribute('aria-label')).to.equal(null);
   });
-});
-
-/** Render the max-inline-size declared on `selector` (read off the element's own applied stylesheets)
- *  into the component's shadow scope with the viewport-clamp token pinned to a tiny value, returning
- *  its resolved computed value. Wired to --lr-popover-viewport-clamp the min() collapses to that
- *  pinned value; a leftover 92vw/90vw literal would resolve to something else. */
-function renderedClamp(el: HTMLElement, selector: string): string {
-  const normalize = (text: string) => text.replace(/"/g, "'");
-  let declared = '';
-  for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
-    for (const rule of sheet.cssRules) {
-      if (
-        rule instanceof CSSStyleRule &&
-        normalize(rule.selectorText) === normalize(selector) &&
-        rule.style.maxInlineSize
-      ) {
-        declared = rule.style.maxInlineSize;
-      }
-    }
-  }
-  const probe = document.createElement('span');
-  probe.style.display = 'block';
-  probe.style.setProperty('--lr-popover-viewport-clamp', '10px');
-  probe.style.maxInlineSize = declared;
-  el.shadowRoot!.appendChild(probe);
-  const value = getComputedStyle(probe).maxInlineSize;
-  probe.remove();
-  return value;
-}
-
-it('clamps its floating surface width through the shared popover-viewport-clamp token', async () => {
-  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as HTMLElement;
-  await (el as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete;
-  expect(renderedClamp(el, "[part='menu']")).to.equal('10px');
 });
 
 it('blur() releases the native trigger it focused', async () => {

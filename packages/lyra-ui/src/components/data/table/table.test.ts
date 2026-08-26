@@ -1232,7 +1232,7 @@ it('reflects spellcheck=false when assigned as a property', async () => {
   el.spellcheck = false;
   await el.updateComplete;
   const property = (
-    el.constructor as typeof LyraTable & {
+    el.constructor as unknown as {
       elementProperties: Map<string, { converter?: { toAttribute?: (value: boolean) => string | null } }>;
     }
   ).elementProperties.get('spellcheck');
@@ -1405,16 +1405,16 @@ it('clears editingCell (without emitting) instead of throwing when the transient
 it('renders grouped row sections without making group headers focus stops', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
-  el.rows = [rows[0], rows[1], { id: 'c', name: 'Gamma', score: 2 }];
+  el.rows = [rows[0]!, rows[1]!, { id: 'c', name: 'Gamma', score: 2 }];
   el.rowKey = (r) => r.id;
   el.groupBy = (r) => (r.score > 2 ? 'Passing' : 'Needs review');
   await el.updateComplete;
 
   const groups = [...el.shadowRoot!.querySelectorAll('[part="group-row"]')];
   expect(groups.length).to.equal(2);
-  expect(groups[0].textContent).to.contain('Passing');
-  expect(groups[1].textContent).to.contain('Needs review');
-  expect(groups[0].getAttribute('tabindex')).to.equal(null);
+  expect(groups[0]!.textContent).to.contain('Passing');
+  expect(groups[1]!.textContent).to.contain('Needs review');
+  expect(groups[0]!.getAttribute('tabindex')).to.equal(null);
   expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(3);
 });
 
@@ -1545,9 +1545,9 @@ it('forwards spellcheck/autocapitalize/autocorrect to a text cell editor but not
 
   const cells = [...el.shadowRoot!.querySelectorAll('[part="row"] [part="cell"]')] as HTMLElement[];
 
-  cells[0].dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  cells[0]!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
   await el.updateComplete;
-  const textInput = cells[0].querySelector('[part="cell-editor"]') as HTMLInputElement;
+  const textInput = cells[0]!.querySelector('[part="cell-editor"]') as HTMLInputElement;
   expect(textInput.spellcheck).to.be.false;
   expect(textInput.getAttribute('autocapitalize')).to.equal('off');
   expect(textInput.getAttribute('autocorrect')).to.equal('off');
@@ -1560,9 +1560,9 @@ it('forwards spellcheck/autocapitalize/autocorrect to a text cell editor but not
   );
   await el.updateComplete;
 
-  cells[1].dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  cells[1]!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
   await el.updateComplete;
-  const numberInput = cells[1].querySelector('[part="cell-editor"]') as HTMLInputElement;
+  const numberInput = cells[1]!.querySelector('[part="cell-editor"]') as HTMLInputElement;
   expect(numberInput.hasAttribute('spellcheck')).to.be.false;
   expect(numberInput.hasAttribute('autocapitalize')).to.be.false;
   expect(numberInput.hasAttribute('autocorrect')).to.be.false;
@@ -1574,7 +1574,7 @@ it('filters without throwing over rows containing a circular reference or a BigI
     name: 'Circular',
     score: 5n as unknown as number,
   };
-  cyclic.self = cyclic;
+  cyclic['self'] = cyclic;
   const el = (await fixture(html`<lr-table filterable></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
   el.rows = [...rows, cyclic as unknown as Row];
@@ -2034,7 +2034,9 @@ it('renders a visual sort-direction chevron only in the active sort column, mark
   el.sortKey = 'score';
   el.sortDir = 'desc';
   await el.updateComplete;
-  const [nameHeader, scoreHeader] = [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')];
+  const [nameHeader, scoreHeader] = [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="header-cell"]'),
+  ] as [HTMLElement, HTMLElement];
   expect((nameHeader.querySelector('[part="sort-icon"]')) == null).to.be.true;
   const icon = scoreHeader.querySelector('[part="sort-icon"]');
   expect(icon != null).to.equal(true);
@@ -2050,7 +2052,7 @@ it('flips the sort-icon rotation data-dir when sortDir changes from desc to asc'
   el.sortKey = 'score';
   el.sortDir = 'asc';
   await el.updateComplete;
-  const scoreHeader = el.shadowRoot!.querySelectorAll('[part="header-cell"]')[1];
+  const scoreHeader = el.shadowRoot!.querySelectorAll('[part="header-cell"]')[1]!;
   const icon = scoreHeader.querySelector('[part="sort-icon"]');
   expect(icon!.getAttribute('data-dir')).to.equal('asc');
 });
@@ -2064,7 +2066,7 @@ it('rotates the wrapping [part="sort-icon"] element, not the inner svg, per the 
   el.sortKey = 'score';
   el.sortDir = 'desc';
   await el.updateComplete;
-  const scoreHeader = el.shadowRoot!.querySelectorAll('[part="header-cell"]')[1];
+  const scoreHeader = el.shadowRoot!.querySelectorAll('[part="header-cell"]')[1]!;
   const icon = scoreHeader.querySelector('[part="sort-icon"]') as HTMLElement;
   const svgEl = icon.querySelector('svg') as unknown as HTMLElement;
   expect(getComputedStyle(icon).transform).to.not.equal('none');
@@ -2474,7 +2476,9 @@ it('sets aria-selected="true" only on the row matching selectedRowKeys', async (
   el.selectionMode = 'single';
   el.selectedRowKeys = new Set(['b']);
   await el.updateComplete;
-  const [firstRow, secondRow] = [...el.shadowRoot!.querySelectorAll('[part="row"]')];
+  const [firstRow, secondRow] = [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]'),
+  ] as [HTMLElement, HTMLElement];
   expect(firstRow.getAttribute('aria-selected')).to.equal('false');
   expect(secondRow.getAttribute('aria-selected')).to.equal('true');
 });
@@ -2495,12 +2499,14 @@ it('sets data-align="end" on the header cell and body cell for an end-aligned co
   el.columns = columns;
   el.rows = rows;
   await el.updateComplete;
-  const [nameHeader, scoreHeader] = [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')];
+  const [nameHeader, scoreHeader] = [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="header-cell"]'),
+  ] as [HTMLElement, HTMLElement];
   expect(nameHeader.getAttribute('data-align')).to.equal('start');
   expect(scoreHeader.getAttribute('data-align')).to.equal('end');
-  const firstRowCells = el.shadowRoot!.querySelectorAll('[part="row"]')[0].querySelectorAll('[part="cell"]');
-  expect(firstRowCells[0].getAttribute('data-align')).to.equal('start');
-  expect(firstRowCells[1].getAttribute('data-align')).to.equal('end');
+  const firstRowCells = el.shadowRoot!.querySelectorAll('[part="row"]')[0]!.querySelectorAll('[part="cell"]');
+  expect(firstRowCells[0]!.getAttribute('data-align')).to.equal('start');
+  expect(firstRowCells[1]!.getAttribute('data-align')).to.equal('end');
 });
 
 it('emits lr-row-click via keydown (Enter and Space) on a focused row', async () => {
@@ -2565,7 +2571,9 @@ it('exposes aria-sort as ascending/descending on the active sortable column, "no
   el.sortDir = 'asc';
   await el.updateComplete;
 
-  const [nameHeader, scoreHeader] = [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')];
+  const [nameHeader, scoreHeader] = [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="header-cell"]'),
+  ] as [HTMLElement, HTMLElement];
   expect(nameHeader.hasAttribute('aria-sort')).to.be.false;
   expect(scoreHeader.getAttribute('aria-sort')).to.equal('ascending');
 
@@ -2583,7 +2591,9 @@ it('gives only the roving-tabindex header cell (default: the first column) a tab
   el.columns = columns;
   el.rows = rows;
   await el.updateComplete;
-  const [nameHeader, scoreHeader] = [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')];
+  const [nameHeader, scoreHeader] = [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="header-cell"]'),
+  ] as [HTMLElement, HTMLElement];
   expect(nameHeader.getAttribute('tabindex')).to.equal('0');
   expect(scoreHeader.getAttribute('tabindex')).to.equal('-1');
 });
@@ -2594,7 +2604,9 @@ it('gives only the roving-tabindex row (default: the first row) a tabindex of 0,
   el.rows = rows;
   el.rowKey = (r) => r.id;
   await el.updateComplete;
-  const [firstRow, secondRow] = [...el.shadowRoot!.querySelectorAll('[part="row"]')];
+  const [firstRow, secondRow] = [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]'),
+  ] as [HTMLElement, HTMLElement];
   expect(firstRow.getAttribute('tabindex')).to.equal('0');
   expect(secondRow.getAttribute('tabindex')).to.equal('-1');
 });
@@ -2606,7 +2618,9 @@ it('uses selectedRowKeys as the default roving-tabindex row when no row has been
   el.rowKey = (r) => r.id;
   el.selectedRowKeys = new Set(['b']);
   await el.updateComplete;
-  const [firstRow, secondRow] = [...el.shadowRoot!.querySelectorAll('[part="row"]')];
+  const [firstRow, secondRow] = [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]'),
+  ] as [HTMLElement, HTMLElement];
   expect(firstRow.getAttribute('tabindex')).to.equal('-1');
   expect(secondRow.getAttribute('tabindex')).to.equal('0');
 });
@@ -2670,7 +2684,7 @@ it('moves the roving tabindex between header cells with ArrowRight/ArrowLeft and
   el.columns = columns;
   el.rows = rows;
   await el.updateComplete;
-  const [nameHeader, scoreHeader] = [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')] as HTMLElement[];
+  const [nameHeader, scoreHeader] = [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')] as [HTMLElement, HTMLElement];
 
   nameHeader.focus();
   nameHeader.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
@@ -2697,7 +2711,7 @@ it('swaps ArrowLeft/ArrowRight header navigation under dir="rtl", matching a nat
   el.columns = columns;
   el.rows = rows;
   await el.updateComplete;
-  const [nameHeader, scoreHeader] = [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')] as HTMLElement[];
+  const [nameHeader, scoreHeader] = [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')] as [HTMLElement, HTMLElement];
 
   // Under RTL, ArrowRight moves toward the *start* of DOM order (the visual
   // right edge, since the table mirrors columns) -- the opposite of LTR.
@@ -2721,7 +2735,7 @@ it('does not swap ArrowUp/ArrowDown row navigation under dir="rtl" (direction on
   el.rows = rows;
   el.rowKey = (r) => r.id;
   await el.updateComplete;
-  const [firstRow, secondRow] = [...el.shadowRoot!.querySelectorAll('[part="row"]')] as HTMLElement[];
+  const [firstRow, secondRow] = [...el.shadowRoot!.querySelectorAll('[part="row"]')] as [HTMLElement, HTMLElement];
 
   firstRow.focus();
   firstRow.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
@@ -2739,7 +2753,7 @@ it('moves the roving tabindex between rows with ArrowDown/ArrowUp, and ArrowUp f
   el.rows = rows;
   el.rowKey = (r) => r.id;
   await el.updateComplete;
-  const [firstRow, secondRow] = [...el.shadowRoot!.querySelectorAll('[part="row"]')] as HTMLElement[];
+  const [firstRow, secondRow] = [...el.shadowRoot!.querySelectorAll('[part="row"]')] as [HTMLElement, HTMLElement];
 
   firstRow.focus();
   firstRow.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
@@ -2764,16 +2778,16 @@ it('supports Home/End row navigation and ignores unknown keyboard commands', asy
   el.rows = rows;
   el.rowKey = (r) => r.id;
   await el.updateComplete;
-  const [firstRow, secondRow] = [...el.shadowRoot!.querySelectorAll('[part="row"]')] as HTMLElement[];
+  const [firstRow, secondRow] = [...el.shadowRoot!.querySelectorAll('[part="row"]')] as [HTMLElement, HTMLElement];
 
   secondRow.focus();
   secondRow.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement?.getAttribute('data-row-key')).to.equal(firstRow.dataset.rowKey);
+  expect(el.shadowRoot!.activeElement?.getAttribute('data-row-key')).to.equal(firstRow.dataset['rowKey']);
 
   firstRow.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement?.getAttribute('data-row-key')).to.equal(secondRow.dataset.rowKey);
+  expect(el.shadowRoot!.activeElement?.getAttribute('data-row-key')).to.equal(secondRow.dataset['rowKey']);
 
   const before = el.shadowRoot!.activeElement?.getAttribute('data-row-key');
   secondRow.dispatchEvent(new KeyboardEvent('keydown', { key: 'Unrelated', bubbles: true }));
@@ -2790,7 +2804,7 @@ it('ignores unknown keyboard commands on a header', async () => {
   header.focus();
   header.dispatchEvent(new KeyboardEvent('keydown', { key: 'Unrelated', bubbles: true }));
   await el.updateComplete;
-  expect(el.shadowRoot!.activeElement?.getAttribute('data-col-key')).to.equal(header.dataset.colKey);
+  expect(el.shadowRoot!.activeElement?.getAttribute('data-col-key')).to.equal(header.dataset['colKey']);
 });
 
 it('skips a priority-hidden header cell when navigating with ArrowRight, instead of stranding focus on it', async () => {
@@ -2805,8 +2819,8 @@ it('skips a priority-hidden header cell when navigating with ArrowRight, instead
   await el.updateComplete;
 
   const [nameHeader, scoreHeader, idHeader] = [
-    ...el.shadowRoot!.querySelectorAll('[part="header-cell"]'),
-  ] as HTMLElement[];
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="header-cell"]'),
+  ] as [HTMLElement, HTMLElement, HTMLElement];
   expect(getComputedStyle(scoreHeader).display).to.equal('none');
 
   nameHeader.focus();
@@ -2888,8 +2902,8 @@ it('offsets a second sticky column past the first instead of overlapping at inse
   el.rows = rows;
   await el.updateComplete;
   const cells = el.shadowRoot!.querySelectorAll('[part="header-cell"][data-sticky]');
-  const first = getComputedStyle(cells[0]).insetInlineStart;
-  const second = getComputedStyle(cells[1]).insetInlineStart;
+  const first = getComputedStyle(cells[0]!).insetInlineStart;
+  const second = getComputedStyle(cells[1]!).insetInlineStart;
   expect(first).to.not.equal(second);
 });
 
@@ -3059,13 +3073,13 @@ describe('accessible name (accessibleLabel / caption / dev warning)', () => {
     originalWarn = console.warn;
     warnings = [];
     console.warn = (...args: unknown[]) => warnings.push(args);
-    const runtime = globalThis as typeof globalThis & { process?: unknown };
+    const runtime = globalThis as unknown as { process?: unknown };
     originalProcess = runtime.process;
     runtime.process = { env: { NODE_ENV: 'development' } };
   });
   afterEach(() => {
     console.warn = originalWarn;
-    const runtime = globalThis as typeof globalThis & { process?: unknown };
+    const runtime = globalThis as unknown as { process?: unknown };
     if (originalProcess === undefined) delete runtime.process;
     else runtime.process = originalProcess;
   });
@@ -3108,7 +3122,7 @@ describe('accessible name (accessibleLabel / caption / dev warning)', () => {
   });
 
   it('does not warn in a production runtime', async () => {
-    (globalThis as typeof globalThis & { process?: unknown }).process = {
+    (globalThis as unknown as { process?: unknown }).process = {
       env: { NODE_ENV: 'production' },
     };
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
@@ -3405,7 +3419,7 @@ describe('expandable rows', () => {
     expect(el.shadowRoot!.querySelector('[data-row-expand-toggle]')).to.exist;
     const toggleCells = el.shadowRoot!.querySelectorAll('[part="expand-toggle-cell"]');
     expect(toggleCells.length).to.equal(rows.length);
-    expect(toggleCells[0].querySelector('button') != null).to.equal(true);
+    expect(toggleCells[0]!.querySelector('button') != null).to.equal(true);
   });
 
   it('gives the row-expand toggle button the shared minimum hit area', async () => {
@@ -3429,8 +3443,8 @@ describe('expandable rows', () => {
     el.canExpand = (r) => r.id !== 'a';
     await el.updateComplete;
     const toggleCells = [...el.shadowRoot!.querySelectorAll('[part="expand-toggle-cell"]')];
-    expect(toggleCells[0].querySelector('button') == null).to.equal(true); // row 'a' (Alpha) opted out
-    expect(toggleCells[1].querySelector('button') != null).to.equal(true); // row 'b' (Beta)
+    expect(toggleCells[0]!.querySelector('button') == null).to.equal(true); // row 'a' (Alpha) opted out
+    expect(toggleCells[1]!.querySelector('button') != null).to.equal(true); // row 'b' (Beta)
   });
 
   it('emits lr-row-expand-toggle with { row, rowKey } when the chevron button is clicked, and does not also emit lr-row-click', async () => {
@@ -3923,8 +3937,8 @@ describe('heat-tint mode', () => {
     await el.updateComplete;
     const scoreCells = [...el.shadowRoot!.querySelectorAll('[part="cell"][data-col-key="score"]')] as HTMLElement[];
     expect(scoreCells.length).to.equal(2);
-    expect(scoreCells[0].style.getPropertyValue('--lr-table-heat-t')).to.equal('100.00%'); // Alpha: (3-1)/(3-1)
-    expect(scoreCells[1].style.getPropertyValue('--lr-table-heat-t')).to.equal('0.00%'); // Beta: (1-1)/2
+    expect(scoreCells[0]!.style.getPropertyValue('--lr-table-heat-t')).to.equal('100.00%'); // Alpha: (3-1)/(3-1)
+    expect(scoreCells[1]!.style.getPropertyValue('--lr-table-heat-t')).to.equal('0.00%'); // Beta: (1-1)/2
     expect(scoreCells.every((c) => c.hasAttribute('data-heat'))).to.be.true;
     const nameCells = [...el.shadowRoot!.querySelectorAll('[part="cell"][data-col-key="name"]')] as HTMLElement[];
     expect(nameCells.every((c) => !c.hasAttribute('data-heat'))).to.be.true;
@@ -3938,8 +3952,8 @@ describe('heat-tint mode', () => {
     el.heatTintScale = { min: 0, max: 10 };
     await el.updateComplete;
     const scoreCells = [...el.shadowRoot!.querySelectorAll('[part="cell"][data-col-key="score"]')] as HTMLElement[];
-    expect(scoreCells[0].style.getPropertyValue('--lr-table-heat-t')).to.equal('30.00%'); // Alpha: 3/10
-    expect(scoreCells[1].style.getPropertyValue('--lr-table-heat-t')).to.equal('10.00%'); // Beta: 1/10
+    expect(scoreCells[0]!.style.getPropertyValue('--lr-table-heat-t')).to.equal('30.00%'); // Alpha: 3/10
+    expect(scoreCells[1]!.style.getPropertyValue('--lr-table-heat-t')).to.equal('10.00%'); // Beta: 1/10
   });
 
   it('keeps full-range finite heat values at the low, midpoint, and high tint stops', async () => {
@@ -3985,8 +3999,8 @@ describe('heat-tint mode', () => {
     el.rowKey = (r) => r.id;
     await el.updateComplete;
     const scoreCells = [...el.shadowRoot!.querySelectorAll('[part="cell"][data-col-key="score"]')] as HTMLElement[];
-    expect(scoreCells[0].hasAttribute('data-heat')).to.be.true;
-    expect(scoreCells[1].hasAttribute('data-heat')).to.be.false;
+    expect(scoreCells[0]!.hasAttribute('data-heat')).to.be.true;
+    expect(scoreCells[1]!.hasAttribute('data-heat')).to.be.false;
   });
 
   it('declares the heat-tint ramp CSS with retheme-able tokens matching lr-heatmap defaults', () => {
@@ -4121,8 +4135,8 @@ describe('rowTotal / grandTotal', () => {
     expect(el.shadowRoot!.querySelector('[data-row-total]')).to.exist;
     const cells = [...el.shadowRoot!.querySelectorAll('[part="row-total-cell"]')];
     expect(cells.length).to.equal(rows.length);
-    expect(cells[0].textContent!.trim()).to.equal('6'); // Alpha score 3 * 2
-    expect(cells[1].textContent!.trim()).to.equal('2'); // Beta score 1 * 2
+    expect(cells[0]!.textContent!.trim()).to.equal('6'); // Alpha score 3 * 2
+    expect(cells[1]!.textContent!.trim()).to.equal('2'); // Beta score 1 * 2
   });
 
   it('renders grandTotal in the footer row only when a column also defines footer', async () => {
@@ -4136,7 +4150,7 @@ describe('rowTotal / grandTotal', () => {
     const foot = el.shadowRoot!.querySelector('[part="foot"]');
     expect(foot != null).to.equal(true);
     const footerCells = [...foot!.querySelectorAll('[part="footer-cell"]')];
-    expect(footerCells[footerCells.length - 1].textContent!.trim()).to.equal('4'); // 3 + 1
+    expect(footerCells[footerCells.length - 1]!.textContent!.trim()).to.equal('4'); // 3 + 1
   });
 
   it('renders an empty grand-total cell (not "undefined") when rowTotal/footer are set but grandTotal is not', async () => {
@@ -4280,10 +4294,10 @@ describe('sticky-offset observation across reconnect', () => {
 
     const headers = () => el.shadowRoot!.querySelectorAll<HTMLElement>('th[data-col-key]');
     await waitUntil(
-      () => headers()[1].style.getPropertyValue('--lr-table-sticky-offset') !== '',
+      () => headers()[1]!.style.getPropertyValue('--lr-table-sticky-offset') !== '',
       'expected an initial sticky offset on the second sticky column'
     );
-    const initialOffset = headers()[1].style.getPropertyValue('--lr-table-sticky-offset');
+    const initialOffset = headers()[1]!.style.getPropertyValue('--lr-table-sticky-offset');
 
     // A pure DOM move never runs the Lit update lifecycle, so only the
     // reconnect path itself can restore the per-header resize observations.
@@ -4299,11 +4313,11 @@ describe('sticky-offset observation across reconnect', () => {
     await nextFrame();
     await nextFrame();
 
-    const first = headers()[0];
+    const first = headers()[0]!;
     first.style.inlineSize = '100px';
     await waitUntil(
       () => {
-        const offset = headers()[1].style.getPropertyValue('--lr-table-sticky-offset');
+        const offset = headers()[1]!.style.getPropertyValue('--lr-table-sticky-offset');
         return offset === `${first.offsetWidth}px` && offset !== initialOffset;
       },
       'expected the second sticky column offset to track the resized first header after reconnect',
@@ -4985,11 +4999,17 @@ describe('loadingAppearance="skeleton"', () => {
   });
 });
 
-it("colors the filter's placeholder and undoes Firefox's reduced default opacity", () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(
-    /\[part='filter'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)[^}]*opacity:\s*1/
-  );
+it("renders the filter placeholder color and undoes Firefox's reduced default opacity", async () => {
+  const el = (await fixture(html`
+    <lr-table filterable style="--lr-color-text-quiet: rgb(1, 2, 3)"></lr-table>
+  `)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+  const filter = el.shadowRoot!.querySelector<HTMLInputElement>('[part="filter"]')!;
+  const placeholder = getComputedStyle(filter, '::placeholder');
+  expect(placeholder.color).to.equal('rgb(1, 2, 3)');
+  expect(placeholder.opacity).to.equal('1');
 });
 
 it("resets the native search-cancel glyph on the filter field (matches lr-input's own unconditional reset)", () => {
@@ -5039,9 +5059,30 @@ it("lets a consumer's own ::part(header-cell):hover override win over the intern
   }
 });
 
-it('gives the row-expand-toggle a :hover treatment, like its sibling icon controls (resize-handle/more-button/reveal-columns-button)', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='row-expand-toggle'\]:hover\s*\{[^}]*background/);
+it('renders the row-expand-toggle hover treatment shared by the sibling icon controls', async () => {
+  const el = (await fixture(html`
+    <lr-table style="--lr-color-brand-quiet: rgb(1, 2, 3)"></lr-table>
+  `)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  el.rowKey = (row) => row.id;
+  el.expandedContent = (row) => html`<p>${row.name} details</p>`;
+  await el.updateComplete;
+  const toggle = el.shadowRoot!.querySelector<HTMLElement>('[part="row-expand-toggle"]')!;
+  toggle.scrollIntoView({ block: 'center' });
+  const rect = toggle.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    await waitUntil(
+      () => getComputedStyle(toggle).backgroundColor === 'rgb(1, 2, 3)',
+      'the rendered row-expand-toggle hover background never appeared',
+    );
+  } finally {
+    await resetMouse();
+  }
 });
 
 describe("editTrigger: 'always'", () => {
@@ -5183,7 +5224,7 @@ describe("editTrigger: 'always'", () => {
     if (!active || active.getAttribute('part') !== 'cell-editor') return null;
     const row = active.closest('[data-row-key]') as HTMLElement | null;
     const cell = active.closest('td[data-col-key]') as HTMLElement | null;
-    return `${row?.dataset.rowKey}/${cell?.dataset.colKey}`;
+    return `${row?.dataset['rowKey']}/${cell?.dataset['colKey']}`;
   };
 
   it('keeps focus in the same logical cell when the rows are re-sorted underneath it', async () => {
@@ -5408,8 +5449,8 @@ describe("editTrigger: 'always'", () => {
 
   it('leaves roving header and row navigation untouched with an always-on column present', async () => {
     const el = await alwaysTable();
-    const [nameHeader, scoreHeader] = [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')] as HTMLElement[];
-    const [firstRow, secondRow] = [...el.shadowRoot!.querySelectorAll('[part="row"]')] as HTMLElement[];
+    const [nameHeader, scoreHeader] = [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')] as [HTMLElement, HTMLElement];
+    const [firstRow, secondRow] = [...el.shadowRoot!.querySelectorAll('[part="row"]')] as [HTMLElement, HTMLElement];
 
     nameHeader.focus();
     nameHeader.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
@@ -5475,15 +5516,15 @@ describe('lifecycle super calls', () => {
     // `super.willUpdate()`/`super.updated()` resolve against from inside LyraTable's own overrides.
     // Patching it (and restoring via `delete` below) spies on the real call without needing sinon.
     const proto = Object.getPrototypeOf(Object.getPrototypeOf(el)) as Record<string, unknown>;
-    const originalWillUpdate = proto.willUpdate as ((changed: unknown) => void) | undefined;
-    const originalUpdated = proto.updated as ((changed: unknown) => void) | undefined;
+    const originalWillUpdate = proto['willUpdate'] as ((changed: unknown) => void) | undefined;
+    const originalUpdated = proto['updated'] as ((changed: unknown) => void) | undefined;
     let willUpdateCalls = 0;
     let updatedCalls = 0;
-    proto.willUpdate = function (this: unknown, changed: unknown) {
+    proto['willUpdate'] = function (this: unknown, changed: unknown) {
       willUpdateCalls++;
       return originalWillUpdate?.call(this, changed);
     };
-    proto.updated = function (this: unknown, changed: unknown) {
+    proto['updated'] = function (this: unknown, changed: unknown) {
       updatedCalls++;
       return originalUpdated?.call(this, changed);
     };
@@ -5495,8 +5536,8 @@ describe('lifecycle super calls', () => {
       expect(willUpdateCalls).to.be.greaterThan(0);
       expect(updatedCalls).to.be.greaterThan(0);
     } finally {
-      delete proto.willUpdate;
-      delete proto.updated;
+      delete proto['willUpdate'];
+      delete proto['updated'];
     }
   });
 });
@@ -5634,7 +5675,7 @@ describe('lr-table sorted-header theming and specificity', () => {
     el.sortKey = 'score';
     el.sortDir = 'asc';
     await el.updateComplete;
-    const [nameHeader, scoreHeader] = [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')] as HTMLElement[];
+    const [nameHeader, scoreHeader] = [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')] as [HTMLElement, HTMLElement];
     expect(getComputedStyle(scoreHeader).backgroundColor).to.equal('rgb(7, 8, 9)');
     // The unsorted header must NOT pick up the token.
     expect(getComputedStyle(nameHeader).backgroundColor).to.not.equal('rgb(7, 8, 9)');
@@ -6688,7 +6729,7 @@ describe('v9 bounded and transactional contracts', () => {
 
   it('contains native cell-editor input/change events while publishing the committed edit', async () => {
     const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<Row>;
-    el.columns = [{ ...columns[0], editTrigger: 'double-click' }];
+    el.columns = [{ ...columns[0]!, editTrigger: 'double-click' }];
     el.rows = rows;
     el.rowKey = (row) => row.id;
     await el.updateComplete;
@@ -6832,7 +6873,7 @@ describe('v9 bounded and transactional contracts', () => {
         ...columns[0]!,
         sticky: true,
         editable: true,
-        editValue: (row) => row.name,
+        editValue: (row: Row) => row.name,
       } as unknown as TableColumn<Row>,
     ];
     el.rows = rows;
@@ -7398,6 +7439,25 @@ describe('a column missing its cell renderer', () => {
       ).to.be.true;
     } finally {
       console.error = originalError;
+    }
+  });
+
+  it('ignores truthy non-function optional column callbacks', async () => {
+    for (const callback of ['sortValue', 'headerCell', 'cellStyle'] as const) {
+      const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable;
+      el.columns = [{
+        key: 'value',
+        label: 'Value',
+        cell: (row: { value: string }) => row.value,
+        sortable: true,
+        [callback]: 'not-a-function',
+      }] as never;
+      el.rows = [{ value: 'kept' }] as never;
+      if (callback === 'sortValue') el.sortKey = 'value';
+
+      await el.updateComplete;
+
+      expect(el.shadowRoot!.textContent).to.include('kept');
     }
   });
 });

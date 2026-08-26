@@ -38,6 +38,23 @@ it('defaults to run=null, showCancel=true, showRetry=true, and renders the share
   expect((el.shadowRoot!.querySelector('[part="header"]')) == null).to.be.true;
 });
 
+it('renders summary run records without steps and defaults a step with no status to pending', async () => {
+  const withoutSteps = await fixture<LyraAgentRun>(html`
+    <lr-agent-run .run=${{ id: 'summary', status: { kind: 'done' } } as unknown as AgentRun}></lr-agent-run>
+  `);
+  expect(withoutSteps.shadowRoot!.querySelector('[part="status-badge"]')!.textContent!.trim()).to.equal('Done');
+  expect(withoutSteps.shadowRoot!.querySelectorAll('lr-task-list')).to.have.lengthOf(0);
+
+  const missingStepStatus = await fixture<LyraAgentRun>(html`
+    <lr-agent-run
+      .run=${makeRun({ steps: [{ id: 'step', kind: 'tool', label: 'Queued step' } as unknown as AgentStep] })}
+    ></lr-agent-run>
+  `);
+  const list = missingStepStatus.shadowRoot!.querySelector('lr-task-list') as LyraTaskList;
+  expect(list.items).to.have.lengthOf(1);
+  expect(list.items[0]!.status).to.equal('pending');
+});
+
 it('renders a lifecycle-status badge with the built-in generic labels for running/error', async () => {
   const running = (await fixture(
     html`<lr-agent-run .run=${makeRun({ status: { kind: 'running' } })}></lr-agent-run>`,

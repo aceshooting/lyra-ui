@@ -14,6 +14,11 @@ const nodes: FileTreeNode[] = [
   { path: 'README.md' },
 ];
 
+function required<T>(value: T | undefined, context: string): T {
+  if (value === undefined) throw new Error(`Missing ${context}`);
+  return value;
+}
+
 describe('lr-file-tree', () => {
   it('renders a row per file/directory, deepest-first order preserved', async () => {
     const el = (await fixture(html`<lr-file-tree></lr-file-tree>`)) as LyraFileTree;
@@ -28,9 +33,14 @@ describe('lr-file-tree', () => {
     el.nodes = nodes;
     await el.updateComplete;
     const tree = el.shadowRoot!.querySelector('lr-tree')!;
-    const appItem = tree.data[0].children!.find((i: { id: string }) => i.id === 'src/app.ts')!;
-    expect(appItem.badges![0].text).to.equal('M');
-    expect(appItem.badges![0].tone).to.equal('brand');
+    const appItem = required(
+      required(tree.data[0], 'root file-tree row').children?.find(
+        (i: { id: string }) => i.id === 'src/app.ts',
+      ),
+      'src/app.ts row',
+    );
+    expect(required(appItem.badges?.[0], 'git-status badge').text).to.equal('M');
+    expect(required(appItem.badges?.[0], 'git-status badge').tone).to.equal('brand');
     expect(appItem.description).to.include('+4');
     expect(appItem.description).to.include('-1');
   });
@@ -40,7 +50,7 @@ describe('lr-file-tree', () => {
     el.nodes = [{ path: 'changed.ts', additions: 1234, deletions: 56 }];
     await el.updateComplete;
     const tree = el.shadowRoot!.querySelector('lr-tree')!;
-    const description = tree.data[0].description as string;
+    const description = required(tree.data[0], 'localized file row').description as string;
 
     expect(description).to.include(new Intl.NumberFormat('ar').format(1234));
     expect(description).to.include(new Intl.NumberFormat('ar').format(56));
@@ -50,7 +60,10 @@ describe('lr-file-tree', () => {
     const el = await fixture<LyraFileTree>(html`<lr-file-tree></lr-file-tree>`);
     el.nodes = [{ path: 'changed.ts', additions: Number.NaN, deletions: Number.POSITIVE_INFINITY }];
     await el.updateComplete;
-    const description = el.shadowRoot!.querySelector('lr-tree')!.data[0].description as string;
+    const description = required(
+      el.shadowRoot!.querySelector('lr-tree')!.data[0],
+      'normalized file row',
+    ).description as string;
 
     expect(description).to.include('+0');
     expect(description).to.include('-0');
@@ -150,8 +163,8 @@ describe('lr-file-tree', () => {
     await el.updateComplete;
     const tree = el.shadowRoot!.querySelector('lr-tree')!;
 
-    expect(tree.data[0].selected).to.be.false;
-    expect(tree.data[1].selected).to.be.true;
+    expect(required(tree.data[0], 'first file-tree row').selected).to.be.false;
+    expect(required(tree.data[1], 'second file-tree row').selected).to.be.true;
   });
 
   it('represents a lazy loading placeholder as disabled status content, not a selectable stop', async () => {
@@ -159,7 +172,10 @@ describe('lr-file-tree', () => {
     el.nodes = [{ path: 'lazy-dir', kind: 'directory', hasChildren: true }];
     await el.updateComplete;
     const tree = el.shadowRoot!.querySelector('lr-tree')!;
-    const placeholder = tree.data[0].children![0];
+    const placeholder = required(
+      required(tree.data[0], 'lazy directory row').children?.[0],
+      'lazy loading placeholder',
+    );
 
     expect(placeholder.disabled).to.be.true;
   });

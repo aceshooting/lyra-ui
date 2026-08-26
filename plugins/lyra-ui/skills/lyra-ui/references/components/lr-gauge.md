@@ -6,6 +6,7 @@
 - **Class** `LyraGauge`, also available unregistered from `@aceshooting/lyra-ui/components/data/gauge/gauge.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
@@ -58,8 +59,12 @@ Dependency-free SVG radial, full-circle ring, or linear meter (no charting libra
 **Known gotchas:**
 
 - SVG text cannot wrap. Long caller-supplied `label`/`valueText` strings are visibly abbreviated
-  with an ellipsis instead of being compressed into unreadable hairline glyphs; the SVG `<title>`,
-  host accessible label, and `aria-valuetext` retain the complete text.
+  with an ellipsis instead of being compressed into unreadable hairline glyphs; a nested SVG
+  `<title>` supplies the full hover tooltip, while the host accessible label and `aria-valuetext`
+  retain the complete text.
+- The host defaults to `role="meter"` for a finite, non-degenerate range and `role="img"`
+  otherwise. An authored host role remains authoritative across value updates; removing it restores
+  the generated default.
 - setting `valueText` (e.g. `"72°F"`) also sets `aria-valuetext` on the host (in addition to
   changing the visible SVG text), so a screen reader announces your formatted string instead of the
   raw `aria-valuenow` number; the SVG `<text part="value">`/`<text part="label">` elements are

@@ -6,6 +6,7 @@
 - **Class** `LyraEmpty`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/empty/empty.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -81,7 +82,8 @@ consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
   a host `aria-label` names the host but does not replace that visible update text;
   the shadow `[part="base"]` remains ordinary visible content rather than a shadow-root live region.
 - Note: correctly works around the classic `:empty`-pseudo-class trap (a wrapper with a `<slot>`
-  inside can never match `:empty`) by tracking real slot assignment in JS (`hasIcon`/`hasActions`) —
+  inside can never match `:empty`) by tracking real flattened slot content in JS, including a bare
+  non-whitespace text node such as an emoji as default icon content —
   `lr-table` reuses this component for its own empty-rows state, and `lr-stat` (below) now uses
   the same JS-tracked-slot-state pattern for its own icon/caption wrappers.
 

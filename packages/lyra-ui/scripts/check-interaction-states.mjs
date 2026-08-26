@@ -1,3 +1,5 @@
+import { isMainModule } from './is-main-module.mjs';
+
 // Every interactive part that reacts to :hover must also react to :active.
 // A control that lights up under the pointer and then does nothing at all when pressed reads as
 // broken — the user cannot tell the click registered until whatever it triggers finishes, which on
@@ -56,6 +58,7 @@ import { fileURLToPath } from 'node:url';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const componentsRoot = join(packageDir, 'src', 'components');
+const internalRoot = join(packageDir, 'src', 'internal');
 
 function styleFiles(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -392,12 +395,12 @@ function templateSourcesFor(styleFile) {
     .map((file) => readFileSync(file, 'utf8'));
 }
 
-if (process.argv[1] && process.argv[1].endsWith('check-interaction-states.mjs')) {
+if (isMainModule(import.meta.url)) {
   const findings = [];
   let checked = 0;
   let pointerParts = 0;
   let focusVisibleSheets = 0;
-  const files = styleFiles(componentsRoot);
+  const files = [...styleFiles(componentsRoot), ...styleFiles(internalRoot)].sort();
 
   for (const file of files) {
     const raw = readFileSync(file, 'utf8');
@@ -459,4 +462,3 @@ if (process.argv[1] && process.argv[1].endsWith('check-interaction-states.mjs'))
     );
   }
 }
-

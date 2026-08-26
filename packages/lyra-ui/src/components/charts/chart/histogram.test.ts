@@ -17,6 +17,11 @@ it('locks .type to "bar" — assigning a different value at runtime (e.g. via a 
   expect(el.type).to.equal('bar');
 });
 
+it('ignores a non-bar type from declarative markup', async () => {
+  const el = (await fixture(html`<lr-histogram type="line"></lr-histogram>`)) as LyraHistogram;
+  expect(el.type).to.equal('bar');
+});
+
 it('normalizes unsafe HTML `bins` values before they reach the binning pass', () => {
   const el = document.createElement('lr-histogram') as LyraHistogram;
 

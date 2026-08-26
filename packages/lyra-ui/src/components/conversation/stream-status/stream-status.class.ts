@@ -127,9 +127,10 @@ export interface LyraStreamStatusEventMap {
  *   while `data-stalled` is present.
  * @cssprop [--lr-stream-status-stalled-border-color=var(--lr-color-warning)] - `base` row border
  *   color while `data-stalled` is present.
- * @cssprop [--lr-stream-status-message-color=var(--lr-color-warning)] - `message` text color
- *   while `data-stalled` is present. Decoupled from `--lr-stream-status-stalled-border-color` even though
- *   both fall back to the same shared token today.
+ * @cssprop [--lr-stream-status-message-color=var(--lr-color-warning)] - `phase` and `message` text
+ *   color while `data-stalled` is present. Decoupled from
+ *   `--lr-stream-status-stalled-border-color` even though both fall back to the same shared token
+ *   today.
  * @status stable
  * @since 4.0.0
  */

@@ -1,8 +1,8 @@
 import { expect } from '@open-wc/testing';
-import { loadD3, loadD3Modules } from './graph-loader.js';
+import { loadD3, loadD3Modules, type D3ZoomTransform } from './graph-loader.js';
 
 function createD3PeerApis() {
-  const identity = {
+  const identity: D3ZoomTransform = {
     k: 1,
     x: 0,
     y: 0,
@@ -66,12 +66,12 @@ describe('loadD3Modules (uncached, dependency-injectable)', () => {
     );
 
     expect(modules).to.not.equal(null);
-    expect((modules!.forceSimulation) === (peers.force.forceSimulation)).to.equal(true);
+    expect(Object.is(modules!.forceSimulation, peers.force.forceSimulation)).to.equal(true);
     expect((modules!.drag) === (peers.drag.drag)).to.equal(true);
     expect((modules!.zoom) === (peers.zoom.zoom)).to.equal(true);
     expect(modules!.zoomIdentity).to.equal(peers.zoom.zoomIdentity);
     expect((modules!.zoomTransform) === (peers.zoom.zoomTransform)).to.equal(true);
-    expect((modules!.select) === (peers.selection.select)).to.equal(true);
+    expect(Object.is(modules!.select, peers.selection.select)).to.equal(true);
   });
 
   it('prefers usable D3 APIs on module namespaces over their default exports', async () => {
@@ -86,10 +86,10 @@ describe('loadD3Modules (uncached, dependency-injectable)', () => {
     );
 
     expect(modules).to.not.equal(null);
-    expect((modules!.forceSimulation) === (direct.force.forceSimulation)).to.equal(true);
+    expect(Object.is(modules!.forceSimulation, direct.force.forceSimulation)).to.equal(true);
     expect((modules!.drag) === (direct.drag.drag)).to.equal(true);
     expect((modules!.zoom) === (direct.zoom.zoom)).to.equal(true);
-    expect((modules!.select) === (direct.selection.select)).to.equal(true);
+    expect(Object.is(modules!.select, direct.selection.select)).to.equal(true);
   });
 
   it('accepts a callable peer namespace when it also exposes the required APIs', async () => {
@@ -104,7 +104,7 @@ describe('loadD3Modules (uncached, dependency-injectable)', () => {
     );
 
     expect(modules).to.not.equal(null);
-    expect(modules!.forceSimulation === peers.force.forceSimulation).to.equal(true);
+    expect(Object.is(modules!.forceSimulation, peers.force.forceSimulation)).to.equal(true);
   });
 
   it('fails closed when a default-wrapped D3 peer lacks a required API', async () => {

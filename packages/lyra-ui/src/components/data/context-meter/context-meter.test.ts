@@ -45,8 +45,8 @@ it('defaults an unspecified segment tone to neutral and carries the given tone t
   await el.updateComplete;
 
   const segments = el.shadowRoot!.querySelectorAll('[part="segment"]');
-  expect(segments[0].getAttribute('data-tone')).to.equal('neutral');
-  expect(segments[1].getAttribute('data-tone')).to.equal('danger');
+  expect(segments[0]!.getAttribute('data-tone')).to.equal('neutral');
+  expect(segments[1]!.getAttribute('data-tone')).to.equal('danger');
 });
 
 it('accepts an arbitrary safe color per segment without changing semantic tone behavior', async () => {
@@ -60,7 +60,7 @@ it('accepts an arbitrary safe color per segment without changing semantic tone b
   const segments = el.shadowRoot!.querySelectorAll('[part="segment"]');
   expect((segments[0] as HTMLElement).style.getPropertyValue('--lr-context-meter-segment-color')).to.equal('#123456');
   expect((segments[1] as HTMLElement).style.getPropertyValue('--lr-context-meter-segment-color')).to.equal('oklch(60% 0.2 30)');
-  expect(segments[0].getAttribute('data-tone')).to.equal('brand');
+  expect(segments[0]!.getAttribute('data-tone')).to.equal('brand');
 });
 
 it('rejects unsafe arbitrary segment colors', async () => {
@@ -278,14 +278,14 @@ describe('summary localization', () => {
     el.segments = SEGMENTS;
     await el.updateComplete;
     const segments = el.shadowRoot!.querySelectorAll('[part="segment"]');
-    expect(segments[0].getAttribute('title')).to.equal('System prompt: 2,000');
+    expect(segments[0]!.getAttribute('title')).to.equal('System prompt: 2,000');
 
     // reorder the placeholders to prove the title is interpolated, not the
     // label concatenated with the formatted count
     el.strings = { contextMeterSegmentLabel: '{count} — {label}' };
     await el.updateComplete;
     const reordered = el.shadowRoot!.querySelectorAll('[part="segment"]');
-    expect(reordered[0].getAttribute('title')).to.equal('2,000 — System prompt');
+    expect(reordered[0]!.getAttribute('title')).to.equal('2,000 — System prompt');
   });
 });
 
@@ -336,12 +336,12 @@ it('renders an svg base with circle segments in ring mode, using stroke-dasharra
 
   const circumference = 2 * Math.PI * 40;
   // First segment starts at offset 0 (the top of the ring, via the -90deg rotation).
-  expect(Number(circles[0].getAttribute('stroke-dashoffset'))).to.equal(-0);
-  const [len0] = circles[0].getAttribute('stroke-dasharray')!.split(' ').map(Number);
+  expect(Number(circles[0]!.getAttribute('stroke-dashoffset'))).to.equal(-0);
+  const [len0] = circles[0]!.getAttribute('stroke-dasharray')!.split(' ').map(Number);
   expect(len0).to.be.closeTo(circumference * 0.25, 0.01);
 
   // Second segment picks up exactly where the first left off.
-  expect(Number(circles[1].getAttribute('stroke-dashoffset'))).to.be.closeTo(-circumference * 0.25, 0.01);
+  expect(Number(circles[1]!.getAttribute('stroke-dashoffset'))).to.be.closeTo(-circumference * 0.25, 0.01);
 });
 
 it('is accessible with an empty/default meter', async () => {

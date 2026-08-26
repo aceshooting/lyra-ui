@@ -57,7 +57,7 @@ for (const story of manifest.stories) {
   assert.ok(profiles[story.profile], `${story.id} names unknown profile ${story.profile}`);
   if (story.forcedColorsProbe) {
     assert.ok(
-      ['intrinsic-color', 'chart-encodings'].includes(story.forcedColorsProbe),
+      ['intrinsic-color', 'swatch-colors', 'chart-encodings'].includes(story.forcedColorsProbe),
       `${story.id} names unknown forced-colors pixel probe ${story.forcedColorsProbe}`,
     );
     assert.ok(
@@ -84,6 +84,7 @@ for (const story of manifest.stories) {
 assert.ok(manifest.stories.some((story) => profiles[story.profile].axes.includes('forced-colors')));
 assert.ok(manifest.stories.some((story) => profiles[story.profile].axes.includes('narrow')));
 assert.ok(manifest.stories.some((story) => story.forcedColorsProbe === 'intrinsic-color'));
+assert.ok(manifest.stories.some((story) => story.forcedColorsProbe === 'swatch-colors'));
 assert.ok(manifest.stories.some((story) => story.forcedColorsProbe === 'chart-encodings'));
 assert.ok(manifest.stories.some((story) => story.narrowProbe === 'viewport-fit'));
 assert.ok(manifest.stories.some((story) => story.comparisonPolicy === 'evidence-only'));

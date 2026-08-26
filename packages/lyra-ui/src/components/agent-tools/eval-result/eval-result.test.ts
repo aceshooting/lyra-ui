@@ -1,8 +1,8 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './eval-result.js';
 import type { LyraEvalResult, EvalRunResult } from './eval-result.js';
-import type { TableColumn } from '../../data/table/table.class.js';
-import type { RubricKey } from '../../forms/rubric-form/rubric-form.class.js';
+import type { LyraTable, TableColumn } from '../../data/table/table.class.js';
+import type { LyraRubricForm, RubricKey } from '../../forms/rubric-form/rubric-form.class.js';
 
 const RUBRIC_KEYS: RubricKey[] = [
   { key: 'accuracy', type: 'score', label: 'Accuracy', min: 0, max: 5, step: 1 },
@@ -11,7 +11,7 @@ const RUBRIC_KEYS: RubricKey[] = [
 
 const COLUMNS: TableColumn<EvalRunResult>[] = [
   { key: 'label', label: 'Run', cell: (r) => r.label },
-  { key: 'accuracy', label: 'Accuracy', cell: (r) => r.review?.accuracy ?? r.scores?.accuracy },
+  { key: 'accuracy', label: 'Accuracy', cell: (r) => r.review?.['accuracy'] ?? r.scores?.['accuracy'] },
 ];
 
 const RUNS: EvalRunResult[] = [
@@ -20,6 +20,46 @@ const RUNS: EvalRunResult[] = [
 ];
 
 describe('lr-eval-result', () => {
+  it('contains the nested table sort-request event', async () => {
+    const el = await fixture<LyraEvalResult>(html`
+      <lr-eval-result .runs=${RUNS} .columns=${COLUMNS}></lr-eval-result>
+    `);
+    let proposals = 0;
+    el.addEventListener('lr-sort-request', () => proposals++);
+    el.shadowRoot!.querySelector('lr-table')!.dispatchEvent(new CustomEvent('lr-sort-request', {
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+      detail: { phase: 'request', sortKey: 'label', sortDir: 'asc' },
+    }));
+    expect(proposals).to.equal(0);
+  });
+
+  it('renders a still-running result whose output has not arrived yet', async () => {
+    const el = await fixture<LyraEvalResult>(html`
+      <lr-eval-result
+        .runs=${[{ id: 'run-a', label: 'GPT-4o' }] as unknown as EvalRunResult[]}
+        .columns=${COLUMNS}
+      ></lr-eval-result>
+    `);
+    const diff = el.shadowRoot!.querySelector('lr-diff-view') as HTMLElement & { oldText: string; newText: string };
+    expect(diff.oldText).to.equal('');
+    expect(diff.newText).to.equal('');
+  });
+
+  it('lets each instance give its independently interactive comparison grid a distinct name', async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <lr-eval-result label="Baseline answer" .runs=${RUNS} .columns=${COLUMNS}></lr-eval-result>
+        <lr-eval-result label="Candidate answer" .runs=${RUNS} .columns=${COLUMNS}></lr-eval-result>
+      </div>
+    `);
+    const names = [...wrapper.querySelectorAll<LyraEvalResult>('lr-eval-result')].map(
+      (element) => element.shadowRoot!.querySelector('lr-table')!.getAttribute('aria-label'),
+    );
+    expect(names).to.deep.equal(['Baseline answer', 'Candidate answer']);
+  });
+
   it('renders a purpose-named comparison grid without cloning the host aria-label', async () => {
     const el = (await fixture(
       html`<lr-eval-result aria-label="Run comparison" .runs=${RUNS} .columns=${COLUMNS}></lr-eval-result>`,
@@ -105,7 +145,8 @@ describe('lr-eval-result', () => {
       ></lr-eval-result>
     `);
     const review = el.shadowRoot!.querySelector('[part="review"]') as HTMLElement & { itemId: string };
-    const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement & { rows: unknown[] };
+    const table = el.shadowRoot!.querySelector<LyraTable<EvalRunResult>>('lr-table');
+    if (!table) throw new Error('Expected the normalized run table to render.');
     expect(el.selectedRunId).to.equal(null);
     expect(el.baselineRunId).to.equal(null);
     expect(review.itemId).to.equal('run-a');
@@ -333,11 +374,9 @@ it('normalizes duplicate run, column, and rubric identities first-wins before co
       ]}
     ></lr-eval-result>
   `);
-  const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement & {
-    rows: EvalRunResult[];
-    columns: TableColumn<EvalRunResult>[];
-  };
-  const rubric = el.shadowRoot!.querySelector('lr-rubric-form') as HTMLElement & { keys: RubricKey[] };
+  const table = el.shadowRoot!.querySelector<LyraTable<EvalRunResult>>('lr-table');
+  const rubric = el.shadowRoot!.querySelector<LyraRubricForm>('lr-rubric-form');
+  if (!table || !rubric) throw new Error('Expected the normalized table and rubric form to render.');
   expect(table.rows).to.have.length(1);
   expect(table.rows[0]!.label).to.equal('First run');
   expect(table.columns).to.have.length(1);

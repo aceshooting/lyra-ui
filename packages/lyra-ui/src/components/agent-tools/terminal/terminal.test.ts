@@ -427,19 +427,23 @@ describe('lr-terminal', () => {
     expect(line.getAttribute('aria-current')).to.equal('true');
   });
 
-  it('drops a highlight with a missing or null anchor instead of throwing, and keeps rendering', async () => {
-    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
-    el.write('a\nb\nc');
+  it('drops missing or null highlight anchors from the first update without losing the terminal', async () => {
+    const el = document.createElement('lr-terminal') as LyraTerminal;
+    el.content = 'ready';
+    el.highlights = [{ id: 'missing-anchor' }] as unknown as LyraHighlight[];
+    document.body.append(el);
+    try {
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelectorAll('[part="base"]').length).to.equal(1);
+      expect(el.highlights.map((highlight) => highlight.id)).to.deep.equal([]);
 
-    el.highlights = [{ id: 'h1', label: 'Source 1' }] as unknown as LyraTerminal['highlights'];
-    await el.updateComplete;
-    expect(el.highlights).to.have.length(0);
-    expect(el.shadowRoot!.querySelector('[part="base"]')).to.exist;
-
-    el.highlights = [{ id: 'h1', label: 'Source 1', anchor: null }] as unknown as LyraTerminal['highlights'];
-    await el.updateComplete;
-    expect(el.highlights).to.have.length(0);
-    expect(el.shadowRoot!.querySelector('[part="base"]')).to.exist;
+      el.highlights = [{ id: 'null-anchor', anchor: null }] as unknown as LyraHighlight[];
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelectorAll('[part="base"]').length).to.equal(1);
+      expect(el.highlights.map((highlight) => highlight.id)).to.deep.equal([]);
+    } finally {
+      el.remove();
+    }
   });
 
   it('gives a multi-line highlight one named interactive owner and leaves blank continuation lines non-interactive', async () => {
@@ -728,7 +732,7 @@ describe('lr-terminal', () => {
     const callbacks = new Map<number, () => void>();
     const clears: number[] = [];
     ownerWindow.setTimeout = ((handler: TimerHandler) => {
-      if (typeof handler === 'function') callbacks.set(71, handler);
+      if (typeof handler === 'function') callbacks.set(71, () => handler());
       return 71;
     }) as typeof ownerWindow.setTimeout;
     ownerWindow.clearTimeout = ((handle?: number) => {
@@ -782,7 +786,7 @@ describe('lr-terminal', () => {
     });
     ownerWindow.setTimeout = ((handler: TimerHandler, delay?: number) => {
       const handle = ++nextHandle;
-      if (typeof handler === 'function') timers.set(handle, { callback: handler, delay: delay ?? 0 });
+      if (typeof handler === 'function') timers.set(handle, { callback: () => handler(), delay: delay ?? 0 });
       return handle;
     }) as typeof ownerWindow.setTimeout;
     ownerWindow.clearTimeout = ((handle?: number) => {
@@ -846,7 +850,7 @@ describe('lr-terminal', () => {
     } finally {
       el.remove();
       if (originalClipboard) Object.defineProperty(ownerWindow.navigator, 'clipboard', originalClipboard);
-      else delete (ownerWindow.navigator as Navigator & { clipboard?: Clipboard }).clipboard;
+      else Reflect.deleteProperty(ownerWindow.navigator, 'clipboard');
       ownerWindow.setTimeout = originalSetTimeout;
       ownerWindow.clearTimeout = originalClearTimeout;
       ownerWindow.URL.createObjectURL = originalCreateObjectURL;
@@ -881,8 +885,8 @@ describe('lr-terminal', () => {
     // WebKit does not expose ShadowRoot.getSelection(), so use a deterministic selection-shaped
     // value here and leave native cross-shadow selection support to the component's fail-closed path.
     const range = document.createRange();
-    range.setStart(textNodeOf(lines[0]), 0);
-    range.setEnd(textNodeOf(lines[1]), 3);
+    range.setStart(textNodeOf(lines[0]!), 0);
+    range.setEnd(textNodeOf(lines[1]!), 3);
     const sourceRect = new DOMRect(1, 2, 3, 4);
     Object.defineProperty(range, 'getClientRects', {
       configurable: true,
@@ -890,8 +894,8 @@ describe('lr-terminal', () => {
     });
     const selection = {
       isCollapsed: false,
-      anchorNode: textNodeOf(lines[0]),
-      focusNode: textNodeOf(lines[1]),
+      anchorNode: textNodeOf(lines[0]!),
+      focusNode: textNodeOf(lines[1]!),
       getRangeAt: () => range,
     } as unknown as Selection;
     (list.shadowRoot as unknown as { getSelection: () => Selection }).getSelection = () => selection;

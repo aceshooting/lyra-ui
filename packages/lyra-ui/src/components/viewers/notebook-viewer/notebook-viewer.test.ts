@@ -1,21 +1,23 @@
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import './notebook-viewer.js';
 import type { LyraNotebookViewer } from './notebook-viewer.js';
 import { __setNotebookSanitizerForTesting } from './dompurify-loader.js';
 import { DEFAULT_MAX_RESOURCE_BYTES, LyraUserFacingError } from '../../../internal/resource-loader.js';
 import type { LyraTextViewerTarget } from '../../../internal/text-viewer-target.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import { styles } from './notebook-viewer.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 /** The search half of the shared viewer contract -- `lr-notebook-viewer` resolves its own anchor
  *  kinds rather than the mixin's, so only the search methods are asserted assignable. */
 type SearchContract = Pick<LyraTextViewerTarget, 'search' | 'searchNext' | 'searchPrevious' | 'clearSearch'>;
+type NotebookDocument = Exclude<LyraNotebookViewer['notebook'], string | undefined>;
 
 afterEach(() => {
   __setNotebookSanitizerForTesting(undefined);
 });
 
-const NOTEBOOK = {
+const NOTEBOOK: NotebookDocument = {
   nbformat: 4,
   nbformat_minor: 5,
   metadata: { language_info: { name: 'python' } },
@@ -92,18 +94,18 @@ describe('parsing and rendering', () => {
     await waitUntil(() => rowRoot(el).querySelectorAll('[part~="cell"]').length > 0);
     const cells = [...rowRoot(el).querySelectorAll('[part~="cell"]')];
     expect(cells.length).to.equal(3);
-    expect(cells[0].getAttribute('data-cell-type')).to.equal('markdown');
-    expect(cells[1].getAttribute('data-cell-type')).to.equal('code');
-    expect(cells[2].getAttribute('data-cell-type')).to.equal('raw');
+    expect(cells[0]!.getAttribute('data-cell-type')).to.equal('markdown');
+    expect(cells[1]!.getAttribute('data-cell-type')).to.equal('code');
+    expect(cells[2]!.getAttribute('data-cell-type')).to.equal('raw');
   });
 
   it('renders a markdown cell through lr-markdown and a code cell through lr-code-block', async () => {
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${NOTEBOOK}></lr-notebook-viewer>`)) as LyraNotebookViewer;
     await waitUntil(() => rowRoot(el).querySelectorAll('[part~="cell"]').length > 0);
     const cells = [...rowRoot(el).querySelectorAll('[part~="cell"]')];
-    expect(cells[0].querySelector('lr-markdown')).to.exist;
-    expect(cells[1].querySelector('lr-code-block')).to.exist;
-    expect((cells[1].querySelector('lr-code-block') as HTMLElement).getAttribute('language')).to.equal('python');
+    expect(cells[0]!.querySelector('lr-markdown')).to.exist;
+    expect(cells[1]!.querySelector('lr-code-block')).to.exist;
+    expect((cells[1]!.querySelector('lr-code-block') as HTMLElement).getAttribute('language')).to.equal('python');
   });
 
   it('renders a stream output tinted by stream name and a stdout/stderr data attribute', async () => {
@@ -185,7 +187,7 @@ describe('parsing and rendering', () => {
   it('rejects malformed notebook shape as invalid', async () => {
     const el = (await fixture(html`<lr-notebook-viewer></lr-notebook-viewer>`)) as LyraNotebookViewer;
     const eventPromise = oneEvent(el, 'lr-render-error');
-    el.notebook = { not: 'a notebook' };
+    (el as unknown as { notebook: unknown }).notebook = { not: 'a notebook' };
     await eventPromise;
     expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
   });
@@ -486,7 +488,10 @@ describe('parsing and rendering', () => {
 
   it('rejects a notebook with more cells than the MAX_CELLS cap', async () => {
     const el = (await fixture(html`<lr-notebook-viewer></lr-notebook-viewer>`)) as LyraNotebookViewer;
-    const cells = Array.from({ length: 2001 }, (_v, i) => ({ cell_type: 'code', id: `c${i}`, source: '' }));
+    const cells: NotebookDocument['cells'] = Array.from(
+      { length: 2001 },
+      (_value, index) => ({ cell_type: 'code', id: `c${index}`, source: '' }),
+    );
     const eventPromise = oneEvent(el, 'lr-render-error');
     el.notebook = { nbformat: 4, nbformat_minor: 5, cells };
     const event = await eventPromise;
@@ -901,10 +906,10 @@ describe('rendering non-text outputs', () => {
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
     await waitUntil(() => rowRoot(el).querySelectorAll('[part~="output"] img').length >= 2);
     const imgs = [...rowRoot(el).querySelectorAll('[part~="output"] img')];
-    expect(imgs[0].getAttribute('src')).to.equal('data:image/png;base64,AAAA');
-    expect(imgs[1].getAttribute('src')).to.equal('data:image/jpeg;base64,BBBB');
-    expect(imgs[0].getAttribute('alt')).to.equal('Chart showing revenue');
-    expect(imgs[1].getAttribute('alt')).to.equal('Code cell 2');
+    expect(imgs[0]!.getAttribute('src')).to.equal('data:image/png;base64,AAAA');
+    expect(imgs[1]!.getAttribute('src')).to.equal('data:image/jpeg;base64,BBBB');
+    expect(imgs[0]!.getAttribute('alt')).to.equal('Chart showing revenue');
+    expect(imgs[1]!.getAttribute('alt')).to.equal('Code cell 2');
   });
 
   it('lazily sanitizes and renders an image/svg+xml output, stripping unsafe markup', async () => {
@@ -1056,8 +1061,8 @@ describe('rendering non-text outputs', () => {
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
     await waitUntil(() => rowRoot(el).querySelectorAll('lr-json-viewer').length >= 2);
     const viewers = [...rowRoot(el).querySelectorAll('lr-json-viewer')] as (HTMLElement & { data?: unknown })[];
-    expect(viewers[0].data).to.deep.equal({ a: 1 });
-    expect(viewers[1].data).to.deep.equal({ b: 2 });
+    expect(viewers[0]!.data).to.deep.equal({ a: 1 });
+    expect(viewers[1]!.data).to.deep.equal({ b: 2 });
   });
 
   it('shows a localized notice for an output with no renderable mime type', async () => {
@@ -1095,6 +1100,55 @@ describe('rendering non-text outputs', () => {
 });
 
 describe('event boundaries', () => {
+  const COMPOSED_CHILD_NOTEBOOK = {
+    nbformat: 4,
+    nbformat_minor: 5,
+    metadata: { language_info: { name: 'python' } },
+    cells: [
+      { cell_type: 'markdown', id: 'md1', source: '# Heading', metadata: {} },
+      {
+        cell_type: 'code',
+        id: 'code1',
+        source: 'alpha\nbeta',
+        execution_count: 1,
+        metadata: {},
+        outputs: [{
+          output_type: 'execute_result',
+          data: { 'application/json': { ready: true } },
+        }],
+      },
+    ],
+  };
+
+  async function mountComposedChildren(): Promise<{
+    el: LyraNotebookViewer;
+    markdown: HTMLElement;
+    codeBlock: HTMLElement & { updateComplete: Promise<unknown> };
+    jsonViewer: HTMLElement;
+  }> {
+    const el = await fixture<LyraNotebookViewer>(
+      html`<lr-notebook-viewer .notebook=${COMPOSED_CHILD_NOTEBOOK}></lr-notebook-viewer>`,
+    );
+    await waitUntil(() => {
+      const root = el.shadowRoot?.querySelector('lr-virtual-list')?.shadowRoot;
+      return root !== null && root !== undefined
+        && root.querySelector('lr-markdown') !== null
+        && root.querySelector('lr-code-block') !== null
+        && root.querySelector('lr-json-viewer') !== null;
+    });
+    const root = rowRoot(el);
+    const codeBlock = root.querySelector('lr-code-block') as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    await codeBlock.updateComplete;
+    return {
+      el,
+      markdown: root.querySelector('lr-markdown') as HTMLElement,
+      codeBlock,
+      jsonViewer: root.querySelector('lr-json-viewer') as HTMLElement,
+    };
+  }
+
   it('does not expose the internal virtual-list range event under the canonical lr-visible-range-change name', async () => {
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${NOTEBOOK}></lr-notebook-viewer>`)) as LyraNotebookViewer;
     await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
@@ -1117,6 +1171,113 @@ describe('event boundaries', () => {
       { detail: { scrollTop: 0, viewportHeight: 100 }, bubbles: true, composed: true },
     ));
     expect(leaked).to.equal(0);
+  });
+
+  it('seals composed events owned by nested code, markdown, and JSON renderers', async () => {
+    const { el, markdown, codeBlock, jsonViewer } = await mountComposedChildren();
+    const cases: readonly [HTMLElement, string][] = [
+      [codeBlock, 'lr-copy'],
+      [codeBlock, 'lr-error'],
+      [codeBlock, 'lr-copy-error'],
+      [codeBlock, 'lr-toggle-request'],
+      [codeBlock, 'lr-toggle'],
+      [codeBlock, 'lr-line-activate'],
+      [codeBlock, 'lr-text-select'],
+      [markdown, 'lr-render-error'],
+      [markdown, 'lr-link-click'],
+      [markdown, 'lr-highlight-activate'],
+      [markdown, 'lr-text-select'],
+      [markdown, 'lr-anchor-result'],
+      [jsonViewer, 'lr-copy'],
+      [jsonViewer, 'lr-error'],
+      [jsonViewer, 'lr-copy-error'],
+      [jsonViewer, 'lr-search-change'],
+    ];
+
+    for (const [child, name] of cases) {
+      let leaked = 0;
+      const listener = () => { leaked++; };
+      el.addEventListener(name, listener);
+      child.dispatchEvent(new CustomEvent(name, {
+        bubbles: true,
+        composed: true,
+        detail: {},
+      }));
+      el.removeEventListener(name, listener);
+      expect(leaked, `${child.localName} ${name}`).to.equal(0);
+    }
+  });
+
+  it('keeps a real nested code-block copy event off the notebook host', async () => {
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: () => Promise.resolve() },
+    });
+    try {
+      const { el, codeBlock } = await mountComposedChildren();
+      let leaked = 0;
+      el.addEventListener('lr-copy', () => { leaked++; });
+      const copied = oneEvent(codeBlock, 'lr-copy');
+      const copyButton = codeBlock.shadowRoot!.querySelector(
+        '[part="copy-button"]',
+      ) as HTMLButtonElement;
+      copyButton.click();
+      await copied;
+      await aTimeout(0);
+      expect(leaked).to.equal(0);
+    } finally {
+      if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
+  it('keeps a real nested code selection and its line-range anchor off the notebook host', async function () {
+    const { el, codeBlock } = await mountComposedChildren();
+    await waitUntil(() => codeBlock.shadowRoot!.querySelectorAll('[data-line]').length >= 2);
+    const [line1, line2] = codeBlock.shadowRoot!.querySelectorAll('[data-line]');
+    const textNodeOf = (line: Element): Text => {
+      const walker = document.createTreeWalker(
+        line.querySelector('.line-source')!,
+        NodeFilter.SHOW_TEXT,
+      );
+      let node = walker.nextNode();
+      while (node && (node.textContent?.length ?? 0) === 0) node = walker.nextNode();
+      if (!(node instanceof Text)) throw new Error('expected rendered code-line text');
+      return node;
+    };
+    const firstText = textNodeOf(line1!);
+    const secondText = textNodeOf(line2!);
+    const range = document.createRange();
+    range.setStart(firstText, 0);
+    range.setEnd(secondText, Math.min(2, secondText.data.length));
+    const shadowSelection = (
+      codeBlock.shadowRoot as unknown as { getSelection?: () => Selection | null }
+    ).getSelection?.();
+    const selection = shadowSelection ?? window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+    if (selection.rangeCount === 0) this.skip();
+
+    let nested = 0;
+    let nestedAnchor: unknown;
+    let leaked = 0;
+    codeBlock.addEventListener('lr-text-select', (event) => {
+      nested++;
+      nestedAnchor = (event as CustomEvent<{ anchor: unknown }>).detail.anchor;
+    });
+    el.addEventListener('lr-text-select', () => { leaked++; });
+    try {
+      codeBlock.shadowRoot!.querySelector('[part="body"]')!.dispatchEvent(
+        new MouseEvent('mouseup', { bubbles: true, composed: true }),
+      );
+      await aTimeout(0);
+      expect(nested).to.equal(1);
+      expect(nestedAnchor).to.deep.equal({ kind: 'line-range', start: 1, end: 2 });
+      expect(leaked).to.equal(0);
+    } finally {
+      selection.removeAllRanges();
+    }
   });
 });
 
@@ -1174,11 +1335,11 @@ describe('output collapsing', () => {
     await waitUntil(() => rowRoot(el).querySelectorAll('[part="output-toggle"]').length >= 2);
     const toggles = [...rowRoot(el).querySelectorAll('[part="output-toggle"]')] as HTMLButtonElement[];
     expect(toggles.length).to.equal(2);
-    toggles[0].click();
+    toggles[0]!.click();
     await el.updateComplete;
-    expect(toggles[0].getAttribute('aria-expanded'), 'cell 0 / output 1000 expands').to.equal('true');
+    expect(toggles[0]!.getAttribute('aria-expanded'), 'cell 0 / output 1000 expands').to.equal('true');
     expect(
-      toggles[1].getAttribute('aria-expanded'),
+      toggles[1]!.getAttribute('aria-expanded'),
       'cell 1 / output 0 shares the colliding numeric key and must stay collapsed',
     ).to.equal('false');
   });
@@ -1460,7 +1621,7 @@ describe('i18n', () => {
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Visionneuse de bloc-notes');
 
     const eventPromise = oneEvent(el, 'lr-render-error');
-    el.notebook = { not: 'a notebook' };
+    (el as unknown as { notebook: unknown }).notebook = { not: 'a notebook' };
     await eventPromise;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Bloc-notes invalide.');
@@ -1682,14 +1843,86 @@ describe('virtualized cell part styling', () => {
   });
 });
 
-// `:hover` has no scriptable state in this runner (no pointer-control plugin is installed), so the
-// hover/focus-visible variants are asserted on the shipped selector text. Their reachability is
-// already proven by the rendered `output-toggle` assertions above, which share the same selector
-// prefix -- an inert prefix would fail those first.
-it('gives the output-toggle hover/focus-visible', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/lr-virtual-list::part\(output-toggle\):hover/);
-  expect(css).to.match(/lr-virtual-list::part\(output-toggle\):focus-visible[^{]*\{[^}]*outline:/);
+it('renders output-toggle hover and keyboard focus-visible feedback', async () => {
+  const longText = Array.from(
+    { length: 3 },
+    (_value, index) => `line ${index}`,
+  ).join('\n');
+  const notebook = {
+    nbformat: 4,
+    nbformat_minor: 5,
+    cells: [
+      {
+        cell_type: 'code',
+        id: 'c1',
+        source: 'x',
+        execution_count: 1,
+        metadata: {},
+        outputs: [
+          {
+            output_type: 'execute_result',
+            data: { 'text/plain': longText },
+          },
+        ],
+      },
+    ],
+  };
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <button id="before-notebook">Before notebook</button>
+      <lr-notebook-viewer
+        output-collapse-lines="1"
+        style="--lr-focus-ring: 5px dashed rgb(1, 2, 3)"
+        .notebook=${notebook}
+      ></lr-notebook-viewer>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-notebook-viewer') as LyraNotebookViewer;
+  await waitUntil(
+    () => rowRoot(el).querySelector('[part="output-toggle"]') !== null,
+  );
+  const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement;
+  list.style.setProperty('--lr-focus-ring', '5px dashed rgb(1, 2, 3)');
+  const toggle = rowRoot(el).querySelector(
+    '[part="output-toggle"]',
+  ) as HTMLButtonElement;
+  toggle.scrollIntoView({ block: 'center' });
+  await aTimeout(0);
+  const box = toggle.getBoundingClientRect();
+
+  try {
+    expect(getComputedStyle(toggle).textDecorationLine).to.equal('none');
+    await resetMouse();
+    await sendMouse({
+      type: 'move',
+      position: [
+        Math.round(box.left + box.width / 2),
+        Math.round(box.top + box.height / 2),
+      ],
+    });
+    await waitUntil(
+      () => getComputedStyle(toggle).textDecorationLine.includes('underline'),
+      'the output toggle never entered its rendered hover state',
+    );
+
+    await resetMouse();
+    const codeBlock = rowRoot(el).querySelector('lr-code-block') as HTMLElement;
+    codeBlock.inert = true;
+    (wrapper.querySelector('#before-notebook') as HTMLButtonElement).focus();
+    for (let index = 0; index < 6 && !toggle.matches(':focus-visible'); index++) {
+      await sendKeys({ press: 'Tab' });
+    }
+    await waitUntil(
+      () => toggle.matches(':focus-visible'),
+      'keyboard Tab never reached the output toggle as focus-visible',
+    );
+    const focused = getComputedStyle(toggle);
+    expect(focused.outlineStyle).to.equal('dashed');
+    expect(focused.outlineWidth).to.equal('5px');
+    expect(focused.outlineColor).to.equal('rgb(1, 2, 3)');
+  } finally {
+    await resetMouse();
+  }
 });
 
 it('validates maxHeight before assigning the base custom property', async () => {

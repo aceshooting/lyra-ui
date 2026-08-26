@@ -6,6 +6,7 @@
 - **Class** `LyraAgentRun`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/agent-run/agent-run.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 25 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -37,7 +38,8 @@ string; label: string; status: AgentStatus; startedAt?: number; endedAt?: number
   are epoch milliseconds; `AgentStep.kind` is deliberately free-form (an agent's own step taxonomy is
   application-defined) — unlike `LyraSpan['kind']`'s closed union. The record and its nested step
   collection are clone-owned, bounded, and frozen; pass a new object to update it. `null` renders
-  the shared `lr-empty` `noData` state
+  the shared `lr-empty` `noData` state. A runtime summary record that has not loaded `steps` yet
+  renders with an empty task slot, and a step whose status has not arrived yet renders as pending
 - `metrics: readonly AgentRunMetric[] = []` (attribute: false) — `AgentRunMetric { id: string; label: string;
 value: string | number; variant?: BadgeVariant }` (exported here), e.g. prompt/completion token
   counts; `variant` tones `[part="metric-value"]` via `data-variant`, including the full

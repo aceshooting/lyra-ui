@@ -6,6 +6,7 @@
 - **Class** `LyraFunnel`, also available unregistered from `@aceshooting/lyra-ui/components/data/funnel/funnel.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `12.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 14 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -108,6 +109,9 @@ interface LyraFunnelStage {
 - **A comparison series of a different length pairs by index.** Extra comparison entries are ignored;
   stages past its end simply get no comparison bar. A comparison series whose own first value is
   zero or negative draws nothing.
+- **Malformed stage entries are omitted independently.** Non-record entries and records without a
+  string `label` cannot suppress valid neighbors in either series. This is a render-only boundary:
+  the public `stages` and `comparison` arrays retain caller identity and are never rewritten.
 - **Non-finite `value`s are treated as `0`** rather than blanking the stage, so one bad row cannot
   take the chart with it.
 - Values, shares and drop-off percentages all format through the component's effective locale

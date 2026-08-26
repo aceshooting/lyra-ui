@@ -70,7 +70,14 @@ export const styles = css`
     color: var(--lr-message-parts-error-color, var(--lr-color-danger));
   }
 
+  [part~='error'] > span {
+    flex: 1 1 0;
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+
   [part='retry'] {
+    flex: 0 0 auto;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
   }

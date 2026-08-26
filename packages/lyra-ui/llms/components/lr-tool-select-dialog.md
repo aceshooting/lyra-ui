@@ -6,6 +6,7 @@
 - **Class** `LyraToolSelectDialog`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-select-dialog/tool-select-dialog.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 25 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
@@ -46,6 +47,8 @@ string; disabled?: boolean; disabledReason?: string }` — one selectable agent 
 **Properties:**
 
 - `open: boolean = false` (reflected) — set it directly or use the lifecycle methods below.
+- `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop-click
+  dismissal; Escape remains available without it.
 - `tools: ToolSelectDialogTool[] = []` (attribute: false) — the full set of tools a consumer offers,
   across all categories. `id` is the public identity: empty/blank ids are omitted and when provider
   data repeats one, the first occurrence wins consistently for grouping, filtering, counts,
@@ -61,7 +64,8 @@ string; disabled?: boolean; disabledReason?: string }` — one selectable agent 
   property assignment made without the attribute can name the panel.
 - `searchPlaceholder?: string` (attribute `search-placeholder`) — omission uses localized
   `searchToolsPlaceholder`; every supplied string, including `"Search tools…"` and `""`, remains
-  literal.
+  literal as placeholder copy. Empty/whitespace-only copy leaves the field visually empty while
+  its accessible name falls back to localized `searchToolsPlaceholder`.
 - `filter: ToolSelectFilter | null = null` (attribute: false) — overrides the built-in
   case-insensitive name/description substring match.
 - `autocomplete: string = ''`, `spellcheck: boolean = true`, `autocapitalize: string = ''`,
@@ -79,8 +83,10 @@ void` performs the reasoned API dismissal;
 checkbox or switch. A host can prevent a proposal while it validates or persists it, then assign
 the desired detail values after that work succeeds. `lr-close`
 (`detail: ToolSelectDialogCloseReason` — fired exactly once per dismissal, via Escape, a backdrop
-click, or a `close()` call), and no-detail `focus`/`blur` events re-dispatched when the
-internal search input gains or loses focus.
+click when `lightDismiss` is enabled, or a `close()` call), and no-detail `focus`/`blur` events
+re-dispatched when the internal search input gains or loses focus.
+Native `input`/`change` and prefixed `lr-input` implementation events from the built-in checkbox and
+switch controls stop at the dialog boundary; listen for the single aggregate `lr-change` proposal.
 
 **Slots:** `footer` — optional action buttons (e.g. a "Done" button), rendered in a bottom row. Changes
 already apply live via `lr-change`, so this slot is purely optional; only visually shown once it has
@@ -131,8 +137,8 @@ checkboxes for editing.
 
 **Known gotchas:**
 
-- No built-in footer/close button — dismissal happens via Escape, a backdrop click, or a consumer's own
-  `footer`-slotted action calling `close()` directly.
+- No built-in footer/close button — dismissal happens via Escape, an opted-in (`light-dismiss`)
+  backdrop click, or a consumer's own `footer`-slotted action calling `close()` directly.
 - A row is effectively disabled whenever _either_ its own `tool.disabled` is true _or_ the top-level
   `useDefaults` switch is on — a tool without `disabled` set can still render as a locked checkbox while
   `useDefaults` is true.

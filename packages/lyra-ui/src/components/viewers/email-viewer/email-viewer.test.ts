@@ -3,9 +3,9 @@ import "./email-viewer.js";
 import type { LyraEmailViewer } from "./email-viewer.js";
 import { __setEmailDepsForTesting } from "./email-loader.js";
 import { DEFAULT_MAX_RESOURCE_BYTES } from "../../../internal/resource-loader.js";
-import { styles } from "./email-viewer.styles.js";
 import { getDefaultDocumentRendererRegistry } from "../document-viewer/registry.js";
 import type { LyraHighlight } from "../document-viewer/anchors.js";
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const SAMPLE_EML = [
   "From: Ada Lovelace <ada@example.test>",
@@ -133,6 +133,14 @@ const FIXED_HTML_EML = [
   "",
 ].join("\r\n");
 
+const FRAGMENT_HTML_EML = [
+  'Subject: Fragment targets',
+  'Content-Type: text/html; charset=utf-8',
+  '',
+  '<p id="retained-fragment">Retained target</p><script id="removed-fragment">bad()</script>',
+  '',
+].join('\r\n');
+
 function response(body: string, ok = true): Response {
   const bytes = new TextEncoder().encode(body);
   return {
@@ -175,6 +183,24 @@ function abortError(): Error {
 describe("lr-email-viewer", () => {
   afterEach(() => __setEmailDepsForTesting(undefined));
 
+  it('keeps loaded message content and later updates working when a highlight omits its anchor', async () => {
+    const { el, restore } = await loaded(TEXT_EML);
+    try {
+      el.highlights = [{ id: 'missing-anchor' }] as unknown as LyraEmailViewer['highlights'];
+      await el.updateComplete;
+      el.name = 'Updated message';
+      await el.updateComplete;
+
+      expect(el.highlights.map((highlight) => highlight.id)).to.deep.equal([]);
+      expect(el.shadowRoot!.querySelectorAll('[part="body"]').length).to.equal(1);
+      expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+        'Updated message',
+      );
+    } finally {
+      restore();
+    }
+  });
+
   it("renders a localized empty state by default", async () => {
     const el = await fixture<LyraEmailViewer>(
       html`<lr-email-viewer></lr-email-viewer>`
@@ -204,6 +230,44 @@ describe("lr-email-viewer", () => {
       expect(
         el.shadowRoot!.querySelector('[part="body-html"] strong')!.textContent
       ).to.equal("up 12%");
+    } finally {
+      restore();
+    }
+  });
+
+  it('reports found:true only for an id retained in the sanitized email body', async () => {
+    const { el, restore } = await loaded(FRAGMENT_HTML_EML);
+    try {
+      const timing = el as unknown as {
+        anchorTimeoutMs: number;
+        anchorRetryIntervalMs: number;
+      };
+      timing.anchorTimeoutMs = 20;
+      timing.anchorRetryIntervalMs = 2;
+      expect(
+        el.shadowRoot!.querySelector('#retained-fragment')?.textContent,
+      ).to.equal('Retained target');
+      expect(
+        el.shadowRoot!.querySelectorAll('#removed-fragment').length,
+      ).to.equal(0);
+
+      const retainedEvent = oneEvent(el, 'lr-anchor-result');
+      expect(
+        await el.scrollToAnchor({
+          kind: 'fragment',
+          id: 'retained-fragment',
+        }),
+      ).to.equal(true);
+      expect((await retainedEvent).detail).to.deep.equal({ found: true });
+
+      const removedEvent = oneEvent(el, 'lr-anchor-result');
+      expect(
+        await el.scrollToAnchor({
+          kind: 'fragment',
+          id: 'removed-fragment',
+        }),
+      ).to.equal(false);
+      expect((await removedEvent).detail).to.deep.equal({ found: false });
     } finally {
       restore();
     }
@@ -737,6 +801,55 @@ describe("lr-email-viewer", () => {
   });
 
   describe("attachments", () => {
+    it('localizes a missing attachment filename at render time with a dedicated fallback', async () => {
+      __setEmailDepsForTesting({
+        PostalMime: {
+          parse: () =>
+            Promise.resolve({
+              text: 'See attachment.',
+              attachments: [
+                {
+                  filename: null,
+                  mimeType: 'application/octet-stream',
+                  content: new Uint8Array([1]),
+                },
+              ],
+            }),
+        },
+        DOMPurify: undefined,
+      });
+      const restore = stubFetch(TEXT_EML);
+      try {
+        const el = await fixture<LyraEmailViewer>(html`
+          <lr-email-viewer src="https://example.test/message.eml"></lr-email-viewer>
+        `);
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="attachment-button"]') !== null
+        );
+        expect(
+          el.shadowRoot!.querySelector('[part="attachment-name"]')!.textContent
+        ).to.equal('Unnamed attachment');
+        expect(
+          el.shadowRoot!.querySelector('[part="attachment-button"]')!.getAttribute('aria-label')
+        ).to.equal('Open Unnamed attachment');
+
+        el.strings = {
+          emailViewerUnnamedAttachment: 'pièce jointe sans nom',
+          emailViewerOpenAttachment: 'Ouvrir {filename}',
+        };
+        await el.updateComplete;
+
+        expect(
+          el.shadowRoot!.querySelector('[part="attachment-name"]')!.textContent
+        ).to.equal('pièce jointe sans nom');
+        expect(
+          el.shadowRoot!.querySelector('[part="attachment-button"]')!.getAttribute('aria-label')
+        ).to.equal('Ouvrir pièce jointe sans nom');
+      } finally {
+        restore();
+      }
+    });
+
     it('emits immutable Blob attachment content and never creates an object URL itself', async () => {
       const originalCreateObjectURL = URL.createObjectURL;
       let createObjectUrlCalled = false;
@@ -1595,8 +1708,42 @@ it("validates maxHeight before assigning the base custom property", async () => 
 });
 
 describe("styling", () => {
-  it("gives quote-toggle a hover state", () => {
-    const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
-    expect(css).to.match(/\[part='quote-toggle'\]:hover/);
+  it("changes the rendered quote toggle under real pointer hover", async () => {
+    const restore = stubFetch(GMAIL_QUOTE_EML);
+    const el = await fixture<LyraEmailViewer>(html`
+      <lr-email-viewer
+        fold-quotes
+        src="https://example.test/message.eml"
+        style="--lr-color-brand-quiet: rgb(1, 2, 3)"
+      ></lr-email-viewer>
+    `);
+    try {
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null,
+      );
+      const toggle = el.shadowRoot!.querySelector(
+        '[part="quote-toggle"]',
+      ) as HTMLElement;
+      const resting = getComputedStyle(toggle).backgroundColor;
+      const box = toggle.getBoundingClientRect();
+      await resetMouse();
+      await sendMouse({
+        type: 'move',
+        position: [
+          Math.round(box.left + box.width / 2),
+          Math.round(box.top + box.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => getComputedStyle(toggle).backgroundColor !== resting,
+        'the quote toggle never entered its rendered hover state',
+      );
+      expect(getComputedStyle(toggle).backgroundColor).to.equal(
+        'rgb(1, 2, 3)',
+      );
+    } finally {
+      await resetMouse();
+      restore();
+    }
   });
 });

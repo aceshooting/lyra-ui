@@ -202,7 +202,7 @@ export const styles = css`
   [part='retry-button']:focus-visible,
   [part='preview-button']:focus-visible,
   [part='remove-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='retry-button'] svg,

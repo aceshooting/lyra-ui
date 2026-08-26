@@ -6,6 +6,7 @@
 - **Class** `LyraCopyButton`, also available unregistered from `@aceshooting/lyra-ui/components/utility/copy-button/copy-button.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -42,6 +43,9 @@ positioning opinion of its own.
   containers.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the localized
   built-in button name while leaving tooltip/feedback labels unchanged; retained Lyra alias.
+  An empty or whitespace-only value falls back to the localized state label so the built-in
+  icon-only trigger always remains named; remove the attribute or assign `null` for the same
+  fallback.
 - `disabled: boolean = false` (reflected)
 - `feedbackDuration: number = 1000` (attribute `feedback-duration`) — milliseconds before the
   confirmation **or** the failure state returns to the copy icon. A non-finite value falls back to

@@ -235,7 +235,7 @@ describe('lr-include', () => {
     const calls: (RequestInit | undefined)[] = [];
     window.fetch = ((_url: string, init?: RequestInit) => { calls.push(init); return Promise.resolve(response('<p>ok</p>')); }) as typeof window.fetch;
     try {
-      const el = await fixture<LyraInclude>(html`<lr-include src="https://example.test/cors-mode.html" mode="cors"></lr-include>`);
+      await fixture<LyraInclude>(html`<lr-include src="https://example.test/cors-mode.html" mode="cors"></lr-include>`);
       await waitUntil(() => calls.length > 0);
       expect(calls[0]?.mode).to.equal('cors');
     } finally { window.fetch = original; }
@@ -531,7 +531,12 @@ describe('lr-include', () => {
     `);
     try {
       const template = fixtureRoot.querySelector('template')!;
-      const [first, second] = [...fixtureRoot.querySelectorAll<LyraInclude>('lr-include')];
+      const includes = [...fixtureRoot.querySelectorAll<LyraInclude>('lr-include')];
+      const first = includes[0];
+      const second = includes[1];
+      if (first === undefined || second === undefined) {
+        throw new Error('Expected two include elements in the fixture');
+      }
       const firstLoaded = oneEvent(first, 'lr-load');
       const secondLoaded = oneEvent(second, 'lr-load');
       first.src = '#include-template';
@@ -753,7 +758,7 @@ describe('lr-include', () => {
     const calls: (RequestInit | undefined)[] = [];
     window.fetch = ((_url: string, init?: RequestInit) => { calls.push(init); return Promise.resolve(response('<p>ok</p>')); }) as typeof window.fetch;
     try {
-      const el = await fixture<LyraInclude>(
+      await fixture<LyraInclude>(
         html`<lr-include src="https://example.test/invalid-mode.html" mode="bogus"></lr-include>`,
       );
       await waitUntil(() => calls.length > 0);

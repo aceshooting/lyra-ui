@@ -6,9 +6,10 @@
 - **Class** `LyraEbookViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/ebook-viewer/ebook-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `epubjs` — see `llms/peers.md`
-- **Themeable via** 8 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -60,9 +61,12 @@ Selection text is capped at 4,096 code units and selection rectangles at 1,000.
 non-live shadow content and later loading transitions use the shared document-level polite sink),
 `toolbar`, `previous-button`, `next-button`, `previous-icon`, `next-icon`,
 `mount`, and `error` (ordinary visible text; later error transitions use the shared document-level
-assertive sink). Search results are appended to the shared document-level polite sink, which lives
-in the host's light DOM; the empty `announcer` shadow mirror that used to carry a part of that name
-was removed in 9.0.0 (it had no styling of its own and never held any text).
+assertive sink), plus `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest
+anchor-jump message; the spoken copy is appended to the shared document-level polite sink only
+while the viewer and its composed ancestors are exposed to the accessibility tree). Search results
+are appended to the shared document-level polite sink, which lives in the host's light DOM; the
+empty `announcer` shadow mirror that used to carry a part of that name was removed in 9.0.0 (it had
+no styling of its own and never held any text).
 
 **Themeable custom properties:** `--lr-ebook-viewer-max-height` (default `none`) — maximum block
 size of `[part="mount"]` before it scrolls internally; also settable via the `max-height` property,

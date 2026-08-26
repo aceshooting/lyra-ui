@@ -6,6 +6,7 @@
 - **Class** `LyraIntersectionObserver`, also available unregistered from `@aceshooting/lyra-ui/components/utility/intersection-observer/intersection-observer.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 1 part, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -22,7 +23,9 @@ in the default slot and emits a composed event, while adding no layout of its ow
 `root-margin`), `threshold: number | number[] | string = '0'` (the mapped attribute form accepts
 space-separated values), `root: Element | string | null = null` (an element or mapped element ID),
 `intersectClass: string = ''` (attribute `intersect-class`, toggled on each target), and `once:
-boolean = false` (reflected; unobserves a target after its first intersection).
+boolean = false` (reflected; unobserves a target after its first intersection). A once-consumed
+target stays consumed across option-driven observer rebuilds and disconnect/reconnect cycles;
+setting `once` to false is the explicit reset boundary.
 
 **Events:** mapped `lr-intersect` once per entry with `{ entry }`, plus the existing batch alias
 `lr-intersection` with a frozen

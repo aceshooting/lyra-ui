@@ -62,7 +62,7 @@
     "d3-zoom": "^3.0.0",
     "knip": "^6.32.2",
     "lit": "^3.3.3",
-    "maplibre-gl": "^6.4.1",
+    "maplibre-gl": "^6.6.0",
     "pdfjs-dist": "^6.2.108",
     "playwright": "^1.62.1",
     "publint": "^0.3.24",
@@ -72,6 +72,6 @@
     "tailwindcss": "^4.3.3",
     "vite": "^8.2.2"
   },
-  "packageManager": "pnpm@11.22.0",
+  "packageManager": "pnpm@11.24.0",
   "customElements": "packages/lyra-ui/custom-elements.json"
 }

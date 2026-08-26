@@ -6,6 +6,7 @@
 - **Class** `LyraSuggestionChips`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/suggestion-chips/suggestion-chips.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 6 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -30,8 +31,9 @@ the first valid occurrence winning. The input is clone-owned, bounded, and froze
 array after changing the sequence or a row. `icon` is an optional
 peer-neutral literal hint (for example, an emoji), rendered decoratively before the text, and
 `detail` is an optional secondary line. Empty renders nothing at all. `wrap: boolean = false`
-(reflected) — wraps into multiple rows instead of a single horizontally scrollable line. `label:
-string = ''` — accessible name for the group, defaults to the localized `suggestionsLabel`.
+(reflected) — wraps into multiple rows instead of a single horizontally scrollable line. `label?:
+string` — accessible name for the group. Omitting it uses the localized `suggestionsLabel`; an
+explicit empty string intentionally leaves the group unnamed.
 
 **Events:** `lr-suggestion-select` — `detail: { suggestionId, label }`.
 
@@ -55,7 +57,7 @@ on `:host`. Plus shared tokens `--lr-space-xs/-m/-2xs`,
 
 Keyboard: roving tabindex across chips; ArrowLeft/ArrowRight (direction-aware) plus Home/End;
 Enter/Space activate. Renders inside an internal `lr-scroller` (`orientation="horizontal"`,
-`hide-scrollbar`) unless `wrap` is set.
+`without-scrollbar`) unless `wrap` is set.
 
 ```html
 <lr-suggestion-chips></lr-suggestion-chips>

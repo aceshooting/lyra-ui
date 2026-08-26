@@ -9,6 +9,7 @@ import './tooltip.js';
 import './dropdown.js';
 import '../../forms/button/button.js';
 import '../../forms/icon-button/icon-button.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 type PositionedOverlay = LyraPopover | LyraTooltip;
 
@@ -714,6 +715,43 @@ it('uses a for target as the popover interaction and ARIA owner when no trigger 
   expect(trigger.hasAttribute('aria-haspopup')).to.equal(false);
 });
 
+it('lets a pointer activation on a for target close the open popover without reopening it', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <button id="external-pointer">External trigger</button>
+      <lr-popover
+        for="external-pointer"
+        style="--show-duration: 0ms; --hide-duration: 0ms"
+      >
+        <p>Details</p>
+      </lr-popover>
+    </div>
+  `);
+  const trigger = wrapper.querySelector<HTMLButtonElement>('#external-pointer')!;
+  const el = wrapper.querySelector<LyraPopover>('lr-popover')!;
+  await el.show();
+  let shows = 0;
+  el.addEventListener('lr-show', () => shows += 1);
+  const rect = trigger.getBoundingClientRect();
+
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ],
+    });
+    await sendMouse({ type: 'down' });
+    await sendMouse({ type: 'up' });
+    await el.updateComplete;
+
+    expect({ open: el.open, shows }).to.deep.equal({ open: false, shows: 0 });
+  } finally {
+    await resetMouse();
+  }
+});
+
 it('uses a for target as the tooltip interaction and description owner', async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div>
@@ -972,7 +1010,7 @@ it("resolves a popover host onto lr-button's focused internal control", async ()
   };
 
   expect(trigger.getAttribute('aria-controls')).to.equal(el.id);
-  if ('ariaControlsElements' in focusedControl) {
+  if (Reflect.has(focusedControl, 'ariaControlsElements')) {
     expect(focusedControl.ariaControlsElements?.length).to.equal(1);
     expect((focusedControl.ariaControlsElements?.[0]) === (el)).to.equal(true);
     expect(focusedControl.getAttribute('aria-controls')).to.equal('');
@@ -995,7 +1033,7 @@ it("resolves a dropdown host onto lr-icon-button's focused internal control", as
   };
 
   expect(trigger.getAttribute('aria-controls')).to.equal(el.id);
-  if ('ariaControlsElements' in focusedControl) {
+  if (Reflect.has(focusedControl, 'ariaControlsElements')) {
     expect(focusedControl.ariaControlsElements?.length).to.equal(1);
     expect((focusedControl.ariaControlsElements?.[0]) === (el)).to.equal(true);
     expect(focusedControl.getAttribute('aria-controls')).to.equal('');
@@ -1018,9 +1056,9 @@ it('owns ARIA and restores focus on the real control inside a consumer popover t
   expect(wrapper.getAttribute('aria-haspopup')).to.equal('dialog');
   expect(focusedControl.getAttribute('aria-haspopup')).to.equal('dialog');
   expect(focusedControl.getAttribute('aria-expanded')).to.equal('false');
-  if ('ariaControlsElements' in focusedControl) {
-    expect(focusedControl.ariaControlsElements.length).to.equal(1);
-    expect(focusedControl.ariaControlsElements[0] === el).to.equal(true);
+  if (Reflect.has(focusedControl, 'ariaControlsElements')) {
+    expect(focusedControl.ariaControlsElements?.length).to.equal(1);
+    expect(focusedControl.ariaControlsElements?.[0] === el).to.equal(true);
   }
 
   await el.show();
@@ -1065,7 +1103,7 @@ it('shows a tooltip after focus and describes the trigger', async () => {
   expect(el.hasAttribute('open')).to.be.true;
   const description = el.querySelector('[data-lyra-tooltip-description]')!;
   expect(description.textContent).to.equal('Helpful text');
-  if ('ariaDescribedByElements' in trigger) {
+  if (Reflect.has(trigger, 'ariaDescribedByElements')) {
     expect(trigger.ariaDescribedByElements?.length).to.equal(1);
     expect((trigger.ariaDescribedByElements?.[0]) === (description)).to.equal(true);
     expect(trigger.getAttribute('aria-describedby')).to.equal(description.id);
@@ -1091,7 +1129,7 @@ it("resolves a tooltip popup onto lr-button's focused internal control", async (
   };
   const description = el.querySelector('[data-lyra-tooltip-description]')!;
 
-  if ('ariaDescribedByElements' in focusedControl) {
+  if (Reflect.has(focusedControl, 'ariaDescribedByElements')) {
     expect(focusedControl.ariaDescribedByElements?.length).to.equal(1);
     expect((focusedControl.ariaDescribedByElements?.[0]) === (description)).to.equal(true);
     expect(focusedControl.getAttribute('aria-describedby')).to.equal('');
@@ -1116,7 +1154,7 @@ it("resolves a tooltip popup onto lr-icon-button's focused internal control", as
   };
   const description = el.querySelector('[data-lyra-tooltip-description]')!;
 
-  if ('ariaDescribedByElements' in focusedControl) {
+  if (Reflect.has(focusedControl, 'ariaDescribedByElements')) {
     expect(focusedControl.ariaDescribedByElements?.length).to.equal(1);
     expect((focusedControl.ariaDescribedByElements?.[0]) === (description)).to.equal(true);
     expect(focusedControl.getAttribute('aria-describedby')).to.equal('');
@@ -2055,7 +2093,10 @@ describe('overlay semantic and lifecycle regressions', () => {
 
     const content = el.querySelector(tagName) as HTMLElement & { attachAction(): HTMLButtonElement };
     const action = content.attachAction();
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part~="popup"]')?.getAttribute('role') === 'dialog',
+      'the bounded shadow-content scan did not discover the late action',
+    );
     await el.updateComplete;
 
     expect(el.shadowRoot!.querySelector('[part~="popup"]')?.getAttribute('role')).to.equal('dialog');
@@ -2117,7 +2158,8 @@ describe('overlay semantic and lifecycle regressions', () => {
         <lr-popover><button slot="trigger">Two</button><button id="two">Two action</button></lr-popover>
       </div>
     `);
-    const [underlying, top] = [...wrapper.querySelectorAll('lr-popover')] as LyraPopover[];
+    const [underlying, top] = [...wrapper.querySelectorAll<LyraPopover>('lr-popover')];
+    if (!underlying || !top) throw new Error('expected two sibling popovers');
     underlying.showAt({ x: 10, y: 10 });
     top.showAt({ x: 50, y: 50 });
     await underlying.updateComplete;
@@ -2147,6 +2189,36 @@ describe('overlay semantic and lifecycle regressions', () => {
 
     expect(trigger.getAttribute('aria-haspopup')).to.equal('menu');
     expect(el.shadowRoot!.querySelector('[part~="popup"]')?.getAttribute('role')).to.equal('menu');
+  });
+
+  it('normalizes invalid popup roles before projecting them into ARIA', async () => {
+    const el = (await fixture(html`
+      <lr-popover popup-role="bogus" open style="--show-duration: 0ms; --hide-duration: 0ms">
+        <button slot="trigger">Open</button>
+        <p>Details</p>
+      </lr-popover>
+    `)) as LyraPopover;
+    await el.updateComplete;
+    const trigger = el.querySelector('button') as HTMLButtonElement;
+    const surface = el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
+
+    expect({
+      property: el.popupRole,
+      trigger: trigger.getAttribute('aria-haspopup'),
+      surface: surface.getAttribute('role'),
+    }).to.deep.equal({ property: 'dialog', trigger: 'dialog', surface: 'dialog' });
+
+    el.popupRole = 'menu';
+    await el.updateComplete;
+    (el as unknown as { popupRole: string }).popupRole = 'tooltip';
+    await el.updateComplete;
+
+    expect({
+      property: el.popupRole,
+      trigger: trigger.getAttribute('aria-haspopup'),
+      surface: surface.getAttribute('role'),
+    }).to.deep.equal({ property: 'dialog', trigger: 'dialog', surface: 'dialog' });
+    await expect(el).to.be.accessible();
   });
 
   it('renders no popup role or generated name under popup-role="none"', async () => {
@@ -3148,7 +3220,11 @@ describe('public animation registry integration', () => {
         );
         const nativeAnimation = popup.getAnimations().find((animation) => animation.id === showName);
         expect(nativeAnimation?.id).to.equal(showName);
-        expect(String(nativeAnimation?.effect?.getKeyframes()[0]?.opacity)).to.equal('0.2');
+        const effect = nativeAnimation?.effect;
+        if (!(effect instanceof KeyframeEffect)) {
+          throw new Error(`expected ${showName} to use a KeyframeEffect`);
+        }
+        expect(String(effect.getKeyframes()[0]?.['opacity'])).to.equal('0.2');
         nativeAnimation?.finish();
         await shown;
 

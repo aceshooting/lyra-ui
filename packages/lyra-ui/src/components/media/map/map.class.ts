@@ -223,10 +223,11 @@ export interface LyraMapChoroplethLayer {
   readonly geojson: FeatureCollection;
   readonly field: string;
   /**
-   * `[value, color]` pairs, ascending by `value`, fed to a maplibre-gl
-   * `interpolate` expression. Must contain at least one pair -- an empty
-   * array can't build a valid expression, so it's ignored (the existing fill
-   * layer, if any, is left as-is) rather than applied.
+   * `[value, color]` pairs, ascending by `value`, fed to a maplibre-gl `interpolate` or `step`
+   * expression. CSS custom-property references are resolved against the host before they reach
+   * MapLibre's WebGL canvas. Must contain at least one pair -- an empty array can't build a valid
+   * expression, so it's ignored (the existing fill layer, if any, is left as-is) rather than
+   * applied.
    */
   readonly stops: readonly (readonly [number, string])[];
   /**
@@ -248,8 +249,9 @@ export interface LyraMapChoroplethLayer {
    * `'step'` — maplibre's `['step', …]` requires that base output before its first threshold.
    *
    * Defaults to the first stop's own color, which makes the common case (a legend whose first band
-   * starts at the data's minimum) need no extra configuration. Set it when the map should
-   * distinguish "below the lowest advertised band" from the lowest band itself.
+   * starts at the data's minimum) need no extra configuration. CSS custom-property references are
+   * resolved against the host before reaching MapLibre. Set it when the map should distinguish
+   * "below the lowest advertised band" from the lowest band itself.
    */
   readonly stepBaseColor?: string;
 }
@@ -276,6 +278,84 @@ export type LyraMapChoroplethInterpolation = 'linear' | 'logarithmic' | 'step';
  * palette without collapsing the top of the range into a single band.
  */
 const CHOROPLETH_LOG_INTERPOLATION_BASE = 0.25;
+
+/** Number of exact MapLibre interpolation samples retained per legend interval. The public stop
+ * count is already bounded, so this remains a bounded amount of inline gradient data. */
+const CHOROPLETH_LEGEND_SAMPLES_PER_INTERVAL = 8;
+
+/** MapLibre's exponential interpolation factor, kept in lockstep with the expression emitted for
+ * a logarithmic choropleth. */
+function choroplethLogInterpolationFactor(input: number, lower: number, upper: number): number {
+  const difference = upper - lower;
+  if (difference === 0) return 0;
+  const progress = input - lower;
+  return (
+    (Math.pow(CHOROPLETH_LOG_INTERPOLATION_BASE, progress) - 1) /
+    (Math.pow(CHOROPLETH_LOG_INTERPOLATION_BASE, difference) - 1)
+  );
+}
+
+function compactGradientPercent(value: number): string {
+  return String(Math.round(Math.min(100, Math.max(0, value)) * 10_000) / 10_000);
+}
+
+/**
+ * Builds the continuous legend image. Linear choropleths retain the authored stops verbatim;
+ * logarithmic choropleths sample the same exponential factor MapLibre evaluates and place those
+ * mixed colors at their true data positions. CSS gradients have no exponential easing primitive,
+ * so bounded sampling is the narrow way to keep the visible key truthful.
+ */
+function choroplethLegendGradientImage(
+  stops: readonly (readonly [number, string])[],
+  interpolation: LyraMapChoroplethInterpolation | undefined,
+): string {
+  const lo = stops[0]!;
+  const hi = stops[stops.length - 1]!;
+  const span = hi[0] - lo[0];
+  const stopPercent = (value: number, index: number): number =>
+    span > 0 ? ((value - lo[0]) / span) * 100 : (index / (stops.length - 1)) * 100;
+
+  if (interpolation !== 'logarithmic' || span <= 0) {
+    const image = stops
+      .map(
+        ([value, color], index) =>
+          `${color} ${compactGradientPercent(stopPercent(value, index))}%`,
+      )
+      .join(', ');
+    return `linear-gradient(to right, ${image})`;
+  }
+
+  const image = [`${lo[1]} 0%`];
+  for (let index = 1; index < stops.length; index += 1) {
+    const lower = stops[index - 1]!;
+    const upper = stops[index]!;
+    const interval = upper[0] - lower[0];
+    if (interval <= 0) {
+      image.push(`${upper[1]} ${compactGradientPercent(stopPercent(upper[0], index))}%`);
+      continue;
+    }
+    for (let sample = 1; sample <= CHOROPLETH_LEGEND_SAMPLES_PER_INTERVAL; sample += 1) {
+      const intervalProgress = sample / CHOROPLETH_LEGEND_SAMPLES_PER_INTERVAL;
+      const input = lower[0] + interval * intervalProgress;
+      const position = ((input - lo[0]) / span) * 100;
+      if (sample === CHOROPLETH_LEGEND_SAMPLES_PER_INTERVAL) {
+        image.push(`${upper[1]} ${compactGradientPercent(position)}%`);
+        continue;
+      }
+      const factor = Math.min(
+        1,
+        Math.max(0, choroplethLogInterpolationFactor(input, lower[0], upper[0])),
+      );
+      const lowerWeight = compactGradientPercent((1 - factor) * 100);
+      const upperWeight = compactGradientPercent(factor * 100);
+      image.push(
+        `color-mix(in srgb, ${lower[1]} ${lowerWeight}%, ${upper[1]} ${upperWeight}%) ` +
+          `${compactGradientPercent(position)}%`,
+      );
+    }
+  }
+  return `linear-gradient(to right, ${image.join(', ')})`;
+}
 
 /**
  * What a `dataLayers` entry renders.
@@ -425,7 +505,8 @@ export interface LyraMapMarker {
   readonly lngLat: readonly [number, number];
   /** A CSS color. Invalid values and `url()` paint servers use maplibre-gl's default marker color. */
   readonly color?: string;
-  /** Visible popup text and the marker button's accessible name. */
+  /** Visible popup text and the marker button's accessible name. A runtime record with a
+   * non-string label is malformed and omitted without suppressing valid sibling markers. */
   readonly label?: string;
   /**
    * Rendered as the marker's popup content via maplibre-gl's
@@ -1185,6 +1266,8 @@ export interface LyraMapEventMap {
  * @csspart error - Visible localized message shown instead of `container` when `mapStyle` is
  *   missing, the optional peer is unavailable, WebGL2 cannot be created, or map initialization
  *   fails; the transition is announced through the shared light-DOM assertive region.
+ * @cssprop [--lr-map-height=var(--lr-size-24rem)] - Default host block size, shared with the
+ *   pre-upgrade reservation stylesheet. An explicit outer `block-size` still wins.
  * @cssprop [--lr-map-choropleth-fill-opacity=0.75] - Fill opacity for choropleth and polygon
  *   `dataLayers` fills. Read from the resolved cascade whenever those layers are applied or painted
  *   after a theme change.
@@ -1315,10 +1398,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * `interpolate` fill is itself a continuous ramp that discrete rows cannot honestly describe.
    *
    * Takes the same `[value, color]` stop shape as `choropleth.stops`, so the usual assignment is
-   * `legendGradient = myChoropleth.stops` and the key cannot drift from the layer it describes.
-   * Stops are sorted ascending, bounded, and filtered to finite values carrying a CSS-parsable
-   * color; fewer than two usable stops render no bar at all, since a one-stop "gradient" is a flat
-   * block that describes nothing. Unset (the default) renders exactly today's markup.
+   * `legendGradient = myChoropleth.stops`. A dev-mode diagnostic reports an independently authored
+   * copy that drifts from the layer. Stops are sorted ascending, bounded, and filtered to finite
+   * values carrying a CSS-parsable color; fewer than two usable stops render no bar at all, since a
+   * one-stop "gradient" is a flat block that describes nothing. A logarithmic choropleth samples
+   * the same exponential interpolation in its visible key; unset (the default) renders exactly
+   * today's markup.
    *
    * Endpoint labels default to this component's locale-aware formatting of the lowest and highest
    * stop values; `legendGradientLoLabel`/`legendGradientHiLabel` override them.
@@ -1330,6 +1415,35 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const previous = this._legendGradient;
     this._legendGradient = normalizeMapLegendGradient(value);
     this.requestUpdate('legendGradient', previous);
+  }
+
+  /** Dev-mode-only: catches a gradient key whose value/color stops disagree with the layer it
+   * claims to describe. Warning preserves explicit override behavior while making drift visible. */
+  private warnOnLegendChoroplethMismatch(): void {
+    const layer = this.choropleth;
+    const legend = this.legendGradient;
+    if (!layer || legend.length === 0 || !Array.isArray(layer.stops) || layer.stops.length === 0) {
+      return;
+    }
+    const sameLength = legend.length === layer.stops.length;
+    const sameStops =
+      sameLength &&
+      legend.every(([legendValue, legendColor], index) => {
+        const layerStop = layer.stops[index];
+        return (
+          Array.isArray(layerStop) &&
+          layerStop[0] === legendValue &&
+          resolvedLayerColor(this, layerStop[1], undefined) ===
+            resolvedLayerColor(this, legendColor, undefined)
+        );
+      });
+    if (sameStops) return;
+    devWarnOnce(
+      'lyra-map-legend-choropleth-mismatch',
+      `<${this.localName}>: legendGradient does not match choropleth.stops, so the visible key ` +
+        'may misdescribe the map. Assign the same stops array to both, or derive both from one ' +
+        'source.',
+    );
   }
   /** Overrides the low endpoint's caption; defaults to the lowest stop value, locale-formatted. */
   @property({ attribute: 'legend-gradient-lo-label' }) legendGradientLoLabel: string | null = null;
@@ -1524,6 +1638,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    *    was written for -- and with no `try`/`catch` the exception escaped `updated()` into the
    *    consumer's render cycle, degenerating into repeated throws from the peer's own matrix math
    *    on every later `resize`/`setZoom` and a canvas that never paints again.
+   *  * Once that transform is already damaged, the defensive `getZoom()`/`getCenter()` snapshots
+   *    can throw too. They therefore belong to the same boundary as the mutation and readback.
    *
    * Either way the answer is the same: drop the constraint and restore the camera -- an
    * unconstrained map is a far smaller defect than a blank one -- and say so once, naming the
@@ -1533,9 +1649,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const map = this._map;
     if (!map || typeof map.setMaxBounds !== 'function') return;
     const bounds = this.safeMaxBounds;
-    const zoomBefore = map.getZoom();
-    const centerBefore = map.getCenter();
+    let zoomBefore: number | undefined;
+    let centerBefore: { lng: number; lat: number } | undefined;
     try {
+      zoomBefore = map.getZoom();
+      centerBefore = map.getCenter();
       map.setMaxBounds(bounds);
       if (bounds === null) return;
       if (Number.isFinite(map.getZoom())) return;
@@ -1548,7 +1666,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     } catch {
       // Nothing further to try: the revert is best-effort by construction.
     }
-    if (Number.isFinite(zoomBefore)) map.setZoom(zoomBefore);
+    if (typeof zoomBefore === 'number' && Number.isFinite(zoomBefore)) map.setZoom(zoomBefore);
     if (centerBefore) map.setCenter([centerBefore.lng, centerBefore.lat]);
     devWarnOnce(
       'lyra-map-max-bounds-rejected',
@@ -1867,6 +1985,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.setAttribute('aria-busy', String(this.loading));
+    if (changed.has('choropleth') || changed.has('legendGradient')) {
+      this.warnOnLegendChoroplethMismatch();
+    }
 
     // Became visible after the maplibre-gl module had already loaded (the
     // reverse order — module loads first, visibility follows — is the
@@ -2025,14 +2146,17 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // `['step', input, base, threshold, color, …]` -- discrete bands, not a ramp. The base output
     // (values below the first threshold) defaults to the first stop's own color, so a legend whose
     // first band starts at the data minimum needs no extra configuration.
+    const resolvedStops = stops.map(
+      ([value, color]) => [value, resolvedLayerColor(this, color, undefined)] as const,
+    );
     let colorExpr: unknown[];
     if (this.choropleth.interpolation === 'step') {
       const base =
         typeof this.choropleth.stepBaseColor === 'string' && this.choropleth.stepBaseColor.trim()
-          ? this.choropleth.stepBaseColor.trim()
-          : stops[0]![1];
+          ? resolvedLayerColor(this, this.choropleth.stepBaseColor, undefined)
+          : resolvedStops[0]![1];
       colorExpr = ['step', ['get', field], base];
-      for (const [value, color] of stops) colorExpr.push(value, color);
+      for (const [value, color] of resolvedStops) colorExpr.push(value, color);
     } else {
       // `stops` stay in the data's own units under either interpolation, so a consumer never has to
       // pre-transform values to log10 and then hand-relabel the legend back into real units.
@@ -2041,7 +2165,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           ? ['exponential', CHOROPLETH_LOG_INTERPOLATION_BASE]
           : ['linear'];
       colorExpr = ['interpolate', interpolationExpr, ['get', field]];
-      for (const [value, color] of stops) colorExpr.push(value, color);
+      for (const [value, color] of resolvedStops) colorExpr.push(value, color);
     }
 
     if (this._map.getLayer(fillLayerId)) {
@@ -2502,6 +2626,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     for (const candidate of markers) {
       const lngLat = this.validMarkerLngLat(candidate);
       if (!lngLat) continue;
+      const rawLabel = (candidate as { label?: unknown }).label;
+      if (rawLabel !== undefined && typeof rawLabel !== 'string') continue;
       const m = candidate as LyraMapMarker;
       const rawId: unknown = m.id;
       let key: string;
@@ -2866,18 +2992,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (stops.length < 2) return nothing;
     const lo = stops[0]!;
     const hi = stops[stops.length - 1]!;
-    const span = hi[0] - lo[0];
-    // Position every intermediate stop at its true proportion of the value range, so the bar shows
-    // the ramp the `interpolate` expression actually produces rather than evenly spacing colors
-    // that are not evenly spaced in value. A zero span (every stop on the same value) can't be
-    // divided, so those fall back to even spacing.
-    const image = stops
-      .map(([value, color], index) => {
-        const percent =
-          span > 0 ? ((value - lo[0]) / span) * 100 : (index / (stops.length - 1)) * 100;
-        return `${color} ${percent}%`;
-      })
-      .join(', ');
+    const image = choroplethLegendGradientImage(stops, this.choropleth?.interpolation);
     return html`<div class="legend-gradient">
       <span part="legend-lo">${this.legendGradientLoLabel ?? this.formatCount(lo[0])}</span>
       <span
@@ -2885,7 +3000,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         class="gradient-bar"
         aria-hidden="true"
         inert
-        style=${styleMap({ backgroundImage: `linear-gradient(to right, ${image})` })}
+        style=${styleMap({ backgroundImage: image })}
       ></span>
       <span part="legend-hi">${this.legendGradientHiLabel ?? this.formatCount(hi[0])}</span>
     </div>`;

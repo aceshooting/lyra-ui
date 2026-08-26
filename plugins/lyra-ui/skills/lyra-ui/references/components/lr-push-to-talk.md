@@ -6,6 +6,7 @@
 - **Class** `LyraPushToTalk`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/push-to-talk/push-to-talk.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -38,6 +39,9 @@ properties: `state: PushToTalkState` (`'idle' | 'requesting' | 'denied' | 'recor
 mirrored to `data-state`) and `stream: MediaStream | null` (the live capture stream, assignable straight onto
 `lr-audio-visualizer.stream`).
 
+A host `aria-label` names the internal trigger by attribute presence; an explicitly empty value is
+preserved instead of being replaced by the generated Hold/Start/Stop label.
+
 `levelEvents`, `maxDurationMs`, and `showTimer` stay reactive during an active recording: changing
 them starts or stops their audio-analysis, deadline, or elapsed-time work immediately. A changed
 maximum remains measured from the original recording start rather than granting a fresh duration;
@@ -54,7 +58,8 @@ APIs, so do not place a second interactive control there.
 **Events:** `lr-record-start` (`detail: { stream: MediaStream }`), `lr-record-chunk` (`detail: { blob:
 Blob }`, only when `timeslice-ms > 0`), `lr-record-stop` (`detail: { blob: Blob; durationMs: number
 }`), `lr-record-cancel` (`detail: null`), `lr-record-error`
-(`detail: { error: DOMException | Error }`, including recorder runtime errors), `lr-level`
+(`detail: { error: DOMException | Error }`, covering permission, recorder construction/start, and
+recorder runtime failures), `lr-level`
 (`detail: { level: number }` — 0–1 amplitude, opt-in via `level-events`), and `lr-record-state-change`
 (`detail: { state: 'idle' | 'requesting' | 'denied' | 'recording' | 'error' }`).
 

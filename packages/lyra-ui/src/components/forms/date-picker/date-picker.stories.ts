@@ -26,6 +26,26 @@ export const Range: Story = {
   render: () => html`<lr-date-picker mode="range" months="2"></lr-date-picker>`,
 };
 
+export const ControlledSelection: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`selection` is a writable parsed range view. Property writes use the same endpoint validation, reversal normalization, ISO serialization, and event-silent controlled semantics as `valueAsRange`.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-date-picker
+      mode="range"
+      .selection=${{
+        from: new Date(2026, 6, 20),
+        to: new Date(2026, 6, 10),
+      }}
+    ></lr-date-picker>
+  `,
+};
+
 export const RangeNarrowAllocation: Story = {
   name: "Two months at a 320px allocation",
   parameters: {

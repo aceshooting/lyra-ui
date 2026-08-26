@@ -6,6 +6,7 @@
 - **Class** `LyraInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/input/input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 17 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -60,8 +61,9 @@ shared hit target (42px including the row border at the default theme); `l` and 
 - `clearable: boolean = false` (reflected) — shows a localized clear action while a `text` or
   `search` input has a value; clearing preserves input focus
 - `withClear: boolean = false` (attribute `with-clear`) — Web Awesome's spelling of `clearable`;
-  either one shows the same action. Inherited by `lr-number-input` and `lr-time-input`, where it is
-  inert for the same reason `clearable` is (neither type renders a clear action)
+  either one shows the same action. Inherited by `lr-number-input`, where it is inert because that
+  type renders no clear action, and by `lr-time-input`, where it enables the segmented field's
+  localized clear action
 - `readonly: boolean = false` (reflected) — forwarded to the native input and disables clearing
 - `label: string = ''`
 - `hint: string = ''`
@@ -252,9 +254,10 @@ what is specific to it.
 - **`setCustomValidity(message)` and `resetValidity()` are on every form-associated _value_ control
   here** — every one
   that submits something, whether it drives `ElementInternals` through the shared mixin or by hand.
-  (`lr-button` and `lr-icon-button` are form-associated so an ancestor `<fieldset disabled>` and
-  `form.elements` reach them, but they carry no value or validity, so they have no such method.) It
-  is the standard channel for a rejection no client-side constraint can express — a server-side
+  (`lr-button` is a form-associated submitter, so an ancestor `<fieldset disabled>` and
+  `form.elements` reach it, but it carries no value or validity and therefore has no such method;
+  `lr-icon-button` is deliberately not form-associated.) It is the standard channel for a rejection
+  no client-side constraint can express — a server-side
   "that email is already registered". A non-empty message raises `customError` and becomes
   `validationMessage`, so the control fails `checkValidity()`, blocks submission, and matches
   `:invalid`/`:state(invalid)`.

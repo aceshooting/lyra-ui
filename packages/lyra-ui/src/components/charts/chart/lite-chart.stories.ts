@@ -317,9 +317,10 @@ export const SharedBarXAlignment: Story = {
 };
 
 /** `maxLabels` thins out which x-axis category labels render text (bars themselves always still
- *  render) once there are more categories than that -- always keeping the first and last label,
- *  spreading the rest roughly evenly, so a long category list stays legible in `layout="fit"`
- *  instead of the axis text overlapping into an unreadable smear. */
+ *  render) once there are more categories than that -- selecting from any bounded record sample,
+ *  always keeping its first and last label, and spreading the rest roughly evenly, so a long
+ *  category list stays legible in `layout="fit"` instead of the axis text overlapping into an
+ *  unreadable smear. */
 export const LabelDecimation: Story = {
   render: () => {
     const labels = Array.from({ length: 24 }, (_, i) => `Week ${i + 1}`);

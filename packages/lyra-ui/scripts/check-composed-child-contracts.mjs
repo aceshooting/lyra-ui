@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { isMainModule } from './is-main-module.mjs';
+
 // Prevent silent no-op composition bugs. Every statically named `<lr-*>` child in a Lit template
 // must receive only public attributes/properties from the package's custom-elements manifest.
 // This covers both component implementation templates and Storybook examples. It deliberately
@@ -453,4 +455,4 @@ function runCli() {
   );
 }
 
-if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))) runCli();
+if (isMainModule(import.meta.url)) runCli();

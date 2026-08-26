@@ -6,6 +6,7 @@
 - **Class** `LyraCodeEditor`, also available unregistered from `@aceshooting/lyra-ui/components/forms/code-editor/code-editor.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 8 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -39,7 +40,9 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
   same supplemental length validity as user edits.
 - `resize: 'none' | 'both' | 'horizontal' | 'vertical' | 'auto' = 'both'` — written as the
   textarea's inline `resize`; `auto` grows the owned surface to its content without a manual drag
-  handle, and an invalid runtime value falls back to `'both'`
+  handle. A consumer `max-block-size` on the `textarea` part caps that growth and restores vertical
+  scrolling; changing away from `auto` clears its inline block-size and overflow state. An invalid
+  runtime value falls back to `'both'`
 - `size: LyraSize = 'm'` (reflected) — visual size on the shared control ladder, the same scale as
   `lr-textarea`/`lr-input`/`lr-select`, accepting both spellings of every tier (`2xs`/`xs`/`s`/`m`/
   `l`/`xl` and `small`/`medium`/`large`). Governs the gutter's and textarea's padding and font size,

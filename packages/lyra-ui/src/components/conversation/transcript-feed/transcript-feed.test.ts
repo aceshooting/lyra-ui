@@ -1,7 +1,7 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './transcript-feed.js';
 import type { LyraTranscriptFeed, LyraTranscriptEntry } from './transcript-feed.js';
-import { styles } from './transcript-feed.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function entryEls(el: LyraTranscriptFeed): HTMLElement[] {
   return [...el.shadowRoot!.querySelectorAll('[part~="entry"]')] as HTMLElement[];
@@ -29,7 +29,7 @@ it('shows the localized empty state (or a slotted override) when entries is empt
   const withSlot = (await fixture(html`
     <lr-transcript-feed><span slot="empty">Nothing said yet</span></lr-transcript-feed>
   `)) as LyraTranscriptFeed;
-  expect(withSlot.shadowRoot!.querySelector('[part="empty"] slot')!.assignedElements()[0].textContent).to.equal(
+  expect(withSlot.shadowRoot!.querySelector<HTMLSlotElement>('[part="empty"] slot')!.assignedElements()[0]!.textContent).to.equal(
     'Nothing said yet',
   );
 });
@@ -195,13 +195,15 @@ it('retains zero as an explicit full-history rendering opt-in', async () => {
   expect(entryEls(el)).to.have.lengthOf(501);
 });
 
-it('uses first-wins identity and rejects empty or blank transcript ids from rendering', async () => {
+it('uses first-wins identity and rejects malformed transcript ids or text from rendering and announcements', async () => {
   const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
   el.entries = [
     null,
     7,
     { id: 'same', text: 'first' },
     { id: 'same', text: 'second' },
+    { id: 'missing-text' },
+    { id: 'null-text', text: null },
     { id: '', text: 'missing identity' },
     { id: '   ', text: 'blank identity' },
   ] as unknown as LyraTranscriptEntry[];
@@ -247,9 +249,33 @@ describe('follow / stick-to-bottom contract', () => {
     expect((el.shadowRoot!.querySelector('[part="jump-button"]')) === null).to.be.true;
   });
 
-  it('gives jump-button a hover state', () => {
-    const css = styles[0].cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='jump-button'\]:hover/);
+  it('renders the jump-button hover state', async () => {
+    const el = await fixture<LyraTranscriptFeed>(html`
+      <lr-transcript-feed
+        style="block-size: 120px; --lr-color-brand-quiet: rgb(1, 2, 3)"
+      ></lr-transcript-feed>
+    `);
+    el.entries = Array.from({ length: 30 }, (_, i) => ({ id: String(i), text: `line ${i}` }));
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    base.scrollTop = 0;
+    base.dispatchEvent(new Event('scroll'));
+    await el.updateComplete;
+    const button = el.shadowRoot!.querySelector<HTMLElement>('[part="jump-button"]')!;
+    button.scrollIntoView({ block: 'center' });
+    const rect = button.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(
+        () => getComputedStyle(button).backgroundColor === 'rgb(1, 2, 3)',
+        'the jump-button hover background never appeared',
+      );
+    } finally {
+      await resetMouse();
+    }
   });
 
   it('auto-scrolls to the bottom on new entries while follow is true', async () => {
@@ -520,6 +546,34 @@ it('resets announcement history only when sessionId changes and baselines the ne
   ];
   await el.updateComplete;
   expect(sinkMessages()).to.deep.equal(['session A', 'new in session B']);
+});
+
+it('keeps the first entries after a standalone sessionId change as a silent baseline', async () => {
+  const el = (await fixture(html`
+    <lr-transcript-feed
+      session-id="session-a"
+      .entries=${[{ id: 'turn-a', text: 'existing session A' }] as LyraTranscriptEntry[]}
+    ></lr-transcript-feed>
+  `)) as LyraTranscriptFeed;
+  await el.updateComplete;
+  expect(sinkMessages(), 'the mounted session is silent').to.deep.equal([]);
+
+  el.sessionId = 'session-b';
+  await el.updateComplete;
+  expect(sinkMessages(), 'changing identity alone announces nothing').to.deep.equal([]);
+
+  el.entries = [{ id: 'turn-b-existing', text: 'existing session B' }];
+  await el.updateComplete;
+  expect(sinkMessages(), 'the later-arriving new-session backlog is a silent baseline').to.deep.equal(
+    [],
+  );
+
+  el.entries = [
+    ...el.entries,
+    { id: 'turn-b-new', text: 'new in session B' },
+  ];
+  await el.updateComplete;
+  expect(sinkMessages()).to.deep.equal(['new in session B']);
 });
 
 it('preserves an explicitly empty log label override by presence', async () => {

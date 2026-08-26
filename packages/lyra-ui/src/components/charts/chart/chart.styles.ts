@@ -30,6 +30,7 @@ export const styles = css`
       'plot'
       'legend'
       'warning'
+      'table-toggle'
       'table';
     grid-template-columns: minmax(0, 1fr);
     align-items: start;
@@ -138,6 +139,7 @@ export const styles = css`
       'legend'
       'plot'
       'warning'
+      'table-toggle'
       'table';
   }
   /* Column 1 vs column 2, not physical left vs right: a grid numbers columns along the inline axis,
@@ -148,6 +150,7 @@ export const styles = css`
     grid-template-areas:
       'legend plot'
       'warning warning'
+      'table-toggle table-toggle'
       'table table';
     grid-template-columns:
       minmax(0, min(33cqi, var(--lr-chart-legend-side-max, var(--lr-size-15rem))))
@@ -157,6 +160,7 @@ export const styles = css`
     grid-template-areas:
       'plot legend'
       'warning warning'
+      'table-toggle table-toggle'
       'table table';
     grid-template-columns:
       minmax(0, 1fr)
@@ -169,6 +173,7 @@ export const styles = css`
         'plot'
         'legend'
         'warning'
+        'table-toggle'
         'table';
       grid-template-columns: minmax(0, 1fr);
     }
@@ -258,6 +263,7 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='data-table-toggle'] {
+    grid-area: table-toggle;
     align-self: flex-start;
     font: inherit;
     font-size: var(--lr-font-size-xs);

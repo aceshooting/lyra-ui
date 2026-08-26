@@ -21,8 +21,8 @@ describe('buildCalendarGrid', () => {
     // 2026-03-05 is a Thursday.
     const { cells, weekCount } = buildCalendarGrid([{ date: '2026-03-05', value: 1 }]);
     expect(cells).to.have.length(1);
-    expect(cells[0].week).to.equal(0);
-    expect(cells[0].weekday).to.equal(4); // Sun=0 .. Thu=4
+    expect(cells[0]!.week).to.equal(0);
+    expect(cells[0]!.weekday).to.equal(4); // Sun=0 .. Thu=4
     expect(weekCount).to.equal(1);
   });
 
@@ -31,9 +31,9 @@ describe('buildCalendarGrid', () => {
       { date: '2026-03-05', value: 1 },
       { date: '2026-03-12', value: 2 },
     ]);
-    expect(cells[0].week).to.equal(0);
-    expect(cells[1].week).to.equal(1);
-    expect(cells[1].weekday).to.equal(cells[0].weekday);
+    expect(cells[0]!.week).to.equal(0);
+    expect(cells[1]!.week).to.equal(1);
+    expect(cells[1]!.weekday).to.equal(cells[0]!.weekday);
   });
 
   it('emits a month label at the Sunday nearest each month transition', () => {
@@ -57,8 +57,8 @@ describe('buildCalendarGrid', () => {
       { date: '2026-03-05', value: 9 },
     ]);
     expect(cells).to.have.length(1);
-    expect(cells[0].date).to.equal('2026-03-05');
-    expect(cells[0].value).to.equal(9);
+    expect(cells[0]!.date).to.equal('2026-03-05');
+    expect(cells[0]!.value).to.equal(9);
     expect(weekCount).to.equal(1);
     expect(Number.isNaN(weekCount)).to.equal(false);
   });
@@ -122,7 +122,7 @@ describe('buildCalendarGrid', () => {
   it('defaults firstDayOfWeek to 0 (Sunday), anchoring the grid the same way as before', () => {
     // 2026-03-05 is a Thursday.
     const { cells } = buildCalendarGrid([{ date: '2026-03-05', value: 1 }]);
-    expect(cells[0].weekday).to.equal(4); // Sun=0 .. Thu=4
+    expect(cells[0]!.weekday).to.equal(4); // Sun=0 .. Thu=4
   });
 
   it('anchors the grid at the given firstDayOfWeek instead of Sunday, shifting week/weekday assignment across a week boundary', () => {
@@ -136,18 +136,18 @@ describe('buildCalendarGrid', () => {
     ];
 
     const sundayAnchored = buildCalendarGrid(days, 0);
-    expect(sundayAnchored.cells[0].week).to.equal(0);
-    expect(sundayAnchored.cells[0].weekday).to.equal(0); // Sunday is weekday 0
-    expect(sundayAnchored.cells[1].week).to.equal(0);
-    expect(sundayAnchored.cells[1].weekday).to.equal(1); // Monday is weekday 1
+    expect(sundayAnchored.cells[0]!.week).to.equal(0);
+    expect(sundayAnchored.cells[0]!.weekday).to.equal(0); // Sunday is weekday 0
+    expect(sundayAnchored.cells[1]!.week).to.equal(0);
+    expect(sundayAnchored.cells[1]!.weekday).to.equal(1); // Monday is weekday 1
 
     const mondayAnchored = buildCalendarGrid(days, 1);
     // Monday (2026-03-02) is the anchor weekday, so it starts a fresh week
     // (week 1), while Sunday (2026-03-01) is weekday 6 of the *previous* week.
-    expect(mondayAnchored.cells[0].week).to.equal(0);
-    expect(mondayAnchored.cells[0].weekday).to.equal(6); // Sunday is 6 days after the Monday anchor
-    expect(mondayAnchored.cells[1].week).to.equal(1);
-    expect(mondayAnchored.cells[1].weekday).to.equal(0); // Monday is the anchor weekday
+    expect(mondayAnchored.cells[0]!.week).to.equal(0);
+    expect(mondayAnchored.cells[0]!.weekday).to.equal(6); // Sunday is 6 days after the Monday anchor
+    expect(mondayAnchored.cells[1]!.week).to.equal(1);
+    expect(mondayAnchored.cells[1]!.weekday).to.equal(0); // Monday is the anchor weekday
   });
 
   it('formats month labels using the runtime locale, not a hardcoded "en"', () => {
@@ -156,7 +156,7 @@ describe('buildCalendarGrid', () => {
       month: 'short',
       timeZone: 'UTC',
     });
-    expect(monthLabels[0].label).to.equal(expected);
+    expect(monthLabels[0]!.label).to.equal(expected);
   });
 
   it('calls monthLabelText with the real JS month index (0-based) and year, using its return value instead of the locale-derived label', () => {
@@ -166,7 +166,7 @@ describe('buildCalendarGrid', () => {
       return `M${jsMonth}-${year}`;
     });
     expect(seen).to.deep.equal([[2, 2026]]);
-    expect(monthLabels[0].label).to.equal('M2-2026');
+    expect(monthLabels[0]!.label).to.equal('M2-2026');
   });
 
   it('falls back to the locale-derived label when monthLabelText returns undefined', () => {
@@ -175,7 +175,7 @@ describe('buildCalendarGrid', () => {
       month: 'short',
       timeZone: 'UTC',
     });
-    expect(monthLabels[0].label).to.equal(expected);
+    expect(monthLabels[0]!.label).to.equal(expected);
   });
 
   it('formats month labels using an explicitly passed locale, overriding the runtime default', () => {
@@ -184,7 +184,7 @@ describe('buildCalendarGrid', () => {
       month: 'short',
       timeZone: 'UTC',
     });
-    expect(monthLabels[0].label).to.equal(expected);
+    expect(monthLabels[0]!.label).to.equal(expected);
   });
 });
 

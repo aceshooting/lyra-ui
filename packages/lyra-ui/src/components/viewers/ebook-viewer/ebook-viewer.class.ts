@@ -10,7 +10,6 @@ import {
   readResponseArrayBuffer,
   resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
@@ -936,19 +935,10 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       matchCountExact: this.searchMatchCountExact,
       activeIndex: this.searchActiveIndex,
     });
-    const numberFormat = getNumberFormat(this.effectiveLocale);
     announceSearchResult(
-      (key, fallback, values) => this.localize(
-        key,
-        fallback,
-        values
-          ? Object.fromEntries(Object.entries(values).map(([name, value]) => [
-              name,
-              typeof value === 'number' ? numberFormat.format(value) : value,
-            ]))
-          : undefined,
-      ),
+      (key, fallback, values) => this.localize(key, fallback, values),
       this.announcer,
+      this.effectiveLocale,
       this.searchMatches.length,
       this.searchActiveIndex,
     );

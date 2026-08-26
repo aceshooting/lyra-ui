@@ -12,6 +12,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { tag } from '../../../internal/prefix.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
+import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { groupStyles } from './radio-group.styles.js';
 import type { LyraRadio } from './radio.class.js';
 import { dispatchNativeEvent, dispatchNativeInputEvent } from '../../../internal/native-event-relay.js';
@@ -47,7 +48,7 @@ export interface LyraRadioGroupEventMap {
   'lr-invalid': CustomEvent<null>;
 }
 
-export type RadioGroupOrientation = 'horizontal' | 'vertical';
+export type RadioGroupOrientation = LyraOrientation;
 
 // The two tags a group manages. `<lr-radio-button>` is a `LyraRadio` subclass, so every group
 // behaviour applies to it unchanged -- but discovery is by local name (an `instanceof` check would
@@ -58,6 +59,9 @@ const RADIO_TAGS = (): string[] => [tag('radio'), tag('radio-button')];
 
 /**
  * `<lr-radio-group>` — a labeled, keyboard-navigable group of radios.
+ * A required but pristine group exposes `aria-invalid="false"`; intrinsic invalidity is projected
+ * to the radiogroup only after user interaction or a native validity check (`checkValidity()`,
+ * `reportValidity()`, or form-level validation), while explicit error chrome remains immediate.
  *
  * @customElement lr-radio-group
  * @slot - Radio controls.
@@ -76,8 +80,8 @@ const RADIO_TAGS = (): string[] => [tag('radio'), tag('radio-button')];
  * @cssstate optional - Matches while `required` is not set.
  * @cssstate valid - Matches while the aggregate value satisfies every constraint.
  * @cssstate invalid - Matches while the aggregate value fails a constraint.
- * @cssstate user-valid - Matches `valid` after user interaction or `reportValidity()`.
- * @cssstate user-invalid - Matches `invalid` after user interaction or `reportValidity()`.
+ * @cssstate user-valid - Matches `valid` after user interaction or a native validity check.
+ * @cssstate user-invalid - Matches `invalid` after user interaction or a native validity check.
  * @csspart base - The radiogroup wrapper.
  * @csspart form-control - Mapped form-control wrapper.
  * @csspart label - The group label.
@@ -195,6 +199,10 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   private pendingSelection?: string;
   private hadShoelaceDefaultValue = false;
 
+  /** Submitted form-data key. Lyra defaults to empty, unlike `<sl-radio-group>`'s `"option"`;
+   *  the migration codemod inserts `name="option"`, while a manual tag rename must set it
+   *  explicitly to preserve Shoelace's default.
+   * @default '' */
   get name(): string { return this._name; }
   set name(next: string | null) {
     const old = this._name;
@@ -295,6 +303,14 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     ) {
       return;
     }
+    // Native validity APIs dispatch `invalid` from ElementInternals, and form-level validation
+    // bypasses this element's public methods entirely. The event does not identify which validity
+    // API initiated the check, so it is the shared observable signal that validation was revealed.
+    // Group-owned children are valid while aggregated, so a form-level pass still reaches this
+    // branch exactly once through the FACE host.
+    this.hasInteracted = true;
+    this.reflectValidityStates();
+    this.requestUpdate();
     // A real veto point, exactly as in `installInvalidEventAlias()`: cancelling the alias cancels
     // the native `invalid` behind it, so an app presenting the failure its own way can suppress
     // the browser's validation bubble.
@@ -753,6 +769,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   reportValidity(): boolean {
     this.hasInteracted = true;
     this.updateValidity();
+    this.requestUpdate();
     return this.internals.reportValidity();
   }
   private commitCustomValidity(message: string | null | undefined): void {
@@ -822,7 +839,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
         aria-required=${this.required ? 'true' : 'false'}
         aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
         aria-orientation=${this.orientation}
-        aria-invalid=${!this.internals.validity.valid ? 'true' : 'false'}
+        aria-invalid=${hasError || (this.hasInteracted && !this.internals.validity.valid) ? 'true' : 'false'}
         @keydown=${this.onKeyDown}>
         <div part="form-control">
           <div part="label form-control-label" id=${this.labelId} ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot></div>

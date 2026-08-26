@@ -27,7 +27,7 @@ function fields(el: LyraKnownDate): HTMLInputElement[] {
 }
 
 function fieldOrder(el: LyraKnownDate): string[] {
-  return fields(el).map((input) => input.dataset.field!);
+  return fields(el).map((input) => input.dataset['field']!);
 }
 
 function fieldFor(el: LyraKnownDate, name: 'day' | 'month' | 'year'): HTMLInputElement {
@@ -140,9 +140,9 @@ it('uses native InputEvent/Event constructors while retaining the shipped detail
 
   const inputPromise = oneEvent(el, 'input');
   typeInto(fieldFor(el, 'day'), '27');
-  const inputEvent = (await inputPromise) as InputEvent & {
-    detail: { day: string };
-  };
+  const observedInput = await inputPromise;
+  if (!(observedInput instanceof InputEvent)) throw new Error('Expected a native InputEvent');
+  const inputEvent = observedInput as InputEvent & { detail: { day: string } };
   expect(inputEvent.constructor.name).to.equal('InputEvent');
   expect(inputEvent.bubbles).to.be.true;
   expect(inputEvent.composed).to.be.true;
@@ -161,6 +161,24 @@ it('uses native InputEvent/Event constructors while retaining the shipped detail
   expect(changeEvent.composed).to.be.true;
   expect(changeEvent.cancelable).to.be.false;
   expect(changeEvent.detail.value).to.equal('2007-03-27');
+});
+
+it('preserves the native inputType when translating a private field input event', async () => {
+  const el = await fixture<LyraKnownDate>(html`
+    <lr-known-date locale="en-GB" value="2007-03-27"></lr-known-date>
+  `);
+  const day = fieldFor(el, 'day');
+  const translatedInput = oneEvent(el, 'input');
+  day.value = '';
+  day.dispatchEvent(new InputEvent('input', {
+    bubbles: true,
+    composed: true,
+    inputType: 'deleteContentBackward',
+  }));
+
+  const event = await translatedInput;
+  if (!(event instanceof InputEvent)) throw new Error('Expected a native InputEvent');
+  expect(event.inputType).to.equal('deleteContentBackward');
 });
 
 describe('mirrored Web Awesome public surface', () => {
@@ -540,7 +558,7 @@ it('recreates its error observer in the adopted owner realm', async () => {
   } finally {
     el.remove();
     if (descriptor) Object.defineProperty(frameWindow, 'MutationObserver', descriptor);
-    else delete (frameWindow as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+    else Reflect.deleteProperty(frameWindow, 'MutationObserver');
     frame.remove();
   }
 });
@@ -879,6 +897,18 @@ describe('declarative value sanitization', () => {
     const invalid = (await fixture(html`<lr-known-date value="2007-02-30"></lr-known-date>`)) as LyraKnownDate;
     expect(invalid.value).to.equal('');
   });
+
+  it('accepts valid four-digit ISO years below 100 without the Date constructor remap', async () => {
+    const el = await fixture<LyraKnownDate>(html`
+      <lr-known-date value="0001-01-01"></lr-known-date>
+    `);
+    expect(el.value).to.equal('0001-01-01');
+    expect(el.parts).to.deep.equal({ day: '1', month: '1', year: '1' });
+    expect(el.valueAsDate?.getFullYear()).to.equal(1);
+
+    el.parts = { day: '29', month: '2', year: '4' };
+    expect(el.value).to.equal('0004-02-29');
+  });
 });
 
 describe('valueAsDate', () => {
@@ -892,6 +922,17 @@ describe('valueAsDate', () => {
 
     el.valueAsDate = null;
     expect(el.value).to.equal('');
+  });
+
+  it('zero-pads a valueAsDate year below 100 to canonical four-digit ISO', async () => {
+    const el = await fixture<LyraKnownDate>(html`<lr-known-date></lr-known-date>`);
+    const ancient = new Date(0);
+    ancient.setHours(0, 0, 0, 0);
+    ancient.setFullYear(99, 11, 31);
+
+    el.valueAsDate = ancient;
+    expect(el.value).to.equal('0099-12-31');
+    expect(el.valueAsDate?.getFullYear()).to.equal(99);
   });
 });
 
@@ -1095,7 +1136,7 @@ describe('slot vs. attribute precedence and empty-state hiding', () => {
     const slot = el.shadowRoot!.querySelector('slot[name="label"]') as HTMLSlotElement;
     const assigned = slot.assignedElements({ flatten: true });
     expect(assigned).to.have.length(1);
-    expect(assigned[0].textContent).to.equal('Birth date');
+    expect(assigned[0]!.textContent).to.equal('Birth date');
   });
 });
 
@@ -1144,7 +1185,7 @@ describe('size', () => {
       ['small', 's'],
       ['medium', 'm'],
       ['large', 'l'],
-    ]) {
+    ] as const) {
       expect(await heightOf(alias), alias).to.equal(await heightOf(step));
     }
   });
@@ -1456,12 +1497,11 @@ describe('invalid-border cssprop indirection', () => {
 describe('lifecycle: willUpdate calls super', () => {
   it('calls super.willUpdate() so a future base-class/mixin hook is not silently skipped', async () => {
     let sawCall = false;
-    const original = LyraElement.prototype.willUpdate;
-    (
-      LyraElement.prototype as unknown as {
-        willUpdate: (changed: PropertyValues) => void;
-      }
-    ).willUpdate = function (this: LyraElement, changed: PropertyValues) {
+    const basePrototype = LyraElement.prototype as unknown as {
+      willUpdate: (changed: PropertyValues) => void;
+    };
+    const original = basePrototype.willUpdate;
+    basePrototype.willUpdate = function (this: LyraElement, changed: PropertyValues) {
       sawCall = true;
       return (original as (changed: PropertyValues) => void).call(this, changed);
     };
@@ -1470,7 +1510,7 @@ describe('lifecycle: willUpdate calls super', () => {
       await el.updateComplete;
       expect(sawCall).to.be.true;
     } finally {
-      LyraElement.prototype.willUpdate = original;
+      basePrototype.willUpdate = original;
     }
   });
 });
@@ -1894,7 +1934,7 @@ it('focus() falls back to the first field in locale order once every field is al
   await el.updateComplete;
   el.focus();
   const focused = el.shadowRoot!.activeElement as HTMLInputElement | null;
-  expect(focused?.dataset.field).to.equal('day');
+  expect(focused?.dataset['field']).to.equal('day');
 });
 
 it('falls back to ambient globals in a window missing MutationObserver, requestAnimationFrame, Event, and InputEvent', async () => {

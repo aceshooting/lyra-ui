@@ -220,7 +220,11 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  protected static override readonly ownedCollectionProperties = Object.freeze(['shortTerm', 'longTerm', 'types']);
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'shortTerm',
+    'longTerm',
+    'types',
+  ]);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -366,6 +370,9 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     return firstByRetrievalIdentity(
       Array.isArray(value) ? (value as readonly LyraMemoryItem[]) : [],
       (memory) => memory.id
+    ).filter(
+      (memory) =>
+        typeof memory.text === 'string' && memory.text.trim().length > 0
     );
   }
 
@@ -484,8 +491,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     this.pending = null;
     if (approved) {
       if (p.kind === 'add') this.emit('lr-add', { memory: p.item });
-      else
-        this.emit('lr-remove', { memoryId: p.item.id, scope: p.scope });
+      else this.emit('lr-remove', { memoryId: p.item.id, scope: p.scope });
     }
     this.refocusItem(p.scope, index);
   }

@@ -75,11 +75,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * @csspart metrics - Metric-card controls.
  * @csspart metric - One metric control.
  * @csspart metric-selected - The controlled active metric.
+ * @csspart metric-category - The metric's caller-supplied category label.
  * @csspart chart - The active metric trend.
  * @csspart runs - Evaluation run history.
  * @csspart runs-heading - Run-history heading.
  * @csspart run - One evaluation run.
  * @csspart empty - The no-runs or unavailable-controlled-slice state.
+ * @cssprop [--lr-rag-eval-dashboard-selected-border-color=var(--lr-color-brand)] - Border color
+ *   shared by the controlled active slice and metric.
  * @status stable
  * @since 7.0.0
  */
@@ -97,12 +100,16 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  protected static override readonly ownedCollectionProperties = Object.freeze(['metrics', 'runs']);
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'metrics',
+    'runs',
+  ]);
 
   static override styles = [LyraElement.styles, styles];
 
   /** Metric definitions shown as controls and used to format run values. */
-  @property({ attribute: false }) metrics: readonly LyraRagEvaluationMetric[] = [];
+  @property({ attribute: false }) metrics: readonly LyraRagEvaluationMetric[] =
+    [];
   /** Evaluation runs displayed in the trend chart and run history. */
   @property({ attribute: false }) runs: readonly LyraRagEvaluationRun[] = [];
   /** Controlled id of the active metric; empty selects the first available metric. */
@@ -135,11 +142,12 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
   private get normalizedRuns(): LyraRagEvaluationRun[] {
     return firstByRetrievalIdentity(
       Array.isArray(this.runs)
-        ? this.runs.filter((run): run is LyraRagEvaluationRun =>
-            isRecord(run) &&
-            isNonBlankIdentity(run['id']) &&
-            typeof run['label'] === 'string' &&
-            isRecord(run['metrics'])
+        ? this.runs.filter(
+            (run): run is LyraRagEvaluationRun =>
+              isRecord(run) &&
+              isNonBlankIdentity(run['id']) &&
+              typeof run['label'] === 'string' &&
+              isRecord(run['metrics'])
           )
         : [],
       (run) => run.id
@@ -149,9 +157,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
   private activeMetric(
     metrics: readonly LyraRagEvaluationMetric[]
   ): LyraRagEvaluationMetric | undefined {
-    return (
-      metrics.find((metric) => metric.id === this.metricId) ?? metrics[0]
-    );
+    return metrics.find((metric) => metric.id === this.metricId) ?? metrics[0];
   }
 
   private slices(runs: readonly LyraRagEvaluationRun[]): string[] {
@@ -167,9 +173,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
   private filteredRuns(
     runs: readonly LyraRagEvaluationRun[]
   ): readonly LyraRagEvaluationRun[] {
-    return this.slice
-      ? runs.filter((run) => run.slice === this.slice)
-      : runs;
+    return this.slice ? runs.filter((run) => run.slice === this.slice) : runs;
   }
 
   private formatMetric(
@@ -203,7 +207,9 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     this.emit('lr-run-change', { run });
   }
 
-  private renderSlices(slices: readonly string[]): TemplateResult | typeof nothing {
+  private renderSlices(
+    slices: readonly string[]
+  ): TemplateResult | typeof nothing {
     if (!slices.length) return nothing;
     const allSlicesPart = this.slice ? 'slice' : 'slice slice-selected';
     return html`
@@ -313,6 +319,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
                     this.latestValue(metric, filtered)
                   )}
                 ></lr-stat>
+                <span part="metric-category">${metric.category}</span>
               </button>
             `;
           })}

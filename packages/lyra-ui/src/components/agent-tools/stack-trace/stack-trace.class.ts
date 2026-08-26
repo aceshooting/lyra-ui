@@ -24,6 +24,42 @@ import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_D
 /** How long the "Copied!" confirmation state lasts before reverting -- matches
  *  `lr-copy-button`'s own confirmation duration. */
 const COPY_CONFIRM_MS = 1500;
+const MAX_INTERNAL_PATTERNS = 10_000;
+
+function snapshotInternalPatterns(value: unknown): readonly (string | RegExp)[] {
+  if (!Array.isArray(value)) return Object.freeze([]);
+  let length = 0;
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(value, 'length');
+    if (
+      descriptor
+      && 'value' in descriptor
+      && typeof descriptor.value === 'number'
+      && Number.isSafeInteger(descriptor.value)
+      && descriptor.value >= 0
+    ) {
+      length = Math.min(descriptor.value, MAX_INTERNAL_PATTERNS);
+    }
+  } catch {
+    return Object.freeze([]);
+  }
+  const patterns: (string | RegExp)[] = [];
+  for (let index = 0; index < length; index += 1) {
+    try {
+      const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+      if (!descriptor || !('value' in descriptor)) continue;
+      const pattern = descriptor.value;
+      if (typeof pattern === 'string') {
+        if (pattern.trim().length > 0) patterns.push(pattern);
+      } else if (pattern instanceof RegExp) {
+        patterns.push(new RegExp(pattern.source, pattern.flags));
+      }
+    } catch {
+      // A malformed entry cannot suppress later valid patterns.
+    }
+  }
+  return Object.freeze(patterns);
+}
 
 /** A parsed frame is navigable only when its complete location survived the parser's safe-integer
  *  validation. This guard intentionally repeats at the event boundary so a future parser change
@@ -35,33 +71,6 @@ function isSelectableFrame(frame: StackFrame): frame is StackFrame & { file: str
     && Number.isSafeInteger(frame.line)
     && (frame.column === undefined || Number.isSafeInteger(frame.column))
   );
-}
-
-/** Bounds how many matcher patterns `internalPatterns` retains -- generous for a manually curated
- *  list, protective against a runaway/generated one. */
-const MAX_INTERNAL_PATTERNS = 256;
-
-/** Clone-owns `internalPatterns`: keeps every non-blank string verbatim, clones every `RegExp` via
- *  `new RegExp(pattern.source, pattern.flags)` (a `RegExp` carries mutable `lastIndex`, so only a
- *  detached copy is truthfully "owned"), drops anything else instead of discarding the whole
- *  array, caps the result at `MAX_INTERNAL_PATTERNS`, and freezes it. A hostile getter on an
- *  array-like input invalidates only that one entry -- later valid patterns remain reachable. */
-function normalizeInternalPatterns(source: unknown): readonly (string | RegExp)[] {
-  if (!Array.isArray(source)) return Object.freeze([]);
-  const patterns: (string | RegExp)[] = [];
-  for (let index = 0; index < Math.min(source.length, MAX_INTERNAL_PATTERNS); index += 1) {
-    try {
-      const entry = source[index];
-      if (typeof entry === 'string') {
-        if (entry.trim().length > 0) patterns.push(entry);
-      } else if (entry instanceof RegExp) {
-        patterns.push(new RegExp(entry.source, entry.flags));
-      }
-    } catch {
-      // A hostile getter invalidates only that entry; later valid patterns remain reachable.
-    }
-  }
-  return Object.freeze(patterns);
 }
 
 /** Visual chrome for `<lr-stack-trace>`'s root — the library's shared container-frame vocabulary. */
@@ -136,10 +145,6 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  static override properties = {
-    internalPatterns: { attribute: false, noAccessor: true },
-  };
-
   /** The raw stack trace text to parse and render. */
   @property() trace = '';
 
@@ -147,21 +152,18 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   @property({ type: Boolean, attribute: 'collapse-internal', reflect: true, converter: trueDefaultBooleanConverter })
   collapseInternal = true;
 
-  private _internalPatterns: readonly (string | RegExp)[] = normalizeInternalPatterns(DEFAULT_INTERNAL_PATTERNS);
-
   /** Clone-owned file-path substrings/`RegExp`s that mark a frame as internal. Defaults to
    *  `DEFAULT_INTERNAL_PATTERNS` (common Node/browser/Python framework locations). Assignment
-   *  validates each entry as a non-blank string or a `RegExp` -- anything else is dropped rather
-   *  than discarding the whole array -- clones every `RegExp` (a `RegExp` carries mutable
-   *  `lastIndex`, so only a detached copy is truthfully "owned"), caps the result at 256 entries,
-   *  and freezes it. Reassign a new array after changes. */
+   *  retains non-blank strings, clone-owns `RegExp`s, drops malformed entries without suppressing
+   *  valid later entries, bounds the result, and freezes it. Reassign a new array after changes. */
+  private _internalPatterns = snapshotInternalPatterns(DEFAULT_INTERNAL_PATTERNS);
+  @property({ attribute: false })
   get internalPatterns(): readonly (string | RegExp)[] {
     return this._internalPatterns;
   }
-
-  set internalPatterns(next: readonly (string | RegExp)[]) {
+  set internalPatterns(value: readonly (string | RegExp)[]) {
     const previous = this._internalPatterns;
-    this._internalPatterns = normalizeInternalPatterns(next);
+    this._internalPatterns = snapshotInternalPatterns(value);
     this.requestUpdate('internalPatterns', previous);
   }
 

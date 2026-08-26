@@ -11,7 +11,7 @@ const editorHtmlDataPath = join(packageDir, 'vscode-html-data.json');
 
 let contextPromise;
 
-export async function readComponentInventory() {
+async function readComponentInventory() {
   return JSON.parse(await readFile(inventoryPath, 'utf8'));
 }
 

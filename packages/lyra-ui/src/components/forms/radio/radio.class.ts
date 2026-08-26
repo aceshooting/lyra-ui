@@ -23,6 +23,7 @@ import {
   declaredDefaultConverter,
   omittedEmptyStringConverter } from '../../../internal/converters.js';
 import { hasRealContent } from '../../../internal/a11y.js';
+import { isActionableElement } from '../../../internal/focus-navigation.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -669,14 +670,13 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   // identical activation contract instead of reimplementing (and drifting from) it.
   private isNestedInteractiveEvent(event: Event): boolean {
     const currentTarget = event.currentTarget;
-    if (!(currentTarget instanceof Element)) return false;
     for (const entry of event.composedPath()) {
       if (entry === currentTarget) break;
       if (
-        entry instanceof Element &&
-        entry.matches(
-          'button, a[href], input, select, textarea, [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"], [contenteditable="true"]',
-        )
+        entry &&
+        typeof entry === 'object' &&
+        (entry as Node).nodeType === 1 &&
+        isActionableElement(entry as Element)
       ) return true;
     }
     return false;

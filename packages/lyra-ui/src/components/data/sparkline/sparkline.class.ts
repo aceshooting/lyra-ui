@@ -1,6 +1,6 @@
 import { html, nothing, svg, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
-import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
+import { nextId } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRatio } from '../../../internal/numbers.js';
@@ -96,7 +96,8 @@ export class LyraSparkline extends LyraElement {
   /** Semantic default color; public color custom properties take precedence. */
   @property({ reflect: true }) trend?: LyraSparklineTrend;
 
-  /** Compatibility accessible-name override. `label` takes precedence. */
+  /** Compatibility accessible-name property. An authored host `aria-label` wins; otherwise a
+   * nonempty `label` precedes a nonempty programmatic value here. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   /** Additive programmatic data source used when `data` is empty. Property-only. */
@@ -196,13 +197,14 @@ export class LyraSparkline extends LyraElement {
   }
 
   private accessibleName(values: readonly number[]): string {
-    // The host attribute outranks the property, per AGENTS.md ("a host aria-label wins over any
-    // computed internal accessible name") and matching lr-lite-chart, lr-tree, lr-segmented and
-    // lr-avatar-group. This order was inverted until 10.0.0: an author who set both got `label`,
-    // silently discarding the aria-label they wrote on the element itself.
-    const hostLabel = hostAriaLabel(this);
+    // An authored host attribute (including an intentional empty value) wins. The visible-series
+    // label then outranks the property-only compatibility alias, followed by the generated summary.
+    const hostLabel = this.getAttribute('aria-label');
     if (hostLabel !== null) return hostLabel;
     if (this.label) return this.label;
+    if (typeof this.accessibleLabel === 'string' && this.accessibleLabel.length > 0) {
+      return this.accessibleLabel;
+    }
 
     const last = values.at(-1);
     if (last === undefined) return this.localize('noData');

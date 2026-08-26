@@ -221,7 +221,7 @@ export interface LyraDashboardGridEventMap {
  *   cell is a real focusable, draggable/resizable target). Set to `transparent` to opt out.
  * @cssprop [--lr-dashboard-grid-collision-outline-color=var(--lr-color-danger)] - Outline color
  *   of a cell whose current drag/resize preview collides with another cell.
- * @cssprop [--lr-dashboard-grid-interaction-shadow=var(--lr-shadow)] - Box shadow applied to a
+ * @cssprop [--lr-dashboard-grid-interaction-shadow=var(--lr-shadow-m)] - Box shadow applied to a
  *   cell for the duration of its pointer drag or resize interaction.
  * @status stable
  * @since 4.1.0

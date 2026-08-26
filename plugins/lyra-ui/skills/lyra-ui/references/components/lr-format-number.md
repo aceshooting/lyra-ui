@@ -6,6 +6,7 @@
 - **Class** `LyraFormatNumber`, also available unregistered from `@aceshooting/lyra-ui/components/utility/format/format-number.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** nothing component-specific — inherits only the shared surface
@@ -36,7 +37,9 @@ effective locale. Only a malformed locale itself falls back to the runtime defau
 - `currency: string = 'USD'` and `currencyDisplay: 'symbol' | 'narrowSymbol' | 'code' | 'name' =
 'symbol'` (`currency-display`); used only by currency formatting
 - `withoutGrouping: boolean = false` (`without-grouping`) and `noGrouping: boolean = false`
-  (`no-grouping`) — Web Awesome/Shoelace aliases; either disables grouping separators
+  (`no-grouping`) — Web Awesome/Shoelace aliases; either disables grouping separators. With both
+  false, the `Intl.NumberFormat` option is omitted so each locale and notation keeps its own default
+  grouping policy
 - `notation: 'standard' | 'compact' | 'scientific' | 'engineering' = 'standard'`
 - `minimumIntegerDigits?: number` (attribute `minimum-integer-digits`)
 - `minimumFractionDigits?: number` (attribute `minimum-fraction-digits`)

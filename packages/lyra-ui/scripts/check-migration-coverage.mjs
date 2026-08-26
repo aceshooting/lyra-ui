@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expandManifestInheritance } from './manifest-compact.mjs';
+import { isMainModule } from './is-main-module.mjs';
 import { buildMigrationContract, buildMirrorMap } from './migrate-wa.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -316,7 +317,6 @@ function run() {
   return 0;
 }
 
-if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))) {
+if (isMainModule(import.meta.url)) {
   process.exitCode = run();
 }
-

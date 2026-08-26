@@ -16,11 +16,18 @@ const data = [
   { id: '2', label: 'Leaf' },
 ];
 
+function required<T>(value: T | undefined, context: string): T {
+  if (value === undefined) throw new Error(`Missing ${context}`);
+  return value;
+}
+
 it('sets aria-level, aria-setsize, and aria-posinset to the correct values for top-level and nested items', async () => {
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const [root, leaf] = [...el.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
+  const items = [...el.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
+  const root = required(items[0], 'root tree item');
+  const leaf = required(items[1], 'leaf tree item');
 
   expect((root as unknown as HTMLElement).getAttribute('aria-level')).to.equal('1');
   expect((root as unknown as HTMLElement).getAttribute('aria-setsize')).to.equal('2');
@@ -31,9 +38,11 @@ it('sets aria-level, aria-setsize, and aria-posinset to the correct values for t
 
   root.expand();
   await el.updateComplete;
-  const [childA, childB] = [
+  const children = [
     ...(root as unknown as HTMLElement).shadowRoot!.querySelectorAll('lr-tree-item'),
   ] as unknown as HTMLElement[];
+  const childA = required(children[0], 'first child tree item');
+  const childB = required(children[1], 'second child tree item');
   expect(childA.getAttribute('aria-level')).to.equal('2');
   expect(childA.getAttribute('aria-setsize')).to.equal('2');
   expect(childA.getAttribute('aria-posinset')).to.equal('1');

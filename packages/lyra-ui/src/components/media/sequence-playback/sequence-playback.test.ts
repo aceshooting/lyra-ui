@@ -194,7 +194,7 @@ it('schedules and cancels timers in the current owner window across iframe adopt
   let mainCancellations = 0;
   let frameCancellations = 0;
   window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
-    const id = originalMainSetTimeout.call(window, handler, timeout, ...args);
+    const id = originalMainSetTimeout(handler, timeout, ...args);
     if (timeout === 1000) mainTimerIds.add(id);
     return id;
   }) as typeof window.setTimeout;
@@ -203,7 +203,7 @@ it('schedules and cancels timers in the current owner window across iframe adopt
     originalMainClearTimeout.call(window, id);
   }) as typeof window.clearTimeout;
   frameWindow.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
-    const id = originalFrameSetTimeout.call(frameWindow, handler, timeout, ...args);
+    const id = originalFrameSetTimeout(handler, timeout, ...args);
     if (timeout === 1000) frameTimerIds.add(id);
     return id;
   }) as typeof frameWindow.setTimeout;
@@ -638,7 +638,7 @@ it('clamps a non-positive interval-ms instead of hammering a zero-delay tick loo
     // clamped to a sane minimum, only a handful of ticks land in 50ms.
     expect(el.currentIndex).to.be.lessThan(20);
     expect(calls).to.have.length(1);
-    expect(calls[0][0]).to.contain('below the 16ms floor');
+    expect(calls[0]![0]).to.contain('below the 16ms floor');
     el.pause();
   } finally {
     console.warn = originalWarn;

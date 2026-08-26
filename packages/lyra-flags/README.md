@@ -113,13 +113,14 @@ tier asset, exactly like `flagUrl(code, { variant })` does. Register one with `<
 importing `flag-peer.js` (which always registers the full three-tier resolver) when your app has
 made this commitment.
 
-`./standard` also exports `createFlagUrlResolver()`, so a tier-committed consumer can take the bulk
-path above without reaching back through the package root:
+`./standard` also exports `flagUrls()` and `createFlagUrlResolver()`, so a tier-committed consumer
+can take either bulk path above without reaching back through the package root:
 
 ```js
-import { createFlagUrlResolver } from '@aceshooting/lyra-flags/standard';
+import { flagUrls, createFlagUrlResolver } from '@aceshooting/lyra-flags/standard';
 import { setFlagUrlResolver } from '@aceshooting/lyra-ui/components/media/flag/flag.js';
 
+const everyStandardUrl = await flagUrls();
 setFlagUrlResolver(createFlagUrlResolver()); // one shared eager map, standard tier only
 ```
 

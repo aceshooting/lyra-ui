@@ -6,6 +6,7 @@
 - **Class** `LyraPollStatus`, also available unregistered from `@aceshooting/lyra-ui/components/utility/poll-status/poll-status.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 4 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
@@ -83,8 +84,8 @@ called. Phase transitions ("Paused.", "Resumed.", "Refreshing now.") are announc
 - `active="false"` and `paused` both stop the ticker independently, but only `paused` fires
   `lr-pause-change` — that event is scoped to the built-in pause button's own toggle, not to
   `active`.
-- the countdown rounds up to the nearest whole second, so it never shows a literal "0:00" — the
-  display jumps straight from a small count (e.g. "0:01") to "Refreshing…" once the deadline is
-  actually reached.
+- the countdown rounds up while time remains. If a deadline is already elapsed when the ticker is
+  armed — including a due-immediately or sufficiently short cycle — it can render "0:00" for one
+  update before the scheduled due tick advances it to "Refreshing…".
 
 ---

@@ -1,4 +1,10 @@
-import { html, nothing, svg, type PropertyValues, type TemplateResult } from 'lit';
+import {
+  html,
+  nothing,
+  svg,
+  type PropertyValues,
+  type TemplateResult,
+} from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -94,7 +100,9 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  protected static override readonly ownedCollectionProperties = Object.freeze(['points']);
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'points',
+  ]);
 
   static override styles = [LyraElement.styles, specialistTokens, styles];
 
@@ -268,9 +276,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
         vector-effect="non-scaling-stroke"
       ></line>
       <circle class="point-marker" r="6" fill=${
-        PALETTE[
-          (clusterIndices.get(cluster) ?? 0) % PALETTE.length
-        ]
+        PALETTE[(clusterIndices.get(cluster) ?? 0) % PALETTE.length]
       }></circle>
       <title>${label}</title>
     </g>`;
@@ -332,11 +338,9 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
                     cx="6"
                     cy="6"
                     r="5"
-                    fill=${
-                      PALETTE[
-                        (clusterIndices.get(cluster) ?? 0) % PALETTE.length
-                      ]
-                    }
+                    fill=${PALETTE[
+                      (clusterIndices.get(cluster) ?? 0) % PALETTE.length
+                    ]}
                   ></circle>
                 </svg>
                 <span part="legend-label">${cluster}</span>

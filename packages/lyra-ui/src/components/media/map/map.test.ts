@@ -9,7 +9,13 @@ import {
 } from '@open-wc/testing';
 import { render, type PropertyValues } from 'lit';
 import './map.js';
-import { LyraMap } from './map.js';
+import {
+  LyraMap as LyraMapElement,
+  type LyraMapInstance,
+  type LyraMapMarker,
+  type LyraMapMarkerActivationDetail,
+  type LyraMapStyleSpecification,
+} from './map.js';
 import { buildGeoJsonPropertyDiff } from './map.class.js';
 import { loadMaplibre } from './map-loader.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -17,6 +23,43 @@ import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { setMapCanvasReadyCallback } from '../../../internal/map-canvas-ready.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
+
+interface TestMapSource {
+  setData?(data: unknown): unknown;
+}
+
+interface TestMapInstance extends LyraMapInstance {
+  addSource(id: string, source: unknown): unknown;
+  fire(type: string, event?: unknown): unknown;
+  getLayer(id: string): unknown;
+  getPaintProperty(layerId: string, property: string): unknown;
+  getSource(id: string): TestMapSource | undefined;
+  isStyleLoaded(): boolean;
+  queryRenderedFeatures(...args: unknown[]): unknown[];
+  removeLayer(id: string): unknown;
+  setStyle(style: unknown): unknown;
+}
+
+interface LyraMap extends LyraMapElement {
+  readonly map: TestMapInstance | undefined;
+}
+
+type CanvasGetContextStub = (
+  this: HTMLCanvasElement,
+  contextId: string,
+  ...rest: unknown[]
+) => unknown;
+
+function setCanvasGetContext(
+  prototype: HTMLCanvasElement,
+  implementation: CanvasGetContextStub,
+): void {
+  Object.defineProperty(prototype, 'getContext', {
+    configurable: true,
+    writable: true,
+    value: implementation,
+  });
+}
 
 // maplibre-gl requires a real WebGL2 context; headless Firefox/WebKit in CI don't reliably
 // provide one (unlike Chromium's software rasterizer), so any test that needs a map to actually
@@ -54,7 +97,7 @@ const LOCAL_STYLE = {
     },
   },
   layers: [{ id: 'demo', type: 'fill', source: 'demo' }],
-};
+} satisfies LyraMapStyleSpecification;
 
 // MapLibre owns WebGL contexts and workers outside the fixture's DOM subtree. Clearing fixtures
 // after every test exercises the component's disconnect cleanup before the next map is mounted.
@@ -80,8 +123,14 @@ function choroplethResourceId(el: LyraMap): string {
   return (el as unknown as { _appliedChoroplethSourceId?: string })._appliedChoroplethSourceId ?? '';
 }
 
+it('uses the same map-height token as the pre-upgrade reservation', async () => {
+  const { el } = await connectedMapWithoutMaplibre('--lr-map-height: 275px');
+  expect(getComputedStyle(el).blockSize).to.equal('275px');
+  expect(el.getBoundingClientRect().height).to.be.closeTo(275, 1);
+});
+
 it('preloads the optional map peer without constructing a map', async () => {
-  const loaded = await LyraMap.preload();
+  const loaded = await LyraMapElement.preload();
   expect(typeof loaded).to.equal('boolean');
 });
 
@@ -160,11 +209,13 @@ it('forwards renderWorldCopies only when explicitly authored, preserving the pee
   const OriginalIntersectionObserver = window.IntersectionObserver;
   const originalGetContext = HTMLCanvasElement.prototype.getContext;
   Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: undefined });
-  (HTMLCanvasElement.prototype as unknown as { getContext: (...args: unknown[]) => unknown }).getContext =
+  setCanvasGetContext(
+    HTMLCanvasElement.prototype,
     function (this: HTMLCanvasElement, contextId: string, ...rest: unknown[]) {
       if (contextId === 'webgl2') return {};
       return originalGetContext.call(this, contextId as never, ...(rest as []));
-    };
+    },
+  );
 
   const constructed: Record<string, unknown>[] = [];
   class ConstructionMap {
@@ -239,11 +290,11 @@ it('resizes only the current connected map when its allocated container changes'
     privateMap._map = firstMap;
     privateMap.observeMapAllocation(firstMap, container);
     expect(observed[0] === container).to.be.true;
-    callbacks[0]([], {} as ResizeObserver);
+    callbacks[0]!([], {} as ResizeObserver);
     expect(firstResizes).to.equal(1);
 
     el.remove();
-    callbacks[0]([], {} as ResizeObserver);
+    callbacks[0]!([], {} as ResizeObserver);
     expect(firstResizes, 'a stale callback cannot resize a disconnected map').to.equal(1);
     expect(disconnects).to.equal(1);
 
@@ -251,9 +302,9 @@ it('resizes only the current connected map when its allocated container changes'
     await el.updateComplete;
     privateMap._map = secondMap;
     privateMap.observeMapAllocation(secondMap, container);
-    callbacks[1]([], {} as ResizeObserver);
+    callbacks[1]!([], {} as ResizeObserver);
     expect(secondResizes).to.equal(1);
-    callbacks[0]([], {} as ResizeObserver);
+    callbacks[0]!([], {} as ResizeObserver);
     expect(firstResizes, 'the replaced observer remains inert after reconnect').to.equal(1);
   } finally {
     privateMap._map = undefined;
@@ -317,7 +368,7 @@ it('does not construct the underlying maplibregl.Map (and its WebGL context) unt
     expect(el.map == null).to.be.true;
 
     // Now simulate the element scrolling into view.
-    callbacks[0]([{ isIntersecting: true } as unknown as IntersectionObserverEntry], new OriginalIO(() => {}));
+    callbacks[0]!([{ isIntersecting: true } as unknown as IntersectionObserverEntry], new OriginalIO(() => {}));
     await waitUntil(() => el.map != null, 'map never constructed after becoming visible', { timeout: 2000 });
     expect(el.map != null).to.be.true;
   } finally {
@@ -455,32 +506,35 @@ it('probes WebGL2 in the concrete owner realm before and after adoption', async 
   let removals = 0;
   let loadCalls = 0;
 
-  (HTMLCanvasElement.prototype as unknown as { getContext: (...args: unknown[]) => unknown }).getContext =
+  setCanvasGetContext(
+    HTMLCanvasElement.prototype,
     function (this: HTMLCanvasElement, contextId: string, ...rest: unknown[]) {
       if (contextId === 'webgl2') {
         ambientProbes += 1;
         return null;
       }
       return ambientGetContext.call(this, contextId as never, ...(rest as []));
-    };
-  (frameWindow.HTMLCanvasElement.prototype as unknown as {
-    getContext: (...args: unknown[]) => unknown;
-  }).getContext = function (this: HTMLCanvasElement, contextId: string, ...rest: unknown[]) {
-    if (contextId === 'webgl2') {
-      frameProbes += 1;
-      return {
-        getExtension(name: string) {
-          if (name !== 'WEBGL_lose_context') return null;
-          return {
-            loseContext: () => {
-              frameProbeReleases += 1;
-            },
-          };
-        },
-      };
-    }
-    return frameGetContext.call(this, contextId as never, ...(rest as []));
-  };
+    },
+  );
+  setCanvasGetContext(
+    frameWindow.HTMLCanvasElement.prototype,
+    function (this: HTMLCanvasElement, contextId: string, ...rest: unknown[]) {
+      if (contextId === 'webgl2') {
+        frameProbes += 1;
+        return {
+          getExtension(name: string) {
+            if (name !== 'WEBGL_lose_context') return null;
+            return {
+              loseContext: () => {
+                frameProbeReleases += 1;
+              },
+            };
+          },
+        };
+      }
+      return frameGetContext.call(this, contextId as never, ...(rest as []));
+    },
+  );
   Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: undefined });
   Object.defineProperty(frameWindow, 'IntersectionObserver', { configurable: true, value: undefined });
 
@@ -631,16 +685,20 @@ for (const failureStage of ['constructor', 'setup'] as const) {
     const OriginalIntersectionObserver = window.IntersectionObserver;
     const originalGetContext = HTMLCanvasElement.prototype.getContext;
     Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: undefined });
-    (HTMLCanvasElement.prototype as unknown as { getContext: (...args: unknown[]) => unknown }).getContext =
+    setCanvasGetContext(
+      HTMLCanvasElement.prototype,
       function (this: HTMLCanvasElement, contextId: string, ...rest: unknown[]) {
         if (contextId === 'webgl2') return {};
         return originalGetContext.call(this, contextId as never, ...(rest as []));
-      };
+      },
+    );
 
     let attempts = 0;
     let removals = 0;
     const unhandled: PromiseRejectionEvent[] = [];
-    const onUnhandled = (event: PromiseRejectionEvent): void => unhandled.push(event);
+    const onUnhandled = (event: PromiseRejectionEvent): void => {
+      unhandled.push(event);
+    };
     window.addEventListener('unhandledrejection', onUnhandled);
     class TransactionMap {
       private readonly callbacks = new Map<string, Array<(event: unknown) => void>>();
@@ -721,11 +779,13 @@ it('classifies an initial peer style error and disposes the published candidate 
   const OriginalIntersectionObserver = window.IntersectionObserver;
   const originalGetContext = HTMLCanvasElement.prototype.getContext;
   Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: undefined });
-  (HTMLCanvasElement.prototype as unknown as { getContext: (...args: unknown[]) => unknown }).getContext =
+  setCanvasGetContext(
+    HTMLCanvasElement.prototype,
     function (this: HTMLCanvasElement, contextId: string, ...rest: unknown[]) {
       if (contextId === 'webgl2') return {};
       return originalGetContext.call(this, contextId as never, ...(rest as []));
-    };
+    },
+  );
   let errorCallback: ((event: unknown) => void) | undefined;
   let removals = 0;
   class StyleErrorMap {
@@ -767,11 +827,13 @@ it('logs a post-load runtime map error via console.error instead of failing an a
   const originalIntersectionObserver = window.IntersectionObserver;
   const originalGetContext = HTMLCanvasElement.prototype.getContext;
   Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: undefined });
-  (HTMLCanvasElement.prototype as unknown as { getContext: (...args: unknown[]) => unknown }).getContext =
+  setCanvasGetContext(
+    HTMLCanvasElement.prototype,
     function (this: HTMLCanvasElement, contextId: string, ...rest: unknown[]) {
       if (contextId === 'webgl2') return {};
       return originalGetContext.call(this, contextId as never, ...(rest as []));
-    };
+    },
+  );
   const handlers: Record<string, ((event: unknown) => void) | undefined> = {};
   class RuntimeErrorMap {
     private readonly canvas = document.createElement('canvas');
@@ -793,9 +855,9 @@ it('logs a post-load runtime map error via console.error instead of failing an a
   console.error = (...args: unknown[]) => { calls.push(args); };
   try {
     await waitUntil(() => el.map != null, 'fake map never initialized');
-    handlers.load?.(undefined);
+    handlers['load']?.(undefined);
     const runtimeError = new Error('runtime tile error');
-    handlers.error?.({ error: runtimeError });
+    handlers['error']?.({ error: runtimeError });
 
     expect(el.map != null).to.be.true;
     expect(calls.length).to.equal(1);
@@ -817,11 +879,13 @@ it('rolls back a synchronous dynamic style failure and retries with a fresh map'
   const originalIntersectionObserver = window.IntersectionObserver;
   const originalGetContext = HTMLCanvasElement.prototype.getContext;
   Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: undefined });
-  (HTMLCanvasElement.prototype as unknown as { getContext: (...args: unknown[]) => unknown }).getContext =
+  setCanvasGetContext(
+    HTMLCanvasElement.prototype,
     function (this: HTMLCanvasElement, contextId: string, ...rest: unknown[]) {
       if (contextId === 'webgl2') return {};
       return originalGetContext.call(this, contextId as never, ...(rest as []));
-    };
+    },
+  );
   let constructions = 0;
   let removals = 0;
   class DynamicStyleMap {
@@ -878,11 +942,13 @@ it('rolls back a synchronous dynamic style failure and retries with a fresh map'
 // happens to be available.
 it('renders a distinct accessible error state instead of crashing when WebGL2 is unavailable', async () => {
   const originalGetContext = HTMLCanvasElement.prototype.getContext;
-  (HTMLCanvasElement.prototype as unknown as { getContext: (...args: unknown[]) => unknown }).getContext =
+  setCanvasGetContext(
+    HTMLCanvasElement.prototype,
     function (this: HTMLCanvasElement, contextId: string, ...rest: unknown[]) {
       if (contextId === 'webgl2') return null;
       return originalGetContext.call(this, contextId as never, ...(rest as []));
-    };
+    },
+  );
   const el = document.createElement('lr-map') as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   el.strings = { mapWebglUnavailable: 'Owner realm has no WebGL2' };
@@ -909,14 +975,16 @@ it('renders a distinct accessible error state instead of crashing when WebGL2 is
 it('fails closed when the WebGL2 capability probe itself throws', async () => {
   const originalGetContext = HTMLCanvasElement.prototype.getContext;
   let webgl2ProbeCalls = 0;
-  (HTMLCanvasElement.prototype as unknown as { getContext: (...args: unknown[]) => unknown }).getContext =
+  setCanvasGetContext(
+    HTMLCanvasElement.prototype,
     function (this: HTMLCanvasElement, contextId: string, ...rest: unknown[]) {
       if (contextId === 'webgl2') {
         webgl2ProbeCalls++;
         throw new Error('WebGL2 probing is blocked');
       }
       return originalGetContext.call(this, contextId as never, ...(rest as []));
-    };
+    },
+  );
   const el = document.createElement('lr-map') as LyraMap;
   (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({});
   el.mapStyle = LOCAL_STYLE;
@@ -972,11 +1040,11 @@ it('calls setCenter/setZoom on the underlying map when center/zoom change after 
   el.map!.setCenter = ((c: unknown) => {
     centerArg = c;
     return el.map;
-  }) as typeof el.map.setCenter;
+  }) as TestMapInstance['setCenter'];
   el.map!.setZoom = ((z: unknown) => {
     zoomArg = z;
     return el.map;
-  }) as typeof el.map.setZoom;
+  }) as TestMapInstance['setZoom'];
 
   el.center = [3, 4];
   el.zoom = 7;
@@ -1011,7 +1079,7 @@ it('clamps a non-finite/out-of-range zoom passed to setZoom on the live map afte
   el.map!.setZoom = ((z: unknown) => {
     zoomArg = z;
     return el.map;
-  }) as typeof el.map.setZoom;
+  }) as TestMapInstance['setZoom'];
 
   el.zoom = Number.NaN;
   await el.updateComplete;
@@ -1036,7 +1104,7 @@ it('normalizes malformed and out-of-range center values before live map updates'
   el.map!.setCenter = ((center: unknown) => {
     centerArg = center;
     return el.map;
-  }) as typeof el.map.setCenter;
+  }) as TestMapInstance['setCenter'];
   el.center = [Number.POSITIVE_INFINITY, -999];
   await el.updateComplete;
   expect(centerArg).to.deep.equal([0, -90]);
@@ -1106,7 +1174,7 @@ it('renders a legend swatch per entry', async () => {
     (swatch) => swatch.inert,
   )).to.be.true;
   expect([...legend.querySelectorAll<HTMLElement>('[part="legend-swatch"]')].map(
-    (swatch) => swatch.dataset.pattern,
+    (swatch) => swatch.dataset['pattern'],
   )).to.deep.equal(['diagonal', 'dots']);
 });
 
@@ -1742,7 +1810,7 @@ it('adds the choropleth GeoJSON source without promoteId, so a top-level Feature
   el.map!.addSource = ((id: string, options: unknown) => {
     addSourceOptions = options;
     return originalAddSource(id, options as never);
-  }) as typeof el.map.addSource;
+  }) as TestMapInstance['addSource'];
 
   el.choropleth = choropleth('promote-id-check', [
     [0, '#000000'],
@@ -1821,7 +1889,7 @@ it('attaches the clicked choropleth feature to lr-map-click when one exists at t
     properties: { value: 5 },
     geometry: { type: 'Point', coordinates: [0, 0] },
   };
-  el.map!.queryRenderedFeatures = (() => [fakeFeature]) as typeof el.map.queryRenderedFeatures;
+  el.map!.queryRenderedFeatures = (() => [fakeFeature]) as TestMapInstance['queryRenderedFeatures'];
 
   let detail: { lngLat: [number, number]; feature?: unknown } | undefined;
   el.addEventListener('lr-map-click', (e) => (detail = (e as CustomEvent).detail));
@@ -1862,7 +1930,7 @@ it('does not query the choropleth fill layer on click before it has been added t
   el.map!.queryRenderedFeatures = ((...args: Parameters<typeof original>) => {
     queried = true;
     return original(...args);
-  }) as typeof el.map.queryRenderedFeatures;
+  }) as TestMapInstance['queryRenderedFeatures'];
 
   let detail: { lngLat: [number, number]; feature?: unknown } | undefined;
   el.addEventListener('lr-map-click', (e) => (detail = (e as CustomEvent).detail));
@@ -1943,10 +2011,13 @@ it('calls setStyle when mapStyle changes after the map has mounted', async funct
   el.map!.setStyle = ((style: unknown) => {
     calledWith = style;
     return el.map;
-  }) as typeof el.map.setStyle;
+  }) as TestMapInstance['setStyle'];
 
-  const NEXT_STYLE = { ...LOCAL_STYLE, sources: { demo2: LOCAL_STYLE.sources.demo } };
-  el.mapStyle = NEXT_STYLE as typeof LOCAL_STYLE;
+  const NEXT_STYLE = {
+    ...LOCAL_STYLE,
+    sources: { demo2: LOCAL_STYLE.sources.demo },
+  } satisfies LyraMapStyleSpecification;
+  el.mapStyle = NEXT_STYLE;
   await el.updateComplete;
 
   expect(calledWith).to.deep.equal(NEXT_STYLE);
@@ -1969,7 +2040,7 @@ it('accepts the string style-URL form of mapStyle and passes it through to setSt
   el.map!.setStyle = ((style: unknown) => {
     calledWith = style;
     return el.map;
-  }) as typeof el.map.setStyle;
+  }) as TestMapInstance['setStyle'];
 
   el.mapStyle = 'https://example.test/lr-map-style.json';
   await el.updateComplete;
@@ -2048,8 +2119,8 @@ it('re-applies the choropleth once the new style finishes loading after a mapSty
   const NEXT_STYLE = {
     ...LOCAL_STYLE,
     layers: [{ id: 'demo', type: 'fill', source: 'demo', paint: { 'fill-opacity': 0.9 } }],
-  };
-  el.mapStyle = NEXT_STYLE as typeof LOCAL_STYLE;
+  } satisfies LyraMapStyleSpecification;
+  el.mapStyle = NEXT_STYLE;
   await el.updateComplete;
 
   await waitUntil(() => el.map!.getLayer('style-reload-fill') != null, 'choropleth never re-applied', {
@@ -2229,8 +2300,8 @@ describe('dataLayers', () => {
     const NEXT_STYLE = {
       ...LOCAL_STYLE,
       layers: [{ id: 'demo', type: 'fill', source: 'demo', paint: { 'fill-opacity': 0.9 } }],
-    };
-    el.mapStyle = NEXT_STYLE as typeof LOCAL_STYLE;
+    } satisfies LyraMapStyleSpecification;
+    el.mapStyle = NEXT_STYLE;
     await el.updateComplete;
 
     await waitUntil(() => {
@@ -2296,17 +2367,16 @@ it('exposes every declarative marker as a named button and emits one immutable a
     label: 'Station A',
     color: '#123456',
   };
-  const details: Array<Record<string, unknown>> = [];
-  const events: CustomEvent<Record<string, unknown>>[] = [];
+  const details: LyraMapMarkerActivationDetail[] = [];
+  const events: CustomEvent<LyraMapMarkerActivationDetail>[] = [];
   el.addEventListener('lr-map-marker-activate', (event) => {
-    const activationEvent = event as CustomEvent<Record<string, unknown>>;
-    events.push(activationEvent);
-    details.push(activationEvent.detail);
+    events.push(event);
+    details.push(event.detail);
   });
   const privateMap = el as unknown as {
     configureMarkerInteraction(
       element: HTMLElement,
-      activation: { id?: string; lngLat: readonly [number, number]; marker: unknown },
+      activation: { id?: string; lngLat: readonly [number, number]; marker: LyraMapMarker },
     ): void;
   };
   privateMap.configureMarkerInteraction(markerElement, {
@@ -2329,17 +2399,17 @@ it('exposes every declarative marker as a named button and emits one immutable a
   markerElement.dispatchEvent(space);
 
   expect(space.defaultPrevented, 'Space activates without scrolling the page').to.be.true;
-  expect(details.map((detail) => detail['source'])).to.deep.equal([
+  expect(details.map((detail) => detail.source)).to.deep.equal([
     'pointer',
     'keyboard',
     'keyboard',
   ]);
-  expect(details.every((detail) => detail['id'] === 'station-a')).to.be.true;
-  expect(details[0]!['lngLat']).to.deep.equal([6.13, 49.61]);
-  expect((details[0]!['marker'] as { label?: string }).label).to.equal('Station A');
+  expect(details.every((detail) => detail.id === 'station-a')).to.be.true;
+  expect(details[0]!.lngLat).to.deep.equal([6.13, 49.61]);
+  expect(details[0]!.marker.label).to.equal('Station A');
   expect(Object.isFrozen(details[0])).to.be.true;
-  expect(Object.isFrozen(details[0]!['lngLat'])).to.be.true;
-  expect(Object.isFrozen(details[0]!['marker'])).to.be.true;
+  expect(Object.isFrozen(details[0]!.lngLat)).to.be.true;
+  expect(Object.isFrozen(details[0]!.marker)).to.be.true;
   expect(events.every((event) => event.bubbles && event.composed)).to.be.true;
   expect(events.every((event) => !event.cancelable)).to.be.true;
 
@@ -2656,7 +2726,7 @@ it('preserves colliding choropleth and data-layer namespaces across clear and st
   el.mapStyle = {
     ...LOCAL_STYLE,
     layers: [{ id: 'demo', type: 'fill', source: 'demo', paint: { 'fill-opacity': 0.8 } }],
-  } as typeof LOCAL_STYLE;
+  } satisfies LyraMapStyleSpecification;
   await el.updateComplete;
   await waitUntil(
     () => {
@@ -3027,6 +3097,7 @@ it('skips malformed/non-finite markers without aborting valid marker reconciliat
     { id: 'missing', lngLat: undefined },
     { id: 'infinite', lngLat: [Number.POSITIVE_INFINITY, 20] },
     { id: 'bad-latitude', lngLat: [10, 91] },
+    { id: 'bad-label', lngLat: [10, 20], label: 42 },
     { id: 'valid', lngLat: [11, 21], label: 'Valid' },
   ] as unknown as typeof el.markers;
   await el.updateComplete;
@@ -3333,6 +3404,85 @@ describe('continuous choropleth legend', () => {
     expect(bar.hasAttribute('inert'), 'not a tab stop either').to.be.true;
   });
 
+  it('renders a logarithmic choropleth key with the same non-linear colour progression as its layer', async () => {
+    const linear = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    linear.choropleth = {
+      ...choropleth(
+        'linear-regions',
+        STOPS.map(([value, color]) => [value, color]),
+      ),
+      interpolation: 'linear',
+    };
+    linear.legendGradient = STOPS;
+    await linear.updateComplete;
+
+    const logarithmic = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    logarithmic.choropleth = {
+      ...choropleth(
+        'log-regions',
+        STOPS.map(([value, color]) => [value, color]),
+      ),
+      interpolation: 'logarithmic',
+    };
+    logarithmic.legendGradient = STOPS;
+    await logarithmic.updateComplete;
+
+    const linearImage = linear.shadowRoot!
+      .querySelector<HTMLElement>('[part="legend-gradient"]')!
+      .style.backgroundImage;
+    const logarithmicImage = logarithmic.shadowRoot!
+      .querySelector<HTMLElement>('[part="legend-gradient"]')!
+      .style.backgroundImage;
+    expect(logarithmicImage, 'the key must not retain a CSS-linear colour progression').to.not.equal(
+      linearImage
+    );
+    expect(
+      logarithmicImage.includes('color-mix'),
+      'the rendered key carries sampled ramp colors'
+    ).to.be.true;
+  });
+
+  it('warns in dev mode when legendGradient does not describe the choropleth stops', async () => {
+    const key = 'lyra-map-legend-choropleth-mismatch';
+    (globalThis as unknown as { litIssuedWarnings?: Set<string> }).litIssuedWarnings?.delete(key);
+    const warnings: string[] = [];
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '));
+    try {
+      const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+      el.choropleth = choropleth('regions', [[0, '#f7fbff'], [100, '#08306b']]);
+      el.legendGradient = [[0, '#f7fbff'], [100, '#ff0000']];
+      await el.updateComplete;
+    } finally {
+      console.warn = originalWarn;
+    }
+    expect(
+      warnings.some((message) => message.includes('legendGradient')),
+      'a visually false key is made audible'
+    ).to.be.true;
+  });
+
+  it('does not warn when legendGradient is built from the choropleth stops', async () => {
+    const key = 'lyra-map-legend-choropleth-mismatch';
+    (globalThis as unknown as { litIssuedWarnings?: Set<string> }).litIssuedWarnings?.delete(key);
+    const warnings: string[] = [];
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '));
+    try {
+      const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+      const layer = choropleth('regions', [[0, '#f7fbff'], [100, '#08306b']]);
+      el.choropleth = layer;
+      el.legendGradient = layer.stops;
+      await el.updateComplete;
+    } finally {
+      console.warn = originalWarn;
+    }
+    expect(
+      warnings.some((message) => message.includes('legendGradient')),
+      'an agreed key is not a defect'
+    ).to.be.false;
+  });
+
   it('opens the legend panel for slotted legend content alone', async () => {
     const el = (await fixture(
       html`<lr-map><div slot="legend" id="custom">Custom key</div></lr-map>`
@@ -3363,8 +3513,15 @@ describe('choropleth interpolation', () => {
     ],
   } as never;
 
-  const paintExprFor = async (interpolation?: string) => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const paintExprFor = async (
+    interpolation?: string,
+    options: {
+      stops?: readonly (readonly [number, string])[];
+      stepBaseColor?: string;
+      style?: string;
+    } = {},
+  ) => {
+    const el = (await fixture(html`<lr-map style=${options.style ?? ''}></lr-map>`)) as LyraMap;
     const applied: unknown[] = [];
     // Stand in for the maplibre instance: applyChoropleth() only needs the handful of methods it
     // calls, and this keeps the assertion on the emitted expression rather than on a real GL context.
@@ -3382,7 +3539,8 @@ describe('choropleth interpolation', () => {
       sourceId: 'regions',
       geojson: GEOJSON,
       field: 'population',
-      stops: [[0, '#eee'], [100, '#036']],
+      stops: options.stops ?? [[0, '#eee'], [100, '#036']],
+      ...(options.stepBaseColor ? { stepBaseColor: options.stepBaseColor } : {}),
       ...(interpolation ? { interpolation } : {}),
     } as never;
     (el as unknown as { applyChoropleth: () => void }).applyChoropleth();
@@ -3426,6 +3584,32 @@ describe('choropleth interpolation', () => {
     const log = await paintExprFor('logarithmic');
     expect(linear.slice(3), 'linear stop values').to.deep.equal([0, '#eee', 100, '#036']);
     expect(log.slice(3), 'identical stop values under log').to.deep.equal([0, '#eee', 100, '#036']);
+  });
+
+  it('resolves CSS token colors before emitting interpolate and step expressions', async () => {
+    const options = {
+      stops: [[0, 'var(--map-test-low)'], [100, 'var(--map-test-high)']] as const,
+      stepBaseColor: 'var(--map-test-base)',
+      style:
+        '--map-test-low: rgb(1, 2, 3); --map-test-high: rgb(4, 5, 6); ' +
+        '--map-test-base: rgb(7, 8, 9)',
+    };
+    const interpolate = await paintExprFor('linear', options);
+    const step = await paintExprFor('step', options);
+
+    expect(interpolate.slice(3), 'continuous ramp colors').to.deep.equal([
+      0,
+      'rgb(1, 2, 3)',
+      100,
+      'rgb(4, 5, 6)',
+    ]);
+    expect(step.slice(2), 'step base and band colors').to.deep.equal([
+      'rgb(7, 8, 9)',
+      0,
+      'rgb(1, 2, 3)',
+      100,
+      'rgb(4, 5, 6)',
+    ]);
   });
 });
 
@@ -3494,7 +3678,7 @@ describe('lr-map-click across choropleth and dataLayers', () => {
     el.map!.queryRenderedFeatures = ((_point: unknown, options?: { layers?: string[] }) => {
       queried = options?.layers ?? [];
       return [];
-    }) as typeof el.map.queryRenderedFeatures;
+    }) as TestMapInstance['queryRenderedFeatures'];
     el.map!.fire('click', { lngLat: { lng: 1, lat: 2 }, point: { x: 5, y: 5 } });
 
     expect(queried, 'choropleth fill still queried').to.include('both-choropleth-fill');
@@ -3512,7 +3696,7 @@ describe('lr-map-click across choropleth and dataLayers', () => {
       geometry: { type: 'Point', coordinates: [0, 0] },
       layer: { id: `${zones}-fill` },
     };
-    el.map!.queryRenderedFeatures = (() => [hit]) as typeof el.map.queryRenderedFeatures;
+    el.map!.queryRenderedFeatures = (() => [hit]) as TestMapInstance['queryRenderedFeatures'];
 
     let detail: { feature?: unknown; origin?: string; sourceId?: string } | undefined;
     el.addEventListener('lr-map-click', (e) => (detail = (e as CustomEvent).detail));
@@ -3543,7 +3727,7 @@ describe('lr-map-click across choropleth and dataLayers', () => {
       geometry: { type: 'Point', coordinates: [0, 0] },
       layer: { id: 'attributed-choropleth-fill' },
     };
-    el.map!.queryRenderedFeatures = (() => [hit]) as typeof el.map.queryRenderedFeatures;
+    el.map!.queryRenderedFeatures = (() => [hit]) as TestMapInstance['queryRenderedFeatures'];
 
     let detail: { origin?: string; sourceId?: string } | undefined;
     el.addEventListener('lr-map-click', (e) => (detail = (e as CustomEvent).detail));
@@ -3556,7 +3740,7 @@ describe('lr-map-click across choropleth and dataLayers', () => {
   it('leaves origin and sourceId undefined when nothing was hit', async function () {
     if (!hasWebGL2) this.skip();
     const { el } = await withZones();
-    el.map!.queryRenderedFeatures = (() => []) as typeof el.map.queryRenderedFeatures;
+    el.map!.queryRenderedFeatures = (() => []) as TestMapInstance['queryRenderedFeatures'];
 
     let detail: { feature?: unknown; origin?: string; sourceId?: string } | undefined;
     el.addEventListener('lr-map-click', (e) => (detail = (e as CustomEvent).detail));
@@ -3714,7 +3898,11 @@ describe('incremental GeoJSON updates', () => {
     applied.set('source', collection(1));
     const diffs: unknown[] = [];
     let replacements = 0;
-    const source = {
+    type PushGeoJsonSource = {
+      setData(): void;
+      updateData(diff: unknown): void;
+    };
+    const source: PushGeoJsonSource = {
       setData: () => {
         replacements += 1;
       },
@@ -3723,7 +3911,7 @@ describe('incremental GeoJSON updates', () => {
       },
     };
     const push = (el as unknown as {
-      pushGeoJson: (source: typeof source, id: string, value: unknown) => void;
+      pushGeoJson: (source: PushGeoJsonSource, id: string, value: unknown) => void;
     }).pushGeoJson.bind(el);
 
     push(source, 'source', two);
@@ -3891,6 +4079,50 @@ it('routes a throwing setMaxBounds into the same revert-and-warn path as a non-f
   expect(calls[calls.length - 1], 'the constraint must be dropped after a throw').to.equal(null);
   expect(Number.isFinite(el.map!.getZoom()), 'the camera must survive').to.be.true;
   expect(el.map!.getZoom()).to.be.closeTo(zoomBefore, 0.001);
+});
+
+it('contains failures from both defensive camera snapshot reads', async () => {
+  const failures: string[] = [];
+  const revertCalls: Record<'getZoom' | 'getCenter', unknown[]> = {
+    getZoom: [],
+    getCenter: [],
+  };
+
+  for (const throwingRead of ['getZoom', 'getCenter'] as const) {
+    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    el.maxBounds = [[-10, -10], [10, 10]];
+    await el.updateComplete;
+    const calls = revertCalls[throwingRead];
+    const stub = {
+      getZoom: () => {
+        if (throwingRead === 'getZoom') throw new Error('getZoom snapshot failed');
+        return 3;
+      },
+      getCenter: () => {
+        if (throwingRead === 'getCenter') throw new Error('getCenter snapshot failed');
+        return { lng: 1, lat: 2 };
+      },
+      setMaxBounds: (bounds: unknown) => calls.push(bounds),
+      setZoom: () => {},
+      setCenter: () => {},
+    };
+    const privateMap = el as unknown as { _map: unknown; applyMaxBounds(): void };
+    privateMap._map = stub;
+    try {
+      privateMap.applyMaxBounds();
+    } catch (error) {
+      failures.push(`${throwingRead}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  expect(
+    failures,
+    'camera reads stay inside the same defensive boundary as setMaxBounds'
+  ).to.deep.equal([]);
+  expect(revertCalls.getZoom, 'a failed zoom snapshot drops the constraint').to.deep.equal([null]);
+  expect(revertCalls.getCenter, 'a failed center snapshot drops the constraint').to.deep.equal([
+    null,
+  ]);
 });
 
 // ---------------------------------------------------------------------------
@@ -4323,8 +4555,8 @@ describe('dataLayers clustering and heatmap', () => {
     const NEXT_STYLE = {
       ...LOCAL_STYLE,
       layers: [{ id: 'demo', type: 'fill', source: 'demo', paint: { 'fill-opacity': 0.9 } }],
-    };
-    el.mapStyle = NEXT_STYLE as typeof LOCAL_STYLE;
+    } satisfies LyraMapStyleSpecification;
+    el.mapStyle = NEXT_STYLE;
     await el.updateComplete;
 
     await waitUntil(
@@ -4372,7 +4604,7 @@ describe('dataLayers clustering and heatmap', () => {
     el.map!.queryRenderedFeatures = ((_point: unknown, options?: { layers?: string[] }) => {
       queried = options?.layers ?? [];
       return [hit];
-    }) as typeof el.map.queryRenderedFeatures;
+    }) as TestMapInstance['queryRenderedFeatures'];
 
     let detail: { origin?: string; sourceId?: string; feature?: unknown } | undefined;
     el.addEventListener('lr-map-click', (e) => (detail = (e as CustomEvent).detail));

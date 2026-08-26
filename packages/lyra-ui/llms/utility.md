@@ -38,13 +38,14 @@ extension?: string }`. Descriptor labels/descriptions are consumer-supplied, alr
 - `loading: boolean = false` (reflected) — controlled busy state for an async or server-generated
   export; sets host/trigger `aria-busy` and disables the trigger and menu items. The component does
   not toggle it automatically
-- `label?: string` — trigger button text; `undefined` uses the localized `exportButtonLabel`
-  default. Every supplied string, including `''` and `'Export'`, is caller-owned. The effective
-  label also feeds the format-choice menu's localized accessible name
+- `label?: string` — trigger button text; omission uses the localized `exportButtonLabel` default.
+  Every supplied string, including `''` and `'Export'`, remains caller-owned visible copy. An empty
+  or whitespace-only visible label keeps the localized default as the trigger's accessible name;
+  the effective accessible name also feeds the format-choice menu's localized name
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the trigger's
   accessible name and feeds the localized format-menu name without changing the visible label.
   Presence is authoritative, so an explicit empty string is preserved; `null` restores naming from
-  the visible label
+  a nonempty visible label or the localized fallback
 - `open: boolean = false` (reflected)
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the native trigger button.
@@ -110,7 +111,7 @@ escapeCsvField, buildCsv, downloadBlob } from
 '@aceshooting/lyra-ui/components/utility/export-button/csv.js'`):
 
 ```ts
-escapeCsvField(value: unknown): string   // quotes/escapes; neutralizes leading ASCII/fullwidth =,+,-,@ and tab/CR/LF formula prefixes with an apostrophe
+escapeCsvField(value: unknown): string   // quotes/escapes; neutralizes leading whitespace and ASCII/fullwidth =,+,-,@ formula prefixes with an apostrophe
 buildCsv(rows: readonly Readonly<Record<string, unknown>>[], columns: readonly LyraCsvColumn[]): string  // CRLF-joined, header row included
 downloadBlob(content: string, filename: string, mime: string, ownerDocument?: Document): void // triggers a browser download in the supplied document realm
 ```
@@ -130,6 +131,8 @@ downloadBlob(content: string, filename: string, mime: string, ownerDocument?: Do
   normalized closed without a false `lr-show`/`lr-hide` pair; shrinking an open menu to one format,
   or becoming `disabled`/`loading`, closes it and repairs focus. JSON projection safely preserves
   an own enumerable column literally named `__proto__`.
+- an empty format list, including one whose descriptors are all rejected during validation,
+  disables the trigger because no export action exists.
 - the multi-format menu (`role="menu"`) supports full arrow-key navigation — ArrowUp/ArrowDown move
   between items (opening the menu and seeding the right one focused, if it was closed), Home/End
   jump to the first/last item once open, Escape closes it and returns focus to the trigger button,
@@ -170,6 +173,9 @@ positioning opinion of its own.
   containers.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the localized
   built-in button name while leaving tooltip/feedback labels unchanged; retained Lyra alias.
+  An empty or whitespace-only value falls back to the localized state label so the built-in
+  icon-only trigger always remains named; remove the attribute or assign `null` for the same
+  fallback.
 - `disabled: boolean = false` (reflected)
 - `feedbackDuration: number = 1000` (attribute `feedback-duration`) — milliseconds before the
   confirmation **or** the failure state returns to the copy icon. A non-finite value falls back to
@@ -328,7 +334,9 @@ in the default slot and emits a composed event, while adding no layout of its ow
 `root-margin`), `threshold: number | number[] | string = '0'` (the mapped attribute form accepts
 space-separated values), `root: Element | string | null = null` (an element or mapped element ID),
 `intersectClass: string = ''` (attribute `intersect-class`, toggled on each target), and `once:
-boolean = false` (reflected; unobserves a target after its first intersection).
+boolean = false` (reflected; unobserves a target after its first intersection). A once-consumed
+target stays consumed across option-driven observer rebuilds and disconnect/reconnect cycles;
+setting `once` to false is the explicit reset boundary.
 
 **Events:** mapped `lr-intersect` once per entry with `{ entry }`, plus the existing batch alias
 `lr-intersection` with a frozen
@@ -731,9 +739,9 @@ called. Phase transitions ("Paused.", "Resumed.", "Refreshing now.") are announc
 - `active="false"` and `paused` both stop the ticker independently, but only `paused` fires
   `lr-pause-change` — that event is scoped to the built-in pause button's own toggle, not to
   `active`.
-- the countdown rounds up to the nearest whole second, so it never shows a literal "0:00" — the
-  display jumps straight from a small count (e.g. "0:01") to "Refreshing…" once the deadline is
-  actually reached.
+- the countdown rounds up while time remains. If a deadline is already elapsed when the ticker is
+  armed — including a due-immediately or sufficiently short cycle — it can render "0:00" for one
+  update before the scheduled due tick advances it to "Refreshing…".
 
 ---
 
@@ -755,7 +763,9 @@ replacement, disconnect, or adoption; a cross-root string IDREF is never left be
   plain `<textarea>` or single-line text `<input type="text"|"search">` gets caret-precise
   positioning; any other element anchors the whole popup under that element's own box.
 - `items: readonly Readonly<LyraMentionItem>[] = []` (attribute: false) — the full candidate set,
-  pre-`query`-filtering. Assignment takes a shallow frozen snapshot.
+  pre-`query`-filtering. Assignment takes a shallow frozen snapshot. Runtime rows without a string
+  `label` remain in that diagnostic snapshot but are omitted from filtering/rendering before the
+  built-in or custom predicate runs, so one malformed provider row cannot take down valid siblings.
 - `query: string = ''` — the text typed since the trigger character; drives the built-in filtering
   (see `filter`).
 - `open: boolean = false` (reflected)
@@ -768,8 +778,9 @@ replacement, disconnect, or adoption; a cross-root string IDREF is never left be
   caller-owned. A host-level plain `aria-label` attribute on `<lr-mention-popover>` itself takes
   priority over this property when present (checked via a plain `getAttribute()` read, not a
   reactive property) — matches the same fallback on `<lr-combobox>`/`<lr-table>`.
-- `filteredItems: readonly Readonly<LyraMentionItem>[]` — read-only getter; `items` filtered by `query` via `filter` (or
-  the built-in default). Empty `query` returns `items` unfiltered.
+- `filteredItems: readonly Readonly<LyraMentionItem>[]` — read-only getter; label-valid `items`
+  filtered by `query` via `filter` (or the built-in default). An empty `query` skips the query
+  predicate but still omits malformed-label rows.
 - `activeDescendantId: string | null` — read-only getter; the `id` of the currently-highlighted
   internal row, or `null` while closed or when `filteredItems` is empty. Useful for diagnostics and
   same-tree consumers; do not copy it to an external control as a string IDREF.
@@ -1309,7 +1320,9 @@ effective locale. Only a malformed locale itself falls back to the runtime defau
 - `currency: string = 'USD'` and `currencyDisplay: 'symbol' | 'narrowSymbol' | 'code' | 'name' =
 'symbol'` (`currency-display`); used only by currency formatting
 - `withoutGrouping: boolean = false` (`without-grouping`) and `noGrouping: boolean = false`
-  (`no-grouping`) — Web Awesome/Shoelace aliases; either disables grouping separators
+  (`no-grouping`) — Web Awesome/Shoelace aliases; either disables grouping separators. With both
+  false, the `Intl.NumberFormat` option is omitted so each locale and notation keeps its own default
+  grouping policy
 - `notation: 'standard' | 'compact' | 'scientific' | 'engineering' = 'standard'`
 - `minimumIntegerDigits?: number` (attribute `minimum-integer-digits`)
 - `minimumFractionDigits?: number` (attribute `minimum-fraction-digits`)
@@ -1471,7 +1484,8 @@ all are filled); `blur()` blurs whichever field currently has focus; `resetValid
 consumer-supplied custom error and republishes intrinsic constraints;
 `formStateRestoreCallback(state)` restores a string state and clears for other shapes.
 
-**Events:** native bubbling/composed `InputEvent` `input` (every keystroke) and native
+**Events:** native bubbling/composed `InputEvent` `input` (every keystroke, preserving the private
+field edit's `inputType`) and native
 bubbling/composed `Event` `change` (a field blur where the composite value newly transitioned),
 plus re-dispatched bubbling/composed `focus` and `blur` (`blur` fires once when focus
 leaves all three fields, not per field-to-field Tab; each entry into the control likewise produces
@@ -1517,9 +1531,10 @@ labelled control in the library does: `--lr-form-control-required-content` (the 
 CSS `content` string; `''` suppresses it), `--lr-form-control-required-color` (default
 `var(--lr-color-danger)`) and `--lr-form-control-required-offset` (default `0`). One declaration on
 an ancestor — `:root` included — retunes this marker along with every other one in the page. The
-one detail specific to this component: `[part="form-control-label"]` is the marker owner inside the
-`<legend>`, so known-date consumes the same shared primitive and public marker hooks as every other
-form control. With no label the legend is hidden and nothing is painted. Full description in
+one detail specific to this component: `[part="legend"]` owns the marker, while
+`[part="form-control-label"]` owns only the label content inside that legend. A
+`::part(form-control-label)` rule therefore cannot retheme the marker; use the three public marker
+properties above. With no label the legend is hidden and nothing is painted. Full description in
 `llms/shared.md` → "The required-field marker".
 
 **CSS states:** `:state(blank)` while the composite value is empty/incomplete;

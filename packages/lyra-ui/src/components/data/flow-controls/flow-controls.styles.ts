@@ -63,16 +63,15 @@ export const styles = css`
     color: var(--lr-color-text);
     cursor: pointer;
   }
-  /* :where() leaves only :hover contributing -- (0,1,0), the same selection as
-     \`[part='base'] button:hover:not(:disabled)\` ((0,3,1)) but now losing the pseudo-element
-     tiebreak to a consumer's own \`::part(zoom-in):hover\` ((0,1,1)) with no !important. Mirrors
-     lr-attachment-trigger's identical fix for the same over-specific shape. */
+  /* Keep the internal state selector low-specificity so sibling shadow-tree rules remain easy to
+     order. Consumer ::part() rules win at the shadow boundary through cascade encapsulation, not
+     through a specificity contest with this selector. */
   :where([part='base'] button):hover:where(:not(:disabled)) {
     background: var(--lr-color-surface-hover, var(--lr-color-border));
   }
-  /* Same shape as the hover rule, so the same (0,1,0) and a consumer's ::part(zoom-in):active
-     override still wins. The hover fill carried further toward --lr-color-mix-partner (the text
-     colour), which moves whichever way the surface needs instead of always lightening. */
+  /* The active selector keeps the same low-specificity internal shape. The hover fill carried
+     further toward --lr-color-mix-partner (the text colour), which moves whichever way the
+     surface needs instead of always lightening. */
   :where([part='base'] button):active:where(:not(:disabled)) {
     background: color-mix(
       in oklab,

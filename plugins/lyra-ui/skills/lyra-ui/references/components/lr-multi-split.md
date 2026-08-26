@@ -6,6 +6,7 @@
 - **Class** `LyraMultiSplit`, also available unregistered from `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `9.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 3 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -155,7 +156,8 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
   renders nothing (`hidden`, out of the accessibility tree) instead of the always-visible overlay
   card this state rendered before `open` existed. Setting `open = true` reveals it as a
   focus-trapped floating panel with a `[part="backdrop"]` scrim; Escape or a backdrop click set
-  `open` back to `false`. Leaving `'floating'` while `open` is still `true` also closes it, the same
+  `open` back to `false`. While open, the floating panel is the modal root and every sibling pane
+  behind it is inert. Leaving `'floating'` while `open` is still `true` also closes it, the same
   way `<lr-app-rail>` closes its mobile overlay when leaving `'mobile'` while open.
 
 `collapse`'s three resulting states — `'wide'` (default, today's plain layout) / `'rail'` / `'floating'`
@@ -213,7 +215,8 @@ Otherwise shared tokens only.
 Keyboard: focus a divider (`Tab`), then `ArrowRight`/`ArrowLeft` (horizontal) or
 `ArrowDown`/`ArrowUp` (vertical) to resize by a fixed 2% step — RTL-aware for horizontal layouts
 (under `direction: rtl`, the forward/backward keys and drag-delta sign both swap so they still track
-the visually-adjacent panel).
+the visually-adjacent panel). Home and End jump directly to that divider's current achievable
+minimum and maximum, including per-panel px/percent constraints.
 
 **Known gotchas:**
 

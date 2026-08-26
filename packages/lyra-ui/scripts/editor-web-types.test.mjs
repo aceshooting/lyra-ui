@@ -20,6 +20,15 @@ import { expandManifestInheritance } from './manifest-compact.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 
+for (const name of ['vscode-html-data.json', 'vscode-css-data.json', 'web-types.json']) {
+  const serialized = readFileSync(join(packageDir, name), 'utf8');
+  assert.equal(
+    serialized,
+    `${JSON.stringify(JSON.parse(serialized))}\n`,
+    `${name} remains deterministically compact in the published package`,
+  );
+}
+
 // --- unit coverage over a synthetic declaration --------------------------------------------------
 
 const synthetic = {

@@ -40,6 +40,11 @@ class LyraHtmlViewerBase extends LyraElement<LyraHtmlViewerEventMap> {}
  * containment so retained author styles cannot position content over the surrounding application.
  * A nonempty host `aria-label` makes the host the sole named semantic owner; otherwise the loaded
  * shadow document owns the explicit-empty, `name`, or localized fallback label.
+ * Its passive-document profile is network-silent and non-interactive: links, form controls, and
+ * custom elements are unwrapped to their ordinary text/children where safe; remote navigation and
+ * resource attributes are removed. Images load only inline base64 GIF, JPEG, PNG, or WebP data,
+ * while same-document SVG fragment references may remain; an `<a>` itself never remains in the
+ * rendered preview.
  *
  * @customElement lr-html-viewer
  * @event lr-render-error - Fired when fetching or sanitizing the document fails.

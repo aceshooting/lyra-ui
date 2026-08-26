@@ -22,6 +22,10 @@ that immutable snapshot and paint at most 100 host highlights; an `activeHighlig
 the snapshot is placed first and preserved inside both rendering ceilings. DOCX, Markdown, PDF,
 ebook, SVG, and XML use these candidate/paint semantics.
 
+All DOMPurify-backed passive-markup profiles strip `part` and `exportparts` from embedded content.
+Untrusted documents therefore cannot impersonate a viewer's public CSS parts; ordinary passive
+content and `data-*` metadata remain intact.
+
 ## `lr-document-preview`
 
 A format-dispatching viewer for one document/attachment, plus the visual state machine for an async
@@ -280,6 +284,9 @@ value, without suppressing the visible `name` heading.
   embedded `DocumentAnchorTarget` mixin, which composes up through this element unchanged — the
   shell stays silent in that case, so the event fires exactly once either way. A string `anchor`
   (a highlight id) counts as supported by any renderer declaring at least one anchor kind.
+- `lr-render-error` — `detail: { error }`. The fallback preview or an embedded renderer emits this
+  when fetching, parsing, sanitizing, or rendering fails; the composed event reaches the document
+  viewer unchanged.
 
 **CSS parts:** `body` — wrapper around the active renderer, loading/error state, or fallback preview;
 it renders explicit `aria-busy="true"|"false"`. Visible loading/error text is ordinary non-live
@@ -394,6 +401,10 @@ Mammoth preserves document structure such as headings, paragraphs, lists, tables
 inline raster images; it is not intended to reproduce pixel-exact Word page layout. There is no
 unsanitized rendering escape
 hatch: if `dompurify` is unavailable, rendering is blocked even when Mammoth converted successfully.
+Converted markup then passes through the passive-document profile: anchors, form controls, and
+custom elements are unwrapped to ordinary text/children where safe, remote navigation/resource
+attributes are removed, and an `<a>` itself never remains. Images render only inline base64 GIF,
+JPEG, PNG, or WebP data; same-document SVG fragment references may remain.
 
 Every rendered heading's slug (the same GitHub-slugger-style algorithm `<lr-markdown>` uses) is
 stamped as its `id` and cached into `getHeadingTree()`'s document-ordered outline. Duplicate
@@ -440,7 +451,9 @@ content. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` as
 highlight), `highlight-actions` (keyboard-accessible actions for resolved highlights),
 `highlight-action` (one native highlight activation button), `search-match` (a painted in-document
 search match), and `search-match-active` (the currently active search match, also carries
-`search-match`).
+`search-match`), plus `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest
+anchor-jump message; the spoken copy is appended to the shared document-level polite sink only
+while the viewer and its composed ancestors are exposed to the accessibility tree).
 
 **Themeable custom properties:** `--lr-docx-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
@@ -486,6 +499,15 @@ attachment row is a real `<button>` that emits `lr-attachment-open` with an immu
 of the decoded bytes; opening, downloading, or object-URL'ing them is the host's job (e.g.
 `URL.createObjectURL(content)` → `<lr-document-viewer>` → revoke on
 `lr-close`).
+An attachment with no filename uses the localized `emailViewerUnnamedAttachment` fallback
+(`"Unnamed attachment"` in English) for its visible name, open-button accessible name, and
+`lr-attachment-open` detail. The fallback resolves while rendering, so changing the locale or
+per-instance `strings` after the message loads updates it without reparsing the message.
+
+Sanitized HTML uses the passive-document profile: anchors, form controls, and custom elements are
+unwrapped to ordinary text/children where safe, remote navigation/resource attributes are removed,
+and an `<a>` itself never remains. Images render only inline base64 GIF, JPEG, PNG, or WebP data;
+same-document SVG fragment references may remain.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the message.
@@ -498,7 +520,10 @@ localized show/hide toggle. `false` (the default) preserves the full body render
 host `aria-label` makes the host the sole named semantic owner; an explicitly empty host label
 keeps the shadow `region` with an empty name, and an absent host label falls back to `name` or the
 localized label. `highlights`, `activeHighlightId`, `anchor`, and
-`anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
+`anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract. A fragment is
+an exact DOM `id` lookup: Lyra generates no ids for message headers or a plain-text body, while an
+HTML message can resolve only an id retained from its sanitized body. Without such an id the jump
+reports `found: false`; text-quote anchors work across all rendered message text.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on rendered message text and emit the shared search/anchor events.
@@ -527,7 +552,10 @@ The three shared text-viewer events bubble and compose and are non-cancelable.
 `attachment-item`), `attachment-name` (an attachment's filename, inside `attachment-button`),
 `attachment-size` (an attachment's formatted file size, inside `attachment-button`), `quoted` (a
 folded quoted-text block, hidden until expanded, only while `foldQuotes`), `quote-toggle` (the
-show/hide-quoted-text toggle button, only while `foldQuotes`), `spinner`, and `error`.
+show/hide-quoted-text toggle button, only while `foldQuotes`), `spinner`, `error`, and
+`anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest anchor-jump message; the
+spoken copy is appended to the shared document-level polite sink only while the viewer and its
+composed ancestors are exposed to the accessibility tree).
 
 **Themeable custom properties:** `--lr-email-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
@@ -552,7 +580,9 @@ the exclusive boundary it represents (14–17 renders as 14–16). No HTML is in
 `max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
 precedence over `name` by attribute presence, including an explicitly empty value. `highlights`,
 `activeHighlightId`, `anchor`, and
-`anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
+`anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract. Fragment
+resolution is an exact DOM `id` lookup, but generated event markup defines no fragment ids, so a
+fragment jump reports `found: false`. Use a text-quote anchor for event content.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on rendered event text and emit `lr-search-change`/`lr-anchor-result`.
@@ -573,7 +603,9 @@ passive and cannot be activated.
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base`, `body`, `event-list`, `event`, `event-summary`, `event-time`, `event-location`,
-`event-description`, `spinner`, and `error`.
+`event-description`, `spinner`, `error`, and `anchor-live-region` (an aria-hidden, non-live shadow
+mirror of the latest anchor-jump message; the spoken copy is appended to the shared document-level
+polite sink only while the viewer and its composed ancestors are exposed to the accessibility tree).
 
 **Themeable custom properties:** `--lr-calendar-viewer-max-height` (default `none`) — maximum block
 size of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
@@ -584,7 +616,8 @@ size of `[part="body"]`; also settable via the `max-height` property, which writ
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the calendar. The accepted model is further
 capped at 250 events and 2 MiB of rendered event text; this keeps the complete accepted document in
-the DOM so search, selection and anchors remain truthful without the former 10,000-event eager tree.
+the DOM so search, selection and text-quote anchors remain truthful without the former 10,000-event
+eager tree.
 
 ## `lr-archive-viewer`
 
@@ -608,9 +641,10 @@ virtualized row into view. Queries are capped at 4,096 code units and each pass 
 code units; `matchCountExact: false` reports a ceiling-truncated lower bound. `scrollToAnchor()` resolves text-quote and fragment anchors and emits
 `lr-anchor-result`. A fragment id is the exact ZIP entry path. A text quote resolves within one
 complete entry path; both forms first mount the absolute virtualized row and only then perform the
-shared DOM-level anchor resolution. A jump whose archive is replaced by a concurrent `src`
-reassignment mid-flight, or whose row cannot be located after the wait, reports `found: false`
-rather than a phantom success.
+shared DOM-level anchor resolution. Rendered rows intentionally do not expose entry paths as DOM
+ids; the fragment mapping is resolved against archive metadata. A jump whose archive is replaced
+by a concurrent `src` reassignment mid-flight, or whose row cannot be located after the wait,
+reports `found: false` rather than a phantom success.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or parsing fails;
 `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) from search,
@@ -621,8 +655,11 @@ entry path; and `lr-anchor-result` (`detail: { found }`) after anchor resolution
 are passive and cannot be activated.
 
 **CSS parts:** `base`, `body`, `entry`, `entry-icon`, `entry-name`, `entry-name-dir`, `entry-size`,
-`highlight` (the `<mark>` fallback for a painted entry-path quote), `spinner`, and `error`. A
-directory row's name element carries both `entry-name` and
+`highlight` (the `<mark>` fallback for a painted entry-path quote), `spinner`, `error`, and
+`anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest anchor-jump message; the
+spoken copy is appended to the shared document-level polite sink only while the viewer and its
+composed ancestors are exposed to the accessibility tree). A directory row's name element carries
+both `entry-name` and
 `entry-name-dir` (a part list), so `::part(entry-name-dir)` selects only directory names while
 `::part(entry-name)` still selects every name. Entry rows are rendered into the embedded
 `<lr-virtual-list>`'s own shadow root and forwarded with `exportparts`, so
@@ -707,9 +744,12 @@ Selection text is capped at 4,096 code units and selection rectangles at 1,000.
 non-live shadow content and later loading transitions use the shared document-level polite sink),
 `toolbar`, `previous-button`, `next-button`, `previous-icon`, `next-icon`,
 `mount`, and `error` (ordinary visible text; later error transitions use the shared document-level
-assertive sink). Search results are appended to the shared document-level polite sink, which lives
-in the host's light DOM; the empty `announcer` shadow mirror that used to carry a part of that name
-was removed in 9.0.0 (it had no styling of its own and never held any text).
+assertive sink), plus `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest
+anchor-jump message; the spoken copy is appended to the shared document-level polite sink only
+while the viewer and its composed ancestors are exposed to the accessibility tree). Search results
+are appended to the shared document-level polite sink, which lives in the host's light DOM; the
+empty `announcer` shadow mirror that used to carry a part of that name was removed in 9.0.0 (it had
+no styling of its own and never held any text).
 
 **Themeable custom properties:** `--lr-ebook-viewer-max-height` (default `none`) — maximum block
 size of `[part="mount"]` before it scrolls internally; also settable via the `max-height` property,
@@ -757,7 +797,9 @@ speaker notes, and several advanced effects are not rendered.
 values, declaration breaks, and `url()` are ignored. `highlights`, `activeHighlightId`, `anchor`,
 and `anchorKinds`
 (`['text-quote', 'fragment']`) provide the shared text-viewer contract when the renderer exposes
-DOM text.
+DOM text. Lyra defines no fragment ids for slides. A fragment can resolve only an exact DOM `id`
+exposed by the optional renderer in its currently mounted output; renderer-owned ids are not a
+stable Lyra navigation contract. Use `page`/`goToSlide()` or a text-quote anchor instead.
 
 **Methods:** `goToSlide(index)` returns a promise and navigates the mounted presentation using the
 renderer's zero-based index. A current renderer rejection is contained, enters the localized error
@@ -802,10 +844,13 @@ The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base` (the named region with explicit `aria-busy="true"|"false"`), `header`, `name`,
 `notice`, `error`, `nav`, `previous-button`, `previous-icon`, `slide-count`, `next-button`,
-`next-icon`, and `container`. While loading, the decorative skeleton is paired with an ordinary
-visually-hidden localized label; later loading and error transitions use the shared document-level
-polite and assertive sinks, respectively, without adding live semantics inside the viewer shadow.
-The previous/next chevrons mirror under effective RTL direction, including inherited `dir` changes.
+`next-icon`, `container`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror of the
+latest anchor-jump message; the spoken copy is appended to the shared document-level polite sink
+only while the viewer and its composed ancestors are exposed to the accessibility tree). While
+loading, the decorative skeleton is paired with an ordinary visually-hidden localized label; later
+loading and error transitions use the shared document-level polite and assertive sinks,
+respectively, without adding live semantics inside the viewer shadow. The previous/next chevrons
+mirror under effective RTL direction, including inherited `dir` changes.
 
 **Themeable custom properties:** `--lr-pptx-viewer-max-height` (default `none`) — maximum block
 size of `[part="container"]` before it scrolls internally; also settable via the `max-height`
@@ -814,8 +859,8 @@ property, which writes this token inline.
 **Optional peer dependency:** install `@aiden0z/pptx-renderer` with
 `pnpm add @aiden0z/pptx-renderer`. The registry matches the official PPTX MIME type and `.pptx`
 filenames, declaring `{ anchors: ['text-quote', 'fragment'], search: true, textSelect: true }`
-capabilities and forwarding `anchor`/`highlights` to the mounted viewer, so a deep link opened
-through `<lr-document-viewer>` survives the registry hop.
+capabilities and forwarding `anchor`/`highlights` to the mounted viewer. That forwarding preserves
+the request across the registry hop; it does not create stable fragment ids in renderer output.
 
 Remote resources are capped at 25 MB and measured ZIP expansion is capped at 256 MB before the
 renderer opens the archive; exceeding either ceiling surfaces the localized
@@ -893,8 +938,9 @@ rendered region highlight), `region-highlight` (one region highlight, `data-tone
 (one action in that list),
 `frame-viewport`/`frame-content`/`frame-controls`/`frame-zoom-in`/`frame-zoom-out`/`frame-reset`
 (forwarded from the internal `<lr-pan-zoom>` while `zoomable`).
-The passive rendered image owns `role="img"`; the body upgrades to a named `region` only when zoom
-controls or interactive region highlights are present. The spinner always includes visible
+Passive loaded SVG content owns `role="img"`. Idle, loading, and error states instead use a named
+`region`, keeping their descendant state text in the accessibility tree; zoom controls or
+interactive region highlights likewise use a region. The spinner always includes visible
 localized loading text alongside its decorative ring, and the ring stops under reduced motion.
 
 **Themeable custom properties:** `--lr-svg-viewer-max-height` (default `none`) — maximum block size
@@ -921,6 +967,11 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 
 Fetches an HTML document, sanitizes it with the optional `dompurify` peer, and renders the safe markup
 inside a bounded, scrollable body.
+Its passive-document profile is network-silent and non-interactive: links, form controls, and custom
+elements are unwrapped to their ordinary text/children where safe; remote navigation and resource
+attributes are removed. Images load only inline base64 GIF, JPEG, PNG, or WebP data, while
+same-document SVG fragment references may remain; an `<a>` itself never remains in the rendered
+preview.
 
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
 `max-height`); invalid CSS
@@ -948,7 +999,10 @@ highlights are passive and cannot be activated.
 
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
-**CSS parts:** `base`, `body`, `html`, `spinner`, and `error`.
+**CSS parts:** `base`, `body`, `html`, `spinner`, `error`, and `anchor-live-region` (an aria-hidden,
+non-live shadow mirror of the latest anchor-jump message; the spoken copy is appended to the shared
+document-level polite sink only while the viewer and its composed ancestors are exposed to the
+accessibility tree).
 
 **Themeable custom properties:** `--lr-html-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
@@ -977,8 +1031,13 @@ whose document is replaced by a concurrent `src` reassignment mid-flight reports
 rather than a phantom success, and a header-row target scrolls with the same
 `prefers-reduced-motion`-gated smooth behavior every other row uses.
 
-**Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
-`max-height`); invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
+**Properties:** `src: string = ''`, `name: string = ''`, `maxHeight: string = ''` (attribute
+`max-height`), and `scrollMode: DatasetViewerScrollMode = 'self'` (attribute `scroll-mode`,
+reflected). Invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
+`scrollMode='self'` preserves contained horizontal scrolling and applies `maxHeight`.
+`scrollMode='page'` drops both the overflow container and height cap so an uncapped sticky header
+uses the page scrollport; the explicit tradeoff is that a wide dataset can overflow its host.
+Unsupported attribute and untyped property values normalize to `'self'`.
 Host `aria-label` names the table by attribute presence, including an explicitly empty value;
 `name` and the localized row-count caption are fallbacks. The same computed name (host `aria-label`,
 else `name`) also names a persistent `role="region"` landmark on `[part='base']` in _every_ fetch
@@ -1011,15 +1070,19 @@ every fetch state), `body`, `table`, `header-row`, `header-cell`, `data-row`, `c
 `cell-highlight-action` (the native button filling a highlighted cell — focusable, emits
 `lr-highlight-activate` on click or Enter/Space; its complete accessible name uses the localized
 `cellHighlightWithLabel` message with independent `{value}` and `{label}` placeholders), `spinner`,
-and `error`. `data-row`, `cell`,
+`error`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest anchor-jump
+message; the spoken copy is appended to the shared document-level polite sink only while the viewer
+and its composed ancestors are exposed to the accessibility tree). `data-row`, `cell`,
 `cell-highlight` and `cell-highlight-action` render inside the internal `<lr-virtual-list>` and are
 forwarded via `exportparts`, so `lr-dataset-viewer::part(cell)` reaches them from a consumer
 stylesheet.
 
-**Exports:** `DatasetTable` is `{ fields: string[]; rows: Record<string, string>[] }`.
+**Exports:** `DatasetTable` is `{ fields: string[]; rows: Record<string, string>[] }`;
+`DatasetViewerScrollMode` is `'self' | 'page'`.
 
 **Themeable custom properties:** `--lr-dataset-viewer-max-height` (default `none`) — maximum block
 size of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
+Page scroll mode deliberately ignores this cap.
 `--lr-dataset-viewer-highlight-color` (default `var(--lr-color-brand)`) — the outline color of a
 `cell-highlight` cell. The cell matching `activeHighlightId` receives a private warning-color
 default because a `[data-active]` selector can't be chained onto the `::part(cell-highlight)` the
@@ -1043,7 +1106,7 @@ label when `FN` is absent).
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the contacts. Parsing retains at most 250
 contacts and 2 MiB of rendered contact text, keeping the complete accepted model searchable and
-anchorable without a 10,000-card eager DOM tree.
+text-quote anchorable without a 10,000-card eager DOM tree.
 
 **Properties:** `src: string = ''`, `name: string = ''`,
 `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — `1`–`6` expose every
@@ -1052,7 +1115,9 @@ keeps the names visual-only — and `maxHeight: string = ''` (attribute `max-hei
 `max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
 precedence over `name` by attribute presence, including an explicitly empty value. `highlights`,
 `activeHighlightId`, `anchor`, and
-`anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
+`anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract. Fragment
+resolution is an exact DOM `id` lookup, but generated contact cards define no fragment ids, so a
+fragment jump reports `found: false`. Use a text-quote anchor for contact content.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on rendered contact text and emit the shared search/anchor events.
@@ -1073,7 +1138,10 @@ highlights are passive and cannot be activated.
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base`, `body`, `contact`, `contact-name`, `contact-org`, `contact-tel`,
-`contact-email`, `contact-adr`, `spinner`, and `error`.
+`contact-email`, `contact-adr`, `spinner`, `error`, and `anchor-live-region` (an aria-hidden,
+non-live shadow mirror of the latest anchor-jump message; the spoken copy is appended to the shared
+document-level polite sink only while the viewer and its composed ancestors are exposed to the
+accessibility tree).
 
 **Themeable custom properties:** `--lr-contact-viewer-max-height` (default `none`) — maximum block
 size of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
@@ -1088,6 +1156,8 @@ actually empty document returns no contacts.
 
 Fetches a PDF and renders its pages with the optional `pdfjs-dist` peer. Pages are virtualized through
 `lr-virtual-list`, and PDF.js's selectable text layer is positioned over each rendered canvas.
+The virtual list's raw `lr-visible-range-change` and `lr-virtual-scroll` events are internal and do
+not escape the viewer; visible-range changes surface through the documented `lr-page-change` state.
 
 Adopts `DocumentAnchorTarget`: `page`, `text-quote`, and `region` anchors resolve, and `highlights`
 paint through one `<lr-highlight-layer>` per page, stacked between the canvas and the text layer
@@ -1187,10 +1257,13 @@ carries its own part name), `page-indicator`, `zoom-indicator`, `pages`, `page`,
 inside a page's text layer — PDF.js creates these imperatively, and they carry the part so a rule can
 reach them without a descendant combinator), `search-match` (a `<mark>` painted into a mounted page's
 text layer around one search match), `search-match-active` (the currently active match, also carries
-`search-match`), `page-error`, `page-error-visible`, `spinner`, and `error`. Search painting is best-effort: a page outside the
-virtualized render window is skipped and repainted once its text layer mounts, and a match spanning a
-text-layer span boundary that `Range.surroundContents()` can't wrap stays unpainted (still reachable
-via `searchNext()`). The loading skeleton is decorative and paired with an ordinary visually-hidden
+`search-match`), `page-error`, `page-error-visible`, `spinner`, `error`, and `anchor-live-region` (an
+aria-hidden, non-live shadow mirror of the latest anchor-jump message; the spoken copy is appended
+to the shared document-level polite sink only while the viewer and its composed ancestors are
+exposed to the accessibility tree). Search painting is best-effort: a page outside the virtualized
+render window is skipped and repainted once its text layer mounts, and a match spanning a text-layer
+span boundary that `Range.surroundContents()` can't wrap stays unpainted (still reachable via
+`searchNext()`). The loading skeleton is decorative and paired with an ordinary visually-hidden
 localized label; later loading and error transitions use the shared document-level polite and
 assertive sinks, respectively, without adding live semantics inside the viewer shadow.
 
@@ -1295,9 +1368,11 @@ grid viewer's event contract; its registry capabilities advertise `textSelect: f
 structural cell covered by a `highlights` entry), `cell-highlight-action` (the native button
 filling a highlighted cell; focusable and emits `lr-highlight-activate`; its complete accessible
 name uses the localized `cellHighlightWithLabel` message with independent `{value}` and `{label}`
-placeholders), `rows`, `spinner`, and
-`error`. `data-row`, `cell`, `cell-highlight`, and `cell-highlight-action` are rendered inside the
-internal `<lr-virtual-list>` and forwarded via
+placeholders), `rows`, `spinner`, `error`, and `anchor-live-region` (an aria-hidden, non-live shadow
+mirror of the latest anchor-jump message; the spoken copy is appended to the shared document-level
+polite sink only while the viewer and its composed ancestors are exposed to the accessibility tree).
+`data-row`, `cell`, `cell-highlight`, and `cell-highlight-action` are rendered inside the internal
+`<lr-virtual-list>` and forwarded via
 `exportparts`, so `lr-spreadsheet-viewer::part(cell)` reaches them from a consumer stylesheet.
 The spinner always includes visible localized loading text alongside its decorative ring; the text
 remains understandable without CSS or animation and the ring stops under reduced motion.
@@ -1316,9 +1391,10 @@ inline on `[part="base"]`.
 **Optional peer dependency:** install `xlsx` with `pnpm add https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`. The official CDN matches the
 `.xlsx` and `.xls` MIME types and filename extensions.
 
-Remote resources are capped at 25 MB, and each parsed sheet at 10,000 rows and 1,000 columns;
-exceeding any of these surfaces the localized `documentPreviewResourceTooLarge` message instead of
-the workbook.
+Remote resources are capped at 25 MB, each parsed sheet at 10,000 rows and 1,000 columns, and each
+workbook at 256 sheets and 1,000,000 aggregate expanded cells. Row limits are per sheet, not
+cumulative across a workbook. Exceeding any ceiling surfaces the localized
+`documentPreviewResourceTooLarge` message instead of the workbook.
 
 ## `lr-csv-viewer`
 
@@ -1331,10 +1407,11 @@ row/column into view via the virtualized list's `active-item-id`. `highlights` p
 mid-flight reports `found: false` rather than a phantom success.
 
 **Properties:** `src: string = ''` and `name: string = ''`. `hasHeaderRow: boolean = true` (attribute
-`has-header-row`) controls whether the first parsed row is rendered as a sticky header.
+`has-header-row`) controls whether the first parsed row is rendered as a persistent header above
+the virtualized row scrollport.
 Host `aria-label` names both the viewer region and loaded table by attribute presence, including an
 explicitly empty value; `name` and the localized label are fallbacks.
-`maxHeight: string = ''` (attribute `max-height`) is a CSS length that caps the scrollable body —
+`maxHeight: string = ''` (attribute `max-height`) is a CSS length that caps the body allocation —
 setting it writes `--lr-csv-viewer-max-height` inline on `[part="base"]`; invalid CSS `max-height`
 values, declaration breaks, and `url()` are ignored. `anchorKinds: readonly LyraAnchorKind[] =
 ['cell-range']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
@@ -1355,18 +1432,23 @@ Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor
 search/navigation/clear, canonical source reset, and effective-locale re-evaluation. `lr-text-select` is not part of this
 grid viewer's event contract; its registry capabilities advertise `textSelect: false`.
 
-**CSS parts:** `base`, `body` (the capped scroll surface), `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a structural
+**CSS parts:** `base`, `body` (the capped content allocation), `sheet` (the named `role="table"`),
+`header-row` (persistent above the nested virtual-list row scrollport), `data-row`, `cell`, `cell-highlight` (a structural
 cell covered by a `highlights` entry), `cell-highlight-action` (the native button filling a
 highlighted cell; emits `lr-highlight-activate`; its complete accessible name uses the localized
-`cellHighlightWithLabel` message with independent `{value}` and `{label}` placeholders), `rows`,
-`spinner`, and `error`. `data-row`,
+`cellHighlightWithLabel` message with independent `{value}` and `{label}` placeholders; this action,
+not the structural `cell-highlight`, owns keyboard focus and its focus ring), `rows`,
+`spinner`, `error`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest
+anchor-jump message; the spoken copy is appended to the shared document-level polite sink only while
+the viewer and its composed ancestors are exposed to the accessibility tree). `data-row`,
 `cell`, `cell-highlight`, and `cell-highlight-action` are rendered inside the internal
 `<lr-virtual-list>` and forwarded via `exportparts`, so
 `lr-csv-viewer::part(cell)` reaches them from a consumer stylesheet.
 
 **Themeable custom properties:** `--lr-csv-viewer-max-height` (default `none`) — maximum block size
-of `[part="body"]` before it scrolls internally; also settable via the `maxHeight` property, which
-writes this token inline on `[part="base"]`. `--lr-csv-viewer-highlight-color` (default
+allocated to `[part="body"]`; the nested virtual-list scrolls data rows in the remainder below the
+header. It is also settable via the `maxHeight` property, which writes this token inline on
+`[part="base"]`. `--lr-csv-viewer-highlight-color` (default
 `var(--lr-color-brand)`) — the outline color of a `cell-highlight` cell. The cell matching
 `activeHighlightId` receives a private warning-color default because a `[data-active]` selector
 can't be chained onto the `::part(cell-highlight)` the cell reaches this component's stylesheet
@@ -1391,6 +1473,12 @@ unlike `<lr-html-viewer>`, which renders a foreign document inside an isolated p
 markup always passes through the shared DOMPurify-backed sanitizer before it reaches `innerHTML`;
 there is deliberately no `allow-scripts`-style escape hatch (the Web Awesome/Shoelace equivalents'
 raw injection option is omitted, not shipped as a no-op).
+The post-sanitization transclusion profile is network-silent and non-interactive: anchors are
+retained, but only resolvable same-document `#fragment` links survive and those ids are rebased per
+include instance. Other navigation and resource attributes such as `href`, `src`, `srcset`,
+`action`, `ping`, and `poster` are removed, so images never load. Form controls and custom elements
+cannot remain interactive; their wrappers are unwrapped when their ordinary children are safe,
+while elements such as inputs that have no passive content are removed.
 
 A bare primitive: no label/hint/error chrome, no implicit role, no computed accessible name, and no
 `aria-live` wrapper (the fragment can carry its own landmarks; wrapping the host would re-announce
@@ -1459,7 +1547,10 @@ The three shared text-viewer events bubble and compose and are non-cancelable.
 the sanitized fragment on success, and left untouched on failure (as is any previously successful
 include).
 
-**CSS parts:** `base` — the `display: contents` wrapper around the default slot.
+**CSS parts:** `base` (the `display: contents` wrapper around the default slot), and
+`anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest anchor-jump message; the
+spoken copy is appended to the shared document-level polite sink only while the viewer and its
+composed ancestors are exposed to the accessibility tree).
 
 An absent `dompurify` fails closed: it fires `lr-include-error` with
 `reason: 'missing-sanitizer'` and leaves the existing content in place — unsanitized markup is
@@ -1497,7 +1588,8 @@ positioned ancestor.
 to be nonempty and the first item retained when IDs repeat; `activeHighlightId: string | null = null`
 (attribute `active-highlight-id`), and `interactive: boolean = true` (reflected) — gates click/keyboard
 activation. A rectangle is eligible only when `x`/`y`/`width`/`height` are finite numbers and both
-dimensions are nonnegative; invalid rectangles are omitted from paint, focus, and activation. When
+dimensions are nonnegative; an item with a missing/non-array `rects` collection and each invalid
+rectangle are omitted from paint, focus, and activation. When
 `interactive=false`, the base is `aria-hidden` pure paint with no group role, accessible name, or
 controls. If every rectangle is invalid, no shadow subtree is rendered.
 
@@ -1553,7 +1645,8 @@ viewer, allocation width, status, or document identity changes.
 If `pageCount` shrinks past the currently focused row, focus moves to the absolute last remaining
 page instead of using the rendered window's local index or being lost with the virtualized row.
 Rapid consecutive shrinks supersede an in-flight repair, so focus lands on the latest count. The
-numeric type-ahead buffer is cleared on detach.
+numeric type-ahead buffer is cleared on detach. Alt/Ctrl/Meta-modified digits are left to browser or
+application shortcuts and never enter the buffer.
 
 **CSS parts:** `base` (the rail), `pages` (the embedded `<lr-virtual-list>`), `page` (one page
 button), `page-current` (the button for the current `page`), `thumbnail` (the thumbnail canvas/DOM
@@ -1596,6 +1689,11 @@ plain preformatted text. A code cell's `execute_result`/`display_data` outputs p
 same shared `internal/ansi.ts` parser `lr-terminal` uses — a traceback keeps its coloring instead of
 showing raw `ESC[` sequences. Sanitizing raw HTML/SVG output markup lazy-loads the
 optional peer `dompurify`; without it, the output renders a localized notice instead of raw markup.
+Sanitized `text/html` output uses the passive-document profile: anchors, form controls, and custom
+elements are unwrapped to ordinary text/children where safe, remote navigation/resource attributes
+are removed, and only inline base64 raster image sources render. Sanitized `image/svg+xml` output
+is likewise network-silent and non-interactive: animation is removed and only same-document
+fragment references or inline base64 raster image references survive.
 Cells are virtualized through `lr-virtual-list`. `node-path` anchors resolve `path[0]` as a cell
 index; `fragment` anchors resolve a cell's own `id`. No execution, no kernels, no editing, no
 ipywidgets.
@@ -1656,9 +1754,11 @@ tone), `cell-highlighted-success`, `cell-highlighted-warning`, `cell-highlighted
 scrollable preformatted surface for a raw cell), `outputs`, `output`
 (`data-output-type`, `data-stream`), `output-error` (added alongside `output` on a stderr stream or
 an error output), `error-output-label` (the label introducing an error output's traceback),
-`output-toggle`, `error`, `spinner`. The highlight/active state variants are separate part _names_
-rather than attribute selectors, because Shadow Parts forbids an attribute selector after
-`::part()`.
+`output-toggle`, `error`, `spinner`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror
+of the latest anchor-jump message; the spoken copy is appended to the shared document-level polite
+sink only while the viewer and its composed ancestors are exposed to the accessibility tree). The
+highlight/active state variants are separate part _names_ rather than attribute selectors, because
+Shadow Parts forbids an attribute selector after `::part()`.
 The document-level spinner always includes visible localized loading text alongside its decorative
 ring; the text remains understandable without CSS or animation and the ring stops under reduced
 motion.
@@ -1748,7 +1848,8 @@ whose anchor is a `node-path` this document resolves tints its element row — `
 is the entry's own `label` when supplied, otherwise a localized "Highlight n of m". `activeHighlightId`
 adds `data-active-highlight` to the matching row. Entries are deduplicated by `id`; an entry whose
 anchor kind or path this document cannot resolve is dropped whole rather than painted at some
-coarser granularity, and an entry inside a collapsed subtree paints once that subtree is expanded.
+coarser granularity; missing and non-array `path` values are included in that invalid case. An entry
+inside a collapsed subtree paints once that subtree is expanded.
 Painting retains at most 100 resolved entries from a 1,000-entry candidate window; an active entry
 anywhere in the bounded 10,000-record host snapshot is placed first inside both ceilings.
 
@@ -1775,7 +1876,9 @@ tree, rather than resolving indistinguishably from the bare element path),
 `toggle` (an element's expand/collapse button on nodes with renderable children; its collapsed
 chevron mirrors under effective RTL direction), `highlight-action` (the focusable button a resolved
 `highlights` entry adds to its element row), `toggle-placeholder` (the empty toggle-column spacer on
-leaf rows), `error`, `spinner`.
+leaf rows), `error`, `spinner`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror of
+the latest anchor-jump message; the spoken copy is appended to the shared document-level polite sink
+only while the viewer and its composed ancestors are exposed to the accessibility tree).
 The spinner always includes visible localized loading text alongside its decorative ring; the text
 remains understandable without CSS or animation and the ring stops under reduced motion.
 
@@ -1911,7 +2014,9 @@ used as `<lr-map>`'s `label` and the root's `aria-label` (falling back to the lo
 text-viewer contract adds `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`), plus `search()`, `searchNext()`, `searchPrevious()`,
 `clearSearch()`, and `scrollToAnchor()` for the ordinary-DOM serialized feature metadata and status
-text, independent of whether the optional map peer is available.
+text, independent of whether the optional map peer is available. Fragment resolution is an exact
+DOM `id` lookup, but the generated metadata, status, and map output define no fragment ids, so a
+fragment jump reports `found: false`. Use a text-quote anchor for serialized metadata.
 
 **Events:**
 
@@ -1936,8 +2041,10 @@ rendered in both map and fallback paths), `missing-library` (the missing-`maplib
 alongside the `lr-json-viewer` fallback; its transition uses the shared document-level assertive
 sink), `error` (ordinary visible error text; later transitions use the same assertive sink),
 `spinner` (a decorative skeleton plus an ordinary visually-hidden localized label; later loading
-transitions use the shared document-level polite sink). No active live semantics are rendered in
-the viewer's shadow tree.
+transitions use the shared document-level polite sink), and `anchor-live-region` (an aria-hidden,
+non-live shadow mirror of the latest anchor-jump message; the spoken copy is appended to the shared
+document-level polite sink only while the viewer and its composed ancestors are exposed to the
+accessibility tree). No active live semantics are rendered in the viewer's shadow tree.
 
 Those states carry the same visual tones the rest of this family uses rather than plain inherited
 body text: `error` is `--lr-color-danger` (matching `lr-docx-viewer`/`lr-email-viewer`/

@@ -29,7 +29,7 @@ class Demo extends LyraElement {
     return this.beginAbortableLoad();
   }
 
-  render() {
+  override render() {
     return html`<span>hi</span>`;
   }
 }
@@ -38,7 +38,7 @@ customElements.define(tag("demo-base"), Demo);
 class WarnDemo extends LyraElement {
   @property({ reflect: true, attribute: 'chart-axis' }) chartAxis = '';
 
-  render() {
+  override render() {
     return html`<span>warn-demo</span>`;
   }
 }
@@ -107,7 +107,7 @@ class DemoLocale extends LyraElement {
   ): string {
     return this.localize(key, fallback, values);
   }
-  render() {
+  override render() {
     return html`<span>${this.localize("cancel")}</span>`;
   }
 }
@@ -129,7 +129,7 @@ class DemoHydration extends LyraElement {
     });
   }
 
-  render() {
+  override render() {
     this.renderCalls += 1;
     this.presenceAtRender.push(this.renderSlotPresence(false));
     return html`<span>hydration</span>`;
@@ -153,7 +153,7 @@ class DemoHydrationThrow extends LyraElement {
     });
   }
 
-  render() {
+  override render() {
     throw new Error("hydration boom");
   }
 }
@@ -162,7 +162,7 @@ customElements.define(tag("demo-hydration-throw"), DemoHydrationThrow);
 class DemoDirection extends LyraElement {
   renderCalls = 0;
 
-  render() {
+  override render() {
     this.renderCalls += 1;
     return html`<span>${this.effectiveDirection}</span>`;
   }
@@ -184,7 +184,7 @@ customElements.define(tag("demo-updated-direction"), DemoUpdatedDirection);
 class DemoInheritedContext extends LyraElement {
   renderCalls = 0;
 
-  render() {
+  override render() {
     this.renderCalls += 1;
     return html`<span
       >${this.effectiveDirection}|${this.effectiveMessageLocale}</span
@@ -194,7 +194,7 @@ class DemoInheritedContext extends LyraElement {
 customElements.define(tag("demo-inherited-context"), DemoInheritedContext);
 
 class DemoHostAria extends LyraElement {
-  render() {
+  override render() {
     return html`<div
       role="group"
       aria-label=${this.getAttribute("aria-label") ?? nothing}
@@ -478,9 +478,9 @@ it('preserves bounded nested structure through domain validation depth', async (
     | Readonly<Record<string, unknown>>
     | undefined;
   for (let depth = 0; depth <= 64; depth += 1) {
-    expect(retained?.label).to.equal(`depth-${depth}`);
+    expect(retained?.['label']).to.equal(`depth-${depth}`);
     expect(Object.isFrozen(retained)).to.be.true;
-    const children = retained?.children as
+    const children = retained?.['children'] as
       | readonly Readonly<Record<string, unknown>>[]
       | undefined;
     expect(Object.isFrozen(children)).to.be.true;
@@ -881,7 +881,7 @@ it("re-resolves locale and direction when reconnected under a different ancestor
   // previously consumed sensitivities, compare against the former rendered context and schedule
   // the render -- reading a test-only getter here would mask the stale-output bug.
   sections[1]!.append(el);
-  await new Promise((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
+  await new Promise<void>((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
   await el.updateComplete;
   expect(el.shadowRoot?.textContent?.trim()).to.equal("rtl|x-two");
   expect(el.renderCalls).to.equal(firstRenderCalls + 1);
@@ -890,7 +890,7 @@ it("re-resolves locale and direction when reconnected under a different ancestor
   const reconnectedRenderCalls = el.renderCalls;
   sections[1]!.setAttribute("lang", "x-three");
   sections[1]!.setAttribute("dir", "ltr");
-  await new Promise((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
+  await new Promise<void>((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
   await el.updateComplete;
   expect(el.shadowRoot?.textContent?.trim()).to.equal("ltr|x-three");
   expect(
@@ -899,7 +899,7 @@ it("re-resolves locale and direction when reconnected under a different ancestor
   ).to.equal(reconnectedRenderCalls + 1);
 
   sections[1]!.setAttribute("locale", "x-four");
-  await new Promise((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
+  await new Promise<void>((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
   await el.updateComplete;
   expect(el.shadowRoot?.textContent?.trim()).to.equal("ltr|x-four");
 });
@@ -1030,7 +1030,7 @@ it("shares inherited-context observation and resolves direction only for consume
     contextDirectionReads = 0;
     wrapper.removeAttribute("dir");
     wrapper.className = "shared-rtl-context";
-    await new Promise((resolve) =>
+    await new Promise<void>((resolve) =>
       queueMicrotask(() => queueMicrotask(resolve))
     );
     await directionConsumer.updateComplete;
@@ -1070,7 +1070,7 @@ it("re-renders direction-sensitive output after host style and class changes", a
     expect(el.shadowRoot?.textContent?.trim()).to.equal("ltr");
 
     el.style.direction = "rtl";
-    await new Promise((resolve) =>
+    await new Promise<void>((resolve) =>
       queueMicrotask(() => queueMicrotask(resolve))
     );
     await el.updateComplete;
@@ -1078,7 +1078,7 @@ it("re-renders direction-sensitive output after host style and class changes", a
 
     el.style.direction = "";
     el.className = tag("host-rtl-context");
-    await new Promise((resolve) =>
+    await new Promise<void>((resolve) =>
       queueMicrotask(() => queueMicrotask(resolve))
     );
     await el.updateComplete;
@@ -1097,7 +1097,7 @@ it("coalesces a host direction mutation into an already-pending render", async (
   el.requestUpdate();
   el.style.direction = "rtl";
   await el.updateComplete;
-  await new Promise((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
+  await new Promise<void>((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
   await el.updateComplete;
 
   expect(el.shadowRoot?.textContent?.trim()).to.equal("rtl");
@@ -1119,7 +1119,7 @@ it("does not suppress a direction mutation queued after the pending render consu
   });
   el.style.direction = "rtl";
   await el.updateComplete;
-  await new Promise((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
+  await new Promise<void>((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
   await el.updateComplete;
 
   expect(getComputedStyle(el).direction).to.equal("ltr");
@@ -1142,7 +1142,7 @@ it("does not suppress a direction mutation from updated() after the DOM commit",
   el.requestUpdate();
   el.style.direction = "rtl";
   await el.updateComplete;
-  await new Promise((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
+  await new Promise<void>((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
   await el.updateComplete;
 
   expect(getComputedStyle(el).direction).to.equal("ltr");
@@ -1169,7 +1169,7 @@ it("coalesces a reconnect context comparison into an already-pending render", as
   el.requestUpdate();
   contexts[1]!.append(el);
   await el.updateComplete;
-  await new Promise((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
+  await new Promise<void>((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
   await el.updateComplete;
 
   expect(el.shadowRoot?.textContent?.trim()).to.equal("rtl");
@@ -1204,7 +1204,7 @@ it("tracks flattened assigned-slot direction and slot reassignment", async () =>
     expect(el.shadowRoot?.textContent?.trim()).to.equal("rtl");
 
     slots[0]!.className = "ltr";
-    await new Promise((resolve) =>
+    await new Promise<void>((resolve) =>
       queueMicrotask(() => queueMicrotask(resolve))
     );
     await el.updateComplete;
@@ -1213,7 +1213,7 @@ it("tracks flattened assigned-slot direction and slot reassignment", async () =>
 
     slots[0]!.className = "rtl";
     el.slot = "second";
-    await new Promise((resolve) =>
+    await new Promise<void>((resolve) =>
       queueMicrotask(() => queueMicrotask(resolve))
     );
     await el.updateComplete;
@@ -1224,7 +1224,7 @@ it("tracks flattened assigned-slot direction and slot reassignment", async () =>
     replacement.name = "second";
     replacement.className = "rtl";
     slots[1]!.replaceWith(replacement);
-    await new Promise((resolve) =>
+    await new Promise<void>((resolve) =>
       queueMicrotask(() => queueMicrotask(resolve))
     );
     await el.updateComplete;
@@ -1232,7 +1232,7 @@ it("tracks flattened assigned-slot direction and slot reassignment", async () =>
     expect(el.shadowRoot?.textContent?.trim()).to.equal("rtl");
 
     replacement.className = "ltr";
-    await new Promise((resolve) =>
+    await new Promise<void>((resolve) =>
       queueMicrotask(() => queueMicrotask(resolve))
     );
     await el.updateComplete;
@@ -1240,7 +1240,7 @@ it("tracks flattened assigned-slot direction and slot reassignment", async () =>
     expect(el.shadowRoot?.textContent?.trim()).to.equal("ltr");
 
     host.lang = "ar";
-    await new Promise((resolve) =>
+    await new Promise<void>((resolve) =>
       queueMicrotask(() => queueMicrotask(resolve))
     );
     await el.updateComplete;
@@ -1263,7 +1263,7 @@ it("tracks direction-affecting mutations through a closed shadow root", async ()
   expect(el.shadowRoot?.textContent?.trim()).to.equal("ltr");
 
   context.style.direction = "rtl";
-  await new Promise((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
+  await new Promise<void>((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
   await el.updateComplete;
   expect(el.shadowRoot?.textContent?.trim()).to.equal("rtl");
 });
@@ -1309,7 +1309,7 @@ it("invalidates direction for duplicate declarations, custom properties and :lan
       "rtl"
     );
     wrapper.querySelector("#language")!.setAttribute("lang", "ar");
-    await new Promise((resolve) =>
+    await new Promise<void>((resolve) =>
       queueMicrotask(() => queueMicrotask(resolve))
     );
     await Promise.all(consumers.map((consumer) => consumer.updateComplete));
@@ -1376,7 +1376,7 @@ it("disconnects shared inherited-context observers when an iframe owner document
   foreignDocument.body.append(foreignDocument.adoptNode(el));
 
   try {
-    await new Promise((resolve) =>
+    await new Promise<void>((resolve) =>
       queueMicrotask(() => queueMicrotask(resolve))
     );
     expect(observerConstructions).to.equal(1);
@@ -1502,7 +1502,7 @@ it("never forces computed-style reads for hosts that did not consume effectiveDi
     const passiveContext = wrapper.querySelector("#passive") as HTMLElement;
     passiveContext.style.setProperty("--some-unrelated-token", "1000");
     passiveContext.className = "unrelated-class";
-    await new Promise((resolve) =>
+    await new Promise<void>((resolve) =>
       queueMicrotask(() => queueMicrotask(resolve))
     );
     expect(
@@ -1514,7 +1514,7 @@ it("never forces computed-style reads for hosts that did not consume effectiveDi
       "--probe-direction",
       "rtl"
     );
-    await new Promise((resolve) =>
+    await new Promise<void>((resolve) =>
       queueMicrotask(() => queueMicrotask(resolve))
     );
     await directionConsumer.updateComplete;
@@ -1593,7 +1593,7 @@ it("rolls back multi-root observation transactionally when an owner observer fai
       4
     );
     outer.dir = "rtl";
-    await new Promise((resolve) =>
+    await new Promise<void>((resolve) =>
       queueMicrotask(() => queueMicrotask(resolve))
     );
     expect(updates).to.equal(1);
@@ -1656,11 +1656,11 @@ it("fails closed and retries when owner observation capability accessors are hos
     }
     recordInheritedDirectionRead(host, "ltr");
     foreignDocument.body.dir = "rtl";
-    await new Promise((resolve) =>
+    await new Promise<void>((resolve) =>
       queueMicrotask(() => queueMicrotask(resolve))
     );
     expect(updateRequests).to.equal(1);
-    stop();
+    stop?.();
     stop = undefined;
     foreignDocument.body.dir = "ltr";
     updateRequests = 0;
@@ -1685,12 +1685,12 @@ it("fails closed and retries when owner observation capability accessors are hos
       Reflect.deleteProperty(foreignDocument, "defaultView");
     }
     recordInheritedDirectionRead(host, "ltr");
-    await new Promise((resolve) =>
+    await new Promise<void>((resolve) =>
       queueMicrotask(() => queueMicrotask(resolve))
     );
     updateRequests = 0;
     foreignDocument.body.dir = "rtl";
-    await new Promise((resolve) =>
+    await new Promise<void>((resolve) =>
       queueMicrotask(() => queueMicrotask(resolve))
     );
     expect(updateRequests).to.equal(1);
@@ -1764,7 +1764,7 @@ it("rebinds locale, direction and ancestor observation after adoption into an if
   foreignDocument.body.append(context);
 
   try {
-    await new Promise((resolve) =>
+    await new Promise<void>((resolve) =>
       queueMicrotask(() => queueMicrotask(resolve))
     );
     await el.updateComplete;
@@ -1773,14 +1773,14 @@ it("rebinds locale, direction and ancestor observation after adoption into an if
 
     context.lang = "et";
     context.dir = "ltr";
-    await new Promise((resolve) =>
+    await new Promise<void>((resolve) =>
       queueMicrotask(() => queueMicrotask(resolve))
     );
     await el.updateComplete;
     expect(el.shadowRoot?.textContent?.trim()).to.equal("ltr|et");
 
     context.removeAttribute("lang");
-    await new Promise((resolve) =>
+    await new Promise<void>((resolve) =>
       queueMicrotask(() => queueMicrotask(resolve))
     );
     await el.updateComplete;
@@ -1836,7 +1836,7 @@ class DemoAfterUpdate extends LyraElement {
     this.scheduleAfterUpdate(() => this.ran.push("first"));
     this.scheduleAfterUpdate(() => this.ran.push("second"));
   }
-  render() {
+  override render() {
     return html`<span>after-update</span>`;
   }
 }
@@ -2382,8 +2382,8 @@ describe('dev-mode unknown-attribute warning wiring', () => {
     el.remove();
 
     expect(calls).to.have.length(1);
-    expect(calls[0][0]).to.contain('chart-axsi');
-    expect(calls[0][0]).to.contain("did you mean 'chart-axis'");
+    expect(calls[0]![0]).to.contain('chart-axsi');
+    expect(calls[0]![0]).to.contain("did you mean 'chart-axis'");
   });
 
   it('does not warn for a real observed attribute', async () => {

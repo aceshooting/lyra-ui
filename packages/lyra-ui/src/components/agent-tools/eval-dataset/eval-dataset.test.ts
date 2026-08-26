@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './eval-dataset.js';
 import type { LyraEvalDataset, EvalExample } from './eval-dataset.js';
+import type { LyraTable } from '../../data/table/table.class.js';
 import type { LyraChip } from '../../overlays/chip/chip.class.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
@@ -577,6 +578,32 @@ it('uses `label` or the localized fallback for the grid without cloning a host a
   expect(hostLabeled.shadowRoot!.querySelector('lr-table')!.getAttribute('aria-label')).to.equal('My dataset');
 });
 
+it('contains the nested table sort-request proposal while preserving the documented sort commit', async () => {
+  const el = await fixture<LyraEvalDataset>(html`
+    <lr-eval-dataset .examples=${[{ id: 'one', input: 'Prompt' }]}></lr-eval-dataset>
+  `);
+  const table = el.shadowRoot!.querySelector('lr-table')!;
+  let proposals = 0;
+  let commits = 0;
+  el.addEventListener('lr-sort-request', () => proposals++);
+  el.addEventListener('lr-sort', () => commits++);
+
+  table.dispatchEvent(new CustomEvent('lr-sort-request', {
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+    detail: { phase: 'request', sortKey: 'input', sortDir: 'asc' },
+  }));
+  table.dispatchEvent(new CustomEvent('lr-sort', {
+    bubbles: true,
+    composed: true,
+    detail: { phase: 'commit', sortKey: 'input', sortDir: 'asc' },
+  }));
+
+  expect(proposals).to.equal(0);
+  expect(commits).to.equal(1);
+});
+
 it('applies a consumer ::part(add-button):hover override in the rendered cascade', async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div>
@@ -609,6 +636,7 @@ it('normalizes duplicate example ids first-wins before the nested grid', async (
     ]}></lr-eval-dataset>
   `);
   expect(gridRowCount(el)).to.equal(1);
-  const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement & { rows: EvalExample[] };
+  const table = el.shadowRoot!.querySelector<LyraTable<EvalExample>>('lr-table');
+  if (!table) throw new Error('Expected the normalized examples table to render.');
   expect(table.rows[0]!.input).to.equal('First example');
 });

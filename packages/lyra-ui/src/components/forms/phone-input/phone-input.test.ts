@@ -374,7 +374,9 @@ it('projects label, hint, and error chrome and names the actual native controls'
   const select = el.shadowRoot!.querySelector('[part="country-select"]') as HTMLSelectElement;
   const descriptionIds = input.getAttribute('aria-describedby')!.split(' ');
 
-  expect(input.getAttribute('aria-label')).to.equal('Mobile');
+  const label = el.shadowRoot!.querySelector('label[part="form-control-label"]') as HTMLLabelElement;
+  expect(input.getAttribute('aria-label')).to.equal(null);
+  expect(label.htmlFor).to.equal(input.id);
   expect(select.getAttribute('aria-label')).to.equal('Calling country');
   expect(descriptionIds).to.include(el.shadowRoot!.querySelector('[part="hint"]')!.id);
   const error = el.shadowRoot!.querySelector('[part="error"]')!;
@@ -403,6 +405,34 @@ it('gives a host aria-label precedence over phone-label, label, and placeholder 
   `)) as LyraPhoneInput;
 
   expect(el.input!.getAttribute('aria-label')).to.equal('Account mobile');
+});
+
+it('lets a slotted label name the telephone input instead of the localized fallback', async () => {
+  const el = (await fixture(html`
+    <lr-phone-input .adapter=${adapter}>
+      <span slot="label">Mobile number</span>
+    </lr-phone-input>
+  `)) as LyraPhoneInput;
+  await el.updateComplete;
+  await el.updateComplete;
+
+  const input = el.input!;
+  const label = el.shadowRoot!.querySelector('label[part="form-control-label"]') as HTMLLabelElement;
+  expect(input.getAttribute('aria-label')).to.equal(null);
+  expect(label.hasAttribute('hidden')).to.equal(false);
+  expect(label.htmlFor).to.equal(input.id);
+});
+
+it('lets phone-label keep explicit precedence over a slotted label', async () => {
+  const el = (await fixture(html`
+    <lr-phone-input phone-label="Work" .adapter=${adapter}>
+      <span slot="label">Mobile number</span>
+    </lr-phone-input>
+  `)) as LyraPhoneInput;
+  await el.updateComplete;
+  await el.updateComplete;
+
+  expect(el.input!.getAttribute('aria-label')).to.equal('Work');
 });
 
 it('exposes selection and range-editing APIs while keeping editable and form values synchronized', async () => {
@@ -489,14 +519,14 @@ it('relays focus and blur once as native FocusEvents with relatedTarget, and nev
 
   const focusPromise = oneEvent(el, 'focus');
   el.input!.dispatchEvent(new FocusEvent('focus', { relatedTarget: outside }));
-  const focus = await focusPromise;
-  expect(focus instanceof FocusEvent).to.be.true;
+  const focus: Event = await focusPromise;
+  if (!(focus instanceof FocusEvent)) throw new Error('The relayed focus event was not a FocusEvent.');
   expect(focus.relatedTarget === outside).to.be.true;
 
   const blurPromise = oneEvent(el, 'blur');
   el.input!.dispatchEvent(new FocusEvent('blur', { relatedTarget: outside }));
-  const blur = await blurPromise;
-  expect(blur instanceof FocusEvent).to.be.true;
+  const blur: Event = await blurPromise;
+  if (!(blur instanceof FocusEvent)) throw new Error('The relayed blur event was not a FocusEvent.');
   expect(blur.relatedTarget === outside).to.be.true;
   // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
   expect(aliases).to.deep.equal([]);
@@ -680,6 +710,7 @@ it('rejects a malformed libphonenumber-js peer with a clear Error instead of thr
 
 it('adapts the real libphonenumber-js package, not just a hand-written fake shape', async () => {
   const loaded = await loadLibphonenumberAdapter(() => import('libphonenumber-js/min'));
+  if (!loaded.countries) throw new Error('The adapter did not expose its country catalog.');
 
   expect(loaded.countries.length).to.be.greaterThan(100);
   expect(loaded.countries).to.deep.include({ code: 'LU', callingCode: '352' });
@@ -886,7 +917,10 @@ it('lets every explicit label source outrank the generic fallback name', async (
   expect(input.getAttribute('aria-label')).to.equal('+352 …');
   el.label = 'Mobile';
   await el.updateComplete;
-  expect(input.getAttribute('aria-label')).to.equal('Mobile');
+  expect(input.getAttribute('aria-label')).to.equal(null);
+  expect((el.shadowRoot!.querySelector('label[part="form-control-label"]') as HTMLLabelElement).htmlFor).to.equal(
+    input.id,
+  );
   el.phoneLabel = 'Work number';
   await el.updateComplete;
   expect(input.getAttribute('aria-label')).to.equal('Work number');
@@ -1216,7 +1250,7 @@ it('normalizes a nullish value assignment to the empty string instead of throwin
 
 it('coerces an adapter result claiming "valid" status without a proper E.164 value into invalid', async () => {
   const badAdapter = {
-    parse: (input) => ({ status: 'valid', formatted: input === '123' ? 'nope' : undefined, country: 'LU' }),
+    parse: (input: string) => ({ status: 'valid', formatted: input === '123' ? 'nope' : undefined, country: 'LU' }),
   } as unknown as LyraPhoneNumberAdapter;
   const el = (await fixture(
     html`<lr-phone-input label="Phone number" .adapter=${badAdapter}></lr-phone-input>`,
@@ -1790,8 +1824,10 @@ it('emits a cancelable lr-invalid alias and forwards its cancellation to the nat
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
-  expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
-  expect(aliases[0].cancelable).to.be.true;
+  const alias = aliases[0];
+  if (!alias) throw new Error('The invalid alias was not emitted.');
+  expect(alias.bubbles && alias.composed).to.be.true;
+  expect(alias.cancelable).to.be.true;
 
   // Cancelling the alias must cancel the native `invalid` it aliases, or an app rendering its own
   // error banner cannot suppress the browser's validation bubble alongside it. The host's alias
@@ -1801,7 +1837,9 @@ it('emits a cancelable lr-invalid alias and forwards its cancellation to the nat
   el.addEventListener('invalid', (event) => natives.push(event));
   expect(el.checkValidity()).to.be.false;
   expect(natives).to.have.lengthOf(1);
-  expect(natives[0].defaultPrevented).to.be.true;
+  const native = natives[0];
+  if (!native) throw new Error('The native invalid event was not emitted.');
+  expect(native.defaultPrevented).to.be.true;
 });
 
 it('bars constraint validation while disabled or fieldset-disabled', async () => {

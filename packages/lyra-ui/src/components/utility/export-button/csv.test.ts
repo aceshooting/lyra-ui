@@ -44,6 +44,11 @@ it('guards against a leading tab or CR being read as formula syntax by some spre
   expect(escapeCsvField('\rcmd')).to.equal('"\'\rcmd"');
 });
 
+it('guards formula-like text after leading horizontal whitespace', () => {
+  expect(escapeCsvField(' =1+1')).to.equal("' =1+1");
+  expect(escapeCsvField('\u00a0@cmd')).to.equal("'\u00a0@cmd");
+});
+
 it('guards leading minus in strings while preserving finite numeric cell types', () => {
   expect(escapeCsvField('-5')).to.equal("'-5");
   expect(escapeCsvField('-$5.00')).to.equal("'-$5.00");

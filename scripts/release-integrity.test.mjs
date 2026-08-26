@@ -196,7 +196,7 @@ test('requires exhaustive fail-closed lint shards behind the stable lint gate', 
 
   assert.equal(
     lyraPackage.scripts.lint,
-    'pnpm run contract-policy && tsc --noEmit -p tsconfig.json && pnpm run test:types'
+    'pnpm run contract-policy && tsc --noEmit -p tsconfig.json && pnpm run test:types && pnpm run check:test-types'
   );
   assert.equal(
     lyraPackage.scripts['lint:ci-shard'],
@@ -228,10 +228,13 @@ test('requires the exhaustive packed ATTW matrix in the stable release gate', ()
 
   const contractJob = workflow.slice(contractStart, attwStart);
   const attwJob = workflow.slice(attwStart, publicApiStart);
+  const publicApiJob = workflow.slice(publicApiStart, aggregateStart);
   const aggregateJob = workflow.slice(aggregateStart, docsStart);
   assert.match(contractJob, /pnpm check:packed-consumer:contracts/u);
   assert.doesNotMatch(contractJob, /pnpm check:packed-consumer(?:\s|$)/u);
   assert.match(attwJob, /name: packed-consumer \/ attw \/ shard \$\{\{ matrix\.shard_index \}\}\/4/u);
+  assert.match(publicApiJob, /--filter @aceshooting\/lyra-ui check:public-api/u);
+  assert.match(publicApiJob, /--filter @aceshooting\/lyra-flags check:public-api/u);
   assert.match(attwJob, /shard_index: \[1, 2, 3, 4\]/u);
   assert.match(
     attwJob,
@@ -1238,6 +1241,7 @@ test('release script pins its repository and pushes release refs atomically', ()
     'run llms',
     'run lint',
     'run build',
+    'run check:public-api',
     'run component-quality',
     'run test',
   ]) {
@@ -1347,6 +1351,32 @@ test('release script pins its repository and pushes release refs atomically', ()
   assert.match(lintShardJob, /fetch-depth: 0/);
 });
 
+test('release script exits non-zero when the published upgrade feed stays stale', () => {
+  const publishScript = readFileSync(
+    path.join(repoRoot, 'scripts/publish.sh'),
+    'utf8'
+  );
+  const verificationStart = publishScript.indexOf('primary_dir=""');
+  assert.ok(verificationStart >= 0, 'published-feed verification block must exist');
+  const verificationBlock = publishScript.slice(verificationStart);
+  const harness = `
+set -u
+RELEASE_DIRS=('packages/lyra-ui')
+declare -A PKG_NAME NEW_VERSION
+PKG_NAME['packages/lyra-ui']='@aceshooting/lyra-ui'
+NEW_VERSION['packages/lyra-ui']='12.1.3'
+node() { return 1; }
+${verificationBlock}
+`;
+  const result = spawnSync('bash', ['-c', harness], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+
+  assert.notEqual(result.status, 0, result.stderr);
+  assert.match(result.stderr, /RELEASE INCOMPLETE/);
+});
+
 test('package lifecycle and root custom-elements metadata are clean-checkout safe', () => {
   const rootPackage = JSON.parse(
     readFileSync(path.join(repoRoot, 'package.json'), 'utf8')
@@ -1374,6 +1404,78 @@ test('package lifecycle and root custom-elements metadata are clean-checkout saf
   );
   assert.equal(lyraPackage.scripts.pretest, 'pnpm run build');
   assert.match(lyraPackage.scripts.prepack, /^pnpm run package-metadata &&/);
+});
+
+test('editor data is generated only after its manifest and parity inventory inputs are fresh', () => {
+  const upgradeScript = readFileSync(
+    path.join(repoRoot, 'scripts/upgrade.sh'),
+    'utf8'
+  );
+  const manifestIndex = upgradeScript.indexOf('pnpm manifest');
+  const inventoryIndex = upgradeScript.indexOf(
+    'check-pinned-upstream-manifests.mjs --write-inventory'
+  );
+  const editorDataIndex = upgradeScript.indexOf('run generate-editor-data');
+
+  assert.ok(manifestIndex >= 0, 'upgrade must regenerate the manifest');
+  assert.ok(
+    inventoryIndex > manifestIndex,
+    'upgrade must refresh the parity inventory after the manifest'
+  );
+  assert.ok(
+    editorDataIndex > inventoryIndex,
+    'upgrade must refresh editor data after the parity inventory passes'
+  );
+
+  const lyraPackage = JSON.parse(
+    readFileSync(path.join(repoRoot, 'packages/lyra-ui/package.json'), 'utf8')
+  );
+  const prepackManifestIndex = lyraPackage.scripts.prepack.indexOf('run manifest');
+  const prepackEditorDataIndex = lyraPackage.scripts.prepack.indexOf(
+    'run generate-editor-data'
+  );
+  assert.ok(
+    prepackManifestIndex >= 0 && prepackEditorDataIndex > prepackManifestIndex,
+    'prepack must refresh editor data only after regenerating its manifest input'
+  );
+});
+
+test('checker self-tests and the strict test-tree type gate stay blocking', () => {
+  const lyraPackage = JSON.parse(
+    readFileSync(path.join(repoRoot, 'packages/lyra-ui/package.json'), 'utf8')
+  );
+  const policy = lyraPackage.scripts['contract-policy'];
+  for (const sequence of [
+    'pnpm run provenance-policy && pnpm run test:provenance',
+    'pnpm run test:tag-aliases && pnpm run test:registrations',
+    'pnpm run check:form-associated && pnpm run test:form-associated',
+    'pnpm run check:numeric-guards && pnpm run test:numeric-guards',
+  ]) {
+    assert.ok(policy.includes(sequence), `${sequence} must remain in contract-policy`);
+  }
+
+  assert.match(
+    lyraPackage.scripts.lint,
+    /pnpm run contract-policy && tsc --noEmit -p tsconfig\.json && pnpm run test:types && pnpm run check:test-types$/u,
+    'the complete test tree must remain a blocking lint suffix'
+  );
+
+  const workflow = readFileSync(
+    path.join(repoRoot, '.github/workflows/ci.yml'),
+    'utf8'
+  );
+  assert.doesNotMatch(
+    workflow,
+    /Report test-tree TypeScript diagnostics|continue-on-error: true[\s\S]*?check:test-types/u,
+    'CI must not demote the strict test-tree type gate to a diagnostic'
+  );
+
+  const knipConfig = readFileSync(path.join(repoRoot, 'knip.config.js'), 'utf8');
+  assert.doesNotMatch(
+    knipConfig,
+    /['"]scripts\/\*\.mjs['"]/u,
+    'package scripts and workflow commands, not a blanket wildcard, must establish Knip entries'
+  );
 });
 
 test('contributor docs follow the package-manager authority', () => {

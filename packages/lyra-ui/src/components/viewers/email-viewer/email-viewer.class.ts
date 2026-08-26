@@ -25,7 +25,7 @@ import { sanitizePassiveMarkup } from '../passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewGenericFile, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeEmail, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_download, LYRA_DEFAULT_emailViewerAttachments, LYRA_DEFAULT_emailViewerDate, LYRA_DEFAULT_emailViewerFrom, LYRA_DEFAULT_emailViewerGroupAddress, LYRA_DEFAULT_emailViewerHideQuoted, LYRA_DEFAULT_emailViewerLabel, LYRA_DEFAULT_emailViewerMissingParser, LYRA_DEFAULT_emailViewerNoSubject, LYRA_DEFAULT_emailViewerOpenAttachment, LYRA_DEFAULT_emailViewerShowQuoted, LYRA_DEFAULT_emailViewerSubject, LYRA_DEFAULT_emailViewerTo, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeEmail, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_download, LYRA_DEFAULT_emailViewerAttachments, LYRA_DEFAULT_emailViewerDate, LYRA_DEFAULT_emailViewerFrom, LYRA_DEFAULT_emailViewerGroupAddress, LYRA_DEFAULT_emailViewerHideQuoted, LYRA_DEFAULT_emailViewerLabel, LYRA_DEFAULT_emailViewerMissingParser, LYRA_DEFAULT_emailViewerNoSubject, LYRA_DEFAULT_emailViewerOpenAttachment, LYRA_DEFAULT_emailViewerShowQuoted, LYRA_DEFAULT_emailViewerSubject, LYRA_DEFAULT_emailViewerTo, LYRA_DEFAULT_emailViewerUnnamedAttachment, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -137,14 +137,23 @@ function isQuoteToggleElement(target: EventTarget): target is Element {
 /**
  * Parses `.eml` messages with the optional `postal-mime` peer and renders
  * their HTML body only after DOMPurify sanitization and inside a paint-contained surface.
+ * Sanitized HTML uses the passive-document profile: anchors, form controls, and custom elements
+ * are unwrapped to ordinary text/children where safe, remote navigation/resource attributes are
+ * removed, and an `<a>` itself never remains. Images render only inline base64 GIF, JPEG, PNG, or
+ * WebP data; same-document SVG fragment references may remain.
  * Plain-text messages remain useful without DOMPurify. Attachment rows are real buttons that emit
  * `lr-attachment-open` with an immutable Blob snapshot of the decoded bytes -- this component
  * never opens, downloads, or object-URLs the content; a host routes the Blob into e.g.
  * `URL.createObjectURL(content)` -> `lr-document-viewer` ->
  * revoke on `lr-close`. `fold-quotes` collapses trailing quoted-reply text/HTML behind a
- * localized toggle.
+ * localized toggle. A missing attachment filename uses the localized
+ * `emailViewerUnnamedAttachment` fallback in both visible and accessible names, resolved while
+ * rendering so a later locale or `strings` change updates an already-parsed message.
  * A nonempty host `aria-label` makes the host the sole named semantic owner; otherwise the shadow
  * region owns the explicit-empty, `name`, or localized fallback label.
+ * Fragment anchors perform an exact DOM `id` lookup. Lyra generates no fragment ids for message
+ * headers or plain-text bodies; an HTML message can resolve only an id retained from its sanitized
+ * body. Text-quote anchors remain available across all rendered message text.
  *
  * @customElement lr-email-viewer
  * @event lr-render-error - Fired when fetching or parsing the message fails.
@@ -200,7 +209,6 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     details: LYRA_DEFAULT_details,
     documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
     documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
-    documentPreviewGenericFile: LYRA_DEFAULT_documentPreviewGenericFile,
     documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
     documentPreviewTypeEmail: LYRA_DEFAULT_documentPreviewTypeEmail,
     documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
@@ -218,6 +226,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     emailViewerShowQuoted: LYRA_DEFAULT_emailViewerShowQuoted,
     emailViewerSubject: LYRA_DEFAULT_emailViewerSubject,
     emailViewerTo: LYRA_DEFAULT_emailViewerTo,
+    emailViewerUnnamedAttachment: LYRA_DEFAULT_emailViewerUnnamedAttachment,
     fileSizeUnitB: LYRA_DEFAULT_fileSizeUnitB,
     fileSizeUnitGb: LYRA_DEFAULT_fileSizeUnitGb,
     fileSizeUnitKb: LYRA_DEFAULT_fileSizeUnitKb,
@@ -429,7 +438,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
         attachments: content.map((attachment: { filename?: string | null; mimeType?: string; content: ArrayBuffer | Uint8Array | string }) => {
           const normalized = normalizeAttachmentContent(attachment.content);
           return {
-            filename: attachment.filename || this.localize('documentPreviewGenericFile'),
+            filename: attachment.filename ?? '',
             mimeType: attachment.mimeType ?? '',
             size: normalized.byteLength,
             content: normalized,
@@ -479,27 +488,30 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
   private renderAttachments(attachments: ParsedEmailAttachment[]): TemplateResult | typeof nothing {
     if (!attachments.length) return nothing;
     return html`<div part="attachments"><span part="attachments-label">${this.localize('emailViewerAttachments')}</span><ul part="attachment-list">
-      ${attachments.map((attachment) => html`<li part="attachment-item"><button
-        type="button"
-        part="attachment-button"
-        aria-label=${this.localize('emailViewerOpenAttachment', undefined, { filename: attachment.filename })}
-        @click=${() => this.emit('lr-attachment-open', {
-          attachment: {
-            filename: attachment.filename,
-            mimeType: attachment.mimeType,
-            content: attachment.content
-              ? immutableAttachmentBlob(attachment.content, attachment.mimeType)
-              : undefined,
-          },
-        })}
-      ><span part="attachment-name">${attachment.filename}</span><span part="attachment-size">${formatFileSize(
-        attachment.size,
-        (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]),
-        (value, fractionDigits) => getNumberFormat(this.effectiveLocale, {
-          minimumFractionDigits: fractionDigits,
-          maximumFractionDigits: fractionDigits,
-        }).format(value),
-      )}</span></button></li>`)}
+      ${attachments.map((attachment) => {
+        const filename = attachment.filename || this.localize('emailViewerUnnamedAttachment');
+        return html`<li part="attachment-item"><button
+          type="button"
+          part="attachment-button"
+          aria-label=${this.localize('emailViewerOpenAttachment', undefined, { filename })}
+          @click=${() => this.emit('lr-attachment-open', {
+            attachment: {
+              filename,
+              mimeType: attachment.mimeType,
+              content: attachment.content
+                ? immutableAttachmentBlob(attachment.content, attachment.mimeType)
+                : undefined,
+            },
+          })}
+        ><span part="attachment-name">${filename}</span><span part="attachment-size">${formatFileSize(
+          attachment.size,
+          (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]),
+          (value, fractionDigits) => getNumberFormat(this.effectiveLocale, {
+            minimumFractionDigits: fractionDigits,
+            maximumFractionDigits: fractionDigits,
+          }).format(value),
+        )}</span></button></li>`;
+      })}
     </ul></div>`;
   }
 

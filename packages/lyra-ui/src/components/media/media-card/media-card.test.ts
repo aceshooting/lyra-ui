@@ -1051,7 +1051,7 @@ describe('narrow chat-message attachment compositions', () => {
     for (const { dir, lang, body, filename } of cases) {
       const allocation = await fixture<HTMLElement>(html`
         <div dir=${dir} lang=${lang} style="inline-size: 320px; max-inline-size: 100%;">
-          <lr-chat-message data-role="assistant">
+          <lr-chat-message message-role="assistant">
             ${body}
             <lr-media-card
               slot="attachments"
@@ -1068,8 +1068,10 @@ describe('narrow chat-message attachment compositions', () => {
           </lr-chat-message>
         </div>
       `);
-      const message = allocation.querySelector('lr-chat-message') as HTMLElement;
-      await (message as { updateComplete: Promise<unknown> }).updateComplete;
+      const message = allocation.querySelector('lr-chat-message') as HTMLElement & {
+        updateComplete: Promise<unknown>;
+      };
+      await message.updateComplete;
       const bubble = message.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
       const [fileCard, videoCard] = [...message.querySelectorAll<LyraMediaCard>('lr-media-card')];
       const fileBase = fileCard!.shadowRoot!.querySelector('[part="base"]') as HTMLElement;

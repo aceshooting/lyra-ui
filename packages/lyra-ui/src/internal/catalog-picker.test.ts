@@ -53,6 +53,18 @@ it('keeps the first unique nonempty catalog id before any picker uses the collec
   expect(normalizeCatalog([first, later])).to.deep.equal([first]);
 });
 
+it('omits object rows without a nonblank string label', () => {
+  expect(normalizeCatalog([
+    { id: 'missing' },
+    { id: 'null', label: null },
+    { id: 'empty', label: '' },
+    { id: 'blank', label: '   ' },
+    { id: 'valid', label: 'Valid' },
+  ] as unknown as LyraCatalogEntry[])).to.deep.equal([
+    { id: 'valid', label: 'Valid' },
+  ]);
+});
+
 it('adds one synthetic stale value without mutating the source catalog', () => {
   const source = [{ id: 'a', label: 'Alpha' }];
   expect(withSyntheticCatalogValue(source, 'stale')).to.deep.equal([

@@ -4,6 +4,8 @@ import {
   resolveTree,
   WIDGET_MAX_STRING_LENGTH,
   type ResolveContext,
+  type ResolvedElement,
+  type ResolvedNode,
   type LyraWidgetNode,
 } from "./resolve.js";
 import {
@@ -18,11 +20,22 @@ import {
   type LyraWidgetTypeRegistry,
 } from "./registry.js";
 
+type MutableWidgetNode = {
+  -readonly [Key in keyof LyraWidgetNode]: LyraWidgetNode[Key];
+};
+
+function resolvedElement(node: ResolvedNode | null): ResolvedElement {
+  if (!node || node.kind === 'text') {
+    throw new TypeError('Expected a resolved element node.');
+  }
+  return node;
+}
+
 describe("createWidgetDocument", () => {
   it("takes an immediate frozen structural snapshot without cloning opaque leaves", () => {
     const propLeaf = { value: 1 };
     const payload = { request: "open" };
-    const child: LyraWidgetNode = {
+    const child: MutableWidgetNode = {
       type: "button",
       id: "open",
       props: { data: propLeaf },
@@ -242,7 +255,7 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
       ctx(registry)
     );
     expect(resolved?.kind).to.equal("mapped");
-    expect(resolved?.props).to.deep.equal({
+    expect(resolvedElement(resolved).props).to.deep.equal({
       appearance: "outlined",
       disabled: true,
     });
@@ -262,8 +275,8 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
       },
       ctx(registry)
     );
-    expect(resolved?.children[0]?.slot).to.equal("header");
-    expect(resolved?.children[1]?.slot).to.be.undefined;
+    expect(resolvedElement(resolved).children[0]?.slot).to.equal("header");
+    expect(resolvedElement(resolved).children[1]?.slot).to.be.undefined;
   });
 
   it("resolves structural rows, columns, text and raw string children", () => {
@@ -276,22 +289,22 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
       ctx()
     );
     expect(resolved?.kind).to.equal("builtin-row");
-    expect(resolved?.props).to.deep.equal({
+    expect(resolvedElement(resolved).props).to.deep.equal({
       gap: "m",
       align: "center",
       justify: "between",
     });
-    expect(resolved?.children[0]).to.deep.include({
+    expect(resolvedElement(resolved).children[0]).to.deep.include({
       nodeKey: "path:0.0",
       nodePath: "0.0",
       kind: "text",
       text: "hello",
     });
-    expect(resolved?.children[1]?.kind).to.equal("builtin-text");
+    expect(resolvedElement(resolved).children[1]?.kind).to.equal("builtin-text");
   });
 
   it("fails closed for malformed roots, nested shapes and cycles", () => {
-    const cyclic: LyraWidgetNode = { type: "row" };
+    const cyclic: MutableWidgetNode = { type: "row" };
     cyclic.children = [cyclic];
     const malformed: unknown[] = [
       null,
@@ -332,7 +345,7 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
     ]);
     const resolved = resolveTree({ type: "card", props }, ctx(registry));
 
-    expect(resolved?.props).to.deep.equal({ disabled: false });
+    expect(resolvedElement(resolved).props).to.deep.equal({ disabled: false });
   });
 
   it("bounds depth and node count", () => {
@@ -358,7 +371,7 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
       wide,
       ctx(createWidgetTypeRegistry(), nodeWarnings)
     );
-    expect(resolved?.children.length).to.equal(WIDGET_MAX_NODES - 1);
+    expect(resolvedElement(resolved).children.length).to.equal(WIDGET_MAX_NODES - 1);
     expect(
       nodeWarnings.some((warning) => warning.includes("node cap"))
     ).to.equal(true);
@@ -376,7 +389,7 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
       },
     });
     const resolved = resolveTree({ type: "row", children }, ctx());
-    expect(resolved?.children.length).to.equal(WIDGET_MAX_NODES - 1);
+    expect(resolvedElement(resolved).children.length).to.equal(WIDGET_MAX_NODES - 1);
   });
 
   it("caps authored props before reading an out-of-budget getter", () => {
@@ -398,7 +411,7 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
       { type: "card", props },
       ctx(registry, warnings)
     );
-    expect(resolved?.props).to.deep.equal({});
+    expect(resolvedElement(resolved).props).to.deep.equal({});
     expect(warnings.some((warning) => warning.includes("prop cap"))).to.equal(
       true
     );
@@ -464,12 +477,12 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
       },
       ctx()
     );
-    expect(resolved?.children[0]).to.deep.include({
+    expect(resolvedElement(resolved).children[0]).to.deep.include({
       nodeId: "stable",
       nodeKey: "id:stable",
       nodePath: "0.0",
     });
-    expect(resolved?.children[1]).to.deep.include({
+    expect(resolvedElement(resolved).children[1]).to.deep.include({
       nodeKey: "path:0.1",
       nodePath: "0.1",
     });
@@ -549,8 +562,8 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
       },
       ctx(registry, warnings, { name: "Ada" })
     );
-    expect(resolved?.children).to.have.lengthOf(1);
-    expect(resolved?.children[0]?.kind).to.equal("text");
+    expect(resolvedElement(resolved).children).to.have.lengthOf(1);
+    expect(resolvedElement(resolved).children[0]?.kind).to.equal("text");
     expect(
       warnings.some((warning) => warning.includes("control descendant"))
     ).to.equal(true);
@@ -575,7 +588,7 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
       },
       ctx(registry, [], { name: "Ada" })
     );
-    expect(nested?.children).to.have.lengthOf(0);
+    expect(resolvedElement(nested).children).to.have.lengthOf(0);
   });
 
   it("wires action metadata only when actionId is authored", () => {
@@ -603,8 +616,8 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
       payload: 3,
       interactive: true,
     });
-    expect(inactive?.actionEvent).to.be.undefined;
-    expect(inactive?.interactive).to.equal(true);
+    expect(resolvedElement(inactive).actionEvent).to.be.undefined;
+    expect(resolvedElement(inactive).interactive).to.equal(true);
   });
 
   describe("canonical JSON Pointer binding reads", () => {
@@ -640,7 +653,7 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
         },
         ctx(createWidgetTypeRegistry(), [], { status: null })
       );
-      expect(resolved?.props).to.deep.equal({});
+      expect(resolvedElement(resolved).props).to.deep.equal({});
     });
   });
 
@@ -650,12 +663,12 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
       ctx()
     );
     expect(resolved?.kind).to.equal("builtin-col");
-    expect(resolved?.props).to.deep.equal({ align: "center" });
+    expect(resolvedElement(resolved).props).to.deep.equal({ align: "center" });
   });
 
   it("converts a numeric bound text value to a string", () => {
     const resolved = resolveTree({ type: "text", props: { value: 42 } }, ctx());
-    expect(resolved?.props).to.deep.equal({ value: "42" });
+    expect(resolvedElement(resolved).props).to.deep.equal({ value: "42" });
   });
 
   it("drops a mapped prop whose resolved value does not match the allowlisted primitive type", () => {
@@ -674,7 +687,7 @@ describe("resolveTree (bounded allowlist enforcement)", () => {
       { type: "card", props: { appearance: 42 } },
       ctx(registry, warnings)
     );
-    expect(resolved?.props).to.deep.equal({});
+    expect(resolvedElement(resolved).props).to.deep.equal({});
     expect(warnings.some((warning) => warning.includes("mistyped"))).to.equal(
       true
     );

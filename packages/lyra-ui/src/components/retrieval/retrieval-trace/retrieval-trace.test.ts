@@ -101,6 +101,28 @@ describe("lr-retrieval-trace", () => {
     expect(overridden!.textContent).to.equal("Rewrite (gpt-4o-mini)");
   });
 
+  it("degrades an unknown runtime stage kind without losing valid neighboring stages", async () => {
+    const stages = [
+      { id: "good", kind: "retrieve", startMs: 0, endMs: 5, status: "success" },
+      { id: "unknown", kind: "dedupe", startMs: 5, endMs: 9, status: "success" },
+    ] as unknown as RetrievalStage[];
+    const el = (await fixture(
+      html`<lr-retrieval-trace .stages=${stages}></lr-retrieval-trace>`
+    )) as LyraRetrievalTrace;
+    const waterfall = el.shadowRoot!.querySelector(
+      "lr-span-waterfall"
+    ) as LyraSpanWaterfall;
+    await waterfall.updateComplete;
+
+    expect(el.shadowRoot!.querySelectorAll('[part="timeline"]')).to.have.lengthOf(1);
+    expect(
+      Array.from(waterfall.shadowRoot!.querySelectorAll('[part="bar"]'), (bar) =>
+        bar.getAttribute("data-id")
+      )
+    ).to.deep.equal(["good", "unknown"]);
+    expect(waterfall.shadowRoot!.textContent).to.include("dedupe");
+  });
+
   it("keeps the host name distinct from the timeline's localized purpose", async () => {
     const el = (await fixture(
       html`<lr-retrieval-trace
@@ -462,6 +484,88 @@ describe("lr-retrieval-trace", () => {
       anchor: { kind: "page", page: 12 },
     });
     expect(leaked).to.equal(0);
+  });
+
+  it("drops malformed evidence chunks while retaining valid neighboring chunks", async () => {
+    const stages = [{
+      id: "retrieve",
+      kind: "retrieve",
+      startMs: 0,
+      endMs: 1,
+      status: "success",
+      evidence: {
+        chunks: [
+          {
+            id: "kept",
+            text: "Valid evidence",
+            score: 0.9,
+            source: { id: "source", name: "Source" },
+          },
+          { id: "bad", text: "Missing source", score: 0.5 },
+        ],
+      },
+    }] as unknown as RetrievalStage[];
+    const el = (await fixture(
+      html`<lr-retrieval-trace .stages=${stages}></lr-retrieval-trace>`
+    )) as LyraRetrievalTrace;
+    const inspector = el.shadowRoot!.querySelector(
+      "lr-chunk-inspector"
+    ) as LyraChunkInspector;
+    await inspector.updateComplete;
+
+    expect(inspector.chunks).to.have.lengthOf(1);
+    expect(inspector.chunks[0]!.id).to.equal("kept");
+  });
+
+  it('retains non-finite numeric evidence scores for chunk-inspector normalization', async () => {
+    const stages = [{
+      id: 'retrieve',
+      kind: 'retrieve',
+      startMs: 0,
+      endMs: 1,
+      status: 'success',
+      evidence: {
+        chunks: [
+          {
+            id: 'non-finite',
+            text: 'Still renderable',
+            score: Number.NaN,
+            source: { id: 'source-a', name: 'Source A' },
+          },
+          {
+            id: 'neighbor',
+            text: 'Valid neighbor',
+            score: 0.5,
+            source: { id: 'source-b', name: 'Source B' },
+          },
+        ],
+      },
+    }] as RetrievalStage[];
+    const el = await fixture<LyraRetrievalTrace>(html`
+      <lr-retrieval-trace .stages=${stages}></lr-retrieval-trace>
+    `);
+    const inspector = el.shadowRoot!.querySelector('lr-chunk-inspector') as LyraChunkInspector;
+    await inspector.updateComplete;
+
+    expect(inspector.chunks.map((chunk) => chunk.id)).to.deep.equal(['non-finite', 'neighbor']);
+    expect(inspector.shadowRoot!.querySelector('[part~="score"]')!.textContent).to.include('0%');
+  });
+
+  it("omits evidence disclosure when chunks is not an array and no other evidence is present", async () => {
+    const stages = [{
+      id: "retrieve",
+      kind: "retrieve",
+      startMs: 0,
+      endMs: 1,
+      status: "success",
+      evidence: { chunks: "nope" },
+    }] as unknown as RetrievalStage[];
+    const el = (await fixture(
+      html`<lr-retrieval-trace .stages=${stages}></lr-retrieval-trace>`
+    )) as LyraRetrievalTrace;
+
+    expect(el.shadowRoot!.querySelectorAll('[part="evidence-row"]')).to.have.lengthOf(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="timeline"]')).to.have.lengthOf(1);
   });
 
   it("renders metadata evidence as a key/value list", async () => {

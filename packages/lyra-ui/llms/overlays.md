@@ -68,6 +68,12 @@ the reason string that `lr-close` carries.
 | `lr-hide`       | yes        | before the overlay closes, on every dismissal path |
 | `lr-after-hide` | no         | once the exit animation has finished               |
 
+> **These four names are not overlay-instance-scoped — filter by target.** Overlay-family
+> descendants emit the same bubbling, composed lifecycle events, so a listener on an
+> `<lr-dialog>` also receives (for example) a nested popover's or tooltip's event. This applies to
+> both pre-events and both `lr-after-*` events. When the handler is intended only for the element
+> it is attached to, start with `if (event.target !== event.currentTarget) return;`.
+
 Both pre-events fire **before** the state changes, so `el.open` read inside an `lr-show`/`lr-hide`
 handler is still the _old_ value, and `preventDefault()` cancels the transition rather than undoing
 it: a vetoed `lr-show` leaves the overlay closed for the trigger interaction, `show()` and
@@ -171,16 +177,16 @@ A placement-specific region. The imperative helper maintains one region for each
 
 **Properties:**
 
-- `placement: ToastPlacement = 'top-end'` (reflected) — one of `'top-start'|'top-center'|'top-end'|
+- `placement: LyraToastPlacement = 'top-end'` (reflected) — one of `'top-start'|'top-center'|'top-end'|
 'bottom-start'|'bottom-center'|'bottom-end'`. Every placement resolves inside one logical usable
   rectangle whose four edges are the greater of `--lr-space-l` and the matching safe-area token.
   Start/end follow direction, center placements use that rectangle's midpoint even when the inline
   safe-area insets are asymmetric, and an oversized stack is capped to its usable inline size.
 
 **Methods:** `create(options: LyraToastOptions): Promise<LyraToastItem>` is the canonical form;
-`create(message: string, options?: ToastCreateOptions)` remains as a compatibility overload.
+`create(message: string, options?: LyraToastCreateOptions)` remains as a compatibility overload.
 `LyraToastOptions` contains `message`, optional `placement`, `ownerDocument`, `variant`, `duration`,
-`size`, `withIcon`, `icon`, and `action`; `ToastCreateOptions` omits `message` and `placement`.
+`size`, `withIcon`, `icon`, and `action`; `LyraToastCreateOptions` omits `message` and `placement`.
 `icon` accepts text, a DOM node, a Lit template, or a target-document factory returning one of
 those. Strings are always text, never HTML; cross-document nodes are imported into the region's
 document. `action` creates a native button from `{ label, onClick }`. The options' `ownerDocument`,
@@ -324,8 +330,7 @@ toast({
 });
 ```
 
-`toast(input: LyraToastOptions | string): ToastHandle`, where `ToastOptions` remains a deprecated
-type alias for `LyraToastOptions`, and
+`toast(input: LyraToastOptions | string): ToastHandle`, where
 `ToastHandle = { item: Promise<LyraToastItem>; dismiss: () => void }`. The canonical options are
 shared byte-for-byte with the region's object-form `create()`, including `ownerDocument`, safe icon
 payloads/factories, actions, and the long `small`/`medium`/`large` size aliases. It lazily mounts
@@ -448,7 +453,8 @@ consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
   a host `aria-label` names the host but does not replace that visible update text;
   the shadow `[part="base"]` remains ordinary visible content rather than a shadow-root live region.
 - Note: correctly works around the classic `:empty`-pseudo-class trap (a wrapper with a `<slot>`
-  inside can never match `:empty`) by tracking real slot assignment in JS (`hasIcon`/`hasActions`) —
+  inside can never match `:empty`) by tracking real flattened slot content in JS, including a bare
+  non-whitespace text node such as an emoji as default icon content —
   `lr-table` reuses this component for its own empty-rows state, and `lr-stat` (below) now uses
   the same JS-tracked-slot-state pattern for its own icon/caption wrappers.
 
@@ -464,7 +470,8 @@ with `text`/`circle`/`rect` geometry and opt-in `pulse`/`sheen` effects.
 - `shape: 'text'|'circle'|'rect' = 'text'` (reflected) — the canonical geometry vocabulary;
   exported as `LyraSkeletonShape`. The former `variant` property/attribute and `SkeletonVariant`
   type are removed in v9; use `shape` and `LyraSkeletonShape`.
-- `effect: 'pulse'|'sheen'|'none' = 'none'` (reflected) — animation is opt-in. **Changed in
+- `effect: 'pulse'|'sheen'|'none' = 'none'` (not reflected; the live value is exposed as
+  `data-effect` on `[part="base"]`) — animation is opt-in. **Changed in
   8.0.0:** the Lyra default was `pulse`; set `effect="pulse"` to preserve that motion explicitly.
 - `width?: string`
 - `height?: string`
@@ -475,6 +482,8 @@ with `text`/`circle`/`rect` geometry and opt-in `pulse`/`sheen` effects.
 - `announce: boolean = false` (reflected) — opt one meaningful placeholder into `role="status"`
   and localized hidden text. The false default preserves the decorative bare Web Awesome/Shoelace
   skeleton contract and prevents repeated placeholders from producing duplicate announcements.
+  An author-supplied host role remains authoritative; the component adds and removes the status
+  role only when it owns that opt-in role.
 
 **Events:** none.
 
@@ -913,7 +922,7 @@ their `data-lr-confirm-action` attribute.
   `.remove()` itself. Because the close event is cancelable, `confirm()` waits through the full
   dispatch and remains pending/mounted when a listener calls `preventDefault()`.
 - The neutral confirm button pairs `--lr-color-on-brand` with `--lr-color-brand`; the danger
-  tone pairs `--lr-color-on-danger` with `--lr-color-danger`. Each of those resolves through its
+  variant pairs `--lr-color-on-danger` with `--lr-color-danger`. Each of those resolves through its
   variant's row of the semantic grid (`--lr-color-<variant>-fill-loud` /
   `--lr-color-<variant>-on-loud`), which in turn reads the matching `--lr-theme-color-*` hook and
   falls back to the shared neutral ramp — so retheming the grid retints the confirm button with no
@@ -950,9 +959,11 @@ relied on `<lr-chip selected>` to create an action.
 
 **Properties:**
 
-- `size: '3xs' | '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — standard visual-density
-  scale for typography, padding, gap, and icon size; `m` preserves the original chip dimensions.
-  Unsupported attributes and untyped property writes normalize to reflected `m`
+- `size: '3xs' | '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'`
+  (reflected) — standard visual-density scale for typography, padding, gap, and icon size; `m`
+  preserves the original chip dimensions. The `small`/`medium`/`large` spellings are exact aliases
+  of `s`/`m`/`l` and round-trip unchanged. Unsupported attributes and untyped property writes
+  normalize to reflected `m`.
 - `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected) —
   **renamed from `tone` in 8.0.0, with no alias** (see above). `<lr-badge>`, `<lr-callout>` and
   `<lr-toast-item>` all already spelled it `variant`. It tints the whole surface using the
@@ -1291,7 +1302,7 @@ replacement and transfer, plus direct and forwarded slot changes, are tracked li
   nearest positioned ancestor, so the popup scrolls with its containing content
 - `distance: number = 0` — offset from the anchor along the placement axis, in px
 - `skidding: number = 0` — offset along the anchor's edge, in px
-- `flip: boolean = false` (reflected), with `flipFallbackPlacements: string = ''` (attribute
+- `flip: boolean = false` (not reflected), with `flipFallbackPlacements: string = ''` (attribute
   `flip-fallback-placements` — a
   space-delimited placement list `flip` tries in order instead of just the opposite side;
   unrecognized entries are dropped rather than forwarded), `flipFallbackStrategy: 'best-fit' |
@@ -1300,9 +1311,9 @@ replacement and transfer, plus direct and forwarded slot changes, are tracked li
   `flipBoundary: PlaceBoundary | null = null` (property only — element(s) to measure overflow
   against instead of the popup's clipping ancestors) and `flipPadding: number = 0` (attribute
   `flip-padding`)
-- `boundary: 'viewport' | 'scroll' = 'viewport'` (reflected) — shared overflow boundary for flip,
+- `boundary: 'viewport' | 'scroll' = 'viewport'` (not reflected) — shared overflow boundary for flip,
   shift, and auto-size; each middleware-specific boundary below overrides it independently
-- `shift: boolean = false` (reflected), with
+- `shift: boolean = false` (not reflected), with
   `shiftBoundary: PlaceBoundary | null = null` (property only) and
   `shiftPadding: number = 0` (attribute `shift-padding`)
 - `padding: number = 0` — boundary padding kept clear by `shift` and by the available-size
@@ -1316,11 +1327,11 @@ replacement and transfer, plus direct and forwarded slot changes, are tracked li
   that cap rather than introducing one. An unrecognized value is inert rather than half-applied.
 - `sync: 'width' | 'height' | 'both' | null = null` — copies the anchor's inline size, block size,
   or both onto the popup. An unrecognized value is inert, for the same reason.
-- `hoverBridge: boolean = false` (attribute `hover-bridge`, reflected) — renders an invisible quad
+- `hoverBridge: boolean = false` (attribute `hover-bridge`, not reflected) — renders an invisible quad
   across the `distance` gap, so a pointer travelling between anchor and popup never leaves both at
   once. Purely geometric: this element owns no hover policy of its own, the component built on top
   reads the hover.
-- `arrow: boolean = false` (reflected), `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'`
+- `arrow: boolean = false` (not reflected), `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'`
   (attribute `arrow-placement`) and `arrowPadding: number = 10` (attribute `arrow-padding`) — the
   shared arrow trio described at the top of this family
 
@@ -1444,6 +1455,8 @@ If the import fails, leave the native disclosure visible and usable.
 - `popupRole: 'dialog'|'menu'|'none' = 'dialog'` (attribute `popup-role`). `none` (new in 11.0.0)
   renders **no** `role` and no generated `aria-label` on the popup surface, and leaves
   `aria-haspopup` off the trigger, so slotted content owns its own semantics and accessible name.
+  Unsupported attribute values and untyped property writes normalize to `dialog` before any role
+  or trigger ARIA is rendered.
   It exists for the WAI-ARIA **disclosure navigation** pattern: a flyout of links is not an
   application action menu (`menu` announces "menu, menu item" and expects `menuitem` children) and
   is not an interruptive surface (`dialog`). The `aria-expanded`/`aria-controls` wiring that pattern
@@ -1479,6 +1492,9 @@ is exposed as the public `lr-popover` host. Target insertion, removal, replaceme
 and late custom-element upgrade are tracked live. Authored relationship tokens compose, generated
 whole-value attributes stay authoritative while owned, and exact late-authored baselines return
 when ownership moves or disconnects.
+An enabled, non-inert light-DOM descendant with `data-popover="close"` requests its closest owning
+popover to close when activated. Disabled/`aria-disabled` actions are inert, and a nested popover
+consumes its own action so the same click never closes an ancestor.
 **Methods:** `show(): Promise<void>` opens the popover programmatically — identical to
 `el.open = true`, including the veto point — and resolves after `lr-after-show`. A no-op or vetoed
 transition returns an already-resolved promise.
@@ -1532,7 +1548,8 @@ Per-element overrides win over page defaults; keyframes-only overrides retain th
 a `null` registration skips interpolation, but neither path skips the after-event or its
 method-promise settlement.
 
-**Slots:** `trigger` (the interactive element that toggles the popover), default (popover content).
+**Slots:** `trigger` (the interactive element that toggles the popover), default (popover content;
+an enabled, non-inert descendant with `data-popover="close"` closes its nearest owning popover).
 
 **CSS parts:** `trigger`; `popup dialog popup__popup`; `content body`; and
 `arrow popup__arrow` (rendered unless suppressed). Names grouped together are aliases on the same
@@ -1769,6 +1786,11 @@ back to `menu` and never puts a dialog/menu role on the outer positioning shell.
 Awesome's fixed inner menu role and Shoelace's consumer-menu ownership rather than exposing a
 Lyra-only role switch.
 
+ArrowDown opens and focuses the first enabled item; ArrowUp opens and focuses the last enabled
+item, whether the interaction owner is slotted or resolved through `for`.
+The inherited `data-popover="close"` descendant action is also supported and follows the same
+disabled/inert and nearest-owner rules described for `lr-popover`.
+
 The generated menu uses the dropdown's presence-sensitive host `aria-label`, `accessibleLabel`, or
 localized "Menu" fallback. A consumer-supplied menu keeps its own naming precedence: its host
 `aria-label` (including an explicit empty value), then an explicit nondefault `label`, then the
@@ -1942,11 +1964,12 @@ A circular progress indicator with the same value contract as `lr-progress-bar`.
 accessible-name spelling retained by this progress component, while several sibling components use
 `aria-label` directly). Host
 `aria-label` takes precedence; otherwise the name falls back to `label`, `accessibleLabel`, the
-visible default-slot text when supplied, then the localized "Progress". Non-finite/out-of-range
-`value`/`max` are normalized (`max <= 0` falls
+visible default- or `label`-slot text when supplied, then the localized "Progress".
+Non-finite/out-of-range `value`/`max` are normalized (`max <= 0` falls
 back to `100`, `value` clamps to `[0, max]`) rather than producing NaN geometry.
 **Slots:** default — replaces the built-in center label, which otherwise renders the rounded
-percentage **only when `show-value` is set** (and nothing at all while `indeterminate`).
+percentage **only when `show-value` is set** (and nothing at all while `indeterminate`); `label` —
+named alias for center content, matching `lr-progress-bar`.
 **Breaking in 10.0.0:** a determinate ring used to render its percentage unconditionally, with no way
 to suppress it short of slotting replacement content. It now gains `showValue`/`show-value` defaulting
 to `false`, exactly matching `lr-progress-bar` — which is what "the same value contract as
@@ -1965,7 +1988,8 @@ value updates and reconnection while the offset updates live.
 ring's inline and block size), `--lr-progress-ring-track-width` (default `var(--lr-size-4px)`),
 `--lr-progress-ring-track-color` (default `var(--lr-color-brand-quiet)`),
 `--lr-progress-ring-indicator-width` (defaulting to the track width),
-`--lr-progress-ring-indicator-color` (default `var(--lr-color-brand)`),
+`--lr-progress-ring-indicator-color` (default
+`var(--lr-progress-ring-indicator-variant-color)`, so the active `variant` supplies the color),
 `--lr-progress-ring-indicator-variant-color` (added in 9.0.0, same override precedence as
 `lr-progress-bar`'s `--lr-progress-indicator-variant-color` — the palette slot `variant` resolves
 into),
@@ -1980,9 +2004,10 @@ Upstream aliases are `--size`, `--track-width`, `--track-color`, `--indicator-wi
 ## `lr-badge` and `lr-tag`
 
 Compact status labels. `LyraTag` extends `LyraBadge`, so the two share one visual contract; `lr-tag`
-adds tag semantics and an optional remove affordance. The `lr-badge` light-DOM host is the single
-`role="status"` owner of its projected label. `lr-tag` deliberately opts out of that inherited
-status role, including during SSR/hydration, because a removable keyword is not a live status.
+adds tag semantics and an optional remove affordance. Both are static text by default, matching the
+mirrored upstreams and avoiding repeated announcements when a category badge is re-rendered.
+Authors can opt a genuinely changing badge into live semantics with `role="status"`; that and every
+other author-supplied role remain authoritative across updates, hydration, and reconnect.
 
 **Visual break in 8.0.0 — a badge is no longer a pill by default.** Both components used to render
 fully-rounded ends unconditionally. `--lr-badge-radius` now defaults to `var(--lr-radius)` (a rounded
@@ -2314,8 +2339,10 @@ Three more, all new in 8.0.0: `--lr-callout-font-size` (private default
 default `var(--lr-form-control-padding-inline, var(--lr-space-m))` — the panel's padding on _both_
 axes; each `size` tier changes that private default from the ladder's inline-padding knob, because
 a panel's block rhythm is generous like a control's inline padding rather than tight like its block
-padding, which only exists to fit text inside a fixed control height; `inline` removes the private
-default entirely). Inherited or direct public font-size and padding values remain authoritative.
+padding, which only exists to fit text inside a fixed control height). The padding hook applies to
+the panel treatment; `inline` intentionally forces host padding to zero. Inherited or direct public
+font-size values remain authoritative in either treatment, while inherited/direct padding is
+authoritative only for the panel.
 `--lr-callout-gap` (default `var(--lr-space-s)` — the space between the icon, the
 content and the close action. It deliberately does _not_ vary by `size`: it separates three adjacent
 boxes rather than setting the panel's density, and shrinking it at the small tiers only crowds

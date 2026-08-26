@@ -8,7 +8,7 @@ type CssEscapeHost = { escape?: (identifier: string) => string };
 function createRealmFrame(): {
   iframe: HTMLIFrameElement;
   frameDocument: Document;
-  frameWindow: Window & typeof globalThis;
+  frameWindow: Window;
 } {
   const iframe = document.createElement('iframe');
   document.body.append(iframe);
@@ -171,21 +171,19 @@ it('omits blank run identities and keeps the first valid duplicate', async () =>
   expect(rows[0]!.textContent).to.contain('First');
 });
 
-it('drops malformed run rows instead of throwing (regression)', async () => {
+it('drops malformed run identities while retaining valid neighboring runs', async () => {
   const el = await fixture<LyraSubagentPanel>(html`
-    <lr-subagent-panel .runs=${[{ label: 'Analyzer', status: 'running' }, { id: 'good', label: 'Good', status: 'done' }] as never}></lr-subagent-panel>
+    <lr-subagent-panel .runs=${[
+      null,
+      { label: 'Missing id', status: 'running' },
+      { id: 42, label: 'Numeric id', status: 'done' },
+      { id: 'good', label: 'Good', status: 'done' },
+    ] as unknown as SubagentRun[]}></lr-subagent-panel>
   `);
-  expect(el.shadowRoot!.querySelectorAll('[part~="run"]')).to.have.lengthOf(1);
 
-  const nullRow = await fixture<LyraSubagentPanel>(html`
-    <lr-subagent-panel .runs=${[null] as never}></lr-subagent-panel>
-  `);
-  expect(nullRow.shadowRoot!.querySelectorAll('[part~="run"]')).to.have.lengthOf(0);
-
-  const numericId = await fixture<LyraSubagentPanel>(html`
-    <lr-subagent-panel .runs=${[{ id: 42 }] as never}></lr-subagent-panel>
-  `);
-  expect(numericId.shadowRoot!.querySelectorAll('[part~="run"]')).to.have.lengthOf(0);
+  const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="run"]')];
+  expect(rows).to.have.length(1);
+  expect(rows[0]!.textContent).to.contain('Good');
 });
 
 it('applies per-instance localized strings', async () => {
@@ -206,6 +204,13 @@ it('defaults label to undefined and keeps an explicit empty override verbatim', 
   )) as LyraSubagentPanel;
   expect(empty.label).to.equal('');
   expect(empty.shadowRoot!.querySelector('[part="list"]')!.getAttribute('aria-label')).to.equal('');
+});
+
+it('honors a programmatic accessibleLabel binding on the owned list', async () => {
+  const el = await fixture<LyraSubagentPanel>(html`
+    <lr-subagent-panel .runs=${runs} .accessibleLabel=${'Research agents'}></lr-subagent-panel>
+  `);
+  expect(el.shadowRoot!.querySelector('[role="tree"]')!.getAttribute('aria-label')).to.equal('Research agents');
 });
 
 it('iteratively bounds a deeply nested hierarchy without overflowing the stack', async () => {

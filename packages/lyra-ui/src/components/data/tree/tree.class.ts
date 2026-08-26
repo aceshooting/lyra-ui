@@ -384,9 +384,9 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     return this._dataTruncated;
   }
   /**
-   * Accessible name forwarded to the internal `role="tree"` element. A host `aria-label` is also
-   * forwarded as a fallback when `label` is empty; `label` takes precedence when both are set.
-   * External `aria-labelledby` idrefs are not forwarded across the shadow boundary.
+   * Accessible-name fallback for the internal `role="tree"` element. A host `aria-label` wins by
+   * attribute presence, including when explicitly empty; `label` is used only when that attribute
+   * is absent. External `aria-labelledby` idrefs are not forwarded across the shadow boundary.
    */
   @property() label = '';
   /**

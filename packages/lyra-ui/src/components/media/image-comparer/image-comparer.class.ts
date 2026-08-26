@@ -6,6 +6,7 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { finiteRange, isSliderKey } from '../../../internal/numbers.js';
+import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './image-comparer.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -13,7 +14,7 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_imageComparerLabel } from '../
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export type LyraImageComparerOrientation = 'horizontal' | 'vertical';
+export type LyraImageComparerOrientation = LyraOrientation;
 
 export interface LyraImageComparerEventMap {
   input: Event;

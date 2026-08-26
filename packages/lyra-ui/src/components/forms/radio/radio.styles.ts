@@ -45,7 +45,7 @@ export const styles = css`
     --lr-form-control-gap: inherit;
     --lr-form-control-radius: inherit;
   }
-  [part="base"] {
+  [part~="base"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -62,7 +62,7 @@ export const styles = css`
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
   }
-  [part="base"]:focus-visible {
+  [part~="base"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }

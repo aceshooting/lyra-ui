@@ -226,18 +226,15 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     cursor: pointer;
     white-space: nowrap;
-    /* inline-flex matters only when a tab-icon is present -- gap does nothing with a single child,
-       so a text-only tab lays out as the plain inline-block button did. */
+    /* Rich lr-tab content and its optional close action share one flex row. */
     display: inline-flex;
     align-items: center;
     gap: var(--lr-space-xs);
     transition: color var(--lr-transition-fast),
       border-color var(--lr-transition-fast);
   }
-  [part="tab-icon"] {
-    display: inline-flex;
-    flex: 0 0 auto;
-    align-items: center;
+  [data-tab-label] {
+    min-inline-size: 0;
   }
   /* Its own hook, not the shared --lr-color-text token: recoloring the selected tab must never
      repaint hovered-unselected tabs. :where() leaves only :hover, so this is (0,1,0), below the
@@ -389,6 +386,15 @@ export const styles = css`
     max-inline-size: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  :host([placement="start"]) [data-tab-label],
+  :host([placement="end"]) [data-tab-label] {
+    display: block;
+    flex: 1 1 auto;
+    max-inline-size: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   :host([placement="start"]) [part~="tablist"] {
     border-inline-end: var(--track-width, var(--lr-border-width-thin)) solid

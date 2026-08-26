@@ -34,9 +34,9 @@ it('renders one [part="item"] row per top-level item, carrying data-status/data-
   const el = (await fixture(html`<lr-task-list .items=${items}></lr-task-list>`)) as LyraTaskList;
   const rows = [...el.shadowRoot!.querySelectorAll('[part="item"]')] as HTMLElement[];
   expect(rows.length).to.equal(3);
-  expect(rows[1]!.dataset.status).to.equal('running');
-  expect(rows[1]!.dataset.id).to.equal('step-2');
-  expect(rows[1]!.dataset.depth).to.equal('0');
+  expect(rows[1]!.dataset['status']).to.equal('running');
+  expect(rows[1]!.dataset['id']).to.equal('step-2');
+  expect(rows[1]!.dataset['depth']).to.equal('0');
 });
 
 it('renders each item label and optional detail text', async () => {
@@ -67,8 +67,33 @@ it('renders one nested [part="item"] row per child, at depth 1, inside [part="it
   expect(childWrapper.getAttribute('role')).to.equal('list');
   const childRows = [...childWrapper.querySelectorAll('[part="item"]')] as HTMLElement[];
   expect(childRows.length).to.equal(2);
-  expect(childRows[0]!.dataset.depth).to.equal('1');
-  expect(childRows[0]!.dataset.id).to.equal('child-1');
+  expect(childRows[0]!.dataset['depth']).to.equal('1');
+  expect(childRows[0]!.dataset['id']).to.equal('child-1');
+});
+
+it('drops malformed top-level and child identities while retaining valid neighboring tasks', async () => {
+  const malformed = [
+    null,
+    { label: 'Missing id', status: 'pending' },
+    { id: 42, label: 'Numeric id', status: 'pending' },
+    {
+      id: 'parent',
+      label: 'Parent',
+      status: 'running',
+      children: [
+        null,
+        { label: 'Missing child id', status: 'pending' },
+        { id: 'child', label: 'Child', status: 'success' },
+      ],
+    },
+  ] as unknown as TaskItem[];
+  const el = await fixture<LyraTaskList>(html`
+    <lr-task-list .items=${malformed}></lr-task-list>
+  `);
+
+  const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]')];
+  expect(rows.map((row) => row.dataset['id'])).to.deep.equal(['parent', 'child']);
+  expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('0 of 1 completed');
 });
 
 it('ignores grandchildren (nesting beyond one level) and warns once', async () => {
@@ -261,7 +286,7 @@ it('normalizes foreign runtime task statuses to pending instead of throwing', as
     ] as unknown as TaskItem[]}></lr-task-list>
   `);
   const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]')];
-  expect(rows.map((row) => row.dataset.status)).to.deep.equal(['pending', 'pending']);
+  expect(rows.map((row) => row.dataset['status'])).to.deep.equal(['pending', 'pending']);
   expect(rows.map((row) => row.querySelector('.sr-only')!.textContent!.trim()))
     .to.deep.equal(['Pending', 'Pending']);
 });
@@ -340,6 +365,30 @@ describe('status-change announcements', () => {
     expect(await getLiveRegionText(el)).to.equal('');
   });
 
+  it('treats reconnect data as a new baseline and does not expose detached status history', async () => {
+    const el = document.createElement('lr-task-list') as LyraTaskList;
+    el.items = [{ id: 'step', label: 'Fetch data', status: 'pending' }];
+    document.body.append(el);
+    await el.updateComplete;
+    el.remove();
+
+    el.items = [{ id: 'step', label: 'Fetch data', status: 'running' }];
+    await el.updateComplete;
+    el.items = [{ id: 'step', label: 'Fetch data', status: 'success' }];
+    await el.updateComplete;
+    document.body.append(el);
+    try {
+      await el.updateComplete;
+      expect(await getLiveRegionText(el)).to.equal('');
+
+      el.items = [{ id: 'step', label: 'Fetch data', status: 'error' }];
+      await el.updateComplete;
+      expect(await getLiveRegionText(el)).to.equal('Step failed: Fetch data');
+    } finally {
+      el.remove();
+    }
+  });
+
   it('announces a step starting (pending -> running)', async () => {
     const el = (await fixture(html`<lr-task-list .items=${items}></lr-task-list>`)) as LyraTaskList;
     el.items = items.map((it) => (it.id === 'step-3' ? { ...it, status: 'running' } : it));
@@ -374,6 +423,13 @@ describe('status-change announcements', () => {
     await el.updateComplete;
     expect(await getLiveRegionText(el)).to.equal('Step completed: Child');
   });
+});
+
+it('honors a programmatic accessibleLabel binding on the owned task list', async () => {
+  const el = await fixture<LyraTaskList>(html`
+    <lr-task-list .accessibleLabel=${'Deployment tasks'}></lr-task-list>
+  `);
+  expect(el.shadowRoot!.querySelector('[role="list"]')!.getAttribute('aria-label')).to.equal('Deployment tasks');
 });
 
 it('localizes the default "Tasks" label via .strings while a customized label renders as-is', async () => {

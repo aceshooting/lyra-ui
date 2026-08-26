@@ -111,7 +111,7 @@ export const NestedDialogs: Story = {
         <div slot="footer">
           <button
             @click=${async (e: Event) => {
-              const ok = await confirm({ title: 'Discard unsaved changes?', tone: 'danger' });
+              const ok = await confirm({ title: 'Discard unsaved changes?', variant: 'danger' });
               if (ok) ((e.target as HTMLElement).closest('lr-dialog') as LyraDialog).close('discard');
             }}
           >
@@ -140,7 +140,7 @@ export const ConfirmHelper: Story = {
             title: 'Delete conversation?',
             description: 'This cannot be undone.',
             confirmLabel: 'Delete',
-            tone: 'danger',
+            variant: 'danger',
           });
           alert(ok ? 'Deleted' : 'Cancelled');
         }}

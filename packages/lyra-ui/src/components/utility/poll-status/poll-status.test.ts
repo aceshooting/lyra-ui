@@ -1,9 +1,9 @@
-import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import './poll-status.js';
 import '../live-region/live-region.js';
 import type { LyraPollStatus } from './poll-status.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
-import { styles } from './poll-status.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function liveRegionText(el: LyraPollStatus): string {
   const region = el.shadowRoot!.querySelector('lr-live-region') as LyraLiveRegion;
@@ -18,6 +18,22 @@ describe('lr-poll-status', () => {
     expect(performance.now() - started).to.be.lessThan(300);
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.include('Refreshing');
+  });
+
+  it('shows 0:00 for a due-immediately cycle until its scheduled due tick advances the phase', async () => {
+    const el = document.createElement('lr-poll-status') as LyraPollStatus;
+    el.nextInMs = 0;
+    const due = oneEvent(el, 'lr-poll-due');
+    document.body.append(el);
+    try {
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.equal('0:00');
+      await due;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.include('Refreshing');
+    } finally {
+      el.remove();
+    }
   });
 
   it('exposes restart() for deliberately restarting the same configured delay', async () => {
@@ -419,9 +435,30 @@ describe('lr-poll-status', () => {
     expect(getComputedStyle(indicator).animationDuration).to.equal('1.8s');
   });
 
-  it("gives the pause button a :hover treatment, matching lr-widget's collapse/fullscreen buttons", () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='pause-button'\]:hover:not\(:disabled\)\s*\{[^}]+\}/);
+  it('paints the enabled pause-button hover treatment under a real pointer', async () => {
+    const el = await fixture<LyraPollStatus>(html`
+      <lr-poll-status
+        style="--lr-color-brand-quiet: rgb(1, 2, 3); --lr-color-brand: rgb(4, 5, 6)"
+      ></lr-poll-status>
+    `);
+    const button = el.shadowRoot!.querySelector<HTMLElement>('[part="pause-button"]')!;
+    button.scrollIntoView({ block: 'center' });
+    const rect = button.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      await waitUntil(() => {
+        const computed = getComputedStyle(button);
+        return computed.backgroundColor === 'rgb(1, 2, 3)' && computed.color === 'rgb(4, 5, 6)';
+      }, 'the poll-status pause-button hover treatment never painted');
+    } finally {
+      await resetMouse();
+    }
   });
 
   it('recolors the due indicator dot from an ancestor --lr-poll-status-due-bg, not the bare shared --lr-color-success token', async () => {

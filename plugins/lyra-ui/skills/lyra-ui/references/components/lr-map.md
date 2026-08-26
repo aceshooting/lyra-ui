@@ -6,9 +6,10 @@
 - **Class** `LyraMap`, also available unregistered from `@aceshooting/lyra-ui/components/media/map/map.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `maplibre-gl` — see `llms/peers.md`
-- **Themeable via** 15 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -46,7 +47,11 @@ peer's `resize()` when that allocation changes.
   ascending, bounded to 64, and filtered to finite values carrying a CSS-parsable color; fewer than
   two usable stops render no bar at all, since a one-stop "gradient" is a flat block that describes
   nothing. Each stop sits at its true proportion of the value range, so the bar shows the ramp the
-  expression actually produces rather than evenly spacing unevenly-spaced values. Part names
+  expression actually produces rather than evenly spacing unevenly-spaced values. A logarithmic
+  choropleth renders bounded samples of the same exponential interpolation in the gradient rather
+  than showing a misleading CSS-linear ramp. In development, independently authored
+  `legendGradient` and `choropleth.stops` arrays that disagree produce a once-per-page warning;
+  assigning the same stops (or deriving both from one source) avoids drift. Part names
   (`legend-gradient`, `legend-lo`, `legend-hi`) mirror `lr-heatmap`'s gradient legend, and the bar
   is `aria-hidden`/`inert` with the captions carrying the meaning. Mirrors under RTL
 - `legendGradientLoLabel: string | null = null` (attribute `legend-gradient-lo-label`),
@@ -84,7 +89,9 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
   legend, and would render two regions in the same advertised band as visibly different colours
   (`legendGradient` covers the opposite case, a gradient legend). `stepBaseColor` is the colour for
   values below the first threshold, which `['step', …]` requires; it defaults to the first stop's own
-  colour, so a legend whose first band starts at the data minimum needs no extra configuration
+  colour, so a legend whose first band starts at the data minimum needs no extra configuration.
+  Stop colors and `stepBaseColor` accept CSS custom-property references; Lyra resolves them from
+  the live host cascade before passing the expression to MapLibre's WebGL renderer.
 - `markers: LyraMapMarker[] = []` (attribute: false) — `LyraMapMarker { id?: string; lngLat:
 [number, number]; color?: string; label?: string; unsafeHtml?: string }`; an explicit `id` is
   trimmed and must be nonempty, and the first marker for an explicit ID wins. Markers are reconciled
@@ -100,8 +107,9 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
   are excluded; an explicitly supplied `label` remains the more predictable accessible name. A
   marker whose `color` changes for a persisting `id`
   can't be recolored in place (no `Marker.setColor()`) and is torn down/reconstructed instead — see
-  gotchas. Entries with non-finite coordinates or latitude outside `[-90, 90]` are skipped without
-  aborting valid siblings. `color` is used only when the browser accepts it as CSS `color`;
+  gotchas. Entries with non-finite coordinates, latitude outside `[-90, 90]`, or a runtime
+  non-string `label` are skipped without aborting valid siblings. `color` is used only when the
+  browser accepts it as CSS `color`;
   declaration breaks and `url()` paint servers fall back to MapLibre's default marker color.
   Every retained marker is a named `role="button"` tab stop, including one without a popup. Click,
   Enter, and Space emit `lr-map-marker-activate`; Space suppresses its page-scroll default while
@@ -197,7 +205,10 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   peer's own matrix math, and the canvas never painting again — a blank map, with nothing thrown at
   the call site to attribute it to. This property applies the same call, then reads the camera back
   and reverts (restoring zoom and centre) if it did not survive, so the worst case is an
-  unconstrained map plus a dev-mode warning. A malformed box is rejected rather than clamped
+  unconstrained map plus a dev-mode warning. The defensive camera snapshots are inside the same
+  failure boundary, so a peer whose damaged transform already throws from `getZoom()` or
+  `getCenter()` is also reduced to an unconstrained map instead of leaking through Lit's update.
+  A malformed box is rejected rather than clamped
 
 **Choropleth and `dataLayers` updates are diffed before they reach the peer.** `setData()`
 unconditionally re-tiles and repaints an entire source, which is invisible on a static map and
@@ -283,6 +294,8 @@ shadow chrome live; raw caught errors are never exposed.
 
 **Themeable custom properties:**
 
+- `--lr-map-height` (default `var(--lr-size-24rem)`) — host block size, shared with the optional
+  pre-upgrade reservation stylesheet. An explicit outer `block-size` still wins.
 - `--lr-map-choropleth-fill-opacity` (default `0.75`) — fill opacity for the declarative
   `choropleth` layer and polygon fills in every `dataLayers` entry. It intentionally inherits from
   an ancestor, so one scoped declaration rethemes every nested map without setting each host.

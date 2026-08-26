@@ -1,8 +1,9 @@
 #!/usr/bin/env node
+import { isMainModule } from './is-main-module.mjs';
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -3104,8 +3105,7 @@ export function acquirePublishedBaseline(
   }
 }
 
-const DECLARATION_FILES = Object.freeze({
-  named: 'dist/lyra.d.ts',
+const FRAMEWORK_DECLARATION_FILES = Object.freeze({
   react: 'dist/custom-elements-jsx.d.ts',
   vue: 'dist/vue.d.ts',
   svelte: 'dist/svelte.d.ts',
@@ -3113,14 +3113,14 @@ const DECLARATION_FILES = Object.freeze({
 
 export function readPackageApi(root) {
   const packageJsonFile = path.join(root, 'package.json');
-  const manifestFile = path.join(root, 'custom-elements.json');
-  const namedDeclarationsFile = path.join(root, DECLARATION_FILES.named);
   if (!existsSync(packageJsonFile)) throw new Error(`Missing public API package metadata: ${packageJsonFile}`);
-  if (!existsSync(manifestFile)) throw new Error(`Missing custom-elements manifest: ${manifestFile}`);
-  if (!existsSync(namedDeclarationsFile)) {
-    throw new Error(
-      `Missing built public declarations: ${namedDeclarationsFile}. Run the package build before the public API gate.`,
-    );
+  const packageJson = readJson(packageJsonFile);
+  const manifestRelative = packageJson.customElements;
+  const manifestFile = typeof manifestRelative === 'string'
+    ? path.join(root, manifestRelative)
+    : undefined;
+  if (manifestFile && !existsSync(manifestFile)) {
+    throw new Error(`Missing custom-elements manifest: ${manifestFile}`);
   }
   const declarations = { files: {}, packageFiles: [] };
   const collectFiles = (directory, relativeDirectory) => {
@@ -3137,14 +3137,45 @@ export function readPackageApi(root) {
       }
     }
   };
-  collectFiles(path.join(root, 'dist'), 'dist');
+  for (const listed of packageJson.files ?? []) {
+    const relative = String(listed).replace(/^\.\//, '').replaceAll('\\', '/');
+    const absolute = path.join(root, relative);
+    if (!existsSync(absolute)) continue;
+    const entry = readdirSync(path.dirname(absolute), { withFileTypes: true })
+      .find((candidate) => candidate.name === path.basename(absolute));
+    if (entry?.isDirectory()) collectFiles(absolute, relative);
+    else if (entry?.isFile()) {
+      declarations.packageFiles.push(relative);
+      if (/\.d\.[cm]?ts$/.test(relative)) declarations.files[relative] = readFileSync(absolute, 'utf8');
+    }
+  }
   declarations.packageFiles.sort();
-  for (const [name, relativeFile] of Object.entries(DECLARATION_FILES)) {
+  for (const [name, relativeFile] of Object.entries(FRAMEWORK_DECLARATION_FILES)) {
     const file = path.join(root, relativeFile);
     if (existsSync(file)) declarations[name] = readFileSync(file, 'utf8');
   }
-  declarations.namedEntry = DECLARATION_FILES.named;
-  return { packageJson: readJson(packageJsonFile), manifest: readJson(manifestFile), declarations };
+  const rootExport = packageJson.exports?.['.'] ?? packageJson.exports;
+  const rootTypes = packageJson.types
+    ?? (rootExport && typeof rootExport === 'object' && !Array.isArray(rootExport)
+      ? rootExport.types
+      : undefined);
+  if (typeof rootTypes === 'string') {
+    const namedEntry = normalizedFileKey(rootTypes);
+    const namedDeclarationsFile = path.join(root, namedEntry);
+    if (!existsSync(namedDeclarationsFile)) {
+      throw new Error(
+        `Missing built public declarations: ${namedDeclarationsFile}. Run the package build before the public API gate.`,
+      );
+    }
+    declarations.namedEntry = namedEntry;
+    declarations.named = readFileSync(namedDeclarationsFile, 'utf8');
+    declarations.files[namedEntry] = declarations.named;
+  }
+  return {
+    packageJson,
+    manifest: manifestFile ? readJson(manifestFile) : { schemaVersion: '1.0.0', modules: [] },
+    declarations,
+  };
 }
 
 export function readChangesetBump(changesetDir, packageName) {
@@ -3243,8 +3274,7 @@ export function runCli(argv = process.argv.slice(2)) {
   }
 }
 
-const isMain = process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
-if (isMain) {
+if (isMainModule(import.meta.url)) {
   try {
     process.exitCode = runCli();
   } catch (error) {

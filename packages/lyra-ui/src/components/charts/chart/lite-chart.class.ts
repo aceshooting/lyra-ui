@@ -59,6 +59,27 @@ export interface LyraLiteChartSeries {
   readonly color?: string;
 }
 
+function isLiteChartSeries(value: unknown): value is LyraLiteChartSeries {
+  try {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      !Array.isArray(value) &&
+      Array.isArray((value as { data?: unknown }).data)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function normalizeLiteChartSeries(value: unknown): readonly LyraLiteChartSeries[] {
+  try {
+    return Object.freeze(Array.isArray(value) ? value.filter(isLiteChartSeries) : []);
+  } catch {
+    return Object.freeze([]);
+  }
+}
+
 export type LyraLiteChartType = 'bar' | 'line';
 
 function normalizeLiteChartType(value: unknown): LyraLiteChartType {
@@ -436,7 +457,17 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   @property({ converter: { fromAttribute: (value) => normalizeLiteChartType(value) } })
   type: LyraLiteChartType = 'bar';
   @property({ attribute: false }) labels: readonly string[] = [];
-  @property({ attribute: false }) datasets: readonly LyraLiteChartSeries[] = [];
+  private _datasets: readonly LyraLiteChartSeries[] = Object.freeze([]);
+  /** Series with an array `data` payload. Malformed entries are dropped without hiding siblings. */
+  @property({ attribute: false })
+  get datasets(): readonly LyraLiteChartSeries[] {
+    return this._datasets;
+  }
+  set datasets(value: readonly LyraLiteChartSeries[]) {
+    const previous = this._datasets;
+    this._datasets = normalizeLiteChartSeries(value);
+    this.requestUpdate('datasets', previous);
+  }
   @property({ type: Boolean }) legend = false;
   /** Logical placement for the optional DOM legend. */
   @property({
@@ -1177,8 +1208,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /**
    * A value-to-y-pixel mapping for a bar's top/bottom edge. `'linear'` (the
    * default) is the standard `niceDomain`-fraction formula. `'sqrt'`
-   * compresses via `Math.sqrt(value / domainMax)`, clamping `value` to
-   * `[0, hi]` first since a negative input has no real square root.
+   * compresses each signed magnitude independently around the linear zero
+   * baseline, so positive and negative bars stay on their respective sides.
    *
    * NOT used for the `stacked && scale === 'sqrt'` case — that combination's
    * proportionality (compress the bar's *total* height once, then split it
@@ -1189,9 +1220,19 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    */
   private barValueToY(value: number, plotY: number, plotH: number, lo: number, hi: number): number {
     if (this.scale === 'sqrt') {
-      const domainMax = hi > 0 ? hi : 1;
-      const frac = Math.sqrt(Math.min(domainMax, Math.max(0, value)) / domainMax);
-      return plotY + plotH - frac * plotH;
+      const zeroY = plotY + plotH - domainFraction(0, lo, hi) * plotH;
+      if (value >= 0) {
+        const domainMax = hi > 0 ? hi : 1;
+        const fraction = Math.sqrt(
+          Math.min(domainMax, value) / domainMax
+        );
+        return zeroY - fraction * (zeroY - plotY);
+      }
+      const domainMax = lo < 0 ? -lo : 1;
+      const fraction = Math.sqrt(
+        Math.min(domainMax, -value) / domainMax
+      );
+      return zeroY + fraction * (plotY + plotH - zeroY);
     }
     return plotY + plotH - this.valueFraction(value, lo, hi) * plotH;
   }
@@ -1451,9 +1492,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     // negative floor, or 1 when there's no negative extent at all (unused in that case).
     const negDomainMax = lo < 0 ? -lo : 1;
     // The zero line's pixel position on the LINEAR domain, independent of `this.scale` -- unlike
-    // `barValueToY(0, ...)`, whose sqrt branch always maps value 0 to the plot's bottom edge
-    // regardless of `lo` (correct only when lo === 0, i.e. no negative values in the domain). Both
-    // the plain-stacked and stackedSqrt branches below anchor their positive/negative stacks here,
+    // `barValueToY(0, ...)`, so all scale modes and both stacked branches share one exact baseline,
     // matching renderGrid()'s own zero gridline position.
     const zeroY = plotY + plotH - domainFraction(0, lo, hi) * plotH;
     const clampSvgCoordinate = (value: number, fallback = zeroY) =>
@@ -1876,8 +1915,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     return Math.min(n, Math.max(2, fits));
   }
 
-  /** Indexes retained by `maxLabels`, distributed across the complete domain so the sample
-   * immediately before the forced final endpoint can never bunch against it. The generated mark
+  /** Indexes retained by `maxLabels`, selected from the generated mark sample so an independently
+   * sampled domain cannot erase requested labels at a later set intersection. The generated mark
    * sample caps the useful result at 1,000, so this selector must do the same rather than allocate
    * an arbitrary consumer-supplied `maxLabels` count. In auto mode the resolved plot width and
    * rendered source indexes supply a deterministic cap. `undefined` means every *sampled* label
@@ -1900,9 +1939,18 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     // while the documented first/last guarantee still keeps both endpoints.
     const max = finiteCount(requested, n);
     if (n <= max) return undefined;
-    const count = Math.min(n, MAX_RENDERED_CHART_RECORDS, Math.max(2, max));
-    if (count <= 1) return new Set(n === 1 ? [0] : []);
-    return new Set(Array.from({ length: count }, (_, index) => Math.round((index * (n - 1)) / (count - 1))));
+    const renderedCount = renderedIndexes.length;
+    const count = Math.min(
+      renderedCount,
+      MAX_RENDERED_CHART_RECORDS,
+      Math.max(2, max),
+    );
+    if (count <= 1) return new Set(count === 1 ? [renderedIndexes[0]!] : []);
+    return new Set(
+      Array.from({ length: count }, (_, index) =>
+        renderedIndexes[Math.round((index * (renderedCount - 1)) / (count - 1))]!,
+      ),
+    );
   }
 
   private displayCategoryLabel(label: string, availableWidth: number): string {

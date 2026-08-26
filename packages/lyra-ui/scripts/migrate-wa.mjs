@@ -86,6 +86,12 @@ const REDUCED_MOTION_REVIEW_TAGS = new Set([
   'sl-animated-image',
 ]);
 
+const ICON_VOCABULARY_REVIEW_TAGS = new Set([
+  'wa-icon',
+  'sl-icon',
+  'sl-icon-button',
+]);
+
 function reducedMotionReviewMessage(upstreamTag) {
   return (
     `${upstreamTag} does not freeze or snap its animation under prefers-reduced-motion: reduce. ` +
@@ -93,6 +99,15 @@ function reducedMotionReviewMessage(upstreamTag) {
     'automatically. Review whether the migrated element should keep animating for users who asked ' +
     'for less motion, or set respect-reduced-motion="false" to preserve upstream playback under ' +
     'that preference.'
+  );
+}
+
+function iconVocabularyReviewMessage(upstreamTag) {
+  return (
+    `${upstreamTag}'s icon-name vocabulary is not bundled with Lyra. The default library includes ` +
+    'only add, check, close, search, menu, chevron-left, chevron-right, chevron-down, calendar, ' +
+    'command, and trash; any other migrated name renders no glyph. Register the required ' +
+    `vocabulary with registerIconLibrary('default', { resolver }) or replace each name explicitly.`
   );
 }
 
@@ -729,6 +744,19 @@ function quotedRangeContaining(text, offset) {
     if (offset >= start && offset < index) return [start, index];
   }
   return null;
+}
+
+function htmlTemplateStyleRanges(text) {
+  const ranges = [];
+  for (const match of text.matchAll(/<style(?:\s[^>]*)?>(?<body>[\s\S]*?)<\/style\s*>/gi)) {
+    const quoted = quotedRangeContaining(text, match.index);
+    if (!quoted || text[quoted[0]] !== '`') continue;
+    if (!/\bhtml\s*$/.test(text.slice(0, quoted[0]))) continue;
+    if (insideTemplateExpression(text, quoted[0], match.index)) continue;
+    const bodyStart = match.index + match[0].indexOf(match.groups.body);
+    ranges.push([bodyStart, bodyStart + match.groups.body.length]);
+  }
+  return ranges;
 }
 
 function insideTemplateExpression(text, templateStart, offset) {
@@ -2855,6 +2883,7 @@ export function migrateText(original, contract, options = {}) {
   const rootRegistrationMappings = options.rootRegistrationMappings ?? new Map();
   const starts = lineStarts(original);
   const ignoredRanges = commentRanges(original);
+  const htmlStyleRanges = htmlTemplateStyleRanges(original);
   const markupTokens = scanMarkupTags(original, ignoredRanges);
   const allOpeningTokens = scanAllOpeningTags(original, ignoredRanges);
   const apiReferences = scanApiTagReferences(original, ignoredRanges, options.domFactoryBindings);
@@ -3100,6 +3129,18 @@ export function migrateText(original, contract, options = {}) {
         ['reduced-motion-default'],
       );
     }
+    if (!token.closing && ICON_VOCABULARY_REVIEW_TAGS.has(token.tag)) {
+      warn(
+        token.nameStart,
+        mapping.upstreamTag,
+        null,
+        'BEHAVIOR_REVIEW_REQUIRED',
+        mapping.targetTag,
+        iconVocabularyReviewMessage(mapping.upstreamTag),
+        null,
+        ['icon-name-vocabulary'],
+      );
+    }
     if (!token.closing) openingTokens.push({ token, mapping, attributes: parseTagAttributes(original, token) });
   }
 
@@ -3140,6 +3181,18 @@ export function migrateText(original, contract, options = {}) {
         reducedMotionReviewMessage(mapping.upstreamTag),
         null,
         ['reduced-motion-default'],
+      );
+    }
+    if (ICON_VOCABULARY_REVIEW_TAGS.has(reference.tag)) {
+      warn(
+        reference.start,
+        mapping.upstreamTag,
+        null,
+        'BEHAVIOR_REVIEW_REQUIRED',
+        mapping.targetTag,
+        iconVocabularyReviewMessage(mapping.upstreamTag),
+        null,
+        ['icon-name-vocabulary'],
       );
     }
   }
@@ -3263,7 +3316,11 @@ export function migrateText(original, contract, options = {}) {
       const selectorMatches = [...match.groups.selector.matchAll(tagPattern)].filter(
         (tagMatch) => {
           const offset = selectorStart + tagMatch.index;
-          return !insideRanges(offset, ignoredRanges) && !quotedRangeContaining(original, offset);
+          if (insideRanges(offset, ignoredRanges)) return false;
+          const quoted = quotedRangeContaining(original, offset);
+          if (!quoted) return true;
+          return insideRanges(offset, htmlStyleRanges)
+            && !insideTemplateExpression(original, quoted[0], offset);
         },
       );
       if (!selectorMatches.length) continue;

@@ -6,6 +6,7 @@
 - **Class** `LyraMemoryPanel`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/memory-panel/memory-panel.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 18 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -35,12 +36,14 @@ shape?: 'circle' | 'square' | 'diamond' }`, forwarded verbatim to every expanded
 - `thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 }` (attribute: false) —
   confidence-tier boundaries (reusing `lr-citation-badge`'s high/medium/low confidence vocabulary and
   success/warning/danger tones), also forwarded as the provenance relevance tiers
-- `label: string = ''` — fallback name for the stable overall group. A non-empty host `aria-label`
+- `label?: string` — fallback name for the stable overall group; omission uses the localized memory
+  panel label. A non-empty host `aria-label`
   makes the host the sole overall owner; an explicitly empty host label stays empty
 
 Each memory list is canonicalized independently by nonblank `id`. Malformed rows and later
 duplicates are omitted first-wins before empty state, focus/disclosure state, confirmations, counts,
-rendering, or actions.
+rendering, or actions. Rows whose `text` is missing, nonstring, blank, or whitespace-only are also
+omitted without hiding later valid memories.
 
 **Events:**
 
@@ -48,10 +51,10 @@ rendering, or actions.
   long-term" was approved; the short-term item as-is. Only offered on short-term items.
 - `lr-remove` (`detail: LyraMemoryRemoveDetail` = `{ memoryId: string; scope: 'short-term' | 'long-term' }`)
   — a pending per-item removal was approved. Offered on every item.
-- `lr-forget` (`detail: undefined`) — the pending "forget all long-term memories" bulk action was
+- `lr-forget` (`detail: null`) — the pending "forget all long-term memories" bulk action was
   approved. Only rendered while `longTerm` is non-empty.
 - `lr-expand` (`detail: LyraMemoryExpandDetail` = `{ memoryId: string; scope: 'short-term' |
-  'long-term'; expanded: boolean }`) — an item's provenance disclosure was toggled.
+'long-term'; expanded: boolean }`) — an item's provenance disclosure was toggled.
 
 **Slots:** none.
 

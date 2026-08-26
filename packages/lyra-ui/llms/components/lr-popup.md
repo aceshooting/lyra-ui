@@ -6,6 +6,7 @@
 - **Class** `LyraPopup`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/popup/popup.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 4 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -51,7 +52,7 @@ replacement and transfer, plus direct and forwarded slot changes, are tracked li
   nearest positioned ancestor, so the popup scrolls with its containing content
 - `distance: number = 0` — offset from the anchor along the placement axis, in px
 - `skidding: number = 0` — offset along the anchor's edge, in px
-- `flip: boolean = false` (reflected), with `flipFallbackPlacements: string = ''` (attribute
+- `flip: boolean = false` (not reflected), with `flipFallbackPlacements: string = ''` (attribute
   `flip-fallback-placements` — a
   space-delimited placement list `flip` tries in order instead of just the opposite side;
   unrecognized entries are dropped rather than forwarded), `flipFallbackStrategy: 'best-fit' |
@@ -60,9 +61,9 @@ replacement and transfer, plus direct and forwarded slot changes, are tracked li
   `flipBoundary: PlaceBoundary | null = null` (property only — element(s) to measure overflow
   against instead of the popup's clipping ancestors) and `flipPadding: number = 0` (attribute
   `flip-padding`)
-- `boundary: 'viewport' | 'scroll' = 'viewport'` (reflected) — shared overflow boundary for flip,
+- `boundary: 'viewport' | 'scroll' = 'viewport'` (not reflected) — shared overflow boundary for flip,
   shift, and auto-size; each middleware-specific boundary below overrides it independently
-- `shift: boolean = false` (reflected), with
+- `shift: boolean = false` (not reflected), with
   `shiftBoundary: PlaceBoundary | null = null` (property only) and
   `shiftPadding: number = 0` (attribute `shift-padding`)
 - `padding: number = 0` — boundary padding kept clear by `shift` and by the available-size
@@ -76,11 +77,11 @@ replacement and transfer, plus direct and forwarded slot changes, are tracked li
   that cap rather than introducing one. An unrecognized value is inert rather than half-applied.
 - `sync: 'width' | 'height' | 'both' | null = null` — copies the anchor's inline size, block size,
   or both onto the popup. An unrecognized value is inert, for the same reason.
-- `hoverBridge: boolean = false` (attribute `hover-bridge`, reflected) — renders an invisible quad
+- `hoverBridge: boolean = false` (attribute `hover-bridge`, not reflected) — renders an invisible quad
   across the `distance` gap, so a pointer travelling between anchor and popup never leaves both at
   once. Purely geometric: this element owns no hover policy of its own, the component built on top
   reads the hover.
-- `arrow: boolean = false` (reflected), `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'`
+- `arrow: boolean = false` (not reflected), `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'`
   (attribute `arrow-placement`) and `arrowPadding: number = 10` (attribute `arrow-padding`) — the
   shared arrow trio described at the top of this family
 

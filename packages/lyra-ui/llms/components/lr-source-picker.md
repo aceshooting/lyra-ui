@@ -6,9 +6,10 @@
 - **Class** `LyraSourcePicker`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/source-picker/source-picker.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -28,13 +29,15 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
   normalized once into a deterministic nonblank first-id-wins model with identity/cycle detection,
   a depth ceiling of 64 and a 2,000-node ceiling; blank/whitespace ids, duplicate ids, and other
   rejected/truncated input fail closed with localized visible status rather than recursing or
-  exposing ambiguous controls
+  exposing ambiguous controls. A nonempty raw payload with no valid root entries renders a localized
+  invalid-value error rather than the ordinary no-data state
 - `selectedSourceIds: string[] = []` (attribute: false) — controlled; blank ids, duplicates, and ids
   that are not leaves in the current `sources` tree are pruned, and the host assigns updates back from
   `lr-sources-change`
 - `showSelectAll: boolean = true` (attribute `show-select-all`)
 - `searchable: boolean = true`
-- `label: string = ''` — fallback name for the source tree
+- `label?: string` — fallback name for the source tree; omission uses the localized picker label,
+  while an explicit empty string stays empty
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
   the host attribute is absent, overrides the tree name. Authored host `aria-label` instead names
   the picker as a whole (including explicit-empty/dynamic values) and is not cloned onto the tree,
@@ -53,7 +56,8 @@ owner), `summary` ("{selected} of {total} selected"), `tree`
 `aria-selected` state), `disclosure` (a folder row's pointer-only expand/collapse indicator; the
 surrounding treeitem owns keyboard expansion),
 `checkbox` (tri-state glyph), `icon` (the `lr-file-icon` type badge), `label`, `empty` (`noData`
-when `sources` is empty, `noMatches` when a filter empties the tree), `limit` (bounded-normalizer
+when `sources` is empty, `noMatches` when a filter empties the tree), `error` (a nonempty raw
+payload containing no valid roots), `limit` (bounded-normalizer
 failure/truncation). Post-mount no-match and recovery transitions announce through the shared
 light-DOM polite sink; the shadow messages are visible mirrors, never live regions.
 

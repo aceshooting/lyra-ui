@@ -6,6 +6,7 @@
 - **Class** `LyraRadarChart`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/radar-chart.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
 - **Themeable via** 16 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -31,7 +32,8 @@ of every entry in these lists.**
 `yLabel` (`y-label`), plus additive `labels`, `datasets`, `valueFormatter`, `formatter`, `area`, `zoom`,
 `height`, `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`), `dataLabels`
 (`data-labels`), `stackTotals` (`stack-totals`), `config`, `showDataTable`
-(`show-data-table`), `chartArea` (readonly), and `chart`. `type` differs only in its initial value.
+(`show-data-table`), `dataTableToggle` (`data-table-toggle`), `chartArea` (readonly), and `chart`.
+`type` differs only in its initial value.
 
 **Methods:** `appendData(label, values, maxPoints?)`, `exportData('csv' | 'png')`, `renderChart()`, `resetZoom()`,
 `refreshTheme()`.
@@ -65,7 +67,8 @@ together. The mirrored hooks are `--border-color-1`,
 `--grid-color`, `--line-border-width`, and `--point-radius`, also identical to the core chart.
 
 **Optional peer deps:** same as `lr-chart` — `chart.js`, plus `chartjs-plugin-zoom` only once
-`zoom` is set, and `chartjs-plugin-datalabels` only once `data-labels`/`stack-totals` is set.
+`zoom` is set, `chartjs-plugin-datalabels` only once `data-labels`/`stack-totals` is set, and
+`chartjs-plugin-annotation` only once `annotations` contains a usable entry.
 
 ```html
 <lr-bar-chart></lr-bar-chart>

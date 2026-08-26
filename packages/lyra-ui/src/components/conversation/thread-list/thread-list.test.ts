@@ -9,7 +9,6 @@ import type { LyraThreadList } from "./thread-list.js";
 import type { LyraConversationItem } from "../conversation-item/conversation-item.class.js";
 import type { LyraVirtualList } from "../../layout/virtual-list/virtual-list.class.js";
 import type { LyraDropdown } from "../../overlays/overlay/dropdown.class.js";
-import { styles } from "./thread-list.styles.js";
 
 type ChatThreadLike = { id: string };
 type RenderedThreadListItem =
@@ -503,15 +502,30 @@ describe("data mode", () => {
     expect(todayToggle.getAttribute("aria-expanded")).to.equal("false");
   });
 
-  it("gives the group-toggle a :hover rule matching its :focus-visible affordance", () => {
-    // `:hover` can't be driven synthetically in this headless runner, so this proves the
-    // stylesheet declares a real hover background for the part (mirroring the sibling
-    // `row-action` rule in this same file), the same convention `<lr-artifact-panel>`'s own
-    // hover-coverage test already uses for exactly this defect class.
-    const css = styles.cssText.replace(/\s+/g, " ");
-    expect(css).to.match(
-      /lr-virtual-list::part\(group-toggle\):hover\s*\{[^}]*background:\s*var\(--lr-color-surface-raised\)/
-    );
+  it("renders the group-toggle hover treatment matching its focus-visible affordance", async () => {
+    const el = await fixture<LyraThreadList>(html`
+      <lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>
+    `);
+    await el.updateComplete;
+    await nextFrame();
+    const list = el.shadowRoot!.querySelector<LyraVirtualList>('lr-virtual-list')!;
+    list.style.setProperty('--lr-color-surface-raised', 'rgb(1, 2, 3)');
+    await waitUntil(() => list.shadowRoot!.querySelector('[part~="group-toggle"]') != null);
+    const toggle = list.shadowRoot!.querySelector<HTMLElement>('[part~="group-toggle"]')!;
+    toggle.scrollIntoView({ block: "center" });
+    const rect = toggle.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: "move",
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(
+        () => getComputedStyle(toggle).backgroundColor === "rgb(1, 2, 3)",
+        "the group-toggle hover background never appeared",
+      );
+    } finally {
+      await resetMouse();
+    }
   });
 
   it('grouping="none" renders every visible thread in host order with no group headers', async () => {
@@ -933,21 +947,21 @@ describe("data mode", () => {
     expect(buttons.length).to.equal(3);
 
     const pinPromise = oneEvent(el, "lr-thread-pin");
-    buttons[0].click();
+      buttons[0]!.click();
     expect((await pinPromise).detail).to.deep.equal({
       conversationId: "t1",
       pinned: true,
     });
 
     const archivePromise = oneEvent(el, "lr-thread-archive");
-    buttons[1].click();
+      buttons[1]!.click();
     expect((await archivePromise).detail).to.deep.equal({
       conversationId: "t1",
       archived: true,
     });
 
     const deletePromise = oneEvent(el, "lr-thread-delete");
-    buttons[2].click();
+      buttons[2]!.click();
     expect((await deletePromise).detail).to.deep.equal({
       conversationId: "t1",
     });
@@ -1035,13 +1049,13 @@ describe("data mode", () => {
       const children = [...actionsSlot.children];
       // Built-in pin button first, custom content appended after it -- the documented precedence.
       expect(children.length).to.equal(2);
-      expect(children[0].getAttribute("aria-label")).to.equal(
+        expect(children[0]!.getAttribute("aria-label")).to.equal(
         "Pin conversation"
       );
-      expect(children[1].classList.contains("custom-action")).to.be.true;
+        expect(children[1]!.classList.contains("custom-action")).to.be.true;
 
       const customPromise = oneEvent(el, "custom-rename");
-      (children[1] as HTMLButtonElement).click();
+        (children[1]! as HTMLButtonElement).click();
       expect((await customPromise).detail).to.deep.equal({ id: "t1" });
     });
 
@@ -1113,7 +1127,7 @@ describe("data mode", () => {
       const rowBoxes = [
         ...list.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]'),
       ];
-      const firstMenu = dataRows(el)[0].querySelector<LyraDropdown>("lr-dropdown")!;
+        const firstMenu = dataRows(el)[0]!.querySelector<LyraDropdown>("lr-dropdown")!;
       const firstRowBox = rowBoxes.find((row) =>
         row.querySelector("#menu-p1")
       )!;
@@ -1302,6 +1316,29 @@ describe("data mode", () => {
       expect(ev.detail).to.deep.equal({ text: "today", matchCount: 1 });
     });
 
+    it("drops records without a string title before filtering", async () => {
+      const el = (await fixture(html`
+        <lr-thread-list
+          style="block-size:400px"
+          searchable
+          grouping="none"
+          .threads=${[
+            { id: "missing" },
+            { id: "null", title: null },
+            { id: "valid", title: "Valid match" },
+          ] as unknown as Array<{ id: string; title: string }>}
+        ></lr-thread-list>
+      `)) as LyraThreadList;
+      const input = el.shadowRoot!.querySelector(
+        '[part="search-input"]'
+      ) as HTMLInputElement;
+      input.value = "valid";
+      input.dispatchEvent(new Event("input"));
+      await el.updateComplete;
+
+      expect(renderedThreadIds(el)).to.deep.equal(["valid"]);
+    });
+
     it("matches against excerpt too, case-insensitively", async () => {
       const el = (await fixture(
         html`<lr-thread-list
@@ -1455,7 +1492,7 @@ describe("data mode", () => {
         })
       );
       await el.updateComplete;
-      const firstRow = dataRows(el)[0];
+        const firstRow = dataRows(el)[0]!;
       expect(firstRow.shadowRoot!.activeElement != null).to.equal(true);
     });
 
@@ -1518,7 +1555,7 @@ describe("data mode", () => {
     await el.updateComplete;
     await nextFrame();
     const rows = dataRows(el);
-    const firstOption = rows[0].shadowRoot!.querySelector(
+      const firstOption = rows[0]!.shadowRoot!.querySelector(
       '[part="select-button"]'
     ) as HTMLElement;
     firstOption.focus();
@@ -1531,11 +1568,11 @@ describe("data mode", () => {
       })
     );
     await nextFrame();
-    const secondOption = rows[1].shadowRoot!.querySelector(
+      const secondOption = rows[1]!.shadowRoot!.querySelector(
       '[part="select-button"]'
     );
     expect(document.activeElement != null).to.equal(true); // focus moved somewhere inside the shadow tree
-    expect(rows[1].shadowRoot!.activeElement === secondOption).to.equal(true);
+      expect(rows[1]!.shadowRoot!.activeElement === secondOption).to.equal(true);
   });
 
   it("ArrowUp roves focus to the previous rendered row", async () => {
@@ -1549,7 +1586,7 @@ describe("data mode", () => {
     await el.updateComplete;
     await nextFrame();
     const rows = dataRows(el);
-    const secondOption = rows[1].shadowRoot!.querySelector(
+      const secondOption = rows[1]!.shadowRoot!.querySelector(
       '[part="select-button"]'
     ) as HTMLElement;
     secondOption.focus();
@@ -1562,10 +1599,10 @@ describe("data mode", () => {
       })
     );
     await nextFrame();
-    const firstOption = rows[0].shadowRoot!.querySelector(
+      const firstOption = rows[0]!.shadowRoot!.querySelector(
       '[part="select-button"]'
     );
-    expect(rows[0].shadowRoot!.activeElement === firstOption).to.equal(true);
+      expect(rows[0]!.shadowRoot!.activeElement === firstOption).to.equal(true);
   });
 
   it("ArrowUp with no row focused jumps to the last rendered row", async () => {
@@ -1588,7 +1625,7 @@ describe("data mode", () => {
       })
     );
     await nextFrame();
-    const lastRow = rows[rows.length - 1];
+      const lastRow = rows[rows.length - 1]!;
     const lastOption = lastRow.shadowRoot!.querySelector(
       '[part="select-button"]'
     );
@@ -1718,7 +1755,7 @@ it("renders first-class start, meta, and row-content hooks inside virtualized ro
   )) as LyraThreadList;
   await el.updateComplete;
   await nextFrame();
-  const row = dataRows(el)[0];
+    const row = dataRows(el)[0]!;
   expect(row.querySelector('[slot="start"] [data-testid="start"]')).to.exist;
   expect(row.querySelector('[slot="meta"] [data-testid="meta"]')).to.exist;
   expect(row.querySelector('[slot="content"] [data-testid="content"]')).to
@@ -1754,7 +1791,7 @@ it("renders a renderExcerpt hook into the row item's excerpt slot, winning over 
   )) as LyraThreadList;
   await el.updateComplete;
   await nextFrame();
-  const row = dataRows(el)[0];
+    const row = dataRows(el)[0]!;
   const slotted = row.querySelector('[slot="excerpt"] [data-testid="excerpt"]');
   expect(slotted != null).to.equal(true);
   expect(slotted!.textContent).to.contain("rich");
@@ -1789,7 +1826,7 @@ it("gives renderExcerpt marks token-driven default highlight styling", async () 
   )) as LyraThreadList;
   await el.updateComplete;
   await nextFrame();
-  const row = dataRows(el)[0];
+    const row = dataRows(el)[0]!;
   const mark = row.querySelector<HTMLElement>('[data-testid="highlight"]')!;
   const reference = row.querySelector<HTMLElement>(
     '[data-testid="highlight-reference"]'
@@ -1820,7 +1857,7 @@ it("themes renderExcerpt marks through component-scoped custom properties", asyn
   )) as LyraThreadList;
   await el.updateComplete;
   await nextFrame();
-  const mark = dataRows(el)[0].querySelector<HTMLElement>(
+    const mark = dataRows(el)[0]!.querySelector<HTMLElement>(
     '[data-testid="highlight"]'
   )!;
   const computed = getComputedStyle(mark);
@@ -1847,7 +1884,7 @@ it("does not apply excerpt-highlight hooks to marks outside renderExcerpt", asyn
   )) as LyraThreadList;
   await el.updateComplete;
   await nextFrame();
-  const mark = dataRows(el)[0].querySelector<HTMLElement>(
+    const mark = dataRows(el)[0]!.querySelector<HTMLElement>(
     '[data-testid="content-mark"]'
   )!;
   const computed = getComputedStyle(mark);
@@ -1865,7 +1902,7 @@ it("leaves rendering unchanged when renderExcerpt is unset", async () => {
   )) as LyraThreadList;
   await el.updateComplete;
   await nextFrame();
-  const row = dataRows(el)[0];
+    const row = dataRows(el)[0]!;
   expect(row.querySelector('[slot="excerpt"]') == null).to.be.true;
   await row.updateComplete;
   expect(
@@ -2182,9 +2219,9 @@ describe("wrapRow row-wrapper part", () => {
       ),
     ];
     expect(wrappers.length).to.equal(3);
-    expect(wrappers[0].querySelector("span[data-thread-id]") === null).to.be
-      .false;
-    expect(getComputedStyle(wrappers[0]).backgroundColor).to.equal(
+      expect(wrappers[0]!.querySelector("span[data-thread-id]") === null).to.be
+        .false;
+      expect(getComputedStyle(wrappers[0]!).backgroundColor).to.equal(
       "rgb(9, 8, 7)"
     );
     expect(list.getAttribute("exportparts")).to.contain(
@@ -2248,8 +2285,8 @@ describe("wrapRow row-wrapper part", () => {
     );
     await el.updateComplete;
     expect(
-      rows[0].shadowRoot!.activeElement ===
-        rows[0].shadowRoot!.querySelector('[part="select-button"]')
+        rows[0]!.shadowRoot!.activeElement ===
+          rows[0]!.shadowRoot!.querySelector('[part="select-button"]')
     ).to.equal(true);
 
     el.shadowRoot!.querySelector('[part="list"]')!.dispatchEvent(
@@ -2261,8 +2298,8 @@ describe("wrapRow row-wrapper part", () => {
     );
     await nextFrame();
     expect(
-      rows[1].shadowRoot!.activeElement ===
-        rows[1].shadowRoot!.querySelector('[part="select-button"]')
+        rows[1]!.shadowRoot!.activeElement ===
+          rows[1]!.shadowRoot!.querySelector('[part="select-button"]')
     ).to.equal(true);
   });
 
@@ -2727,12 +2764,12 @@ describe("keyboard navigation past the rendered window", () => {
       rowsBefore.length,
       "the window is smaller than the full list"
     ).to.be.lessThan(20);
-    const lastId = rowsBefore[rowsBefore.length - 1].conversationId;
+      const lastId = rowsBefore[rowsBefore.length - 1]!.conversationId;
     const expectedNextId =
       manyThreads[manyThreads.findIndex((thread) => thread.id === lastId) + 1]!
         .id;
     (
-      rowsBefore[rowsBefore.length - 1].shadowRoot!.querySelector(
+        rowsBefore[rowsBefore.length - 1]!.shadowRoot!.querySelector(
         '[part="select-button"]'
       ) as HTMLElement
     ).focus();
@@ -2760,7 +2797,7 @@ describe("keyboard navigation past the rendered window", () => {
     await el.updateComplete;
 
     const rowsAfter = dataRows(el);
-    const newLast = rowsAfter[rowsAfter.length - 1];
+      const newLast = rowsAfter[rowsAfter.length - 1]!;
     const focusedRowId =
       rowsAfter.find(
         (row) =>
@@ -2848,7 +2885,7 @@ describe("keyboard navigation past the rendered window", () => {
     await nextFrame();
     const rows = dataRows(el);
     (
-      rows[rows.length - 1].shadowRoot!.querySelector(
+        rows[rows.length - 1]!.shadowRoot!.querySelector(
         '[part="select-button"]'
       ) as HTMLElement
     ).focus();
@@ -2863,7 +2900,7 @@ describe("keyboard navigation past the rendered window", () => {
     await nextFrame();
     await nextFrame();
     expect(viewportEl(el).scrollTop).to.equal(0);
-    const last = rows[rows.length - 1];
+      const last = rows[rows.length - 1]!;
     expect(
       last.shadowRoot!.activeElement ===
         last.shadowRoot!.querySelector('[part="select-button"]')
@@ -3016,21 +3053,17 @@ describe("sticky group headers", () => {
     expect(band(el)!.textContent).to.contain("Yesterday");
   });
 
-  it("keeps the pinned toggle clickable, emitting lr-group-toggle for the pinned group", async () => {
+  it('keeps the pinned copy purely presentational and the real row as the only toggle', async () => {
     const el = await mount(true);
-    const pinnedToggle = band(el)!.querySelector<HTMLButtonElement>(
-      '[part~="group-toggle"]'
-    )!;
+    const pinned = band(el)!;
     expect(
-      getComputedStyle(pinnedToggle).pointerEvents,
-      "the copy opts back into pointer events"
-    ).to.equal("auto");
-
-    const event = oneEvent(el, "lr-group-toggle");
-    pinnedToggle.click();
-    const detail = (await event).detail;
-    expect(detail.groupId).to.equal("today");
-    expect(detail.collapsed).to.be.true;
+      pinned.querySelector('[part~="group-toggle"]') === null,
+      'the inert visual copy does not contain a misleading button'
+    ).to.equal(true);
+    expect(
+      getComputedStyle(pinned).pointerEvents,
+      'the copy preserves virtual-list pointer transparency'
+    ).to.equal('none');
   });
 
   it("keeps the real row as the only exposed heading, and adds no tab stop", async () => {
@@ -3044,7 +3077,7 @@ describe("sticky group headers", () => {
       realHeaders.length,
       "the real group header row owns the heading"
     ).to.equal(1);
-    expect(realHeaders[0].getAttribute("aria-level")).to.equal("2");
+      expect(realHeaders[0]!.getAttribute("aria-level")).to.equal("2");
 
     const copy = band(el)!;
     expect(copy.getAttribute("aria-hidden")).to.equal("true");
@@ -3053,8 +3086,9 @@ describe("sticky group headers", () => {
       "the copy is not a second heading"
     ).to.be.true;
     expect(
-      copy.querySelector<HTMLElement>('[part~="group-toggle"]')!.tabIndex
-    ).to.equal(-1);
+      copy.querySelector('[part~="group-toggle"]') === null,
+      'the copy contains no second toggle at all'
+    ).to.equal(true);
 
     // Every remaining Tab stop is a real row's, not the copy's.
     const tabbable = [
@@ -3204,8 +3238,8 @@ describe("compact forwarding", () => {
     ];
     expect(slotted.length).to.equal(2);
     // The host owns its own items' density here, exactly as it owns every other row property.
-    expect(slotted[0].hasAttribute("compact")).to.be.false;
-    expect(slotted[0].compact).to.be.false;
-    expect(slotted[1].compact).to.be.true;
+      expect(slotted[0]!.hasAttribute("compact")).to.be.false;
+      expect(slotted[0]!.compact).to.be.false;
+      expect(slotted[1]!.compact).to.be.true;
   });
 });

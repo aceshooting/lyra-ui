@@ -12,7 +12,7 @@
  *
  * @internal
  */
-export const UNSAFE_LEADING = /^[=+\-@\uFF1D\uFF0B\uFF0D\uFF20\t\r\n]/;
+export const UNSAFE_LEADING = /^[\s=+\-@\uFF1D\uFF0B\uFF0D\uFF20]/u;
 const NEEDS_QUOTING = /[",\r\n]/;
 
 /** Escapes a CSV field: quotes as needed, guards against formula injection. */

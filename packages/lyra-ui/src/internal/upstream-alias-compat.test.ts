@@ -68,8 +68,8 @@ describe('pinned upstream write aliases', () => {
       expect(animation, 'registered animation is created').to.exist;
       expect(animation!.effect!.getComputedTiming().iterations).to.equal(2);
       const frames = (animation!.effect as KeyframeEffect).getKeyframes();
-      expect(frames[0]!.opacity).to.equal('0.25');
-      expect(frames.at(-1)!.opacity).to.equal('0.75');
+      expect(frames[0]!['opacity']).to.equal('0.25');
+      expect(frames.at(-1)!['opacity']).to.equal('0.75');
     } finally {
       cleanup();
     }

@@ -20,16 +20,18 @@ const reorderItems: TaskItem[] = [
 
 const clone = (): TaskItem[] => JSON.parse(JSON.stringify(reorderItems)) as TaskItem[];
 
+type MutableTaskItem = Omit<TaskItem, 'children'> & { children?: MutableTaskItem[] };
+
 function itemRow(el: LyraTaskList, id: string): HTMLElement {
   const row = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]')].find(
-    (candidate) => candidate.dataset.id === id,
+    (candidate) => candidate.dataset['id'] === id,
   );
   if (!row) throw new Error(`Could not find task row ${id}`);
   return row;
 }
 
 function focusedItemId(el: LyraTaskList): string | undefined {
-  return (el.shadowRoot!.activeElement as HTMLElement | null)?.dataset.id;
+  return (el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id'];
 }
 
 function modifiedArrow(
@@ -55,7 +57,7 @@ function applyItemsReorder(el: LyraTaskList, event: CustomEvent): void {
     fromIndex: number;
     toIndex: number;
   };
-  const next = JSON.parse(JSON.stringify(el.items)) as TaskItem[];
+  const next = JSON.parse(JSON.stringify(el.items)) as MutableTaskItem[];
   const siblings = parentTaskId === null ? next : next.find((item) => item.id === parentTaskId)?.children;
   if (!siblings) return;
   const [moved] = siblings.splice(fromIndex, 1);
@@ -204,7 +206,7 @@ describe('reorderable', () => {
     );
     await el.updateComplete;
 
-    expect(rows.map((row) => row.dataset.id)).to.deep.equal(['shared', 'shared']);
+    expect(rows.map((row) => row.dataset['id'])).to.deep.equal(['shared', 'shared']);
     expect(rows.every((row) => !row.hasAttribute('tabindex'))).to.be.true;
     expect(events.length).to.equal(0);
   });
@@ -220,7 +222,7 @@ describe('reorderable', () => {
 
     expect(
       [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"][data-depth="0"]')].map(
-        (candidate) => candidate.dataset.id,
+        (candidate) => candidate.dataset['id'],
       ),
     ).to.deep.equal(['write', 'prepare', 'review']);
     expect(focusedItemId(el)).to.equal('prepare');
@@ -237,7 +239,7 @@ describe('reorderable', () => {
 
     expect(
       [...itemRow(el, 'prepare').querySelectorAll<HTMLElement>('[part="item"]')].map(
-        (candidate) => candidate.dataset.id,
+        (candidate) => candidate.dataset['id'],
       ),
     ).to.deep.equal(['prepare-b', 'prepare-a', 'prepare-c']);
     expect(focusedItemId(el)).to.equal('prepare-a');

@@ -85,6 +85,8 @@ interface OwnedAnimationFrameWait {
  * the rail tracks page/count from the viewer's own events) and **mediated** (`page-count`/`page` are
  * host-bound directly, rows render a placeholder glyph -- still a fully functional pager). In wired
  * mode the viewer's `page` is the single source of truth.
+ * Unmodified digit keys provide page-number type-ahead; Alt/Ctrl/Meta-modified digits remain
+ * available to browser and application shortcuts and never alter the page.
  *
  * @customElement lr-page-rail
  * @event lr-page-select - A page row was activated (click, or Enter/Space on a focused row).
@@ -612,7 +614,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (!/^[0-9]$/.test(e.key)) return;
+    if (e.altKey || e.ctrlKey || e.metaKey || !/^[0-9]$/.test(e.key)) return;
     this.digitBuffer += e.key;
     const target = Number(this.digitBuffer);
     this.cancelDigitTimer();

@@ -7,6 +7,7 @@
 - **Class** `LyraTabGroup`, also available unregistered from `@aceshooting/lyra-ui/components/layout/tab-group/tab-group.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 16 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -43,9 +44,9 @@ or badge while the button's accessible name stays exactly its accessibility-expo
 Direct default-slot element roots in that visual label become inert while projected and regain
 their latest author-owned inert state when released; use text/glyph markup, not an independent
 action. Author `aria-hidden`, hidden, inert, and CSS-hidden branches are excluded from the name, and
-direct-label text or visibility changes refresh it. `active` on a tab/panel pair is an SSR hint: the
-group reads an initially active tab and then keeps both child attributes synchronized with its own
-selection after hydration.
+direct-label text or visibility changes refresh it. `active` on a paired or labeled unpaneled tab is
+an SSR hint: the group reads an initially active tab and then keeps the source tab and any matching
+panel attributes synchronized with its own selection after hydration.
 
 Implements the WAI-ARIA APG tabs pattern. With the default `activation="auto"`, Left/Right (swapped
 under RTL, or Up/Down when `placement` is `start`/`end`) move focus _and_ selection together; with

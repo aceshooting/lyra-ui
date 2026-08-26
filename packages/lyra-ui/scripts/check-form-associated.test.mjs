@@ -99,6 +99,30 @@ export class LyraFixture extends LyraElement {
   assert.deepEqual(rulesFor(source, { requireLabelSupport: true }), []);
 });
 
+check('a direct control with a local label factory may install only internals capture', () => {
+  const source = `
+import { FORM_CONTROL_LABEL_FACTORY } from './lyra-element.js';
+import { installFormControlInternalsCapture } from './form-control-labels.js';
+installFormControlInternalsCapture();
+export class LyraFixture extends LyraElement {
+  static formAssociated = true;
+  static [FORM_CONTROL_LABEL_FACTORY] = createFixtureLabelController;
+}
+`;
+  assert.deepEqual(rulesFor(source, { requireLabelSupport: true }), []);
+});
+
+check('capture-only installation without a local label factory remains incomplete', () => {
+  const source = `
+import { installFormControlInternalsCapture } from './form-control-labels.js';
+installFormControlInternalsCapture();
+export class LyraFixture extends LyraElement {
+  static formAssociated = true;
+}
+`;
+  assert.deepEqual(rulesFor(source, { requireLabelSupport: true }), ['g']);
+});
+
 check('a shared-mixin control inherits the mixin module label-support installation', () => {
   const source = `
 export class LyraFixture extends FormAssociated(LyraElement) {}

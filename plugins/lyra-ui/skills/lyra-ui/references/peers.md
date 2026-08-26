@@ -12,11 +12,11 @@ JavaScript, no component imports these frameworks, and Lyra ships no runtime wra
 **Component-loaded peers (26).** No component imports one eagerly. Install a
 peer only when you use a component that needs it.
 
-**How they load.** A component that needs a peer resolves it through a dynamic `import()` on first
-use, rendering an `<lr-skeleton>` placeholder with `aria-busy="true"` on the host while it settles.
-If the peer is genuinely absent, the component falls back to an empty/degraded render and logs one
-`console.warn` (deduped module-wide, not per instance) — it never throws and never blocks paint.
-`<lr-phone-input>` is the exception: it takes an explicit consumer-built adapter
+**How they load.** Most component-loaded peers resolve through a dynamic `import()` on first use.
+Loading and failure behavior is component-specific: placeholders, `aria-busy`, visible localized
+fallbacks, events, and console diagnostics vary. Consult the owning component section for its exact
+loading and failure contract. `<lr-phone-input>` is the exception: it takes an explicit
+consumer-built adapter
 (`loadLibphonenumberAdapter()`) instead of importing `libphonenumber-js` itself.
 
 **SheetJS (`xlsx`).** The supported `>=0.20.3 <0.21.0` releases are distributed by SheetJS
@@ -37,7 +37,7 @@ for the page.
 
 | Peer | Range | Needed by |
 |---|---|---|
-| `@aceshooting/lyra-flags` | `workspace:^2.2.0` | `lr-flag`, `lr-locale-picker`, `lr-phone-input` |
+| `@aceshooting/lyra-flags` | `^2.2.0` | _(loaded by a shared internal module)_ |
 | `@aiden0z/pptx-renderer` | `^1.2.4` | `lr-pptx-viewer` |
 | `@sgratzl/chartjs-chart-boxplot` | `^4.4.5` | `lr-box-plot` |
 | `chart.js` | `^4.5.1` | `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
@@ -48,16 +48,16 @@ for the page.
 | `d3-force` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
 | `d3-selection` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
 | `d3-zoom` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
-| `dompurify` | `^3.4.14` | `lr-agent-workspace`, `lr-command-palette`, `lr-condition-builder`, `lr-dashboard-grid`, `lr-docx-viewer`, `lr-email-viewer`, `lr-eval-run`, `lr-html-viewer`, `lr-icon`, `lr-icon-button`, `lr-include`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-svg-viewer`, `lr-video`, `lr-video-playlist`, `lr-widget-renderer` |
+| `dompurify` | `^3.4.14` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-docx-viewer`, `lr-email-viewer`, `lr-eval-run`, `lr-html-viewer`, `lr-icon`, `lr-icon-button`, `lr-include`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-svg-viewer`, `lr-video`, `lr-video-playlist`, `lr-widget-renderer` |
 | `emoji-picker-element-data` | `^1.8.0` | `lr-emoji-picker` |
 | `epubjs` | `^0.3.93` | `lr-ebook-viewer` |
 | `ical.js` | `^2.2.1` | `lr-calendar-viewer` |
 | `katex` | `^0.18.4` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-eval-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-widget-renderer` |
-| `libphonenumber-js` | `>=1.11.0 <2` | `lr-phone-input` |
+| `libphonenumber-js` | `>=1.11.0 <2` | _(not referenced by any component)_ |
 | `mammoth` | `^1.12.1` | `lr-docx-viewer` |
 | `maplibre-gl` | `>=5 <7` | `lr-geojson-view`, `lr-geojson-viewer`, `lr-map` |
-| `marked` | `^18.0.10` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-eval-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-widget-renderer` |
-| `papaparse` | `^5.6.0` | `lr-csv-viewer`, `lr-dataset-viewer` |
+| `marked` | `^18.0.11` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-eval-run`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-widget-renderer` |
+| `papaparse` | `^5.7.0` | `lr-csv-viewer`, `lr-dataset-viewer` |
 | `pdfjs-dist` | `^6.2.108` | `lr-pdf-viewer` |
 | `postal-mime` | `^3.0.0` | `lr-email-viewer` |
 | `qrcode` | `^1.5.4` | `lr-qr-code` |

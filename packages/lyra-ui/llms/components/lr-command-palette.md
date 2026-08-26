@@ -6,8 +6,9 @@
 - **Class** `LyraCommandPalette`, also available unregistered from `@aceshooting/lyra-ui/components/layout/command-palette/command-palette.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
-- **Optional peers** `dompurify` — see `llms/peers.md`
+- **Optional peers** none
 - **Themeable via** 14 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -31,7 +32,9 @@ shortcut?, keywords?: readonly string[], disabled?, icon?, onSelect? }`. The seq
   must be nonempty and unique; invalid rows are omitted and the first duplicate wins. Replacing or
   reordering the array preserves the active command by `commandId`. `icon` is an optional leading glyph (a `TemplateResult`,
   an emoji string, etc. — not restricted to a square icon) rendered in the `icon` part before the
-  label; a command with no `icon` renders no `icon` part at all. Filtering is case-insensitive
+  label; a command with no `icon` renders no `icon` part at all. A runtime `keywords` value that is
+  not an array is ignored, as are non-string members, without dropping otherwise-valid commands.
+  Filtering is case-insensitive
   substring matching over `label` + `description` + `group` + `keywords` joined together (not
   fuzzy/subsequence), memoized per `commands` array identity — reassign the array, never mutate it
   in place. Consecutive commands sharing a `group` render one `[part='group']` heading, so pre-sort

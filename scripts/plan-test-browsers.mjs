@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
-import { realpathSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { isMainModule } from '../packages/lyra-ui/scripts/is-main-module.mjs';
 
 export const SUPPORTED_TEST_BROWSERS = Object.freeze([
   'chromium',
@@ -44,8 +43,7 @@ export function normalizeBrowserInput(input) {
   return Object.freeze(normalized);
 }
 
-const invokedPath = process.argv[1];
-if (invokedPath && realpathSync(invokedPath) === realpathSync(fileURLToPath(import.meta.url))) {
+if (isMainModule(import.meta.url)) {
   try {
     const browsers = normalizeBrowserInput(process.env.BROWSERS_INPUT);
     process.stdout.write(`browsers=${JSON.stringify(browsers)}\n`);

@@ -43,9 +43,6 @@ export const dateSourceConverter: ComplexAttributeConverter<string | number | Da
   },
 };
 
-const MAX_FRACTION_DIGITS = 100;
-const MAX_SIGNIFICANT_DIGITS = 21;
-
 /** Runtime guard for public literal-union properties assigned through untyped JS or markup. */
 function closedValue<T extends string>(value: unknown, values: readonly T[], fallback: T): T {
   return typeof value === 'string' && values.includes(value as T) ? (value as T) : fallback;
@@ -54,31 +51,6 @@ function closedValue<T extends string>(value: unknown, values: readonly T[], fal
 /** Runtime guard for optional public literal-union properties. */
 function optionalClosedValue<T extends string>(value: unknown, values: readonly T[]): T | undefined {
   return typeof value === 'string' && values.includes(value as T) ? (value as T) : undefined;
-}
-
-function optionalInteger(
-  value: number | undefined,
-  fallback: number,
-  minimum: number,
-  maximum: number,
-): number | undefined {
-  return value === undefined ? undefined : finiteInteger(value, fallback, minimum, maximum);
-}
-
-function orderedDigits(
-  minimum: number | undefined,
-  maximum: number | undefined,
-  minimumFallback: number,
-  maximumFallback: number,
-  lowerBound: number,
-  upperBound: number,
-): [number | undefined, number | undefined] {
-  let safeMinimum = optionalInteger(minimum, minimumFallback, lowerBound, upperBound);
-  let safeMaximum = optionalInteger(maximum, maximumFallback, lowerBound, upperBound);
-  if (safeMinimum !== undefined && safeMaximum !== undefined && safeMinimum > safeMaximum) {
-    [safeMinimum, safeMaximum] = [safeMaximum, safeMinimum];
-  }
-  return [safeMinimum, safeMaximum];
 }
 
 export interface NumberFormatInputs {
@@ -95,7 +67,7 @@ export interface NumberFormatInputs {
   maximumSignificantDigits?: number;
 }
 
-/** Builds a fully runtime-validated `Intl.NumberFormat` options bag. */
+/** Builds an `Intl.NumberFormat` options bag after numeric inputs are normalized at the component boundary. */
 export function numberFormatOptions(input: NumberFormatInputs): Intl.NumberFormatOptions {
   const type = closedValue(input.type, NUMBER_TYPES, 'decimal');
   const notation = closedValue(input.notation, NUMBER_NOTATIONS, 'standard');
@@ -103,35 +75,24 @@ export function numberFormatOptions(input: NumberFormatInputs): Intl.NumberForma
   const options: Intl.NumberFormatOptions = {
     style: type,
     notation,
-    useGrouping: !(input.withoutGrouping || input.noGrouping),
   };
+  // Omitting useGrouping preserves the locale/notation default. Passing true is not equivalent:
+  // it forces separators in locales that ordinarily leave four-digit values ungrouped.
+  if (input.withoutGrouping || input.noGrouping) options.useGrouping = false;
   if (type === 'currency') {
     options.currency = input.currency.trim() || 'USD';
     options.currencyDisplay = currencyDisplay;
   }
 
-  const minimumIntegerDigits = optionalInteger(input.minimumIntegerDigits, 1, 1, 21);
-  const [minimumFractionDigits, maximumFractionDigits] = orderedDigits(
-    input.minimumFractionDigits,
-    input.maximumFractionDigits,
-    0,
-    MAX_FRACTION_DIGITS,
-    0,
-    MAX_FRACTION_DIGITS,
-  );
-  const [minimumSignificantDigits, maximumSignificantDigits] = orderedDigits(
-    input.minimumSignificantDigits,
-    input.maximumSignificantDigits,
-    1,
-    MAX_SIGNIFICANT_DIGITS,
-    1,
-    MAX_SIGNIFICANT_DIGITS,
-  );
-  if (minimumIntegerDigits !== undefined) options.minimumIntegerDigits = minimumIntegerDigits;
-  if (minimumFractionDigits !== undefined) options.minimumFractionDigits = minimumFractionDigits;
-  if (maximumFractionDigits !== undefined) options.maximumFractionDigits = maximumFractionDigits;
-  if (minimumSignificantDigits !== undefined) options.minimumSignificantDigits = minimumSignificantDigits;
-  if (maximumSignificantDigits !== undefined) options.maximumSignificantDigits = maximumSignificantDigits;
+  if (input.minimumIntegerDigits !== undefined) options.minimumIntegerDigits = input.minimumIntegerDigits;
+  if (input.minimumFractionDigits !== undefined) options.minimumFractionDigits = input.minimumFractionDigits;
+  if (input.maximumFractionDigits !== undefined) options.maximumFractionDigits = input.maximumFractionDigits;
+  if (input.minimumSignificantDigits !== undefined) {
+    options.minimumSignificantDigits = input.minimumSignificantDigits;
+  }
+  if (input.maximumSignificantDigits !== undefined) {
+    options.maximumSignificantDigits = input.maximumSignificantDigits;
+  }
   return options;
 }
 

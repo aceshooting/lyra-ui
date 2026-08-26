@@ -64,6 +64,18 @@ it('renders a themed badge and tag alias', async () => {
   await expect(el.querySelector('lr-badge')!).to.be.accessible();
 });
 
+it('keeps static badge text out of a live-region role unless the author opts in', async () => {
+  const el = (await fixture(html`<lr-badge>Person</lr-badge>`)) as LyraBadge;
+  expect(el.hasAttribute('role')).to.be.false;
+
+  el.textContent = 'Organization';
+  await el.updateComplete;
+  expect(el.hasAttribute('role')).to.be.false;
+
+  el.setAttribute('role', 'status');
+  expect(el.getAttribute('role')).to.equal('status');
+});
+
 it('honors inherited and direct public badge hooks without host defaults shadowing them', async () => {
   const wrapper = await fixture(html`
     <div style="--lr-badge-background: rgb(1, 2, 3); --lr-badge-radius: 7px">
@@ -78,35 +90,35 @@ it('honors inherited and direct public badge hooks without host defaults shadowi
   expect(getComputedStyle(base(direct!)).borderRadius).to.equal('9px');
 });
 
-it("owns status semantics on the badge host without creating a second semantic owner", async () => {
+it('preserves author-owned host semantics without creating a shadow semantic owner', async () => {
   const el = (await fixture(
     html`<lr-badge>Deployment complete</lr-badge>`
   )) as LyraBadge;
-  expect(el.getAttribute("role")).to.equal("status");
-  expect(base(el).hasAttribute("role")).to.be.false;
+  expect(el.hasAttribute('role')).to.be.false;
+  expect(base(el).hasAttribute('role')).to.be.false;
 
-  el.setAttribute("role", "presentation");
-  expect(
-    el.getAttribute("role"),
-    "the component retains its one deliberate semantic role"
-  ).to.equal("status");
+  el.setAttribute('role', 'presentation');
+  expect(el.getAttribute('role'), 'an authored static role remains authoritative').to.equal(
+    'presentation'
+  );
   await expect(el).to.be.accessible();
 });
 
-it("keeps the host-only status contract on a hydration-shaped mount and reconnect", async () => {
+it('keeps author-owned semantics on a hydration-shaped mount and reconnect', async () => {
   const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
-  const el = document.createElement("lr-badge") as LyraBadge;
-  el.attachShadow({ mode: "open" });
-  el.textContent = "Server status";
+  const el = document.createElement('lr-badge') as LyraBadge;
+  el.attachShadow({ mode: 'open' });
+  el.textContent = 'Server status';
   container.append(el);
   await el.updateComplete;
-  expect(el.getAttribute("role")).to.equal("status");
+  expect(el.hasAttribute('role')).to.be.false;
   expect(el.shadowRoot!.querySelectorAll('[role="status"]').length).to.equal(0);
 
+  el.setAttribute('role', 'status');
   el.remove();
   container.append(el);
   await el.updateComplete;
-  expect(el.getAttribute("role")).to.equal("status");
+  expect(el.getAttribute('role')).to.equal('status');
 });
 
 it("preserves every valid upstream variant and size spelling as the observable public value", async () => {
@@ -448,7 +460,7 @@ describe('start and end slots', () => {
   it('updates the wrappers on a later slotchange', async () => {
     const el = (await fixture(html`<lr-badge>Label</lr-badge>`)) as LyraBadge;
     const startHidden = (): boolean =>
-      (el.shadowRoot!.querySelector('[part="start"]') as HTMLElement).hidden;
+      (el.shadowRoot!.querySelector('[part="start"]') as HTMLElement).hidden === true;
 
     const icon = document.createElement('span');
     icon.slot = 'start';
@@ -535,10 +547,13 @@ it('never renders a remove button on lr-badge, even with the tag-only attribute 
 function relativeLuminance(color: string): number {
   const channels = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/u.exec(color);
   if (!channels) throw new Error(`unparseable computed colour: ${color}`);
-  const [r, g, b] = [1, 2, 3].map((index) => {
-    const channel = Number(channels[index]) / 255;
+  const linearChannel = (index: number): number => {
+    const rawChannel = channels[index];
+    if (rawChannel === undefined) throw new Error(`missing computed colour channel: ${color}`);
+    const channel = Number(rawChannel) / 255;
     return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
-  });
+  };
+  const [r, g, b] = [linearChannel(1), linearChannel(2), linearChannel(3)];
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 

@@ -8,6 +8,12 @@ function constructorForTag(): CustomElementConstructor {
   return class extends HTMLElement {};
 }
 
+function finishFirstUpdate(element: HTMLElement): void {
+  const finishUpdate = Reflect.get(element, 'finishUpdate');
+  if (typeof finishUpdate !== 'function') throw new Error('Expected a finishUpdate() test hook');
+  Reflect.apply(finishUpdate, element, []);
+}
+
 function override(tag: AutoloadableTagName, loader: () => Promise<CustomElementConstructor>): void {
   stop();
   overriddenTags.add(tag);
@@ -115,14 +121,10 @@ describe('autoloader', () => {
     const root = await fixture<HTMLElement>(html`<div></div>`);
     await start(root);
 
-    const first = document.createElement(tag) as HTMLElement & {
-      finishUpdate(): void;
-    };
+    const first = document.createElement(tag);
     root.append(first);
     await aTimeout(0);
-    const second = document.createElement(tag) as HTMLElement & {
-      finishUpdate(): void;
-    };
+    const second = document.createElement(tag);
     root.append(second);
     await aTimeout(0);
     expect(first.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(true);
@@ -142,12 +144,12 @@ describe('autoloader', () => {
     );
     await customElements.whenDefined(tag);
 
-    first.finishUpdate();
+    finishFirstUpdate(first);
     await aTimeout(0);
     expect(first.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
     expect(second.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(true);
 
-    second.finishUpdate();
+    finishFirstUpdate(second);
     await aTimeout(0);
     expect(second.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
   });
@@ -178,14 +180,12 @@ describe('autoloader', () => {
     const root = await fixture<HTMLElement>(html`<div></div>`);
     await start(root);
 
-    const host = document.createElement(hostTag) as HTMLElement & {
-      finishUpdate(): void;
-    };
+    const host = document.createElement(hostTag);
     root.append(host);
     await aTimeout(0);
     expect(host.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(true);
 
-    host.finishUpdate();
+    finishFirstUpdate(host);
     await aTimeout(0);
     await aTimeout(0);
     expect(childLoads).to.equal(1);
@@ -342,9 +342,7 @@ describe('autoloader', () => {
       resolveUpdate = resolve;
     });
     let updateRead = false;
-    const element = document.createElement(tag) as HTMLElement & {
-      readonly updateComplete: Promise<void>;
-    };
+    const element = document.createElement(tag);
     Object.defineProperty(element, 'updateComplete', {
       configurable: true,
       get() {
@@ -828,7 +826,31 @@ describe('autoloader', () => {
     expect(detail?.error).to.be.an('error');
   });
 
-  it('excludes optional-peer tags by default and enables only a complete explicit peer set', async () => {
+  it('loads peer-free phone input and fixed-glyph composites with the default policy', async () => {
+    const tags = ['lr-phone-input', 'lr-command-palette', 'lr-condition-builder'] as const;
+    const calls = new Map<AutoloadableTagName, number>();
+    for (const tag of tags) {
+      override(tag, async () => {
+        calls.set(tag, (calls.get(tag) ?? 0) + 1);
+        return constructorForTag();
+      });
+    }
+    const root = await fixture<HTMLElement>(html`
+      <div>
+        <lr-phone-input></lr-phone-input>
+        <lr-command-palette></lr-command-palette>
+        <lr-condition-builder></lr-condition-builder>
+      </div>
+    `);
+
+    expect((await discover(root)).join(',')).to.equal(tags.join(','));
+    for (const tag of tags) {
+      expect(calls.get(tag)).to.equal(1);
+      expect(customElements.get(tag)).to.be.a('function');
+    }
+  });
+
+  it('loads the base flag without requiring its separately registered asset peer', async () => {
     const tag = 'lr-flag';
     let calls = 0;
     override(tag, async () => {
@@ -837,11 +859,7 @@ describe('autoloader', () => {
     });
     const root = await fixture<HTMLElement>(html`<div><lr-flag></lr-flag></div>`);
 
-    expect(await discover(root)).to.deep.equal([]);
-    expect(calls).to.equal(0);
-    expect(customElements.get(tag)).to.equal(undefined);
-
-    await discover(root, { optionalPeers: ['@aceshooting/lyra-flags'] });
+    expect((await discover(root)).join(',')).to.equal(tag);
     expect(calls).to.equal(1);
     expect(customElements.get(tag)).to.be.a('function');
   });
@@ -1029,12 +1047,39 @@ describe('autoloader', () => {
       return constructorForTag();
     });
     const root = await fixture<HTMLElement>(html`<div><lr-code-block></lr-code-block></div>`);
-    const peers = {
-      has: (peer: string) => peer === 'shiki',
-      *[Symbol.iterator]() {
+    class StructuralPeers implements ReadonlySet<string> {
+      readonly size = 1;
+
+      has(peer: string): boolean {
+        return peer === 'shiki';
+      }
+
+      forEach(
+        callback: (value: string, key: string, set: ReadonlySet<string>) => void,
+        thisArg?: unknown,
+      ): void {
+        callback.call(thisArg, 'shiki', 'shiki', this);
+      }
+
+      *entries() {
+        yield ['shiki', 'shiki'] as [string, string];
+        return undefined;
+      }
+
+      *keys() {
         yield 'shiki';
-      },
-    } as ReadonlySet<string>;
+        return undefined;
+      }
+
+      values() {
+        return this.keys();
+      }
+
+      [Symbol.iterator]() {
+        return this.values();
+      }
+    }
+    const peers = new StructuralPeers();
 
     await discover(root, { optionalPeers: peers });
     expect(calls).to.equal(1);

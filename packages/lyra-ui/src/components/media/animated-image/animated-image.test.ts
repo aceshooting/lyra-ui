@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import './animated-image.js';
 import type { LyraAnimatedImage } from './animated-image.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -687,15 +687,30 @@ describe('play-button hover specificity', () => {
     style.textContent = `lr-animated-image::part(play-button):hover { color: rgb(1, 2, 3); }`;
     document.head.appendChild(style);
     try {
-      const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
-      // jsdom/browser test runners don't synthesize a real :hover pseudo-class from a dispatched
-      // event, so assert via the internal rule's specificity instead of the actual paint --
-      // mirrors lr-attachment-trigger's identical `trigger-button hover specificity` test.
-      const internalSheet = (el.shadowRoot!.adoptedStyleSheets ?? [])
-        .flatMap((sheet) => Array.from(sheet.cssRules))
-        .map((rule) => rule.cssText)
-        .find((text) => text.includes(':hover') && text.includes('play-button'));
-      expect(internalSheet).to.contain(':where(');
+      const el = (await fixture(html`
+        <lr-animated-image
+          alt="Pixel"
+          respect-reduced-motion="false"
+          style="inline-size: 160px; block-size: 100px"
+        ></lr-animated-image>
+      `)) as LyraAnimatedImage;
+      await loaded(el);
+      const button = el.shadowRoot!.querySelector<HTMLElement>('[part="play-button"]')!;
+      expect((button as HTMLButtonElement).disabled).to.be.false;
+      button.scrollIntoView({ block: 'center' });
+      const rect = button.getBoundingClientRect();
+      try {
+        await sendMouse({
+          type: 'move',
+          position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+        });
+        await waitUntil(
+          () => getComputedStyle(button).color === 'rgb(1, 2, 3)',
+          'the consumer play-button hover override never reached the rendered button',
+        );
+      } finally {
+        await resetMouse();
+      }
     } finally {
       style.remove();
     }

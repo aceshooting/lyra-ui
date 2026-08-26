@@ -56,16 +56,18 @@ it('normalizes duplicate decision ids first-wins before counts and disclosure ro
   expect(el.shadowRoot!.querySelector('[part="count"][data-state="deny"]')!.textContent).to.contain('0');
 });
 
-it('drops a decision with an out-of-union category or state instead of throwing', async () => {
+it('drops decisions with unknown category or state while retaining valid neighboring decisions', async () => {
   const el = await fixture<LyraPolicySummary>(html`
     <lr-policy-summary .decisions=${[
-      { id: 'valid', category: 'tool', label: 'Valid decision', state: 'allow', explanation: 'ok' },
-      { id: 'bad-category', category: 'unknown-category', label: 'Bad category', state: 'allow', explanation: 'bad' },
-      { id: 'bad-state', category: 'tool', label: 'Bad state', state: 'unknown-state', explanation: 'bad' },
-    ] as never}></lr-policy-summary>
+      { id: 'kept', category: 'network', label: 'Bad category', state: 'allow', explanation: 'bad' },
+      { id: 'bad-state', category: 'tool', label: 'Bad state', state: 'blocked', explanation: 'bad' },
+      { id: 'kept', category: 'tool', label: 'Kept', state: 'allow', explanation: 'valid' },
+    ] as unknown as PolicyDecision[]}></lr-policy-summary>
   `);
-  const rows = [...el.shadowRoot!.querySelectorAll('[part="decision"]')];
-  expect(rows.map((row) => row.querySelector('[part="label"]')!.textContent)).to.deep.equal(['Valid decision']);
+
+  const rows = el.shadowRoot!.querySelectorAll('[part="decision"]');
+  expect(rows).to.have.length(1);
+  expect(rows[0]!.textContent).to.include('Kept');
 });
 
 describe('lr-policy-summary', () => {
@@ -105,9 +107,11 @@ describe('lr-policy-summary', () => {
     expect(list.getAttribute('role')).to.equal('list');
     const rows = el.shadowRoot!.querySelectorAll('[part="decision"]');
     expect(rows.length).to.equal(4);
-    expect(rows[0].getAttribute('role')).to.equal('listitem');
-    expect(rows[0].getAttribute('data-state')).to.equal('allow');
-    expect(rows[0].getAttribute('data-category')).to.equal('guardrail');
+    const firstRow = rows.item(0);
+    if (!firstRow) throw new Error('Expected the first policy decision row to render.');
+    expect(firstRow.getAttribute('role')).to.equal('listitem');
+    expect(firstRow.getAttribute('data-state')).to.equal('allow');
+    expect(firstRow.getAttribute('data-category')).to.equal('guardrail');
   });
 
   it('renders the category text, decision label, and a state badge with the mapped variant and localized text', async () => {

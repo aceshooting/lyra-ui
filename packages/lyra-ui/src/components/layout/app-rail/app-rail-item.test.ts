@@ -512,7 +512,7 @@ describe("tooltip", () => {
     await el.updateComplete;
     const label = el.querySelector("span")!;
     label.textContent = "Archive";
-    await new Promise((resolve) => queueMicrotask(resolve));
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="tooltip"]')!.textContent!.trim()).to.equal("Archive");
   });

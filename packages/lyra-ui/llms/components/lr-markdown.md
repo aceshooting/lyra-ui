@@ -6,9 +6,10 @@
 - **Class** `LyraMarkdown`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/markdown/markdown.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 11 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -156,6 +157,7 @@ placed first and preserved inside both ceilings.
 **CSS parts:** `content` (the wrapper around the rendered or plain-text-fallback output; carries
 `data-fallback` while showing the plain-text fallback — still-loading peers or a failed render —
 so a consumer can target `lr-markdown [part='content'][data-fallback]` to style it distinctly),
+`anchor-live-region` (the aria-hidden, non-live shadow mirror of the latest anchor-jump message),
 `heading` (every rendered `<h1>`–`<h6>`, shifted by `heading-offset`), `paragraph` (every rendered
 `<p>`), `list` (every rendered `<ul>`/`<ol>`), `code-block` (every rendered fenced/indented `<pre>`),
 `inline-code` (every rendered inline `<code>` span — backtick spans, not fenced blocks), `link`
@@ -165,7 +167,7 @@ carrying `data-display="inline"|"block"`)
 
 **Themeable custom properties:** `--lr-markdown-font-mono` (default `var(--lr-font-mono)` — the
 code/code-block font, resolving through the library's shared monospace stack so a
-`--lr-theme-font-mono` override reaches it), `--lr-code-block-tab-size` (default `2` — tab width inside a
+`--lr-theme-font-family-mono` override reaches it), `--lr-code-block-tab-size` (default `2` — tab width inside a
 rendered fenced or indented `code-block`), plus shared tokens `--lr-space-xs/-s/-m/-l`,
 `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`, `--lr-color-text-quiet`,
 `--lr-radius`.

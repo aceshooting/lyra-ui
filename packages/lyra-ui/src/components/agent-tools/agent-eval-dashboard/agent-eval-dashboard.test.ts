@@ -3,13 +3,21 @@ import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './agent-eval-dashboard.js';
 import type { LyraAgentEvalDashboard } from './agent-eval-dashboard.class.js';
 import type { LyraStat } from '../../data/stat/stat.class.js';
+import type { LyraLiteChart } from '../../charts/chart/lite-chart.class.js';
 describe('lr-agent-eval-dashboard', () => {
   it('renders metrics, trend, and runs', async () => { const el = (await fixture(html`<lr-agent-eval-dashboard .strings=${{ evaluationDashboardLabel: 'Evaluation overview' }} .metrics=${[{ id: 'pass', label: 'Pass rate', value: 0.9, format: 'percent' }]} .runs=${[{ id: 'r1', label: 'Run 1', status: 'done', metrics: { pass: 0.9 } }]}></lr-agent-eval-dashboard>`)) as LyraAgentEvalDashboard; await el.updateComplete; expect(el.shadowRoot!.querySelector('lr-lite-chart')).to.exist; expect(el.shadowRoot!.querySelectorAll('[part="run"]').length).to.equal(1); });
 
-  it('tolerates a run whose status is missing entirely instead of throwing', async () => {
-    const el = await fixture<LyraAgentEvalDashboard>(html`<lr-agent-eval-dashboard .metrics=${[{ id: 'pass', label: 'Pass', value: 0.9, format: 'percent' }]} .runs=${[{ id: 'r1', label: 'Run 1' }] as never}></lr-agent-eval-dashboard>`);
-    await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('lr-lite-chart')).to.exist;
+  it('defaults a missing runtime run status to idle without losing the dashboard', async () => {
+    const el = await fixture<LyraAgentEvalDashboard>(html`
+      <lr-agent-eval-dashboard
+        .metrics=${[{ id: 'pass', label: 'Pass', value: 0.9, format: 'percent' }]}
+        .runs=${[{ id: 'r1', label: 'Run 1' }] as never}
+      ></lr-agent-eval-dashboard>
+    `);
+
+    expect(el.shadowRoot!.querySelectorAll('lr-lite-chart')).to.have.length(1);
+    expect(el.shadowRoot!.querySelectorAll('[part="run"]')).to.have.length(1);
+    expect(el.shadowRoot!.querySelector('[part="run-status"]')!.textContent!.trim()).to.equal('Idle');
   });
 
   it('bounds both the chart and rendered history to max-rendered-runs', async () => {
@@ -27,7 +35,8 @@ describe('lr-agent-eval-dashboard', () => {
       ></lr-agent-eval-dashboard>
     `);
     expect(el.shadowRoot!.querySelectorAll('[part="run"]')).to.have.length(12);
-    const chart = el.shadowRoot!.querySelector('lr-lite-chart') as HTMLElement & { labels: string[] };
+    const chart = el.shadowRoot!.querySelector<LyraLiteChart>('lr-lite-chart');
+    if (!chart) throw new Error('Expected the evaluation history chart to render.');
     expect(chart.labels).to.have.length(12);
     expect(chart.labels[0]).to.equal('Run 0');
   });
@@ -47,13 +56,35 @@ describe('lr-agent-eval-dashboard', () => {
   });
 
   it('emits the shared lr-run-activate detail with id and run context', async () => {
-    const run = { id: 'r-1', label: 'Run one', status: 'done' as const };
+    const run = {
+      id: 'r-1',
+      label: 'Run one',
+      status: 'done' as const,
+      metrics: { accuracy: 0.9 },
+    };
     const el = await fixture<LyraAgentEvalDashboard>(html`
       <lr-agent-eval-dashboard .runs=${[run]}></lr-agent-eval-dashboard>
     `);
     const pending = oneEvent(el, 'lr-run-activate');
     (el.shadowRoot!.querySelector('[part="run"]') as HTMLButtonElement).click();
-    expect((await pending).detail).to.deep.equal({ runId: 'r-1', run });
+    const detail = (await pending).detail;
+    expect(detail).to.deep.equal({ runId: 'r-1', run });
+    expect(Object.isFrozen(detail), 'detail root').to.equal(true);
+    expect(Object.isFrozen(detail.run), 'nested run').to.equal(true);
+    expect(Object.isFrozen(detail.run.metrics), 'nested metrics').to.equal(true);
+    expect(detail.run, 'event run is detached from component state').to.not.equal(el.runs[0]);
+    expect(detail.run.metrics, 'event metrics are detached from component state').to.not.equal(
+      el.runs[0]!.metrics,
+    );
+
+    try {
+      (detail as { runId: string }).runId = 'consumer-change';
+      (detail.run.metrics as { accuracy: number }).accuracy = 0;
+    } catch {
+      // Strict-mode writes to frozen snapshots throw; non-strict runtimes silently ignore them.
+    }
+    expect(detail.runId).to.equal('r-1');
+    expect(el.runs[0]!.metrics!['accuracy']).to.equal(0.9);
   });
   it('is accessible in empty and populated states', async () => { await expect((await fixture(html`<lr-agent-eval-dashboard></lr-agent-eval-dashboard>`)) as LyraAgentEvalDashboard).to.be.accessible(); await expect((await fixture(html`<lr-agent-eval-dashboard .runs=${[{ id: 'r', label: 'Run', status: 'done' }]}></lr-agent-eval-dashboard>`)) as LyraAgentEvalDashboard).to.be.accessible(); });
 
@@ -127,12 +158,13 @@ describe('lr-agent-eval-dashboard', () => {
   it('falls back to USD when the currency code is invalid', async () => {
     const el = (await fixture(html`
       <lr-agent-eval-dashboard
+        lang="en"
         currency="not-a-code"
         .metrics=${[{ id: 'cost', label: 'Cost', value: 2.5, format: 'currency' }]}
       ></lr-agent-eval-dashboard>
     `)) as LyraAgentEvalDashboard;
     expect((el.shadowRoot!.querySelector('lr-stat') as HTMLElement & { value: string }).value).to.equal(
-      new Intl.NumberFormat(el.effectiveLocale, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(2.5),
+      new Intl.NumberFormat('en', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(2.5),
     );
   });
 

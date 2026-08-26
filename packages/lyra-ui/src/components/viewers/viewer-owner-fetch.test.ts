@@ -127,11 +127,13 @@ it('fetches every remote viewer through its adopted iframe realm and resolves it
       if (tagName === 'lr-document-preview') element.mimeType = 'text/plain';
       const loadMethod = LOAD_METHOD_BY_TAG[tagName];
       const controls = element as unknown as Record<string, (...args: string[]) => Promise<void>>;
+      const load = controls[loadMethod];
+      if (load === undefined) throw new Error(`Missing ${loadMethod} test seam on ${tagName}`);
       const requestsBeforeDetachedAttempt = ownerRequests.length;
       if (tagName === 'lr-document-preview') {
-        await controls[loadMethod](element.src);
+        await load.call(element, element.src);
       } else {
-        await controls[loadMethod]();
+        await load.call(element);
       }
       expect(
         ownerRequests.length,
@@ -140,9 +142,9 @@ it('fetches every remote viewer through its adopted iframe realm and resolves it
 
       ownerDocument.body.append(element);
       if (tagName === 'lr-document-preview') {
-        void controls[loadMethod](element.src);
+        void load.call(element, element.src);
       } else {
-        void controls[loadMethod]();
+        void load.call(element);
       }
       await waitFor(
         () => ownerRequests.length === requestsBeforeDetachedAttempt + 1,

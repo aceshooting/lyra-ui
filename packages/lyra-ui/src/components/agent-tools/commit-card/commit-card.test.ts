@@ -1,6 +1,6 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './commit-card.js';
-import type { LyraCommitCard } from './commit-card.js';
+import type { CommitFileChange, LyraCommitCard } from './commit-card.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 async function settleClipboard(el: LyraCommitCard): Promise<void> {
@@ -472,6 +472,20 @@ describe('lr-commit-card', () => {
     // The glyph stays the terse letter sighted users expect; the accessible name is the expansion.
     expect(status.textContent!.trim()).to.equal('M');
     expect(status.getAttribute('aria-label')).to.equal('Modified');
+  });
+
+  it('drops an unknown git status while retaining the file row', async () => {
+    const el = await fixture<LyraCommitCard>(html`
+      <lr-commit-card
+        files-expanded="true"
+        hash="abcdef1"
+        .files=${[{ path: 'a.ts', additions: 1, deletions: 0, status: 'copied' }] as unknown as CommitFileChange[]}
+      ></lr-commit-card>
+    `);
+
+    expect(el.shadowRoot!.querySelectorAll('[part="file"]')).to.have.length(1);
+    expect(el.shadowRoot!.querySelectorAll('[part="file-status"]')).to.have.length(0);
+    expect(el.shadowRoot!.querySelector('[part="file"]')!.textContent).to.include('a.ts');
   });
 
   it('routes the git-status expansion through .strings, so registerLyraLocale() can translate it', async () => {

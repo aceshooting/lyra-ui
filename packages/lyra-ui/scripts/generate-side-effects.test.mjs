@@ -25,6 +25,10 @@ try {
     join(fixtureScripts, 'generate-side-effects.mjs'),
     readFileSync(join(scriptDir, 'generate-side-effects.mjs'), 'utf8'),
   );
+  writeFileSync(
+    join(fixtureScripts, 'is-main-module.mjs'),
+    readFileSync(join(scriptDir, 'is-main-module.mjs'), 'utf8'),
+  );
   writeFileSync(join(componentDir, 'test-control.class.ts'), 'export class TestControl {}\n');
   writeFileSync(join(componentDir, 'test-control.ts'), 'defineElement();\n');
   writeFileSync(

@@ -136,13 +136,20 @@ export interface LyraDialogEventMap {
  *   button.
  * @slot footer - Action buttons, rendered in a bottom row.
  * @event lr-show - The dialog is about to open. Cancelable — `preventDefault()` keeps it closed.
- * @event lr-after-show - The dialog is open and its enter animation has finished.
+ *   Descendants emit the same name; handle it as this dialog's event only when
+ *   `event.target === event.currentTarget`.
+ * @event lr-after-show - The dialog is open and its enter animation has finished. Descendants
+ *   emit the same name; handle it as this dialog's event only when
+ *   `event.target === event.currentTarget`.
  * @event lr-hide - The dialog is about to close, for every dismissal path. Cancelable —
  *   `preventDefault()` keeps it open and stops `lr-close` from firing at all. Detail is
  *   `{ source: Element }`, the affordance or host that requested the transition. The single
  *   exception is an open dialog being removed from the document: the close has already happened
- *   and cannot be undone, so that one is announced non-cancelable.
- * @event lr-after-hide - The dialog is closed and its exit animation has finished.
+ *   and cannot be undone, so that one is announced non-cancelable. Descendants emit the same
+ *   name; handle it as this dialog's event only when `event.target === event.currentTarget`.
+ * @event lr-after-hide - The dialog is closed and its exit animation has finished. Descendants
+ *   emit the same name; handle it as this dialog's event only when
+ *   `event.target === event.currentTarget`.
  * @event lr-initial-focus - Emitted immediately before the first automatic focus movement for an
  *   open activation. Cancelable; vetoing it leaves focus where the caller put it. CSS-hidden
  *   dialogs defer it until rendered, and reconnecting the same open dialog does not repeat it.

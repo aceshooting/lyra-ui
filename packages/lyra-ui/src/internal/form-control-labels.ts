@@ -1,7 +1,10 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { deepActiveElementIn } from './active-element.js';
-import { collectComposedFocusTargets } from './focus-navigation.js';
-import { registerFormControlLabelSupport, type LyraElement } from './lyra-element.js';
+import { firstFormControlFocusTarget } from './form-control-focus-target.js';
+import {
+  registerFormControlLabelSupport,
+  type LyraElement,
+} from './lyra-element.js';
 
 /**
  * How an external `<label>` activation reaches a control.
@@ -21,13 +24,13 @@ export type ExternalLabelActivation = 'focus' | 'activate';
  * own shadow root exposes.
  *
  * Roles carry the answer for every toggle (`checkbox`/`switch`/`radio` all activate), but a plain
- * `<button>` does not: `<lr-button>` and `<lr-icon-button>` must run their submit/reset behaviour
- * on a label click, while `<lr-color-picker>`'s and `<lr-select>`'s triggers are also `<button>`s
- * and must merely take focus — opening a popup from a label click is not what any native control
- * does. Guessing from the tag name would encode the component list in the bridge; the symbol lets
- * the two controls that differ say so themselves.
+ * `<button>` does not: `<lr-button>` must run its submit/reset behaviour on a label click, while
+ * `<lr-color-picker>`'s and `<lr-select>`'s triggers are also `<button>`s and must merely take focus
+ * — opening a popup from a label click is not what any native control does. Guessing from the tag
+ * name would encode the component list in the bridge; the symbol lets controls whose role is
+ * ambiguous declare the right behavior themselves.
  */
-export const EXTERNAL_LABEL_ACTIVATION = Symbol('lr-external-label-activation');
+const EXTERNAL_LABEL_ACTIVATION = Symbol('lr-external-label-activation');
 
 /** A control that declares its own {@linkcode ExternalLabelActivation}. */
 interface ExternalLabelActivationHost {
@@ -153,8 +156,7 @@ interface AssociationRootSubscription {
  * associated *now* cannot discover the first label added later, and cannot see an associated label
  * being removed from its parent. A single root observer closes that platform gap without installing
  * one document-wide observer per control. It wakes subscribers only for mutations that can change
- * label membership; text within an already-associated label remains the small per-label observer's
- * responsibility.
+ * label membership or the text of a currently associated label.
  */
 const associationRootObservations = new WeakMap<Node, AssociationRootObservation>();
 
@@ -183,7 +185,7 @@ function isShadowRootNode(node: Node | null | undefined): node is ShadowRoot {
  * handling runs before that checkpoint, so relying on the otherwise-live list can activate the
  * control a `for` attribute named one mutation ago. Resolve the simple platform association rule
  * structurally here; `getElementById()` also preserves the first-match rule for duplicate IDs. */
-function isCurrentlyAssociatedLabel(label: HTMLLabelElement, host: HTMLElement): boolean {
+export function isCurrentlyAssociatedLabel(label: HTMLLabelElement, host: HTMLElement): boolean {
   const root = host.getRootNode();
   if (label.getRootNode() !== root) return false;
   if (!label.hasAttribute('for')) {
@@ -419,10 +421,15 @@ function collectAssociationCandidates(node: Node, result: AssociationCandidates)
   return containsLabelable;
 }
 
+function containingLabel(node: Node): HTMLLabelElement | null {
+  if (isLabelElement(node)) return node;
+  const element = node.nodeType === 1 ? node as Element : node.parentElement;
+  const label = element?.closest('label');
+  return isLabelElement(label ?? null) ? label! : null;
+}
+
 function containingImplicitLabel(node: Node): HTMLLabelElement | null {
-  if (isLabelElement(node)) return node.hasAttribute('for') ? null : node;
-  if (node.nodeType !== 1 || !('closest' in node)) return null;
-  const label = (node as Element).closest('label');
+  const label = containingLabel(node);
   return label && !label.hasAttribute('for') ? label : null;
 }
 
@@ -481,6 +488,15 @@ function affectedAssociationSubscriptions(
       break;
     }
     candidates.work++;
+    const label = containingLabel(mutation.target);
+    if (label) {
+      if (label.hasAttribute('for')) {
+        if (label.htmlFor) candidates.ids.add(label.htmlFor);
+      } else {
+        candidates.implicitLabels.add(label);
+      }
+    }
+    if (mutation.type === 'characterData') continue;
     if (mutation.type === 'attributes') {
       const target = mutation.target as Element;
       if (mutation.attributeName === 'id') {
@@ -534,7 +550,11 @@ function affectedAssociationSubscriptions(
   return { subscriptions: affected, fallbackAll: false };
 }
 
-function observeAssociationRoot(host: HTMLElement, listener: () => void): AssociationRootSubscription {
+/** Subscribes one control to the shared, root-indexed external-label association observer. */
+export function observeExternalLabelAssociations(
+  host: HTMLElement,
+  listener: () => void,
+): AssociationRootSubscription {
   const root = host.getRootNode();
   let observation = associationRootObservations.get(root);
   if (!observation) {
@@ -558,6 +578,7 @@ function observeAssociationRoot(host: HTMLElement, listener: () => void): Associ
       attributeFilter: ['for', 'id', 'type'],
       attributeOldValue: true,
       childList: true,
+      characterData: true,
       subtree: true,
     });
     observation = {
@@ -718,7 +739,6 @@ export function resolveExternalLabelText(
  */
 export class ExternalLabelController implements ReactiveController {
   private labels: HTMLLabelElement[] = [];
-  private labelObserver?: MutationObserver;
   private associationRootSubscription?: AssociationRootSubscription;
   /** The element currently carrying an applied name, and what it read before. */
   private applied?: { target: HTMLElement; name: string; had: boolean; previous: string | null };
@@ -729,7 +749,7 @@ export class ExternalLabelController implements ReactiveController {
 
   hostConnected(): void {
     this.associationRootSubscription?.disconnect();
-    this.associationRootSubscription = observeAssociationRoot(this.host, () => this.refresh());
+    this.associationRootSubscription = observeExternalLabelAssociations(this.host, () => this.refresh());
     this.refresh();
   }
 
@@ -739,7 +759,6 @@ export class ExternalLabelController implements ReactiveController {
 
   hostDisconnected(): void {
     this.release();
-    this.stopObservingLabels();
     this.associationRootSubscription?.disconnect();
     this.associationRootSubscription = undefined;
     for (const label of this.labels) label.removeEventListener('click', this.onLabelClick);
@@ -755,35 +774,9 @@ export class ExternalLabelController implements ReactiveController {
       for (const label of this.labels) label.removeEventListener('click', this.onLabelClick);
       this.labels = next;
       for (const label of this.labels) label.addEventListener('click', this.onLabelClick);
-      this.observeLabels();
     }
     this.associationRootSubscription?.update(next);
     this.apply();
-  }
-
-  /**
-   * Watches only the labels this control is actually associated with for text/subtree changes. The
-   * shared association-root observer handles `for`/`id` changes and label insertion/removal, while
-   * this smaller observer avoids waking every FACE control when one label's prose changes.
-   */
-  private observeLabels(): void {
-    this.stopObservingLabels();
-    const Observer = this.host.ownerDocument.defaultView?.MutationObserver;
-    if (this.labels.length === 0 || Observer === undefined) return;
-    const observer = new Observer(() => this.refresh());
-    for (const label of this.labels) {
-      observer.observe(label, {
-        characterData: true,
-        childList: true,
-        subtree: true,
-      });
-    }
-    this.labelObserver = observer;
-  }
-
-  private stopObservingLabels(): void {
-    this.labelObserver?.disconnect();
-    this.labelObserver = undefined;
   }
 
   /** Whether label activation is currently barred — the control's own `disabled` or an ancestor
@@ -852,7 +845,7 @@ export class ExternalLabelController implements ReactiveController {
 
   private resolveFocusTarget(): HTMLElement | null {
     if (this.hostSemanticOwner) return this.host;
-    return collectComposedFocusTargets(this.host).elements[0] ?? null;
+    return firstFormControlFocusTarget(this.host);
   }
 
   /** Host-owned semantic controls opt in with a symbol so the protocol cannot accidentally become
@@ -996,6 +989,19 @@ export class ExternalLabelController implements ReactiveController {
       }
     });
   };
+}
+
+/**
+ * Installs only the shared `ElementInternals` capture hook.
+ *
+ * This is the lean half of form-label support for a form-associated component that declares its
+ * own `FORM_CONTROL_LABEL_FACTORY`. It deliberately leaves the generic factory untouched: a full
+ * installer imported before or after this call therefore keeps serving every other control.
+ *
+ * @internal
+ */
+export function installFormControlInternalsCapture(): void {
+  registerFormControlLabelSupport(captureFormInternals);
 }
 
 let supportInstalled = false;

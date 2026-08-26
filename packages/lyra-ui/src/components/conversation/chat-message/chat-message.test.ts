@@ -24,6 +24,29 @@ it('defaults to messageRole="assistant" and status="sent" without taking over th
   expect(el.hasAttribute("role")).to.be.false;
 });
 
+it("normalizes an out-of-set status attribute to sent instead of throwing during render", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message status="delivered">hi</lr-chat-message>`
+  )) as LyraChatMessage;
+
+  expect(el.status).to.equal("sent");
+  expect(el.getAttribute("status")).to.equal("sent");
+  expect(el.shadowRoot!.querySelectorAll('[part~="bubble"]')).to.have.lengthOf(1);
+});
+
+it("normalizes an out-of-set post-mount status transition without wedging later updates", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message status="sent">hi</lr-chat-message>`
+  )) as LyraChatMessage;
+
+  el.setAttribute("status", "queued");
+  await el.updateComplete;
+
+  expect(el.status).to.equal("sent");
+  expect(el.getAttribute("status")).to.equal("sent");
+  expect(el.shadowRoot!.querySelectorAll('[part~="bubble"]')).to.have.lengthOf(1);
+});
+
 it("reflects an explicit message-role attribute back to messageRole", async () => {
   const el = (await fixture(
     html`<lr-chat-message message-role="user">hi</lr-chat-message>`
@@ -1030,9 +1053,9 @@ describe("failure slot", () => {
     ) as HTMLSlotElement;
     const assigned = slot.assignedElements({ flatten: true });
     expect(assigned).to.have.lengthOf(1);
-    expect(assigned[0].getAttribute("role")).to.equal("alert");
-    expect(assigned[0].textContent).to.contain("Send failed");
-    expect(assigned[0].querySelector("button") != null).to.equal(true);
+    expect(assigned[0]!.getAttribute("role")).to.equal("alert");
+    expect(assigned[0]!.textContent).to.contain("Send failed");
+    expect(assigned[0]!.querySelector("button") != null).to.equal(true);
   });
 
   it("lets the consumer failure content lay out exactly as authored, without any ::part(failure) override", async () => {

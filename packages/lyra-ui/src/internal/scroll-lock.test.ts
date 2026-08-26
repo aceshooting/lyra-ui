@@ -103,7 +103,7 @@ describe('scrollbar-width gutter compensation', () => {
     if (originalDescriptor) {
       Object.defineProperty(root, 'clientWidth', originalDescriptor);
     } else {
-      delete (root as unknown as Record<string, unknown>).clientWidth;
+      delete (root as unknown as Record<string, unknown>)['clientWidth'];
     }
     root.style.paddingInlineEnd = '';
   });
@@ -215,7 +215,7 @@ it('measures a foreign document scrollbar through that document\'s owner window'
     expect(ownerCalls).to.be.greaterThan(0);
   } finally {
     if (widthDescriptor) Object.defineProperty(root, 'clientWidth', widthDescriptor);
-    else delete (root as unknown as Record<string, unknown>).clientWidth;
+    else delete (root as unknown as Record<string, unknown>)['clientWidth'];
     if (ambientDescriptor) Object.defineProperty(window, 'getComputedStyle', ambientDescriptor);
     if (ownerDescriptor) Object.defineProperty(foreignWindow, 'getComputedStyle', ownerDescriptor);
     iframe.remove();

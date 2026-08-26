@@ -3,7 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { getScratchCtx } from '../../../internal/canvas.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -234,9 +234,10 @@ function normalizePalette(value: unknown): readonly string[] | undefined {
  * Instead, like `lr-heatmap`'s cells, the whole `[part="svg"]` is one tab
  * stop with roving arrow-key focus (Home/End jump to the first/last word,
  * Enter/Space activates the focused one), a drawn `[part="focus-ring"]`, and
- * a shared light-DOM polite status announcement. The generated application
- * role and aggregate accessible name live on that same focusable SVG; authored
- * host semantics stay on the host and are never copied onto a second owner.
+ * a shared light-DOM polite status announcement. The application role and
+ * aggregate accessible name live on that same focusable SVG. An authored host
+ * `aria-label` is forwarded to that semantic owner and takes precedence over
+ * the localized generated name; any authored host role remains on the host.
  * `[part="live-region"]` is an aria-hidden mirror of the most recent announcement. Mount is silent, and identical edge
  * movements append separate announcements.
  *
@@ -313,6 +314,11 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
 
   /** Font size, in px, for the highest-weight word. */
   @property({ attribute: 'max-font-size', type: Number }) maxFontSize = DEFAULT_MAX_FONT_SIZE;
+
+  /** Pins the weight-to-font-size input domain to `[min, max]`, so separate clouds can share one
+   * scale instead of each deriving it from its own lightest/heaviest word. Reversed endpoints are
+   * normalized; a degenerate or non-finite pair falls back to the data-derived range. */
+  @property({ attribute: false }) domain?: [number, number];
 
   private _scale: WordCloudScale = 'linear';
   /** `sqrt` compresses the weight->font-size mapping so one heavy word doesn't dwarf the rest. */
@@ -479,6 +485,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
       changed.has('words') ||
       changed.has('minFontSize') ||
       changed.has('maxFontSize') ||
+      changed.has('domain') ||
       changed.has('scale') ||
       changed.has('wordRotation')
     ) {
@@ -514,6 +521,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     this.cachedLayout = layoutWordCloud(this.words, {
       minFontSize,
       maxFontSize,
+      domain: this.domain,
       scale: this.scale,
       wordRotation: this.wordRotation,
       measureText,
@@ -532,6 +540,10 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
       this.focusedIndex = null;
       this.liveText = '';
     }
+    // A relayout moves or replaces the word under a stationary pointer without necessarily
+    // delivering pointerleave. Never let the new word at the same original index inherit the old
+    // word's visual hover state; the next real pointermove will establish a fresh hit.
+    this.hoveredOriginalIndex = null;
   }
 
   /** Forces a relayout so the font-family theme token (`--lr-font`) is
@@ -799,13 +811,14 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
       count: this.formatCount(layout.placed.length),
       word: this.localize(layout.placed.length === 1 ? 'wordCloudWord' : 'wordCloudWords'),
     });
+    const accessibleLabel = hostAriaLabel(this) ?? generatedLabel;
 
     return html`
       <div part="base">
         <svg
           part="svg"
           role="application"
-          aria-label=${generatedLabel}
+          aria-label=${accessibleLabel}
           aria-describedby=${hasWordLimit ? 'word-limit' : nothing}
           tabindex="0"
           viewBox="0 0 ${layout.width} ${layout.height}"

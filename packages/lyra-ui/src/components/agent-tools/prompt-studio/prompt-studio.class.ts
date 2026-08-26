@@ -153,8 +153,11 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     'lr-version-select',
   ]);
 
+  /** Host-controlled messages; a runtime non-array value renders as not-yet-loaded empty data. */
   @property({ attribute: false }) messages: readonly PromptStudioMessage[] = [];
+  /** Host-controlled variables; a runtime non-array value renders as not-yet-loaded empty data. */
   @property({ attribute: false }) variables: readonly PromptStudioVariable[] = [];
+  /** Host-controlled saved versions; a runtime non-array value renders as not-yet-loaded empty data. */
   @property({ attribute: false }) versions: readonly PromptStudioVersion[] = [];
   @property({ attribute: 'selected-version-id' }) selectedVersionId: string | null = null;
   /** Accessible name for the studio region. It is independent from the visible `heading`; when
@@ -201,13 +204,21 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   private state(): PromptStudioState {
     return {
       messages: this.uniqueMessages().map((message) => ({ ...message })),
-      variables: this.variables.map((variable) => ({ ...variable })),
+      variables: this.variableItems().map((variable) => ({ ...variable })),
     };
   }
 
-  private uniqueMessages(source = this.messages): PromptStudioMessage[] {
+  private messageItems(source: unknown = this.messages): readonly PromptStudioMessage[] {
+    return Array.isArray(source) ? source : [];
+  }
+
+  private variableItems(source: unknown = this.variables): readonly PromptStudioVariable[] {
+    return Array.isArray(source) ? source : [];
+  }
+
+  private uniqueMessages(source: unknown = this.messages): PromptStudioMessage[] {
     const seen = new Set<string>();
-    return source.filter((message) => {
+    return this.messageItems(source).filter((message) => {
       if (!message || typeof message.id !== 'string' || message.id.trim().length === 0 || seen.has(message.id)) return false;
       seen.add(message.id);
       return true;
@@ -216,7 +227,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
 
   private uniqueVersions(): PromptStudioVersion[] {
     const seen = new Set<string>();
-    return this.versions.filter((version) => {
+    return (Array.isArray(this.versions) ? this.versions : []).filter((version) => {
       if (!version || typeof version.id !== 'string' || version.id.trim().length === 0 || seen.has(version.id)) return false;
       seen.add(version.id);
       return true;
@@ -229,7 +240,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     // component's accepted next state behind the veto point.
     const proposal: PromptStudioState = {
       messages: this.uniqueMessages(messages).map((message) => ({ ...message })),
-      variables: variables.map((variable) => ({ ...variable })),
+      variables: this.variableItems(variables).map((variable) => ({ ...variable })),
     };
     if (this.emit('lr-change', proposal, { cancelable: true }).defaultPrevented) return;
     this.messages = proposal.messages;
@@ -274,7 +285,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   private updateVariable(index: number, patch: Partial<PromptStudioVariable>): void {
     this.emitChange(
       this.messages,
-      this.variables.map((variable, candidateIndex) =>
+      this.variableItems().map((variable, candidateIndex) =>
         candidateIndex === index ? { ...variable, ...patch } : variable),
     );
   }
@@ -338,7 +349,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
 
   private resolve(content: string): string {
     const variables = new Map<string, string>();
-    for (const variable of this.variables) {
+    for (const variable of this.variableItems()) {
       if (variable.name !== '' && !variables.has(variable.name)) variables.set(variable.name, variable.value);
     }
     const resolved = new Map<string, string>();
@@ -442,7 +453,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     const heading = this.heading || this.localize('promptStudioLabel');
     const label = this.label || heading;
     const messages = this.uniqueMessages();
-    const variables = this.variables;
+    const variables = this.variableItems();
     return html`
       <section part="base" aria-label=${overallSemanticLabel(this, label) ?? nothing}>
         <header part="toolbar">

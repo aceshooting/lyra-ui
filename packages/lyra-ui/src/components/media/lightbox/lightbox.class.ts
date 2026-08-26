@@ -740,7 +740,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
               `
             : nothing}
         </div>
-        ${hasCaption ? html`<p part="caption" id=${this.captionId}>${image!.caption}</p>` : nothing}
+        ${hasCaption ? html`<p part="caption" id=${this.captionId} tabindex="0">${image!.caption}</p>` : nothing}
         <span part="live-region" class="sr-only" aria-hidden="true"
           >${this.liveText}</span
         >

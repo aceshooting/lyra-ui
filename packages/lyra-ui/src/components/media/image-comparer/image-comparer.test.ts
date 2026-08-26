@@ -17,6 +17,22 @@ it('renders before and after slots with a positioned divider', async () => {
   expect((el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).style.getPropertyValue('--lr-comparer-position')).to.equal('35%');
 });
 
+it('renders beforeLabel and afterLabel as slot fallbacks without replacing slotted content', async () => {
+  const el = await fixture<LyraImageComparer>(html`
+    <lr-image-comparer before-label="Original" after-label="Edited" aria-label="Comparison">
+      <span slot="after">Slotted result</span>
+    </lr-image-comparer>
+  `);
+  const before = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="before"]')!;
+  const after = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="after"]')!;
+
+  expect(before.textContent).to.equal('Original');
+  expect(after.textContent).to.equal('Edited');
+  expect(after.assignedElements().map((node) => node.textContent)).to.deep.equal([
+    'Slotted result',
+  ]);
+});
+
 it('normalizes and reflects every assigned position into [0, 100]', async () => {
   const el = (await fixture(html`<lr-image-comparer></lr-image-comparer>`)) as LyraImageComparer;
   await el.updateComplete;

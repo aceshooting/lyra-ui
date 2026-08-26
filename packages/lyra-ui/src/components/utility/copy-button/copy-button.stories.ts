@@ -33,6 +33,21 @@ export const CustomAccessibleLabel: Story = {
   `,
 };
 
+export const EmptyAccessibleLabelFallback: Story = {
+  name: 'Empty accessible label fallback',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'An empty or whitespace-only host `aria-label` falls back to the localized state label, keeping the built-in icon-only trigger named.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-copy-button aria-label="" value="npm install @aceshooting/lyra-ui"></lr-copy-button>
+  `,
+};
+
 export const FromSourceAndTooltip: Story = {
   name: 'From source, labels, and tooltip',
   render: () => html`

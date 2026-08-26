@@ -36,6 +36,26 @@ export const SingleFormat: Story = {
   `,
 };
 
+/** Empty caller-owned visible copy keeps the localized default as the native button's name. */
+export const EmptyVisibleLabel: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The trigger remains visibly empty while its native button uses the localized export label as an accessible fallback.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-export-button
+      label=""
+      .strings=${{ exportButtonLabel: 'Download data' }}
+      .rows=${rows}
+      .columns=${columns}
+    ></lr-export-button>
+  `,
+};
+
 export const MultiFormatMenu: Story = {
   render: () => html`
     <lr-export-button

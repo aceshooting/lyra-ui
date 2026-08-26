@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 
-export const COMPONENT_METADATA_SCHEMA_VERSION = 1;
-export const COMPONENT_STATUSES = Object.freeze(['stable', 'experimental']);
+const COMPONENT_METADATA_SCHEMA_VERSION = 1;
+const COMPONENT_STATUSES = Object.freeze(['stable', 'experimental']);
 export const UNRELEASED_VERSION = 'unreleased';
 
 const SEMVER_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z.-]+))?$/;
@@ -82,7 +82,7 @@ function git(repoRoot, args, { allowFailure = false, trim = true } = {}) {
   }
 }
 
-export function hasCompleteGitHistory(repoRoot) {
+function hasCompleteGitHistory(repoRoot) {
   return git(repoRoot, ['rev-parse', '--is-shallow-repository'], { allowFailure: true }) === 'false';
 }
 
@@ -470,7 +470,7 @@ function validateDeprecations(metadata, componentsByTag, manifest, findings) {
   }
 }
 
-export function expectedMaturity(metadata, inventory) {
+function expectedMaturity(metadata, inventory) {
   return componentMetadataByTag(metadata, {
     tags: (inventory.components ?? []).map((component) => component.tag),
     packageVersion: metadata?.history?.current?.version,

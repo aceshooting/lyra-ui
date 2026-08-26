@@ -106,6 +106,25 @@ export const Default: Story = {
   `,
 };
 
+/** Forced-colors evidence uses shipped palette data rather than palette tokens, whose deliberate
+ *  system-color remapping is ordinary chrome behavior. The visual harness verifies that all five
+ *  intrinsic swatch fills remain chromatic and pairwise distinct under real browser emulation. */
+export const ForcedColorsIntrinsic: Story = {
+  name: 'Forced colors intrinsic data',
+  render: () => html`
+    <lr-swatch-picker
+      aria-label="Intrinsic data colors"
+      .items=${[
+        { value: 'blue', color: GEMSTONES.sapphire.fill, label: 'Blue' },
+        { value: 'green', color: GEMSTONES.emerald.fill, label: 'Green' },
+        { value: 'purple', color: GEMSTONES.amethyst.fill, label: 'Purple' },
+        { value: 'orange', color: GEMSTONES.topaz.fill, label: 'Orange' },
+        { value: 'red', color: GEMSTONES.ruby.fill, label: 'Red' },
+      ]}
+    ></lr-swatch-picker>
+  `,
+};
+
 /** `size` spans the same `2xs`–`xl` scale as `lr-input`, default `m`. */
 export const Sizes: Story = {
   render: () => {

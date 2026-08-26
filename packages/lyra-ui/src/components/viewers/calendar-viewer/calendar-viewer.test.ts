@@ -16,6 +16,30 @@ async function loaded(body: string): Promise<{ el: LyraCalendarViewer; restore: 
 describe('lr-calendar-viewer', () => {
   it('renders a localized empty state by default', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer></lr-calendar-viewer>`); expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No calendar to display.'); });
   it('parses and renders events with plain text fields', async () => { const { el, restore } = await loaded(SAMPLE_ICS); try { expect(el.shadowRoot!.querySelectorAll('[part="event"]')).to.have.lengthOf(1); expect(el.shadowRoot!.querySelector('[part="event-summary"]')!.textContent).to.contain('Quarterly planning'); expect(el.shadowRoot!.querySelector('[part="event-location"]')!.textContent).to.contain('Room 204'); expect(el.shadowRoot!.querySelector('[part="event-description"]')!.textContent).to.contain('Review roadmap'); expect(el.shadowRoot!.querySelector('[part="event-time"]')!.textContent).to.not.equal(''); } finally { restore(); } });
+  it('reports found:false for a fragment matching generated event data because event markup has no ids', async () => {
+    const { el, restore } = await loaded(SAMPLE_ICS);
+    try {
+      const timing = el as unknown as {
+        anchorTimeoutMs: number;
+        anchorRetryIntervalMs: number;
+      };
+      timing.anchorTimeoutMs = 20;
+      timing.anchorRetryIntervalMs = 2;
+      expect(
+        el.shadowRoot!.querySelector('[part="event"]')!.hasAttribute('id'),
+      ).to.equal(false);
+      const resultEvent = oneEvent(el, 'lr-anchor-result');
+      expect(
+        await el.scrollToAnchor({
+          kind: 'fragment',
+          id: 'event-1@example.test',
+        }),
+      ).to.equal(false);
+      expect((await resultEvent).detail).to.deep.equal({ found: false });
+    } finally {
+      restore();
+    }
+  });
   it('uses the locale date-range formatter instead of fixed punctuation', async () => {
     const restore = stubFetch(SAMPLE_ICS);
     try {

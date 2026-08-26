@@ -23,6 +23,22 @@ export const Default: StoryObj = {
   `,
 };
 
+/** Exact 320px allocation with long content exercises the narrow container-query branch. */
+export const Narrow320: StoryObj = {
+  render: () => html`
+    <lr-funnel
+      label="Self-serve subscription conversion in a narrow dashboard panel"
+      style="inline-size: 320px; max-inline-size: 100%"
+      .stages=${[
+        { label: 'Visited the enterprise pricing comparison page', value: 12_480 },
+        { label: 'Started a fourteen-day collaborative workspace trial', value: 4310 },
+        { label: 'Invited at least one additional project teammate', value: 1620 },
+        { label: 'Converted to an annual paid organization plan', value: 512 },
+      ]}
+    ></lr-funnel>
+  `,
+};
+
 /** The comparison cohort is normalized to its own first stage, so shapes compare even when the
  *  absolute volumes do not. */
 export const AgainstAPeerGroup: StoryObj = {
@@ -151,6 +167,14 @@ export const EdgeCases: StoryObj = {
         .comparison=${[
           { label: 'Visited pricing', value: 900 },
           { label: 'Started trial', value: 260 },
+        ]}
+      ></lr-funnel>
+      <lr-funnel
+        label="Malformed entries omitted"
+        .stages=${[
+          { label: 'Visited', value: 940 },
+          null,
+          { label: 'Converted', value: 120 },
         ]}
       ></lr-funnel>
     </div>

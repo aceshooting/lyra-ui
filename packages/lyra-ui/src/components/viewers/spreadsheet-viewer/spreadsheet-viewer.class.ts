@@ -2,8 +2,8 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { srOnly } from '../../../internal/a11y.js';
 import {
-  assertTableDimensions,
   assertTableSize,
   isAbortError,
   isResourceLimitError,
@@ -106,6 +106,9 @@ class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMa
  * persistent DOM to keep in sync. `search()` is a case-insensitive
  * substring match over every sheet's stringified cell values (the same stringification `cell()`
  * already renders), ordered sheet then row then column, switching tabs as navigation crosses sheets.
+ * Each sheet is independently limited to 10,000 rows and 1,000 columns; a workbook additionally
+ * retains at most 256 sheets and 1,000,000 aggregate expanded cells. Internal tab and virtual-list
+ * lifecycle events stay contained inside the viewer.
  *
  * @customElement lr-spreadsheet-viewer
  * @event lr-render-error - Fired when fetching or parsing fails.
@@ -120,7 +123,8 @@ class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMa
  *   `matchCountExact=false` identifies a ceiling-truncated lower bound.
  * @csspart base - The root wrapper.
  * @csspart body - The scrollable wrapper around the fetched-state content, capped by `max-height`.
- * @csspart tabs - The sheet-switching `<lr-tab-group>`, rendered only for a multi-sheet workbook.
+ * @csspart tabs - The sheet-switching `<lr-tab-group>`, rendered only for a multi-sheet workbook;
+ *   its `lr-tab-show`/`lr-tab-hide` lifecycle events do not escape this viewer.
  * @csspart sheet - The wrapper around one sheet's header row and virtualized body.
  * @csspart rows - The virtualized row list.
  * @csspart header-row - A sheet's header row.
@@ -168,7 +172,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, viewerLoadingStyles];
+  static override styles = [LyraElement.styles, styles, viewerLoadingStyles, srOnly];
   /** URL to fetch and parse. */
   @property() src = '';
   /** Source filename or display name, used as the viewer's accessible name. */
@@ -371,23 +375,18 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
         );
       }
       const sheets: SpreadsheetSheet[] = [];
-      let totalRows = 0;
-      let maxColumns = 0;
       let totalCells = 0;
       for (const name of sheetNames) {
         const rows = library.utils.sheet_to_json(workbook.Sheets[name], {
           header: 1,
         }) as unknown[][];
         assertTableSize(rows);
-        totalRows += rows.length;
-        maxColumns = Math.max(maxColumns, columns(rows));
         totalCells += rows.reduce((sum, row) => sum + row.length, 0);
         if (totalCells > MAX_SPREADSHEET_CELLS) {
           throw new LyraResourceLimitError(
             'The spreadsheet contains too many expanded cells.'
           );
         }
-        assertTableDimensions(totalRows, maxColumns);
         sheets.push({ name, rows });
       }
       if (this.isConnected && generation === this.generation) {
@@ -562,6 +561,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
     return html`<lr-tab-group
       part="tabs"
       .active=${`sheet-${this.activeSheetIndex}`}
+      @lr-tab-hide=${this.stopInternalEvent}
       @lr-tab-show=${this.onTabsChange}
       >${sheets.map(
         (sheet, index) =>

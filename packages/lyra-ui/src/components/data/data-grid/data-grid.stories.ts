@@ -118,7 +118,7 @@ export const HonestColumnControls: Story = {
     docs: {
       description: {
         story:
-          "Open a column's options button. It discloses a native-control group with distinct pin-to-start, pin-to-end, unpin, and visibility names; Escape closes it and returns focus. Resize separators are separate keyboard stops with complete adjustable values.",
+          "Open a filter, the all-columns picker, or a column's options button. Only one disclosure stays open; the shared topmost overlay router lets Escape close it and return focus. Column options remain an honest native-control group with distinct pin-to-start, pin-to-end, unpin, and visibility names. Resize separators are separate keyboard stops with complete adjustable values.",
       },
     },
   },
@@ -126,6 +126,7 @@ export const HonestColumnControls: Story = {
     <lr-data-grid
       label="Column controls"
       with-column-menu
+      with-columns-menu
       pinnable
       resizable
       .columns=${columns}

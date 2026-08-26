@@ -3,6 +3,15 @@ import './tree.js';
 import type { LyraTree, LyraTreeNodeData } from './tree.js';
 import type { LyraTreeItem } from './tree-item.js';
 
+type MutableTreeNodeData = Omit<LyraTreeNodeData, 'children'> & {
+  children?: MutableTreeNodeData[];
+};
+
+function required<T>(value: T | undefined, context: string): T {
+  if (value === undefined) throw new Error(`Missing ${context}`);
+  return value;
+}
+
 /** Walks into shadow roots to find the actually-focused element (a focused
  *  element inside a shadow tree only surfaces as its shadow host via the
  *  plain `document.activeElement`). */
@@ -25,7 +34,7 @@ describe('reorderable', () => {
     { id: '2', label: 'Leaf' },
   ];
 
-  const clone = (): LyraTreeNodeData[] => JSON.parse(JSON.stringify(reorderData));
+  const clone = (): MutableTreeNodeData[] => JSON.parse(JSON.stringify(reorderData)) as MutableTreeNodeData[];
 
   const applyDataReorder = (el: LyraTree, event: CustomEvent): void => {
     const { parentNodeId, fromIndex, toIndex } = event.detail as {
@@ -33,8 +42,8 @@ describe('reorderable', () => {
       fromIndex: number;
       toIndex: number;
     };
-    const next = JSON.parse(JSON.stringify(el.data)) as LyraTreeNodeData[];
-    const find = (items: LyraTreeNodeData[], id: string): LyraTreeNodeData | undefined => {
+    const next = JSON.parse(JSON.stringify(el.data)) as MutableTreeNodeData[];
+    const find = (items: MutableTreeNodeData[], id: string): MutableTreeNodeData | undefined => {
       for (const item of items) {
         if (item.id === id) return item;
         const nested = item.children ? find(item.children, id) : undefined;
@@ -102,9 +111,10 @@ describe('reorderable', () => {
     await el.updateComplete;
 
     expect(events.length).to.equal(1);
-    expect(events[0].detail).to.deep.equal({ nodeId: '1', parentNodeId: null, fromIndex: 0, toIndex: 1 });
-    expect(events[0].bubbles).to.be.true;
-    expect(events[0].composed).to.be.true;
+    const event = required(events[0], 'top-level reorder event');
+    expect(event.detail).to.deep.equal({ nodeId: '1', parentNodeId: null, fromIndex: 0, toIndex: 1 });
+    expect(event.bubbles).to.be.true;
+    expect(event.composed).to.be.true;
   });
 
   it('Cmd+ArrowUp on a nested node is scoped to its own parent\'s children, reporting that parentNodeId', async () => {
@@ -119,7 +129,7 @@ describe('reorderable', () => {
     await el.updateComplete;
 
     expect(events.length).to.equal(1);
-    expect(events[0].detail).to.deep.equal({
+    expect(required(events[0], 'nested reorder event').detail).to.deep.equal({
       nodeId: '1.2',
       parentNodeId: '1',
       fromIndex: 1,
@@ -163,7 +173,9 @@ describe('reorderable', () => {
     const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
     el.data = clone();
     await el.updateComplete;
-    const [root, leaf] = [...el.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
+    const items = [...el.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
+    const root = required(items[0], 'root tree item');
+    const leaf = required(items[1], 'leaf tree item');
     (root as unknown as HTMLElement).focus();
 
     const events: CustomEvent[] = [];
@@ -197,14 +209,14 @@ describe('reorderable', () => {
       const { fromIndex, toIndex } = (e as CustomEvent).detail;
       const next = [...el.data];
       const [moved] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, moved);
+      next.splice(toIndex, 0, required(moved, 'moved top-level node'));
       el.data = next;
     });
     modArrow(root as unknown as Element, 'ArrowDown');
     await el.updateComplete;
 
     const ids = [...el.querySelectorAll('lr-tree-item')].map(
-      (n) => (n as unknown as LyraTreeItem).item.id,
+      (n) => (n as unknown as LyraTreeItem).item?.id,
     );
     expect(ids).to.deep.equal(['2', '1']);
     // `syncNodes()` re-inserts the moved element, which drops real DOM focus to
@@ -221,11 +233,11 @@ describe('reorderable', () => {
 
     el.addEventListener('lr-reorder', (e) => {
       const { parentNodeId, fromIndex, toIndex } = (e as CustomEvent).detail;
-      const next = JSON.parse(JSON.stringify(el.data)) as LyraTreeNodeData[];
-      const parent = next.find((item) => item.id === parentNodeId)!;
-      const children = parent.children!;
+      const next = JSON.parse(JSON.stringify(el.data)) as MutableTreeNodeData[];
+      const parent = required(next.find((item) => item.id === parentNodeId), 'reorder parent');
+      const children = required(parent.children, 'reorder siblings');
       const [moved] = children.splice(fromIndex, 1);
-      children.splice(toIndex, 0, moved);
+      children.splice(toIndex, 0, required(moved, 'moved nested node'));
       el.data = next;
     });
     modArrow(childA as unknown as Element, 'ArrowDown');
@@ -233,7 +245,7 @@ describe('reorderable', () => {
 
     const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
     const childIds = [...root.shadowRoot!.querySelectorAll('lr-tree-item')].map(
-      (n) => (n as unknown as LyraTreeItem).item.id,
+      (n) => (n as unknown as LyraTreeItem).item?.id,
     );
     expect(childIds).to.deep.equal(['1.2', '1.1', '1.3']);
     expect((deepActiveElement() as unknown as LyraTreeItem | null)?.item?.id).to.equal('1.1');
@@ -243,7 +255,9 @@ describe('reorderable', () => {
     const el = (await fixture(html`<lr-tree dir="rtl" reorderable></lr-tree>`)) as LyraTree;
     el.data = clone();
     await el.updateComplete;
-    const [root, leaf] = [...el.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
+    const items = [...el.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
+    const root = required(items[0], 'root tree item');
+    const leaf = required(items[1], 'leaf tree item');
     (root as unknown as HTMLElement).focus();
 
     const events: CustomEvent[] = [];
@@ -253,14 +267,24 @@ describe('reorderable', () => {
     // in the sibling list, in both LTR and RTL.
     modArrow(root as unknown as Element, 'ArrowDown');
     await el.updateComplete;
-    expect(events[0].detail).to.deep.equal({ nodeId: '1', parentNodeId: null, fromIndex: 0, toIndex: 1 });
+    expect(required(events[0], 'RTL down reorder event').detail).to.deep.equal({
+      nodeId: '1',
+      parentNodeId: null,
+      fromIndex: 0,
+      toIndex: 1,
+    });
 
     (leaf as unknown as HTMLElement).focus();
     arrow(root as unknown as Element, 'End');
     await el.updateComplete;
     modArrow(leaf as unknown as Element, 'ArrowUp');
     await el.updateComplete;
-    expect(events[1].detail).to.deep.equal({ nodeId: '2', parentNodeId: null, fromIndex: 1, toIndex: 0 });
+    expect(required(events[1], 'RTL up reorder event').detail).to.deep.equal({
+      nodeId: '2',
+      parentNodeId: null,
+      fromIndex: 1,
+      toIndex: 0,
+    });
     expect(events.length).to.equal(2);
   });
 

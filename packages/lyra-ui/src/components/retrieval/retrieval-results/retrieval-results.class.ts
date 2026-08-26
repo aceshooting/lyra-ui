@@ -42,13 +42,17 @@ export interface RetrievalResultsSelectDetail {
 }
 
 export interface LyraRetrievalResultsEventMap {
-  'lr-select': CustomEvent<LyraEventDetailSnapshot<RetrievalResultsSelectDetail>>;
+  'lr-select': CustomEvent<
+    LyraEventDetailSnapshot<RetrievalResultsSelectDetail>
+  >;
   'lr-load-more': CustomEvent<null>;
-  'lr-chunk-open': CustomEvent<LyraEventDetailSnapshot<{
-    chunkId: string;
-    sourceId: string;
-    anchor?: DocumentLocator;
-  }>>;
+  'lr-chunk-open': CustomEvent<
+    LyraEventDetailSnapshot<{
+      chunkId: string;
+      sourceId: string;
+      anchor?: DocumentLocator;
+    }>
+  >;
 }
 
 export type RetrievalResultsGrouping = 'source' | 'custom' | 'none';
@@ -192,7 +196,11 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  protected static override readonly ownedCollectionProperties = Object.freeze(['chunks', 'selectedChunkIds', 'groupOrder']);
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'chunks',
+    'selectedChunkIds',
+    'groupOrder',
+  ]);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -308,6 +316,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     chunks: readonly RetrievalChunk[];
     groups: LyraVirtualListGroup[];
   };
+  private processedGroupingLocaleSignature = '';
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -365,6 +374,10 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    const groupingLocaleSignature =
+      this.grouping === 'source'
+        ? `${this.effectiveLocale}\u0000${this.localize('untitledSource')}`
+        : '';
     // Only the identity/sort/group inputs actually affect the processed chunk pipeline --
     // an unrelated update (e.g. `selectedChunkIds`, `presentation`) leaves the cache as-is.
     if (
@@ -375,8 +388,10 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
       changed.has('grouping') ||
       changed.has('groupBy') ||
       changed.has('groupLabel') ||
-      changed.has('groupOrder')
+      changed.has('groupOrder') ||
+      groupingLocaleSignature !== this.processedGroupingLocaleSignature
     ) {
+      this.processedGroupingLocaleSignature = groupingLocaleSignature;
       this.processedChunksCache = this.computeProcessedChunks();
     }
     if (changed.has('chunks') || changed.has('selectedChunkIds')) {

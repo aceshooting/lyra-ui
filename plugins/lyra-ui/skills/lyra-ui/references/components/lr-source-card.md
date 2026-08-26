@@ -6,6 +6,7 @@
 - **Class** `LyraSourceCard`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/source-card/source-card.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -27,7 +28,7 @@ direct light-DOM children of the list (plain composition — no `.items` array p
 
 - `expanded: boolean = false` (reflected) — whether the card list is currently shown. Starts
   collapsed by default so a message's sources don't eat vertical space until asked for.
-- `label: string = ''` — header text used when `label-plural` isn't set, e.g. `"Sources"`.
+- `label?: string` — header text used when `label-plural` isn't set, e.g. `"Sources"`.
 - `labelPlural: string = ''` (attribute `label-plural`) — fully consumer-built, already-pluralized
   header summary, e.g. `"3 sources"` or `"1 source"`; this component never counts or pluralizes on
   its own. Takes precedence over `label` when both are set. If neither is set, the header falls back

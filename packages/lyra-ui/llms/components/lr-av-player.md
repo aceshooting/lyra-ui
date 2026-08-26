@@ -6,9 +6,10 @@
 - **Class** `LyraAvPlayer`, also available unregistered from `@aceshooting/lyra-ui/components/media/av-player/av-player.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -102,7 +103,10 @@ root, so no selection binding is installed.
 `data-match`, `data-active-match`), `cue-current` (added alongside `cue` on the row the playhead is
 inside), `cue-match` (added alongside `cue` on a row matching the current search query),
 `cue-active-match` (added alongside `cue`/`cue-match` on the row holding the current match),
-`cue-time`, `cue-speaker`, `cue-text`, and `error`.
+`cue-time`, `cue-speaker`, `cue-text`, `error`, and `anchor-live-region` (an aria-hidden, non-live
+shadow mirror of the latest anchor-jump message; the spoken copy is appended to the shared
+document-level polite sink only while the viewer and its composed ancestors are exposed to the
+accessibility tree).
 
 `error` is ordinary localized visible text, not a shadow live region. A fresh post-mount native,
 playback, or unsafe-source failure appends the localized message to the document's pre-mounted

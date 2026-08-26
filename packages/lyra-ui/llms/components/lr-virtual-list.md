@@ -6,6 +6,7 @@
 - **Class** `LyraVirtualList`, also available unregistered from `@aceshooting/lyra-ui/components/layout/virtual-list/virtual-list.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -61,8 +62,8 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
   `startIndex` as a measured virtual entry immediately before that row. Its live block size
   contributes to every following offset, so a variable-height or late-resizing marker never covers
   the group's first row. Markers remain windowed with their rows. Groups are sorted by `startIndex`;
-  a `startIndex` that's non-integer, out of range, or a duplicate of an earlier group's is silently
-  dropped rather than rendered wrong. An entry whose
+  a non-object entry or a `startIndex` that's non-integer, out of range, or a duplicate of an earlier
+  group's is silently dropped rather than rendered wrong. An entry whose
   `label` is the **empty string** renders no marker at all — it is a pure position anchor, for a host
   that renders its own group header as an ordinary row (and would otherwise end up with two stacked
   headers) but still needs this component to know where each group starts, e.g. to drive

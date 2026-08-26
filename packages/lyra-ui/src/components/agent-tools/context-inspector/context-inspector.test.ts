@@ -33,6 +33,17 @@ it('fails a non-array runtime segment collection closed', async () => {
   expect(el.shadowRoot!.querySelectorAll('lr-empty')).to.have.lengthOf(1);
 });
 
+it('keeps a valid-id streaming segment whose text body has not arrived yet', async () => {
+  const el = await fixture<LyraContextInspector>(html`<lr-context-inspector></lr-context-inspector>`);
+  el.segments = [{ id: 's1', label: 'System prompt', tokens: 12 }] as unknown as ContextInspectorSegment[];
+  await el.updateComplete;
+
+  const row = el.shadowRoot!.querySelector('[part="segment"]')!;
+  expect(row.querySelector('[part="segment-label"]')!.textContent).to.equal('System prompt');
+  expect(row.querySelector('[part="segment-text"]')!.textContent!.trim()).to.equal('');
+  expect((el.shadowRoot!.querySelector('lr-copy-button') as LyraCopyButton).value).to.equal('System prompt\n');
+});
+
 it('maps segments/total/label onto the embedded lr-context-meter', async () => {
   const el = (await fixture(html`<lr-context-inspector></lr-context-inspector>`)) as LyraContextInspector;
   el.segments = segments;

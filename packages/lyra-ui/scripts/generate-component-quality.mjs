@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isMainModule } from './is-main-module.mjs';
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -180,7 +181,7 @@ export async function run(argv = process.argv.slice(2)) {
   );
 }
 
-if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))) {
+if (isMainModule(import.meta.url)) {
   run().catch((error) => {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;

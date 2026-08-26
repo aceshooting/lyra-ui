@@ -10,7 +10,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Scrollable pan-and-zoom surface for slotted content or a safe image source. Scaling participates in layout so the entire painted footprint remains reachable; rejected sources fall back to the slot. Viewport focus transitions relay exactly one native `FocusEvent`.',
+          'Scrollable pan-and-zoom surface for slotted content or a safe image source. Scaling participates in layout so the entire painted footprint remains reachable; rejected sources fall back to the slot. Reset returns to exact 100% independently of the relative zoom step. The labelled control group keeps each native button in the Tab sequence. Viewport focus transitions relay exactly one native `FocusEvent`.',
       },
     },
   },

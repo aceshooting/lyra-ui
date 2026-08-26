@@ -488,6 +488,8 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * click that ends a text-selection drag over a highlighted passage never activates it (the
  * selection-in-progress check in `onPageClick` exists precisely to distinguish that case from a
  * genuine activation click).
+ * The composed virtual-list lifecycle is an implementation detail: visible-range changes update
+ * `page`, while raw `lr-visible-range-change` and `lr-virtual-scroll` events stay contained.
  *
  * @customElement lr-pdf-viewer
  * @event lr-render-error - Fired when fetching, parsing, or rendering fails, including synchronous
@@ -2436,10 +2438,14 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     this.page = next;
   };
 
+  private stopInternalEvent = (event: Event): void => {
+    event.stopPropagation();
+  };
+
   private renderBody(): TemplateResult {
     switch (this.loadState.kind) {
       case 'ready': {
-        return html`${this.renderToolbar()}<lr-virtual-list part="pages" exportparts="page:page, page-canvas:page-canvas, page-error:page-error, text-layer:text-layer, text-span:text-span, search-match:search-match, search-match-active:search-match-active" .source=${this.indexedPages(this.loadState.pageCount)} .renderItem=${this.renderPageItem} .activeItemId=${this.scrollDrivenPage ? '' : this.page} @lr-visible-range-change=${this.onVisibleRangeChanged}></lr-virtual-list>`;
+        return html`${this.renderToolbar()}<lr-virtual-list part="pages" exportparts="page:page, page-canvas:page-canvas, page-error:page-error, text-layer:text-layer, text-span:text-span, search-match:search-match, search-match-active:search-match-active" .source=${this.indexedPages(this.loadState.pageCount)} .renderItem=${this.renderPageItem} .activeItemId=${this.scrollDrivenPage ? '' : this.page} @lr-visible-range-change=${this.onVisibleRangeChanged} @lr-virtual-scroll=${this.stopInternalEvent}></lr-virtual-list>`;
       }
       case 'loading': return html`<div part="spinner">
         <lr-skeleton shape="rect" .announce=${false}></lr-skeleton>

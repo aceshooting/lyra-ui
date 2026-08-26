@@ -66,7 +66,7 @@ async function listingWithEntries(names: string[]): Promise<{
   });
   return {
     el,
-    list: el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+    list: el.shadowRoot!.querySelector('lr-virtual-list') as unknown as HTMLElement & {
       items: { name: string }[];
       rowHeight: number | 'auto';
       scrollToIndex(index: number, options?: { behavior?: ScrollBehavior }): void;
@@ -151,7 +151,7 @@ describe('lr-archive-viewer', () => {
 
   it('lists ZIP entries and computes file sizes', async () => {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`); const buffer = await buildZip({ 'README.txt': 'hello world', 'src/index.js': 'console.log(1);' }); const restore = stubFetch(buffer);
-    try { el.src = 'https://example.test/archive.zip'; await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null || el.shadowRoot!.querySelector('[part="error"]') !== null, undefined, { timeout: 5000 }); expect((el.shadowRoot!.querySelector('[part="error"]')) == null).to.be.true; const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: { name: string; dir: boolean; size: number }[] }; await waitUntil(() => list.items?.length === 3, undefined, { timeout: 5000 }); expect(list.items.map((item) => item.name).sort()).to.deep.equal(['README.txt', 'src/', 'src/index.js']); expect(list.items.find((item) => item.name === 'README.txt')!.size).to.equal(11); expect(list.items.find((item) => item.name === 'src/')!.dir).to.be.true; } finally { restore(); }
+    try { el.src = 'https://example.test/archive.zip'; await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null || el.shadowRoot!.querySelector('[part="error"]') !== null, undefined, { timeout: 5000 }); expect((el.shadowRoot!.querySelector('[part="error"]')) == null).to.be.true; const list = el.shadowRoot!.querySelector('lr-virtual-list') as unknown as HTMLElement & { items: { name: string; dir: boolean; size: number }[] }; await waitUntil(() => list.items?.length === 3, undefined, { timeout: 5000 }); expect(list.items.map((item) => item.name).sort()).to.deep.equal(['README.txt', 'src/', 'src/index.js']); expect(list.items.find((item) => item.name === 'README.txt')!.size).to.equal(11); expect(list.items.find((item) => item.name === 'src/')!.dir).to.be.true; } finally { restore(); }
   });
   it('searches virtualized archive entry names and navigates the matching entry', async () => {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
@@ -359,7 +359,7 @@ describe('lr-archive-viewer', () => {
     try {
       el.src = 'https://example.test/archive.zip';
       await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
-      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as unknown as HTMLElement & {
         items: { name: string; size: number }[];
       };
       await waitUntil(() => list.items?.length === 1);
@@ -456,7 +456,7 @@ describe('lr-archive-viewer', () => {
       reconnectHost.append(el);
       await waitUntil(() => fetchCalls === 2);
       await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
-      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as unknown as HTMLElement & {
         items: { name: string }[];
       };
       await waitUntil(() => list.items?.some((entry) => entry.name === 'fresh/new.txt'));

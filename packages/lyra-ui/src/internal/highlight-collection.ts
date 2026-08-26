@@ -41,11 +41,16 @@ export function snapshotLyraHighlights(value: unknown): readonly LyraHighlight[]
       // several viewers deliberately support `scrollToAnchor(highlight.anchor)` by reference, so
       // once admitted it is pushed unchanged (never cloned).
       const anchor = owned['anchor'];
+      const anchorKind =
+        anchor !== null && typeof anchor === 'object' && !Array.isArray(anchor)
+          ? (anchor as Record<string, unknown>)['kind']
+          : undefined;
       if (
         anchor === null ||
         typeof anchor !== 'object' ||
         Array.isArray(anchor) ||
-        typeof (anchor as Record<string, unknown>)['kind'] !== 'string'
+        typeof anchorKind !== 'string' ||
+        anchorKind.trim().length === 0
       ) continue;
       seenIds.add(id);
       output.push(Object.freeze({ ...owned, id }) as unknown as LyraHighlight);

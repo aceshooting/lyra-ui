@@ -6,6 +6,7 @@
 - **Class** `LyraRetrievalTrace`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/retrieval-trace/retrieval-trace.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 13 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
@@ -30,14 +31,16 @@ RetrievalStageKind; label?: string; startMs: number; endMs?: number; status: 'pe
   default label for `kind`; `detail` is secondary text under the stage name. Pass in any order — the
   timeline sorts by `startMs`. Each stage projects to one `LyraSpan` with `kind` mapped
   `query-rewrite → 'llm'`, `embed → 'embedding'`, `retrieve → 'retriever'`,
-  `rerank`/`filter` → `'tool'`
-  . Stage ids must be nonempty, nonblank, and unique: invalid records and later duplicates are
+  `rerank`/`filter` → `'tool'`. Without a `label` override, an unknown runtime kind keeps its literal
+  string as the visible label and uses the generic `'tool'` span kind instead of aborting the trace.
+  Stage ids must be nonempty, nonblank, and unique: invalid records and later duplicates are
   omitted first-wins before timeline, evidence, controlled state, counts, or event paths
 - `RetrievalStageEvidence { text?: string; chunks?: RetrievalChunk[]; metadata?: Record<string,
 unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** verbatim, rendered
   through `lr-chunk-inspector` (`source.id → sourceId`, `source.name → title`, `locator → anchor`;
   page locators also supply the visible `page`); `text` is free-form (e.g. the rewritten query, an
-  embedding model id); `metadata` renders as a plain key/value list. A
+  embedding model id); `metadata` renders as a plain key/value list. Malformed runtime chunk rows
+  are omitted while valid neighboring chunks remain visible. A
   stage whose evidence has none of the three renders no disclosure row at all
 - `activeStageId: string | null = null` (attribute `active-stage-id`) — controlled selection,
   forwarded verbatim to the internal `lr-span-waterfall`'s `activeSpanId`

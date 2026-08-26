@@ -79,19 +79,14 @@ export const styles = css`
     box-sizing: border-box;
     display: flex;
     align-items: center;
+    gap: var(--lr-space-xs);
     min-inline-size: 0;
     padding: var(--lr-space-xs) var(--lr-space-s);
     background: var(--lr-color-surface);
     color: var(--lr-color-text-quiet);
   }
-  /* sticky-groups: the pinned copy of the current group header. lr-virtual-list ships that layer
-     pointer-transparent since it copies an existing row; this component's header owns a real
-     collapse toggle, so it opts back in. Padding, background, toggle and icon come from the
-     group-header/group-toggle/group-icon rules around this one, which the copy shares by rendering
-     the same parts. */
-  lr-virtual-list::part(sticky-group) {
-    pointer-events: auto;
-  }
+  /* sticky-groups keeps lr-virtual-list's pinned copy pointer-transparent and inert. Only the real
+     measured group row owns the collapse toggle; the copy repeats its label and icon visually. */
   lr-virtual-list::part(group-toggle) {
     display: flex;
     flex: 1 1 auto;

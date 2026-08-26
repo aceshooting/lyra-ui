@@ -6,6 +6,7 @@
 - **Class** `LyraHistogram`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/histogram.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
 - **Themeable via** 16 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -38,7 +39,7 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   (`without-tooltip`), `valueFormatter`, `formatter`, `area`, `zoom`, `config`, `height`, `xLabel` (`x-label`),
   `yLabel` (`y-label`), `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`),
   `stacked`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `showDataTable`
-  (`show-data-table`), `chartArea` (readonly).
+  (`show-data-table`), `dataTableToggle` (`data-table-toggle`), `chartArea` (readonly).
 
 **Methods:** `resetZoom()`, `refreshTheme()`, and `renderChart()` are inherited; `appendSamples(values,
 maxSamples?)` appends finite raw samples and optionally retains only the newest samples.
@@ -72,8 +73,9 @@ mirrored `--border-color-1`,
 `--border-radius`, `--border-width`, `--grid-border-width`, `--grid-color`,
 `--line-border-width`, and `--point-radius` hooks listed on the core chart.
 
-**Optional peer deps:** the same `chart.js` peer, plus `chartjs-plugin-zoom` when `zoom` is set and
-`chartjs-plugin-datalabels` when `data-labels` or `stack-totals` is set.
+**Optional peer deps:** the same `chart.js` peer, plus `chartjs-plugin-zoom` when `zoom` is set,
+`chartjs-plugin-datalabels` when `data-labels` or `stack-totals` is set, and
+`chartjs-plugin-annotation` when `annotations` contains a usable entry.
 
 All of the above behave exactly as documented in `llms/components/lr-chart.md` — read that file for
 their semantics, defaults, and gotchas.

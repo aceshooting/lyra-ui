@@ -139,3 +139,20 @@ export const RetintedActiveFilter: Story = {
     ></lr-test-results>
   `,
 };
+
+export const RunningIndicatorSize: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-test-results-spinner-size` controls the composed running indicator without overriding the child spinner component\'s public token globally.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-test-results
+      style="max-width:32rem;--lr-test-results-spinner-size: 1.75rem"
+      .suites=${mixedSuites}
+    ></lr-test-results>
+  `,
+};

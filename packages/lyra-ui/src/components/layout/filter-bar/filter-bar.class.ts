@@ -651,11 +651,11 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
           return false;
         if (typeof definition.label !== 'string' || definition.label.trim().length === 0) return false;
         if (seen.has(definition.filterId)) return false;
-        seen.add(definition.filterId);
         if ((definition.type === 'select' || definition.type === 'combobox') && !Array.isArray(definition.options)) {
           return false;
         }
         if (definition.type === 'custom' && !definition.custom?.adapter) return false;
+        seen.add(definition.filterId);
         return true;
       } catch {
         return false;

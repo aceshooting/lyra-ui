@@ -274,7 +274,7 @@ describe('lr-copy-button', () => {
       const handle = nativeSetTimeout(handler, timeout, ...args);
       if (timeout === el.feedbackDuration) {
         feedbackHandle = handle;
-        if (typeof handler === 'function') feedbackCallback = handler;
+        if (typeof handler === 'function') feedbackCallback = () => handler(...args);
       }
       return handle;
     }) as typeof frameWindow.setTimeout;
@@ -651,11 +651,17 @@ describe('lr-copy-button', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('preserves an explicit empty host aria-label and restores the localized fallback on removal', async () => {
+  it('keeps the icon-only button named when the host aria-label is empty or blank', async () => {
     const el = (await fixture(html`
       <lr-copy-button aria-label="" value="secret"></lr-copy-button>
     `)) as LyraCopyButton;
-    expect(baseButton(el).getAttribute('aria-label')).to.equal('');
+    expect(baseButton(el).getAttribute('aria-label')).to.equal('Copy');
+    await expect(el).to.be.accessible();
+
+    el.setAttribute('aria-label', '   ');
+    await el.updateComplete;
+    expect(baseButton(el).getAttribute('aria-label')).to.equal('Copy');
+    await expect(el).to.be.accessible();
 
     el.removeAttribute('aria-label');
     await el.updateComplete;

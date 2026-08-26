@@ -361,6 +361,8 @@ const strings: LyraLocaleStrings = {
     'تسميات البيانات غير متاحة، لكن المخطط الأساسي يبقى متاحًا.',
   chartStackTotalsUnavailable:
     'إجماليات التكديس غير متاحة، لكن المخطط الأساسي يبقى متاحًا.',
+  chartAnnotationsUnavailable:
+    'التعليقات التوضيحية على المخطط غير متاحة، لكن المخطط الأساسي يبقى متاحًا.',
   chart: 'مخطط',
   chartTypeLine: 'خطي',
   chartTypeBar: 'شريطي',
@@ -774,6 +776,7 @@ const strings: LyraLocaleStrings = {
   emailViewerSubject: 'الموضوع',
   emailViewerDate: 'التاريخ',
   emailViewerAttachments: 'المرفقات',
+  emailViewerUnnamedAttachment: 'مرفق بلا اسم',
   emailViewerNoSubject: '(بلا موضوع)',
   emailViewerOpenAttachment: 'فتح {filename}',
   emailViewerShowQuoted: 'إظهار النص المقتبس',
@@ -1299,6 +1302,7 @@ const strings: LyraLocaleStrings = {
   ingestionStageDone: 'تم',
   ingestionStageFailed: 'فشل',
   ingestionStageCancelled: 'مُلغى',
+  ingestionStageUnknown: 'مرحلة غير معروفة',
   ingestionQueueLabel: 'قائمة انتظار الاستيعاب',
   ingestionQueueEmpty: 'لا توجد مستندات في قائمة الانتظار',
   documentLibraryFreshnessFresh: 'حديث',
@@ -1342,6 +1346,7 @@ const strings: LyraLocaleStrings = {
   drilldownDocuments: 'المستندات',
   drilldownRuns: 'عمليات تشغيل الوكيل',
   drilldownEmpty: 'لم يتم تحديد أي عنصر',
+  drilldownUntitledNode: 'خطوة بلا عنوان',
   evaluationRunStatusIdle: 'خامل',
   evaluationRunStatusWaitingInput: 'في انتظار الإدخال',
   evaluationRunStatusWaitingApproval: 'في انتظار الموافقة',

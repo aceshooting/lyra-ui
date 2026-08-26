@@ -109,10 +109,11 @@ const stringArrayConverter = {
  * Enter commits the typed draft into a token while there is one; with the draft empty it performs
  * the implicit form submission a native text field would (see `internal/submit-on-enter.ts` — the
  * internal input is in a shadow root and has no form owner, so the platform can never do it here).
- * A `delimiter` keystroke stays purely a commit key and never submits.
+ * A `delimiter` keystroke stays purely a commit key and never submits. Tab commits a nonempty
+ * draft without preventing the key, so native focus traversal still advances.
  * `select()`, the selection getters/setters, `setSelectionRange()`, and `setRangeText()` expose the
  * native draft input's editing surface. Range edits synchronize the pending draft without
- * emitting user events, so a later delimiter/Enter/blur commit consumes the edited text.
+ * emitting user events, so a later delimiter/Enter/Tab/blur commit consumes the edited text.
  * `focus()` and `click()` are synchronous no-ops under own or fieldset-cascaded disablement,
  * including the same task that begins the disabled transition before Lit updates the draft input.
  * If a focused token surface disappears through its own remove action or a controlled

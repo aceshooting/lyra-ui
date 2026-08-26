@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { isMainModule } from './is-main-module.mjs';
+
 // Root-barrel import gate: fails when a ```ts/```js code fence in llms/*.md shows a consumer
 // importing from the bare `@aceshooting/lyra-ui` package root. Since 8.0.0 the root is a pure
 // export surface -- the registration side effects moved to `src/all.ts`, published as the
@@ -128,7 +130,6 @@ function run() {
   }
 }
 
-const isMain = process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url));
-if (isMain) run();
+if (isMainModule(import.meta.url)) run();
 
 export { run };

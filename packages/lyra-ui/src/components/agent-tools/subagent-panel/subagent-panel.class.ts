@@ -185,12 +185,12 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
   private ordered(): OrderedRuns {
     const normalized: SubagentRun[] = [];
     const byId = new Map<string, SubagentRun>();
-    let truncated = false;
-    for (const run of firstByIdentity(Array.isArray(this.runs) ? this.runs : [], (r) => r.id)) {
-      if (normalized.length >= MAX_RENDERED_RUNS) {
-        truncated = true;
-        break;
-      }
+    const runs = firstByIdentity(
+      Array.isArray(this.runs) ? this.runs : [],
+      (run) => run.id,
+    );
+    const truncated = runs.length > MAX_RENDERED_RUNS;
+    for (const run of runs.slice(0, MAX_RENDERED_RUNS)) {
       normalized.push(run);
       byId.set(run.id, run);
     }

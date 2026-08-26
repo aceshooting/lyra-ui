@@ -1,17 +1,22 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './path-strip.js';
 import type { LyraPathStrip, LyraPathElement } from './path-strip.js';
-import { styles } from './path-strip.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
-const motionMatchMedia = (matches: boolean): typeof window.matchMedia =>
-  ((query: string) =>
-    ({
-      matches,
-      media: query,
-      addEventListener: () => {},
-      removeEventListener: () => {},
-    } as MediaQueryList)) as typeof window.matchMedia;
+const motionMatchMedia = (ownerWindow: Window, matches: boolean): typeof window.matchMedia => {
+  const originalMatchMedia = ownerWindow.matchMedia;
+  return (query: string) => {
+    const nativeQuery = originalMatchMedia.call(ownerWindow, query);
+    return new Proxy(nativeQuery, {
+      get(target, property) {
+        if (property === 'matches') return matches;
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+  };
+};
 
 function sinkElement(): HTMLElement | null {
   return document.querySelector<HTMLElement>(
@@ -194,8 +199,8 @@ it('uses the adopted owner window reduced-motion preference when revealing a rov
   const originalOwnerMatchMedia = ownerWindow.matchMedia;
   const el = document.createElement('lr-path-strip') as LyraPathStrip;
   try {
-    window.matchMedia = motionMatchMedia(false);
-    ownerWindow.matchMedia = motionMatchMedia(true);
+    window.matchMedia = motionMatchMedia(window, false);
+    ownerWindow.matchMedia = motionMatchMedia(ownerWindow, true);
     el.path = path;
     document.body.append(el);
     await el.updateComplete;
@@ -335,10 +340,38 @@ it('is accessible with a full path', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('gives node and relation a hover state', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='node'\]:hover/);
-  expect(css).to.match(/\[part='relation'\]:hover/);
+it('paints node and relation hover feedback under a real pointer', async () => {
+  const el = await fixture<LyraPathStrip>(html`
+    <lr-path-strip
+      style="--lr-color-brand-quiet: rgb(1, 2, 3)"
+      .path=${path}
+    ></lr-path-strip>
+  `);
+  const targets = ['node', 'relation'].map(
+    (part) => el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!
+  );
+  for (const target of targets) {
+    // The controls are slotted through the nested lr-scroller, whose token boundary becomes
+    // their flattened-tree inheritance parent; set the probe token on the rendered control.
+    target.style.setProperty('--lr-color-brand-quiet', 'rgb(1, 2, 3)');
+    target.scrollIntoView({ block: 'center' });
+    const rect = target.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => getComputedStyle(target).backgroundColor === 'rgb(1, 2, 3)',
+        `${target.getAttribute('part')} never painted its hover background`
+      );
+    } finally {
+      await resetMouse();
+    }
+  }
 });
 
 it('formats announced positions with the effective locale', async () => {
@@ -447,9 +480,9 @@ it('moves the roving stop to either endpoint with End and Home', async () => {
 
 it('mirrors a reverse directed edge in both logical directions', async () => {
   const reversePath: LyraPathElement[] = [
-    { kind: 'node', node: { id: 'source' } },
+    { kind: 'node', node: { id: 'source', label: 'Source' } },
     { kind: 'edge', relation: 'reverse', directed: true, reverse: true },
-    { kind: 'node', node: { id: 'target' } },
+    { kind: 'node', node: { id: 'target', label: 'Target' } },
   ];
   const wrapper = await fixture<HTMLDivElement>(html`<div>
     <lr-path-strip .path=${reversePath}></lr-path-strip>

@@ -6,6 +6,7 @@
 - **Class** `LyraPanZoom`, also available unregistered from `@aceshooting/lyra-ui/components/media/pan-zoom/pan-zoom.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 7 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -33,7 +34,10 @@ import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe compon
 
 **Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update zoom and emit `lr-zoom-change`
 (`detail: { zoom }`). `resetZoom()` preserves pan; `resetView()` also scrolls the viewport to the
-origin. The viewport accepts `+`/`=`, `-`/`_`, and `0`, without consuming keys from a slotted editor.
+origin. Reset reaches 100% exactly whenever it is within `minZoom`/`maxZoom`; it is not quantized to
+the nearest `zoomStep`. The viewport accepts `+`/`=`, `-`/`_`, and `0`, without consuming keys from
+a slotted editor. The three zoom buttons are independently tabbable inside a labelled `group`; the
+container does not claim toolbar arrow-key navigation.
 
 **Slots:** default — inspected content, ignored while `src` renders an image.
 

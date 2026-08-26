@@ -333,6 +333,33 @@ async function assertForcedColorsPaintedPixels(page, story) {
     throw new Error(`${story.id} forced-colors axis did not activate the browser media feature.`);
   }
 
+  if (story.forcedColorsProbe === 'swatch-colors') {
+    const fills = page.locator('lr-swatch-picker').locator('[part~="swatch-fill"]');
+    await fills.first().waitFor({ state: 'visible', timeout: 5_000 });
+    const fillCount = await fills.count();
+    if (fillCount < 3) {
+      throw new Error(`${story.id} expected at least 3 intrinsic swatch colors, found ${fillCount}.`);
+    }
+    const signatures = [];
+    for (let index = 0; index < fillCount; index += 1) {
+      const pixels = await fills.nth(index).screenshot({ animations: 'disabled' });
+      const stats = assertCaptureHasPaint(pixels, `${story.id} intrinsic swatch ${index + 1}`);
+      if (stats.chromaticPixels < 64) {
+        throw new Error(
+          `${story.id} intrinsic swatch ${index + 1} was flattened by forced colors: ` +
+            `${stats.chromaticPixels} chromatic pixels.`,
+        );
+      }
+      signatures.push(stats.pixelSignature);
+    }
+    if (new Set(signatures).size !== fillCount) {
+      throw new Error(
+        `${story.id} painted ${new Set(signatures).size} distinct intrinsic swatches for ${fillCount} data colors.`,
+      );
+    }
+    return;
+  }
+
   if (story.forcedColorsProbe === 'intrinsic-color') {
     const grid = page.locator('lr-color-picker').locator('[part~="grid"]');
     await grid.waitFor({ state: 'visible', timeout: 5_000 });

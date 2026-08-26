@@ -29,8 +29,8 @@ describe('lr-document-compare', () => {
     el.diffLayout = 'split';
     await el.updateComplete;
     const foreign = el as unknown as Record<string, unknown>;
-    foreign.view = 'columns';
-    foreign.diffLayout = 'columns';
+    foreign['view'] = 'columns';
+    foreign['diffLayout'] = 'columns';
     await el.updateComplete;
     expect(el.view).to.equal('diff');
     expect(el.getAttribute('view')).to.equal('diff');
@@ -435,6 +435,7 @@ describe('lr-document-compare', () => {
 
     it('matches the other pane through its normalized first-wins highlight identities', async () => {
       const el = await highlightsFixture();
+      if (el.newVersion === undefined) throw new Error('Expected a new document version');
       el.newVersion = {
         ...el.newVersion,
         highlights: [
@@ -465,6 +466,7 @@ describe('lr-document-compare', () => {
       // document-compare's own id-match check reads `this.newVersion.highlights`, and a render
       // cascades the new value down to the child, so this is the realistic way a host would
       // change which highlights are matchable.
+      if (el.newVersion === undefined) throw new Error('Expected a new document version');
       el.newVersion = {
         ...el.newVersion,
         highlights: [{ id: 'other-id', anchor: { kind: 'region', rect: { x: 0, y: 0, width: 5, height: 5 } } }],
@@ -657,7 +659,7 @@ describe('lr-document-compare', () => {
 
   describe('accessibility', () => {
     it('is accessible in diff view', async () => {
-      const el = await fixture(html`
+      const el = await fixture<LyraDocumentCompare>(html`
         <lr-document-compare
           .oldVersion=${{ id: 'v1', name: 'v1', text: 'a\nb' }}
           .newVersion=${{ id: 'v2', name: 'v2', text: 'a\nc' }}
@@ -667,7 +669,7 @@ describe('lr-document-compare', () => {
     });
 
     it('is accessible in populated side-by-side view, including region highlights', async () => {
-      const el = await fixture(html`
+      const el = await fixture<LyraDocumentCompare>(html`
         <lr-document-compare
           view="side-by-side"
           .oldVersion=${{

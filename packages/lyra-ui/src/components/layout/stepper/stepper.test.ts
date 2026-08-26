@@ -4,6 +4,7 @@ import {
   html,
   oneEvent,
   elementUpdated,
+  waitUntil,
 } from "@open-wc/testing";
 import "./stepper.js";
 import type { LyraStepper } from "./stepper.js";
@@ -189,6 +190,23 @@ describe("lr-stepper", () => {
     await el.updateComplete;
     expect(el.steps).to.have.length(256);
     expect(stepButtons(el)).to.have.length(256);
+  });
+
+  it('drops steps with empty or whitespace-only labels while retaining an accessible valid step', async () => {
+    const el = (await fixture(html`
+      <lr-stepper
+        .steps=${[
+          { stepId: 'empty', label: '', state: 'completed' },
+          { stepId: 'blank', label: '   ', state: 'current' },
+          { stepId: 'review', label: 'Review', state: 'current' },
+        ]}
+      ></lr-stepper>
+    `)) as LyraStepper;
+
+    expect(el.steps.length).to.equal(1);
+    expect(stepButtons(el).length).to.equal(1);
+    expect(stepButtons(el)[0]!.textContent?.trim()).to.include('Review');
+    await expect(el).to.be.accessible();
   });
 
   it("uses list/progress semantics instead of tabs without tabpanels", async () => {
@@ -1523,22 +1541,39 @@ describe("horizontal step row overflow", () => {
 
 describe("step hover specificity", () => {
   it('the internal [part="step"]:hover rule is :where()-wrapped, so a consumer ::part(step):hover override wins without needing !important', async () => {
-    const el = (await fixture(
-      html`<lr-stepper .steps=${steps()}></lr-stepper>`
-    )) as LyraStepper;
-    // Same technique as attachment-trigger.test.ts's identically-shaped specificity test: real
-    // browser test runners don't synthesize a :hover pseudo-class from a dispatched event, so
-    // assert via the rendered stylesheet's own selector text instead of a paint result.
-    const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
-      .flatMap((sheet) => Array.from(sheet.cssRules))
-      .map((rule) => rule.cssText)
-      .find(
-        (text) => text.includes(":hover") && text.includes("aria-disabled")
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <style>
+          lr-stepper::part(step):hover {
+            background-color: rgb(7, 8, 9);
+          }
+        </style>
+        <lr-stepper
+          style="--lr-transition-fast: 0ms"
+          .steps=${steps()}
+        ></lr-stepper>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-stepper") as LyraStepper;
+    const target = stepButtons(el)[2]!;
+    const rect = target.getBoundingClientRect();
+    try {
+      await resetMouse();
+      await sendMouse({
+        type: "move",
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => getComputedStyle(target).backgroundColor === "rgb(7, 8, 9)",
+        "consumer step hover background did not win"
       );
-    expect(internalRule, 'expected a [part="step"]:hover rule').to.not.equal(
-      undefined
-    );
-    expect(internalRule).to.contain(":where(");
+      expect(getComputedStyle(target).backgroundColor).to.equal("rgb(7, 8, 9)");
+    } finally {
+      await resetMouse();
+    }
   });
 });
 

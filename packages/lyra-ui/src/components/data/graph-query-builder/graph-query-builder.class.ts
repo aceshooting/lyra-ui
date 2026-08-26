@@ -274,7 +274,8 @@ export interface LyraGraphQueryBuilderEventMap {
  *
  * **Accessible name:** a host-level `aria-label` wins. Otherwise the region (`role="group"`) is
  * labelled by the same visible label element that renders the `label` slot/property/localized
- * default, so visible and announced names cannot diverge.
+ * default, so visible and announced names cannot diverge. The same region carries explicit
+ * `aria-invalid="true"|"false"` from the complete builder's effective intrinsic/custom validity.
  *
  * @customElement lr-graph-query-builder
  * @slot actions - Extra host controls rendered in the footer beside the Run button.
@@ -718,6 +719,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     this.validityController.setCustomValidity(message ?? '');
     this.syncValidityCustomStates();
     this.publishValiditySnapshot();
+    this.requestUpdate();
   }
 
   formResetCallback(): void {
@@ -1044,6 +1046,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
         aria-label=${hostLabel ?? nothing}
         aria-labelledby=${hostLabel === null ? this.labelId : nothing}
         aria-describedby=${describedBy || nothing}
+        aria-invalid=${this.internals.validity.valid ? 'false' : 'true'}
       >
         <div part="label" id=${this.labelId}>
           <slot name="label" @slotchange=${this.onChromeSlotChange}

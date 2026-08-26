@@ -13,7 +13,6 @@
  * values onto a string or number, so nothing needs the element's lifecycle.
  */
 
-import { hostAriaLabel } from '../../../internal/a11y.js';
 import {
   composedAccessibilityText,
   composedAccessibleVisibleText,
@@ -114,7 +113,6 @@ export function resolveProgressLabel(
     localizedFallback: string;
   },
 ): string {
-  const authored = hostAriaLabel(host);
-  if (authored !== null) return authored;
+  if (host.hasAttribute('aria-label')) return host.getAttribute('aria-label') ?? '';
   return parts.label || parts.accessibleLabel || parts.visibleText || parts.localizedFallback;
 }

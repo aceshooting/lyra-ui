@@ -1,8 +1,14 @@
 import { expect } from '@open-wc/testing';
 import { adaptAiSdkMessage } from './ai-sdk.js';
 
+function requireAdaptedMessage(input: unknown): NonNullable<ReturnType<typeof adaptAiSdkMessage>> {
+  const message = adaptAiSdkMessage(input);
+  if (!message) throw new Error('Expected a valid AI SDK message fixture');
+  return message;
+}
+
 it('maps AI SDK-style ordered parts without requiring the vendor package', () => {
-  const message = adaptAiSdkMessage({
+  const message = requireAdaptedMessage({
     id: 'message-1',
     role: 'assistant',
     metadata: { model: 'example-model' },
@@ -35,7 +41,7 @@ it('maps AI SDK-style ordered parts without requiring the vendor package', () =>
 });
 
 it('falls back safely for malformed roles and part values', () => {
-  const message = adaptAiSdkMessage({
+  const message = requireAdaptedMessage({
     id: 'message-2',
     role: 'unexpected',
     parts: [{ type: 'text', text: 42 }, null, 'bad'],
@@ -45,7 +51,7 @@ it('falls back safely for malformed roles and part values', () => {
 });
 
 it('maps dynamic and named tool parts across pending, running, success, and error states', () => {
-  const message = adaptAiSdkMessage({
+  const message = requireAdaptedMessage({
     id: 'message-tools',
     role: 'assistant',
     parts: [
@@ -104,7 +110,7 @@ it('maps dynamic and named tool parts across pending, running, success, and erro
 });
 
 it('maps tool outputs, including falsy result values', () => {
-  const message = adaptAiSdkMessage({
+  const message = requireAdaptedMessage({
     id: 'message-output',
     role: 'assistant',
     parts: [
@@ -133,7 +139,7 @@ it('maps tool outputs, including falsy result values', () => {
 });
 
 it('maps source and file parts with documented identifier and label fallbacks', () => {
-  const message = adaptAiSdkMessage({
+  const message = requireAdaptedMessage({
     id: 'message-documents',
     role: 'system',
     parts: [
@@ -182,7 +188,7 @@ it('maps source and file parts with documented identifier and label fallbacks', 
 });
 
 it('drops unknown parts and applies safe fallbacks without disturbing valid neighbors', () => {
-  const message = adaptAiSdkMessage({
+  const message = requireAdaptedMessage({
     id: 'message-mixed',
     role: 'user',
     parts: [
@@ -231,7 +237,7 @@ it('recursively snapshots metadata, tool inputs, outputs, citations, and data', 
   const output = { nested: { hits: 1 } };
   const data = { nested: { value: 1 } };
   const source = { nested: { rank: 1 } };
-  const message = adaptAiSdkMessage({
+  const message = requireAdaptedMessage({
     id: 'immutable',
     role: 'assistant',
     metadata,
@@ -265,7 +271,7 @@ it('rejects non-serializable nested provider values rather than retaining aliase
 });
 
 it('represents tool failures through domain error fields without a generic error stream state', () => {
-  const message = adaptAiSdkMessage({
+  const message = requireAdaptedMessage({
     id: 'tool-error',
     role: 'assistant',
     parts: [{
@@ -297,7 +303,7 @@ it('honors a custom part limit without partially adapting oversized messages', (
 });
 
 it('preserves reasoning failures and source identifier label fallbacks', () => {
-  const message = adaptAiSdkMessage({
+  const message = requireAdaptedMessage({
     id: 'fallbacks',
     role: 'assistant',
     parts: [

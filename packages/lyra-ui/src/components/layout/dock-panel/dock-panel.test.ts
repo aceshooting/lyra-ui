@@ -760,7 +760,8 @@ it("routes an adopted drag through its owner window and removes that realm's lis
   ) => {
     if (type.startsWith("pointer") || type === "lostpointercapture")
       removedPointerTypes.push(type);
-    originalRemoveEventListener.call(frameWindow, type, listener, options);
+    if (listener !== null)
+      originalRemoveEventListener.call(frameWindow, type, listener, options);
   }) as typeof frameWindow.removeEventListener;
 
   try {

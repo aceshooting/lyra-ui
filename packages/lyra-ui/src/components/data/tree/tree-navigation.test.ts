@@ -16,6 +16,11 @@ const data = [
   { id: '2', label: 'Leaf' },
 ];
 
+function required<T>(value: T | undefined, context: string): T {
+  if (value === undefined) throw new Error(`Missing ${context}`);
+  return value;
+}
+
 /** Walks into shadow roots to find the actually-focused element (a focused
  *  element inside a shadow tree only surfaces as its shadow host via the
  *  plain `document.activeElement`). */
@@ -28,7 +33,9 @@ it('gives the first item a roving tabindex of 0 and every other item -1', async 
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const [root, leaf] = [...el.querySelectorAll('lr-tree-item')] as HTMLElement[];
+  const items = [...el.querySelectorAll<HTMLElement>('lr-tree-item')];
+  const root = required(items[0], 'root tree item');
+  const leaf = required(items[1], 'leaf tree item');
   expect(root.tabIndex).to.equal(0);
   expect(leaf.tabIndex).to.equal(-1);
 });
@@ -37,7 +44,9 @@ it('ArrowDown moves the roving tabindex to the next visible item', async () => {
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const [root, leaf] = [...el.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
+  const items = [...el.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
+  const root = required(items[0], 'root tree item');
+  const leaf = required(items[1], 'leaf tree item');
   (root as unknown as HTMLElement).focus();
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
   await el.updateComplete;
@@ -67,7 +76,9 @@ it('Home/End jump to the first/last visible item', async () => {
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const [root, leaf] = [...el.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
+  const items = [...el.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
+  const root = required(items[0], 'root tree item');
+  const leaf = required(items[1], 'leaf tree item');
   (root as unknown as HTMLElement).focus();
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
   await el.updateComplete;
@@ -95,7 +106,9 @@ it('ArrowUp moves the roving tabindex to the previous visible item', async () =>
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
   el.data = data;
   await el.updateComplete;
-  const [root, leaf] = [...el.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
+  const items = [...el.querySelectorAll('lr-tree-item')] as unknown as LyraTreeItem[];
+  const root = required(items[0], 'root tree item');
+  const leaf = required(items[1], 'leaf tree item');
   (root as unknown as HTMLElement).focus();
   root.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
   await el.updateComplete;

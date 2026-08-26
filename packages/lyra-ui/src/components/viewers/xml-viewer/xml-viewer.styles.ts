@@ -89,7 +89,7 @@ export const styles = css`
     background: color-mix(in oklab, var(--_lr-xml-viewer-highlight-background), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='highlight-action']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   /* The one attribute an attribute-addressing node-path anchor resolved to, so a citation pointing
@@ -178,7 +178,7 @@ export const styles = css`
   }
   [part='toggle']:focus-visible,
   [part='copy-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='copy-button'] {
@@ -216,6 +216,12 @@ export const styles = css`
   [part='error'] {
     color: var(--lr-color-danger);
     padding: var(--lr-space-l);
+    text-align: center;
+  }
+  .empty-note {
+    margin: 0;
+    padding: var(--lr-space-l);
+    color: var(--lr-color-text-quiet);
     text-align: center;
   }
   [part='spinner'] {

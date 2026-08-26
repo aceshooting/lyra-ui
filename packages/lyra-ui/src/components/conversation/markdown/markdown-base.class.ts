@@ -214,6 +214,9 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     beginMarkdownDepsLoad(this, (resolved) => {
       this.deps = resolved;
       this.renderMarkdown();
+      // A failed/missing peer can leave renderedHtml at the same fallback value. The dependency
+      // settlement still changes aria-busy, so it must independently schedule an update.
+      this.requestUpdate();
     });
   }
 

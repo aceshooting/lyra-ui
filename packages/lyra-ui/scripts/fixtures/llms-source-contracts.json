@@ -3632,7 +3632,7 @@
       "module": "src/components/conversation/code-block/code-loader.ts",
       "exportName": "loadShikiHighlighter",
       "kind": "function",
-      "fingerprint": "badcbfd5984fbe15aaad",
+      "fingerprint": "62e1357cb5721c7b5a51",
       "routes": [
         "src/components/conversation/code-block/code-loader.ts"
       ],
@@ -3648,7 +3648,7 @@
       "module": "src/components/conversation/code-block/code-loader.ts",
       "exportName": "loadShikiLanguage",
       "kind": "function",
-      "fingerprint": "0e892bfb60ccd5598eec",
+      "fingerprint": "a7967fc7a11023760912",
       "routes": [
         "src/components/conversation/code-block/code-loader.ts"
       ],
@@ -3664,7 +3664,7 @@
       "module": "src/components/conversation/code-block/code-loader.ts",
       "exportName": "shikiHasLoadedLanguage",
       "kind": "function",
-      "fingerprint": "fa67bee4f55443cf726a",
+      "fingerprint": "b9ad8b4e7505f6df522c",
       "routes": [
         "src/components/conversation/code-block/code-loader.ts"
       ],
@@ -3680,7 +3680,7 @@
       "module": "src/components/conversation/code-block/shiki-types.ts",
       "exportName": "loadShikiHighlighterCore",
       "kind": "function",
-      "fingerprint": "d377d0e23ed3f36e2439",
+      "fingerprint": "2c72ac0e16df3f3ea006",
       "routes": [
         "src/components/conversation/code-block/code-loader.ts"
       ],
@@ -3712,7 +3712,7 @@
       "module": "src/components/conversation/code-block/shiki-types.ts",
       "exportName": "ShikiHighlighter",
       "kind": "interface",
-      "fingerprint": "0cc2a3367d380a735ce5",
+      "fingerprint": "afa77d36dd1a1a8b1783",
       "routes": [
         "src/components/conversation/code-block/code-loader.ts"
       ],
@@ -3726,21 +3726,11 @@
     },
     {
       "module": "src/components/conversation/code-block/shiki-types.ts",
-      "exportName": "ShikiLanguageInput",
+      "exportName": "ShikiLanguageRegistration",
       "kind": "interface",
       "fingerprint": "3e20a7fac24b73c416d8",
       "routes": [
         "src/all.ts",
-        "src/components/conversation/code-block/code-block-core.ts",
-        "src/components/conversation/code-block/code-block.ts",
-        "src/components/conversation/code-block/code-loader.ts",
-        "src/components/conversation/index.ts",
-        "src/components/conversation/markdown/markdown-core.ts",
-        "src/components/conversation/markdown/markdown.ts",
-        "src/components/lr-code-block-core.ts",
-        "src/components/lr-code-block.ts",
-        "src/components/lr-markdown-core.ts",
-        "src/components/lr-markdown.ts",
         "src/lyra.ts",
         "src/ssr-loader.ts",
         "src/ssr/all.ts"
@@ -3750,7 +3740,7 @@
       "locator": {
         "kind": "utility",
         "name": "components-conversation-code-block-shiki-types-contracts",
-        "declaration": "ShikiLanguageInput"
+        "declaration": "ShikiLanguageRegistration"
       }
     },
     {
@@ -4805,7 +4795,7 @@
       "module": "src/components/data/condition-builder/condition-builder.class.ts",
       "exportName": "ConditionBuilderField",
       "kind": "interface",
-      "fingerprint": "0a726e20bc3371c5d2ac",
+      "fingerprint": "adaf384ca0ac6aa486b6",
       "routes": [
         "src/all.ts",
         "src/components/data/condition-builder/condition-builder.class.ts",
@@ -4845,6 +4835,29 @@
         "kind": "utility",
         "name": "components-data-condition-builder-condition-builder-contracts",
         "declaration": "ConditionBuilderFieldOption"
+      }
+    },
+    {
+      "module": "src/components/data/condition-builder/condition-builder.class.ts",
+      "exportName": "ConditionBuilderValidationIssue",
+      "kind": "interface",
+      "fingerprint": "9d55dc09ae9c19ef5bf4",
+      "routes": [
+        "src/all.ts",
+        "src/components/data/condition-builder/condition-builder.class.ts",
+        "src/components/data/condition-builder/condition-builder.ts",
+        "src/components/data/index.ts",
+        "src/components/lr-condition-builder.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/data.md",
+      "family": "data",
+      "locator": {
+        "kind": "utility",
+        "name": "components-data-condition-builder-condition-builder-contracts",
+        "declaration": "ConditionBuilderValidationIssue"
       }
     },
     {
@@ -6136,7 +6149,7 @@
       "module": "src/components/data/heatmap/heatmap.class.ts",
       "exportName": "HeatmapCalendarData",
       "kind": "interface",
-      "fingerprint": "35eacf3f3ff264dbd9f1",
+      "fingerprint": "a7b95a37bd63974002fa",
       "routes": [
         "src/all.ts",
         "src/components/data/heatmap/heatmap.class.ts",
@@ -13664,7 +13677,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "2f3c982aa665f34b355e",
+      "fingerprint": "f33e2727f85c7c195f35",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -14062,7 +14075,7 @@
       "module": "src/internal/form-associated.ts",
       "exportName": "FormAssociated",
       "kind": "function",
-      "fingerprint": "81b110f7783788c8ec85",
+      "fingerprint": "d5904bfeb229eb4c2648",
       "routes": [
         "src/all.ts",
         "src/lyra.ts",
@@ -14083,7 +14096,7 @@
       "module": "src/internal/form-associated.ts",
       "exportName": "FormAssociatedInterface",
       "kind": "interface",
-      "fingerprint": "843bbfd635d89f1aa7d9",
+      "fingerprint": "ac603340553d062caff9",
       "routes": [
         "src/all.ts",
         "src/lyra.ts",
@@ -14575,7 +14588,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "0d4d4bc9c71c1ab40a3a",
+      "fingerprint": "0c41213f81320cc740b5",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -14716,7 +14729,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "c524586ccc2aa0e5be9d",
+      "fingerprint": "dfa1d40f2b6f56fb1e9e",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -14892,10 +14905,52 @@
       }
     },
     {
+      "module": "src/internal/positioner-geometry.ts",
+      "exportName": "VirtualAnchor",
+      "kind": "interface",
+      "fingerprint": "6220eeb589321491d0cb",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-popup.ts",
+        "src/components/overlays/index.ts",
+        "src/components/overlays/popup/popup.class.ts",
+        "src/components/overlays/popup/popup.ts",
+        "src/lyra.ts",
+        "src/ssr-loader.ts",
+        "src/ssr/all.ts",
+        "src/utilities/index.ts",
+        "src/utilities/positioner.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "positioner",
+        "declaration": "VirtualAnchor"
+      }
+    },
+    {
+      "module": "src/internal/positioner-geometry.ts",
+      "exportName": "virtualAnchorFromRect",
+      "kind": "function",
+      "fingerprint": "412f8b46a6a60843d5b8",
+      "routes": [
+        "src/utilities/index.ts",
+        "src/utilities/positioner.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "positioner",
+        "declaration": "virtualAnchorFromRect"
+      }
+    },
+    {
       "module": "src/internal/positioner.ts",
       "exportName": "place",
       "kind": "function",
-      "fingerprint": "2758be0fcbe7ce9fb1b9",
+      "fingerprint": "4c8dfa03862b55c1aec9",
       "routes": [
         "src/utilities/index.ts",
         "src/utilities/positioner.ts"
@@ -14957,48 +15012,6 @@
         "kind": "utility",
         "name": "positioner",
         "declaration": "trackRect"
-      }
-    },
-    {
-      "module": "src/internal/positioner.ts",
-      "exportName": "VirtualAnchor",
-      "kind": "interface",
-      "fingerprint": "6220eeb589321491d0cb",
-      "routes": [
-        "src/all.ts",
-        "src/components/lr-popup.ts",
-        "src/components/overlays/index.ts",
-        "src/components/overlays/popup/popup.class.ts",
-        "src/components/overlays/popup/popup.ts",
-        "src/lyra.ts",
-        "src/ssr-loader.ts",
-        "src/ssr/all.ts",
-        "src/utilities/index.ts",
-        "src/utilities/positioner.ts"
-      ],
-      "document": "llms/shared.md",
-      "family": "overlays",
-      "locator": {
-        "kind": "utility",
-        "name": "positioner",
-        "declaration": "VirtualAnchor"
-      }
-    },
-    {
-      "module": "src/internal/positioner.ts",
-      "exportName": "virtualAnchorFromRect",
-      "kind": "function",
-      "fingerprint": "f9405493619f8d0722cc",
-      "routes": [
-        "src/utilities/index.ts",
-        "src/utilities/positioner.ts"
-      ],
-      "document": "llms/shared.md",
-      "family": "shared",
-      "locator": {
-        "kind": "utility",
-        "name": "positioner",
-        "declaration": "virtualAnchorFromRect"
       }
     },
     {
@@ -15265,7 +15278,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "24ac304aee026d397c97",
+      "fingerprint": "6073b074822e6e3cca96",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15700,7 +15713,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "096d7de22b1ec0015789",
+      "fingerprint": "c0e9d73f898b74a1f423",
       "routes": [
         "src/vue.ts"
       ],

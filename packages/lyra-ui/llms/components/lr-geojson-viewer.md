@@ -6,9 +6,10 @@
 - **Class** `LyraGeoJsonViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `9.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `maplibre-gl` — see `llms/peers.md`
-- **Themeable via** 6 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-geojson-view` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -44,7 +45,9 @@ used as `<lr-map>`'s `label` and the root's `aria-label` (falling back to the lo
 text-viewer contract adds `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`), plus `search()`, `searchNext()`, `searchPrevious()`,
 `clearSearch()`, and `scrollToAnchor()` for the ordinary-DOM serialized feature metadata and status
-text, independent of whether the optional map peer is available.
+text, independent of whether the optional map peer is available. Fragment resolution is an exact
+DOM `id` lookup, but the generated metadata, status, and map output define no fragment ids, so a
+fragment jump reports `found: false`. Use a text-quote anchor for serialized metadata.
 
 **Events:**
 
@@ -69,8 +72,10 @@ rendered in both map and fallback paths), `missing-library` (the missing-`maplib
 alongside the `lr-json-viewer` fallback; its transition uses the shared document-level assertive
 sink), `error` (ordinary visible error text; later transitions use the same assertive sink),
 `spinner` (a decorative skeleton plus an ordinary visually-hidden localized label; later loading
-transitions use the shared document-level polite sink). No active live semantics are rendered in
-the viewer's shadow tree.
+transitions use the shared document-level polite sink), and `anchor-live-region` (an aria-hidden,
+non-live shadow mirror of the latest anchor-jump message; the spoken copy is appended to the shared
+document-level polite sink only while the viewer and its composed ancestors are exposed to the
+accessibility tree). No active live semantics are rendered in the viewer's shadow tree.
 
 Those states carry the same visual tones the rest of this family uses rather than plain inherited
 body text: `error` is `--lr-color-danger` (matching `lr-docx-viewer`/`lr-email-viewer`/

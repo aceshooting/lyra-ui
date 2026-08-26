@@ -5,6 +5,7 @@ import type { LyraTimeRange, TimeRangePreset } from "./time-range.js";
 import { styles } from "./time-range.styles.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { setReducedMotion } from "../../../../test/wtr-media.js";
 
 function beginChangedStartDrag(el: LyraTimeRange, pointerId: number): void {
   const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
@@ -89,12 +90,15 @@ it("moves the start handle with ArrowRight and emits lr-input then lr-change", a
     "change",
     "lr-change",
   ]);
-  expect(sequence[0].event.constructor === Event).to.be.true;
-  expect(sequence[2].event.constructor === Event).to.be.true;
-  expect(sequence[0].event.target === el && sequence[2].event.target === el).to
-    .be.true;
-  expect(sequence[1].event instanceof CustomEvent).to.be.true;
-  expect((sequence[1].event as CustomEvent).detail).to.deep.equal({
+  const [nativeInput, aliasInput, nativeChange] = sequence;
+  if (!nativeInput || !aliasInput || !nativeChange) {
+    throw new Error('The time-range event sequence was incomplete.');
+  }
+  expect(nativeInput.event.constructor === Event).to.be.true;
+  expect(nativeChange.event.constructor === Event).to.be.true;
+  expect(nativeInput.event.target === el && nativeChange.event.target === el).to.be.true;
+  expect(aliasInput.event instanceof CustomEvent).to.be.true;
+  expect((aliasInput.event as CustomEvent).detail).to.deep.equal({
     start: 25,
     end: 80,
   });
@@ -618,8 +622,12 @@ it('aborts a still-tracked drag on the next pointermove when :disabled starts ma
   // themselves before any further pointermove can arrive. Stub matches() to force exactly that
   // window instead, the same way other tests here stub getBoundingClientRect/setPointerCapture.
   const originalMatches = el.matches.bind(el);
-  el.matches = (selectors: string): boolean =>
-    selectors === ":disabled" ? true : originalMatches(selectors);
+  const ownMatchesDescriptor = Object.getOwnPropertyDescriptor(el, 'matches');
+  Object.defineProperty(el, 'matches', {
+    configurable: true,
+    value: (selectors: string): boolean =>
+      selectors === ":disabled" ? true : originalMatches(selectors),
+  });
 
   let inputFired = false;
   el.addEventListener("lr-input", () => (inputFired = true));
@@ -629,7 +637,8 @@ it('aborts a still-tracked drag on the next pointermove when :disabled starts ma
       new PointerEvent("pointermove", { pointerId: 1, clientX: 100 })
     );
   } finally {
-    el.matches = originalMatches;
+    if (ownMatchesDescriptor) Object.defineProperty(el, 'matches', ownMatchesDescriptor);
+    else Reflect.deleteProperty(el, 'matches');
   }
 
   expect(inputFired, "the drag must abort instead of mutating start/end").to.be
@@ -1324,21 +1333,41 @@ it("themes preset and handle hover/pressed paint through independent component h
 
 describe("preset-button hover specificity", () => {
   it("wraps the internal :hover:not(:disabled) rule in :where() so a consumer ::part(preset-button):hover override does not need !important", async () => {
-    const el = (await fixture(html`
-      <lr-time-range
-        .presets=${[{ label: "Last 7 days", start: 0, end: 7 }]}
-      ></lr-time-range>
-    `)) as LyraTimeRange;
-    // Real :hover can't be synthesized from a dispatched event in this test harness (jsdom/real
-    // browser alike) -- assert the internal rule's specificity-zeroing shape directly, the same
-    // way lr-attachment-trigger's own hover-specificity test does.
-    const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
-      .flatMap((sheet) => Array.from(sheet.cssRules))
-      .map((rule) => rule.cssText)
-      .find(
-        (text) => text.includes(":hover") && text.includes("preset-button")
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <style>
+          lr-time-range::part(preset-button):hover {
+            border-color: rgb(7, 8, 9);
+          }
+        </style>
+        <lr-time-range
+          style="--lr-transition-fast: 0ms"
+          .presets=${[{ label: "Last 7 days", start: 0, end: 7 }]}
+        ></lr-time-range>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-time-range") as LyraTimeRange;
+    const preset = el.shadowRoot!.querySelector<HTMLElement>(
+      '[part="preset-button"]'
+    )!;
+    const rect = preset.getBoundingClientRect();
+    try {
+      await resetMouse();
+      await sendMouse({
+        type: "move",
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => getComputedStyle(preset).borderColor === "rgb(7, 8, 9)",
+        "consumer preset-button hover border did not win"
       );
-    expect(internalRule).to.contain(":where(");
+      expect(getComputedStyle(preset).borderColor).to.equal("rgb(7, 8, 9)");
+    } finally {
+      await resetMouse();
+    }
   });
 });
 
@@ -1396,21 +1425,6 @@ it("references the shared focus-ring tokens on the handle focus-visible outline 
 });
 
 it('targets the real preset-button part in the reduced-motion override, not a nonexistent "preset" part', async () => {
-  const el = (await fixture(
-    html`<lr-time-range
-      min="0"
-      max="100"
-      start="20"
-      end="80"
-      .presets=${[{ label: "Last hour", start: 0, end: 10 }]}
-    ></lr-time-range>`
-  )) as LyraTimeRange;
-  const presetButton = el.shadowRoot!.querySelector('[part="preset-button"]');
-  expect(
-    presetButton != null,
-    'the rendered preset button must actually carry part="preset-button"'
-  ).to.equal(true);
-
   const reducedMotionBlock =
     styles.cssText.match(
       /@media \(prefers-reduced-motion: reduce\)[\s\S]*/
@@ -1419,6 +1433,32 @@ it('targets the real preset-button part in the reduced-motion override, not a no
   // The pre-fix selector was `[part='preset']`, which never matches the button's real
   // `preset-button` part -- assert the exact broken selector string is gone.
   expect(reducedMotionBlock).to.not.match(/\[part=["']preset["']\]/);
+
+  try {
+    await setReducedMotion("no-preference");
+    const el = (await fixture(
+      html`<lr-time-range
+        style="--lr-transition-fast: 2s"
+        min="0"
+        max="100"
+        start="20"
+        end="80"
+        .presets=${[{ label: "Last hour", start: 0, end: 10 }]}
+      ></lr-time-range>`
+    )) as LyraTimeRange;
+    const presetButton = el.shadowRoot!.querySelector<HTMLElement>(
+      '[part="preset-button"]'
+    )!;
+    expect(getComputedStyle(presetButton).transitionDuration).to.equal("2s");
+
+    await setReducedMotion("reduce");
+    await waitUntil(
+      () => getComputedStyle(presetButton).transitionDuration === "0s",
+      "time-range preset transition did not stop under reduced motion"
+    );
+  } finally {
+    await setReducedMotion("no-preference");
+  }
 });
 
 it("renders handles/fill in the correct left-to-right order when min > max (inverted domain)", async () => {
@@ -2524,7 +2564,9 @@ it('renders a [part="presets"] row of [part="preset-button"] buttons when preset
   expect(row !== null).to.equal(true);
   const buttons = el.shadowRoot!.querySelectorAll('[part="preset-button"]');
   expect(buttons.length).to.equal(3);
-  expect(buttons[1].textContent).to.include("Last 30 days");
+  const lastThirtyDays = buttons[1];
+  if (!lastThirtyDays) throw new Error('The Last 30 days preset was not rendered.');
+  expect(lastThirtyDays.textContent).to.include("Last 30 days");
   // the brush itself must be completely unaffected: same track/handles.
   expect(el.shadowRoot!.querySelector('[part="base"]')).to.not.equal(null);
   expect(el.shadowRoot!.querySelector('[part="handle-start"]')).to.not.equal(
@@ -2535,7 +2577,7 @@ it('renders a [part="presets"] row of [part="preset-button"] buttons when preset
   );
 });
 
-it("clicking a preset button sets start/end to that preset and fires lr-change with the right detail", async () => {
+it('clicking a preset exposes its identity before the synchronous input and change events', async () => {
   const el = (await fixture(
     html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`
   )) as LyraTimeRange;
@@ -2546,19 +2588,79 @@ it("clicking a preset button sets start/end to that preset and fires lr-change w
   );
 
   let changeDetail: { start: number; end: number } | undefined;
+  const identities: Array<TimeRangePreset | undefined> = [];
+  for (const type of ['input', 'lr-input', 'change'] as const) {
+    el.addEventListener(type, () => identities.push(el.appliedPreset));
+  }
   el.addEventListener(
     "lr-change",
-    (e) => (changeDetail = (e as CustomEvent).detail)
+    (e) => {
+      identities.push(el.appliedPreset);
+      changeDetail = (e as CustomEvent).detail;
+    }
   );
-  buttons[1].click(); // 'Last 30 days' -> { start: 0, end: 30 }
+  buttons[1]!.click(); // 'Last 30 days' -> { start: 0, end: 30 }
   await el.updateComplete;
 
   expect(el.start).to.equal(0);
   expect(el.end).to.equal(30);
   expect(changeDetail).to.deep.equal({ start: 0, end: 30 });
+  expect(identities).to.deep.equal([
+    el.presets[1],
+    el.presets[1],
+    el.presets[1],
+    el.presets[1],
+  ]);
+  expect(el.appliedPreset, 'identity remains readable after the event pair').to.equal(
+    el.presets[1],
+  );
 });
 
-it("marks only the preset matching the current start/end as active (aria-pressed + data-active)", async () => {
+it('preserves preset identity when the exposed preset snapshot is reassigned unchanged', async () => {
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+  )) as LyraTimeRange;
+  el.presets = [{ label: 'Working window', start: 20, end: 80 }];
+  await el.updateComplete;
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="preset-button"]')!.click();
+  await el.updateComplete;
+  const currentPresets = el.presets;
+  const selected = el.appliedPreset;
+
+  el.presets = currentPresets;
+  await el.updateComplete;
+
+  expect(el.presets, 'reassigning the owned snapshot is a no-op').to.equal(currentPresets);
+  expect(el.appliedPreset).to.equal(selected);
+  expect(el.appliedPreset).to.equal(currentPresets[0]);
+  expect(
+    el.shadowRoot!.querySelector('[part="preset-button"]')!.getAttribute('aria-pressed'),
+  ).to.equal('true');
+});
+
+it('clears preset identity when presets is replaced by an equal-value collection', async () => {
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+  )) as LyraTimeRange;
+  el.presets = [{ label: 'Working window', start: 20, end: 80 }];
+  await el.updateComplete;
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="preset-button"]')!.click();
+  await el.updateComplete;
+  const previousPresets = el.presets;
+
+  el.presets = [{ label: 'Working window', start: 20, end: 80 }];
+  await el.updateComplete;
+
+  expect(el.presets).to.not.equal(previousPresets);
+  expect(el.appliedPreset, 'a replaced collection has no selected object identity').to.equal(
+    undefined,
+  );
+  expect(
+    el.shadowRoot!.querySelector('[part="preset-button"]')!.getAttribute('aria-pressed'),
+  ).to.equal('false');
+});
+
+it('does not infer preset identity from equal values and marks only the clicked identity active', async () => {
   const el = (await fixture(
     html`<lr-time-range min="0" max="100" start="0" end="30"></lr-time-range>`
   )) as LyraTimeRange;
@@ -2568,23 +2670,123 @@ it("marks only the preset matching the current start/end as active (aria-pressed
     '[part="preset-button"]'
   );
 
-  expect(buttons[0].getAttribute("aria-pressed")).to.equal("false");
-  expect(buttons[0].hasAttribute("data-active")).to.be.false;
-  expect(buttons[1].getAttribute("aria-pressed")).to.equal("true");
-  expect(buttons[1].hasAttribute("data-active")).to.be.true;
-  expect(buttons[2].getAttribute("aria-pressed")).to.equal("false");
-  expect(buttons[2].hasAttribute("data-active")).to.be.false;
+  expect(buttons[0]!.getAttribute("aria-pressed")).to.equal("false");
+  expect(buttons[0]!.hasAttribute("data-active")).to.be.false;
+  expect(buttons[1]!.getAttribute('aria-pressed')).to.equal('false');
+  expect(buttons[1]!.hasAttribute('data-active')).to.be.false;
+  expect(buttons[2]!.getAttribute("aria-pressed")).to.equal("false");
+  expect(buttons[2]!.hasAttribute("data-active")).to.be.false;
+  expect(el.appliedPreset).to.equal(undefined);
+
+  const events: string[] = [];
+  el.addEventListener('lr-input', () => events.push('input'));
+  el.addEventListener('lr-change', () => events.push('change'));
+  buttons[1]!.click();
+  await el.updateComplete;
+  expect(events, 'selecting an equal-value preset remains event-silent').to.deep.equal([]);
+  expect(el.appliedPreset).to.equal(el.presets[1]);
+  expect(buttons[1]!.getAttribute('aria-pressed')).to.equal('true');
+  expect(buttons[1]!.hasAttribute('data-active')).to.be.true;
 
   // Clicking a different preset moves the "active" affordance accordingly.
-  buttons[2].click();
+  buttons[2]!.click();
   await el.updateComplete;
-  expect(buttons[0].getAttribute("aria-pressed")).to.equal("false");
-  expect(buttons[1].getAttribute("aria-pressed")).to.equal("false");
-  expect(buttons[2].getAttribute("aria-pressed")).to.equal("true");
-  expect(buttons[2].hasAttribute("data-active")).to.be.true;
+  expect(buttons[0]!.getAttribute("aria-pressed")).to.equal("false");
+  expect(buttons[1]!.getAttribute("aria-pressed")).to.equal("false");
+  expect(buttons[2]!.getAttribute("aria-pressed")).to.equal("true");
+  expect(buttons[2]!.hasAttribute("data-active")).to.be.true;
 });
 
-it("projects clamped and reversed presets through the same normalization before exposing active state", async () => {
+it('clears preset identity before a manual drag event and never re-infers it from values', async () => {
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="100" start="20" end="80" step="1"></lr-time-range>`,
+  )) as LyraTimeRange;
+  el.presets = [{ label: 'Working window', start: 20, end: 80 }];
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="preset-button"]')!;
+  button.click();
+  await el.updateComplete;
+  expect(el.appliedPreset).to.equal(el.presets[0]);
+
+  let identityInsideInput: TimeRangePreset | undefined = el.appliedPreset;
+  el.addEventListener('input', () => {
+    identityInsideInput = el.appliedPreset;
+  });
+  beginChangedStartDrag(el, 104);
+
+  expect(identityInsideInput, 'manual identity clears before the input notification').to.equal(
+    undefined,
+  );
+  expect(el.appliedPreset).to.equal(undefined);
+
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 104, clientX: 40 }));
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 104 }));
+  await el.updateComplete;
+  expect(el.start, 'the drag returned to the preset numeric range').to.equal(20);
+  expect(el.end).to.equal(80);
+  expect(el.appliedPreset, 'equal values do not recreate historical identity').to.equal(undefined);
+  expect(button.getAttribute('aria-pressed')).to.equal('false');
+});
+
+it('clears identity after an actual controlled value change but preserves it for no-op writes', async () => {
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+  )) as LyraTimeRange;
+  el.presets = [{ label: 'Working window', start: 20, end: 80 }];
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="preset-button"]')!;
+  button.click();
+  await el.updateComplete;
+
+  el.start = 20;
+  el.end = 80;
+  await el.updateComplete;
+  expect(el.appliedPreset, 'recommitting the current values is not a new range').to.equal(
+    el.presets[0],
+  );
+
+  el.start = 25;
+  await el.updateComplete;
+  expect(el.appliedPreset).to.equal(undefined);
+  expect(button.getAttribute('aria-pressed')).to.equal('false');
+
+  el.start = 20;
+  await el.updateComplete;
+  expect(el.appliedPreset, 'returning to equal values does not infer a preset').to.equal(undefined);
+});
+
+it('preserves identity across reconnect but clears it when the owning form resets', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector<LyraTimeRange>('lr-time-range')!;
+  el.presets = [{ label: 'Working window', start: 20, end: 80 }];
+  await el.updateComplete;
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="preset-button"]')!.click();
+  await el.updateComplete;
+  const selected = el.appliedPreset;
+
+  el.remove();
+  form.append(el);
+  await el.updateComplete;
+  expect(el.appliedPreset, 'reconnection does not change the selected range').to.equal(selected);
+
+  form.reset();
+  await el.updateComplete;
+  expect(el.start).to.equal(20);
+  expect(el.end).to.equal(80);
+  expect(el.appliedPreset, 'declared reset values did not come from a preset click').to.equal(
+    undefined,
+  );
+  expect(
+    el.shadowRoot!.querySelector('[part="preset-button"]')!.getAttribute('aria-pressed'),
+    'reset also removes the rendered active state when the values were already defaults',
+  ).to.equal('false');
+});
+
+it('projects a clicked clamped and reversed preset through normalization before exposing identity', async () => {
   const el = (await fixture(
     html`<lr-time-range min="10" max="90" start="10" end="90"></lr-time-range>`
   )) as LyraTimeRange;
@@ -2594,15 +2796,19 @@ it("projects clamped and reversed presets through the same normalization before 
   const button = el.shadowRoot!.querySelector<HTMLButtonElement>(
     '[part="preset-button"]'
   )!;
-  expect(button.getAttribute("aria-pressed")).to.equal("true");
-  expect(button.hasAttribute("data-active")).to.be.true;
+  expect(button.getAttribute('aria-pressed')).to.equal('false');
+  expect(button.hasAttribute('data-active')).to.be.false;
 
   const events: string[] = [];
   el.addEventListener("lr-input", () => events.push("input"));
   el.addEventListener("lr-change", () => events.push("change"));
   button.click();
+  await el.updateComplete;
   expect(el.start).to.equal(10);
   expect(el.end).to.equal(90);
+  expect(el.appliedPreset).to.equal(el.presets[0]);
+  expect(button.getAttribute('aria-pressed')).to.equal('true');
+  expect(button.hasAttribute('data-active')).to.be.true;
   expect(
     events,
     "an already-active normalized preset is event-silent"
@@ -2832,6 +3038,8 @@ describe("active-preset cssprops", () => {
     `)) as HTMLElement;
     const el = wrapper.querySelector("lr-time-range") as LyraTimeRange;
     el.presets = PRESETS;
+    await el.updateComplete;
+    el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="preset-button"]')[1]!.click();
     await el.updateComplete;
     return el;
   }
@@ -3142,6 +3350,30 @@ const supportsStateSelector = (() => {
 })();
 
 describe("lr-time-range setCustomValidity()", () => {
+  it('projects both aria-invalid polarities to the focusable range handles', async () => {
+    const el = (await fixture(html`
+      <lr-time-range
+        aria-label="Booking window"
+        min="0"
+        max="100"
+        start="20"
+        end="80"
+      ></lr-time-range>
+    `)) as LyraTimeRange;
+    const handles = [...el.shadowRoot!.querySelectorAll('[role="slider"]')] as HTMLElement[];
+    expect(handles.map((handle) => handle.getAttribute('aria-invalid'))).to.deep.equal(['false', 'false']);
+
+    el.setCustomValidity('That window is unavailable.');
+    await el.updateComplete;
+    expect(el.checkValidity()).to.equal(false);
+    expect(handles.map((handle) => handle.getAttribute('aria-invalid'))).to.deep.equal(['true', 'true']);
+    await expect(el).to.be.accessible();
+
+    el.setCustomValidity('');
+    await el.updateComplete;
+    expect(handles.map((handle) => handle.getAttribute('aria-invalid'))).to.deep.equal(['false', 'false']);
+  });
+
   it("exposes a reflected customError property that delegates to the native validity surface", async () => {
     const el = (await fixture(
       html`<lr-time-range
@@ -3185,10 +3417,13 @@ describe("lr-time-range setCustomValidity()", () => {
 
     expect(el.checkValidity()).to.be.false;
     expect(aliases).to.have.lengthOf(1);
-    expect(aliases[0].bubbles && aliases[0].composed && aliases[0].cancelable)
-      .to.be.true;
+    const alias = aliases[0];
+    if (!alias) throw new Error('The invalid alias was not emitted.');
+    expect(alias.bubbles && alias.composed && alias.cancelable).to.be.true;
     expect(natives).to.have.lengthOf(1);
-    expect(natives[0].defaultPrevented).to.be.true;
+    const native = natives[0];
+    if (!native) throw new Error('The native invalid event was not emitted.');
+    expect(native.defaultPrevented).to.be.true;
   });
 
   it("blocks form submission and becomes the validationMessage", async () => {
@@ -3780,7 +4015,7 @@ describe("click-to-seek on the track", () => {
   }
 
   const seek = (el: LyraTimeRange, clientX: number, pointerId = 1) => {
-    const base = pinTrack(el);
+    pinTrack(el);
     const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
     track.dispatchEvent(
       new PointerEvent("pointerdown", {
@@ -4153,6 +4388,8 @@ describe("active-preset pointer feedback", () => {
     `)) as HTMLElement;
     const el = wrapper.querySelector("lr-time-range") as LyraTimeRange;
     el.presets = PRESETS;
+    await el.updateComplete;
+    el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="preset-button"]')[1]!.click();
     await el.updateComplete;
     return el;
   }

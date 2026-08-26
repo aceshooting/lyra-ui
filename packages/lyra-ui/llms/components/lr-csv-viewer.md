@@ -6,9 +6,10 @@
 - **Class** `LyraCsvViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/csv-viewer/csv-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `papaparse` — see `llms/peers.md`
-- **Themeable via** 11 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -24,10 +25,11 @@ row/column into view via the virtualized list's `active-item-id`. `highlights` p
 mid-flight reports `found: false` rather than a phantom success.
 
 **Properties:** `src: string = ''` and `name: string = ''`. `hasHeaderRow: boolean = true` (attribute
-`has-header-row`) controls whether the first parsed row is rendered as a sticky header.
+`has-header-row`) controls whether the first parsed row is rendered as a persistent header above
+the virtualized row scrollport.
 Host `aria-label` names both the viewer region and loaded table by attribute presence, including an
 explicitly empty value; `name` and the localized label are fallbacks.
-`maxHeight: string = ''` (attribute `max-height`) is a CSS length that caps the scrollable body —
+`maxHeight: string = ''` (attribute `max-height`) is a CSS length that caps the body allocation —
 setting it writes `--lr-csv-viewer-max-height` inline on `[part="base"]`; invalid CSS `max-height`
 values, declaration breaks, and `url()` are ignored. `anchorKinds: readonly LyraAnchorKind[] =
 ['cell-range']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
@@ -48,18 +50,23 @@ Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor
 search/navigation/clear, canonical source reset, and effective-locale re-evaluation. `lr-text-select` is not part of this
 grid viewer's event contract; its registry capabilities advertise `textSelect: false`.
 
-**CSS parts:** `base`, `body` (the capped scroll surface), `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a structural
+**CSS parts:** `base`, `body` (the capped content allocation), `sheet` (the named `role="table"`),
+`header-row` (persistent above the nested virtual-list row scrollport), `data-row`, `cell`, `cell-highlight` (a structural
 cell covered by a `highlights` entry), `cell-highlight-action` (the native button filling a
 highlighted cell; emits `lr-highlight-activate`; its complete accessible name uses the localized
-`cellHighlightWithLabel` message with independent `{value}` and `{label}` placeholders), `rows`,
-`spinner`, and `error`. `data-row`,
+`cellHighlightWithLabel` message with independent `{value}` and `{label}` placeholders; this action,
+not the structural `cell-highlight`, owns keyboard focus and its focus ring), `rows`,
+`spinner`, `error`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest
+anchor-jump message; the spoken copy is appended to the shared document-level polite sink only while
+the viewer and its composed ancestors are exposed to the accessibility tree). `data-row`,
 `cell`, `cell-highlight`, and `cell-highlight-action` are rendered inside the internal
 `<lr-virtual-list>` and forwarded via `exportparts`, so
 `lr-csv-viewer::part(cell)` reaches them from a consumer stylesheet.
 
 **Themeable custom properties:** `--lr-csv-viewer-max-height` (default `none`) — maximum block size
-of `[part="body"]` before it scrolls internally; also settable via the `maxHeight` property, which
-writes this token inline on `[part="base"]`. `--lr-csv-viewer-highlight-color` (default
+allocated to `[part="body"]`; the nested virtual-list scrolls data rows in the remainder below the
+header. It is also settable via the `maxHeight` property, which writes this token inline on
+`[part="base"]`. `--lr-csv-viewer-highlight-color` (default
 `var(--lr-color-brand)`) — the outline color of a `cell-highlight` cell. The cell matching
 `activeHighlightId` receives a private warning-color default because a `[data-active]` selector
 can't be chained onto the `::part(cell-highlight)` the cell reaches this component's stylesheet

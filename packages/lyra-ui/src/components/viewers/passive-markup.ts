@@ -108,7 +108,8 @@ function isSvgElement(element: Element): boolean {
 /**
  * Applies the network-silent, non-interactive half of embedded-markup sanitization after the
  * required DOMPurify pass. DOMPurify remains the parser/XSS boundary; this second pass narrows
- * resource, navigation, form, CSS and custom-element sinks according to the viewer context.
+ * resource, navigation, form, CSS, shadow-part styling and custom-element sinks according to the
+ * viewer context.
  */
 export function sanitizePassiveMarkup(
   sanitizer: HtmlSanitizer,
@@ -158,6 +159,8 @@ export function sanitizePassiveMarkup(
       const value = element.getAttribute(attributeName) ?? '';
       if (
         name === 'style'
+        || name === 'part'
+        || name === 'exportparts'
         || name.startsWith('on')
         || INTERACTION_ATTRIBUTES.has(name)
       ) {

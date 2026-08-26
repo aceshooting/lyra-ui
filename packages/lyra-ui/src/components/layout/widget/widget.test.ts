@@ -299,7 +299,7 @@ describe("rich label/sublabel", () => {
     ) as HTMLSlotElement;
     const assigned = slot.assignedElements({ flatten: true });
     expect(assigned.length).to.equal(1);
-    expect(assigned[0].textContent).to.equal("rich");
+    expect(assigned[0]!.textContent).to.equal("rich");
   });
 
   it("renders label/sublabel as plain strings when no slot content is provided (unchanged default)", async () => {
@@ -977,7 +977,7 @@ it("stretches the panel base to each CSS grid allocation", async () => {
     (widget) => widget.getBoundingClientRect().height
   );
 
-  expect(hostHeights[0]).to.be.lessThan(hostHeights[2]);
+  expect(hostHeights[0]!).to.be.lessThan(hostHeights[2]!);
   for (const widget of widgets) {
     const base = widget.shadowRoot!.querySelector(
       '[part="base"]'
@@ -2018,7 +2018,7 @@ it("inherits the fullscreen scrim hook while a direct host value remains authori
   `);
   const [inherited, direct] = Array.from(
     wrapper.querySelectorAll("lr-widget")
-  ) as LyraWidget[];
+  ) as [LyraWidget, LyraWidget];
   const inheritedBackdrop = inherited.shadowRoot!.querySelector(
     '[part="backdrop"]'
   ) as HTMLElement;

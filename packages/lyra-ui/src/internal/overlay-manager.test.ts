@@ -11,7 +11,7 @@ import { activateNonmodalOverlay } from './nonmodal-overlay-manager.js';
 
 function createOverlay(doc: Document, label: string) {
   const host = doc.createElement('section');
-  host.dataset.overlay = label;
+  host.dataset['overlay'] = label;
   const panel = doc.createElement('div');
   panel.tabIndex = -1;
   const first = doc.createElement('button');
@@ -110,7 +110,7 @@ it('returns an inert handle when an overlay host has no owner document', () => {
 
 it('uses the lean nonmodal adapter when neither focus trapping nor modal resources are requested', () => {
   const background = document.createElement('button');
-  background.dataset.overlayBackground = '';
+  background.dataset['overlayBackground'] = '';
   document.body.append(background);
   const overlay = createOverlay(document, 'lean-nonmodal');
   let escapes = 0;
@@ -164,7 +164,7 @@ it('routes Escape only to the topmost overlay across different overlay owners', 
 
 it('shares ordering, Escape, inerting, and focus return across modal and nonmodal adapters', () => {
   const background = document.createElement('button');
-  background.dataset.overlayBackground = '';
+  background.dataset['overlayBackground'] = '';
   document.body.append(background);
   background.focus();
   const modal = createOverlay(document, 'mixed-modal');
@@ -233,8 +233,8 @@ it('moves a suspended nonmodal entry between document stacks without disturbing 
 it('scopes a third-party modal above the Lyra stack until its release handle is called', () => {
   const overlay = createOverlay(document, 'lyra-below-external');
   const external = document.createElement('section');
-  external.dataset.overlayBackground = '';
-  external.dataset.externalModal = '';
+  external.dataset['overlayBackground'] = '';
+  external.dataset['externalModal'] = '';
   document.body.append(external);
   const dismissed: string[] = [];
   const handle = activateOverlay({
@@ -269,8 +269,8 @@ it('nests independent external-modal suspension handles without an unbalanced re
   const overlay = createOverlay(document, 'lyra-below-two-externals');
   const first = document.createElement('section');
   const second = document.createElement('section');
-  first.dataset.overlayBackground = '';
-  second.dataset.overlayBackground = '';
+  first.dataset['overlayBackground'] = '';
+  second.dataset['overlayBackground'] = '';
   document.body.append(first, second);
   const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
 
@@ -298,7 +298,7 @@ it('nests independent external-modal suspension handles without an unbalanced re
 
 it('preserves Lyra stack order and focus-return targets across an external modal', () => {
   const trigger = document.createElement('button');
-  trigger.dataset.overlayBackground = '';
+  trigger.dataset['overlayBackground'] = '';
   document.body.append(trigger);
   trigger.focus();
   const bottom = createOverlay(document, 'bottom-before-external');
@@ -314,7 +314,7 @@ it('preserves Lyra stack order and focus-return targets across an external modal
   topHandle.focusInitial();
 
   const external = document.createElement('section');
-  external.dataset.overlayBackground = '';
+  external.dataset['overlayBackground'] = '';
   document.body.append(external);
   const release = suspendLyraModalsFor(external);
   release();
@@ -330,7 +330,7 @@ it('preserves Lyra stack order and focus-return targets across an external modal
 it('automatically releases an external-modal suspension when its owner disconnects', async () => {
   const overlay = createOverlay(document, 'lyra-after-external-disconnect');
   const external = document.createElement('section');
-  external.dataset.overlayBackground = '';
+  external.dataset['overlayBackground'] = '';
   document.body.append(external);
   const dismissed: string[] = [];
   const handle = activateOverlay({
@@ -353,7 +353,7 @@ it('automatically releases an external-modal suspension when its owner disconnec
 it('yields Tab without trapping focus while an external modal suspension is active', () => {
   const overlay = createOverlay(document, 'lyra-yields-tab');
   const external = document.createElement('section');
-  external.dataset.overlayBackground = '';
+  external.dataset['overlayBackground'] = '';
   document.body.append(external);
   const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
   handle.focusInitial();
@@ -373,7 +373,7 @@ it('yields Tab without trapping focus while an external modal suspension is acti
 it('automatically releases an external-modal suspension when its owner is adopted into another document', async () => {
   const overlay = createOverlay(document, 'lyra-after-external-adoption');
   const external = document.createElement('section');
-  external.dataset.overlayBackground = '';
+  external.dataset['overlayBackground'] = '';
   document.body.append(external);
   const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
   const release = suspendLyraModalsFor(external);
@@ -454,11 +454,11 @@ it('does not suspend Lyra overlays for a disconnected external modal root', () =
 
 it('updates a return target without changing stack order or moving focus', () => {
   const initialReturn = document.createElement('button');
-  initialReturn.dataset.overlayBackground = '';
-  initialReturn.dataset.returnTarget = 'initial';
+  initialReturn.dataset['overlayBackground'] = '';
+  initialReturn.dataset['returnTarget'] = 'initial';
   const nextReturn = document.createElement('button');
-  nextReturn.dataset.overlayBackground = '';
-  nextReturn.dataset.returnTarget = 'next';
+  nextReturn.dataset['overlayBackground'] = '';
+  nextReturn.dataset['returnTarget'] = 'next';
   document.body.append(initialReturn, nextReturn);
   initialReturn.focus();
 
@@ -486,7 +486,7 @@ it('updates a return target without changing stack order or moving focus', () =>
 
   topHandle.deactivate({ restoreFocus: false });
   bottomHandle.deactivate();
-  expect((document.activeElement as HTMLElement | null)?.dataset.returnTarget).to.equal('next');
+  expect((document.activeElement as HTMLElement | null)?.dataset['returnTarget']).to.equal('next');
 });
 
 it('evaluates a live return target after modal inert cleanup reveals its real focus target', () => {
@@ -503,7 +503,7 @@ it('evaluates a live return target after modal inert cleanup reveals its real fo
     );
   }
   const page = document.createElement('section');
-  page.dataset.overlay = 'live-restore-page';
+  page.dataset['overlay'] = 'live-restore-page';
   const header = document.createElement('header');
   const original = document.createElement('button');
   original.id = 'original-live-trigger';
@@ -588,7 +588,7 @@ it('fails closed for detached, throwing, fake, and foreign live return targets',
 
 it('pulls an escaped focus position back inside and wraps both Tab boundaries', () => {
   const outside = document.createElement('button');
-  outside.dataset.overlayBackground = '';
+  outside.dataset['overlayBackground'] = '';
   document.body.append(outside);
   const overlay = createOverlay(document, 'dialog');
   const handle = activateOverlay({
@@ -620,7 +620,7 @@ it('pulls an escaped focus position back inside and wraps both Tab boundaries', 
 
 it('captures and restores focus in stack order, including direct deactivation', () => {
   const trigger = document.createElement('button');
-  trigger.dataset.overlayBackground = '';
+  trigger.dataset['overlayBackground'] = '';
   document.body.append(trigger);
   trigger.focus();
 
@@ -685,7 +685,7 @@ it('keeps the legacy initial-focus path unchanged when no focus hook is supplied
 
 it('runs the initial-focus hook once and honors both its allow and veto decisions', () => {
   const outside = document.createElement('button');
-  outside.dataset.overlayBackground = '';
+  outside.dataset['overlayBackground'] = '';
   outside.id = 'initial-focus-hook-outside';
   document.body.append(outside);
 
@@ -731,11 +731,11 @@ it('runs the initial-focus hook once and honors both its allow and veto decision
 
 it('defers the one-shot initial-focus hook until a hidden panel renders', async () => {
   const outside = document.createElement('button');
-  outside.dataset.overlayBackground = '';
+  outside.dataset['overlayBackground'] = '';
   document.body.append(outside);
   outside.focus();
   const ancestor = document.createElement('div');
-  ancestor.dataset.overlayBackground = '';
+  ancestor.dataset['overlayBackground'] = '';
   ancestor.style.display = 'none';
   const overlay = createOverlay(document, 'deferred-initial-focus');
   ancestor.append(overlay.host);
@@ -768,7 +768,7 @@ it('defers the one-shot initial-focus hook until a hidden panel renders', async 
 
 it('rebases an upper overlay return target when a lower overlay disappears', () => {
   const trigger = document.createElement('button');
-  trigger.dataset.overlayBackground = '';
+  trigger.dataset['overlayBackground'] = '';
   document.body.append(trigger);
   trigger.focus();
   const bottom = createOverlay(document, 'bottom');
@@ -799,7 +799,7 @@ it('rebases a live return resolver through a nested overlay and evaluates it aft
     );
   }
   const trigger = document.createElement(tagName);
-  trigger.dataset.overlayBackground = '';
+  trigger.dataset['overlayBackground'] = '';
   document.body.append(trigger);
   const inner = trigger.shadowRoot!.querySelector<HTMLButtonElement>('button')!;
   inner.focus();
@@ -865,7 +865,7 @@ it('resolves a live return target in the overlay current document after adoption
 
 it('suspends and resumes across synchronous reparenting without losing its focus-return record', async () => {
   const trigger = document.createElement('button');
-  trigger.dataset.overlayBackground = '';
+  trigger.dataset['overlayBackground'] = '';
   document.body.append(trigger);
   trigger.focus();
   const overlay = createOverlay(document, 'dialog');
@@ -918,12 +918,12 @@ it('preserves the existing stack order when a lower overlay is suspended and res
 
 it('suspends inerting, focus trapping, stack ownership, and scroll lock while its host has no layout box', async () => {
   const trigger = document.createElement('button');
-  trigger.dataset.overlayBackground = '';
-  trigger.dataset.returnTarget = 'rendered-lifecycle';
+  trigger.dataset['overlayBackground'] = '';
+  trigger.dataset['returnTarget'] = 'rendered-lifecycle';
   document.body.append(trigger);
   trigger.focus();
   const background = document.createElement('main');
-  background.dataset.overlayBackground = '';
+  background.dataset['overlayBackground'] = '';
   document.body.append(background);
   const overlay = createOverlay(document, 'rendered-lifecycle');
   let dismissals = 0;
@@ -964,10 +964,10 @@ it('suspends inerting, focus trapping, stack ownership, and scroll lock while it
 
 it('does not claim modal resources when activated under a hidden ancestor, then resumes in place', async () => {
   const background = document.createElement('main');
-  background.dataset.overlayBackground = '';
+  background.dataset['overlayBackground'] = '';
   document.body.append(background);
   const ancestor = document.createElement('div');
-  ancestor.dataset.overlayBackground = '';
+  ancestor.dataset['overlayBackground'] = '';
   ancestor.style.display = 'none';
   const overlay = createOverlay(document, 'hidden-before-open');
   ancestor.append(overlay.host);
@@ -1058,7 +1058,7 @@ it('keeps rendered suspension across a synchronous disconnect/reconnect until th
 
   handle.suspend();
   const destination = document.createElement('div');
-  destination.dataset.overlayBackground = '';
+  destination.dataset['overlayBackground'] = '';
   document.body.append(destination);
   destination.append(overlay.host);
   handle.resume();
@@ -1114,10 +1114,10 @@ it('moves focus into a surviving lower overlay when the top closes without resto
 
 it('makes modal background paths inert and restores pre-existing inert state', () => {
   const preInert = document.createElement('aside');
-  preInert.dataset.overlayBackground = '';
+  preInert.dataset['overlayBackground'] = '';
   preInert.inert = true;
   const background = document.createElement('main');
-  background.dataset.overlayBackground = '';
+  background.dataset['overlayBackground'] = '';
   document.body.append(preInert, background);
   const overlay = createOverlay(document, 'dialog');
 
@@ -1133,7 +1133,7 @@ it('makes modal background paths inert and restores pre-existing inert state', (
 
 it('can keep a modal subtree interactive while inerting same-host application siblings', async () => {
   const page = document.createElement('section');
-  page.dataset.overlay = 'same-host-page';
+  page.dataset['overlay'] = 'same-host-page';
   const header = document.createElement('header');
   const main = document.createElement('main');
   const footer = document.createElement('footer');
@@ -1142,7 +1142,7 @@ it('can keep a modal subtree interactive while inerting same-host application si
   header.inert = true;
   page.append(header, main, footer, drawer);
   const outside = document.createElement('div');
-  outside.dataset.overlayBackground = '';
+  outside.dataset['overlayBackground'] = '';
   document.body.append(page, outside);
 
   const pageHandle = activateOverlay({
@@ -1192,7 +1192,7 @@ it('can keep a modal subtree interactive while inerting same-host application si
 
 it('tracks live application inert changes while keeping modal background inert', async () => {
   const background = document.createElement('main');
-  background.dataset.overlayBackground = '';
+  background.dataset['overlayBackground'] = '';
   background.inert = true;
   document.body.append(background);
   const overlay = createOverlay(document, 'dialog');
@@ -1208,7 +1208,7 @@ it('tracks live application inert changes while keeping modal background inert',
 
 it('restores original inert state after a managed background is detached and reinserted', async () => {
   const background = document.createElement('main');
-  background.dataset.overlayBackground = '';
+  background.dataset['overlayBackground'] = '';
   document.body.append(background);
   const overlay = createOverlay(document, 'dialog');
   const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
@@ -1345,7 +1345,7 @@ it('collects rendered focus targets through slots and nested shadow roots', () =
 
   const focusable = collectFocusableElements(wrapper);
   expect(focusable.length).to.equal(1);
-  expect(focusable[0].tagName).to.equal('INPUT');
+  expect(focusable[0]!.tagName).to.equal('INPUT');
   wrapper.remove();
 });
 
@@ -1484,25 +1484,25 @@ it('models each native radio group as one Tab stop', () => {
   const unchecked = document.createElement('input');
   unchecked.type = 'radio';
   unchecked.name = 'choice';
-  unchecked.dataset.radio = 'unchecked';
+  unchecked.dataset['radio'] = 'unchecked';
   const checked = document.createElement('input');
   checked.type = 'radio';
   checked.name = 'choice';
   checked.checked = true;
-  checked.dataset.radio = 'checked';
+  checked.dataset['radio'] = 'checked';
   const otherGroup = document.createElement('input');
   otherGroup.type = 'radio';
   otherGroup.name = 'other';
-  otherGroup.dataset.radio = 'other';
+  otherGroup.dataset['radio'] = 'other';
   const unnamed = document.createElement('input');
   unnamed.type = 'radio';
-  unnamed.dataset.radio = 'unnamed';
+  unnamed.dataset['radio'] = 'unnamed';
   root.append(unchecked, checked, otherGroup, unnamed);
   document.body.append(root);
 
   const focusable = collectFocusableElements(root);
 
-  expect(focusable.map((element) => element.dataset.radio)).to.deep.equal(['checked', 'other', 'unnamed']);
+  expect(focusable.map((element) => element.dataset['radio'])).to.deep.equal(['checked', 'other', 'unnamed']);
   root.remove();
 });
 
@@ -1528,7 +1528,7 @@ it('traverses fallback content of an unassigned slot', () => {
   const focusable = collectFocusableElements(host);
 
   expect(focusable.length).to.equal(1);
-  expect(focusable[0].textContent).to.equal('fallback');
+  expect(focusable[0]!.textContent).to.equal('fallback');
   host.remove();
 });
 
@@ -1681,7 +1681,7 @@ it('keeps a non-scrolling tabindex="-1" element out of the tab order', () => {
 
 it('keeps Tab inside a panel whose only stop is an overflowing scroll region', () => {
   const host = document.createElement('section');
-  host.dataset.overlay = 'scroll-panel';
+  host.dataset['overlay'] = 'scroll-panel';
   const panel = document.createElement('div');
   panel.tabIndex = -1;
   const region = document.createElement('div');
@@ -1719,7 +1719,7 @@ it('falls back to getClientRects when checkVisibility is unavailable on the elem
   try {
     const focusable = collectFocusableElements(root);
     expect(focusable.length).to.equal(1);
-    expect(focusable[0].textContent).to.equal('target');
+    expect(focusable[0]!.textContent).to.equal('target');
   } finally {
     button.checkVisibility = original;
     root.remove();
@@ -1775,7 +1775,7 @@ it('wraps Tab (and Shift+Tab) to an edge focusable target when nothing is curren
 
 it('coalesces a second inert-update mutation batch that arrives before the first is applied', async () => {
   const background = document.createElement('main');
-  background.dataset.overlayBackground = '';
+  background.dataset['overlayBackground'] = '';
   document.body.append(background);
   const overlay = createOverlay(document, 'dialog');
   const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
@@ -1796,7 +1796,7 @@ it('coalesces a second inert-update mutation batch that arrives before the first
     // still pending -- it must find the update already queued and fold into it rather than scheduling
     // a second one.
     const second = document.createElement('aside');
-    second.dataset.overlayBackground = '';
+    second.dataset['overlayBackground'] = '';
     document.body.append(second);
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
     expect(captured.length).to.equal(1);
@@ -1814,7 +1814,7 @@ it('coalesces a second inert-update mutation batch that arrives before the first
 
 it('coalesces two rapid same-element inert attribute changes into their final settled value', async () => {
   const background = document.createElement('main');
-  background.dataset.overlayBackground = '';
+  background.dataset['overlayBackground'] = '';
   document.body.append(background);
   const overlay = createOverlay(document, 'dialog');
   const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });

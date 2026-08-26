@@ -1,6 +1,6 @@
 #!/usr/bin/env node
+import { isMainModule } from './is-main-module.mjs';
 
-import { realpathSync } from 'node:fs';
 import { readdir, readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,6 +14,7 @@ import { parseSync } from 'oxc-parser';
 const UNRESOLVED_CEILING = 27;
 
 const componentsRoot = fileURLToPath(new URL('../src/components/', import.meta.url));
+const internalRoot = fileURLToPath(new URL('../src/internal/', import.meta.url));
 const localizationFile = fileURLToPath(new URL('../src/internal/localization.ts', import.meta.url));
 const packageRoot = fileURLToPath(new URL('../', import.meta.url));
 
@@ -352,23 +353,26 @@ async function sourceFiles(directory) {
 }
 
 async function main() {
-  const files = (await sourceFiles(componentsRoot)).sort();
+  const files = [
+    ...(await sourceFiles(componentsRoot)),
+    ...(await sourceFiles(internalRoot)),
+  ].sort();
   const [localizationSource, ...sources] = await Promise.all([
     readFile(localizationFile, 'utf8'),
     ...files.map((file) => readFile(file, 'utf8')),
   ]);
-  const componentSources = files.map((file, index) => ({
+  const productionSources = files.map((file, index) => ({
     file: relative(packageRoot, file),
     source: sources[index],
   }));
-  const shared = sharedStringConstants(componentSources);
-  const all = componentSources.flatMap(({ file, source }) =>
+  const shared = sharedStringConstants(productionSources);
+  const all = productionSources.flatMap(({ file, source }) =>
     localizeCalls(source, file, shared).map((call) => ({ ...call, file })),
   );
   const resolved = all.filter(({ keys }) => keys !== undefined);
   const unresolved = all.filter(({ keys }) => keys === undefined);
   const keys = new Set(resolved.flatMap(({ keys: resolvedKeys }) => resolvedKeys));
-  const missing = findMissingDefaultStrings(componentSources, localizationSource);
+  const missing = findMissingDefaultStrings(productionSources, localizationSource);
   if (missing.length > 0) {
     console.error('Component localize() keys missing from DEFAULT_STRINGS:');
     for (const finding of missing) {
@@ -393,7 +397,7 @@ async function main() {
     return;
   }
   console.log(
-    `Default-string contract passed: ${all.length} component localize() call(s), ` +
+    `Default-string contract passed: ${all.length} component/internal localize() call(s), ` +
       `${resolved.length} resolved to ${keys.size} distinct key(s), ` +
       `${unresolved.length} not statically decidable (ceiling ${UNRESOLVED_CEILING}).`,
   );
@@ -402,6 +406,6 @@ async function main() {
   }
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
+if (isMainModule(import.meta.url)) {
   await main();
 }

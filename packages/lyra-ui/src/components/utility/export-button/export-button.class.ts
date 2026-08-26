@@ -2,7 +2,10 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { place } from '../../../internal/positioner.js';
+import {
+  deferredPlaceReady as place,
+  type DeferredOperationHandle,
+} from '../../../internal/anchored-overlay-runtime.js';
 import { nextId } from '../../../internal/a11y.js';
 import { buildCsv, downloadBlob, type LyraCsvColumn } from './csv.js';
 import { styles } from './export-button.styles.js';
@@ -113,7 +116,8 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   @property() filename = 'export';
   private _formats: readonly LyraExportFormatOption[] = Object.freeze(['csv']);
 
-  /** Format choices keyed by unique, nonempty `formatId`; the first duplicate wins. */
+  /** Format choices keyed by unique, nonempty `formatId`; the first duplicate wins. An empty or
+   * fully rejected list disables the trigger because there is no export action to perform. */
   get formats(): readonly LyraExportFormatOption[] {
     return this._formats;
   }
@@ -149,11 +153,12 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   @property({ type: Boolean, reflect: true }) loading = false;
   /** Visible trigger button text. It also feeds the format menu's `aria-label` when no host
    * `aria-label` supplies a more specific name. `undefined` uses the localized default; every
-   * supplied string, including `''` and `'Export'`, is caller-owned. */
+   * supplied string, including `''` and `'Export'`, is caller-owned visible copy. An empty or
+   * whitespace-only visible label retains the localized default as the trigger's accessible name. */
   @property() label?: string;
   /** Accessible name forwarded from the host to the native trigger button.
-   * When unset, the trigger's visible `label` provides its name. An explicit empty string remains
-   * authoritative by attribute/property presence. */
+   * When unset, a nonempty visible `label` provides the name; an empty visible label uses the
+   * localized default. An explicit empty `aria-label` remains authoritative by presence. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @property({ type: Boolean, reflect: true }) open = false;
 
@@ -161,7 +166,8 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   @query('[part="menu"]') private menuEl?: HTMLElement;
 
   private readonly menuId = nextId('export-menu');
-  private cleanup?: () => void;
+  private cleanup?: DeferredOperationHandle;
+  private menuPositioned = false;
   private pointerDocument?: Document;
   private _isFirstUpdate = true;
   private openVetoed = false;
@@ -220,11 +226,11 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
 
   /** Opens the menu (if closed) and focuses `index`, or moves focus there directly if already open. */
   private focusMenuItemOnOpen(index: number): void {
-    if (this.open) {
+    if (this.open && this.menuPositioned) {
       this.focusMenuItem(index);
     } else {
       this.pendingMenuFocusIndex = index;
-      this.openMenu();
+      if (!this.open) this.openMenu();
     }
   }
 
@@ -366,6 +372,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     ) {
       this.cleanup?.();
       this.cleanup = undefined;
+      this.menuPositioned = false;
       // Reacting to the `open` property itself (not just inside
       // openMenu()) means this runs however `open` became true -- via
       // openMenu()'s own click path, or a consumer/test setting
@@ -377,10 +384,22 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       if (this.open) {
         const anchor = this.triggerEl;
         const menu = this.menuEl;
-        if (anchor && menu) this.cleanup = place(anchor, menu);
+        if (anchor && menu) {
+          const placement = place(anchor, menu);
+          this.cleanup = placement;
+          void placement.ready.then((positioned) => {
+            if (this.cleanup !== placement || !this.open || !this.isConnected) return;
+            if (!positioned) {
+              this.forcedMenuClose = 'state';
+              this.open = false;
+              return;
+            }
+            this.menuPositioned = true;
+            this.focusMenuItem(this.pendingMenuFocusIndex);
+            this.pendingMenuFocusIndex = 0;
+          });
+        }
         this.bindDocumentPointer();
-        this.focusMenuItem(this.pendingMenuFocusIndex);
-        this.pendingMenuFocusIndex = 0;
       }
     }
     if (changed.has('formats') && this.formatsFocusSnapshot) {
@@ -395,7 +414,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
           this.triggerEl?.focus();
         } else if (this.open) {
           const nextIndex = this.formats.findIndex((format) => this.formatId(format) === id);
-          this.focusMenuItem(nextIndex >= 0 ? nextIndex : index);
+          this.focusMenuItemOnOpen(nextIndex >= 0 ? nextIndex : index);
         }
       });
     }
@@ -494,18 +513,22 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
    *  built-in default it instead routes through `this.localize()` so a locale/`.strings`
    *  override applies without requiring `label` itself to be set. */
   private get effectiveLabel(): string {
-    return this.label === undefined ? this.localize('exportButtonLabel') : this.label;
+    return this.label == null ? this.localize('exportButtonLabel') : this.label;
   }
 
   override render(): TemplateResult {
     const label = this.effectiveLabel;
-    const accessibleLabel = this.accessibleLabel ?? label;
+    const labelNamesTrigger = label.trim().length > 0;
+    const accessibleLabel =
+      this.accessibleLabel ?? (labelNamesTrigger ? label : this.localize('exportButtonLabel'));
+    const triggerAriaLabel =
+      this.accessibleLabel !== null || !labelNamesTrigger ? accessibleLabel : nothing;
     return html`
       <button
         part="trigger"
         type="button"
-        ?disabled=${this.disabled || this.loading}
-        aria-label=${this.accessibleLabel ?? nothing}
+        ?disabled=${this.disabled || this.loading || this.formats.length === 0}
+        aria-label=${triggerAriaLabel}
         aria-busy=${this.loading ? 'true' : 'false'}
         aria-haspopup=${this.formats.length > 1 ? 'menu' : nothing}
         aria-expanded=${this.formats.length > 1 ? (this.open ? 'true' : 'false') : nothing}

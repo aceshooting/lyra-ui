@@ -15,7 +15,9 @@ export type LyraSkeletonEffect = 'pulse' | 'sheen' | 'none';
 /**
  * `<lr-skeleton>` — a loading placeholder mirroring the public Web Awesome/Shoelace skeleton
  * surface under the `lr-` prefix. It is decorative by default like both upstreams; `announce`
- * opts one placeholder into a localized status. Geometry is exposed as `shape`.
+ * opts one placeholder into a localized status. An author-supplied host role remains authoritative;
+ * the component adds/removes `role="status"` only when it owns that opt-in role. Geometry is
+ * exposed as `shape`.
  *
  * @customElement lr-skeleton
  * @csspart base - Compatibility name for the placeholder shape.
@@ -58,12 +60,22 @@ export class LyraSkeleton extends LyraElement {
    *  every supplied value, including the English fallback or an empty string, remains literal. */
   @property() label?: string;
 
+  /** True only while this component, rather than the author, owns the current status role. */
+  private ownsStatusRole = false;
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    const role = this.getAttribute('role');
     if (this.announce) {
-      this.setAttribute('role', 'status');
-    } else {
-      this.removeAttribute('role');
+      if (role === null) {
+        this.setAttribute('role', 'status');
+        this.ownsStatusRole = true;
+      } else if (role !== 'status') {
+        this.ownsStatusRole = false;
+      }
+    } else if (this.ownsStatusRole) {
+      if (role === 'status') this.removeAttribute('role');
+      this.ownsStatusRole = false;
     }
   }
 

@@ -83,6 +83,30 @@ export const StructuredParts: Story = {
   `,
 };
 
+/** Public retrieval, context-budget, and built-in composer state forwarded to their child surfaces. */
+export const ControlledChildState: Story = {
+  render: () => html`
+    <div style="height: 640px; padding: var(--lr-space-m);">
+      <lr-agent-workspace
+        label="Controlled assistant state"
+        .messages=${messages}
+        .retrievalChunks=${[
+          { id: 'chunk-1', text: 'Release notes passage', score: 0.94, source: { id: 'doc-1', name: 'CHANGELOG.md' } },
+        ]}
+        .retrievalLoading=${true}
+        .retrievalHasMore=${true}
+        .contextSegments=${[
+          { id: 'context-1', label: 'Release notes', text: 'Selected context', tokens: 1_240 },
+        ]}
+        .contextTotal=${16_384}
+        .composerStatus=${'streaming'}
+        .composerMinRows=${3}
+        .composerMaxRows=${6}
+      ></lr-agent-workspace>
+    </div>
+  `,
+};
+
 export const NarrowAllocation: Story = {
   render: () => html`
     <div style="inline-size: 360px; height: 640px;">

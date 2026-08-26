@@ -43,6 +43,7 @@ function snapshotItems(value: unknown): readonly HighlightLayerItem[] {
       if (typeof rawId !== 'string') continue;
       const id = rawId.trim();
       if (id.length === 0 || seenIds.has(id)) continue;
+      if (!Array.isArray((candidate as { rects?: unknown }).rects)) continue;
       seenIds.add(id);
       output.push(rawId === id ? candidate as HighlightLayerItem : { ...candidate, id } as HighlightLayerItem);
     } catch {

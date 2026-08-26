@@ -1,8 +1,8 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './highlight-layer.js';
 import type { LyraHighlightLayer, HighlightLayerItem } from './highlight-layer.js';
-import { styles } from './highlight-layer.styles.js';
 import { maxPairedAnimationEndMs } from './highlight-layer-timing.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const ITEMS: HighlightLayerItem[] = [
   { id: 'a', rects: [{ x: 10, y: 10, width: 20, height: 5 }], label: 'Zone A', tone: 'accent' },
@@ -117,8 +117,8 @@ describe('lr-highlight-layer', () => {
       html`<lr-highlight-layer .items=${ITEMS} active-highlight-id="b"></lr-highlight-layer>`,
     );
     const targets = itemActions(el);
-    expect(targets[0].getAttribute('aria-current')).to.equal('false');
-    expect(targets[1].getAttribute('aria-current')).to.equal('true');
+    expect(targets[0]!.getAttribute('aria-current')).to.equal('false');
+    expect(targets[1]!.getAttribute('aria-current')).to.equal('true');
   });
 
   it('gives one multi-rect logical highlight one semantic roving target', async () => {
@@ -230,6 +230,20 @@ describe('lr-highlight-layer', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="rect"]')).to.have.length(1);
   });
 
+  it('omits missing and non-array rect collections without reserving ids or losing valid neighbors', async () => {
+    const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer></lr-highlight-layer>`);
+    el.items = [
+      { id: 'shared' },
+      { id: 'wrong-shape', rects: 'nope' },
+      { id: 'shared', rects: [{ x: 1, y: 2, width: 3, height: 4 }] },
+      { id: 'neighbor', rects: [{ x: 5, y: 6, width: 7, height: 8 }] },
+    ] as unknown as HighlightLayerItem[];
+    await el.updateComplete;
+
+    expect(el.items.map((item) => item.id)).to.deep.equal(['shared', 'neighbor']);
+    expect(el.shadowRoot!.querySelectorAll('[part="rect"]')).to.have.length(2);
+  });
+
   it('focuses an item whose public id contains selector metacharacters', async () => {
     const items: HighlightLayerItem[] = [
       { id: 'ordinary', rects: [{ x: 5, y: 5, width: 10, height: 5 }] },
@@ -253,14 +267,14 @@ describe('lr-highlight-layer', () => {
       window.removeEventListener('error', onError);
     }
     expect(uncaught).to.be.undefined;
-    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset.id).to.equal('quote"]');
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']).to.equal('quote"]');
   });
 
   it('names a labeled rect via highlightWithLabel and an unlabeled one via highlightOfTotal', async () => {
     const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>`);
     const targets = itemActions(el);
-    expect(targets[0].getAttribute('aria-label')).to.equal('Highlight: Zone A');
-    expect(targets[1].getAttribute('aria-label')).to.equal('Highlight 2 of 2');
+    expect(targets[0]!.getAttribute('aria-label')).to.equal('Highlight: Zone A');
+    expect(targets[1]!.getAttribute('aria-label')).to.equal('Highlight 2 of 2');
   });
 
   it('renumbers action labels after filtering items with no rendered rectangles', async () => {
@@ -331,8 +345,8 @@ describe('lr-highlight-layer', () => {
     first.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     await el.updateComplete;
     const rects = itemActions(el);
-    expect(rects[1].getAttribute('tabindex')).to.equal('0');
-    expect(rects[0].getAttribute('tabindex')).to.equal('-1');
+    expect(rects[1]!.getAttribute('tabindex')).to.equal('0');
+    expect(rects[0]!.getAttribute('tabindex')).to.equal('-1');
   });
 
   it('ArrowUp moves the roving tab stop back to the previous rect', async () => {
@@ -343,8 +357,8 @@ describe('lr-highlight-layer', () => {
     await el.updateComplete;
 
     const rects = itemActions(el);
-    expect(rects[0].getAttribute('tabindex')).to.equal('0');
-    expect(rects[1].getAttribute('tabindex')).to.equal('-1');
+    expect(rects[0]!.getAttribute('tabindex')).to.equal('0');
+    expect(rects[1]!.getAttribute('tabindex')).to.equal('-1');
   });
 
   it('Home/End jump the roving tab stop to the first/last rendered rect', async () => {
@@ -414,13 +428,13 @@ describe('lr-highlight-layer', () => {
     `);
     const targets = itemActions(el);
     targets[2]!.focus();
-    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset.id).to.equal('c');
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']).to.equal('c');
 
     el.items = items.slice(0, 2);
     await el.updateComplete;
     const surviving = itemActions(el);
-    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset.id).to.equal('b');
-    expect(surviving.filter((target) => target.tabIndex === 0).map((target) => target.dataset.id)).to.deep.equal([
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']).to.equal('b');
+    expect(surviving.filter((target) => target.tabIndex === 0).map((target) => target.dataset['id'])).to.deep.equal([
       'b',
     ]);
   });
@@ -430,7 +444,7 @@ describe('lr-highlight-layer', () => {
       <lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>
     `);
     itemActions(el)[1]!.focus();
-    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset.id).to.equal('b');
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']).to.equal('b');
 
     el.items = [{ id: 'empty', rects: [] }];
     await el.updateComplete;
@@ -470,8 +484,8 @@ describe('lr-highlight-layer', () => {
     el.flash('a');
     await el.updateComplete;
     const rects = el.shadowRoot!.querySelectorAll('[part="rect"]');
-    expect(rects[0].hasAttribute('data-flash')).to.be.true;
-    expect(rects[1].hasAttribute('data-flash')).to.be.false;
+    expect(rects[0]!.hasAttribute('data-flash')).to.be.true;
+    expect(rects[1]!.hasAttribute('data-flash')).to.be.false;
   });
 
   it('uses the computed flash animation duration for state cleanup', async () => {
@@ -544,7 +558,7 @@ describe('lr-highlight-layer', () => {
     await Promise.resolve();
 
     const flashing = el.shadowRoot!.querySelector<HTMLElement>('[data-flash]');
-    expect(flashing?.dataset.id).to.equal('b');
+    expect(flashing?.dataset['id']).to.equal('b');
   });
 
   it('ignores an obsolete flash timer after a newer highlight starts flashing', async () => {
@@ -555,7 +569,7 @@ describe('lr-highlight-layer', () => {
     const originalClearTimeout = window.clearTimeout;
     const handlers: Array<() => void> = [];
     window.setTimeout = ((handler: TimerHandler) => {
-      if (typeof handler === 'function') handlers.push(handler);
+      if (typeof handler === 'function') handlers.push(() => handler());
       return 80 + handlers.length;
     }) as typeof window.setTimeout;
     window.clearTimeout = (() => undefined) as typeof window.clearTimeout;
@@ -573,7 +587,7 @@ describe('lr-highlight-layer', () => {
       await el.updateComplete;
 
       const flashing = el.shadowRoot!.querySelector<HTMLElement>('[data-flash]');
-      expect(flashing?.dataset.id).to.equal('b');
+      expect(flashing?.dataset['id']).to.equal('b');
     } finally {
       el.remove();
       window.setTimeout = originalSetTimeout;
@@ -669,7 +683,7 @@ describe('lr-highlight-layer', () => {
     const target = el.shadowRoot!.querySelector('[part="rect-target"]') as HTMLElement;
     const box = target.getBoundingClientRect();
     const hit = el.shadowRoot!.elementFromPoint(box.left + box.width / 2 + 15, box.top + box.height / 2);
-    expect((hit as HTMLElement | null)?.dataset.id).to.equal('small');
+    expect((hit as HTMLElement | null)?.dataset['id']).to.equal('small');
   });
 
   it('moves adjacent logical highlights to non-overlapping minimum-size actions', async () => {
@@ -714,8 +728,8 @@ describe('lr-highlight-layer', () => {
       ></lr-highlight-layer>
     `);
     const targets = itemActions(el);
-    expect(targets[0].getAttribute('aria-label')).to.equal('Surlignage : Zone A');
-    expect(targets[1].getAttribute('aria-label')).to.equal('Surlignage 2 sur 2');
+    expect(targets[0]!.getAttribute('aria-label')).to.equal('Surlignage : Zone A');
+    expect(targets[1]!.getAttribute('aria-label')).to.equal('Surlignage 2 sur 2');
   });
 
   it('resolves the group aria-label through a .strings override when no host aria-label is set', async () => {
@@ -732,10 +746,88 @@ describe('lr-highlight-layer', () => {
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
   });
 
-  it('gives an interactive rect a hover state matching its focus-visible affordance', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='rect-target'\]:hover/);
-    expect(css).to.match(/\[part='highlight-action'\]:hover/);
+  it('renders distinct real-pointer hover feedback for rect targets and grouped actions', async () => {
+    const rectWrapper = await fixture<HTMLElement>(html`
+      <div style="position: relative; width: 200px; height: 200px">
+        <lr-highlight-layer
+          .items=${[
+            {
+              id: 'rect',
+              rects: [{ x: 25, y: 25, width: 30, height: 30 }],
+            },
+          ]}
+        ></lr-highlight-layer>
+      </div>
+    `);
+    const rectLayer = rectWrapper.querySelector(
+      'lr-highlight-layer',
+    ) as LyraHighlightLayer;
+    const target = rectLayer.shadowRoot!.querySelector(
+      '[part="rect-target"]',
+    ) as HTMLElement;
+    const rect = target.nextElementSibling as HTMLElement;
+    const restingOutline = getComputedStyle(rect).outlineWidth;
+    const targetBox = target.getBoundingClientRect();
+
+    try {
+      await resetMouse();
+      await sendMouse({
+        type: 'move',
+        position: [
+          Math.round(targetBox.left + targetBox.width / 2),
+          Math.round(targetBox.top + targetBox.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => getComputedStyle(rect).outlineWidth !== restingOutline,
+        'the rendered rectangle never reflected its target hover state',
+      );
+
+      const actionWrapper = await fixture<HTMLElement>(html`
+        <div style="position: relative; width: 200px; height: 200px">
+          <lr-highlight-layer
+            style="--lr-color-surface: rgb(4, 5, 6); --lr-color-surface-raised: rgb(1, 2, 3)"
+            .items=${[
+              {
+                id: 'first',
+                label: 'First',
+                rects: [{ x: 50, y: 50, width: 1, height: 1 }],
+              },
+              {
+                id: 'second',
+                label: 'Second',
+                rects: [{ x: 51, y: 50, width: 1, height: 1 }],
+              },
+            ]}
+          ></lr-highlight-layer>
+        </div>
+      `);
+      const actionLayer = actionWrapper.querySelector(
+        'lr-highlight-layer',
+      ) as LyraHighlightLayer;
+      const action = actionLayer.shadowRoot!.querySelector(
+        '[part="highlight-action"]',
+      ) as HTMLElement;
+      const restingBackground = getComputedStyle(action).backgroundColor;
+      const actionBox = action.getBoundingClientRect();
+      await resetMouse();
+      await sendMouse({
+        type: 'move',
+        position: [
+          Math.round(actionBox.left + actionBox.width / 2),
+          Math.round(actionBox.top + actionBox.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => getComputedStyle(action).backgroundColor !== restingBackground,
+        'the grouped highlight action never entered its rendered hover state',
+      );
+      expect(getComputedStyle(action).backgroundColor).to.equal(
+        'rgb(1, 2, 3)',
+      );
+    } finally {
+      await resetMouse();
+    }
   });
 });
 

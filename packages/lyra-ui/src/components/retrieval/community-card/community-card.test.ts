@@ -1,8 +1,9 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import './community-card.js';
 import type { LyraCommunityCard, LyraCommunity } from './community-card.js';
 import type { LyraEntity } from '../entity-card/entity-card.js';
-import { styles } from './community-card.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const community: LyraCommunity = {
   id: 'c1',
@@ -256,16 +257,47 @@ it('is accessible with members and an overflow chip', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('gives the title button, member, and overflow parts hover/focus-visible', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='title'\] button:hover/);
-  expect(css).to.match(
-    /\[part='title'\] button:focus-visible[^{]*\{[^}]*outline:/
-  );
-  expect(css).to.match(/\[part='member'\]:hover/);
-  expect(css).to.match(/\[part='overflow'\]:hover/);
-  expect(css).to.match(/\[part='member'\]:focus-visible[^{]*\{[^}]*outline:/);
-  expect(css).to.match(/\[part='overflow'\]:focus-visible[^{]*\{[^}]*outline:/);
+it('renders the title, member, and overflow hover/focus-visible feedback', async () => {
+  const el = await fixture<LyraCommunityCard>(html`
+    <lr-community-card
+      max-members="1"
+      style="--lr-color-brand-quiet: rgb(1, 2, 3); --lr-focus-ring-width: 6px; --lr-focus-ring-color: rgb(4, 5, 6)"
+      .community=${community}
+      .members=${members}
+    ></lr-community-card>
+  `);
+  const title = el.shadowRoot!.querySelector<HTMLElement>('[part="title"] button')!;
+  const member = el.shadowRoot!.querySelector<HTMLElement>('[part="member"]')!;
+  const overflow = el.shadowRoot!.querySelector<HTMLElement>('[part="overflow"]')!;
+
+  for (const target of [title, member, overflow]) {
+    target.scrollIntoView({ block: 'center' });
+    const rect = target.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => target === title
+          ? getComputedStyle(target).textDecorationLine.includes('underline')
+          : getComputedStyle(target).backgroundColor === 'rgb(1, 2, 3)',
+        `${target.getAttribute('part') ?? 'title button'} never painted its hover feedback`
+      );
+    } finally {
+      await resetMouse();
+    }
+
+    await sendKeys({ press: 'Tab' });
+    target.focus();
+    await waitUntil(() => {
+      const computed = getComputedStyle(target);
+      return computed.outlineWidth === '6px' && computed.outlineColor === 'rgb(4, 5, 6)';
+    }, `${target.getAttribute('part') ?? 'title button'} never painted its keyboard focus ring`);
+  }
 });
 
 it('formats member and overflow counts with the effective locale', async () => {

@@ -21,6 +21,7 @@ import {
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
 import { literalSetConverter } from '../../../internal/converters.js';
+import { canonicalIdentityList, isRecord } from '../retrieval-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_retrievalFilterChipLabel, LYRA_DEFAULT_retrievalFiltersLabel, LYRA_DEFAULT_retrievalModeHybrid, LYRA_DEFAULT_retrievalModeKeyword, LYRA_DEFAULT_retrievalModeLabel, LYRA_DEFAULT_retrievalModeVector, LYRA_DEFAULT_retrievalSearchEmptyDescription, LYRA_DEFAULT_retrievalSearchLabel, LYRA_DEFAULT_search, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
@@ -46,7 +47,9 @@ export interface RetrievalFiltersChangeDetail {
 export interface LyraRetrievalSearchEventMap {
   'lr-search': CustomEvent<LyraEventDetailSnapshot<RetrievalQuery>>;
   'lr-cancel': CustomEvent<CancelEventDetail>;
-  'lr-filters-change': CustomEvent<LyraEventDetailSnapshot<RetrievalFiltersChangeDetail>>;
+  'lr-filters-change': CustomEvent<
+    LyraEventDetailSnapshot<RetrievalFiltersChangeDetail>
+  >;
 }
 
 /**
@@ -125,7 +128,10 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  protected static override readonly ownedCollectionProperties = Object.freeze(['filters', 'scope']);
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'filters',
+    'scope',
+  ]);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -156,7 +162,8 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
 
   /** Arbitrary metadata filters, rendered as removable `"{key}: {value}"` chips. Controlled --
    *  reassign to change what's shown; see the class doc's "update, then emit" round-trip. */
-  @property({ attribute: false }) filters: Readonly<Record<string, unknown>> = {};
+  @property({ attribute: false }) filters: Readonly<Record<string, unknown>> =
+    {};
 
   /** Source-scope ids/labels this query is restricted to, rendered as removable chips alongside
    *  `filters`. Same controlled round-trip as `filters`. */
@@ -261,12 +268,20 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
     });
   }
 
+  private get normalizedFilters(): Readonly<Record<string, unknown>> {
+    return isRecord(this.filters) ? this.filters : {};
+  }
+
+  private get normalizedScope(): readonly string[] {
+    return canonicalIdentityList(this.scope);
+  }
+
   private buildQuery(): RetrievalQuery {
     return {
       text: this.query,
       mode: this.mode,
-      filters: { ...this.filters },
-      scope: [...this.scope],
+      filters: { ...this.normalizedFilters },
+      scope: [...this.normalizedScope],
     };
   }
 
@@ -281,8 +296,8 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
 
   private emitFiltersChange(): void {
     this.emit('lr-filters-change', {
-      filters: { ...this.filters },
-      scope: [...this.scope],
+      filters: { ...this.normalizedFilters },
+      scope: [...this.normalizedScope],
     });
   }
 
@@ -307,15 +322,18 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   }
 
   private removeScope(value: string, shouldRepairFocus = false): void {
-    const index = this.scope.indexOf(value);
-    this.scope = this.scope.filter((s) => s !== value);
+    const scope = this.normalizedScope;
+    const index = scope.indexOf(value);
+    this.scope = scope.filter((s) => s !== value);
     this.emitFiltersChange();
     this.repairFocusAfterChipRemoval(Math.max(0, index), shouldRepairFocus);
   }
 
   private removeFilter(key: string, shouldRepairFocus = false): void {
-    const index = this.scope.length + Object.keys(this.filters).indexOf(key);
-    const next = { ...this.filters };
+    const filters = this.normalizedFilters;
+    const index =
+      this.normalizedScope.length + Object.keys(filters).indexOf(key);
+    const next = { ...filters };
     delete next[key];
     this.filters = next;
     this.emitFiltersChange();
@@ -355,11 +373,14 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
     const label = retrievalSemanticLabel(
       this,
       this.accessibleLabel ??
-        (this.label == null ? this.localize('retrievalSearchLabel') : this.label)
+        (this.label == null
+          ? this.localize('retrievalSearchLabel')
+          : this.label)
     );
     const searchRole = retrievalSemanticRole(this, 'search');
-    const hasFilters =
-      Object.keys(this.filters).length > 0 || this.scope.length > 0;
+    const filters = this.normalizedFilters;
+    const scope = this.normalizedScope;
+    const hasFilters = Object.keys(filters).length > 0 || scope.length > 0;
 
     return html`
       <div
@@ -396,7 +417,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
               role="group"
               aria-label=${this.localize('retrievalFiltersLabel')}
             >
-              ${this.scope.map(
+              ${scope.map(
                 (s) => html`<lr-chip
                   variant="brand"
                   removable
@@ -412,7 +433,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
                   >${s}</lr-chip
                 >`
               )}
-              ${Object.entries(this.filters).map(
+              ${Object.entries(filters).map(
                 ([k, v]) => html`<lr-chip
                   removable
                   value=${k}

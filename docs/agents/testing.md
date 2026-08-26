@@ -11,6 +11,12 @@
   `src/components/<family>/<name>/<name>.test.ts`. Run via `pnpm test` from repo root (fans out to
   every package) or `packages/lyra-ui/` for just this package;
   `pnpm test:watch` for iteration.
+- **The complete test tree is a blocking strict-TypeScript surface.** Run `pnpm run
+  check:test-types` from `packages/lyra-ui/`; it covers every colocated test, ambient declaration,
+  and shared `test/**/*.ts` helper under `tsconfig.test.json`. Fix diagnostics with the real
+  browser/test contract: complete platform fakes, explicit runtime guards, and precise private-seam
+  interfaces. Do not make a red gate disappear with blanket casts, suppressions, relaxed compiler
+  options, or narrower include/exclude patterns.
 - **Scoping `wtr` to specific files needs the flag repeated, not comma-joined.** `pnpm test
   --files "a.test.ts,b.test.ts"` and `pnpm test -- --files "..."` both silently report "Could not
   find any test files." Working forms: repeat `--files` once per file (`pnpm test --files

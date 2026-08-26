@@ -98,6 +98,7 @@ it('gives host focus and click their native meanings on the first enabled checkb
   const button = wrapper.querySelector('button') as HTMLButtonElement;
   const group = wrapper.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
   const [disabled, enabled] = [...group.querySelectorAll('lr-checkbox')] as LyraCheckbox[];
+  if (!disabled || !enabled) throw new Error('Both checkbox fixtures were not rendered.');
   await Promise.all([disabled.updateComplete, enabled.updateComplete]);
 
   button.focus();
@@ -127,6 +128,7 @@ it('anchors aggregate validity to the first enabled checkbox semantic owner', as
     </lr-checkbox-group>
   `)) as LyraCheckboxGroup;
   const [, enabled] = [...group.querySelectorAll('lr-checkbox')] as LyraCheckbox[];
+  if (!enabled) throw new Error('The enabled checkbox fixture was not rendered.');
   await enabled.updateComplete;
 
   const anchor = resolveValidityAnchor(group);
@@ -342,6 +344,20 @@ it('uses its native fieldset/legend as the sole named group landmark', async () 
   await expect(el).to.be.accessible();
 });
 
+it('forwards a programmatic accessibleLabel property to the native fieldset', async () => {
+  const el = (await fixture(html`
+    <lr-checkbox-group label="Visible label">
+      <lr-checkbox>A</lr-checkbox>
+    </lr-checkbox-group>
+  `)) as LyraCheckboxGroup;
+  el.accessibleLabel = 'Programmatic group name';
+  await el.updateComplete;
+
+  const fieldset = el.shadowRoot!.querySelector('fieldset') as HTMLFieldSetElement;
+  expect(el.hasAttribute('aria-label')).to.equal(false);
+  expect(fieldset.getAttribute('aria-label')).to.equal('Programmatic group name');
+});
+
 it('uses the semibold font-weight design token for the label instead of a hardcoded value', () => {
   expect(styles.cssText).to.include('var(--lr-font-weight-semibold)');
   expect(styles.cssText).to.not.match(/\[part='form-control-label'\]\s*\{[^}]*font-weight:\s*600/);
@@ -413,6 +429,7 @@ it('cascades fieldset-disabled state to children through an internal channel, ne
   const group = form.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
   const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
   const [a, b] = [...group.querySelectorAll('lr-checkbox')] as LyraCheckbox[];
+  if (!a || !b) throw new Error('Both checkbox fixtures were not rendered.');
   await group.updateComplete;
 
   expect(group.effectiveDisabled).to.be.false;
@@ -491,6 +508,7 @@ it('reflects its own disabled property synchronously and propagates it to childr
     </lr-checkbox-group>
   `)) as LyraCheckboxGroup;
   const [a, b] = [...el.querySelectorAll('lr-checkbox')] as LyraCheckbox[];
+  if (!a || !b) throw new Error('Both checkbox fixtures were not rendered.');
   await el.updateComplete;
   expect(el.effectiveDisabled).to.be.false;
   expect(a.effectiveDisabled).to.be.false;
@@ -829,8 +847,10 @@ it('stops a child checkbox\'s own lr-change from also reaching a listener bound 
     await group.updateComplete;
 
     expect(events.length, 'exactly one lr-change reaches an ancestor listener').to.equal(1);
-    expect(events[0].target === group, 'the surviving event targets the group itself').to.be.true;
-    expect(events[0].detail).to.deep.equal({ value: ['a'] });
+    const event = events[0];
+    if (!event) throw new Error('The aggregate change event was not emitted.');
+    expect(event.target === group, 'the surviving event targets the group itself').to.be.true;
+    expect(event.detail).to.deep.equal({ value: ['a'] });
   } finally {
     group.remove();
   }
@@ -869,6 +889,7 @@ it('settles its public and form values after child defaults are restored on form
   `)) as HTMLFormElement;
   const group = form.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
   const [a, b] = [...group.querySelectorAll('lr-checkbox')] as LyraCheckbox[];
+  if (!a || !b) throw new Error('Both checkbox fixtures were not rendered.');
   a.checked = false;
   b.checked = true;
   b.shadowRoot!.querySelector('[part~="base"]')!.dispatchEvent(

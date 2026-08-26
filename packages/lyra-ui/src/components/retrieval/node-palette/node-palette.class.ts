@@ -21,6 +21,7 @@ import { LYRA_DEFAULT_nodePaletteDragHint, LYRA_DEFAULT_nodePaletteEmpty, LYRA_D
 export interface LyraPaletteItem {
   /** The `FlowNode.type` a placement/drop creates. */
   type: string;
+  /** Nonblank text used as the option's visible and accessible name. */
   label: string;
   description?: string;
   /** Items group under localized-by-host category headings, in first-appearance array order. */
@@ -31,6 +32,8 @@ export interface LyraPaletteItem {
   /** Visible but not draggable/placeable. */
   disabled?: boolean;
 }
+
+const EMPTY_PALETTE_ITEMS: readonly LyraPaletteItem[] = Object.freeze([]);
 
 export interface LyraNodePaletteEventMap {
   'lr-palette-place': CustomEvent<{ type: string }>;
@@ -111,7 +114,9 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  protected static override readonly ownedCollectionProperties = Object.freeze(['items']);
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'items',
+  ]);
   /** Item identity is a load-bearing public contract, not an incidental detail: `willUpdate()`
    *  matches a surviving item across a reorder/filter by `===` to keep roving focus on it (see
    *  `occurrenceAt`/`indexOfOccurrence` below), `confirmPendingReorder()` locates the pending
@@ -186,24 +191,54 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   private get filtered(): readonly LyraPaletteItem[] {
     const locale = this.effectiveLocale;
     const q = this.queryText.trim().toLocaleLowerCase(locale);
+    const items = Array.isArray(this.items) ? this.items : EMPTY_PALETTE_ITEMS;
     const cache = this.filteredCache;
     if (
       cache &&
-      cache.items === this.items &&
+      cache.items === items &&
       cache.query === q &&
       cache.locale === locale
     ) {
       return cache.result;
     }
-    const result = !q
-      ? this.items
-      : this.items.filter((item) =>
-          [item.label, item.category ?? '', ...(item.keywords ?? [])]
+    const result: LyraPaletteItem[] = [];
+    for (const item of items) {
+      try {
+        const label = item?.label;
+        const type = item?.type;
+        const category = item?.category;
+        const description = item?.description;
+        const keywords = item?.keywords;
+        const disabled = item?.disabled;
+        if (
+          typeof type !== 'string' ||
+          type.trim() === '' ||
+          typeof label !== 'string' ||
+          label.trim() === '' ||
+          (category !== undefined && typeof category !== 'string') ||
+          (description !== undefined && typeof description !== 'string') ||
+          (keywords !== undefined &&
+            (!Array.isArray(keywords) ||
+              keywords.some((keyword) => typeof keyword !== 'string'))) ||
+          (disabled !== undefined && typeof disabled !== 'boolean')
+        ) {
+          continue;
+        }
+        if (
+          q &&
+          ![label, category ?? '', ...(keywords ?? [])]
             .join(' ')
             .toLocaleLowerCase(locale)
             .includes(q)
-        );
-    this.filteredCache = { items: this.items, query: q, locale, result };
+        ) {
+          continue;
+        }
+        result.push(item);
+      } catch {
+        // A malformed row is omitted without hiding later valid node templates.
+      }
+    }
+    this.filteredCache = { items, query: q, locale, result };
     return result;
   }
 
@@ -542,7 +577,10 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     e.dataTransfer.effectAllowed = 'copy';
   }
 
-  private itemTemplate(item: LyraPaletteItem, rovingIndex: number): TemplateResult {
+  private itemTemplate(
+    item: LyraPaletteItem,
+    rovingIndex: number
+  ): TemplateResult {
     return html`<div
       part="item"
       role="option"
@@ -580,12 +618,10 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     const listLabel =
       hostLabel === null
         ? this.accessibleLabel ??
-          (this.label == null
-            ? this.localize('nodePaletteLabel')
-            : this.label)
+          (this.label == null ? this.localize('nodePaletteLabel') : this.label)
         : this.label != null && this.label !== hostLabel
-          ? this.label
-          : this.localize('nodePaletteLabel');
+        ? this.label
+        : this.localize('nodePaletteLabel');
     return html`<div part="base">
       <slot name="header"></slot>
       <input
@@ -600,14 +636,14 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
         @focus=${this.onSearchFocus}
         @blur=${this.onSearchBlur}
       />
-      <div
-        part="list"
-        id=${this.listId}
-        role="listbox"
-        aria-label=${listLabel}
-      >
+      <div part="list" id=${this.listId} role="listbox" aria-label=${listLabel}>
         ${groups.length === 0
-          ? html`<div part="empty">${this.localize('nodePaletteEmpty')}</div>`
+          ? html`<div
+              part="empty"
+              role="option"
+              aria-selected="false"
+              aria-disabled="true"
+            >${this.localize('nodePaletteEmpty')}</div>`
           : groups.map((group, groupIndex) => {
               const headingId = `${this.listId}-group-${groupIndex}`;
               const content = group.items.map((item) => {

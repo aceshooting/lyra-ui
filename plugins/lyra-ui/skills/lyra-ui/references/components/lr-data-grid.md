@@ -6,9 +6,10 @@
 - **Class** `LyraDataGrid`, also available unregistered from `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 47 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 47 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -34,6 +35,12 @@ is set, malformed, blank, and later-duplicate row identities are omitted first-w
 rendering, focus, selection, expansion, or events. Without `rowKey`, stable row-object occurrence
 replaces positional identity, so reordering the same records does not transfer DOM or controlled
 state to another row.
+
+Pagination exposes the same page-local ARIA row model in client and server modes. The header is row
+one; current-page display rows and expanded detail rows begin at two; and `aria-rowcount` covers
+only that page plus the header. In server mode, `total` still drives `pageCount` and the pager, but
+does not inflate `aria-rowcount` while `aria-rowindex` restarts for each loaded page. Treat these
+ARIA values as page-local positions rather than as the dataset-wide total.
 
 **Properties:**
 
@@ -191,11 +198,13 @@ delegated ancestors can observe editor entry and exit without crossing the shado
 
 Each per-column disclosure opens an honestly named native-control `group`, not a false ARIA menu:
 its buttons have localized pin-to-start, pin-to-end, and unpin names; its visibility toggle has one
-native checkbox semantic owner; `aria-controls` links trigger and group; and Escape closes it and
-returns focus. Resize separators are focusable and expose finite `aria-valuemin`, `aria-valuemax`,
-and `aria-valuenow`; inverted bounds collapse to the minimum. Revoking resize/reorder capability
-during a gesture rolls it back, and column drops require the current grid's owned drag token plus
-current source/target capability.
+native checkbox semantic owner; and `aria-controls` links trigger and group. The per-column group,
+column-filter panel, and all-columns visibility group are mutually exclusive and use the shared
+topmost overlay router, so Escape closes only the active disclosure and returns focus to its own
+trigger. Resize separators are focusable and expose finite `aria-valuemin`, `aria-valuemax`, and
+`aria-valuenow`; inverted bounds collapse to the minimum. Revoking resize/reorder capability during
+a gesture rolls it back, and column drops require the current grid's owned drag token plus current
+source/target capability.
 
 The four pager navigation controls each wrap their glyph in an icon part — `first-icon`,
 `previous-icon`, `next-icon`, `last-icon` — rendered as real chevron SVGs rather than literal
@@ -219,9 +228,15 @@ localized loading text to that shared polite sink, including repeated loading cy
 **Themeable custom properties:** `--accent-color`, `--background-color`, `--border-color`,
 `--border-radius`, `--border-width`, `--cell-padding`, `--focus-ring`, `--header-background`,
 `--header-row-height`, `--header-text-color`, `--indent-size`, `--max-height`, `--row-height`,
-`--row-hover-background`, `--selected-background`, `--stripe-background`, `--text-color`,
+`--row-hover-background`, `--selected-background`, `--stripe-background`, `--text-color`, and
 `--transition-duration`. Defaults resolve through Lyra design tokens. Set `--max-height: none` to
-render every row instead of a virtual window.
+render every row instead of a virtual window. Three grid-specific hooks reach formatter and row
+detail content inside the shadow root: `--lr-data-grid-cell-color` (default `inherit`) controls
+body-cell text, `--lr-data-grid-cell-link-color` (default `var(--lr-color-brand)`) controls nested
+anchors, and `--lr-data-grid-cell-link-hover-color` (default
+`var(--lr-data-grid-cell-link-color, var(--lr-color-brand))`) controls those anchors on hover,
+focus-visible, and active interaction. Set the link color to `revert` to restore the user-agent
+default.
 
 ```html
 <lr-data-grid

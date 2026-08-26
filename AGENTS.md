@@ -35,7 +35,7 @@ several Web Awesome **Pro** components plus original extras. Positioning, non-ne
 
 ## Monorepo layout
 
-pnpm workspace (`pnpm-workspace.yaml`: `packages/*`), Node ≥ 20, `pnpm@11.22.0`.
+pnpm workspace (`pnpm-workspace.yaml`: `packages/*`), Node ≥ 20, `pnpm@11.24.0`.
 
 ```
 lyra-ui/                          (repo root — this file lives here)
@@ -93,7 +93,7 @@ pnpm build       # -r: per package -> dist/ (ESM + .d.ts). lyra-ui runs scripts/
 pnpm test        # -r: builds lyra-ui first (its entrypoint tests import dist/), then runs wtr;
                  #     @aceshooting/lyra-flags has no test runner, just a plain Node script
 pnpm lint        # -r: for lyra-ui NOT just a type check — the full contract-policy chain
-                 #     + tsc --noEmit + test:types
+                 #     + source tsc --noEmit + public compile contracts + strict test-tree tsc
 pnpm manifest    # --filter @aceshooting/lyra-ui: cem analyze -> custom-elements.json
 pnpm registrations # regenerate all.ts imports, tag aliases, allowlist, sideEffects, and explicit exports
 pnpm plugin:sync # sync the lyra-ui version into both agent manifests + Claude marketplace entry
@@ -114,7 +114,7 @@ its baseline in all three engines; see
   families split along real data dependencies (`lint`, `static-checks`, `build-and-coverage`,
   `packed-consumer`, `docs-and-storybook`, `visual-regression`) rather than one linear job, so a
   red check names the specific phase to reproduce instead of "build-test". The `lint` family
-  derives the authoritative `contract-policy` commands plus the two `lint` type-check suffixes and
+  derives the authoritative `contract-policy` commands plus the three `lint` type-check suffixes and
   balances them across three hosted workers; a fail-closed aggregate retains the stable check name.
   Local `pnpm lint` remains the complete sequential command. Within `build-and-coverage`, four
   independently hosted coverage shards consume the shared `dist/`

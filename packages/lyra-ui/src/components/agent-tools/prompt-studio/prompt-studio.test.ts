@@ -20,6 +20,23 @@ const reorderMessages: PromptStudioMessage[] = [
   { id: 'assistant', role: 'assistant', content: 'I will compare both options.' },
 ];
 
+it('treats not-yet-loaded null collections as empty', async () => {
+  const el = document.createElement('lr-prompt-studio') as LyraPromptStudio;
+  el.messages = null as unknown as PromptStudioMessage[];
+  el.variables = null as never;
+  el.versions = null as unknown as PromptStudioVersion[];
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="message"]')).to.have.lengthOf(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="variable"]')).to.have.lengthOf(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="version"]')).to.have.lengthOf(0);
+    expect(el.shadowRoot!.querySelector('[part="add-message"]')).to.exist;
+  } finally {
+    el.remove();
+  }
+});
+
 it('renders messages, resolves variables in preview, and exposes versions', async () => {
   const el = (await fixture(
     html`<lr-prompt-studio
@@ -31,6 +48,24 @@ it('renders messages, resolves variables in preview, and exposes versions', asyn
   expect(el.shadowRoot!.querySelectorAll('[part="message"]').length).to.equal(2);
   expect(el.shadowRoot!.querySelector('[part="preview"]')!.textContent).to.contain('Answer for developers.');
   expect(el.shadowRoot!.querySelector('[data-version-id="v1"]')).to.exist;
+});
+
+it('emits lr-save with the current public studio state', async () => {
+  const el = await fixture<LyraPromptStudio>(html`
+    <lr-prompt-studio
+      .messages=${messages}
+      .variables=${[{ name: 'audience', value: 'developers' }]}
+      .versions=${versions}
+    ></lr-prompt-studio>
+  `);
+  const saved = oneEvent(el, 'lr-save');
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="save"]')!.click();
+  const event = await saved;
+
+  expect(event.detail.messages).to.deep.equal(messages);
+  expect(event.detail.variables).to.deep.equal([
+    { name: 'audience', value: 'developers' },
+  ]);
 });
 
 it('omits empty or blank message and version ids and uses the first duplicate', async () => {

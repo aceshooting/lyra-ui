@@ -6,6 +6,7 @@
 - **Class** `LyraDocumentViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 2 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
@@ -66,6 +67,9 @@ value, without suppressing the visible `name` heading.
   embedded `DocumentAnchorTarget` mixin, which composes up through this element unchanged — the
   shell stays silent in that case, so the event fires exactly once either way. A string `anchor`
   (a highlight id) counts as supported by any renderer declaring at least one anchor kind.
+- `lr-render-error` — `detail: { error }`. The fallback preview or an embedded renderer emits this
+  when fetching, parsing, sanitizing, or rendering fails; the composed event reaches the document
+  viewer unchanged.
 
 **CSS parts:** `body` — wrapper around the active renderer, loading/error state, or fallback preview;
 it renders explicit `aria-busy="true"|"false"`. Visible loading/error text is ordinary non-live

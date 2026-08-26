@@ -240,7 +240,7 @@ export const RichRows: Story = {
           label: 'C-42/24 — Commission v Example',
           description: 'Grand Chamber · Judgment · 14 July 2026',
           accessibleLabel: 'Case C-42/24, Commission v Example, Grand Chamber judgment, 14 July 2026',
-          badges: [{ text: '12' }],
+          badges: [{ text: '12', label: '12 related filings' }],
           icon: html`<svg aria-hidden="true" viewBox="0 0 16 16" width="1em" height="1em">
             <circle cx="8" cy="8" r="6" fill="currentColor"></circle>
           </svg>`,

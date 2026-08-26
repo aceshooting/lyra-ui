@@ -157,8 +157,9 @@ describe("meta slot", () => {
       ).hasAttribute("hidden")
     ).to.be.false;
     expect(
-      el.shadowRoot!.querySelector('[part="meta"] slot')!.assignedElements()[0]
-        .textContent
+      el.shadowRoot!
+        .querySelector<HTMLSlotElement>('[part="meta"] slot')!
+        .assignedElements()[0]!.textContent
     ).to.equal("3 requests");
   });
 });
@@ -1155,12 +1156,30 @@ it("is accessible while renaming", async () => {
   await expect(el).to.be.accessible();
 });
 
-describe('nested-interactive slot contract (meta/excerpt render inside role="button")', () => {
-  // The class doc's @slot meta/@slot excerpt warnings exist specifically because [part="select-button"]
-  // carries role="button" (while not renaming) and wraps both slots -- axe-core's nested-interactive
+describe('nested-interactive slot contract (start/content/excerpt/meta render inside role="button")', () => {
+  // The class doc's four slot warnings exist specifically because [part="select-button"] carries
+  // role="button" (while not renaming) and wraps all four slots -- axe-core's nested-interactive
   // rule forbids a focusable descendant of a role="button" ancestor. A consumer who ignores that
   // prose and slots a real focusable control must actually trip the violation, or the documented
   // contract is untested and could silently stop being true.
+  it("a focusable element slotted into start trips axe nested-interactive", async () => {
+    const el = await fixtureItem(
+      html`<lr-conversation-item label="A"
+        ><a slot="start" href="/session/1">Open</a></lr-conversation-item
+      >`
+    );
+    await expect(el).to.not.be.accessible();
+  });
+
+  it("a focusable element slotted into content trips axe nested-interactive", async () => {
+    const el = await fixtureItem(
+      html`<lr-conversation-item label="A"
+        ><button slot="content">Retry</button></lr-conversation-item
+      >`
+    );
+    await expect(el).to.not.be.accessible();
+  });
+
   it("a focusable element slotted into meta trips axe nested-interactive", async () => {
     const el = await fixtureItem(
       html`<lr-conversation-item label="A"

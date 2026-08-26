@@ -41,6 +41,7 @@ import {
   boundedViewerSearchQuery,
   ViewerSearchWorkBudget,
 } from '../viewer-search-limits.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_datasetViewerCaption, LYRA_DEFAULT_datasetViewerCaptionNamed, LYRA_DEFAULT_datasetViewerEmpty, LYRA_DEFAULT_datasetViewerMissingParser, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDataset, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings.generated.js';
@@ -66,6 +67,14 @@ type OwnedAnimationFrameWait = {
   resolve: (isCurrent: boolean) => void;
 };
 const MAX_SEARCH_MATCHES = 1_000;
+
+/** Which element scrolls when `<lr-dataset-viewer>` overflows. */
+export type DatasetViewerScrollMode = 'self' | 'page';
+
+const DATASET_VIEWER_SCROLL_MODE = literalSetConverter<DatasetViewerScrollMode>(
+  ['self', 'page'],
+  'self'
+);
 
 export interface LyraDatasetViewerEventMap
   extends Omit<LyraAnchorTargetEventMap, 'lr-text-select'> {
@@ -138,6 +147,8 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  * @csspart error - The error message region.
  * @cssprop [--lr-dataset-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
  *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
+ *   `scrollMode='page'` deliberately ignores the cap and hands both axes to page flow so the
+ *   sticky header can use the page scrollport.
  * @cssprop [--lr-dataset-viewer-highlight-color=var(--lr-color-brand)] - Outline color of a
  *   highlighted cell. The active highlight changes a private warning-color default; an inherited
  *   or direct public value remains authoritative.
@@ -184,6 +195,29 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
   /** CSS length that caps the scrollable body. */
   /** A CSS `max-height`; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
+
+  private _scrollMode: DatasetViewerScrollMode = 'self';
+
+  /**
+   * Which element scrolls when the table overflows. `'self'` preserves contained horizontal
+   * scrolling and applies `maxHeight`. `'page'` makes the page the sticky header's scrollport; a
+   * wide dataset can consequently overflow its host.
+   */
+  @property({ reflect: true, attribute: 'scroll-mode', converter: DATASET_VIEWER_SCROLL_MODE })
+  get scrollMode(): DatasetViewerScrollMode {
+    return this._scrollMode;
+  }
+  set scrollMode(next: DatasetViewerScrollMode) {
+    const normalized = DATASET_VIEWER_SCROLL_MODE.normalizeReflected(
+      this,
+      'scroll-mode',
+      next
+    );
+    const previous = this._scrollMode;
+    if (previous === normalized) return;
+    this._scrollMode = normalized;
+    this.requestUpdate('scrollMode', previous);
+  }
 
   /** Anchor kinds this viewer resolves via `scrollToAnchor()`. */
   override readonly anchorKinds: readonly LyraAnchorKind[] = ['cell-range'];

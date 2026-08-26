@@ -169,6 +169,66 @@ it("composes transcript and agent details from controlled data", async () => {
   expect(el.shadowRoot!.querySelector('[part="details"]')).to.exist;
 });
 
+it('forwards retrieval, context-total, and composer state and restores opt-in defaults', async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`
+    <lr-agent-workspace
+      retrieval-loading
+      retrieval-has-more
+      context-total="4321"
+      composer-status="streaming"
+      composer-min-rows="3"
+      composer-max-rows="6"
+      .contextSegments=${[
+        { id: 'context-1', label: 'Source', text: 'Passage', tokens: 3 },
+      ]}
+    ></lr-agent-workspace>
+  `);
+  const results = el.shadowRoot!.querySelector('lr-retrieval-results') as HTMLElement & {
+    loading: boolean;
+    hasMore: boolean;
+  };
+  const inspector = el.shadowRoot!.querySelector('lr-context-inspector') as HTMLElement & {
+    total: number;
+  };
+  const composer = el.shadowRoot!.querySelector('lr-chat-composer') as HTMLElement & {
+    status: string;
+    minRows: number;
+    maxRows: number;
+  };
+
+  expect(results.loading).to.equal(true);
+  expect(results.hasMore).to.equal(true);
+  expect(inspector.total).to.equal(4321);
+  expect(el.composerStatus).to.equal('streaming');
+  expect(el.composerMinRows).to.equal(3);
+  expect(el.composerMaxRows).to.equal(6);
+  expect(composer.status).to.equal('streaming');
+  expect(composer.minRows).to.equal(3);
+  expect(composer.maxRows).to.equal(6);
+
+  el.retrievalLoading = false;
+  el.retrievalHasMore = false;
+  el.contextSegments = [];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('lr-retrieval-results') === null).to.be.true;
+  expect(el.shadowRoot!.querySelector('lr-context-inspector') === null).to.be.true;
+
+  const unset = await fixture<LyraAgentWorkspace>(
+    html`<lr-agent-workspace></lr-agent-workspace>`
+  );
+  const defaultComposer = unset.shadowRoot!.querySelector('lr-chat-composer') as HTMLElement & {
+    status: string;
+    minRows: number;
+    maxRows: number;
+  };
+  expect(unset.retrievalLoading).to.equal(false);
+  expect(unset.retrievalHasMore).to.equal(false);
+  expect(unset.contextTotal).to.equal(0);
+  expect(defaultComposer.status).to.equal('idle');
+  expect(defaultComposer.minRows).to.equal(1);
+  expect(defaultComposer.maxRows).to.equal(8);
+});
+
 it('gates built-in detail sections on canonical nonblank collection identities', async () => {
   const el = await fixture<LyraAgentWorkspace>(html`<lr-agent-workspace></lr-agent-workspace>`);
   el.tools = [{ id: ' ', name: 'blank', args: {}, status: 'success' }] as LyraAgentWorkspace['tools'];
@@ -270,6 +330,33 @@ it("renders ordered message parts when present while preserving legacy text mess
   expect(el.shadowRoot!.querySelectorAll("lr-markdown")).to.have.lengthOf(1);
 });
 
+it('does not expose composed events from its owned legacy Markdown renderer', async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`
+    <lr-agent-workspace
+      .messages=${[{ id: 'm1', role: 'assistant', text: '**Answer**' }]}
+    ></lr-agent-workspace>
+  `);
+  const markdown = el.shadowRoot!.querySelector('lr-markdown')!;
+  const leaked: string[] = [];
+  for (const name of [
+    'lr-render-error',
+    'lr-link-click',
+    'lr-highlight-activate',
+    'lr-text-select',
+    'lr-anchor-result',
+  ]) {
+    const listener = () => { leaked.push(name); };
+    el.addEventListener(name, listener);
+    markdown.dispatchEvent(new CustomEvent(name, {
+      bubbles: true,
+      composed: true,
+      detail: {},
+    }));
+    el.removeEventListener(name, listener);
+  }
+  expect(leaked).to.deep.equal([]);
+});
+
 it("projects built-in messages as viewport rows so unread boundaries use message indices", async () => {
   const el = await fixture<LyraAgentWorkspace>(html`<lr-agent-workspace
     unread-start-index="1"
@@ -286,9 +373,10 @@ it("projects built-in messages as viewport rows so unread boundaries use message
   const boundary = el.shadowRoot!.querySelector(
     "[data-lr-chat-viewport-unread-boundary]"
   );
+  const rowElements: Element[] = Array.from(rows);
   expect(rows).to.have.lengthOf(3);
   expect(
-    Array.from(rows).indexOf(boundary?.nextElementSibling as Element)
+    rowElements.indexOf(boundary?.nextElementSibling as Element)
   ).to.equal(1);
 });
 

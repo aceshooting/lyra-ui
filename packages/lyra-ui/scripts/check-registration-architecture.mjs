@@ -1,5 +1,7 @@
+import { isMainModule } from './is-main-module.mjs';
+
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { readdir, readFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -1075,7 +1077,7 @@ async function checkRegistrationArchitecture() {
   return true;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
+if (isMainModule(import.meta.url)) {
   try {
     if (!(await checkRegistrationArchitecture())) process.exitCode = 1;
   } catch (error) {

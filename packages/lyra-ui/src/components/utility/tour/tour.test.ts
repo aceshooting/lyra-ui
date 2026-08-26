@@ -1,14 +1,19 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './tour.js';
 import type { LyraTour, LyraTourStep } from './tour.js';
-import { setReducedMotion } from '../../../../test/wtr-media.js';
-import { styles } from './tour.styles.js';
-import { registerLyraLocale } from '../../../internal/localization.js';
 import '../../overlays/dialog/dialog.js';
 import type { LyraDialog } from '../../overlays/dialog/dialog.js';
 import '../../overlays/overlay/popover.js';
 import type { LyraPopover } from '../../overlays/overlay/popover.js';
+import { setReducedMotion } from '../../../../test/wtr-media.js';
+import { styles } from './tour.styles.js';
+import { registerLyraLocale } from '../../../internal/localization.js';
+import {
+  __setAnchoredOverlayRuntimeLoaderForTesting,
+  type AnchoredOverlayRuntime,
+} from '../../../internal/anchored-overlay-runtime.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 class TourComposedFocusTarget extends HTMLElement {
   constructor() {
@@ -38,64 +43,19 @@ function makeSteps(count: number, overridesFor?: (index: number) => Partial<Lyra
   }));
 }
 
-const motionMatchMedia = (matches: boolean): typeof window.matchMedia =>
-  ((query: string) =>
-    ({
-      matches,
-      media: query,
-      addEventListener: () => {},
-      removeEventListener: () => {},
-    } as MediaQueryList)) as typeof window.matchMedia;
-
-/**
- * A browser's real :hover/:active pseudo-classes track the physical pointer and cannot be forced
- * from a dispatched event, so a state rule's value is read off the shipped rule and then *painted*
- * on a probe inside the component's own shadow root. Every assertion below is on the rendered
- * result of that paint -- the custom properties resolve exactly as they do in production -- never on
- * stylesheet text.
- */
-function declaredValue(root: ShadowRoot, selector: string, property: string): string {
-  const normalize = (text: string) => text.replace(/"/g, "'").replace(/\s+/g, ' ').trim();
-  for (const sheet of root.adoptedStyleSheets ?? []) {
-    for (const rule of sheet.cssRules) {
-      if (rule instanceof CSSStyleRule && normalize(rule.selectorText) === normalize(selector)) {
-        const value = rule.style.getPropertyValue(property);
-        if (value) return value;
-      }
-    }
-  }
-  return '';
-}
-
-function declaredBackground(root: ShadowRoot, selector: string): string {
-  return declaredValue(root, selector, 'background') || declaredValue(root, selector, 'background-color');
-}
-
-function paintProbe(root: ShadowRoot) {
-  const measure = (apply: (probe: HTMLElement) => void, read: (style: CSSStyleDeclaration) => string) => {
-    const probe = document.createElement('span');
-    apply(probe);
-    root.appendChild(probe);
-    const computed = read(getComputedStyle(probe));
-    probe.remove();
-    return computed;
+const motionMatchMedia = (ownerWindow: Window, matches: boolean): typeof window.matchMedia => {
+  const originalMatchMedia = ownerWindow.matchMedia;
+  return (query: string) => {
+    const nativeQuery = originalMatchMedia.call(ownerWindow, query);
+    return new Proxy(nativeQuery, {
+      get(target, property) {
+        if (property === 'matches') return matches;
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
   };
-  return {
-    /* The zero-percent wrapper forces resting, hovered and pressed through one serialization, so the
-       channel distances compared in the tests are apples-to-apples even though the resting value is
-       a plain token and the two state values are mixes. */
-    render: (value: string) =>
-      measure(
-        (probe) => (probe.style.backgroundColor = `color-mix(in oklab, ${value}, transparent 0%)`),
-        (style) => style.backgroundColor,
-      ),
-    renderFilter: (value: string) =>
-      measure(
-        (probe) => (probe.style.filter = value),
-        (style) => style.filter,
-      ),
-  };
-}
+};
 
 function channelDistance(left: string, right: string): number {
   // Keep scientific-notation channels intact. Firefox serializes a near-zero Oklab channel as
@@ -105,6 +65,26 @@ function channelDistance(left: string, right: string): number {
   const a = channels(left);
   const b = channels(right);
   return Math.hypot(...a.map((value, index) => value - (b[index] ?? 0)));
+}
+
+async function hoverTarget(target: HTMLElement): Promise<void> {
+  target.scrollIntoView({ block: 'center', inline: 'center' });
+  await new Promise<void>((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+  );
+  const rect = target.getBoundingClientRect();
+  await resetMouse();
+  await sendMouse({
+    type: 'move',
+    position: [
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    ],
+  });
+  await waitUntil(
+    () => target.matches(':hover'),
+    `${target.getAttribute('part')} never received the real pointer`
+  );
 }
 
 function targetButtons(count: number) {
@@ -219,7 +199,7 @@ describe('lr-tour', () => {
 
     const body = tour.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
     const popover = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
-    expect(body.innerText.trim()).to.equal('Fallback step body');
+    expect(body.textContent?.trim()).to.equal('Fallback step body');
     expect(popover.getAttribute('aria-describedby')).to.include(body.id);
   });
 
@@ -507,7 +487,7 @@ describe('lr-tour', () => {
     const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
     const firstPanel = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
-    firstPanel.dataset.occurrenceProbe = 'first';
+    firstPanel.dataset['occurrenceProbe'] = 'first';
 
     const changed = oneEvent(tour, 'lr-tour-step-change');
     tour.next();
@@ -515,7 +495,7 @@ describe('lr-tour', () => {
     await tour.updateComplete;
 
     const secondPanel = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
-    expect(secondPanel.dataset.occurrenceProbe).to.equal(undefined);
+    expect(secondPanel.dataset['occurrenceProbe']).to.equal(undefined);
     expect(Object.isFrozen(event.detail)).to.equal(true);
     expect(Object.isFrozen(event.detail.step)).to.equal(true);
     expect(event.detail.index).to.equal(1);
@@ -796,10 +776,18 @@ describe('lr-tour', () => {
     )) as HTMLDivElement;
     const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
+    await waitFor(
+      () => (tour.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part'),
+      (partName) => partName === 'popover',
+    );
     expect((tour.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('popover');
 
     tour.next();
     await tour.updateComplete;
+    await waitFor(
+      () => (tour.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part'),
+      (partName) => partName === 'popover',
+    );
     expect((tour.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('popover');
   });
 
@@ -925,6 +913,58 @@ describe('lr-tour', () => {
     expect((tour.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('next-button');
   });
 
+  it('yields Tab to a modal dialog stacked above an interactive-target step', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${makeSteps(1, () => ({ interactiveTarget: true }))} open></lr-tour>
+        <div id="tour-target-0"><button>Open dialog</button></div>
+        <lr-dialog id="stacked-dialog" label="Dialog" style="--show-duration: 0ms; --hide-duration: 0ms">
+          <button id="dialog-first">First dialog control</button>
+          <button id="dialog-second">Second dialog control</button>
+        </lr-dialog>
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    const dialog = el.querySelector('#stacked-dialog') as LyraDialog;
+    await tour.updateComplete;
+
+    dialog.open = true;
+    await dialog.updateComplete;
+    const first = el.querySelector('#dialog-first') as HTMLButtonElement;
+    first.focus();
+    await sendKeys({ press: 'Tab' });
+
+    expect(focusedDescriptor()).to.include('#dialog-second');
+  });
+
+  it('yields Tab to a nonmodal popover stacked above an interactive-target step', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${makeSteps(1, () => ({ interactiveTarget: true }))} open></lr-tour>
+        <button id="tour-target-0">Open popover</button>
+        <lr-popover
+          id="stacked-popover"
+          for="tour-target-0"
+          style="--show-duration: 0ms; --hide-duration: 0ms"
+        >
+          <button id="popover-first">First popover control</button>
+          <button id="popover-second">Second popover control</button>
+        </lr-popover>
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    const popover = el.querySelector('#stacked-popover') as LyraPopover;
+    await tour.updateComplete;
+
+    await popover.show();
+    await popover.updateComplete;
+    const first = el.querySelector('#popover-first') as HTMLButtonElement;
+    first.focus();
+    await sendKeys({ press: 'Tab' });
+
+    expect(focusedDescriptor()).to.include('#popover-second');
+  });
+
   it('does not steal focus from a still-valid interactive target on a same-step steps replacement', async () => {
     const steps = makeSteps(1, () => ({ interactiveTarget: true }));
     const el = (await fixture(
@@ -963,12 +1003,14 @@ describe('lr-tour', () => {
     original.focus();
     tour.steps = [{ ...steps[0]!, target: '#replacement-target' }];
     await tour.updateComplete;
+    await waitFor(focusedDescriptor, (value) => value.includes('[part=popover]'));
     expect(focusedDescriptor()).to.include('[part=popover]');
 
     replacement.focus();
     replacement.remove();
     tour.steps = [{ ...steps[0]!, target: '#missing-replacement' }];
     await tour.updateComplete;
+    await waitFor(focusedDescriptor, (value) => value.includes('[part=popover]'));
     expect(focusedDescriptor()).to.include('[part=popover]');
   });
 
@@ -1156,6 +1198,10 @@ describe('lr-tour', () => {
     // giving the panel three focusable controls: previous, skip, next.
     tour.next();
     await tour.updateComplete;
+    await waitFor(
+      () => (tour.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part'),
+      (partName) => partName === 'popover',
+    );
 
     const skip = tour.shadowRoot!.querySelector('[part="skip-button"]') as HTMLButtonElement;
     skip.focus();
@@ -1224,6 +1270,60 @@ describe('lr-tour', () => {
     );
     expect(Number(cutout().getAttribute('width'))).to.be.greaterThan(Number(initialWidth));
     expect(parseFloat(spotlight().style.width)).to.be.greaterThan(0);
+  });
+
+  it('clears the previous step geometry while the next deferred placement runtime is cold', async () => {
+    const runtimeFor = (rect: DOMRect): AnchoredOverlayRuntime => ({
+      place: (_anchor, _popup, options = {}) => {
+        options.onPlaced?.({ placement: options.placement ?? 'bottom-start' });
+        return () => undefined;
+      },
+      trackRect: (_target, onUpdate) => {
+        onUpdate(rect);
+        return () => undefined;
+      },
+    });
+    __setAnchoredOverlayRuntimeLoaderForTesting(() =>
+      Promise.resolve(runtimeFor(new DOMRect(10, 20, 50, 30))),
+    );
+    try {
+      const el = (await fixture(
+        html`<div>
+          <lr-tour .steps=${makeSteps(2)}></lr-tour>
+          ${targetButtons(2)}
+        </div>`,
+      )) as HTMLDivElement;
+      const tour = el.querySelector('lr-tour') as LyraTour;
+      tour.start();
+      await tour.updateComplete;
+      const cutout = () =>
+        tour.shadowRoot!.querySelector('[part="backdrop"] .cutout') as SVGRectElement;
+      const spotlight = () =>
+        tour.shadowRoot!.querySelector('[part="spotlight"]') as HTMLElement;
+      const popover = () =>
+        tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+      await waitFor(() => cutout().getAttribute('width'), (value) => value === '58');
+
+      let resolveRuntime!: (runtime: AnchoredOverlayRuntime) => void;
+      const coldRuntime = new Promise<AnchoredOverlayRuntime>((resolve) => {
+        resolveRuntime = resolve;
+      });
+      __setAnchoredOverlayRuntimeLoaderForTesting(() => coldRuntime);
+      tour.next();
+      await tour.updateComplete;
+
+      expect(cutout().getAttribute('width')).to.equal('0');
+      expect(spotlight().hidden).to.equal(true);
+      expect(popover().style.getPropertyValue('visibility')).to.equal('hidden');
+
+      resolveRuntime(runtimeFor(new DOMRect(100, 120, 80, 40)));
+      await coldRuntime;
+      await waitFor(() => cutout().getAttribute('width'), (value) => value === '88');
+      expect(spotlight().hidden).to.equal(false);
+      expect(popover().style.getPropertyValue('visibility')).to.equal('');
+    } finally {
+      __setAnchoredOverlayRuntimeLoaderForTesting(undefined);
+    }
   });
 
   it('repositions and repaints live when placement, distance, or spotlightPadding changes', async () => {
@@ -1302,8 +1402,8 @@ describe('lr-tour', () => {
     const target = ownerDocument.createElement('button');
     const tour = document.createElement('lr-tour') as LyraTour;
     try {
-      window.matchMedia = motionMatchMedia(false);
-      ownerWindow.matchMedia = motionMatchMedia(true);
+      window.matchMedia = motionMatchMedia(window, false);
+      ownerWindow.matchMedia = motionMatchMedia(ownerWindow, true);
       const lifecycle = tour as unknown as {
         renderRoot: HTMLElement | DocumentFragment;
         createRenderRoot(): ShadowRoot;
@@ -1677,6 +1777,7 @@ describe('lr-tour', () => {
     const tour = el.querySelector('lr-tour') as LyraTour;
     tour.start();
     await tour.updateComplete;
+    await waitFor(() => document.activeElement !== trigger, Boolean);
     expect(document.activeElement !== trigger).to.equal(true);
 
     tour.end('api');
@@ -1706,6 +1807,7 @@ describe('lr-tour', () => {
       const tour = el.querySelector('lr-tour') as LyraTour;
       tour.start();
       await tour.updateComplete;
+      await waitFor(() => document.activeElement !== trigger, Boolean);
 
       const veto = (event: Event): void => event.preventDefault();
       tour.addEventListener('lr-tour-step-change', veto);
@@ -1717,6 +1819,7 @@ describe('lr-tour', () => {
 
       tour.next();
       await tour.updateComplete;
+      await waitFor(() => tour.activeIndex === 1 && document.activeElement !== trigger, Boolean);
       expect(tour.activeIndex).to.equal(1);
       expect(document.activeElement === trigger).to.be.false;
 
@@ -1912,90 +2015,114 @@ describe('lr-tour', () => {
   it('mixes the Next button fill toward the shared partner on hover and further again on press', async () => {
     const el = (await fixture(
       html`<div>
-        <lr-tour .steps=${makeSteps(3)} open></lr-tour>
+        <lr-tour
+          style="--lr-color-brand: rgb(200, 200, 200); --lr-color-mix-partner: rgb(0, 0, 0); --lr-color-mix-hover: 10%; --lr-color-mix-active: 60%"
+          .steps=${makeSteps(3)}
+          open
+        ></lr-tour>
         ${targetButtons(3)}
       </div>`,
     )) as HTMLDivElement;
     const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
-    const root = tour.shadowRoot!;
-    const probes = paintProbe(root);
+    const button = tour.shadowRoot!.querySelector<HTMLElement>('[part="next-button"]')!;
+    const resting = getComputedStyle(button).backgroundColor;
+    try {
+      await hoverTarget(button);
+      await waitUntil(
+        () => getComputedStyle(button).backgroundColor !== resting,
+        'the tour Next hover fill never painted'
+      );
+      const hovered = getComputedStyle(button).backgroundColor;
+      expect(getComputedStyle(button).filter).to.equal('none');
 
-    const resting = probes.render(declaredBackground(root, "[part='next-button']"));
-    const hovered = probes.render(declaredBackground(root, "[part='next-button']:hover"));
-    const pressed = probes.render(declaredBackground(root, "[part='next-button']:active"));
-
-    expect(hovered).to.not.equal(resting);
-    expect(pressed).to.not.equal(resting);
-    // The defect this guards: a pressed rule byte-identical to the hover one.
-    expect(pressed).to.not.equal(hovered);
-    expect(channelDistance(pressed, resting)).to.be.greaterThan(channelDistance(hovered, resting));
-
-    // A filter applies to the whole subtree, so it would have dragged the button's own
-    // --lr-color-on-brand label along with the fill. Rendering whatever the rules declare and
-    // reading it back proves none survives.
-    expect(probes.renderFilter(declaredValue(root, "[part='next-button']:hover", 'filter'))).to.equal('none');
-    expect(probes.renderFilter(declaredValue(root, "[part='next-button']:active", 'filter'))).to.equal('none');
+      await sendMouse({ type: 'down' });
+      await waitUntil(
+        () => getComputedStyle(button).backgroundColor !== hovered,
+        'the tour Next pressed fill never painted beyond hover'
+      );
+      const pressed = getComputedStyle(button).backgroundColor;
+      expect(getComputedStyle(button).filter).to.equal('none');
+      expect(channelDistance(pressed, resting)).to.be.greaterThan(
+        channelDistance(hovered, resting)
+      );
+    } finally {
+      await resetMouse();
+    }
   });
 
   it('gives the Previous/Skip buttons a pressed fill deeper than their hover fill', async () => {
-    const el = (await fixture(
-      html`<div>
-        <lr-tour .steps=${makeSteps(3)} open></lr-tour>
-        ${targetButtons(3)}
-      </div>`,
-    )) as HTMLDivElement;
-    const tour = el.querySelector('lr-tour') as LyraTour;
-    await tour.updateComplete;
-    const root = tour.shadowRoot!;
-    const probes = paintProbe(root);
-
-    const resting = probes.render(
-      declaredBackground(root, "[part='previous-button'], [part='skip-button'], [part='next-button']"),
-    );
-    const hovered = probes.render(
-      declaredBackground(
-        root,
-        ":where([part='previous-button']):hover:where(:not(:disabled)), :where([part='skip-button']):hover",
-      ),
-    );
-    const pressed = probes.render(
-      declaredBackground(
-        root,
-        ":where([part='previous-button']):active:where(:not(:disabled)), :where([part='skip-button']):active",
-      ),
-    );
-
-    expect(hovered).to.not.equal(resting);
-    expect(pressed).to.not.equal(hovered);
-    const pressedDistance = channelDistance(pressed, resting);
-    const hoverDistance = channelDistance(hovered, resting);
-    expect(pressedDistance, `resting=${resting}; hovered=${hovered}; pressed=${pressed}`).to.be.greaterThan(
-      hoverDistance,
-    );
+    for (const part of ['previous-button', 'skip-button']) {
+      const el = (await fixture(
+        html`<div>
+          <lr-tour
+            style="--lr-color-brand-quiet: rgb(200, 200, 200); --lr-color-mix-partner: rgb(0, 0, 0); --lr-color-mix-hover: 10%; --lr-color-mix-active: 60%"
+            .steps=${makeSteps(3)}
+            open
+          ></lr-tour>
+          ${targetButtons(3)}
+        </div>`,
+      )) as HTMLDivElement;
+      const tour = el.querySelector('lr-tour') as LyraTour;
+      await tour.updateComplete;
+      if (part === 'previous-button') {
+        tour.goToStep(1);
+        await tour.updateComplete;
+      }
+      const button = tour.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+      const resting = getComputedStyle(button).backgroundColor;
+      try {
+        await hoverTarget(button);
+        await waitUntil(
+          () => getComputedStyle(button).backgroundColor !== resting,
+          `${part} hover fill never painted`
+        );
+        const hovered = getComputedStyle(button).backgroundColor;
+        await sendMouse({ type: 'down' });
+        await waitUntil(
+          () => getComputedStyle(button).backgroundColor !== hovered,
+          `${part} pressed fill never painted beyond hover`
+        );
+        const pressed = getComputedStyle(button).backgroundColor;
+        expect(
+          channelDistance(pressed, resting),
+          `part=${part}; resting=${resting}; hovered=${hovered}; pressed=${pressed}`
+        ).to.be.greaterThan(channelDistance(hovered, resting));
+      } finally {
+        await resetMouse();
+      }
+    }
   });
 
-  it('wraps the internal previous-button/skip-button hover rule in :where() so a consumer ::part(...):hover override wins without !important', async () => {
-    // Regression test: an unwrapped [part='previous-button']:hover:not(:disabled) selector has
-    // specificity (0,3,0), which beats a consumer's ::part(previous-button):hover at (0,1,1) --
-    // matches the low-specificity pattern lr-pagination/lr-attachment-trigger already use.
+  it('lets consumer ::part(previous-button/skip-button):hover overrides win under a real pointer', async () => {
     const el = (await fixture(
       html`<div>
+        <style>
+          lr-tour::part(previous-button):hover,
+          lr-tour::part(skip-button):hover {
+            background: rgb(7, 8, 9);
+          }
+        </style>
         <lr-tour .steps=${makeSteps(2)} open></lr-tour>
         ${targetButtons(2)}
       </div>`,
     )) as HTMLDivElement;
     const tour = el.querySelector('lr-tour') as LyraTour;
     await tour.updateComplete;
-    const internalRule = (tour.shadowRoot!.adoptedStyleSheets ?? [])
-      .flatMap((sheet) => Array.from(sheet.cssRules))
-      .map((rule) => rule.cssText.replace(/"/g, "'"))
-      .find(
-        (text) =>
-          text.includes(':hover') &&
-          (text.includes("[part='previous-button']") || text.includes("[part='skip-button']")),
-      );
-    expect(internalRule).to.contain(':where(');
+    tour.goToStep(1);
+    await tour.updateComplete;
+    for (const part of ['previous-button', 'skip-button']) {
+      const button = tour.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+      try {
+        await hoverTarget(button);
+        await waitUntil(
+          () => getComputedStyle(button).backgroundColor === 'rgb(7, 8, 9)',
+          `the consumer ${part} hover override never won`
+        );
+      } finally {
+        await resetMouse();
+      }
+    }
   });
 
   it('recolors the current progress dot from an ancestor --lr-tour-progress-dot-current-bg, not the bare shared --lr-color-brand token', async () => {
@@ -2164,35 +2291,33 @@ describe('lr-tour', () => {
   });
 });
 
-it('clamps the tour popover width through the shared popover-viewport-clamp token', async () => {
-  const el = (await fixture(html`<lr-tour .steps=${makeSteps(2)}></lr-tour>`)) as LyraTour;
-  await el.updateComplete;
-  const normalize = (text: string) => text.replace(/"/g, "'");
-  let declared = '';
-  for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
-    for (const rule of sheet.cssRules) {
-      if (
-        rule instanceof CSSStyleRule &&
-        normalize(rule.selectorText) === normalize("[part='popover']") &&
-        rule.style.maxInlineSize
-      ) {
-        declared = rule.style.maxInlineSize;
-      }
-    }
-  }
-  const probe = document.createElement('span');
-  probe.style.display = 'block';
-  probe.style.setProperty('--lr-popover-viewport-clamp', '10px');
-  probe.style.maxInlineSize = declared;
-  el.shadowRoot!.appendChild(probe);
-  const computed = getComputedStyle(probe).maxInlineSize;
-  probe.remove();
-  expect(computed).to.equal('10px');
+it('clamps the rendered tour popover width through the shared popover-viewport-clamp token', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <lr-tour
+        open
+        style="--lr-popover-viewport-clamp: 100px"
+        .steps=${makeSteps(1, () => ({
+          heading: 'AnExceptionallyLongUnbrokenTourHeadingThatMustClamp',
+          body: 'AnExceptionallyLongUnbrokenTourBodyThatMustClamp',
+        }))}
+      ></lr-tour>
+      ${targetButtons(1)}
+    </div>
+  `);
+  const tour = wrapper.querySelector('lr-tour') as LyraTour;
+  await tour.updateComplete;
+  const popover = tour.shadowRoot!.querySelector<HTMLElement>('[part="popover"]')!;
+  await waitUntil(
+    () => popover.getBoundingClientRect().width > 0,
+    'the tour popover never acquired rendered geometry'
+  );
+  expect(popover.getBoundingClientRect().width).to.be.at.most(100.5);
 });
 
 it('does not lock scroll or hijack Escape when opened while detached', async () => {
   const el = (await fixture(html`<lr-tour></lr-tour>`)) as LyraTour;
-  el.steps = [{ target: 'body', title: 'One', body: 'First' }];
+  el.steps = [{ stepId: 'detached', target: 'body', heading: 'One', content: 'First' }];
   await el.updateComplete;
 
   const overflowBefore = document.documentElement.style.overflow;

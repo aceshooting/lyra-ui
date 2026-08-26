@@ -3,6 +3,7 @@ import {
   composedParentElement,
   hasRealContent,
   highestReachableWindow,
+  hostAriaLabel,
   isAccessibilityExcluded,
   isAccessibilitySubtreeExcluded,
   isAccessibilityVisible,
@@ -42,9 +43,47 @@ it('prefixes the id through the shared tag() helper, not a hard-coded literal', 
   expect(id.startsWith(`${tag('listbox')}-`)).to.be.true;
 });
 
+it('reads a programmatic accessibleLabel while preserving authored attribute precedence', () => {
+  const host = document.createElement('div') as HTMLDivElement & {
+    accessibleLabel: string | null;
+  };
+  host.accessibleLabel = 'Property name';
+  expect(hostAriaLabel(host)).to.equal('Property name');
+
+  host.setAttribute('aria-label', 'Attribute name');
+  expect(hostAriaLabel(host)).to.equal('Attribute name');
+
+  host.setAttribute('aria-label', '');
+  expect(hostAriaLabel(host), 'an authored empty attribute remains an explicit override').to.equal('');
+
+  host.removeAttribute('aria-label');
+  host.accessibleLabel = '';
+  expect(hostAriaLabel(host), 'an unset compatibility property leaves computed fallbacks available').to.equal(null);
+});
+
+it('does not invoke an unrelated computed accessibleLabel getter', () => {
+  const host = document.createElement('div');
+  let getterReads = 0;
+  const prototype = Object.create(Object.getPrototypeOf(host), {
+    accessibleLabel: {
+      configurable: true,
+      get: () => {
+        getterReads++;
+        return 'Computed implementation detail';
+      },
+    },
+  });
+  Object.setPrototypeOf(host, prototype);
+
+  expect(hostAriaLabel(host)).to.equal(null);
+  expect(getterReads).to.equal(0);
+});
+
 it('coordinates generated ids across separately evaluated package copies', async () => {
-  const firstCopy = await import('../../dist/internal/a11y.js?generated-id-copy=first');
-  const secondCopy = await import('../../dist/internal/a11y.js?generated-id-copy=second');
+  const firstPath = '../../dist/internal/a11y.js?generated-id-copy=first';
+  const secondPath = '../../dist/internal/a11y.js?generated-id-copy=second';
+  const firstCopy = await import(firstPath);
+  const secondCopy = await import(secondPath);
 
   const first = firstCopy.nextId('cross-copy');
   const second = secondCopy.nextId('cross-copy');
@@ -227,7 +266,7 @@ describe('shared accessibility visibility', () => {
       if (originalCheckVisibility) {
         (target as Element & { checkVisibility?: () => boolean }).checkVisibility = originalCheckVisibility;
       } else {
-        delete (target as Element & { checkVisibility?: () => boolean }).checkVisibility;
+        Reflect.deleteProperty(target, 'checkVisibility');
       }
     }
   });

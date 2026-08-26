@@ -6,6 +6,7 @@
 - **Class** `LyraDocumentLibrary`, also available unregistered from `@aceshooting/lyra-ui/components/data/document-library/document-library.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -26,8 +27,9 @@ by accepted `lr-sort` transaction and `{ phase, sortKey, sortDir }` vocabulary a
 
 **Properties:** clone-owned frozen `documents: readonly LibraryDocument[] = []` (at most the first
 10,000 source documents and 10,000 tags per document are retained; document records, nested tags,
-and dates are snapshotted on assignment; malformed records, blank ids, and later duplicate ids are
-omitted first-wins before filters, counts, selection, rows, and events; reads are detached so `Date`
+and dates are snapshotted on assignment; malformed records (including missing/non-string names or
+non-string tag entries), blank ids, and later duplicate ids are omitted first-wins before filters,
+counts, selection, rows, and events; reads are detached so `Date`
 mutators cannot reach retained state; reassign after changes), `filter`, `label`, `loading`,
 clone-owned frozen `selectedDocumentIds: readonly string[] = []` (at most 10,000 unique ids; reassign after
 changes), public controlled `searchTerm: string = ''`
@@ -48,7 +50,8 @@ with `phase: 'commit'`; `lr-selection-change` emits a fresh frozen readonly `{ d
 selection stays silent; every post-mount `selectedDocumentIds` change appends the localized selected count
 to the document's shared light-DOM polite sink, including zero and repeated equal counts.
 Internal search, tag-filter, and checkbox native `input`/`change` plus prefixed `lr-input`/
-`lr-change` aliases, table pagination, and the table's click-anywhere selection event stop at the
+`lr-change` aliases, the tag combobox's lifecycle/filter/clear/invalid events, table pagination and
+priority-column visibility events, and the table's click-anywhere selection event stop at the
 component's translation boundary. The table is still in multiple-selection semantics so
 `selectedDocumentIds` reaches row `aria-selected`; document selection itself remains checkbox-owned, while
 row activation opens the document. Listen for the document-library events above; one interaction

@@ -32,15 +32,24 @@ function normalizeTaskStatus(value: unknown): TaskStatus {
   return value === 'running' || value === 'success' || value === 'error' ? value : 'pending';
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-/** A well-formed row: a record carrying a nonempty string `id`. Applied to both top-level `items`
- *  and, one level deep, their `children` -- every consumer that dereferences `item.id` (hierarchy
- *  checks, status diffing, `idsAreUnique()`, counting, rendering) reaches only rows this passed. */
-function isValidTaskItem(value: unknown): value is TaskItem {
-  return isRecord(value) && typeof value['id'] === 'string' && value['id'].trim().length > 0;
+function validTaskItems(value: unknown): TaskItem[] {
+  const items: TaskItem[] = [];
+  for (const item of Array.isArray(value) ? value : []) {
+    try {
+      if (
+        item !== null
+        && typeof item === 'object'
+        && !Array.isArray(item)
+        && typeof item.id === 'string'
+        && item.id.trim().length > 0
+      ) {
+        items.push(item);
+      }
+    } catch {
+      // A malformed row cannot suppress later valid tasks.
+    }
+  }
+  return items;
 }
 
 /** Visual chrome for `<lr-task-list>`'s root — the library's shared container-frame vocabulary. */
@@ -156,9 +165,9 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
  * `items` is controlled and never mutated by this component, mirroring `<lr-stepper>`'s `steps`
  * contract. Unlike stepper's single-`current` navigation control, task-list has no selection and
  * several steps may be `running` at once. Set `reorderable` to request sibling-scoped keyboard
- * moves; the host applies the reordered `items` array. Reordering requires globally unique,
- * nonempty ids among every top-level task and direct child; invalid/duplicate data stays visible
- * but fails closed.
+ * moves; the host applies the reordered `items` array. Non-record rows and rows without a nonempty
+ * string id are omitted. Reordering additionally requires globally unique ids among every retained
+ * top-level task and direct child; duplicate data stays visible but fails closed.
  * The visible header is a level-three heading by default; set `heading-level` from `1`–`6` to fit
  * the surrounding document outline, or `none` for a visual-only header.
  * Status changes and confirmed moves are announced through an internal `<lr-live-region>`.
@@ -242,7 +251,9 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  /** The plan. Controlled and never mutated by this component -- pass a new array to update it. */
+  /** The plan. Controlled and never mutated by this component -- pass a new array to update it.
+   *  Runtime non-record rows and rows without a nonempty string id are omitted before rendering,
+   *  summaries, announcements, and reorder validation. */
   @property({ attribute: false }) items: readonly TaskItem[] = [];
 
   /** Opts into Ctrl/Cmd+ArrowUp/ArrowDown reorder requests. `items` remains host-owned: the
@@ -301,9 +312,9 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     super.willUpdate(changed);
     if (changed.has('reorderable') && !this.reorderable) this.clearPendingReorder();
     if (changed.has('items')) {
-      for (const item of this.validItems) {
-        for (const child of item.children ?? []) {
-          for (const grandchild of child.children ?? []) {
+      for (const item of validTaskItems(this.items)) {
+        for (const child of validTaskItems(item.children)) {
+          for (const grandchild of validTaskItems(child.children)) {
             console.warn(
               `<lr-task-list> item "${grandchild.id}" is nested more than one level deep and will be ignored -- only one level of nesting is supported.`,
             );
@@ -316,8 +327,8 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    const wasMounting = this.isMounting;
-    this.isMounting = false;
+    const wasMounting = this.isMounting || !this.isConnected;
+    this.isMounting = !this.isConnected;
     if (changed.has('items')) {
       this.diffAndAnnounce(wasMounting);
       this.confirmPendingReorder();
@@ -326,25 +337,24 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.isMounting = true;
+    this.previousStatusById.clear();
     this.clearPendingReorder();
   }
 
-  /** `items` filtered to well-formed rows -- a malformed entry (e.g. `null`, a non-string `id`, or
-   *  a blank `id`, from a streamed/paginated source) is dropped before hierarchy checks, status
-   *  diffing, reorder bookkeeping (`idsAreUnique()` included), counting, or rendering ever
-   *  dereferences its `id`. Each item's own `children` is sanitized the same way, one level deep,
-   *  so a malformed child never reaches those same consumers either. */
-  private get validItems(): readonly TaskItem[] {
-    return this.items.filter(isValidTaskItem).map((item) =>
-      Array.isArray(item.children) ? { ...item, children: item.children.filter(isValidTaskItem) } : item,
-    );
+  override connectedCallback(): void {
+    const reconnecting = this.hasUpdated;
+    this.isMounting = true;
+    this.previousStatusById.clear();
+    super.connectedCallback();
+    if (reconnecting) this.requestUpdate('items');
   }
 
   private flattenOneLevel(items: readonly TaskItem[]): TaskItem[] {
     const out: TaskItem[] = [];
-    for (const item of items) {
+    for (const item of validTaskItems(items)) {
       out.push(item);
-      for (const child of item.children ?? []) out.push(child);
+      for (const child of validTaskItems(item.children)) out.push(child);
     }
     return out;
   }
@@ -352,7 +362,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   private diffAndAnnounce(firstSight: boolean): void {
     const region = this.liveRegion;
     const nextMap = new Map<string, TaskStatus>();
-    for (const item of this.flattenOneLevel(this.validItems)) {
+    for (const item of this.flattenOneLevel(validTaskItems(this.items))) {
       const status = normalizeTaskStatus(item.status);
       nextMap.set(item.id, status);
       if (!firstSight && region) {
@@ -392,7 +402,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
 
   private idsAreUnique(): boolean {
     const ids = new Set<string>();
-    for (const item of this.flattenOneLevel(this.validItems)) {
+    for (const item of this.flattenOneLevel(this.items)) {
       if (item.id.trim().length === 0 || ids.has(item.id)) return false;
       ids.add(item.id);
     }
@@ -400,12 +410,18 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   }
 
   private canReorderItems(): boolean {
-    return this.reorderable && this.idsAreUnique();
+    if (!this.reorderable || !Array.isArray(this.items)) return false;
+    const items = validTaskItems(this.items);
+    if (items.length !== this.items.length) return false;
+    if (items.some((item) => Array.isArray(item.children) && validTaskItems(item.children).length !== item.children.length)) {
+      return false;
+    }
+    return this.idsAreUnique();
   }
 
   private siblingItems(parentId: string | null): readonly TaskItem[] | undefined {
-    if (parentId === null) return this.validItems;
-    return this.validItems.find((item) => item.id === parentId)?.children;
+    if (parentId === null) return this.items;
+    return this.items.find((item) => item.id === parentId)?.children;
   }
 
   private requestReorder(item: TaskItem, parentId: string | null, delta: 1 | -1): void {
@@ -513,7 +529,8 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     canReorder: boolean,
   ): TemplateResult {
     const status = normalizeTaskStatus(item.status);
-    const hasChildren = depth === 0 && !!item.children && item.children.length > 0;
+    const children = depth === 0 ? validTaskItems(item.children) : [];
+    const hasChildren = children.length > 0;
     return html`
       <div
         part="item"
@@ -533,11 +550,11 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
           ? html`<div part="item-children" role="list">
               ${canReorder
                 ? repeat(
-                    item.children!,
+                    children,
                     (child) => child.id,
                     (child) => this.renderItem(child, 1, item.id, canReorder),
                   )
-                : item.children!.map((child) => this.renderItem(child, 1, item.id, canReorder))}
+                : children.map((child) => this.renderItem(child, 1, item.id, canReorder))}
             </div>`
           : nothing}
       </div>
@@ -547,8 +564,9 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   override render(): TemplateResult {
     const label = this.label == null ? this.localize('taskListLabel') : this.label;
     const ariaLabel = hostAriaLabel(this) ?? label;
-    const total = this.validItems.length;
-    const completed = this.validItems.filter((item) => normalizeTaskStatus(item.status) === 'success').length;
+    const items = validTaskItems(this.items);
+    const total = items.length;
+    const completed = items.filter((item) => normalizeTaskStatus(item.status) === 'success').length;
     const canReorder = this.canReorderItems();
     const number = getNumberFormat(this.effectiveLocale);
     const summary = this.localize('taskListCompletedOfTotal', undefined, {
@@ -586,11 +604,11 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
         <div part="body" id=${this.bodyId} role="list" aria-label=${ariaLabel} ?hidden=${!this.expanded}>
           ${canReorder
             ? repeat(
-                this.validItems,
+                items,
                 (item) => item.id,
                 (item) => this.renderItem(item, 0, null, canReorder),
               )
-            : this.validItems.map((item) => this.renderItem(item, 0, null, canReorder))}
+            : items.map((item) => this.renderItem(item, 0, null, canReorder))}
         </div>
         <lr-live-region></lr-live-region>
       </div>

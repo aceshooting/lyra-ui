@@ -20,12 +20,16 @@ it("emits one cancelable lr-invalid alias when a validity check fails", async ()
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
-  expect(aliases[0].target === el).to.equal(true);
-  expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
-  expect(aliases[0].cancelable).to.be.true;
+  const alias = aliases[0];
+  if (!alias) throw new Error('The invalid alias was not emitted.');
+  expect(alias.target === el).to.equal(true);
+  expect(alias.bubbles && alias.composed).to.be.true;
+  expect(alias.cancelable).to.be.true;
   // Nothing cancelled it, so the browser's own validation UI stays enabled.
   expect(natives).to.have.lengthOf(1);
-  expect(natives[0].defaultPrevented).to.be.false;
+  const native = natives[0];
+  if (!native) throw new Error('The native invalid event was not emitted.');
+  expect(native.defaultPrevented).to.be.false;
 });
 
 it("cancels the native invalid event when the lr-invalid alias is cancelled", async () => {
@@ -38,7 +42,9 @@ it("cancels the native invalid event when the lr-invalid alias is cancelled", as
 
   expect(el.checkValidity()).to.be.false;
   expect(natives).to.have.lengthOf(1);
-  expect(natives[0].defaultPrevented).to.be.true;
+  const native = natives[0];
+  if (!native) throw new Error('The native invalid event was not emitted.');
+  expect(native.defaultPrevented).to.be.true;
 });
 
 it('defaults to unchecked with role="checkbox" and aria-checked="false"', async () => {
@@ -164,7 +170,7 @@ it("accepts WA hint and Shoelace help-text spellings on one accessible hint surf
       .map((node) => node.textContent ?? "")
       .join("");
     expect(`${hint.textContent ?? ""}${distributed}`, text).to.contain(text);
-    if ("ariaDescribedByElements" in control) {
+    if (Reflect.has(control, "ariaDescribedByElements")) {
       expect(
         control.ariaDescribedByElements,
         `${text} relationship`
@@ -208,7 +214,7 @@ it("renders static error text in the standard form-control frame and describes t
     el.checkValidity(),
     "visible consumer error chrome does not rewrite FACE validity"
   ).to.be.true;
-  if ("ariaDescribedByElements" in control) {
+  if (Reflect.has(control, "ariaDescribedByElements")) {
     const ids = (control.ariaDescribedByElements ?? []).map(
       (element) => element.id
     );
@@ -244,7 +250,7 @@ it("tracks slotted error content added and removed after mount", async () => {
 
   expect(error.hidden).to.be.false;
   expect(control.getAttribute("aria-invalid")).to.equal("true");
-  if ("ariaDescribedByElements" in control) {
+  if (Reflect.has(control, "ariaDescribedByElements")) {
     expect(
       (control.ariaDescribedByElements ?? []).map((element) => element.id)
     ).to.include("checkbox-error");
@@ -261,7 +267,7 @@ it("tracks slotted error content added and removed after mount", async () => {
 
   expect(error.hidden).to.be.true;
   expect(control.getAttribute("aria-invalid")).to.equal("false");
-  if ("ariaDescribedByElements" in control) {
+  if (Reflect.has(control, "ariaDescribedByElements")) {
     expect(
       (control.ariaDescribedByElements ?? []).map((element) => element.id)
     ).to.not.include("checkbox-error");
@@ -353,12 +359,15 @@ it("emits exactly one native Event pair and one prefixed alias pair for user tog
     "change",
     "lr-change",
   ]);
-  expect(observed[0].event.constructor === Event).to.be.true;
-  expect(observed[2].event.constructor === Event).to.be.true;
-  expect(observed[0].event.target === el && observed[2].event.target === el).to
-    .be.true;
-  expect(observed[1].event instanceof CustomEvent).to.be.true;
-  expect((observed[1].event as CustomEvent).detail).to.deep.equal({
+  const [nativeInput, aliasInput, nativeChange] = observed;
+  if (!nativeInput || !aliasInput || !nativeChange) {
+    throw new Error('The checkbox event sequence was incomplete.');
+  }
+  expect(nativeInput.event.constructor === Event).to.be.true;
+  expect(nativeChange.event.constructor === Event).to.be.true;
+  expect(nativeInput.event.target === el && nativeChange.event.target === el).to.be.true;
+  expect(aliasInput.event instanceof CustomEvent).to.be.true;
+  expect((aliasInput.event as CustomEvent).detail).to.deep.equal({
     checked: true,
   });
 });
@@ -476,7 +485,7 @@ describe("aria-describedby forwarding", () => {
     ) as HTMLElement & {
       ariaDescribedByElements?: Element[];
     };
-    if ("ariaDescribedByElements" in base) {
+    if (Reflect.has(base, "ariaDescribedByElements")) {
       expect(base.ariaDescribedByElements?.length).to.equal(1);
       expect(base.ariaDescribedByElements?.[0] === description).to.equal(true);
       expect(base.getAttribute("aria-describedby")).to.equal("");
@@ -505,7 +514,7 @@ describe("aria-describedby forwarding", () => {
 
     checkbox.setAttribute("aria-describedby", "first-description");
     await checkbox.updateComplete;
-    if ("ariaDescribedByElements" in base) {
+    if (Reflect.has(base, "ariaDescribedByElements")) {
       expect(base.ariaDescribedByElements?.length).to.equal(1);
       expect(base.ariaDescribedByElements?.[0] === first).to.equal(true);
     } else {
@@ -516,7 +525,7 @@ describe("aria-describedby forwarding", () => {
 
     checkbox.setAttribute("aria-describedby", "second-description");
     await checkbox.updateComplete;
-    if ("ariaDescribedByElements" in base) {
+    if (Reflect.has(base, "ariaDescribedByElements")) {
       expect(base.ariaDescribedByElements?.length).to.equal(1);
       expect(base.ariaDescribedByElements?.[0] === second).to.equal(true);
     } else {
@@ -527,7 +536,7 @@ describe("aria-describedby forwarding", () => {
 
     checkbox.removeAttribute("aria-describedby");
     await checkbox.updateComplete;
-    if ("ariaDescribedByElements" in base) {
+    if (Reflect.has(base, "ariaDescribedByElements")) {
       expect(base.ariaDescribedByElements?.length ?? 0).to.equal(0);
     } else {
       expect(base.hasAttribute("aria-describedby")).to.be.false;
@@ -1253,9 +1262,7 @@ it("constructs its label observer in the adopted owner realm", async () => {
         observerDescriptor
       );
     } else {
-      delete (
-        frameWindow as Window & { MutationObserver?: typeof MutationObserver }
-      ).MutationObserver;
+      Reflect.deleteProperty(frameWindow, 'MutationObserver');
     }
     frame.remove();
   }

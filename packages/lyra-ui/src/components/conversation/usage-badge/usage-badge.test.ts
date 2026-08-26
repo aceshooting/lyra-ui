@@ -1,8 +1,9 @@
-import { fixture, expect, html } from "@open-wc/testing";
+import { fixture, expect, html, waitUntil } from "@open-wc/testing";
 import "./usage-badge.js";
 import type { LyraUsageBadge } from "./usage-badge.js";
-import { styles } from "./usage-badge.styles.js";
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { sendKeys } from "@web/test-runner-commands";
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-usage-badge', 'compact');
@@ -582,10 +583,39 @@ it("contains all badge states with long localized content in an exact 320px RTL 
   }
 });
 
-it("keeps hover/focus rules low-specificity for consumer part overrides", () => {
-  const css = styles.cssText.replace(/\s+/g, " ");
-  expect(css).to.include(":where([part='base'][tabindex]):hover");
-  expect(css).to.include(":where([part='base'][tabindex]):focus-visible");
+it("renders the interactive base hover and keyboard-focus treatment", async () => {
+  const el = await fixture<LyraUsageBadge>(html`
+    <lr-usage-badge
+      tokens-in="1204"
+      style="--lr-color-surface-raised: rgb(1, 2, 3); --lr-focus-ring-width: 6px; --lr-focus-ring-color: rgb(4, 5, 6); --lr-focus-ring-offset: 3px"
+    ></lr-usage-badge>
+  `);
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  base.scrollIntoView({ block: "center" });
+  const rect = base.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: "move",
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    await waitUntil(
+      () => getComputedStyle(base).backgroundColor === "rgb(1, 2, 3)",
+      "the usage badge hover background never appeared",
+    );
+  } finally {
+    await resetMouse();
+  }
+
+  await sendKeys({ press: "Tab" });
+  base.focus();
+  await waitUntil(() => {
+    const computed = getComputedStyle(base);
+    return (
+      computed.outlineWidth === "6px" &&
+      computed.outlineColor === "rgb(4, 5, 6)" &&
+      computed.outlineOffset === "3px"
+    );
+  }, "the usage badge keyboard focus ring never appeared");
 });
 
 /** Render the max-inline-size declared on `selector` (read off the element's own applied stylesheets)

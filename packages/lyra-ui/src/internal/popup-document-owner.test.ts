@@ -27,7 +27,7 @@ function trackPointerListeners(owner: Document): PointerListenerTracker {
       added.push(pointerListener);
       active.add(pointerListener);
     }
-    originalAdd.call(owner, type, listener, options);
+    if (listener !== null) originalAdd.call(owner, type, listener, options);
   }) as typeof owner.addEventListener;
   owner.removeEventListener = (function (
     type: string,
@@ -37,7 +37,7 @@ function trackPointerListeners(owner: Document): PointerListenerTracker {
     if (type === 'pointerdown' && typeof listener === 'function') {
       active.delete(listener as (event: PointerEvent) => void);
     }
-    originalRemove.call(owner, type, listener, options);
+    if (listener !== null) originalRemove.call(owner, type, listener, options);
   }) as typeof owner.removeEventListener;
   return {
     added,
@@ -140,7 +140,7 @@ it('rebinds date-input visibility work and ignores a queued old-document callbac
         added.push(callback);
         active.add(callback);
       }
-      originalAdd.call(owner, type, listener, options);
+      if (listener !== null) originalAdd.call(owner, type, listener, options);
     }) as typeof owner.addEventListener;
     owner.removeEventListener = (function (
       type: string,
@@ -150,7 +150,7 @@ it('rebinds date-input visibility work and ignores a queued old-document callbac
       if (type === 'visibilitychange' && typeof listener === 'function') {
         active.delete(listener as () => void);
       }
-      originalRemove.call(owner, type, listener, options);
+      if (listener !== null) originalRemove.call(owner, type, listener, options);
     }) as typeof owner.removeEventListener;
     return {
       added,
@@ -243,13 +243,7 @@ it('uses the current owner MutationObserver for date validators and rejects an a
     value: trackedMutationObserver(frameRecords),
   });
   let validations = 0;
-  const element = document.createElement('lr-date-input') as HTMLElement & {
-    validators: Array<{
-      observedAttributes: string[];
-      checkValidity(input: never): { isValid: boolean; message: string; invalidKeys: never[] };
-    }>;
-    updateComplete: Promise<unknown>;
-  };
+  const element = document.createElement('lr-date-input');
   element.validators = [{
     observedAttributes: ['data-rule'],
     checkValidity: () => {
@@ -450,6 +444,7 @@ it('creates adopted voice previews in the owner document and resolves relative m
   await element.updateComplete;
 
   const AmbientAudio = window.Audio;
+  const ambientAudioDescriptor = Object.getOwnPropertyDescriptor(window, 'Audio');
   const originalCreateElement = frameDocument.createElement;
   const originalPlay = frameWindow.HTMLMediaElement.prototype.play;
   const originalPause = frameWindow.HTMLMediaElement.prototype.pause;
@@ -460,10 +455,13 @@ it('creates adopted voice previews in the owner document and resolves relative m
   element.addEventListener('lr-preview-change', (event) => {
     previewChanges.push((event as CustomEvent<{ voiceId: string | null }>).detail.voiceId);
   });
-  window.Audio = function (src?: string): HTMLAudioElement {
-    ambientAudioConstructions += 1;
-    return new AmbientAudio(src);
-  } as typeof window.Audio;
+  Object.defineProperty(window, 'Audio', {
+    configurable: true,
+    value(src?: string): HTMLAudioElement {
+      ambientAudioConstructions += 1;
+      return new AmbientAudio(src);
+    },
+  });
   frameDocument.createElement = (function (
     localName: string,
     options?: ElementCreationOptions,
@@ -497,7 +495,8 @@ it('creates adopted voice previews in the owner document and resolves relative m
     frameWindow.HTMLMediaElement.prototype.play = originalPlay;
     frameWindow.HTMLMediaElement.prototype.pause = originalPause;
     frameDocument.createElement = originalCreateElement;
-    window.Audio = AmbientAudio;
+    if (ambientAudioDescriptor) Object.defineProperty(window, 'Audio', ambientAudioDescriptor);
+    else Reflect.deleteProperty(window, 'Audio');
     element.remove();
     frame.remove();
   }

@@ -419,7 +419,8 @@ it('does not intercept a forward Tab press that is not leaving the last focusabl
     html`<lr-dialog label="Untitled" closable="false" open><button>a</button><button>b</button></lr-dialog>`,
   )) as LyraDialog;
   await el.updateComplete;
-  const a = el.querySelectorAll('button')[0];
+  const a = el.querySelector<HTMLButtonElement>('button');
+  if (!a) throw new Error('expected the dialog to render its first slotted button');
   a.focus();
 
   const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
@@ -868,7 +869,8 @@ describe('stacked dialogs', () => {
     // Focus a middle button -- neither wrap branch in top's own handler
     // should fire, so the only way defaultPrevented ends up true is if the
     // non-topmost (bottom) dialog's zero-focusable early-return wrongly swallows it.
-    const middle = top.querySelectorAll('button')[1];
+    const middle = top.querySelectorAll<HTMLButtonElement>('button')[1];
+    if (!middle) throw new Error('expected the top dialog to render a middle button');
     middle.focus();
 
     const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
@@ -1377,7 +1379,11 @@ describe('enter/exit animation', () => {
       await el.updateComplete;
       const animation = panel.getAnimations().find((candidate) => candidate.id === 'dialog.show');
       expect(animation?.id).to.equal('dialog.show');
-      expect(String(animation?.effect?.getKeyframes()[0]?.opacity)).to.equal('0.15');
+      const effect = animation?.effect;
+      if (!(effect instanceof KeyframeEffect)) {
+        throw new Error('expected dialog.show to use a KeyframeEffect');
+      }
+      expect(String(effect.getKeyframes()[0]?.['opacity'])).to.equal('0.15');
       animation?.finish();
       await shown;
 

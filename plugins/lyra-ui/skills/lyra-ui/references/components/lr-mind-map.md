@@ -6,6 +6,7 @@
 - **Class** `LyraMindMap`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/mind-map/mind-map.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 8 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -25,7 +26,8 @@ radial layout is closed-form arithmetic, in its own `mind-map-layout.ts` module,
 
 - `topics: LyraTopic[] = []` (attribute: false) — `LyraTopic { id: string; label: string; children?:
 LyraTopic[] }`; a single root sits at the center, multiple roots hang off an implicit center hub
-- `label: string = ''` — accessible name for the SVG group and the implicit hub's text
+- `label?: string` — accessible name for the SVG group and the implicit hub's text; omission uses
+  the localized mind-map label, while an explicit empty string stays empty
 - `expandDepth: number = 1` (attribute `expand-depth`) — initial expansion depth (root + first
   ring); expansion state afterward is component-managed per topic id and survives `topics`
   reassignment

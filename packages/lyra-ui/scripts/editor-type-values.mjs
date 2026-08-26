@@ -26,7 +26,7 @@ const EXTERNAL_CLOSED_TYPES = new Map([
 ]);
 
 /** Parses only the deliberately narrow alias vocabulary used for HTML attribute values. */
-export function parseSimpleUnion(typeText) {
+function parseSimpleUnion(typeText) {
   if (typeof typeText !== 'string' || typeText.trim().length === 0) return undefined;
   const members = [];
   let offset = 0;

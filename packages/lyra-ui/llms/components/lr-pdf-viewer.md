@@ -6,9 +6,10 @@
 - **Class** `LyraPdfViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/pdf-viewer/pdf-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `pdfjs-dist` — see `llms/peers.md`
-- **Themeable via** 19 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -17,6 +18,8 @@
 
 Fetches a PDF and renders its pages with the optional `pdfjs-dist` peer. Pages are virtualized through
 `lr-virtual-list`, and PDF.js's selectable text layer is positioned over each rendered canvas.
+The virtual list's raw `lr-visible-range-change` and `lr-virtual-scroll` events are internal and do
+not escape the viewer; visible-range changes surface through the documented `lr-page-change` state.
 
 Adopts `DocumentAnchorTarget`: `page`, `text-quote`, and `region` anchors resolve, and `highlights`
 paint through one `<lr-highlight-layer>` per page, stacked between the canvas and the text layer
@@ -116,10 +119,13 @@ carries its own part name), `page-indicator`, `zoom-indicator`, `pages`, `page`,
 inside a page's text layer — PDF.js creates these imperatively, and they carry the part so a rule can
 reach them without a descendant combinator), `search-match` (a `<mark>` painted into a mounted page's
 text layer around one search match), `search-match-active` (the currently active match, also carries
-`search-match`), `page-error`, `page-error-visible`, `spinner`, and `error`. Search painting is best-effort: a page outside the
-virtualized render window is skipped and repainted once its text layer mounts, and a match spanning a
-text-layer span boundary that `Range.surroundContents()` can't wrap stays unpainted (still reachable
-via `searchNext()`). The loading skeleton is decorative and paired with an ordinary visually-hidden
+`search-match`), `page-error`, `page-error-visible`, `spinner`, `error`, and `anchor-live-region` (an
+aria-hidden, non-live shadow mirror of the latest anchor-jump message; the spoken copy is appended
+to the shared document-level polite sink only while the viewer and its composed ancestors are
+exposed to the accessibility tree). Search painting is best-effort: a page outside the virtualized
+render window is skipped and repainted once its text layer mounts, and a match spanning a text-layer
+span boundary that `Range.surroundContents()` can't wrap stays unpainted (still reachable via
+`searchNext()`). The loading skeleton is decorative and paired with an ordinary visually-hidden
 localized label; later loading and error transitions use the shared document-level polite and
 assertive sinks, respectively, without adding live semantics inside the viewer shadow.
 

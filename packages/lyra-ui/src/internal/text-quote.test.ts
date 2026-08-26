@@ -1821,7 +1821,7 @@ describe('normalization and materialization failure boundaries', () => {
       expect(rangeFromTextQuoteMatch(scope, { start: 0, end: 1 })).to.equal(null);
     } finally {
       if (originalDescriptor) Object.defineProperty(document, 'createRange', originalDescriptor);
-      else delete (document as Document & { createRange?: () => Range }).createRange;
+      else Reflect.deleteProperty(document, 'createRange');
     }
 
     const hostileMatch = {

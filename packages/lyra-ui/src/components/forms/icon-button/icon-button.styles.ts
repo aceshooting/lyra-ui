@@ -13,6 +13,7 @@ export const styles = css`
   [part~='button']:not(:disabled):not([aria-disabled='true']):active { border: var(--lr-icon-button-border-active, var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0))); background: var(--lr-icon-button-background-active, color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))); color: var(--lr-icon-button-color-active, var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))); }
   [part~='button']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   :host(:disabled) [part~='button'],
+  [part~='button']:disabled,
   [part~='button'][aria-disabled='true'] { opacity: var(--lr-opacity-disabled); cursor: not-allowed; }
   /* Font-relative on purpose: an icon button has its own 1.25rem visual-glyph contract,
      independent of the button label font-size the nested component inherits, so the integration

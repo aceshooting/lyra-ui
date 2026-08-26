@@ -9,7 +9,7 @@ const motionMatchMedia = (matches: boolean): typeof window.matchMedia =>
       media: query,
       addEventListener: () => {},
       removeEventListener: () => {},
-    } as MediaQueryList)) as typeof window.matchMedia;
+    } as unknown as MediaQueryList)) as typeof window.matchMedia;
 
 it('defaults to empty heading, no status, in/out handles, horizontal orientation', async () => {
   const el = (await fixture(html`<lr-flow-node></lr-flow-node>`)) as LyraFlowNode;
@@ -145,8 +145,8 @@ it('renders one handle per input/output with data-handle-id/data-handle-kind and
   )) as LyraFlowNode;
   const inputHandles = el.shadowRoot!.querySelectorAll('[part~="handle-input"]');
   expect(inputHandles.length).to.equal(2);
-  expect((inputHandles[0] as HTMLElement).dataset.handleId).to.equal('a');
-  expect((inputHandles[0] as HTMLElement).dataset.handleKind).to.equal('input');
+  expect((inputHandles[0] as HTMLElement).dataset['handleId']).to.equal('a');
+  expect((inputHandles[0] as HTMLElement).dataset['handleKind']).to.equal('input');
   expect((inputHandles[1] as HTMLElement).getAttribute('title')).to.equal('Second input');
   expect(el.shadowRoot!.querySelectorAll('[part~="handle-output"]').length).to.equal(1);
 });
@@ -186,6 +186,33 @@ it('suppresses empty header, body, and toolbar rows and updates them after slot 
   expect(row('toolbar').hidden).to.be.true;
 });
 
+it('keeps slotted toolbar actions visible in coarse-pointer or no-hover environments', async () => {
+  const el = (await fixture(html`
+    <lr-flow-node><button slot="toolbar" type="button">Run</button></lr-flow-node>
+  `)) as LyraFlowNode;
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await el.updateComplete;
+  const mediaRule = el.shadowRoot!.adoptedStyleSheets
+    .flatMap((sheet) => [...sheet.cssRules])
+    .find(
+      (rule): rule is CSSMediaRule =>
+        rule instanceof CSSMediaRule &&
+        rule.conditionText.includes('hover: none') &&
+        rule.conditionText.includes('pointer: coarse'),
+    );
+  expect(mediaRule).to.exist;
+  if (!mediaRule) return;
+  const original = mediaRule.media.mediaText;
+  try {
+    mediaRule.media.mediaText = 'all';
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const toolbar = el.shadowRoot!.querySelector<HTMLElement>('[part="toolbar"]')!;
+    expect(getComputedStyle(toolbar).opacity).to.equal('1');
+  } finally {
+    mediaRule.media.mediaText = original;
+  }
+});
+
 it('header slot suppresses the built-in heading row while keeping a hydration-stable slot tree', async () => {
   const el = (await fixture(
     html`<lr-flow-node heading="Ignored"><span slot="header">Custom header</span></lr-flow-node>`
@@ -212,7 +239,7 @@ it('a header child appended after the initial render still replaces the built-in
   const slot = el.shadowRoot!.querySelector('slot[name="header"]') as HTMLSlotElement;
   const assigned = slot.assignedElements({ flatten: true });
   expect(assigned.length).to.equal(1);
-  expect(assigned[0].textContent).to.equal('Custom header');
+  expect(assigned[0]!.textContent).to.equal('Custom header');
 });
 
 it('keeps server-only header and pulse state for the first hydrating update, then corrects in place', async () => {
@@ -357,7 +384,7 @@ describe('reduced-motion running pulse', () => {
       media: query,
       addEventListener: () => {},
       removeEventListener: () => {},
-    })) as typeof window.matchMedia;
+    })) as unknown as typeof window.matchMedia;
     try {
       const el = (await fixture(html`<lr-flow-node status="running"></lr-flow-node>`)) as LyraFlowNode;
       expect(el.shadowRoot!.querySelector('.card')!.hasAttribute('data-pulse')).to.be.false;

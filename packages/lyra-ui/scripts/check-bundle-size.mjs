@@ -31,6 +31,12 @@ import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
+import {
+  bundleBudgetSlackFinding,
+  budgetKilobytesToBytes,
+  createBundleBudgetReview,
+  validateBundleBudgetPolicy,
+} from "./bundle-budget-policy.mjs";
 import { positiveInitialMarginalGzipBytes } from "./bundle-metrics.mjs";
 
 const packageDir = fileURLToPath(new URL("..", import.meta.url));
@@ -52,12 +58,14 @@ const arguments_ = process.argv.slice(2);
 const unknownArguments = arguments_.filter(
   (argument) =>
     argument !== "--write-stats" &&
+    argument !== "--print-budget-review" &&
     argument !== "--exclusion-claims-only" &&
     !argument.startsWith("--emit=")
 );
 if (unknownArguments.length > 0)
   throw new Error(`Unknown argument: ${unknownArguments[0]}`);
 const writeStats = arguments_.includes("--write-stats");
+const printBudgetReview = arguments_.includes("--print-budget-review");
 const exclusionClaimsOnly = arguments_.includes("--exclusion-claims-only");
 
 // `--emit=<dir>` additionally writes the bundles this script already builds in memory. Nothing in
@@ -87,6 +95,7 @@ const requireFromLoaderHost = createRequire(
 const esbuild = requireFromLoaderHost("esbuild");
 
 const budgets = JSON.parse(readFileSync(budgetsPath, "utf8"));
+if (!printBudgetReview) validateBundleBudgetPolicy(budgets);
 const initialBudgets = JSON.parse(readFileSync(initialBudgetsPath, "utf8"));
 const initialBaselineEntries = initialBudgets.$baseline;
 const initialMarginalBudgets = initialBudgets.$marginalGzipKb;
@@ -329,10 +338,10 @@ const bundleInitialRoute = async (name, imports) => {
 };
 
 // Level 9 approximates the static-hosting gzip a consumer actually ships. zlib patch releases can
-// vary these live counts slightly even when esbuild emits identical bytes, so reviewed ceilings
-// intentionally use integer KiB rather than exact snapshots. Published aggregate stats below use a
-// wider 5% drift band; exact per-component evidence is separately anchored to the emitted bundle
-// SHA-256 by component-integration.mjs.
+// vary these live counts slightly even when esbuild emits identical bytes, so each exact reviewed
+// measurement receives at most 4% whole-byte headroom. Published aggregate stats below use a wider
+// 5% drift band; exact per-component evidence is separately anchored to the emitted bundle SHA-256
+// by component-integration.mjs.
 const gzipBytesOf = (contents) => gzipSync(contents, { level: 9 }).length;
 
 const toKb = (bytes) => (bytes / 1024).toFixed(1);
@@ -446,6 +455,17 @@ if (exclusionClaimsOnly) {
         Math.max(0, Math.ceil(sortedComponentBytes.length * 0.95) - 1)
       ] ?? 0;
     const maxComponentGzipBytes = sortedComponentBytes.at(-1) ?? 0;
+    if (printBudgetReview) {
+      const exactMeasurements = Object.fromEntries([
+        ...measured.map(({ entry, gzipBytes }) => [entry, gzipBytes]),
+        ["$componentP95GzipKb", p95ComponentGzipBytes],
+        ["$componentMaxGzipKb", maxComponentGzipBytes],
+      ]);
+      console.log(
+        "bundle budget review proposal (read-only; preserve any tighter reviewed canary):"
+      );
+      console.log(JSON.stringify(createBundleBudgetReview(exactMeasurements), null, 2));
+    }
     // The second badge figure: the whole barrel, i.e. what a consumer pays who imports every
     // component at once. It is the upper bound the per-component average sits under. It reads
     // `dist/all.js` rather than the package root: the root stopped registering components in 8.0.0,
@@ -507,12 +527,17 @@ if (exclusionClaimsOnly) {
       const line = `${entry}: min ${toKb(minBytes)} KB, gzip ${toKb(
         gzipBytes
       )} KB (budget ${budgetKb} KB)`;
-      if (gzipBytes > budgetKb * 1024) {
+      const budgetBytes = budgetKilobytesToBytes(budgetKb, entry);
+      if (gzipBytes > budgetBytes) {
         errors.push(
           `${line} -- OVER BUDGET by ${toKb(
-            gzipBytes - budgetKb * 1024
+            gzipBytes - budgetBytes
           )} KB gzip`
         );
+      } else if (!printBudgetReview) {
+        const slackFinding = bundleBudgetSlackFinding(entry, gzipBytes, budgetKb);
+        if (slackFinding) errors.push(`${line} -- STALE BUDGET: ${slackFinding}`);
+        else console.log(`${line} ok`);
       } else {
         console.log(`${line} ok`);
       }
@@ -521,7 +546,8 @@ if (exclusionClaimsOnly) {
       const budgetKb = initialMarginalBudgets[measurement.entry];
       const line =
         `${measurement.entry}: initial marginal gzip ${toKb(measurement.marginalGzipBytes)} KB ` +
-        `(route ${toKb(measurement.routeGzipBytes)} KB - baseline ` +
+        `(${measurement.marginalGzipBytes} bytes; route ` +
+        `${toKb(measurement.routeGzipBytes)} KB - baseline ` +
         `${toKb(measurement.baselineGzipBytes)} KB; ${measurement.outputCount} initial chunk(s); ` +
         `budget ${budgetKb} KB)`;
       if (measurement.marginalGzipBytes > budgetKb * 1024) {
@@ -542,8 +568,13 @@ if (exclusionClaimsOnly) {
       const line = `${label}: gzip ${toKb(
         actualBytes
       )} KB (budget ${budgetKb} KB)`;
-      if (actualBytes > budgetKb * 1024) errors.push(`${line} -- OVER BUDGET`);
-      else console.log(`${line} ok`);
+      if (actualBytes > budgetKilobytesToBytes(budgetKb, budgetKey)) {
+        errors.push(`${line} -- OVER BUDGET`);
+      } else if (!printBudgetReview) {
+        const slackFinding = bundleBudgetSlackFinding(budgetKey, actualBytes, budgetKb);
+        if (slackFinding) errors.push(`${line} -- STALE BUDGET: ${slackFinding}`);
+        else console.log(`${line} ok`);
+      } else console.log(`${line} ok`);
     }
 
     // The README badges render scripts/bundle-stats.json straight from main, so a stale file is a

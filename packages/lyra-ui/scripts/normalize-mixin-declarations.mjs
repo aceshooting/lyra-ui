@@ -7,8 +7,8 @@ import { join } from 'node:path';
 // private `*_base` declaration. Rebuild that compiler-generated base type with one exact construct
 // signature: the mapped static side keeps public statics, while ConstructorParameters/InstanceType
 // preserve the caller's constructor and instance surface without publishing `any`.
-const TARGET_BASE = /declare const ([A-Za-z_$][\w$]*): typeof ([A-Za-z_$][\w$]*) & \(new \(\.\.\.args: any\[\]\) => (import\("[^"]+\/(?:anchor-target|text-viewer-target)\.js"\)\.(?:LyraAnchorTarget|LyraTextViewerTarget) & \{\s*renderAnchorLiveRegion\(\): unknown;\s*\})\);/gu;
-const LEAKED_TARGET_BASE = /new \(\.\.\.args: any\[\]\)[\s\S]{0,400}?(?:anchor-target|text-viewer-target)\.js/u;
+const TARGET_BASE = /declare const ([A-Za-z_$][\w$]*): typeof ([A-Za-z_$][\w$]*) & \(new \(\.\.\.args: any\[\]\) => (import\("[^"]+"\)\.(?:LyraAnchorTarget|LyraTextViewerTarget) & \{\s*renderAnchorLiveRegion\(\): unknown;\s*\})\);/gu;
+const LEAKED_TARGET_BASE = /new \(\.\.\.args: any\[\]\)[\s\S]{0,400}?\b(?:LyraAnchorTarget|LyraTextViewerTarget)\b/u;
 
 export function normalizeMixinDeclarationText(source) {
   let replacements = 0;
@@ -47,4 +47,13 @@ export async function normalizeMixinDeclarations(distDirectory) {
     replacements += normalized.replacements;
   }
   return { filesChanged, replacements };
+}
+
+export function assertNormalizedMixinCount(result, expectedReplacements) {
+  if (result.replacements !== expectedReplacements) {
+    throw new Error(
+      `expected ${expectedReplacements} anchor/text-viewer mixin base declaration(s), ` +
+        `normalized ${result.replacements}`,
+    );
+  }
 }

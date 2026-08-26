@@ -11,7 +11,7 @@ import {
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
-import { place } from '../../../internal/positioner.js';
+import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { styles } from './app-rail-item.styles.js';
 

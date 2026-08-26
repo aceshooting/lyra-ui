@@ -6,6 +6,7 @@
 - **Class** `LyraAgentEvalDashboard`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.2.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 13 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -26,7 +27,8 @@ AgentEvaluationDashboardRun[] = []` (attribute: false), where each run is `{ id,
 AgentStatusValue, metrics?: Record<string, number> }`. `AgentStatusValue` accepts either a compact
 `AgentStatusKind` string or an `AgentStatusPresentation` object (`{ kind, message?, label?,
 variant?, terminal?, active? }`), preserving explicit caller labels/messages and badge variants.
-`metricId: string | null = null`; `label: string = ''`; `showChart: boolean = true`; `chartHeight: string =
+`metricId: string | null = null`; `label?: string` — omission localizes the heading while an
+explicit empty string renders no heading/name; `showChart: boolean = true`; `chartHeight: string =
 '220px'`; `maxRenderedRuns: number = 100` (attribute `max-rendered-runs`, clamped to 1–500) bounds
 both the run list and the chart projection.
 Empty metric/run ids are omitted and later duplicates use deterministic first-occurrence-wins

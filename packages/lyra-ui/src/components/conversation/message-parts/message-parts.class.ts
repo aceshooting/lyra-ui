@@ -3,7 +3,6 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import type { CitationMessagePart, CitationSelectEventDetail, MessagePart } from '../../../ai/types.js';
-import { isNonBlankIdentity } from '../../retrieval/retrieval-identity.js';
 import type { LyraThinkingPanelEventMap } from '../../agent-tools/thinking-panel/thinking-panel.class.js';
 import type { LyraToolCallChipEventMap } from '../../agent-tools/tool-call-chip/tool-call-chip.class.js';
 import type { LyraToolResultViewEventMap } from '../../agent-tools/tool-result-view/tool-result-view.class.js';
@@ -16,6 +15,7 @@ import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import type { LyraMarkdownEventMap } from '../markdown/markdown.class.js';
 import type { LyraWidgetRendererEventMap } from '../widget-renderer/widget-renderer.class.js';
+import { isNonBlankIdentity, isRecord } from '../../retrieval/retrieval-identity.js';
 import { styles } from './message-parts.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -36,10 +36,6 @@ export interface LyraMessagePartsEventMap
   'lr-citation-select': CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>;
   'lr-part-retry': CustomEvent<LyraEventDetailSnapshot<{ part: MessagePart }>>;
   'lr-render-error': CustomEvent<{ error: unknown } | { toolName: string; error: unknown }>;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /**

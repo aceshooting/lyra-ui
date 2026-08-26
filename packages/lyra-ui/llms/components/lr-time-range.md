@@ -6,6 +6,7 @@
 - **Class** `LyraTimeRange`, also available unregistered from `@aceshooting/lyra-ui/components/forms/time-range/time-range.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 7 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -31,10 +32,11 @@ into the shadow-root group. `startLabel` and `endLabel` continue to name the ind
 - `start: number = 0`
 - `end: number = 100`
 - `step: number = 1`
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — visual size; proportionally
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected) — visual size; proportionally
   scales the handle, track, and preset buttons via a single `--lr-time-range-size-scale` multiplier
   (not pixel-matched to `lr-input`'s row-height scale — this component's own dimensions aren't on
-  that ladder); the drag hit-area never shrinks below 24px (WCAG 2.5.8)
+  that ladder); `small`/`medium`/`large` are exact aliases for `s`/`m`/`l`, and the drag hit-area
+  never shrinks below 24px (WCAG 2.5.8)
 - `disabled: boolean = false` (reflected)
 - `startLabel?: string` (attribute `start-label`) — caller-owned `aria-label` override for the start
   handle; absence resolves localized `rangeStart` (`"Range start"` in English), while every
@@ -54,6 +56,13 @@ label: string; start: number; end: number }`; a bounded frozen snapshot of optio
   native/prefixed input and change sequences a committed drag or keyboard step would. Preset
   endpoints are clamped and ordered once, and that same normalized pair drives both application
   and `aria-pressed`/`data-active` projection
+- `appliedPreset: TimeRangePreset | undefined` (read-only, attribute: false) — the frozen
+  `presets` snapshot whose button produced the current range. Preset application updates this
+  identity before its synchronous event sequence, so it can be read inside `input`/`change` or
+  `lr-input`/`lr-change` handlers. It remains `undefined` before a preset is selected and is
+  cleared by a real manual handle move, a controlled endpoint change away from that preset, a
+  preset-collection replacement, or a form reset. Numeric equality never infers identity; no-op
+  endpoint writes and reassigning the same preset snapshot preserve it
 - `customError: string | null` (attribute `custom-error`, reflected) — consumer validation message
 
 **Events:** a native-style composed `input` (no detail) then `lr-input` (`detail: { start, end }`),

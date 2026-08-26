@@ -10,6 +10,12 @@ import {
 } from "./calendar-core.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
+const requiredItem = <T>(items: ArrayLike<T>, index: number, description: string): T => {
+  const item = items[index];
+  if (item === undefined) throw new Error(`Missing ${description} at index ${index}.`);
+  return item;
+};
+
 it("gates enabled previous/next hover backgrounds behind :where() (regression)", () => {
   const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
   expect(css).to.match(
@@ -528,7 +534,8 @@ it("moves the roving focus into the newly visible month after navigation", async
     '[part~="day"][tabindex="0"]'
   );
   expect(focusable.length).to.equal(1);
-  expect((focusable[0] as HTMLButtonElement).dataset.date).to.equal(
+  const focused = requiredItem(focusable, 0, 'focusable day') as HTMLButtonElement;
+  expect(focused.dataset['date']).to.equal(
     "2026-08-01"
   );
   expect((focusable[0] as HTMLButtonElement).disabled).to.be.false;
@@ -564,7 +571,8 @@ it("does not steal DOM focus off the next/previous button when navigating months
     '[part~="day"][tabindex="0"]'
   );
   expect(focusable.length).to.equal(1);
-  expect((focusable[0] as HTMLButtonElement).dataset.date).to.equal(
+  const focused = requiredItem(focusable, 0, 'focusable day') as HTMLButtonElement;
+  expect(focused.dataset['date']).to.equal(
     "2026-08-01"
   );
 });
@@ -648,7 +656,7 @@ it("leaves the two-month view alone when ArrowRight moves into a date already vi
   await el.updateComplete;
 
   const grids = el.shadowRoot!.querySelectorAll('[part="grid"]');
-  grids[0].dispatchEvent(
+  requiredItem(grids, 0, 'first month grid').dispatchEvent(
     new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
   );
   await el.updateComplete;
@@ -686,7 +694,7 @@ it("slides the two-month view by exactly one month once a keypress moves past th
     );
 
   // PageDown from July 31 lands on Aug 31, already visible in the second grid.
-  grids()[0].dispatchEvent(
+  requiredItem(grids(), 0, 'first month grid').dispatchEvent(
     new KeyboardEvent("keydown", { key: "PageDown", bubbles: true })
   );
   await el.updateComplete;
@@ -694,7 +702,7 @@ it("slides the two-month view by exactly one month once a keypress moves past th
   expect(titles()[1]).to.contain("august");
 
   // One more day forward crosses past the visible window (Sep 1 isn't shown yet).
-  grids()[1].dispatchEvent(
+  requiredItem(grids(), 1, 'second month grid').dispatchEvent(
     new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
   );
   await el.updateComplete;
@@ -975,7 +983,9 @@ it("keeps exactly one grid cell in the roving tab order after moving focus", asy
     '[part~="day"][tabindex="0"]'
   );
   expect(inTabOrder.length).to.equal(1);
-  expect((inTabOrder[0] as HTMLElement).dataset.date).to.equal("2026-07-16");
+  expect(
+    (requiredItem(inTabOrder, 0, 'roving day') as HTMLElement).dataset['date'],
+  ).to.equal("2026-07-16");
 });
 
 it("crosses a month boundary when ArrowRight moves past the last day of the month", async () => {
@@ -1126,9 +1136,13 @@ it("gives each visible month grid its own accessible name via aria-labelledby, d
   const titles = Array.from(el.shadowRoot!.querySelectorAll('[part="title"]'));
   expect(grids.length).to.equal(2);
   expect(titles.length).to.equal(2);
+  const firstGrid = requiredItem(grids, 0, 'first month grid');
+  const secondGrid = requiredItem(grids, 1, 'second month grid');
+  const firstTitle = requiredItem(titles, 0, 'first month title');
+  const secondTitle = requiredItem(titles, 1, 'second month title');
 
-  const labelledBy0 = grids[0].getAttribute("aria-labelledby");
-  const labelledBy1 = grids[1].getAttribute("aria-labelledby");
+  const labelledBy0 = firstGrid.getAttribute("aria-labelledby");
+  const labelledBy1 = secondGrid.getAttribute("aria-labelledby");
   expect(labelledBy0, "expected the first grid to reference a title id")
     .to.be.a("string")
     .with.length.greaterThan(0);
@@ -1137,10 +1151,10 @@ it("gives each visible month grid its own accessible name via aria-labelledby, d
     .with.length.greaterThan(0);
   expect(labelledBy0).to.not.equal(labelledBy1);
 
-  expect(titles[0].getAttribute("id")).to.equal(labelledBy0);
-  expect(titles[1].getAttribute("id")).to.equal(labelledBy1);
-  expect(titles[0].textContent!.trim().toLowerCase()).to.contain("july");
-  expect(titles[1].textContent!.trim().toLowerCase()).to.contain("august");
+  expect(firstTitle.getAttribute("id")).to.equal(labelledBy0);
+  expect(secondTitle.getAttribute("id")).to.equal(labelledBy1);
+  expect(firstTitle.textContent!.trim().toLowerCase()).to.contain("july");
+  expect(secondTitle.textContent!.trim().toLowerCase()).to.contain("august");
 });
 
 it("formats each day cell aria-label with the full localized weekday/month/day/year", async () => {
@@ -1441,8 +1455,8 @@ it("renders two months as contained rows at a 320px allocation in LTR and RTL", 
     ) as HTMLElement[];
     expect(monthElements.length).to.equal(2);
     const wrapperRect = wrapper.getBoundingClientRect();
-    const firstRect = monthElements[0].getBoundingClientRect();
-    const secondRect = monthElements[1].getBoundingClientRect();
+    const firstRect = requiredItem(monthElements, 0, 'first month').getBoundingClientRect();
+    const secondRect = requiredItem(monthElements, 1, 'second month').getBoundingClientRect();
     for (const rect of [firstRect, secondRect]) {
       expect(rect.left).to.be.at.least(wrapperRect.left - 1);
       expect(rect.right).to.be.at.most(wrapperRect.right + 1);
@@ -1737,7 +1751,7 @@ it("wires locale, weekday-format and first-day-of-week through to the rendered w
     el.shadowRoot!.querySelectorAll('[part="grid"] [role="gridcell"]')
   );
   const idx = cells.findIndex(
-    (c) => (c as HTMLElement).dataset.date === "2026-07-01"
+    (c) => (c as HTMLElement).dataset['date'] === "2026-07-01"
   );
   expect(idx % 7).to.equal(2);
 });
@@ -1822,9 +1836,9 @@ it("renormalizes the roving date when a dynamic minimum disables the selected da
     focusable.length,
     "expected one roving focus target after the constraint update"
   ).to.equal(1);
-  const focused = focusable[0] as HTMLButtonElement;
+  const focused = requiredItem(focusable, 0, 'focusable day') as HTMLButtonElement;
   expect(
-    focused.dataset.date,
+    focused.dataset['date'],
     "expected focus to move to the nearest enabled day"
   ).to.equal("2026-07-20");
   expect(focused.disabled, "the roving focus target must be enabled").to.be
@@ -1907,10 +1921,10 @@ it("hides outside-month placeholders from the accessibility tree only in rows th
   await el.updateComplete;
 
   const weeks = el.shadowRoot!.querySelectorAll('[part="week"]');
-  const firstRowPlaceholders = weeks[0].querySelectorAll(
+  const firstRowPlaceholders = requiredItem(weeks, 0, 'first week').querySelectorAll(
     '[part="day-placeholder"]'
   );
-  const lastRowPlaceholders = weeks[weeks.length - 1].querySelectorAll(
+  const lastRowPlaceholders = requiredItem(weeks, weeks.length - 1, 'last week').querySelectorAll(
     '[part="day-placeholder"]'
   );
   expect(firstRowPlaceholders.length, "expected a mixed leading row").to.equal(
@@ -2099,6 +2113,32 @@ describe("reviewed date-picker parity surface", () => {
     expect(el.value).to.equal("2026-07-10/2026-07-20");
     expect(el.valueAsRange.from?.getDate()).to.equal(10);
     expect(el.valueAsRange.to?.getDate()).to.equal(20);
+  });
+
+  it('writes selection through the range normalizer without emitting user-change events', async () => {
+    const el = (await fixture(
+      html`<lr-date-picker mode="range"></lr-date-picker>`,
+    )) as LyraDatePicker;
+    const events: string[] = [];
+    for (const type of ['input', 'change', 'lr-input', 'lr-change']) {
+      el.addEventListener(type, () => events.push(type));
+    }
+
+    el.selection = {
+      from: new Date(2026, 6, 20),
+      to: new Date(2026, 6, 10),
+    };
+    await el.updateComplete;
+
+    expect(el.value).to.equal('2026-07-10/2026-07-20');
+    expect(el.selection.from?.getDate()).to.equal(10);
+    expect(el.selection.to?.getDate()).to.equal(20);
+    expect(events, 'controlled range selection stays silent').to.deep.equal([]);
+
+    el.selection = { from: null, to: new Date(2026, 6, 15) };
+    await el.updateComplete;
+    expect(el.value, 'an incomplete range clears through valueAsRange semantics').to.equal('');
+    expect(events).to.deep.equal([]);
   });
 
   it("accepts branded Date values from another realm for values, ranges, and disabled dates", async () => {
@@ -2770,9 +2810,9 @@ describe("date-picker coverage gaps", () => {
     const items = Array.from(
       el.shadowRoot!.querySelectorAll('[part~="view-item"]')
     ) as HTMLButtonElement[];
-    expect(items[0].disabled, "January is entirely before the March minimum").to
+    expect(requiredItem(items, 0, 'January').disabled, "January is entirely before the March minimum").to
       .be.true; // January
-    expect(items[5].disabled, "June is on/after the March minimum").to.be.false; // June
+    expect(requiredItem(items, 5, 'June').disabled, "June is on/after the March minimum").to.be.false; // June
   });
 
   it("disables selection periods that contain no selectable day under past-date constraints", async () => {
@@ -3100,6 +3140,41 @@ describe('range presets', () => {
       el.shadowRoot!.querySelector('[part~="presets"]') === null,
       'no empty row either',
     ).to.be.true;
+  });
+
+  it('normalizes non-array preset assignments to an empty collection and remains recoverable', async () => {
+    const el = (await fixture(
+      html`<lr-date-picker mode="range"></lr-date-picker>`,
+    )) as LyraDatePicker;
+
+    el.presets = null as unknown as readonly (typeof PRESETS)[number][];
+    await el.updateComplete;
+    expect(el.presets).to.deep.equal([]);
+    expect(buttons(el)).to.have.lengthOf(0);
+
+    el.presets = { label: 'not a collection' } as unknown as readonly (typeof PRESETS)[number][];
+    await el.updateComplete;
+    expect(el.presets).to.deep.equal([]);
+
+    el.presets = PRESETS;
+    await el.updateComplete;
+    expect(buttons(el).map((button) => button.textContent?.trim())).to.deep.equal([
+      'Last 7 days',
+      'Last 30 days',
+    ]);
+  });
+
+  it('omits non-object entries from an otherwise valid preset collection', async () => {
+    const el = (await fixture(
+      html`<lr-date-picker mode="range"></lr-date-picker>`,
+    )) as LyraDatePicker;
+
+    el.presets = [null, 42, PRESETS[0]] as unknown as readonly (typeof PRESETS)[number][];
+    await el.updateComplete;
+
+    expect(buttons(el).map((button) => button.textContent?.trim())).to.deep.equal([
+      'Last 7 days',
+    ]);
   });
 
   it('renders one labelled button per preset in range mode', async () => {

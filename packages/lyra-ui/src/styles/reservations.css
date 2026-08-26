@@ -31,7 +31,7 @@
   :is(
       lr-chart, lr-line-chart, lr-bar-chart, lr-scatter-chart, lr-pie-chart, lr-doughnut-chart,
       lr-radar-chart, lr-polar-area-chart, lr-bubble-chart, lr-histogram, lr-box-plot,
-      lr-lite-chart, lr-map, lr-heatmap, lr-flow-canvas, lr-knowledge-graph-explorer,
+      lr-lite-chart, lr-map, lr-heatmap, lr-flow-canvas, lr-graph, lr-knowledge-graph-explorer,
       lr-qr-code, lr-skeleton, lr-card, lr-page, lr-widget, lr-table, lr-data-grid
     ):not(:defined) {
     display: block;
@@ -48,7 +48,7 @@
     min-block-size: var(--lr-chart-height, var(--lr-size-280px, 280px));
   }
 
-  /* Map. Matches map.styles.ts's `block-size: var(--lr-size-24rem)`. */
+  /* Map. Matches map.styles.ts's `block-size: var(--lr-map-height, var(--lr-size-24rem))`. */
   lr-map:not(:defined) {
     inline-size: 100%;
     block-size: var(--lr-map-height, var(--lr-size-24rem, 24rem));
@@ -62,12 +62,11 @@
     aspect-ratio: var(--lr-flag-aspect-ratio, 4 / 3);
   }
 
-  /* Canvas-backed surfaces that fill their allocation once defined. Without a reservation these
-     collapse to zero before upgrade and expand to their container afterwards -- the largest single
-     shift of the set. */
-  :is(lr-flow-canvas, lr-knowledge-graph-explorer):not(:defined) {
+  /* Graph/canvas surfaces share this default host block size once defined. An explicit outer
+     block-size still wins before and after upgrade; the token is the themeable agreement path. */
+  :is(lr-flow-canvas, lr-graph, lr-knowledge-graph-explorer):not(:defined) {
     inline-size: 100%;
-    min-block-size: var(--lr-canvas-reserved-height, var(--lr-size-24rem, 24rem));
+    block-size: var(--lr-canvas-reserved-height, var(--lr-size-24rem, 24rem));
   }
 
   /* Inline controls whose height is the shared form-control ladder. Reserving the row height stops

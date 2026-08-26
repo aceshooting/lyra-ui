@@ -16,6 +16,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteDuration, finiteInteger } from '../../../internal/numbers.js';
 import { composedContains } from '../../../internal/overlay-manager.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { tag } from '../../../internal/prefix.js';
 import { styles } from './carousel.styles.js';
 import type { LyraCarouselItem } from './carousel-item.class.js';
@@ -42,7 +43,7 @@ interface RestingSlide {
 
 type CarouselChangeOrigin = 'manual' | 'autoplay';
 
-export type LyraCarouselOrientation = 'horizontal' | 'vertical';
+export type LyraCarouselOrientation = LyraOrientation;
 
 const LOOP_SNAPSHOT_UNSAFE_TAGS = new Set([
   'audio',

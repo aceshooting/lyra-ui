@@ -122,7 +122,7 @@ describe('acquireHighlightHandle', () => {
       } else {
         const marks = root.querySelectorAll('mark[data-lr-highlight-tone="accent"]');
         expect(marks).to.have.length(1);
-        expect(marks[0].textContent).to.equal('gamma');
+        expect(marks[0]!.textContent).to.equal('gamma');
       }
       handle.release();
     } finally {
@@ -341,9 +341,9 @@ describe('acquireHighlightHandle (fallback path, forced via a hidden Highlight g
 
       const marks = root.querySelectorAll('mark[data-lr-highlight-tone="accent"]');
       expect(marks).to.have.length(3);
-      expect(marks[0].textContent).to.equal('lo ');
-      expect(marks[1].textContent).to.equal('brave new');
-      expect(marks[2].textContent).to.equal(' world');
+      expect(marks[0]!.textContent).to.equal('lo ');
+      expect(marks[1]!.textContent).to.equal('brave new');
+      expect(marks[2]!.textContent).to.equal(' world');
       expect(root.textContent).to.equal('Hello brave new world today');
 
       handle.release();

@@ -6,6 +6,7 @@
 - **Class** `LyraAttachmentTrigger`, also available unregistered from `@aceshooting/lyra-ui/components/media/attachment-trigger/attachment-trigger.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -27,8 +28,9 @@ capability as a row.
 - `capabilities: readonly LyraAttachmentCapability[] = ['files']` (property only, no attribute) —
   which capabilities to offer, in display order. `LyraAttachmentCapability = 'files' | 'image' |
 'camera' | 'audio'`; `LyraFileBackedCapability = 'files' | 'image'` (the two that actually open
-  the file picker). Writes are normalized to a frozen, deduplicated, at-most-four entry snapshot;
-  hostile/invalid collections fail closed to the default.
+  the file picker). Writes inspect at most the first 64 candidates and normalize to a frozen,
+  deduplicated, at-most-four entry snapshot. Unknown values and duplicates do not consume that
+  four-entry output budget; hostile/invalid collections fail closed to the default.
 - `accept: string = ''` — a native-file-input-style accept string (e.g. `'image/*'` or
   `'.pdf,.docx'`), forwarded to the hidden file input for the `files`/`image` capabilities. `image`
   defaults it to `'image/*'` unless this prop overrides it; `files` always uses it as-is (empty

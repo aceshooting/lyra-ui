@@ -325,9 +325,9 @@ describe('lr-browser-frame', () => {
     await el.updateComplete;
     const pings = [...el.shadowRoot!.querySelectorAll('[part="ping"]')] as HTMLElement[];
     expect(pings.length).to.equal(2);
-    expect(pings[0].getAttribute('aria-hidden')).to.equal('true');
-    expect(pings[0].dataset.kind).to.equal('click');
-    expect(pings[1].dataset.kind).to.equal('type');
+    expect(pings[0]!.getAttribute('aria-hidden')).to.equal('true');
+    expect(pings[0]!.dataset['kind']).to.equal('click');
+    expect(pings[1]!.dataset['kind']).to.equal('type');
   });
 
   it('positions pings with physical left/top under dir="rtl" so they stay over the non-mirroring screenshot', async () => {

@@ -6,6 +6,7 @@
 - **Class** `LyraWordCloud`, also available unregistered from `@aceshooting/lyra-ui/components/data/word-cloud/word-cloud.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -53,6 +54,10 @@ number, color?: string, group?: string }` snapshots; malformed/hostile records a
   clamped/defaulted the same way (a non-finite value falls back to `48px`, not to `1px`); a
   resulting reversed pair (`minFontSize` greater than `maxFontSize`) is swapped rather than
   inverting the weight-to-size mapping
+- `domain?: [number, number]` (attribute: false) — pins the weight-to-font-size input domain so
+  separate clouds can share one scale instead of each deriving it from its own lightest and
+  heaviest words. Reversed endpoints are normalized; a degenerate or non-finite pair falls back to
+  the data-derived range
 - `scale: 'linear'|'sqrt' = 'linear'` — `sqrt` compresses the weight→font-size mapping so one heavy
   word doesn't dwarf the rest, matching `lr-heatmap`'s `scale` property
 - `wordRotation: 'none'|'mixed' = 'none'` (attribute `word-rotation`, reflected) — `mixed` lets
@@ -115,11 +120,12 @@ through the normal cascade), plus shared tokens (`--lr-font`,
 </script>
 ```
 
-The focusable SVG is the single semantic owner: `role="application"` plus an auto-computed
-`aria-label` such as `"Word cloud of 12 words"` / `"Word cloud of 1 word"`, counting only words
-actually rendered. An authored host `role`/`aria-label` stays on the host and is never copied onto
-the nested focus owner. When records are omitted, the SVG references the visible localized
-`[part="limit"]` rendered/received summary.
+The focusable SVG is the single semantic owner: `role="application"` plus an accessible name. An
+authored host `aria-label` is forwarded to that SVG and wins by attribute presence; when it is
+absent, the SVG uses an auto-computed localized name such as `"Word cloud of 12 words"` / `"Word
+cloud of 1 word"`, counting only words actually rendered. An authored host `role` remains on the
+host and does not replace the SVG's application role. When records are omitted, the SVG references
+the visible localized `[part="limit"]` rendered/received summary.
 
 **Known gotchas:**
 

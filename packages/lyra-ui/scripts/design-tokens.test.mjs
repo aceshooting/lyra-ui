@@ -51,6 +51,11 @@ const bySuffix = (suffix) => {
 };
 
 const dtcg = JSON.parse(bySuffix('/design-tokens.json'));
+assert.equal(
+  bySuffix('/design-tokens.json'),
+  `${JSON.stringify(dtcg)}\n`,
+  'the published DTCG artifact remains deterministically compact',
+);
 assert.equal(dtcg.$extensions['com.aceshooting.lyra'].schemaVersion, 1);
 assert.equal(dtcg.theme.color.surface.default.$type, 'color');
 assert.deepEqual(dtcg.theme.color.surface.default.$value, {

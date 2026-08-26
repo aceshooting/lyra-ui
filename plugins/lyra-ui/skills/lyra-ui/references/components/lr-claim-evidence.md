@@ -6,6 +6,7 @@
 - **Class** `LyraClaimEvidence`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/claim-evidence/claim-evidence.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 11 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -29,7 +30,8 @@ is clamped to 0–1 for localized percent display. `Citation` is the shared AI c
 
 Claims and citations are canonicalized independently by nonblank `id`. Malformed rows and later
 duplicates are omitted first-wins before empty state, controlled selection, evidence lookup,
-rendering, or events.
+rendering, or events. An unrecognized runtime claim status renders as localized “Unsupported” with
+the danger treatment instead of producing an empty or misleading badge.
 
 - `compact: boolean = false` (reflected) — tighter `claim-trigger` padding and column gap, for dense
   evidence lists — the same convention as `lr-source-card`'s/`lr-entity-card`'s `compact`. Purely a

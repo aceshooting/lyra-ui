@@ -40,7 +40,7 @@ import {
 } from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_ingestionAttemptCount, LYRA_DEFAULT_ingestionCancelWithContext, LYRA_DEFAULT_ingestionChunkCount, LYRA_DEFAULT_ingestionEmbeddedOfTotal, LYRA_DEFAULT_ingestionItemProgressLabel, LYRA_DEFAULT_ingestionQueueEmpty, LYRA_DEFAULT_ingestionQueueLabel, LYRA_DEFAULT_ingestionRetryWithContext, LYRA_DEFAULT_ingestionStageCancelled, LYRA_DEFAULT_ingestionStageChunking, LYRA_DEFAULT_ingestionStageDone, LYRA_DEFAULT_ingestionStageEmbedding, LYRA_DEFAULT_ingestionStageExtracting, LYRA_DEFAULT_ingestionStageFailed, LYRA_DEFAULT_ingestionStageIndexing, LYRA_DEFAULT_ingestionStageQueued, LYRA_DEFAULT_ingestionStageUploading, LYRA_DEFAULT_retry } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_ingestionAttemptCount, LYRA_DEFAULT_ingestionCancelWithContext, LYRA_DEFAULT_ingestionChunkCount, LYRA_DEFAULT_ingestionEmbeddedOfTotal, LYRA_DEFAULT_ingestionItemProgressLabel, LYRA_DEFAULT_ingestionQueueEmpty, LYRA_DEFAULT_ingestionQueueLabel, LYRA_DEFAULT_ingestionRetryWithContext, LYRA_DEFAULT_ingestionStageCancelled, LYRA_DEFAULT_ingestionStageChunking, LYRA_DEFAULT_ingestionStageDone, LYRA_DEFAULT_ingestionStageEmbedding, LYRA_DEFAULT_ingestionStageExtracting, LYRA_DEFAULT_ingestionStageFailed, LYRA_DEFAULT_ingestionStageIndexing, LYRA_DEFAULT_ingestionStageQueued, LYRA_DEFAULT_ingestionStageUnknown, LYRA_DEFAULT_ingestionStageUploading, LYRA_DEFAULT_retry } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /**
@@ -58,6 +58,26 @@ export type IngestionStage =
   | 'failed'
   | 'cancelled';
 
+type RenderedIngestionStage = IngestionStage | 'unknown';
+
+const INGESTION_STAGES: ReadonlySet<IngestionStage> = new Set([
+  'queued',
+  'uploading',
+  'extracting',
+  'chunking',
+  'embedding',
+  'indexing',
+  'done',
+  'failed',
+  'cancelled',
+]);
+
+function normalizedStage(stage: unknown): RenderedIngestionStage {
+  return INGESTION_STAGES.has(stage as IngestionStage)
+    ? (stage as IngestionStage)
+    : 'unknown';
+}
+
 /** In-flight stages that render a progress indicator and remain cancelable. `'queued'` is also
  *  cancelable (see `CANCELABLE_STAGES`) but has nothing yet to show progress *of*. */
 const ACTIVE_STAGES: readonly IngestionStage[] = [
@@ -74,7 +94,7 @@ const CANCELABLE_STAGES: readonly IngestionStage[] = [
   ...ACTIVE_STAGES,
 ];
 
-function badgeVariantForStage(stage: IngestionStage): BadgeVariant {
+function badgeVariantForStage(stage: RenderedIngestionStage): BadgeVariant {
   switch (stage) {
     case 'done':
       return 'success';
@@ -82,6 +102,7 @@ function badgeVariantForStage(stage: IngestionStage): BadgeVariant {
       return 'danger';
     case 'queued':
     case 'cancelled':
+    case 'unknown':
       return 'neutral';
     default:
       return 'brand';
@@ -178,7 +199,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  * Blank item ids and later duplicates are ignored before failure state, counts, virtualization,
- * rendering, or actions. The first item for an id wins.
+ * rendering, or actions. The first item for an id wins. Missing and unrecognized runtime `stage`
+ * values render as a localized, neutral, inert unknown state so a newer backend stage never
+ * becomes a blank or misleadingly actionable row.
  *
  * @customElement lr-ingestion-queue
  * @event lr-retry - A row's retry affordance was activated (only rendered for `stage="failed"`
@@ -244,12 +267,15 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     ingestionStageFailed: LYRA_DEFAULT_ingestionStageFailed,
     ingestionStageIndexing: LYRA_DEFAULT_ingestionStageIndexing,
     ingestionStageQueued: LYRA_DEFAULT_ingestionStageQueued,
+    ingestionStageUnknown: LYRA_DEFAULT_ingestionStageUnknown,
     ingestionStageUploading: LYRA_DEFAULT_ingestionStageUploading,
     retry: LYRA_DEFAULT_retry,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  protected static override readonly ownedCollectionProperties = Object.freeze(['items']);
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'items',
+  ]);
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
@@ -287,7 +313,8 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     return firstByRetrievalIdentity(
       Array.isArray(value)
         ? value.filter((item): item is IngestionQueueItem => {
-            if (!isRecord(item) || !isNonBlankIdentity(item['id'])) return false;
+            if (!isRecord(item) || !isNonBlankIdentity(item['id']))
+              return false;
             const document = item['document'];
             return (
               isRecord(document) &&
@@ -350,7 +377,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     if (this.failureLiveText !== '') this.sink?.announce(this.failureLiveText);
   }
 
-  private stageLabel(stage: IngestionStage): string {
+  private stageLabel(stage: RenderedIngestionStage): string {
     switch (stage) {
       case 'queued':
         return this.localize('ingestionStageQueued');
@@ -370,6 +397,8 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
         return this.localize('ingestionStageFailed');
       case 'cancelled':
         return this.localize('ingestionStageCancelled');
+      case 'unknown':
+        return this.localize('ingestionStageUnknown');
     }
   }
 
@@ -400,10 +429,11 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     item: IngestionQueueItem,
     ownRole: boolean
   ): TemplateResult => {
-    const stageLabel = this.stageLabel(item.stage);
-    const showProgress = ACTIVE_STAGES.includes(item.stage);
-    const canRetry = item.stage === 'failed';
-    const canCancel = CANCELABLE_STAGES.includes(item.stage);
+    const stage = normalizedStage(item.stage);
+    const stageLabel = this.stageLabel(stage);
+    const showProgress = stage !== 'unknown' && ACTIVE_STAGES.includes(stage);
+    const canRetry = stage === 'failed';
+    const canCancel = stage !== 'unknown' && CANCELABLE_STAGES.includes(stage);
     const attempts = this.normalizedAttempts(item);
     const hasMeta =
       item.chunkCount !== undefined ||
@@ -416,15 +446,13 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
       <div
         part="item"
         role=${ownRole ? 'listitem' : nothing}
-        data-stage=${item.stage}
+        data-stage=${stage}
       >
         <div part="item-header">
           <span part="item-name" title=${item.document.name}
             >${item.document.name}</span
           >
-          <lr-badge
-            part="item-stage"
-            variant=${badgeVariantForStage(item.stage)}
+          <lr-badge part="item-stage" variant=${badgeVariantForStage(stage)}
             >${stageLabel}</lr-badge
           >
         </div>
@@ -474,7 +502,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
                 : nothing}
             </div>`
           : nothing}
-        ${item.stage === 'failed' && item.error
+        ${stage === 'failed' && item.error
           ? html`<p part="item-error">${item.error}</p>`
           : nothing}
         ${canRetry || canCancel

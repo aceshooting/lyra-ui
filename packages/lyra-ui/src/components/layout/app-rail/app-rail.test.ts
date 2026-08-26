@@ -1812,6 +1812,29 @@ describe("resizable", () => {
     expect(base.style.getPropertyValue("inline-size")).to.equal("");
   });
 
+  it('clears a resized desktop inline size when the same surface becomes the mobile panel', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail
+        open
+        resizable
+        rail-width-px="420"
+        style="--lr-app-rail-mobile-width: 211px"
+      ></lr-app-rail>
+    `)) as LyraAppRail;
+    await el.updateComplete;
+    expect(
+      (el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).style.getPropertyValue(
+        'inline-size'
+      )
+    ).to.equal('420px');
+
+    fireMobileChange(el, true);
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    expect(panel.style.getPropertyValue('inline-size')).to.equal('');
+    expect(getComputedStyle(panel).inlineSize).to.equal('211px');
+  });
+
   it("reflects dragging=true only for the duration of a pointer-driven resize, and suppresses the base transition while true", async () => {
     const el = (await fixture(
       html`<lr-app-rail
@@ -1878,7 +1901,8 @@ describe("resizable", () => {
     ) => {
       if (type.startsWith("pointer") || type === "lostpointercapture")
         removedPointerTypes.push(type);
-      originalRemoveEventListener.call(frameWindow, type, listener, options);
+      if (listener !== null)
+        originalRemoveEventListener.call(frameWindow, type, listener, options);
     }) as typeof frameWindow.removeEventListener;
 
     try {

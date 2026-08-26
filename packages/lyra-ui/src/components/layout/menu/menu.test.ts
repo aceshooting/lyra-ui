@@ -141,7 +141,11 @@ it('is an inline mapped menu with no additive root-overlay API', async () => {
 
 it('renders one roving tab stop and wraps Arrow navigation', async () => {
   const menu = await fixture<LyraMenu>(basic());
-  const [first, second, third] = ownItems(menu);
+  const [first, second, third] = ownItems(menu) as [
+    LyraMenuItem,
+    LyraMenuItem,
+    LyraMenuItem,
+  ];
   expect([first.tabIndex, second.tabIndex, third.tabIndex]).to.deep.equal([
     0, -1, -1,
   ]);
@@ -158,7 +162,7 @@ it('renders one roving tab stop and wraps Arrow navigation', async () => {
 
 it('activates the focused item with Enter and Space through the menu controller', async () => {
   const menu = await fixture<LyraMenu>(basic());
-  const [first, second] = ownItems(menu);
+  const [first, second] = ownItems(menu) as [LyraMenuItem, LyraMenuItem];
   const selected: string[] = [];
   menu.addEventListener('lr-select', (event) => {
     selected.push((event as CustomEvent<{ item: LyraMenuItem }>).detail.item.value);
@@ -186,6 +190,7 @@ it('treats Enter on a submenu parent as disclosure activation rather than select
   share.focus();
   const enter = press(share, 'Enter');
   await settle(menu, child);
+  await waitUntil(() => document.activeElement?.id === 'email', 'submenu placement did not settle');
 
   expect(enter.defaultPrevented).to.be.true;
   expect(share.submenuOpen).to.be.true;
@@ -217,7 +222,11 @@ it('skips disabled, hidden, aria-hidden, and inert items', async () => {
 
 it('rehomes the roving stop when the active item becomes unavailable', async () => {
   const menu = await fixture<LyraMenu>(basic());
-  const [first, second, third] = ownItems(menu);
+  const [first, second, third] = ownItems(menu) as [
+    LyraMenuItem,
+    LyraMenuItem,
+    LyraMenuItem,
+  ];
   second.focus();
   second.disabled = true;
   await second.updateComplete;
@@ -235,7 +244,7 @@ it('contains private item-state events while still repairing roving focus', asyn
       <lr-menu-item value="b">B</lr-menu-item>
     </lr-menu>
   `);
-  const [first, second] = ownItems(menu);
+  const [first, second] = ownItems(menu) as [LyraMenuItem, LyraMenuItem];
   first.focus();
   let leaked = 0;
   menu.addEventListener('lr-menu-item-state-change', () => leaked++);
@@ -250,7 +259,7 @@ it('contains private item-state events while still repairing roving focus', asyn
 
 it('preserves active identity across reorder and repairs removal', async () => {
   const menu = await fixture<LyraMenu>(basic());
-  const [first, second] = ownItems(menu);
+  const [first, second] = ownItems(menu) as [LyraMenuItem, LyraMenuItem];
   second.focus();
   menu.prepend(second);
   await nextFrame();
@@ -264,7 +273,7 @@ it('preserves active identity across reorder and repairs removal', async () => {
 
 it('emits only canonical cancelable lr-select with the complete item', async () => {
   const menu = await fixture<LyraMenu>(basic());
-  const item = ownItems(menu)[0];
+  const item = ownItems(menu)[0]!;
   let canonical = 0;
   let menuAlias = 0;
   let childAlias = 0;
@@ -282,7 +291,7 @@ it('emits only canonical cancelable lr-select with the complete item', async () 
 
 it('honors preventDefault on lr-select without duplicating activation', async () => {
   const menu = await fixture<LyraMenu>(basic());
-  const item = ownItems(menu)[0];
+  const item = ownItems(menu)[0]!;
   let count = 0;
   menu.addEventListener('lr-select', (event) => {
     count += 1;
@@ -673,7 +682,7 @@ it('no-ops Arrow/Home/End navigation when every item is disabled', async () => {
       <lr-menu-item id="b" value="b" disabled>B</lr-menu-item>
     </lr-menu>
   `);
-  const [first, second] = ownItems(menu);
+  const [first, second] = ownItems(menu) as [LyraMenuItem, LyraMenuItem];
   expect([first.tabIndex, second.tabIndex]).to.deep.equal([-1, -1]);
   for (const key of ['ArrowDown', 'ArrowUp', 'Home', 'End']) {
     const event = press(first, key);

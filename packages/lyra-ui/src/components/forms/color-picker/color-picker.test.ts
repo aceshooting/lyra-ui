@@ -4,6 +4,11 @@ import "./color-picker.js";
 import type { LyraColorPicker } from "./color-picker.js";
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 
+interface WindowWithColorPickerConstructors extends Window {
+  AbortSignal: typeof AbortSignal;
+  PointerEvent: typeof PointerEvent;
+}
+
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-color-picker', 'default-value');
 
@@ -813,6 +818,16 @@ it("accepts a semicolon-separated swatch string, an array, and labelled objects"
   );
 });
 
+it('falls back to the localized color name for an explicitly empty swatch label', async () => {
+  const el = await opened();
+  el.swatches = [{ color: '#ff0000', label: '' }];
+  await el.updateComplete;
+
+  const swatch = parts(el, 'swatch')[0]!;
+  expect(swatch.getAttribute('aria-label')?.trim().length).to.be.greaterThan(0);
+  await expect(el).to.be.accessible();
+});
+
 it("renders no swatch container at all when swatches is unset", async () => {
   const el = await opened();
   expect(count(el, "swatches")).to.equal(0);
@@ -1173,7 +1188,8 @@ it("keeps an adopted iframe drag on its owner window and releases that window on
   const frame = document.createElement("iframe");
   document.body.append(frame);
   const frameDocument = frame.contentDocument!;
-  const frameWindow = frame.contentWindow!;
+  const frameWindow = frame.contentWindow as WindowWithColorPickerConstructors | null;
+  if (!frameWindow) throw new Error('The iframe window was unavailable.');
   const el = await opened(
     html`<lr-color-picker inline label="A" value="#ff0000"></lr-color-picker>`
   );
@@ -1980,8 +1996,9 @@ it("emits migrated input and after-show/after-hide aliases exactly once, never t
   const trigger = part(el, "trigger") as HTMLButtonElement;
   trigger.focus();
   trigger.blur();
+  const afterShow = oneEvent(el, "lr-after-show");
   el.show();
-  await el.updateComplete;
+  await afterShow;
   press(part(el, "hue-slider-handle"), "ArrowRight");
   await el.updateComplete;
   el.hide();
@@ -2285,7 +2302,8 @@ it("uses the adopted owner realm for EyeDropper and its abort signal", async () 
   const frame = document.createElement("iframe");
   document.body.append(frame);
   const frameDocument = frame.contentDocument!;
-  const frameWindow = frame.contentWindow!;
+  const frameWindow = frame.contentWindow as WindowWithColorPickerConstructors | null;
+  if (!frameWindow) throw new Error('The iframe window was unavailable.');
   const mainGlobals = window as unknown as { EyeDropper?: unknown };
   const frameGlobals = frameWindow as unknown as { EyeDropper?: unknown };
   const savedMain = mainGlobals.EyeDropper;
@@ -2335,7 +2353,8 @@ it("aborts an owner-realm EyeDropper and ignores its late result after adoption"
   const frame = document.createElement("iframe");
   document.body.append(frame);
   const frameDocument = frame.contentDocument!;
-  const frameWindow = frame.contentWindow!;
+  const frameWindow = frame.contentWindow as WindowWithColorPickerConstructors | null;
+  if (!frameWindow) throw new Error('The iframe window was unavailable.');
   const frameGlobals = frameWindow as unknown as { EyeDropper?: unknown };
   const savedFrame = frameGlobals.EyeDropper;
   let signal: AbortSignal | undefined;
@@ -2732,8 +2751,9 @@ it("makes lr-show/lr-hide cancelable and the after-events not", async () => {
   for (const type of ["lr-show", "lr-after-show", "lr-hide", "lr-after-hide"]) {
     el.addEventListener(type, (event) => seen.push(event as CustomEvent));
   }
+  const afterShow = oneEvent(el, "lr-after-show");
   el.open = true;
-  await el.updateComplete;
+  await afterShow;
   el.open = false;
   await el.updateComplete;
   expect(seen.map((event) => event.type)).to.deep.equal([

@@ -1,12 +1,16 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
+import {
+  FORM_CONTROL_LABEL_FACTORY,
+  LyraElement,
+} from '../../../internal/lyra-element.js';
+import { installFormControlInternalsCapture } from '../../../internal/form-control-labels.js';
 import { chevronIcon, spinnerIcon } from '../../../internal/icons.js';
 import { safeDownloadHref, safeLinkHref } from '../../../internal/safe-url.js';
 import {
   syncAriaControlsElements,
   syncAriaDescribedByElements,
-} from '../../../internal/aria-controls.js';
+} from '../../../internal/aria-reflection.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { variants } from '../../../internal/variants.styles.js';
 import type {
@@ -18,32 +22,29 @@ import { styles } from './button.styles.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import {
-  attachInternalsSafely,
   getFormOwner,
   installCustomErrorProperty,
   setFormOwner,
   type FormOwnerValue,
-} from '../../../internal/form-associated.js';
+} from '../../../internal/direct-form-associated.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import {
   AnchoredValidityController,
   VALIDITY_ANCHOR,
 } from '../../../internal/anchored-validity.js';
 import { setCustomState } from '../../../internal/custom-states.js';
-import {
-  EXTERNAL_LABEL_ACTIVATION,
-  installFormControlLabelSupport,
-  type ExternalLabelActivation,
-} from '../../../internal/form-control-labels.js';
-installFormControlLabelSupport();
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 import {
   currentValidityValidator,
   type LyraFormValidator,
 } from '../form-validator.js';
+import { createButtonExternalLabelController } from './button-external-label.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+installFormControlInternalsCapture();
 
 /** Alias of the library's one semantic-tone vocabulary, kept as an exported name so existing
  *  imports of `ButtonVariant` keep resolving while `internal/variants.ts` holds the only
@@ -191,8 +192,8 @@ export interface LyraButtonEventMap {
  * `appearance="quiet"`.
  * @cssprop [--lr-button-size-2xs=var(--lr-form-control-height-2xs)] - `min-block-size` at
  * `size="2xs"`. Since 8.0.0 the whole scale comes from the shared form-control ladder
- * (`internal/sizes.styles.ts`), so a button is the same height as an input, select, combobox or
- * date input of the same tier by construction rather than by two lists agreeing.
+ * (`internal/sizes.styles.ts`), so ordinary single-row controls share the same minimum-height
+ * floor. A composed control can still grow to preserve an action's hit target or fit its content.
  * @cssprop [--lr-button-size-xs=var(--lr-form-control-height-xs)] - `min-block-size` at `size="xs"`.
  * @cssprop [--lr-button-size-s=var(--lr-form-control-height-s)] - `min-block-size` at `size="s"`
  * (and at the `size="small"` spelling).
@@ -271,6 +272,8 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   // `<fieldset disabled>` must still cascade into this component the same way it would a
   // native `<button>` -- see `effectiveDisabled` below.
   static formAssociated = true;
+  /** @internal */
+  static [FORM_CONTROL_LABEL_FACTORY] = createButtonExternalLabelController;
 
   static override properties = {
     disabled: { type: Boolean, reflect: true, noAccessor: true },
@@ -592,16 +595,6 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   /** @internal */
   [VALIDITY_ANCHOR](): HTMLElement | null {
     return this.baseEl ?? null;
-  }
-
-  /** A native `<button>`'s label activates it, exactly as if the button itself had been clicked —
-   *  so an external `<label for>` must run this button's submit/reset behavior once, not merely
-   *  move focus to it. The role the internal element exposes cannot say that on its own: the
-   *  triggers of `<lr-select>` and `<lr-color-picker>` are `<button>`s too, and opening their
-   *  popups from a label click is not native behavior.
-   *  @internal */
-  [EXTERNAL_LABEL_ACTIVATION](): ExternalLabelActivation {
-    return 'activate';
   }
 
   checkValidity(): boolean {

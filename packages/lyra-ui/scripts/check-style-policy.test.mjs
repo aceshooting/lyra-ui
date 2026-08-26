@@ -77,6 +77,28 @@ test('requires compatibility variables to resolve through Lyra tokens', () => {
   }
 });
 
+test('applies raw-value policy to shared internal styles outside token definitions', () => {
+  const root = mkdtempSync(join(tmpdir(), 'lyra-style-policy-'));
+  try {
+    write(
+      root,
+      'src/components/utility/fixture/fixture.styles.ts',
+      "export const styles = css`\n:host { color: var(--lr-color-text); }\n`;\n"
+    );
+    write(
+      root,
+      'src/internal/policy-probe.styles.ts',
+      "export const styles = css`\n:host { margin-inline-start: 12px; }\n`;\n"
+    );
+
+    const result = run(root);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /src\/internal\/policy-probe\.styles\.ts:2: raw dimension literal/u);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('rejects documented CSS inputs declared by a component while accepting private defaults', () => {
   const root = mkdtempSync(join(tmpdir(), 'lyra-style-policy-'));
   try {

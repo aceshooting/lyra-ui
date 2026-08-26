@@ -298,7 +298,7 @@ it('constructs its label observer in the adopted owner realm', async () => {
     if (observerDescriptor) {
       Object.defineProperty(frameWindow, 'MutationObserver', observerDescriptor);
     } else {
-      delete (frameWindow as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+      Reflect.deleteProperty(frameWindow, 'MutationObserver');
     }
     frame.remove();
   }

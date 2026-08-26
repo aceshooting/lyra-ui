@@ -357,8 +357,10 @@ it('does not preserve a generated description when its source detaches before re
 });
 
 it('composes description leases acquired through separate module instances', async () => {
-  const firstCopy = await import('../../dist/internal/aria-controls.js?description-owner-copy=first');
-  const secondCopy = await import('../../dist/internal/aria-controls.js?description-owner-copy=second');
+  const firstPath = '../../dist/internal/aria-controls.js?description-owner-copy=first';
+  const secondPath = '../../dist/internal/aria-controls.js?description-owner-copy=second';
+  const firstCopy = await import(firstPath);
+  const secondCopy = await import(secondPath);
   const root = await fixture<HTMLElement>(html`
     <div><button></button><span id="copy-first">First</span><span id="copy-second">Second</span></div>
   `);
@@ -468,7 +470,8 @@ it('preserves empty serialized baselines on platforms without reflected element 
   if (controlsOwner) Reflect.deleteProperty(controlsOwner, 'ariaControlsElements');
   if (describedByOwner) Reflect.deleteProperty(describedByOwner, 'ariaDescribedByElements');
   try {
-    const moduleCopy = await import('../../dist/internal/aria-controls.js?description-owner-copy=without-reflection');
+    const modulePath = '../../dist/internal/aria-controls.js?description-owner-copy=without-reflection';
+    const moduleCopy = await import(modulePath);
     const root = document.createElement('div');
     const withBaseline = document.createElement('button');
     const withoutBaseline = document.createElement('button');

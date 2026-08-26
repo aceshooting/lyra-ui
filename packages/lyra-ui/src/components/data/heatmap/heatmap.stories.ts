@@ -69,6 +69,24 @@ export const CalendarMode: Story = {
   },
 };
 
+/** Calendar-specific `weekdayLabelWidth: 'auto'` measures an application-supplied long weekday
+ * label instead of clipping it inside the original 28px gutter. */
+export const CalendarWeekdayLabelWidth: Story = {
+  render: () => html`
+    <lr-heatmap
+      .data=${{
+        kind: 'calendar',
+        days: [{ date: '2026-01-05', value: 3 }],
+        weekdayLabelWidth: 'auto',
+        weekdayLabelText: (weekday: number) =>
+          ({ 1: 'Monday — operations', 3: 'Wednesday — operations', 5: 'Friday — operations' })[
+            weekday
+          ],
+      }}
+    ></lr-heatmap>
+  `,
+};
+
 export const CustomTheme: Story = {
   render: () => html`
     <lr-heatmap
@@ -290,6 +308,25 @@ export const CustomScaleLegend: Story = {
        .data=${{ kind: 'calendar', days: days }}></lr-heatmap>
     `;
   },
+};
+
+/** Custom content stays in the heatmap's own legend row alongside its built-in scale. */
+export const CustomLegendSlot: Story = {
+  render: () => html`
+    <lr-heatmap
+      .data=${{
+        kind: 'matrix',
+        rowLabels: ['North', 'South'],
+        colLabels: ['Q1', 'Q2'],
+        values: [
+          [2, 8],
+          [4, 6],
+        ],
+      }}
+    >
+      <span slot="legend">Forecast range</span>
+    </lr-heatmap>
+  `,
 };
 
 /**

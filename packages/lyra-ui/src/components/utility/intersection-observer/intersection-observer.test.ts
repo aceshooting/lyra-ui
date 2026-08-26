@@ -2,6 +2,19 @@ import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './intersection-observer.js';
 import type { LyraIntersectionObserver } from './intersection-observer.class.js';
 
+function intersectionEntry(target: Element, isIntersecting: boolean): IntersectionObserverEntry {
+  const targetBounds = target.getBoundingClientRect();
+  return {
+    target,
+    time: performance.now(),
+    rootBounds: null,
+    boundingClientRect: targetBounds,
+    intersectionRect: isIntersecting ? targetBounds : new DOMRectReadOnly(),
+    isIntersecting,
+    intersectionRatio: isIntersecting ? 1 : 0,
+  };
+}
+
 describe('<lr-intersection-observer>', () => {
   it('renders a non-layout observer wrapper', async () => {
     const el = await fixture<LyraIntersectionObserver>(html`<lr-intersection-observer><div>Observed</div></lr-intersection-observer>`);
@@ -77,6 +90,66 @@ describe('<lr-intersection-observer>', () => {
       expect(target.classList.contains('visible')).to.be.true;
       expect(latest?.unobserved.length).to.equal(1);
       expect(latest?.unobserved[0] === target).to.equal(true);
+    } finally {
+      window.IntersectionObserver = OriginalIntersectionObserver;
+    }
+  });
+
+  it('keeps once-consumed targets inert across observer rebuilds and reconnects', async () => {
+    interface ObserverRecord {
+      callback: IntersectionObserverCallback;
+      observed: Element[];
+    }
+    const OriginalIntersectionObserver = window.IntersectionObserver;
+    const records: ObserverRecord[] = [];
+    class FakeIntersectionObserver implements IntersectionObserver {
+      private readonly record: ObserverRecord;
+      readonly root: Element | Document | null = null;
+      readonly rootMargin = '0px';
+      readonly scrollMargin = '0px';
+      readonly thresholds: readonly number[] = [0];
+      constructor(callback: IntersectionObserverCallback) {
+        this.record = { callback, observed: [] };
+        records.push(this.record);
+      }
+      observe(target: Element): void { this.record.observed.push(target); }
+      unobserve(): void {}
+      disconnect(): void {}
+      takeRecords(): IntersectionObserverEntry[] { return []; }
+    }
+    window.IntersectionObserver = FakeIntersectionObserver as unknown as typeof IntersectionObserver;
+
+    try {
+      const el = await fixture<LyraIntersectionObserver>(html`
+        <lr-intersection-observer once><div id="target">Observed</div></lr-intersection-observer>
+      `);
+      await aTimeout(0);
+      const target = el.querySelector('#target')!;
+      let intersections = 0;
+      el.addEventListener('lr-intersect', () => { intersections += 1; });
+
+      records.at(-1)!.callback(
+        [{ target, isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+      expect(intersections).to.equal(1);
+
+      const afterFirstIntersection = records.length;
+      el.rootMargin = '1px';
+      await el.updateComplete;
+      await aTimeout(0);
+      expect(records.length, 'an option rebuild must not re-arm a once-consumed target').to.equal(
+        afterFirstIntersection,
+      );
+
+      const parent = el.parentElement!;
+      el.remove();
+      parent.append(el);
+      await aTimeout(0);
+      expect(records.length, 'a reconnect must not re-arm a once-consumed target').to.equal(
+        afterFirstIntersection,
+      );
+      expect(intersections).to.equal(1);
     } finally {
       window.IntersectionObserver = OriginalIntersectionObserver;
     }
@@ -158,6 +231,7 @@ describe('<lr-intersection-observer>', () => {
       private readonly record: ObserverRecord;
       readonly root: Element | Document | null;
       readonly rootMargin: string;
+      readonly scrollMargin = '0px';
       readonly thresholds: readonly number[];
       constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
         this.record = { callback, options, observed: [], unobserved: [], disconnects: 0 };
@@ -199,7 +273,7 @@ describe('<lr-intersection-observer>', () => {
       expect(adoptedObserver.observed.length).to.equal(1);
       expect(adoptedObserver.observed[0] === target).to.equal(true);
 
-      const staleEntry = { target, isIntersecting: true } as IntersectionObserverEntry;
+      const staleEntry = intersectionEntry(target, true);
       el.remove();
       expect(adoptedObserver.disconnects, 'disconnect tears down the exact owner observer').to.equal(1);
       adoptedObserver.callback([staleEntry], {} as IntersectionObserver);
@@ -221,12 +295,21 @@ describe('<lr-intersection-observer>', () => {
 
       el.remove();
       target.classList.remove('visible');
+      const reentrantTarget = frameDocument.createElement('div');
+      el.append(reentrantTarget);
+      const recordsBeforeReentrantConnect = records.length;
       frameDocument.body.append(el);
       await aTimeout(0);
+      expect(records.length).to.be.greaterThan(recordsBeforeReentrantConnect);
       const reentrantObserver = records.at(-1)!;
+      expect(reentrantObserver.observed.length).to.equal(1);
+      expect(reentrantObserver.observed[0] === reentrantTarget).to.equal(true);
       const eventsBeforeReentrantDisconnect = events;
       el.addEventListener('lr-intersect', () => el.remove(), { once: true });
-      reentrantObserver.callback([staleEntry], {} as IntersectionObserver);
+      reentrantObserver.callback(
+        [intersectionEntry(reentrantTarget, true)],
+        {} as IntersectionObserver,
+      );
       expect(
         events,
         'a per-entry listener disconnect prevents the retired callback from emitting its batch',

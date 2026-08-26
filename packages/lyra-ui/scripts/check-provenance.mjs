@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isMainModule } from './is-main-module.mjs';
 
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -166,5 +167,4 @@ export function run({ root = repositoryDir } = {}) {
   return findings;
 }
 
-const isMain = process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url));
-if (isMain) run();
+if (isMainModule(import.meta.url)) run();

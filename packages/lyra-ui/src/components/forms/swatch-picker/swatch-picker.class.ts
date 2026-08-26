@@ -16,7 +16,8 @@ export interface SwatchPickerItem {
   readonly value: string;
   /** The swatch's fill color. Invalid CSS colors and `url()` paint servers are ignored. */
   readonly color: string;
-  /** The swatch's accessible name; also used as its native `title` tooltip. */
+  /** The swatch's nonblank accessible name; also used as its native `title` tooltip. Rows with
+   * an empty or whitespace-only label are omitted. */
   readonly label: string;
   /** Optional decorative custom shape rendered in place of the plain filled circle -- e.g. a gem
    *  or other brand-specific glyph. Its rendered subtree is inert and aria-hidden. A
@@ -127,7 +128,8 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
           if (
             typeof value !== 'string' ||
             typeof color !== 'string' ||
-            typeof label !== 'string'
+            typeof label !== 'string' ||
+            label.trim() === ''
           )
             continue;
           const snapshot = Object.freeze({

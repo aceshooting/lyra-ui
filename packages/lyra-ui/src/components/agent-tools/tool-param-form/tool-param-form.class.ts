@@ -1346,6 +1346,9 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         @lr-input=${this.stopNestedControlEvent}
         @change=${this.stopNestedControlEvent}
         @lr-change=${(e: Event) => this.onBooleanSelectChange(key, e)}
+        @lr-show=${this.stopNestedControlEvent}
+        @lr-hide=${this.stopNestedControlEvent}
+        @lr-option-change=${this.stopNestedControlEvent}
       >
         <lr-option value="">${this.localize('toolParamBooleanUnset')}</lr-option>
         <lr-option value="true">${this.localize('toolParamBooleanTrue')}</lr-option>

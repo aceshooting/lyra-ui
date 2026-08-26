@@ -6,8 +6,9 @@
 - **Class** `LyraLocalePicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/locale-picker/locale-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
-- **Optional peers** `@aceshooting/lyra-flags` — see `llms/peers.md`
+- **Optional peers** none
 - **Themeable via** 12 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -33,7 +34,7 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
   including an authoritative `[]`, overrides it entirely — a curated subset, custom order,
   custom labels, or a locale offered before its strings are registered. Explicit catalogs are
   capped, cloned and frozen at assignment; mutate a new array/entry and reassign it to update the
-  list. `country` (ISO 3166-1 alpha-2) overrides a row's derived flag — e.g.
+  list. `country` (ISO 3166-1 alpha-2 or alpha-3) overrides a row's derived flag — e.g.
   showing Lebanon's flag for an `'ar'` row instead of the library's default Saudi Arabia mapping;
   only available on the `{tag,label,country}` object form, not the bare `string[]` form. Replacing
   the catalog while the listbox is open keeps keyboard navigation valid: an active row beyond the

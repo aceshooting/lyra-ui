@@ -66,6 +66,27 @@ describe('defaults', () => {
     expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
     expect(el.shadowRoot!.querySelector('[part="base"]')!.textContent).to.include('No document to display.');
   });
+
+  it('renders the idle note with the same reset and tokenized spacing as other viewer states', async () => {
+    const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer></lr-xml-viewer>`);
+    const note = el.shadowRoot!.querySelector('.empty-note') as HTMLElement;
+    const style = getComputedStyle(note);
+    expect(style.marginBlockStart).to.equal('0px');
+    expect(style.marginBlockEnd).to.equal('0px');
+    expect(parseFloat(style.paddingBlockStart)).to.be.greaterThan(0);
+  });
+
+  it('keeps the shared anchor live region visually hidden once it carries an announcement', async () => {
+    const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer></lr-xml-viewer>`);
+    await el.scrollToAnchor('no-such-highlight');
+    await el.updateComplete;
+    const region = el.shadowRoot!.querySelector('[part="anchor-live-region"]') as HTMLElement;
+    expect(region !== null, 'the mixin live region is rendered').to.equal(true);
+    expect((region.textContent ?? '').trim().length).to.be.greaterThan(0);
+    const rect = region.getBoundingClientRect();
+    expect(rect.height, 'live-region block size stays clipped to 1px').to.be.at.most(1);
+    expect(rect.width, 'live-region inline size stays clipped to 1px').to.be.at.most(1);
+  });
 });
 
 it('validates maxHeight before assigning the base custom property', async () => {
@@ -443,7 +464,7 @@ describe('collapsedDepth and toggling', () => {
     await el.updateComplete;
     const toggles = [...el.shadowRoot!.querySelectorAll('[part="toggle"]')] as HTMLButtonElement[];
     const rootToggle = toggles[0];
-    expect(rootToggle.getAttribute('aria-expanded')).to.equal('true');
+    expect(rootToggle!.getAttribute('aria-expanded')).to.equal('true');
   });
 
   it('normalizes a NaN collapsedDepth to 0 (fully collapsed) instead of silently disabling auto-collapse', async () => {
@@ -470,7 +491,7 @@ describe('collapsedDepth and toggling', () => {
     const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
     await el.updateComplete;
     const toggles = [...el.shadowRoot!.querySelectorAll('[part="toggle"]')] as HTMLButtonElement[];
-    toggles[1].click(); // collapses the first <item>, creating an override keyed to path "[0]"
+    toggles[1]!.click(); // collapses the first <item>, creating an override keyed to path "[0]"
     await el.updateComplete;
     const overrides = () => (el as unknown as { expandedOverrides: Map<string, boolean> }).expandedOverrides;
     expect(overrides().has('[0]')).to.be.true;
@@ -1280,7 +1301,7 @@ describe('per-node copy button', () => {
       const nodeButtons = [...el.shadowRoot!.querySelectorAll('[part="node"] [part="copy-button"]')] as HTMLButtonElement[];
       const itemButton = nodeButtons[0]; // the first element row's own per-node button
       const eventPromise = oneEvent(el, 'lr-copy');
-      itemButton.click();
+      itemButton!.click();
       const event = await eventPromise;
       expect(event.detail).to.deep.include({ ok: true });
       expect(event.detail.text).to.include('<item');
@@ -1408,6 +1429,25 @@ describe('host-supplied highlights', () => {
     return Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="node"]'));
   }
 
+  it('keeps loaded content and later updates working when a highlight omits its anchor', async () => {
+    const el = await fixture<LyraXmlViewer>(
+      html`<lr-xml-viewer .xml=${HIGHLIGHT_XML}></lr-xml-viewer>`,
+    );
+    await el.updateComplete;
+    const initialNodeCount = nodeRows(el).length;
+
+    el.highlights = [{ id: 'missing-anchor' }] as unknown as LyraXmlViewer['highlights'];
+    await el.updateComplete;
+    el.name = 'Updated XML';
+    await el.updateComplete;
+
+    expect(el.highlights.map((highlight) => highlight.id)).to.deep.equal([]);
+    expect(nodeRows(el).length).to.equal(initialNodeCount);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+      'Updated XML',
+    );
+  });
+
   it('paints a node-path highlight on the addressed element row, with its tone', async () => {
     const el = (await fixture(html`<lr-xml-viewer .xml=${HIGHLIGHT_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
     await el.updateComplete;
@@ -1506,6 +1546,22 @@ describe('host-supplied highlights', () => {
 
     expect(nodeRows(el).filter((row) => row.hasAttribute('data-highlight')).length).to.equal(0);
     expect(el.shadowRoot!.querySelectorAll('[part="highlight-action"]').length).to.equal(0);
+  });
+
+  it('omits missing and non-array node paths without losing a valid neighboring highlight', async () => {
+    const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer .xml=${HIGHLIGHT_XML}></lr-xml-viewer>`);
+    await el.updateComplete;
+
+    el.highlights = [
+      { id: 'missing-path', anchor: { kind: 'node-path' } },
+      { id: 'string-path', anchor: { kind: 'node-path', path: '0' } },
+      { id: 'valid', anchor: { kind: 'node-path', path: [1] } },
+    ] as unknown as LyraXmlViewer['highlights'];
+    await el.updateComplete;
+
+    const actions = el.shadowRoot!.querySelectorAll('[part="highlight-action"]');
+    expect(actions.length).to.equal(1);
+    expect(actions[0]!.getAttribute('data-highlight-id')).to.equal('valid');
   });
 
   it('is accessible with highlights painted', async () => {

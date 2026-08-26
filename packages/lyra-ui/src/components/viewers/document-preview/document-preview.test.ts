@@ -487,6 +487,27 @@ describe("text/* and application/json dispatch", () => {
 });
 
 describe("image/* dispatch", () => {
+  it('keeps the image preview and later updates working when a highlight omits its anchor', async () => {
+    const el = await fixture<LyraDocumentPreview>(html`
+      <lr-document-preview
+        src="https://example.test/photo.png"
+        mime-type="image/png"
+        filename="photo.png"
+      ></lr-document-preview>
+    `);
+
+    el.highlights = [{ id: 'missing-anchor' }] as unknown as LyraDocumentPreview['highlights'];
+    await el.updateComplete;
+    el.filename = 'updated.png';
+    await el.updateComplete;
+
+    expect(el.highlights.map((highlight) => highlight.id)).to.deep.equal([]);
+    expect(el.shadowRoot!.querySelectorAll('[part="body"] img').length).to.equal(1);
+    expect(el.shadowRoot!.querySelector('[part="body"] img')!.getAttribute('alt')).to.equal(
+      'updated.png',
+    );
+  });
+
   it("renders a contained <img> with src and a sensible alt", async () => {
     const el = (await fixture(html`
       <lr-document-preview
@@ -729,7 +750,7 @@ describe("unsupported slot escape hatch", () => {
     ) as HTMLSlotElement;
     const assigned = slot.assignedElements({ flatten: true });
     expect(assigned).to.have.lengthOf(1);
-    expect(assigned[0].id).to.equal("custom-viewer");
+    expect(assigned[0]!.id).to.equal("custom-viewer");
   });
 
   it("falls back to the download link once the unsupported slot is emptied", async () => {
@@ -959,8 +980,8 @@ describe("max-height", () => {
 });
 
 describe("motion", () => {
-  it("routes spinner timing through a documented custom property and stops it for reduced motion", async () => {
-    const css = styles.cssText.replace(/\s+/g, " ");
+  it("declares the spinner timing fallback and reduced-motion kill switch", () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.include(
       "--_lr-document-preview-spin-duration: var(--lr-transition-ambient);"
     );
@@ -1343,7 +1364,7 @@ describe("region highlights (image format)", () => {
       targetBox.left + targetBox.width - 2,
       targetBox.top + targetBox.height / 2
     ) as HTMLElement | null;
-    expect(hit?.dataset.highlightId).to.equal("small");
+    expect(hit?.dataset['highlightId']).to.equal("small");
   });
 
   it("renders a focusable region-highlight and emits lr-highlight-activate", async () => {
@@ -1524,7 +1545,7 @@ describe("region highlights (image format)", () => {
     ) as HTMLElement[];
     const scrolled: string[] = [];
     for (const region of regions) {
-      region.scrollIntoView = () => scrolled.push(region.dataset.id!);
+      region.scrollIntoView = () => scrolled.push(region.dataset['id']!);
     }
     const ok = await el.scrollToAnchor("h2");
     expect(ok).to.be.true;
@@ -1558,7 +1579,7 @@ describe("region highlights (image format)", () => {
     ) as HTMLElement[];
     const scrolled: string[] = [];
     for (const region of regions)
-      region.scrollIntoView = () => scrolled.push(region.dataset.id!);
+      region.scrollIntoView = () => scrolled.push(region.dataset['id']!);
 
     expect(
       await el.scrollToAnchor({

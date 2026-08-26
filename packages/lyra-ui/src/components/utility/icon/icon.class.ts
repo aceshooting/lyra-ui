@@ -79,6 +79,10 @@ export interface LyraIconEventMap {
  * pipeline succeeds; anything else fails closed with a localized alert and no partial markup.
  * Matching loads share a bounded cache of canonical sanitized SVGs. Each instance deep-clones the
  * canonical node before its trusted library mutator runs, so cached state is never mutated.
+ * The mirrored upstreams' icon-name vocabularies are not bundled. The default library contains
+ * only `add`, `check`, `close`, `search`, `menu`, `chevron-left`, `chevron-right`, `chevron-down`,
+ * `calendar`, `command`, and `trash`; any other name renders no glyph unless a matching library is
+ * registered, including through `registerIconLibrary('default', { resolver })`.
  * @customElement lr-icon
  * @slot - Optional custom SVG/path content when no `name`, `path`, `library`, or `src` resolves.
  * @event lr-load - A remote icon finished loading and is in the DOM. `detail: { src }`.

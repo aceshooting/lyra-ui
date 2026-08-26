@@ -6,6 +6,7 @@
 - **Class** `LyraProgressRing`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/progress/progress-ring.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -26,11 +27,12 @@ A circular progress indicator with the same value contract as `lr-progress-bar`.
 accessible-name spelling retained by this progress component, while several sibling components use
 `aria-label` directly). Host
 `aria-label` takes precedence; otherwise the name falls back to `label`, `accessibleLabel`, the
-visible default-slot text when supplied, then the localized "Progress". Non-finite/out-of-range
-`value`/`max` are normalized (`max <= 0` falls
+visible default- or `label`-slot text when supplied, then the localized "Progress".
+Non-finite/out-of-range `value`/`max` are normalized (`max <= 0` falls
 back to `100`, `value` clamps to `[0, max]`) rather than producing NaN geometry.
 **Slots:** default — replaces the built-in center label, which otherwise renders the rounded
-percentage **only when `show-value` is set** (and nothing at all while `indeterminate`).
+percentage **only when `show-value` is set** (and nothing at all while `indeterminate`); `label` —
+named alias for center content, matching `lr-progress-bar`.
 **Breaking in 10.0.0:** a determinate ring used to render its percentage unconditionally, with no way
 to suppress it short of slotting replacement content. It now gains `showValue`/`show-value` defaulting
 to `false`, exactly matching `lr-progress-bar` — which is what "the same value contract as
@@ -49,7 +51,8 @@ value updates and reconnection while the offset updates live.
 ring's inline and block size), `--lr-progress-ring-track-width` (default `var(--lr-size-4px)`),
 `--lr-progress-ring-track-color` (default `var(--lr-color-brand-quiet)`),
 `--lr-progress-ring-indicator-width` (defaulting to the track width),
-`--lr-progress-ring-indicator-color` (default `var(--lr-color-brand)`),
+`--lr-progress-ring-indicator-color` (default
+`var(--lr-progress-ring-indicator-variant-color)`, so the active `variant` supplies the color),
 `--lr-progress-ring-indicator-variant-color` (added in 9.0.0, same override precedence as
 `lr-progress-bar`'s `--lr-progress-indicator-variant-color` — the palette slot `variant` resolves
 into),

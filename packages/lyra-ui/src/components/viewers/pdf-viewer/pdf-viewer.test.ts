@@ -15,8 +15,8 @@ import {
 } from "../document-viewer/registry.js";
 import type { LyraPageRail } from "../page-rail/page-rail.js";
 import type { LyraPdfViewer } from "./pdf-viewer.js";
-import { styles } from "./pdf-viewer.styles.js";
 import { TEXT_QUOTE_LIMITS } from "../../../internal/text-quote.js";
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function response(ok = true): Response {
   return {
@@ -587,7 +587,7 @@ describe("lr-pdf-viewer", () => {
       await waitFor(el, "lr-virtual-list");
       const list = el.shadowRoot!.querySelector(
         "lr-virtual-list"
-      ) as HTMLElement & {
+      ) as unknown as HTMLElement & {
         items: unknown[];
         source: {
           count: number;
@@ -644,6 +644,28 @@ describe("lr-pdf-viewer", () => {
       expect(leaked).to.equal(0);
       expect(pageChangeCount).to.equal(1);
       expect(el.page).to.equal(3);
+    } finally {
+      restore();
+    }
+  });
+
+  it('does not expose the internal virtual-list scroll event', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    installFakeLoader(el, fakeDocument(2));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, 'lr-virtual-list');
+      let leaked = 0;
+      el.addEventListener('lr-virtual-scroll', () => leaked++);
+      el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(
+        new CustomEvent('lr-virtual-scroll', {
+          detail: { scrollTop: 20, viewportHeight: 200 },
+          bubbles: true,
+          composed: true,
+        })
+      );
+      expect(leaked).to.equal(0);
     } finally {
       restore();
     }
@@ -782,7 +804,7 @@ describe("lr-pdf-viewer", () => {
     )) as LyraPdfViewer;
     const boom = new Error("text layer boom");
     class FailingTextLayer {
-      constructor(private options: { container: HTMLElement }) {}
+      constructor(_options: { container: HTMLElement }) {}
       render(): Promise<void> {
         return Promise.reject(boom);
       }
@@ -2205,7 +2227,7 @@ describe("anchor-target adoption", () => {
         getRangeAt: () => range,
         isCollapsed: false,
         rangeCount: 1,
-      })) as typeof window.getSelection;
+      })) as unknown as typeof window.getSelection;
       const eventPromise = oneEvent(el, "lr-text-select");
       el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(
         new PointerEvent("pointerup", { bubbles: true })
@@ -2248,7 +2270,7 @@ describe("anchor-target adoption", () => {
         getRangeAt: () => range,
         isCollapsed: false,
         rangeCount: 1,
-      })) as typeof window.getSelection;
+      })) as unknown as typeof window.getSelection;
       const eventPromise = oneEvent(el, "lr-text-select");
       el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(
         new PointerEvent("pointerup", { bubbles: true })
@@ -2302,7 +2324,7 @@ describe("anchor-target adoption", () => {
         getRangeAt: () => range,
         isCollapsed: false,
         rangeCount: 1,
-      })) as typeof window.getSelection;
+      })) as unknown as typeof window.getSelection;
       const eventPromise = oneEvent(el, "lr-text-select");
       document.dispatchEvent(new Event("selectionchange"));
       const detail = (await eventPromise).detail;
@@ -2522,7 +2544,7 @@ describe("anchor-target adoption", () => {
         getRangeAt: () => selectedRange,
         isCollapsed: false,
         rangeCount: 1,
-      })) as typeof frameWindow.getSelection;
+      })) as unknown as typeof frameWindow.getSelection;
       const selectionEvent = oneEvent(el, "lr-text-select");
       contentRoot.dispatchEvent(
         new frameWindow.MouseEvent("pointerup", {
@@ -2678,7 +2700,7 @@ describe("goToPage", () => {
     try {
       el.src = "https://example.test/report.pdf";
       await waitFor(el, "lr-virtual-list");
-      window.setTimeout = (() => timeoutHandle) as typeof window.setTimeout;
+      window.setTimeout = (() => timeoutHandle) as unknown as typeof window.setTimeout;
       window.clearTimeout = ((handle?: number) => {
         if (handle !== undefined) cleared.push(handle);
       }) as typeof window.clearTimeout;
@@ -2912,7 +2934,7 @@ describe("getOutline", () => {
       ["a"],
       [{ title: "Broken", dest: "missing", items: [] }]
     ) as unknown as Record<string, unknown>;
-    doc.getDestination = () => Promise.reject(new Error("not found"));
+    doc['getDestination'] = () => Promise.reject(new Error("not found"));
     installFakeLoader(el, doc as unknown as ReturnType<typeof fakeDocument>);
     const restore = stubFetch();
     try {
@@ -3898,7 +3920,8 @@ describe("search", () => {
       el.src = 'https://example.test/no-stream.pdf';
       await waitFor(el, '[part="toolbar"]');
       await aTimeout(20);
-      doc.getPage = () => Promise.resolve({
+      const malformedDocument = doc as unknown as { getPage: () => Promise<unknown> };
+      malformedDocument.getPage = () => Promise.resolve({
         ...fakePage(1),
         streamTextContent: () => ({ not: 'a stream' }),
         getTextContent: () => {
@@ -4027,7 +4050,7 @@ describe("search", () => {
       secondPage.resolve({
         ...fakePage(1),
         streamTextContent: () => fakeTextContentStream([{ str: 'current' }]),
-        getTextContent: () => Promise.resolve({ items: [{ str: 'current' }] }),
+        getTextContent: () => Promise.resolve({ items: [{ str: 'current', hasEOL: false }] }),
       });
       expect(await current).to.equal('current ');
       firstPage.reject(new Error('stale'));
@@ -4447,9 +4470,62 @@ describe("registry registration", () => {
 });
 
 describe("styling", () => {
-  it("gives toolbar buttons a hover state", () => {
-    const css = styles.cssText.replace(/\s+/g, " ");
-    expect(css).to.match(/\[part=["']toolbar["']\] button:hover/);
+  it("changes a rendered toolbar button under real pointer hover", async () => {
+    const el = await fixture<LyraPdfViewer>(html`
+      <lr-pdf-viewer
+        style="--lr-pdf-viewer-toolbar-button-hover-bg: rgb(1, 2, 3)"
+      ></lr-pdf-viewer>
+    `);
+    installFakeLoader(el, fakeDocument(3));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      const button = el.shadowRoot!.querySelector(
+        '[part="next-button"]',
+      ) as HTMLButtonElement;
+      const resting = getComputedStyle(button).backgroundColor;
+      const box = button.getBoundingClientRect();
+      await resetMouse();
+      await sendMouse({
+        type: 'move',
+        position: [
+          Math.round(box.left + box.width / 2),
+          Math.round(box.top + box.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => getComputedStyle(button).backgroundColor !== resting,
+        'the PDF toolbar button never entered its rendered hover state',
+      );
+      expect(getComputedStyle(button).backgroundColor).to.equal(
+        'rgb(1, 2, 3)',
+      );
+    } finally {
+      await resetMouse();
+      restore();
+    }
+  });
+
+  it('honors the composite focus-ring shorthand on rendered toolbar buttons', async () => {
+    const el = await fixture<LyraPdfViewer>(html`
+      <lr-pdf-viewer style="--lr-focus-ring: 5px dashed rgb(1, 2, 3)"></lr-pdf-viewer>
+    `);
+    installFakeLoader(el, fakeDocument(3));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      const button = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
+      button.focus();
+      expect(button.matches(':focus-visible')).to.equal(true);
+      const computed = getComputedStyle(button);
+      expect(computed.outlineStyle).to.equal('dashed');
+      expect(computed.outlineWidth).to.equal('5px');
+      expect(computed.outlineColor).to.equal('rgb(1, 2, 3)');
+    } finally {
+      restore();
+    }
   });
 });
 

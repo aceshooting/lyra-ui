@@ -335,6 +335,28 @@ export const styles = css`
 
   [part~="cell"] {
     min-block-size: var(--row-height, var(--_lr-data-grid-row-height));
+    color: var(--lr-data-grid-cell-color, inherit);
+  }
+
+  /* Formatter and row-detail content renders inside this shadow root, where page styles and
+     ::part() cannot reach a nested anchor. :where() keeps the nested selector low-specificity so
+     a formatter's inline colour still wins. */
+  [part~="cell"] a:where(:any-link),
+  [part="row-detail"] a:where(:any-link) {
+    color: var(--lr-data-grid-cell-link-color, var(--lr-color-brand));
+  }
+
+  [part~="cell"] a:where(:any-link):hover,
+  [part~="cell"] a:where(:any-link):focus-visible,
+  [part~="cell"] a:where(:any-link):active,
+  [part="row-detail"] a:where(:any-link):hover,
+  [part="row-detail"] a:where(:any-link):focus-visible,
+  [part="row-detail"] a:where(:any-link):active {
+    color: var(
+      --lr-data-grid-cell-link-hover-color,
+      var(--lr-data-grid-cell-link-color, var(--lr-color-brand))
+    );
+    text-decoration-thickness: var(--lr-border-width-medium);
   }
 
   [part~="cell"][data-align="center"],

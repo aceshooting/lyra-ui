@@ -47,12 +47,12 @@ describe('box-plot forced-colors encodings', () => {
         .buildConfig()
         .data.datasets;
       expect(datasets).to.have.lengthOf(8);
-      expect(datasets.every((dataset) => typeof dataset.backgroundColor === 'object')).to.equal(true);
-      expect(new Set(datasets.map((dataset) => dataset.backgroundColor)).size).to.equal(8);
+      expect(datasets.every((dataset) => typeof dataset['backgroundColor'] === 'object')).to.equal(true);
+      expect(new Set(datasets.map((dataset) => dataset['backgroundColor'])).size).to.equal(8);
 
       const swatches = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="legend-swatch"]')];
       expect(swatches).to.have.lengthOf(8);
-      expect(new Set(swatches.map((swatch) => swatch.dataset.encoding)).size).to.equal(8);
+      expect(new Set(swatches.map((swatch) => swatch.dataset['encoding'])).size).to.equal(8);
       expect(new Set(swatches.map((swatch) => getComputedStyle(swatch).backgroundImage)).size).to.equal(8);
     } finally {
       window.matchMedia = originalMatchMedia;
@@ -71,8 +71,8 @@ describe('box-plot forced-colors encodings', () => {
     const datasets = (el as never as { buildConfig(): { data: { datasets: Array<Record<string, unknown>> } } })
       .buildConfig()
       .data.datasets;
-    expect(datasets.every((dataset) => typeof dataset.backgroundColor === 'string')).to.equal(true);
+    expect(datasets.every((dataset) => typeof dataset['backgroundColor'] === 'string')).to.equal(true);
     const swatches = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="legend-swatch"]')];
-    expect(swatches.every((swatch) => swatch.dataset.encoding === undefined)).to.equal(true);
+    expect(swatches.every((swatch) => swatch.dataset['encoding'] === undefined)).to.equal(true);
   });
 });

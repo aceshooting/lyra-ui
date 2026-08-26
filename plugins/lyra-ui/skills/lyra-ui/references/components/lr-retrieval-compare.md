@@ -6,6 +6,7 @@
 - **Class** `LyraRetrievalCompare`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/retrieval-compare/retrieval-compare.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 14 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
@@ -21,7 +22,7 @@ dense/sparse/rerank/final score breakdowns.
 **Properties:** `sets: RetrievalComparisonSet[] = []` (attribute: false), where
 `RetrievalComparisonSet = { id: string; label: string; chunks: RetrievalChunk[] }`;
 `topK: number = 10` (attribute `top-k`, finite integer with minimum 1);
-`selectedChunkId: string = ''` (attribute `selected-chunk-id`); `label: string = ''` (fallback name
+`selectedChunkId: string = ''` (attribute `selected-chunk-id`); `label?: string` (fallback name
 for the overall comparison region; a non-empty host `aria-label` makes the host the sole overall
 owner, while an explicitly empty host label stays empty on the region).
 `RetrievalChunk` is the shared AI record carrying id/text/score/source plus optional rank, locator,

@@ -114,7 +114,7 @@ export const styles = css`
   }
   [part='cell-highlight-action']:focus-visible,
   lr-virtual-list::part(cell-highlight-action):focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
   }
   [part='rows'] {

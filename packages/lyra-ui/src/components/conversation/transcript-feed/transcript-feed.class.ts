@@ -17,6 +17,7 @@ import { LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_transcriptFeedEmpty, LYRA_DEFAU
 export interface LyraTranscriptEntry {
   id: string;
   speaker?: string;
+  /** Required caption text. Runtime records without a string value are omitted. */
   text: string;
   interim?: boolean;
   timestamp?: LyraTimestamp;
@@ -34,8 +35,9 @@ export interface LyraTranscriptFeedEventMap {
  * auto-scroll with release, the same `follow`/`lr-follow-change` contract `lr-terminal` uses.
  *
  * Rendering reconciles `entries` keyed by `id` via Lit's `repeat()`. Ids must be nonempty,
- * nonblank, and unique within a session; invalid and later duplicate rows are omitted with the
- * first valid occurrence winning. A same-`id` entry with new `text` replaces in place; a same-`id` entry whose
+ * nonblank, and unique within a session, and `text` must be a string; invalid and later duplicate
+ * rows are omitted with the first valid occurrence winning. A same-`id` entry with new `text`
+ * replaces in place; a same-`id` entry whose
  * `interim` flips from `true` to unset/`false`
  * moves from the interim area into the `role="log"` region and announces exactly once. Interim
  * entries render *after* the log container, visible but structurally outside it, so per-token
@@ -117,6 +119,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
    *  however many later updates keep re-rendering the same row. */
   private announcedFinalIds = new Set<string>();
   private sessionChanged = false;
+  private pendingSessionBaseline = false;
 
   /** `maxRenderedEntries`, normalized to a finite non-negative integer (falling back to the
    *  property's own default of `500`) -- a raw `NaN` (e.g. an invalid
@@ -131,7 +134,12 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     const seen = new Set<string>();
     return this.entries.filter((entry) => {
       if (entry === null || typeof entry !== 'object') return false;
-      if (typeof entry.id !== 'string' || entry.id.trim().length === 0 || seen.has(entry.id)) return false;
+      if (
+        typeof entry.id !== 'string' ||
+        entry.id.trim().length === 0 ||
+        typeof entry.text !== 'string' ||
+        seen.has(entry.id)
+      ) return false;
       seen.add(entry.id);
       return true;
     });
@@ -187,7 +195,10 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     super.willUpdate(changed);
     this._isFirstUpdate = !this.hasUpdated;
     this.sessionChanged = changed.has('sessionId') && this.hasUpdated;
-    if (this.sessionChanged) this.announcedFinalIds.clear();
+    if (this.sessionChanged) {
+      this.announcedFinalIds.clear();
+      this.pendingSessionBaseline = true;
+    }
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -213,7 +224,10 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
         fresh.push(entry.text);
       }
     }
-    if (this._isFirstUpdate || this.sessionChanged) return;
+    const establishesBaseline =
+      this._isFirstUpdate || this.sessionChanged || this.pendingSessionBaseline;
+    this.pendingSessionBaseline = false;
+    if (establishesBaseline) return;
     const sink = this.announcementSink;
     if (!sink) return;
     for (const text of fresh) {

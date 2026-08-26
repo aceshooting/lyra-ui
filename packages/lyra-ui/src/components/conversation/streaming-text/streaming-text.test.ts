@@ -120,7 +120,7 @@ it("schedules and cancels coalescing with the adopted document window", async ()
   const callbacks = new Map<number, () => void>();
   const clears: number[] = [];
   ownerWindow.setTimeout = ((handler: TimerHandler) => {
-    if (typeof handler === "function") callbacks.set(81, handler);
+    if (typeof handler === "function") callbacks.set(81, () => handler());
     return 81;
   }) as typeof ownerWindow.setTimeout;
   ownerWindow.clearTimeout = ((handle?: number) => {
@@ -502,6 +502,34 @@ describe("Markdown auto-detection and rendering mode", () => {
       streaming: boolean;
     };
     expect(md.streaming).to.be.true;
+  });
+
+  it('does not expose composed events from its owned Markdown renderer', async () => {
+    const el = await fixture<LyraStreamingText>(html`
+      <lr-streaming-text
+        content-mode="markdown"
+        content="# Heading"
+      ></lr-streaming-text>
+    `);
+    const markdown = el.shadowRoot!.querySelector('lr-markdown')!;
+    const leaked: string[] = [];
+    for (const name of [
+      'lr-render-error',
+      'lr-link-click',
+      'lr-highlight-activate',
+      'lr-text-select',
+      'lr-anchor-result',
+    ]) {
+      const listener = () => { leaked.push(name); };
+      el.addEventListener(name, listener);
+      markdown.dispatchEvent(new CustomEvent(name, {
+        bubbles: true,
+        composed: true,
+        detail: {},
+      }));
+      el.removeEventListener(name, listener);
+    }
+    expect(leaked).to.deep.equal([]);
   });
 });
 

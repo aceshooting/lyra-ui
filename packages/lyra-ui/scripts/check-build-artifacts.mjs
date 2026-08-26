@@ -17,10 +17,11 @@
 // Runs as the second half of `pnpm run build` — the only point where `dist/` is guaranteed to be
 // both present and current — which also covers `prepack` and therefore every published tarball.
 // Run it standalone with `pnpm run check:build-artifacts` after any build.
-import { readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { isMainModule } from './is-main-module.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -94,8 +95,6 @@ function run() {
   );
 }
 
-const isMain = process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
-if (isMain) run();
+if (isMainModule(import.meta.url)) run();
 
 export { run };
-

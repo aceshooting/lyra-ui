@@ -7,16 +7,16 @@ import { tokens } from './tokens.styles.js';
 import { palette } from './tokens/palette.styles.js';
 
 class TokenProbe extends LitElement {
-  static styles = [palette, tokens];
-  render() {
+  static override styles = [palette, tokens];
+  override render() {
     return html`<div part="probe"></div>`;
   }
 }
 customElements.define(tag('token-probe'), TokenProbe);
 
 class SpecialistTokenProbe extends LitElement {
-  static styles = [palette, tokens, specialistTokens];
-  render() {
+  static override styles = [palette, tokens, specialistTokens];
+  override render() {
     return html`<div part="probe"></div>`;
   }
 }
@@ -28,8 +28,8 @@ customElements.define(tag('specialist-token-probe'), SpecialistTokenProbe);
 // inner probe; only a --lr-theme-* input (declared nowhere in component styles) inherits
 // all the way down.
 class NestedTokenProbe extends LitElement {
-  static styles = [palette, tokens];
-  render() {
+  static override styles = [palette, tokens];
+  override render() {
     return html`<lr-token-probe></lr-token-probe>`;
   }
 }
@@ -88,13 +88,13 @@ function fallbackHex(name: string, mode: PaletteMode): string {
   if (bridged) {
     const block = paletteBlock(mode);
     const slot = block.match(
-      new RegExp(`${escaped(bridged[1])}:\\s*var\\([^,]+,\\s*var\\((--lr-ramp-[a-z0-9-]+)\\)\\)`, 'i'),
+      new RegExp(`${escaped(bridged[1]!)}:\\s*var\\([^,]+,\\s*var\\((--lr-ramp-[a-z0-9-]+)\\)\\)`, 'i'),
     );
     expect(slot, `${name} bridges to ${bridged[1]}, which the ${mode} grid does not declare`).to.not.equal(null);
     // The ramp is declared once, on `:host`, and inherits into the dark block.
-    const step = palette.cssText.match(new RegExp(`${escaped(slot![1])}:\\s*(#[0-9a-f]{3,8})`, 'i'));
+    const step = palette.cssText.match(new RegExp(`${escaped(slot![1]!)}:\\s*(#[0-9a-f]{3,8})`, 'i'));
     expect(step, `${slot![1]} is referenced but never declared`).to.not.equal(null);
-    return step![1];
+    return step![1]!;
   }
 
   // The light value is declared once, on `:host`; the dark one is composed into each of the three
@@ -103,11 +103,11 @@ function fallbackHex(name: string, mode: PaletteMode): string {
   // asked for it and another when the attribute did is the bug this shape exists to prevent.
   const values = [
     ...tokenCssText.matchAll(new RegExp(`${escaped(name)}:\\s*var\\([^,]+,\\s*(#[0-9a-f]{3,8})\\s*\\)`, 'gi')),
-  ].map((match) => match[1]);
+  ].map((match) => match[1]!);
   expect(values.length, `${name} must define a light and at least one dark standalone fallback`).to.be.greaterThan(1);
   const [light, ...dark] = values;
   expect(new Set(dark).size, `${name}'s dark fallbacks disagree: ${dark.join(' | ')}`).to.equal(1);
-  return mode === 'light' ? light : dark[0];
+  return mode === 'light' ? light! : dark[0]!;
 }
 
 function relativeLuminance(hex: string): number {
@@ -117,12 +117,12 @@ function relativeLuminance(hex: string): number {
     const value = Number.parseInt(channel, 16) / 255;
     return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
   });
-  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+  return 0.2126 * red! + 0.7152 * green! + 0.0722 * blue!;
 }
 
 function contrastRatio(foreground: string, background: string): number {
   const [lighter, darker] = [relativeLuminance(foreground), relativeLuminance(background)].sort((a, b) => b - a);
-  return (lighter + 0.05) / (darker + 0.05);
+  return (lighter! + 0.05) / (darker! + 0.05);
 }
 
 function expectPaletteContrast(mode: PaletteMode): void {
@@ -163,26 +163,6 @@ function expectPaletteContrast(mode: PaletteMode): void {
 
 /** The elevation scale, smallest to largest. `--lr-shadow` is an alias for the `m` step. */
 const ELEVATION_STEPS = ['xs', 's', 'm', 'l', 'xl'] as const;
-
-/** The 16 ANSI/SGR slots, each of which has both a foreground and a background ramp entry. */
-const TERMINAL_SLOTS = [
-  'black',
-  'red',
-  'green',
-  'yellow',
-  'blue',
-  'magenta',
-  'cyan',
-  'white',
-  'bright-black',
-  'bright-red',
-  'bright-green',
-  'bright-yellow',
-  'bright-blue',
-  'bright-magenta',
-  'bright-cyan',
-  'bright-white',
-] as const;
 
 const squash = (value: string) => value.trim().replace(/\s+/g, ' ');
 
@@ -585,7 +565,7 @@ async function probeVarUnder(themeClass: string, name: string): Promise<string> 
 
 function bridgedThemeInputs(): string[] {
   const layers = `${tokens.cssText}\n${palette.cssText}\n${specialistTokens.cssText}`;
-  return [...new Set([...layers.matchAll(/var\((--lr-theme-[\w-]+)/g)].map((match) => match[1]))].sort();
+  return [...new Set([...layers.matchAll(/var\((--lr-theme-[\w-]+)/g)].map((match) => match[1]!))].sort();
 }
 
 it('declares every bridged theme input in theme.css', async () => {
@@ -679,7 +659,7 @@ it('changes no bridged token value anywhere when theme.css is imported', async (
   const hostTokenNames = (cssText: string, label: string): string[] => {
     const hostBlock = /:host\s*{([\s\S]*?)\n {2}}/.exec(cssText)?.[1];
     if (hostBlock === undefined) throw new Error(`expected the ${label} :host token block to be parsed`);
-    return [...hostBlock.matchAll(/^\s*(--lr-[\w-]+):/gm)].map((match) => match[1]);
+    return [...hostBlock.matchAll(/^\s*(--lr-[\w-]+):/gm)].map((match) => match[1]!);
   };
   const names = [
     ...hostTokenNames(tokens.cssText, 'base'),

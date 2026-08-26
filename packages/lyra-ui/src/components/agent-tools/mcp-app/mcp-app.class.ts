@@ -7,7 +7,6 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeFrameSrc, safeLinkHref } from '../../../internal/safe-url.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { styles } from './mcp-app.styles.js';
-import { hostAriaLabel } from '../../../internal/a11y.js';
 import { purposeAccessibleLabel } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -214,7 +213,10 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
   @property({ attribute: false }) resource: McpAppResource | null = null;
   @property({ type: Number }) height = 320;
   @property({ type: Number, attribute: 'max-height' }) maxHeight = 800;
+  /** Purpose-specific iframe title used ahead of the resource title and localized fallback. */
   @property() label = '';
+  /** Programmatic iframe title when no authored host `aria-label` attribute is present. An empty
+   *  value cannot leave the executable frame unnamed. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @state() private loaded = false;
   @state() private frameHeight = 320;
@@ -458,9 +460,11 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     if (!resource) {
       return html`<div part="base"><p part="error">${this.localize('mcpAppUnavailable')}</p></div>`;
     }
-    const fallbackLabel = (hostAriaLabel(this) === null ? this.accessibleLabel : '') || this.label ||
-      resource.resource.title || this.localize('mcpAppLabel');
-    const label = purposeAccessibleLabel(this, fallbackLabel, { allowExplicitEmpty: true });
+    const propertyLabel = !this.hasAttribute('aria-label') && typeof this.accessibleLabel === 'string'
+      ? this.accessibleLabel
+      : '';
+    const fallbackLabel = propertyLabel || this.label || resource.resource.title || this.localize('mcpAppLabel');
+    const label = purposeAccessibleLabel(this, fallbackLabel);
     const frameGeneration = this.frameGeneration;
     return html`<div part="base">
       ${this.loaded ? nothing : html`<p part="loading">${this.localize('mcpAppLoading')}</p>`}

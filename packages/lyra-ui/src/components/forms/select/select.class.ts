@@ -8,7 +8,10 @@ import {
 } from '../../../internal/lyra-element.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 installFormControlLabelSupport();
-import { place } from '../../../internal/positioner.js';
+import {
+  deferredPlaceReady as place,
+  type DeferredOperationHandle,
+} from '../../../internal/anchored-overlay-runtime.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import {
@@ -451,7 +454,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   private listId = nextId('select-list');
   private triggerId = nextId('select-trigger');
   private valueTextId = nextId('select-value');
-  private cleanup?: () => void;
+  private cleanup?: DeferredOperationHandle;
+  private positioningReady: Promise<boolean> = Promise.resolve(false);
   private overlayHandle?: OverlayHandle;
   private restoreFocusOnClose = true;
   private positionedDirection?: 'ltr' | 'rtl';
@@ -1409,6 +1413,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       placement: rtlAwarePlacement(this.placement, this),
       strategy: this.hoist ? 'fixed' : 'absolute',
     });
+    this.positioningReady = this.cleanup.ready;
   }
 
   private activateListboxOverlay(): void {
@@ -1549,6 +1554,20 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     const token = ++this.transitionToken;
     await this.updateComplete;
     if (this.transitionToken !== token) return;
+    if (event === 'lr-after-show') {
+      while (this.open) {
+        const readiness = this.positioningReady;
+        const positioned = await readiness;
+        if (this.transitionToken !== token) return;
+        if (positioned) break;
+        if (readiness === this.positioningReady) {
+          this.forceCloseOpenState();
+          return;
+        }
+      }
+      await this.updateComplete;
+      if (this.transitionToken !== token) return;
+    }
     if (this.isConnected) {
       const view = this.ownerDocument.defaultView;
       if (view)

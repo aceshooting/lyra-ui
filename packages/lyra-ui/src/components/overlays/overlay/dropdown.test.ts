@@ -5,6 +5,7 @@ import '../../layout/menu/menu.js';
 import { LyraDropdown } from './dropdown.class.js';
 import type { LyraDropdownItem } from '../../layout/menu/dropdown-item.class.js';
 import type { LyraMenu } from '../../layout/menu/menu.class.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function trigger(el: LyraDropdown): HTMLButtonElement {
   return el.querySelector('[slot="trigger"]') as HTMLButtonElement;
@@ -526,6 +527,10 @@ it('uses the direct-item WA submenu shape for nested keyboard selection and one 
   }));
   await parent.updateComplete;
   expect(parent.submenuOpen).to.equal(true);
+  await waitUntil(
+    () => (document.activeElement as HTMLElement | null)?.getAttribute('value') === 'email',
+    'the submenu did not focus its first item after deferred placement',
+  );
   expect((document.activeElement as HTMLElement).getAttribute('value')).to.equal('email');
 
   let selectedValue = '';
@@ -572,6 +577,10 @@ it('mirrors submenu arrows and preserves the safe pointer corridor under RTL', a
   }));
   await parent.updateComplete;
   expect(parent.submenuOpen).to.equal(true);
+  await waitUntil(
+    () => (document.activeElement as HTMLElement | null)?.getAttribute('value') === 'email',
+    'the RTL submenu did not focus its first item after deferred placement',
+  );
   expect((document.activeElement as HTMLElement).getAttribute('value')).to.equal('email');
 
   (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', {
@@ -645,6 +654,84 @@ it('uses absolute positioning by default and treats containingElement as inside 
   } finally {
     containing.remove();
   }
+});
+
+it('lets a pointer activation on a for target close the open dropdown without reopening it', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <button id="external-pointer-dropdown">External trigger</button>
+      <lr-dropdown
+        for="external-pointer-dropdown"
+        style="--show-duration: 0ms; --hide-duration: 0ms"
+      >
+        <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
+      </lr-dropdown>
+    </div>
+  `);
+  const trigger = wrapper.querySelector<HTMLButtonElement>('#external-pointer-dropdown')!;
+  const el = wrapper.querySelector<LyraDropdown>('lr-dropdown')!;
+  await el.show();
+  let shows = 0;
+  el.addEventListener('lr-show', () => shows += 1);
+  const rect = trigger.getBoundingClientRect();
+
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ],
+    });
+    await sendMouse({ type: 'down' });
+    await sendMouse({ type: 'up' });
+    await el.updateComplete;
+
+    expect({ open: el.open, shows }).to.deep.equal({ open: false, shows: 0 });
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('opens from menu arrow keys on an external for trigger and focuses the requested edge item', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <button id="external-keyboard-dropdown">External trigger</button>
+      <lr-dropdown
+        for="external-keyboard-dropdown"
+        style="--show-duration: 0ms; --hide-duration: 0ms"
+      >
+        <lr-dropdown-item value="first">First</lr-dropdown-item>
+        <lr-dropdown-item value="disabled" disabled>Disabled</lr-dropdown-item>
+        <lr-dropdown-item value="last">Last</lr-dropdown-item>
+      </lr-dropdown>
+    </div>
+  `);
+  const external = wrapper.querySelector<HTMLButtonElement>('#external-keyboard-dropdown')!;
+  const el = wrapper.querySelector<LyraDropdown>('lr-dropdown')!;
+  const [first, , last] = items(el);
+
+  external.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowDown',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
+  await el.updateComplete;
+  expect(el.open).to.equal(true);
+  await waitUntil(() => document.activeElement === first, 'first item did not receive focus');
+
+  await el.hide({ focusTrigger: false });
+  external.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'ArrowUp',
+      bubbles: true,
+      cancelable: true,
+    })
+  );
+  await el.updateComplete;
+  await waitUntil(() => document.activeElement === last, 'last item did not receive focus');
 });
 
 it('uses an external `for` anchor while keeping the slotted trigger as the focus-return owner', async () => {

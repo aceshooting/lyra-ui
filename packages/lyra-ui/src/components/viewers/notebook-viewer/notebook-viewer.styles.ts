@@ -103,7 +103,7 @@ export const styles = css`
     background: var(--lr-color-surface-raised);
   }
   lr-virtual-list::part(raw-source):focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   lr-virtual-list::part(outputs) {
@@ -153,7 +153,7 @@ export const styles = css`
     color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   lr-virtual-list::part(output-toggle):focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='error'] {

@@ -174,13 +174,13 @@ export const styles = css`
     font: inherit;
     line-height: var(--lr-line-height-none);
   }
-  [part='clear-button']:hover,
-  [part='expand-button']:hover {
+  [part='clear-button']:not(:disabled):hover,
+  [part='expand-button']:not(:disabled):hover {
     color: var(--lr-time-input-action-hover-color, var(--lr-color-text));
     background: var(--lr-time-input-action-hover-bg, var(--lr-color-brand-quiet));
   }
-  [part='clear-button']:active,
-  [part='expand-button']:active {
+  [part='clear-button']:not(:disabled):active,
+  [part='expand-button']:not(:disabled):active {
     background: var(
       --lr-time-input-action-active-bg,
       color-mix(
@@ -246,15 +246,15 @@ export const styles = css`
   [part='column'] {
     display: flex;
     flex-direction: column;
-    inline-size: var(--column-width, var(--lr-size-3rem));
-    max-block-size: calc(var(--column-item-height, var(--lr-size-2-25rem)) * 6);
+    inline-size: var(--column-width, calc(var(--lr-size-1em) * 3));
+    max-block-size: calc(var(--column-item-height, calc(var(--lr-size-1em) * 2.25)) * 6);
     overflow-block: auto;
     overflow-inline: hidden;
     overscroll-behavior: contain;
     scrollbar-width: thin;
   }
   [part~='column-item'] {
-    flex: 0 0 var(--column-item-height, var(--lr-size-2-25rem));
+    flex: 0 0 var(--column-item-height, calc(var(--lr-size-1em) * 2.25));
     display: flex;
     align-items: center;
     justify-content: center;

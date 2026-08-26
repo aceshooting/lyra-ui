@@ -1,7 +1,7 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './source-card.js';
 import { LyraSourceCard } from './source-card.js';
-import { styles } from './source-card.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
@@ -410,15 +410,6 @@ it('ignores a stale appearance="plain", leaving the card chrome intact', async (
   expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
 });
 
-it('orders :host([frame="plain"]) after :host([compact]) so the equal-specificity reset wins', () => {
-  const css = styles.cssText;
-  const compactAt = css.indexOf(':host([compact])');
-  const plainAt = css.indexOf(":host([frame='plain'])");
-  expect(compactAt).to.be.greaterThan(-1);
-  expect(plainAt).to.be.greaterThan(-1);
-  expect(plainAt).to.be.greaterThan(compactAt);
-});
-
 it('lets plain win over compact when both are set', async () => {
   const el = (await fixture(
     html`<lr-source-card compact frame="plain" title="a.pdf"><span slot="excerpt">x</span></lr-source-card>`,
@@ -439,9 +430,25 @@ it('keeps the title/toggle affordances under plain (they never depended on the c
   // Brand-colored, and still hover-underlined -- the affordance is the text itself, not a border.
   expect(getComputedStyle(title).color).to.not.equal(getComputedStyle(el).color);
   expect((toggle) != null).to.equal(true);
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include("[part='title']:hover { text-decoration: underline; }");
-  expect(css).to.include("[part='toggle']:hover { text-decoration: underline; }");
+  for (const target of [title, toggle]) {
+    target.scrollIntoView({ block: 'center' });
+    const rect = target.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => getComputedStyle(target).textDecorationLine.includes('underline'),
+        `${target.getAttribute('part')} never painted its hover underline under frame=plain`
+      );
+    } finally {
+      await resetMouse();
+    }
+  }
 });
 
 it('is accessible in the populated compact and plain states', async () => {

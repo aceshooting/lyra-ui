@@ -28,6 +28,8 @@ current element count and complete tag list.
 - [llms/peers.md](./llms/peers.md): which optional peer dependency each component needs.
 - [llms/migration.md](./llms/migration.md): every pinned `wa-*`/`sl-*` mapping's
   exact/rewritten/warning/conceptual/unsupported decision and safe codemod rules.
+- [CHANGELOG.md](./CHANGELOG.md): chronological release notes, including breaking changes and
+  post-major minor/patch additions and fixes — read it before upgrading.
 - [llms-full.txt](./llms-full.txt): all of the above component sections in one file.
 - [README.md](./README.md): install, catalog, theming, accessibility, and package-level commands.
 - [Live docs site](https://aceshooting.github.io/lyra-ui/): interactive examples per component —

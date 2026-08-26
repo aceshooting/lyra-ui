@@ -92,8 +92,20 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(el.renderer).to.equal('svg');
     expect(el.label).to.be.undefined;
     expect(
-      el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.getAttribute('aria-label')
+      el
+        .shadowRoot!.querySelector<HTMLElement>('[part="base"]')!
+        .getAttribute('aria-label')
     ).to.equal('Knowledge graph explorer');
+  });
+
+  it('uses the same canvas-height token as the pre-upgrade reservation', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        style="--lr-canvas-reserved-height: 275px"
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    expect(getComputedStyle(el).blockSize).to.equal('275px');
+    expect(el.getBoundingClientRect().height).to.be.closeTo(275, 1);
   });
 
   it('keeps an explicitly empty label distinct from an omitted one', async () => {
@@ -102,7 +114,9 @@ describe('lr-knowledge-graph-explorer', () => {
     )) as LyraKnowledgeGraphExplorer;
     expect(el.label).to.equal('');
     expect(
-      el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.getAttribute('aria-label')
+      el
+        .shadowRoot!.querySelector<HTMLElement>('[part="base"]')!
+        .getAttribute('aria-label')
     ).to.equal('');
   });
 
@@ -348,10 +362,13 @@ describe('lr-knowledge-graph-explorer', () => {
     // legend's own internal flex-wrap keeps a shorter list within a few rows -- it takes this
     // many entries for the wrapped legend to grow past the cap and visibly starve the graph pane
     // below at the default viewport width this suite runs under.
-    const manyNodeTypes: LyraNodeTypeStyle[] = Array.from({ length: 100 }, (_, i) => ({
-      id: `type-${i}`,
-      label: `Type ${i}`,
-    }));
+    const manyNodeTypes: LyraNodeTypeStyle[] = Array.from(
+      { length: 100 },
+      (_, i) => ({
+        id: `type-${i}`,
+        label: `Type ${i}`,
+      })
+    );
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         style="block-size: 30rem"
@@ -362,8 +379,8 @@ describe('lr-knowledge-graph-explorer', () => {
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
 
-    const legendBox = el.shadowRoot!
-      .querySelector('[part="legend"]')!
+    const legendBox = el
+      .shadowRoot!.querySelector('[part="legend"]')!
       .getBoundingClientRect();
     const graphBox = graphEl(el).getBoundingClientRect();
 
@@ -377,7 +394,7 @@ describe('lr-knowledge-graph-explorer', () => {
     ).to.be.greaterThan(100);
   });
 
-  it('still sizes itself from the graph when the host is left unsized', async () => {
+  it('uses its stable reserved block size when the host is left unsized', async () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
         .nodes=${nodes}
@@ -387,10 +404,13 @@ describe('lr-knowledge-graph-explorer', () => {
     `)) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
 
+    const expectedDefaultHeight =
+      Number.parseFloat(getComputedStyle(document.documentElement).fontSize) *
+      24;
     expect(
       el.getBoundingClientRect().height,
-      'no height collapse without an explicit host height'
-    ).to.be.greaterThan(100);
+      'default host reservation'
+    ).to.be.closeTo(expectedDefaultHeight, 2);
     expect(graphEl(el).getBoundingClientRect().height).to.be.greaterThan(100);
   });
 
@@ -464,6 +484,29 @@ describe('lr-knowledge-graph-explorer', () => {
     ) as HTMLInputElement;
     native.value = 'needle';
     native.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+
+    const resultLabels = Array.from(
+      el.shadowRoot!.querySelectorAll('[part="search-result"] button')
+    ).map((button) => button.textContent?.trim());
+    expect(resultLabels).to.deep.equal(['Needle']);
+  });
+
+  it('ignores a non-string node label while retaining valid search matches', async () => {
+    const el = await fixture<LyraKnowledgeGraphExplorer>(html`
+      <lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>
+    `);
+    (el as unknown as { nodes: unknown }).nodes = [
+      { id: 'numeric', label: 42 },
+      { id: 'valid', label: 'Needle' },
+    ];
+    await el.updateComplete;
+
+    const input = el
+      .shadowRoot!.querySelector<LyraInput>('[part="search"]')!
+      .shadowRoot!.querySelector<HTMLInputElement>('input')!;
+    input.value = 'needle';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
     await el.updateComplete;
 
     const resultLabels = Array.from(
@@ -1957,24 +2000,21 @@ describe('lifecycle super calls', () => {
     // component's own override. This component composes several other LyraElement-based children
     // (lr-graph, lr-input, lr-graph-legend, ...), so the patched hook is guarded by `this === el`
     // to count only calls on the instance under test, not every composed child's own willUpdate.
-    const proto = Object.getPrototypeOf(Object.getPrototypeOf(el)) as Record<
-      string,
-      unknown
-    >;
-    const originalWillUpdate = proto.willUpdate as
-      | ((changed: unknown) => void)
-      | undefined;
+    const proto = Object.getPrototypeOf(Object.getPrototypeOf(el)) as unknown as {
+      willUpdate(this: unknown, changed: unknown): void;
+    };
+    const originalWillUpdate = proto.willUpdate;
     let willUpdateCalls = 0;
     proto.willUpdate = function (this: unknown, changed: unknown) {
       if (this === el) willUpdateCalls++;
-      return originalWillUpdate?.call(this, changed);
+      return originalWillUpdate.call(this, changed);
     };
     try {
       el.nodes = nodes;
       await el.updateComplete;
       expect(willUpdateCalls).to.be.greaterThan(0);
     } finally {
-      delete proto.willUpdate;
+      proto.willUpdate = originalWillUpdate;
     }
   });
 });

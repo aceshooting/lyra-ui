@@ -9,7 +9,7 @@ import {
   readComponentTestFiles,
 } from './qualification-core.mjs';
 
-export const QUALIFICATION_LEDGER_SCHEMA_VERSION = 1;
+const QUALIFICATION_LEDGER_SCHEMA_VERSION = 1;
 
 export function validateVisualQualificationManifest(manifest, inventory) {
   const findings = [];

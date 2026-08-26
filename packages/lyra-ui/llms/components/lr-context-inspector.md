@@ -6,6 +6,7 @@
 - **Class** `LyraContextInspector`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/context-inspector/context-inspector.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 15 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -33,7 +34,9 @@ truncated?: boolean; omittedTokens?: number; redactions?: readonly ContextInspec
 end: number; reason?: string }` marks character ranges within `text` that are redaction
   placeholders; `reason` becomes the marker's `title`/accessible reason, falling back to a localized
   "Redacted". Segment `id` is the stable public identity; empty/blank ids and later duplicates are omitted before
-  meter values, rendering, copy/export serialization, and citation events are derived.
+  meter values, rendering, copy/export serialization, and citation events are derived. A valid-id
+  streaming segment whose `text` is not available yet remains visible with an empty body and empty
+  copy/export text rather than rejecting the render.
 - `total: number = 0` — the full token budget `segments` are measured against; passed straight to
   `lr-context-meter.total`
 - `label: string = ''` — accessible group name, and the embedded meter's visible caption (e.g.

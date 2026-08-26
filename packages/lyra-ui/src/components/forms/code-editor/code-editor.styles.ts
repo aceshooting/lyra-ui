@@ -3,6 +3,7 @@ import { formControlRequiredMarker } from '../../../internal/form-control.styles
 export const styles = css`
   :host {
     display: block;
+    block-size: 100%;
     --_lr-code-editor-min-block-size: var(--lr-size-8rem);
     --_lr-code-editor-padding: var(--lr-space-s);
     --_lr-code-editor-font-size: var(--lr-font-size-m);
@@ -47,7 +48,9 @@ export const styles = css`
     --_lr-code-editor-font-size: var(--lr-font-size-xl);
   }
   [part="form-control"] {
-    display: grid;
+    display: flex;
+    flex-direction: column;
+    block-size: 100%;
     gap: var(--lr-space-xs);
   }
   [part~="label"] {
@@ -63,7 +66,9 @@ export const styles = css`
      axes. */
   [part='editor'] {
     display: grid;
+    flex: 1 1 auto;
     grid-template-columns: auto max-content;
+    block-size: 100%;
     overflow: auto;
     min-block-size: var(
       --lr-code-editor-min-block-size,
@@ -120,6 +125,7 @@ export const styles = css`
       --lr-code-editor-min-block-size,
       var(--_lr-code-editor-min-block-size)
     );
+    block-size: 100%;
     overflow: visible;
     padding: var(--lr-code-editor-padding, var(--_lr-code-editor-padding));
     resize: both;

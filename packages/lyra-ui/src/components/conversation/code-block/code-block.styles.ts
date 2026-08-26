@@ -284,6 +284,10 @@ export const styles = css`
     color: var(--shiki-dark, inherit) !important;
     background-color: var(--shiki-dark-bg, transparent) !important;
   }
+  [part='body'][data-dark-theme='true'] [part='pre'] .line-number,
+  [part='body'][data-dark-theme='true'] [part='pre'] button.line-gutter {
+    color: var(--lr-color-text-quiet) !important;
+  }
   [part='body'][data-dark-theme='true'] [part='pre'] [data-highlighted] {
     background: var(--lr-code-block-highlighted-line-bg, var(--lr-color-warning-quiet)) !important;
   }

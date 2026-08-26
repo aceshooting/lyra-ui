@@ -94,7 +94,7 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
   }
   [part='test-status'] lr-spinner {
-    --lr-spinner-size: var(--lr-size-1em);
+    --lr-spinner-size: var(--lr-test-results-spinner-size, var(--lr-size-1em));
   }
   [part='test-status'][data-status='passed'] { color: var(--lr-test-results-passed-color, var(--lr-color-success)); }
   [part='test-status'][data-status='failed'] { color: var(--lr-test-results-failed-color, var(--lr-color-danger)); }

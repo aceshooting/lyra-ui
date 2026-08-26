@@ -37,8 +37,8 @@ export function isShikiHighlighter(candidate: unknown): candidate is ShikiHighli
   );
 }
 
-/** The peer-neutral shape of a pre-imported TextMate grammar module's default export. */
-export interface ShikiLanguageInput {
+/** The peer-neutral shape of one TextMate grammar registration. */
+export interface ShikiLanguageRegistration {
   name: string;
   scopeName: string;
   displayName?: string;
@@ -46,6 +46,12 @@ export interface ShikiLanguageInput {
   patterns?: unknown[];
   repository?: Record<string, unknown>;
 }
+
+/** A pre-imported Shiki language module's default export. Shiki 4 language modules export an
+ *  array because one language entry can register multiple related TextMate grammars. */
+export type ShikiLanguageInput =
+  | ShikiLanguageRegistration
+  | readonly ShikiLanguageRegistration[];
 
 /** The subset of a Shiki/HAST element node that Lyra's transformers mutate. */
 interface ShikiTransformerNode {

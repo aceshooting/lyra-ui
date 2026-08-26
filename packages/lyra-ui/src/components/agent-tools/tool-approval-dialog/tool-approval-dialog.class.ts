@@ -14,7 +14,7 @@ import { activeElementIn } from '../../../internal/active-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_approve, LYRA_DEFAULT_cancel, LYRA_DEFAULT_deny, LYRA_DEFAULT_edit, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_invalidJson, LYRA_DEFAULT_toolApprovalArgsLabel, LYRA_DEFAULT_toolApprovalGenericTool, LYRA_DEFAULT_toolApprovalHeading } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_approve, LYRA_DEFAULT_cancel, LYRA_DEFAULT_deny, LYRA_DEFAULT_edit, LYRA_DEFAULT_invalidJson, LYRA_DEFAULT_toolApprovalArgsLabel, LYRA_DEFAULT_toolApprovalGenericTool, LYRA_DEFAULT_toolApprovalHeading } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -60,8 +60,8 @@ export interface LyraToolApprovalDialogEventMap {
  *
  * This renders its own dialog panel rather than nesting a `<lr-dialog>` in
  * its shadow template. Shared overlay infrastructure coordinates stacking,
- * focus trapping, Escape/backdrop dismissal, and focus return with every
- * other overlay in the same document.
+ * focus trapping, Escape dismissal, optional backdrop dismissal, and focus
+ * return with every other overlay in the same document.
  *
  * Approve/Deny/Edit are built-in chrome (not a `footer` slot a consumer must
  * assemble) — this component's interaction shape is fixed enough (there is
@@ -119,8 +119,8 @@ export interface LyraToolApprovalDialogEventMap {
  * showing `loading` on that button and `disabled` on the other (and, for Approve, alongside the
  * existing invalid-JSON `disabled` gate), until the host finalizes by calling
  * `close('approve'|'deny')` or bounces back by clearing `.pending` to `null`. While `pending` is
- * set, Escape and backdrop dismissal are suppressed -- a decision in flight should not be
- * abandonable out from under the host mid-request -- and `pending` itself resets to `null` every
+ * set, Escape and an enabled backdrop dismissal are suppressed -- a decision in flight should not
+ * be abandonable out from under the host mid-request -- and `pending` itself resets to `null` every
  * time the dialog transitions from closed to open, mirroring `editing`'s own reset-on-reopen
  * contract.
  *
@@ -136,7 +136,7 @@ export interface LyraToolApprovalDialogEventMap {
  * `lr-approve` (`pending` is set to `'deny'`). Otherwise always followed by `lr-close` with
  * reason `'deny'`.
  * @event lr-close - `detail: ToolApprovalDialogCloseReason`. Fired exactly
- * once per dismissal — via Escape, a backdrop click, the Approve/Deny
+ * once per dismissal — via Escape, an opted-in backdrop click, the Approve/Deny
  * buttons, or a `close()` call — so there is one consistent "this dialog is
  * now closed" signal regardless of which path triggered it.
  * @event focus - Re-dispatched when the raw-JSON editor receives focus.
@@ -183,7 +183,6 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     cancel: LYRA_DEFAULT_cancel,
     deny: LYRA_DEFAULT_deny,
     edit: LYRA_DEFAULT_edit,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
     invalidJson: LYRA_DEFAULT_invalidJson,
     toolApprovalArgsLabel: LYRA_DEFAULT_toolApprovalArgsLabel,
     toolApprovalGenericTool: LYRA_DEFAULT_toolApprovalGenericTool,
@@ -195,6 +194,10 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   /** Whether the dialog is open. Set this directly or use `show()`/`hide()`/`close()`. */
   @property({ type: Boolean, reflect: true }) open = false;
+
+  /** Dismisses the dialog on a backdrop click. Opt-in and `false` by default, matching
+   *  `<lr-dialog>`, `<lr-drawer>`, `<lr-lightbox>`, and the sibling tool dialogs. */
+  @property({ type: Boolean, attribute: 'light-dismiss' }) lightDismiss = false;
 
   /** Stable identity/generation for the proposal. Changing it while open resets draft and pending
    *  state even when the replacement proposal happens to reuse the same visible name/arguments. */
@@ -219,8 +222,8 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
    *  on failure, so the user can retry), or call `close('approve'|'deny')` to finalize. Also reset
    *  to `null` every time the dialog transitions from closed to open, mirroring
    *  `editing`/`draftText`/`draftError`'s own reset-on-reopen contract below, so a reused instance
-   *  never leaks one proposal's stuck pending state into the next. While non-null, Escape/backdrop
-   *  dismissal is suppressed (see `activateOverlay()`). */
+   *  never leaks one proposal's stuck pending state into the next. While non-null, Escape and an
+   *  enabled backdrop dismissal are suppressed (see `activateOverlay()`). */
   @property({ reflect: true }) pending: ToolApprovalDialogPending = null;
 
   /** Native editing-assistance attributes forwarded to the raw-JSON textarea. */
@@ -362,7 +365,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         this.close('escape');
       },
       onBackdrop: () => {
-        if (this.pending != null) return;
+        if (this.pending != null || !this.lightDismiss) return;
         this.close('backdrop');
       },
       preferredInitialFocus: () =>
@@ -375,7 +378,8 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   /**
    * Close the dialog and return focus to whatever had it before the dialog
    * opened. `reason` is forwarded as the `lr-close` detail — built-in
-   * triggers pass `'escape'`/`'backdrop'`/`'approve'`/`'deny'`; a consumer's
+   * triggers pass `'escape'`/`'backdrop'`/`'approve'`/`'deny'` (`'backdrop'` only while
+   * `lightDismiss` is enabled); a consumer's
    * own close affordance (e.g. a footer-slotted button) should call this
    * directly with its own reason string, so every dismissal path funnels
    * through the same event instead of the consumer having to also toggle

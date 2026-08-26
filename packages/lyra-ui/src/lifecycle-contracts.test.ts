@@ -293,17 +293,17 @@ function instrumentObservers(): Instrumentation {
         tracked.set(this, record);
       }
 
-      observe(...args: unknown[]): void {
+      override observe(...args: unknown[]): void {
         tracked.get(this)?.observed.add(args[0]);
         super.observe(...args);
       }
 
-      unobserve(target: unknown): void {
+      override unobserve(target: unknown): void {
         tracked.get(this)?.observed.delete(target);
         super.unobserve?.(target);
       }
 
-      disconnect(): void {
+      override disconnect(): void {
         tracked.get(this)?.observed.clear();
         super.disconnect();
       }

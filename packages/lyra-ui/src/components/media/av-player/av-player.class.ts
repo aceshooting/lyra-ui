@@ -460,7 +460,9 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   private waveformObserverWindow?: Window;
   private waveformDetachedObserverWindow?: Window;
   private waveformDrawFrame?: OwnedAnimationFrame;
-  private waveformVisible = true;
+  // Fail closed until the owner realm's observer reports. The no-observer fallback below restores
+  // eager painting before any mount draw reaches the canvas.
+  private waveformVisible = false;
   private waveformDirty = false;
   private lastWaveformAllocation?: {
     target: HTMLCanvasElement;

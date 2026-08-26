@@ -8,9 +8,10 @@
 // because of unrelated uncommitted work in the same files. The originals are restored on failure,
 // so the check never mutates the tree it is auditing.
 import { execFileSync } from 'node:child_process';
-import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isMainModule } from './is-main-module.mjs';
 
 const packageDir = fileURLToPath(new URL('..', import.meta.url));
 
@@ -46,10 +47,7 @@ export function checkPaletteFreshness(dir = packageDir) {
   return stale;
 }
 
-if (
-  process.argv[1] &&
-  realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
-) {
+if (isMainModule(import.meta.url)) {
   let stale;
   try {
     stale = checkPaletteFreshness();
@@ -71,4 +69,3 @@ if (
     );
   }
 }
-

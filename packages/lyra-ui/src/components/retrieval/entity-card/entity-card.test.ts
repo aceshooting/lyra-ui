@@ -3,6 +3,7 @@ import './entity-card.js';
 import type { LyraEntityCard, LyraEntity } from './entity-card.js';
 import { styles } from './entity-card.styles.js';
 import type { LyraResultField } from '../../agent-tools/result-card/result-field.class.js';
+import { setForcedColors } from '../../../../test/wtr-media.js';
 
 const entity: LyraEntity = {
   id: 'e1',
@@ -68,6 +69,25 @@ it('resolves the type badge label/color against types, falling back to the raw t
   expect(
     el.shadowRoot!.querySelector('[part="type-badge"]')!.textContent
   ).to.include('unknown-type');
+});
+
+it('keeps the static type category out of a live region across entity updates', async () => {
+  const el = (await fixture(
+    html`<lr-entity-card></lr-entity-card>`
+  )) as LyraEntityCard;
+  el.entity = entity;
+  el.types = types;
+  await el.updateComplete;
+  let badge = el.shadowRoot!.querySelector('lr-badge')!;
+  await badge.updateComplete;
+  expect(badge.hasAttribute('role')).to.be.false;
+
+  el.entity = { ...entity, type: 'organization' };
+  await el.updateComplete;
+  badge = el.shadowRoot!.querySelector('lr-badge')!;
+  await badge.updateComplete;
+  expect(badge.textContent).to.include('organization');
+  expect(badge.hasAttribute('role')).to.be.false;
 });
 
 it('renders degree and community rows with their localized labels', async () => {
@@ -274,15 +294,6 @@ it('ignores a stale appearance="plain", leaving the card chrome intact', async (
   expect(chrome.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
 });
 
-it('orders :host([frame="plain"]) after :host([compact]) so the equal-specificity reset wins', () => {
-  const css = styles.cssText;
-  const compactAt = css.indexOf(':host([compact])');
-  const plainAt = css.indexOf(":host([frame='plain'])");
-  expect(compactAt).to.be.greaterThan(-1);
-  expect(plainAt).to.be.greaterThan(-1);
-  expect(plainAt).to.be.greaterThan(compactAt);
-});
-
 it('lets plain win over compact when both are set', async () => {
   const el = (await fixture(
     html`<lr-entity-card
@@ -383,31 +394,30 @@ it('routes forced-color badge paint back through the system-owned semantic token
     /@media \(forced-colors: active\).*--lr-badge-color: var\(--lr-color-text\) !important.*--lr-badge-background: var\(--lr-color-surface\) !important.*--lr-badge-border: var\(--lr-color-border-strong\) !important/
   );
 
-  const el = (await fixture(
-    html`<lr-entity-card></lr-entity-card>`
-  )) as LyraEntityCard;
-  el.entity = entity;
-  el.types = [{ id: 'person', label: 'Person', color: '#ffffff' }];
-  await el.updateComplete;
-  const forcedSheet = document.createElement('style');
-  forcedSheet.textContent = styles.cssText.replace(
-    '@media (forced-colors: active)',
-    '@media all'
-  );
-  el.shadowRoot!.append(forcedSheet);
-  const badge = el.shadowRoot!.querySelector('lr-badge') as HTMLElement & {
-    updateComplete: Promise<unknown>;
-    shadowRoot: ShadowRoot;
-  };
-  await badge.updateComplete;
-  const badgeBase = badge.shadowRoot.querySelector(
-    '[part~="base"]'
-  ) as HTMLElement;
-  const cardBase = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  expect(getComputedStyle(badgeBase).color).to.equal(
-    getComputedStyle(cardBase).color
-  );
-  expect(getComputedStyle(badgeBase).backgroundColor).to.equal(
-    getComputedStyle(cardBase).backgroundColor
-  );
+  try {
+    await setForcedColors('active');
+    const el = (await fixture(
+      html`<lr-entity-card></lr-entity-card>`
+    )) as LyraEntityCard;
+    el.entity = entity;
+    el.types = [{ id: 'person', label: 'Person', color: '#ffffff' }];
+    await el.updateComplete;
+    const badge = el.shadowRoot!.querySelector('lr-badge') as HTMLElement & {
+      updateComplete: Promise<unknown>;
+      shadowRoot: ShadowRoot;
+    };
+    await badge.updateComplete;
+    const badgeBase = badge.shadowRoot.querySelector(
+      '[part~="base"]'
+    ) as HTMLElement;
+    const cardBase = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(badgeBase).color).to.equal(
+      getComputedStyle(cardBase).color
+    );
+    expect(getComputedStyle(badgeBase).backgroundColor).to.equal(
+      getComputedStyle(cardBase).backgroundColor
+    );
+  } finally {
+    await setForcedColors('none');
+  }
 });

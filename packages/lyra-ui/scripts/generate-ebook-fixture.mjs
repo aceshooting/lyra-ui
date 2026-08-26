@@ -1,9 +1,11 @@
+import { isMainModule } from './is-main-module.mjs';
+
 // Manual, occasional regeneration tool. Run it from packages/lyra-ui whenever the tiny fixture
 // needs a new chapter or metadata field. The fixed archive timestamp keeps repeated runs
 // byte-identical.
 import { writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import JSZip from 'jszip';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
@@ -50,11 +52,7 @@ export async function generateEbookFixture(
   return buffer.length;
 }
 
-const invokedPath = process.argv[1];
-if (
-  invokedPath &&
-  pathToFileURL(resolve(invokedPath)).href === import.meta.url
-) {
+if (isMainModule(import.meta.url)) {
   const byteLength = await generateEbookFixture();
   console.log(`Wrote ${byteLength}-byte EPUB fixture`);
 }

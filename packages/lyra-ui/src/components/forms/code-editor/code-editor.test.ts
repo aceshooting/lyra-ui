@@ -58,6 +58,80 @@ it('auto-grows the textarea\'s block size to fit its content while resize is "au
   expect(grownBlockSize).to.be.greaterThan(firstBlockSize);
 });
 
+it('clears auto-grow inline geometry when resize changes away from auto', async () => {
+  const el = (await fixture(
+    html`<lr-code-editor resize="auto" value="one\ntwo\nthree\nfour"></lr-code-editor>`
+  )) as LyraCodeEditor;
+  const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+  expect(textarea.style.blockSize).to.not.equal('');
+  expect(textarea.style.overflowY).to.equal('hidden');
+
+  el.resize = 'vertical';
+  await el.updateComplete;
+
+  expect(textarea.style.blockSize).to.equal('');
+  expect(textarea.style.overflowY).to.equal('');
+  expect(textarea.style.resize).to.equal('vertical');
+});
+
+it('keeps capped auto-grown content scrollable instead of clipping it', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <style>
+        lr-code-editor.capped::part(textarea) {
+          max-block-size: 40px;
+        }
+      </style>
+      <lr-code-editor
+        class="capped"
+        resize="auto"
+        style="--lr-code-editor-min-block-size: 0px"
+        value="one&#10;two&#10;three&#10;four&#10;five&#10;six"
+      ></lr-code-editor>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-code-editor') as LyraCodeEditor;
+  await el.updateComplete;
+  const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+
+  expect(textarea.getBoundingClientRect().height).to.be.at.most(40);
+  expect(textarea.scrollHeight).to.be.greaterThan(textarea.clientHeight);
+  expect(textarea.style.overflowY).to.equal('auto');
+});
+
+it('lets CSS resolve a percentage max-block-size against its containing block', async () => {
+  const value = Array.from({ length: 30 }, (_entry, index) => `line ${index + 1}`).join('\n');
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="inline-size: 320px">
+      <style>
+        lr-code-editor.percentage-cap::part(editor) {
+          block-size: 200px;
+          flex: none;
+          grid-template-rows: minmax(0, 1fr);
+        }
+        lr-code-editor.percentage-cap::part(textarea) {
+          max-block-size: 50%;
+        }
+      </style>
+      <lr-code-editor
+        class="percentage-cap"
+        resize="auto"
+        style="--lr-code-editor-min-block-size: 0px"
+        .value=${value}
+      ></lr-code-editor>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-code-editor') as LyraCodeEditor;
+  await el.updateComplete;
+  const editor = el.shadowRoot!.querySelector<HTMLElement>('[part="editor"]')!;
+  const textarea = el.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="textarea"]')!;
+
+  expect(getComputedStyle(textarea).maxBlockSize).to.equal('50%');
+  expect(textarea.getBoundingClientRect().height).to.be.closeTo(editor.clientHeight / 2, 2);
+  expect(textarea.scrollHeight).to.be.greaterThan(textarea.clientHeight);
+  expect(textarea.style.overflowY).to.equal('auto');
+});
+
 it('skips the auto-grow measurement without throwing when getComputedStyle is unavailable', async () => {
   const el = (await fixture(
     html`<lr-code-editor resize="auto" value="one"></lr-code-editor>`
@@ -113,6 +187,34 @@ it("keeps scrolling on the editor frame instead of creating a nested textarea sc
   expect(styles.cssText).to.contain("grid-template-columns: auto max-content");
   expect(styles.cssText).to.contain("inline-size: max-content");
   expect(styles.cssText).to.contain("overflow: visible");
+});
+
+it('fills a bounded parent through the host, form-control, editor, and textarea chain', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="block-size: 320px; inline-size: 320px">
+      <lr-code-editor value="const answer = 42;"></lr-code-editor>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-code-editor') as LyraCodeEditor;
+  const formControl = el.shadowRoot!.querySelector<HTMLElement>('[part="form-control"]')!;
+  const editor = el.shadowRoot!.querySelector<HTMLElement>('[part="editor"]')!;
+  const textarea = el.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="textarea"]')!;
+  const expected = wrapper.getBoundingClientRect().height;
+
+  for (const [name, node] of [
+    ['host', el],
+    ['form control', formControl],
+    ['editor', editor],
+  ] as const) {
+    expect(
+      node.getBoundingClientRect().height,
+      `${name} participates in the full-height chain`
+    ).to.be.closeTo(expected, 1);
+  }
+  expect(
+    textarea.getBoundingClientRect().height,
+    'the textarea fills the editor content box without covering its border'
+  ).to.be.closeTo(editor.clientHeight, 1);
 });
 
 it("renders line numbers and inserts spaces for Tab", async () => {
@@ -919,12 +1021,15 @@ it("relays one native input/change and emits typed Lyra value aliases", async ()
 
   expect(el.value).to.equal("const answer = 42;");
   expect(nativeInputs).to.have.lengthOf(1);
-  expect(nativeInputs[0]).to.be.instanceOf(InputEvent);
-  expect((nativeInputs[0] as InputEvent).inputType).to.equal("insertText");
-  expect(nativeInputs[0].target === el).to.be.true;
+  const nativeInput = nativeInputs[0];
+  if (!(nativeInput instanceof InputEvent)) throw new Error('The relayed input was not an InputEvent.');
+  expect(nativeInput.inputType).to.equal("insertText");
+  expect(nativeInput.target === el).to.be.true;
   expect(nativeChanges).to.have.lengthOf(1);
-  expect(nativeChanges[0].constructor).to.equal(Event);
-  expect(nativeChanges[0].target === el).to.be.true;
+  const nativeChange = nativeChanges[0];
+  if (!nativeChange) throw new Error('The relayed change event was not emitted.');
+  expect(nativeChange.constructor).to.equal(Event);
+  expect(nativeChange.target === el).to.be.true;
   expect(inputDetails).to.deep.equal([{ value: "const answer = 42;" }]);
   expect(changeDetails).to.deep.equal([{ value: "const answer = 42;" }]);
 });
@@ -1245,10 +1350,12 @@ it("bounds the line-number projection and skips all line splitting while the gut
   const originalSplit = String.prototype.split;
   let splits = 0;
   const nextValue = `${value}\nlast`;
-  String.prototype.split = function (...args: Parameters<String["split"]>) {
-    if (String(this) === nextValue && args[0] === "\n") splits++;
-    return originalSplit.apply(this, args);
+  type SplitSeparator = string | RegExp | { [Symbol.split](string: string, limit?: number): string[] };
+  const trackingSplit = function (this: string, separator: SplitSeparator, limit?: number): string[] {
+    if (String(this) === nextValue && separator === "\n") splits++;
+    return Reflect.apply(originalSplit, this, [separator, limit]);
   };
+  String.prototype.split = trackingSplit;
   try {
     el.value = nextValue;
     await el.updateComplete;
@@ -1339,15 +1446,19 @@ it("emits a cancelable lr-invalid alias whose cancellation reaches the native in
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
-  expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
-  expect(aliases[0].cancelable).to.be.true;
+  const alias = aliases[0];
+  if (!alias) throw new Error('The invalid alias was not emitted.');
+  expect(alias.bubbles && alias.composed).to.be.true;
+  expect(alias.cancelable).to.be.true;
 
   el.addEventListener("lr-invalid", (event) => event.preventDefault());
   const natives: Event[] = [];
   el.addEventListener("invalid", (event) => natives.push(event));
   expect(el.checkValidity()).to.be.false;
   expect(natives).to.have.lengthOf(1);
-  expect(natives[0].defaultPrevented).to.be.true;
+  const native = natives[0];
+  if (!native) throw new Error('The native invalid event was not emitted.');
+  expect(native.defaultPrevented).to.be.true;
 });
 
 // -- size: parity with lr-textarea's own six-step ladder (see textarea.test.ts's identical

@@ -194,7 +194,8 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
 
   /** The assembled context, one entry per piece (system prompt, retrieved chunk, history turn,
    *  ...). Empty/blank ids are omitted and duplicates normalize first-wins before metering,
-   *  rendering, export, and events. */
+   *  rendering, export, and events. A valid-id streaming row whose text has not arrived yet is
+   *  retained with an empty text body. */
   @property({ attribute: false }) segments: readonly ContextInspectorSegment[] = [];
 
   /** The full token budget `segments` are measured against — passed straight through to `<lr-context-meter>`'s own `total`. */
@@ -210,7 +211,11 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
   @property({ attribute: 'export-filename' }) exportFilename = 'context';
 
   private get normalizedSegments(): ContextInspectorSegment[] {
-    return firstByIdentity(Array.isArray(this.segments) ? this.segments : [], (segment) => segment.id);
+    return firstByIdentity(Array.isArray(this.segments) ? this.segments : [], (segment) => segment.id)
+      .map((segment) => ({
+        ...segment,
+        text: typeof segment.text === 'string' ? segment.text : '',
+      }));
   }
 
   private get meterSegments(): ContextMeterSegment[] {

@@ -314,7 +314,9 @@ it("renders separators as explicitly decorative content", async () => {
     <lr-breadcrumb-item href="/">Home</lr-breadcrumb-item>
     <lr-breadcrumb-item current>Reports</lr-breadcrumb-item>
   </lr-breadcrumb>`);
-  const [first, second] = Array.from(el.querySelectorAll("lr-breadcrumb-item"));
+  const items = Array.from(el.querySelectorAll("lr-breadcrumb-item"));
+  const first = items[0]!;
+  const second = items[1]!;
   expect(first.getAttribute("role")).to.equal("listitem");
   const firstSeparator = first.shadowRoot!.querySelector('[part="separator"]')!;
   const secondSeparator =

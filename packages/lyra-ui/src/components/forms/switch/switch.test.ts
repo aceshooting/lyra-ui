@@ -90,12 +90,16 @@ it("emits one cancelable lr-invalid alias when a validity check fails", async ()
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
-  expect(aliases[0].target === el).to.equal(true);
-  expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
-  expect(aliases[0].cancelable).to.be.true;
+  const alias = aliases[0];
+  if (!alias) throw new Error('The invalid alias was not emitted.');
+  expect(alias.target === el).to.equal(true);
+  expect(alias.bubbles && alias.composed).to.be.true;
+  expect(alias.cancelable).to.be.true;
   // Nothing cancelled it, so the browser's own validation UI stays enabled.
   expect(natives).to.have.lengthOf(1);
-  expect(natives[0].defaultPrevented).to.be.false;
+  const native = natives[0];
+  if (!native) throw new Error('The native invalid event was not emitted.');
+  expect(native.defaultPrevented).to.be.false;
 });
 
 it("cancels the native invalid event when the lr-invalid alias is cancelled", async () => {
@@ -108,7 +112,9 @@ it("cancels the native invalid event when the lr-invalid alias is cancelled", as
 
   expect(el.checkValidity()).to.be.false;
   expect(natives).to.have.lengthOf(1);
-  expect(natives[0].defaultPrevented).to.be.true;
+  const native = natives[0];
+  if (!native) throw new Error('The native invalid event was not emitted.');
+  expect(native.defaultPrevented).to.be.true;
 });
 
 it("reflects the pinned Web Awesome value property", async () => {
@@ -421,12 +427,15 @@ describe("native form event contract", () => {
       "change",
       "lr-change",
     ]);
-    expect(seen[0].event instanceof InputEvent).to.be.true;
-    expect(seen[2].event.constructor === Event).to.be.true;
-    expect(seen[0].event.target === el && seen[2].event.target === el).to.be
-      .true;
-    expect(seen[1].event instanceof CustomEvent).to.be.true;
-    expect((seen[1].event as CustomEvent).detail).to.deep.equal({
+    const [nativeInput, aliasInput, nativeChange] = seen;
+    if (!nativeInput || !aliasInput || !nativeChange) {
+      throw new Error('The switch event sequence was incomplete.');
+    }
+    expect(nativeInput.event instanceof InputEvent).to.be.true;
+    expect(nativeChange.event.constructor === Event).to.be.true;
+    expect(nativeInput.event.target === el && nativeChange.event.target === el).to.be.true;
+    expect(aliasInput.event instanceof CustomEvent).to.be.true;
+    expect((aliasInput.event as CustomEvent).detail).to.deep.equal({
       checked: true,
     });
     expect(el.checked).to.be.true;
@@ -1137,9 +1146,7 @@ it("constructs its label observer in the adopted owner realm", async () => {
         observerDescriptor
       );
     } else {
-      delete (
-        frameWindow as Window & { MutationObserver?: typeof MutationObserver }
-      ).MutationObserver;
+      Reflect.deleteProperty(frameWindow, 'MutationObserver');
     }
     frame.remove();
   }

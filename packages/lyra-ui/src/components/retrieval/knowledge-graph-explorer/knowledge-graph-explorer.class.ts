@@ -93,7 +93,9 @@ export interface LyraKnowledgeGraphExplorerEventMap {
    *  (the same self-toggle-then-emit contract `lr-graph-legend`'s `hiddenTypes`/`lr-visibility-
    *  change` already establishes), so reassigning it back is optional -- useful only for a host
    *  that wants to persist or observe pins elsewhere. */
-  'lr-pin-change': CustomEvent<LyraEventDetailSnapshot<{ pinnedNodeIds: string[] }>>;
+  'lr-pin-change': CustomEvent<
+    LyraEventDetailSnapshot<{ pinnedNodeIds: string[] }>
+  >;
   /** The user typed in the toolbar's search box. `detail: { query, matchCount, matchCountExact }`
    *  -- `query` is the canonical `LyraSearchChangeDetail` field name
    *  (`internal/text-viewer-target.ts`). `matchCount` is the same live node-filter total the
@@ -114,7 +116,9 @@ export interface LyraKnowledgeGraphExplorerEventMap {
    *  complete updated array. This component already applies it to its own `hiddenTypes` before
    *  emitting, the same self-toggle-then-emit contract `lr-pin-change`/`lr-search-change` follow,
    *  so reassigning it back is optional and a direct host assignment stays silent. */
-  'lr-hidden-types-change': CustomEvent<LyraEventDetailSnapshot<{ hiddenTypes: string[] }>>;
+  'lr-hidden-types-change': CustomEvent<
+    LyraEventDetailSnapshot<{ hiddenTypes: string[] }>
+  >;
   'lr-node-click': CustomEvent<{ nodeId: string; x: number; y: number }>;
   'lr-link-click': CustomEvent<{
     sourceNodeId: string;
@@ -220,6 +224,8 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * @csspart graph - The composed `lr-graph`.
  * @csspart detail-popover - The composed `lr-popover` hosting the details overlay.
  * @csspart detail-card - The default-content `lr-entity-card`, only present while `selectedNodeId` resolves to a node.
+ * @cssprop [--lr-canvas-reserved-height=var(--lr-size-24rem)] - Default host block size, shared
+ *   with the pre-upgrade reservation stylesheet. An explicit outer `block-size` still wins.
  * @status stable
  * @since 4.1.0
  */
@@ -267,12 +273,12 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   /** Labels, colors, and shapes for the graph's node-type vocabulary. */
   @property({ attribute: false }) nodeTypes: readonly LyraNodeTypeStyle[] = [];
   /** Community hull definitions forwarded to the graph. */
-  @property({ attribute: false }) communities: readonly LyraGraphCommunity[] = [];
+  @property({ attribute: false }) communities: readonly LyraGraphCommunity[] =
+    [];
   /** Extra dossier fields, keyed by node id -- see `LyraKnowledgeGraphEntityDetails`. */
-  @property({ attribute: false }) entityDetails: Readonly<Record<
-    string,
-    Readonly<LyraKnowledgeGraphEntityDetails>
-  >> = {};
+  @property({ attribute: false }) entityDetails: Readonly<
+    Record<string, Readonly<LyraKnowledgeGraphEntityDetails>>
+  > = {};
   /** Currently-pinned node ids. Self-toggled by the pin action in the details popover and by a
    *  pinned chip's remove button (see the class doc's "controlled vs. self-managed" note); still
    *  presettable/overridable like any other property. Exactly two pinned nodes reveals the "Find
@@ -697,14 +703,14 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   private matchingNodes(): LyraGraphNode[] | undefined {
     const q = this.searchQuery.trim().toLocaleLowerCase(this.effectiveLocale);
     if (!q) return undefined;
-    return this.graphModel.nodes.filter(
-      (node) =>
+    return this.graphModel.nodes.filter((node) => {
+      const label = typeof node.label === 'string' ? node.label : '';
+      return (
         this.isVisibleNode(node.id) &&
         (node.id.toLocaleLowerCase(this.effectiveLocale).includes(q) ||
-          (node.label ?? '')
-            .toLocaleLowerCase(this.effectiveLocale)
-            .includes(q))
-    );
+          label.toLocaleLowerCase(this.effectiveLocale).includes(q))
+      );
+    });
   }
 
   private searchResultAnnouncement(matches = this.matchingNodes()): string {

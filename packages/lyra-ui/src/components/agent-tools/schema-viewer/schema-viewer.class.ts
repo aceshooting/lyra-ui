@@ -253,7 +253,8 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
 
   /** Clone-owned recursive schema snapshot. Reassign a new record after changing any branch.
    *  Bounded and depth-clamped by {@link snapshotSchemaNode} rather than `LyraElement`'s generic
-   *  `ownedCollectionProperties` machinery -- see that function for why. */
+   *  `ownedCollectionProperties` machinery -- see that function for why. A runtime non-array
+   *  `required` keyword is treated as absent. */
   @property({ attribute: false })
   get schema(): JsonSchemaNode | null {
     return this.schemaValue;
@@ -392,7 +393,7 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
           name: key,
           node,
           path: `${path}/properties/${this.pointerSegment(key)}`,
-          required: schema.required?.includes(key) ?? false,
+          required: Array.isArray(schema.required) && schema.required.includes(key),
         })) break;
       }
       for (const keyword of ['allOf', 'anyOf', 'oneOf'] as const) {

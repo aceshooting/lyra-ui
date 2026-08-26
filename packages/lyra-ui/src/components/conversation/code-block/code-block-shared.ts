@@ -174,12 +174,51 @@ export function codeBlockLineHighlightSet(
   maxLine: number
 ): Set<number> {
   const merged = parseHighlightLines(highlightLines, maxLine);
+  if (!Array.isArray(highlights)) return merged;
   for (const highlight of highlights) {
-    if (highlight.anchor.kind !== 'line-range') continue;
-    const end = highlight.anchor.end ?? highlight.anchor.start;
-    addBoundedLineRange(merged, highlight.anchor.start, end, maxLine);
+    const anchor = lineRangeAnchor(highlight);
+    if (!anchor) continue;
+    const end = anchor.end ?? anchor.start;
+    addBoundedLineRange(merged, anchor.start, end, maxLine);
   }
   return merged;
+}
+
+type LineRangeAnchor = Extract<LyraAnchor, { kind: 'line-range' }>;
+
+function lineRangeAnchor(value: unknown): LineRangeAnchor | undefined {
+  try {
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const anchor = (value as Record<string, unknown>)['anchor'];
+    if (anchor === null || typeof anchor !== 'object' || Array.isArray(anchor)) return undefined;
+    return (anchor as Record<string, unknown>)['kind'] === 'line-range'
+      ? anchor as LineRangeAnchor
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function lineRangeAnchorById(
+  highlights: unknown,
+  id: string | null,
+): LineRangeAnchor | undefined {
+  if (!Array.isArray(highlights)) return undefined;
+  for (const highlight of highlights) {
+    try {
+      if (
+        highlight !== null &&
+        typeof highlight === 'object' &&
+        (highlight as { id?: unknown }).id === id
+      ) {
+        const anchor = lineRangeAnchor(highlight);
+        if (anchor) return anchor;
+      }
+    } catch {
+      // Keep looking when one malformed record exposes a hostile identity getter.
+    }
+  }
+  return undefined;
 }
 
 /** The line numbers covered by the `highlights` entry matching `activeHighlightId`, if any. */
@@ -188,11 +227,11 @@ export function codeBlockActiveHighlightLineSet(
   activeHighlightId: string | null,
   maxLine: number
 ): Set<number> {
-  const active = highlights.find((h) => h.id === activeHighlightId);
   const result = new Set<number>();
-  if (!active || active.anchor.kind !== 'line-range') return result;
-  const end = active.anchor.end ?? active.anchor.start;
-  addBoundedLineRange(result, active.anchor.start, end, maxLine);
+  const anchor = lineRangeAnchorById(highlights, activeHighlightId);
+  if (!anchor) return result;
+  const end = anchor.end ?? anchor.start;
+  addBoundedLineRange(result, anchor.start, end, maxLine);
   return result;
 }
 
@@ -225,7 +264,7 @@ export async function scrollCodeBlockToAnchor(
 ): Promise<boolean> {
   const anchor =
     typeof target === 'string'
-      ? host.highlights.find((h) => h.id === target)?.anchor
+      ? lineRangeAnchorById(host.highlights, target)
       : target;
   if (!anchor || anchor.kind !== 'line-range') return false;
   if (anchor.start < 1 || anchor.start > codeBlockLineCount(host.code))

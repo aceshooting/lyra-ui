@@ -12,6 +12,7 @@ import { styles } from './code-editor.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { sanitizeCssResize } from '../../../internal/safe-css.js';
 import type { LyraSize } from '../../../internal/variants.js';
+import type { LyraTextWrap } from '../../../internal/shared-unions.js';
 import {
   autocorrectConverter,
   normalizeAutocorrect,
@@ -41,7 +42,7 @@ export type LyraCodeEditorResize =
   | 'horizontal'
   | 'vertical'
   | 'auto';
-export type LyraCodeEditorWrap = 'off' | 'soft' | 'hard';
+export type LyraCodeEditorWrap = LyraTextWrap;
 class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
 
 /** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
@@ -59,6 +60,9 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * any other key, or focus leaving the editor, re-arms Tab indentation.
  * In narrow allocations label/hint/error chrome wraps at the host boundary, while unbroken source
  * remains reachable through the editor's internal scroll surface instead of widening the page.
+ * When a containing block gives the host a definite block size, the host, form-control, editor,
+ * and textarea chain fills that allocation; without one, the editor remains content-sized above
+ * its active `--lr-code-editor-min-block-size` floor.
  * The native textarea receives `required` and explicit stateful `aria-invalid`: visible error
  * chrome wins immediately, while intrinsic/custom invalidity is exposed only after interaction.
  *
@@ -207,7 +211,9 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
         : undefined;
     this.requestUpdate('maxlength', previous);
   }
-  /** Native CSS `resize` behavior. An invalid runtime value falls back to `'both'`. */
+  /** Native CSS `resize` behavior. `auto` grows to content and scrolls at a consumer-supplied
+   *  `max-block-size`; leaving `auto` clears that mode's inline size/overflow state. An invalid
+   *  runtime value falls back to `'both'`. */
   @property({ reflect: true, useDefault: true }) resize: LyraCodeEditorResize =
     'both';
   /** Visual size on the library's one control ladder, shared with `<lr-textarea>`/`<lr-input>`/
@@ -595,17 +601,27 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   }
   private fitToContent(): void {
     const textarea = this.textarea;
-    if (!textarea || this.resize !== 'auto') return;
+    if (!textarea) return;
+    if (this.resize !== 'auto') {
+      textarea.style.blockSize = '';
+      textarea.style.overflowY = '';
+      return;
+    }
     textarea.style.blockSize = 'auto';
+    textarea.style.overflowY = 'hidden';
     const computed = this.ownerDocument.defaultView?.getComputedStyle(textarea);
     if (!computed) return;
     const border =
       Number.parseFloat(computed.borderBlockStartWidth) +
       Number.parseFloat(computed.borderBlockEndWidth);
-    const blockSize =
+    const contentBlockSize =
       textarea.scrollHeight + (Number.isFinite(border) ? border : 0);
-    textarea.style.blockSize = `${blockSize}px`;
-    textarea.style.overflowY = 'hidden';
+    // Keep max-block-size in CSS's hands: getComputedStyle() deliberately preserves percentages
+    // (and may preserve calc expressions), so parsing its text would turn 50% into 50px. Writing
+    // the desired size lets layout resolve every supported unit against the right containing block.
+    textarea.style.blockSize = `${contentBlockSize}px`;
+    textarea.style.overflowY =
+      textarea.scrollHeight > textarea.clientHeight ? 'auto' : 'hidden';
   }
   override render(): TemplateResult {
     const lineCount = this.countLines();

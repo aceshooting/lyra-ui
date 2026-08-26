@@ -40,15 +40,15 @@ describe('chart forced-colors encodings', () => {
 
       const datasets = (el as any).buildConfig().data.datasets as Array<Record<string, unknown>>;
       const signatures = datasets.map((dataset) =>
-        JSON.stringify([dataset.borderDash, dataset.pointStyle]),
+        JSON.stringify([dataset['borderDash'], dataset['pointStyle']]),
       );
       expect(new Set(signatures).size).to.equal(8);
-      expect(datasets.every((dataset) => typeof dataset.backgroundColor === 'object')).to.be.true;
-      expect(new Set(datasets.map((dataset) => dataset.backgroundColor)).size).to.equal(8);
+      expect(datasets.every((dataset) => typeof dataset['backgroundColor'] === 'object')).to.be.true;
+      expect(new Set(datasets.map((dataset) => dataset['backgroundColor'])).size).to.equal(8);
 
       const swatches = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="legend-swatch"]')];
       expect(swatches).to.have.lengthOf(8);
-      expect(new Set(swatches.map((swatch) => swatch.dataset.encoding)).size).to.equal(8);
+      expect(new Set(swatches.map((swatch) => swatch.dataset['encoding'])).size).to.equal(8);
       expect(new Set(swatches.map((swatch) => getComputedStyle(swatch).backgroundImage)).size).to.equal(8);
 
       const headings = [...el.shadowRoot!.querySelectorAll('[part="data-table"] thead th')]

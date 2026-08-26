@@ -13,7 +13,7 @@ import '../../overlays/empty/empty.class.js';
 import { styles } from './community-card.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_communityDrillIn, LYRA_DEFAULT_communityMemberCount, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_showMoreCount, LYRA_DEFAULT_untitledCommunity } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_communityDrillIn, LYRA_DEFAULT_communityMemberCount, LYRA_DEFAULT_noData, LYRA_DEFAULT_showMoreCount, LYRA_DEFAULT_untitledCommunity } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraCommunity {
@@ -69,7 +69,6 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
     ...super.defaultStrings,
     communityDrillIn: LYRA_DEFAULT_communityDrillIn,
     communityMemberCount: LYRA_DEFAULT_communityMemberCount,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
     noData: LYRA_DEFAULT_noData,
     showMoreCount: LYRA_DEFAULT_showMoreCount,
     untitledCommunity: LYRA_DEFAULT_untitledCommunity,

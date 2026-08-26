@@ -439,6 +439,10 @@ export const ACCESSOR_WRITE_TYPE_CONTRACTS = new Map([
 // alias inherits at runtime. Keep each compatibility projection explicit and source-linked so a
 // rename fails closed.
 export const INHERITED_PUBLIC_MEMBER_CONTRACTS = new Map([
+  [
+    'lr-archive-viewer',
+    { sourceClass: 'LyraElement', members: ['locale', 'strings'] },
+  ],
   ['lr-drawer', { sourceTag: 'lr-dialog', members: ['modal'] }],
   [
     'lr-geojson-view',
@@ -565,6 +569,13 @@ export const DOCUMENT_ANCHOR_TARGET_CONTRACT = Object.freeze({
         'Resolves an anchor or highlight id, scrolls it into view, and reports whether it was found.',
     }),
   }),
+  cssParts: Object.freeze([
+    Object.freeze({
+      name: 'anchor-live-region',
+      description:
+        'The aria-hidden, non-live shadow mirror of the latest anchor-jump message.',
+    }),
+  ]),
 });
 
 /** Content attributes deliberately owned without a same-named public JavaScript property. */
@@ -869,6 +880,7 @@ export default {
 
           declaration.members ??= [];
           declaration.attributes ??= [];
+          declaration.cssParts ??= [];
 
           for (const [name, metadata] of Object.entries(MIXIN_FIELDS)) {
             let member = declaration.members.find(
@@ -1079,6 +1091,14 @@ export default {
             method.description ??= metadata.description;
             delete method.inheritedFrom;
           }
+
+          for (const metadata of DOCUMENT_ANCHOR_TARGET_CONTRACT.cssParts) {
+            const part = declaration.cssParts.find(
+              (candidate) => candidate.name === metadata.name
+            );
+            if (part) part.description ??= metadata.description;
+            else declaration.cssParts.push(structuredClone(metadata));
+          }
         }
 
         const radio = declarations.get('lr-radio')?.declaration;
@@ -1249,27 +1269,28 @@ export default {
     },
     {
       name: 'lr-locked-chart-type-defaults',
-      // Typed chart subclasses lock their runtime `type` accessor through `lockChartType()` rather
-      // than by shadowing LyraChart's reactive field. Inheritance therefore gives CEM the base
-      // default (`bar`) for every subclass even though both property reads and the reflected
-      // attribute begin at the locked subtype. Project the locked literal type and default here;
-      // the source stays on the single shared implementation and the manifest reports runtime truth.
+      // The mirrored typed-chart subclasses change only the writable type property's default.
+      // Histogram alone installs lockChartType(), so only its type is narrowed to a literal.
+      // Project both distinctions because CEM inheritance otherwise retains LyraChart's default
+      // and cannot observe the prototype-installed histogram accessor.
       packageLinkPhase({ customElementsManifest }) {
-        const LOCKED_TYPES = new Map([
+        const DEFAULT_TYPES = new Map([
           ['lr-bar-chart', 'bar'],
           ['lr-bubble-chart', 'bubble'],
           ['lr-doughnut-chart', 'doughnut'],
+          ['lr-histogram', 'bar'],
           ['lr-line-chart', 'line'],
           ['lr-pie-chart', 'pie'],
           ['lr-polar-area-chart', 'polarArea'],
           ['lr-radar-chart', 'radar'],
           ['lr-scatter-chart', 'scatter'],
         ]);
+        const LITERAL_TYPES = new Set(['lr-histogram']);
 
         for (const module of customElementsManifest.modules ?? []) {
           for (const declaration of module.declarations ?? []) {
-            const lockedType = LOCKED_TYPES.get(declaration.tagName);
-            if (!lockedType) continue;
+            const defaultType = DEFAULT_TYPES.get(declaration.tagName);
+            if (!defaultType) continue;
             const member = declaration.members?.find(
               (candidate) =>
                 candidate.kind === 'field' && candidate.name === 'type'
@@ -1279,17 +1300,19 @@ export default {
             );
             if (!member || !attribute) {
               throw new Error(
-                `${declaration.tagName}: locked chart projection requires inherited type member and attribute metadata`
+                `${declaration.tagName}: chart type projection requires inherited type member and attribute metadata`
               );
             }
-            const literalType = `'${lockedType}'`;
-            member.type = { text: literalType };
+            const literalType = `'${defaultType}'`;
+            if (LITERAL_TYPES.has(declaration.tagName)) {
+              member.type = { text: literalType };
+              attribute.type = { text: literalType };
+            }
             member.default = literalType;
-            // CEM labels syntax-level subclass overrides as inherited. This entry is now a
-            // reviewed runtime projection for the locked subclass, so retain it during compacting
-            // as the subclass's own effective default rather than falling back to LyraChart's.
+            // CEM labels syntax-level subclass overrides as inherited. This projection records the
+            // subclass's effective default, so retain it during compacting instead of falling back
+            // to LyraChart's default.
             delete member.inheritedFrom;
-            attribute.type = { text: literalType };
             attribute.default = literalType;
             delete attribute.inheritedFrom;
           }
@@ -1302,8 +1325,11 @@ export default {
       name: 'lr-inherited-public-member-contracts',
       packageLinkPhase({ customElementsManifest }) {
         const declarations = new Map();
+        const classes = new Map();
         for (const module of customElementsManifest.modules ?? []) {
           for (const declaration of module.declarations ?? []) {
+            if (declaration.kind === 'class' && declaration.name)
+              classes.set(declaration.name, { declaration, module });
             if (declaration.tagName)
               declarations.set(declaration.tagName, { declaration, module });
           }
@@ -1311,14 +1337,17 @@ export default {
 
         for (const [targetTag, contract] of INHERITED_PUBLIC_MEMBER_CONTRACTS) {
           const target = declarations.get(targetTag);
-          const source = declarations.get(contract.sourceTag);
+          const source = contract.sourceClass
+            ? classes.get(contract.sourceClass)
+            : declarations.get(contract.sourceTag);
+          const sourceName = contract.sourceClass ?? contract.sourceTag;
           if (!target)
             throw new Error(
               `${targetTag}: inherited-member projection requires target declaration`
             );
           if (!source) {
             throw new Error(
-              `${targetTag}: inherited-member projection requires source ${contract.sourceTag}`
+              `${targetTag}: inherited-member projection requires source ${sourceName}`
             );
           }
           target.declaration.members ??= [];
@@ -1328,7 +1357,7 @@ export default {
             );
             if (!sourceMember) {
               throw new Error(
-                `${targetTag}: inherited-member projection requires ${contract.sourceTag}.${name}`
+                `${targetTag}: inherited-member projection requires ${sourceName}.${name}`
               );
             }
             const projected = {
@@ -1387,7 +1416,7 @@ export default {
             );
             if (!sourceEvent) {
               throw new Error(
-                `${targetTag}: inherited-member projection requires ${contract.sourceTag}#${name}`
+                `${targetTag}: inherited-member projection requires ${sourceName}#${name}`
               );
             }
             const projectedEvent = structuredClone(sourceEvent);

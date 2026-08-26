@@ -10,7 +10,7 @@ import "./push-to-talk.js";
 import "../../utility/live-region/live-region.js";
 import type { LyraPushToTalk } from "./push-to-talk.js";
 import { MAX_TIMEOUT_MS } from "../../../internal/numbers.js";
-import { styles } from "./push-to-talk.styles.js";
+import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 // -- Fakes for getUserMedia / MediaRecorder / AudioContext -----------------
 // No `sinon` in this repo -- plain manual monkey-patching (save the real
@@ -304,21 +304,51 @@ it("emits the recording-specific state event once for each actual lifecycle tran
   }
 });
 
-it("gives the trigger a hover state while enabled", () => {
-  const css = styles.cssText.replace(/\s+/g, " ");
-  expect(css).to.match(
-    /\[part='trigger'\]\):hover:where\(:not\(:disabled\)\)[^{]*\{[^}]*background:/
-  );
-});
+it("renders the enabled trigger hover state and accepts a consumer ::part(trigger) override", async () => {
+  const restore = stubSuccessfulCapture();
+  try {
+    const el = await fixture<LyraPushToTalk>(html`
+      <lr-push-to-talk style="--lr-color-brand-quiet: rgb(4, 5, 6)"></lr-push-to-talk>
+    `);
+    const trigger = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="trigger"]')!;
+    expect(trigger.disabled).to.equal(false);
+    expect(
+      getComputedStyle(trigger).getPropertyValue("--lr-color-brand-quiet").trim()
+    ).to.equal("rgb(4, 5, 6)");
+    trigger.scrollIntoView({ block: "center" });
+    const rect = trigger.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: "move",
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(
+        () => getComputedStyle(trigger).backgroundColor === "rgb(4, 5, 6)",
+        "the enabled trigger hover background never appeared",
+      );
+    } finally {
+      await resetMouse();
+    }
 
-it("wraps the trigger hover rule in :where() so a consumer ::part(trigger):hover override does not need !important (regression)", () => {
-  // The pre-fix shape -- `[part='trigger']:hover:not(:disabled)` with no `:where()` -- has
-  // specificity (0,3,0), beating a consumer's `::part(trigger):hover` ((0,1,1)); matches
-  // lr-attachment-trigger's established `:where()`-wrapped fix.
-  const css = styles.cssText.replace(/\s+/g, " ");
-  expect(css).to.match(
-    /:where\(\[part='trigger'\]\):hover:where\(:not\(:disabled\)\)/
-  );
+    const style = document.createElement("style");
+    style.textContent = `lr-push-to-talk::part(trigger):hover { background: rgb(1, 2, 3); }`;
+    document.head.append(style);
+    try {
+      await sendMouse({
+        type: "move",
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(
+        () => getComputedStyle(trigger).backgroundColor === "rgb(1, 2, 3)",
+        "the consumer trigger hover override never reached the rendered trigger",
+      );
+    } finally {
+      await resetMouse();
+      style.remove();
+    }
+  } finally {
+    restore();
+  }
 });
 
 describe("recording-state cssprop escape hatches", () => {
@@ -1784,6 +1814,13 @@ it("a host-level aria-label overrides the computed trigger label", async () => {
   expect(trigger(el).getAttribute("aria-label")).to.equal(
     "Talk to the assistant"
   );
+});
+
+it("preserves an explicitly empty host aria-label by attribute presence", async () => {
+  const el = (await fixture(
+    html`<lr-push-to-talk aria-label=""></lr-push-to-talk>`
+  )) as LyraPushToTalk;
+  expect(trigger(el).getAttribute("aria-label")).to.equal("");
 });
 
 describe("recording-state cssprop escape hatch", () => {

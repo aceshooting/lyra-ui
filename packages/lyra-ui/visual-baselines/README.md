@@ -24,11 +24,11 @@ webfont swap-in, wall-clock reads, the browser's default timezone, and the defau
 `system-ui`/`ui-monospace` font stacks resolving to whatever substitution the capturing host
 happens to have installed are all pinned (see `../scripts/visual-regression.mjs`'s header
 comment). The font substitution gap alone once cascaded into a 3.6% diff for word-cloud's
-spiral-search layout. The configured v8 matrix is 83 stories and 253 live captures: all 83 exercise
-light, dark, and RTL; two chart fixtures and one intrinsic-color fixture add forced-colors, and one
-responsive fixture adds the narrow axis. While human review is pending, 171 captures compare with
-the retained tracked baselines and 82 are semantic, nonblank, or painted-pixel evidence only (78
-current light/dark/RTL changes plus four forced-colors/narrow captures). `manifest.json` computes
+spiral-search layout. The configured v8 matrix is 85 stories and 255 live captures: 83 exercise
+light, dark, and RTL; four fixtures exercise forced-colors, and two fixtures exercise the narrow
+axis (one forced-colors-only and one narrow-only). While human review is pending, 126 captures
+compare with retained tracked baselines and 129 are semantic, nonblank, or painted-pixel evidence
+only. `manifest.json` computes
 that matrix and records every exemption. The CI step (`.github/workflows/ci.yml`) remains blocking:
 semantic errors, console errors, missing reviewed baselines, and mismatches outside an explicit
 pending-review exemption all fail. Evidence-only pixels are written to the ignored output directory
@@ -87,9 +87,9 @@ exemption. To extend coverage, add another `<title>--<name>` story id from
 blocking `new` result; an evidence-only capture runs its assertions and stays under
 `.visual-diff-output/evidence/` until a human explicitly promotes that axis.
 
-The runner expands the 83 stories into 253 capture axes before partitioning. Its three CI shards
-contain 85, 84, and 84 captures; the blocking unit/config tests prove the shards are deterministic,
-disjoint, exhaustive, and balanced without changing the 171 retained-baseline plus 82
+The runner expands the 85 stories into 255 capture axes before partitioning. Its three CI shards
+contain 85 captures each; the blocking unit/config tests prove the shards are deterministic,
+disjoint, exhaustive, and balanced without changing the 126 retained-baseline plus 129
 evidence-only policy.
 
 Before any PNG is compared or retained as evidence, the harness recursively checks rendered shadow

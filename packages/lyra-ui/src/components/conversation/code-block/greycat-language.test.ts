@@ -11,6 +11,9 @@ import type { ShikiHighlighter } from './code-loader.js';
 type ExplainedToken = { content: string; scopes: string[] };
 
 function tokenize(hl: ShikiHighlighter, code: string): ExplainedToken[] {
+  if (!('codeToTokensBase' in hl) || typeof hl.codeToTokensBase !== 'function') {
+    throw new TypeError('Expected the real Shiki tokenization capability.');
+  }
   const lines = hl.codeToTokensBase(code, {
     lang: 'gcl',
     theme: 'github-light',

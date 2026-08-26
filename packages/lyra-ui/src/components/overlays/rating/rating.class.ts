@@ -116,7 +116,8 @@ function starSolid(): SVGTemplateResult {
  * IDL property control the live score. `defaultValue` / `default-value` independently own the form
  * reset target, so changing `value` never silently rewrites what `form.reset()` restores.
  *
- * The host is the single focusable `role="slider"` owner and carries its value/name/state ARIA.
+ * The host is the single focusable `role="slider"` owner and carries its value/name/state ARIA,
+ * including explicit `aria-invalid="true"|"false"` from effective intrinsic/custom validity.
  * The shadow symbol row is presentational chrome, so host ARIA customization cannot create a
  * second competing slider.
  *
@@ -550,6 +551,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   setCustomValidity(message: string): void {
     this.validityController.setCustomValidity(message ?? '');
     this.syncValidityStates();
+    this.syncHostSemantics();
   }
 
   /** Clears consumer-supplied validity and restores the current required/value constraint. */
@@ -873,6 +875,10 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
       );
       this.setAttribute('aria-readonly', this.readonly ? 'true' : 'false');
       this.setAttribute('aria-required', this.required ? 'true' : 'false');
+      this.setAttribute(
+        'aria-invalid',
+        this.internals.validity.valid ? 'false' : 'true'
+      );
       this.setAttribute('data-effective-size', this.effectiveSize);
       if (
         !this.externalLabelNameActive &&

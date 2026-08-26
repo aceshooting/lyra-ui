@@ -6,6 +6,7 @@
 - **Class** `LyraRagAnswer`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/rag-answer/rag-answer.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.2.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -25,7 +26,8 @@ or source fetching.
 neutral visible caller text; new non-empty values announce through a shared assertive light-DOM
 region, while initial and reconnect content is not replayed — spelled plain `error` before 9.0.0);
 `showSources: boolean = true`; `showClaims: boolean = true`
-(attribute `show-claims`); `label: string = ''`; `accessibleLabel: string | null = null` (attribute
+(attribute `show-claims`); `label?: string` (omission uses the localized answer label; an explicit
+empty string stays empty); `accessibleLabel: string | null = null` (attribute
 `aria-label`). The same `<article>` remains the semantic shell in `idle`, `loading`, `answer`, and
 `error` states. With no non-empty host `aria-label` it owns the article role/name; a non-empty host
 label makes the host the sole overall owner, while an explicitly empty host label stays empty on

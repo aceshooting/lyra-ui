@@ -80,10 +80,22 @@ export const styles = css`
     min-inline-size: max-content;
   }
 
+  :host([orientation="vertical"]) {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+    block-size: 100%;
+    min-block-size: 0;
+  }
+
   :host([orientation="vertical"]) [part="base"] {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr) auto;
-    min-block-size: var(--lr-scroller-min-block-size, var(--lr-size-10rem));
+    block-size: 100%;
+    min-block-size: min(
+      var(--lr-scroller-min-block-size, var(--lr-size-10rem)),
+      100%
+    );
+    max-block-size: 100%;
   }
 
   :host([orientation="vertical"]) [part="viewport"],

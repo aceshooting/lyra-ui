@@ -1,9 +1,10 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './lightbox.js';
 import type { LyraLightbox, LyraLightboxImage } from './lightbox.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const image = {
   src: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="8" height="8"%3E%3Crect width="8" height="8" fill="%230969da"/%3E%3C/svg%3E',
@@ -544,9 +545,8 @@ it('caps a long caption instead of letting it starve the stage', async () => {
   `)) as LyraLightbox;
   await el.updateComplete;
 
-  const captionBox = el.shadowRoot!
-    .querySelector('[part="caption"]')!
-    .getBoundingClientRect();
+  const caption = el.shadowRoot!.querySelector('[part="caption"]') as HTMLElement;
+  const captionBox = caption.getBoundingClientRect();
   const stageBox = el.shadowRoot!
     .querySelector('[part="stage"]')!
     .getBoundingClientRect();
@@ -559,6 +559,9 @@ it('caps a long caption instead of letting it starve the stage', async () => {
     stageBox.height,
     'the stage keeps a usable amount of the host height'
   ).to.be.greaterThan(100);
+  expect(caption.scrollHeight).to.be.greaterThan(caption.clientHeight);
+  expect(caption.getAttribute('tabindex')).to.equal('0');
+  await expect(el).to.be.accessible();
 });
 
 // -- Live-region announcement (see willUpdate()'s doc for why liveText is derived there, not in
@@ -962,20 +965,40 @@ it('normalizes fractional goTo() indexes before emitting, storing, and rendering
   expect(el.shadowRoot!.querySelector('[part="caption"]')!.textContent).to.contain('Third');
 });
 
-// Regression coverage for the shadow-part-selector-specificity defect class -- a consumer's
-// `::part(close-button):hover` / `::part(previous-button):hover` / `::part(next-button):hover`
-// override must be able to win without `!important`. jsdom/browser test runners don't synthesize
-// a real :hover pseudo-class from a dispatched event, so assert via the internal rule's computed
-// specificity instead, mirroring lr-attachment-trigger's identical `:where()`-wrapped fix.
-describe('close/previous/next-button hover specificity', () => {
-  it('the internal hover rules are :where()-wrapped so a ::part(x):hover override wins without !important', async () => {
-    const el = (await fixture(html`<lr-lightbox .images=${[image, { ...image, caption: 'Second' }]}></lr-lightbox>`)) as LyraLightbox;
-    const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
-      .flatMap((sheet) => Array.from(sheet.cssRules))
-      .map((rule) => rule.cssText)
-      .find((text) => text.includes(':hover') && text.includes('close-button'));
-    expect(internalRule, 'expected an internal close-button :hover rule to exist').to.be.a('string');
-    expect(internalRule!.includes(':where(')).to.be.true;
+describe('consumer hover part overrides', () => {
+  it('applies consumer hover colors to the rendered close and navigation buttons', async function () {
+    if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
+    const style = document.createElement('style');
+    style.textContent = `
+      lr-lightbox::part(close-button):hover,
+      lr-lightbox::part(previous-button):hover,
+      lr-lightbox::part(next-button):hover { color: rgb(1, 2, 3); }
+    `;
+    document.head.append(style);
+    try {
+      const el = (await fixture(html`
+        <lr-lightbox open loop .images=${[image, { ...image, caption: 'Second' }]}></lr-lightbox>
+      `)) as LyraLightbox;
+      await resetMouse();
+      for (const part of ['close-button', 'previous-button', 'next-button']) {
+        const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLButtonElement;
+        const bounds = button.getBoundingClientRect();
+        await sendMouse({
+          type: 'move',
+          position: [
+            Math.round(bounds.left + bounds.width / 2),
+            Math.round(bounds.top + bounds.height / 2),
+          ],
+        });
+        await waitUntil(
+          () => getComputedStyle(button).color === 'rgb(1, 2, 3)',
+          `the consumer hover color never reached the rendered ${part}`,
+        );
+      }
+    } finally {
+      await resetMouse();
+      style.remove();
+    }
   });
 });
 

@@ -1004,8 +1004,7 @@ describe('submenu parent', () => {
     // correct for a stateful role.
     expect(item.getAttribute('aria-expanded')).to.equal('false');
 
-    item.openSubmenu('none');
-    await item.updateComplete;
+    await item.openSubmenu('none');
     expect(item.submenuOpen).to.equal(true);
     expect(item.getAttribute('aria-expanded')).to.equal('true');
     expect(getComputedStyle(popupOf(item)).visibility).to.equal('visible');

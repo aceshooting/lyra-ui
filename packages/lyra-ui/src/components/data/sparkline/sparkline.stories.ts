@@ -135,7 +135,7 @@ export const ProgrammaticBarExtension: Story = {
   render: () => html`
     <lr-sparkline
       mark="bar"
-      aria-label="Programmatic values from zero to one hundred"
+      .accessibleLabel=${'Programmatic values from zero to one hundred'}
       .values=${[20, 40, 30, 70]}
       min="0"
       max="100"

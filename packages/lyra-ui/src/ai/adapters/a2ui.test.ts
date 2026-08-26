@@ -1,6 +1,10 @@
 import { expect } from '@open-wc/testing';
 import { adaptA2UiSurface } from './a2ui.js';
 
+function widgetState(document: ReturnType<typeof adaptA2UiSurface>): unknown {
+  return document && 'state' in document ? document.state : undefined;
+}
+
 it('maps an A2UI-style component graph into a versioned allowlisted widget document', () => {
   const document = adaptA2UiSurface(
     {
@@ -25,7 +29,7 @@ it('maps an A2UI-style component graph into a versioned allowlisted widget docum
   expect(document?.root.type).to.equal('col');
   expect(document?.root.children).to.have.lengthOf(2);
   expect((document?.root.children?.[1] as { actionId?: string }).actionId).to.equal('open-source');
-  expect(document?.state).to.deep.equal({ selected: 'doc-1' });
+  expect(widgetState(document)).to.deep.equal({ selected: 'doc-1' });
 });
 
 it('fails closed for unknown component types and dangling roots', () => {
@@ -60,8 +64,10 @@ it('drops cyclic, dangling, and unknown descendants while preserving the valid s
 
   expect(document?.root.props).to.deep.equal({ gap: 'medium' });
   expect(document?.root.children).to.have.lengthOf(2);
-  expect(document?.root.children?.map((child) => child.id)).to.deep.equal(['valid', 'cycle']);
-  expect(document?.root.children?.[1]?.children).to.equal(undefined);
+  expect(document?.root.children?.map((child) => typeof child === 'string' ? undefined : child.id))
+    .to.deep.equal(['valid', 'cycle']);
+  const cycle = document?.root.children?.[1];
+  expect(typeof cycle === 'string' ? undefined : cycle?.children).to.equal(undefined);
   expect(document).to.not.have.property('state');
 });
 
@@ -88,7 +94,8 @@ it('enforces component-count and traversal-depth ceilings', () => {
   let depth = 0;
   while (node?.children?.[0]) {
     depth += 1;
-    node = node.children[0];
+    const child = node.children[0];
+    node = typeof child === 'string' ? undefined : child;
   }
   expect(depth).to.equal(32);
   expect(node?.id).to.equal('node-32');
@@ -150,7 +157,7 @@ it('recursively snapshots props, action payloads, and state across the adapter b
 
   expect(document?.root.props).to.deep.equal({ nested: { value: 'original' } });
   expect(document?.root.payload).to.deep.equal({ nested: { value: 'original' } });
-  expect(document?.state).to.deep.equal({ nested: { value: 'original' } });
+  expect(widgetState(document)).to.deep.equal({ nested: { value: 'original' } });
 });
 
 it('rejects non-serializable nested records without retaining provider aliases', () => {

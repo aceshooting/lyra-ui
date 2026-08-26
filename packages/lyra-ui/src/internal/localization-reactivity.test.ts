@@ -197,12 +197,12 @@ it("filters lazy catalog delivery by each host ancestor locale candidate chain",
   const before = probes.map((probe) => probe.renderCalls);
 
   registerLyraLocale(base, { noData: "Matching ancestor loaded" });
-  await probes[0].updateComplete;
+  await probes[0]!.updateComplete;
   await Promise.resolve();
 
-  expect(probeText(probes[0])).to.equal("Matching ancestor loaded");
-  expect(probes[0].renderCalls).to.equal(before[0]! + 1);
-  expect(probes[1].renderCalls).to.equal(before[1]);
+  expect(probeText(probes[0]!)).to.equal("Matching ancestor loaded");
+  expect(probes[0]!.renderCalls).to.equal(before[0]! + 1);
+  expect(probes[1]!.renderCalls).to.equal(before[1]);
 });
 
 it("keeps exact-only pseudo catalog delivery isolated from its bare base language", async () => {
@@ -223,13 +223,13 @@ it("keeps exact-only pseudo catalog delivery isolated from its bare base languag
   const before = probes.map((probe) => probe.renderCalls);
 
   registerLyraExactLocale(exact, { noData: "Exact pseudo loaded" });
-  await probes[1].updateComplete;
+  await probes[1]!.updateComplete;
   await Promise.resolve();
 
-  expect(probeText(probes[0])).to.equal("No data");
-  expect(probeText(probes[1])).to.equal("Exact pseudo loaded");
-  expect(probes[0].renderCalls).to.equal(before[0]);
-  expect(probes[1].renderCalls).to.equal(before[1]! + 1);
+  expect(probeText(probes[0]!)).to.equal("No data");
+  expect(probeText(probes[1]!)).to.equal("Exact pseudo loaded");
+  expect(probes[0]!.renderCalls).to.equal(before[0]);
+  expect(probes[1]!.renderCalls).to.equal(before[1]! + 1);
 });
 
 it("updates a bare language host when a newly registered regional catalog becomes its fallback", async () => {
@@ -324,7 +324,7 @@ it("replays a relevant catalog registration that occurred while the localized ho
   probe.remove();
   registerLyraLocale(uniqueLocale("du"), { noData: "Unrelated" });
   wrapper.append(probe);
-  await new Promise((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
+  await new Promise<void>((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
   await probe.updateComplete;
   const callsAfterUnrelatedRegistration = probe.renderCalls;
   expect(probeText(probe)).to.equal("No data");
@@ -333,7 +333,7 @@ it("replays a relevant catalog registration that occurred while the localized ho
   probe.remove();
   registerLyraLocale(locale, { noData: "Loaded while detached" });
   wrapper.append(probe);
-  await new Promise((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
+  await new Promise<void>((resolve) => queueMicrotask(() => queueMicrotask(resolve)));
   await probe.updateComplete;
 
   expect(probeText(probe)).to.equal("Loaded while detached");

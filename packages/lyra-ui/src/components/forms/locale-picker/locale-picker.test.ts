@@ -19,6 +19,11 @@ function trigger(el: LyraLocalePicker): HTMLButtonElement {
 function rows(el: LyraLocalePicker): NodeListOf<HTMLElement> {
   return el.shadowRoot!.querySelectorAll('[part="option"]');
 }
+function requiredItem<T>(items: ArrayLike<T>, index: number, description: string): T {
+  const item = items[index];
+  if (item === undefined) throw new Error(`Missing ${description} at index ${index}.`);
+  return item;
+}
 
 it('rejects direct open writes while disabled or synchronously fieldset-disabled', async () => {
   const fieldset = await fixture<HTMLFieldSetElement>(html`
@@ -173,13 +178,13 @@ it('relays trigger blur/focus once as native FocusEvents with relatedTarget, and
 
   const focusEvent = oneEvent(el, 'focus');
   trigger(el).dispatchEvent(new FocusEvent('focus', { relatedTarget: outside }));
-  const focus = await focusEvent;
-  expect(focus instanceof FocusEvent).to.be.true;
+  const focus: Event = await focusEvent;
+  if (!(focus instanceof FocusEvent)) throw new Error('The relayed focus was not a FocusEvent.');
   expect(focus.relatedTarget === outside).to.be.true;
   const blurEvent = oneEvent(el, 'blur');
   trigger(el).dispatchEvent(new FocusEvent('blur', { relatedTarget: outside }));
-  const blur = await blurEvent;
-  expect(blur instanceof FocusEvent).to.be.true;
+  const blur: Event = await blurEvent;
+  if (!(blur instanceof FocusEvent)) throw new Error('The relayed blur was not a FocusEvent.');
   expect(blur.relatedTarget === outside).to.be.true;
   // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
   expect(aliases).to.deep.equal([]);
@@ -241,8 +246,8 @@ it('locales set as a plain string[] overrides the auto-discovered list', async (
   el.open = true;
   await el.updateComplete;
   expect(rows(el).length).to.equal(2);
-  expect(rows(el)[0].dataset.value).to.equal('fr');
-  expect(rows(el)[1].dataset.value).to.equal('de');
+  expect(requiredItem(rows(el), 0, 'French locale').dataset['value']).to.equal('fr');
+  expect(requiredItem(rows(el), 1, 'German locale').dataset['value']).to.equal('de');
 });
 
 it('treats an explicit empty locale catalog as authoritative and undefined as automatic', async () => {
@@ -295,7 +300,7 @@ it('rejects malformed and hostile locale rows while retaining valid siblings', a
 
   expect(el.locales).to.deep.equal([{ tag: 'de', label: 'Deutsch', country: 'de' }]);
   expect(rows(el)).to.have.length(1);
-  expect(rows(el)[0]!.dataset.value).to.equal('de');
+  expect(requiredItem(rows(el), 0, 'normalized locale').dataset['value']).to.equal('de');
 
   el.locales = 'not-an-array' as unknown as LyraLocalePicker['locales'];
   await el.updateComplete;
@@ -311,9 +316,10 @@ it('locales set as {tag,label}[] overrides the auto-discovered list and honors a
   )) as LyraLocalePicker;
   el.open = true;
   await el.updateComplete;
-  expect(rows(el)[0].textContent).to.contain('Français (bientôt)');
-  expect(rows(el)[1].dataset.value).to.equal('de');
-  expect(rows(el)[1].textContent).to.contain(localeNativeName('de'));
+  expect(requiredItem(rows(el), 0, 'French locale').textContent).to.contain('Français (bientôt)');
+  const german = requiredItem(rows(el), 1, 'German locale');
+  expect(german.dataset['value']).to.equal('de');
+  expect(german.textContent).to.contain(localeNativeName('de'));
 });
 
 // Each row includes its flag, native name, and tag; showFlags=false omits the flag entirely.
@@ -323,7 +329,7 @@ it('shows a flag, native name, and tag per row when showFlags is on (the default
   )) as LyraLocalePicker;
   el.open = true;
   await el.updateComplete;
-  const row = rows(el)[0];
+  const row = requiredItem(rows(el), 0, 'French locale');
   expect(row.querySelector('lr-flag')).to.exist;
   expect(row.textContent).to.contain(localeNativeName('fr'));
   expect(row.textContent).to.contain('fr');
@@ -337,18 +343,20 @@ it('renders Persian and Hebrew regional entries with native names and derived re
   await el.updateComplete;
 
   const offered = [...rows(el)];
-  expect(offered.map((row) => row.dataset.value)).to.deep.equal(['fa-IR', 'he-IL']);
-  expect(offered[0].textContent).to.contain(localeNativeName('fa-IR'));
-  expect(offered[1].textContent).to.contain(localeNativeName('he-IL'));
-  expect((offered[0].querySelector('lr-flag') as HTMLElement).getAttribute('language')).to.equal('fa-IR');
-  expect((offered[1].querySelector('lr-flag') as HTMLElement).getAttribute('language')).to.equal('he-IL');
+  expect(offered.map((row) => row.dataset['value'])).to.deep.equal(['fa-IR', 'he-IL']);
+  const persian = requiredItem(offered, 0, 'Persian locale');
+  const hebrew = requiredItem(offered, 1, 'Hebrew locale');
+  expect(persian.textContent).to.contain(localeNativeName('fa-IR'));
+  expect(hebrew.textContent).to.contain(localeNativeName('he-IL'));
+  expect((persian.querySelector('lr-flag') as HTMLElement).getAttribute('language')).to.equal('fa-IR');
+  expect((hebrew.querySelector('lr-flag') as HTMLElement).getAttribute('language')).to.equal('he-IL');
 });
 
 it('auto-discovers imported Persian and Hebrew catalogs', async () => {
   const el = (await fixture(html`<lr-locale-picker></lr-locale-picker>`)) as LyraLocalePicker;
   el.open = true;
   await el.updateComplete;
-  const offered = [...rows(el)].map((row) => row.dataset.value);
+  const offered = [...rows(el)].map((row) => row.dataset['value']);
   expect(offered).to.include('fa');
   expect(offered).to.include('he');
 });
@@ -372,14 +380,14 @@ it('showFlags=false omits the flag element entirely, not just visually', async (
   await el.updateComplete;
   // .length (a number), never the queried node itself, as chai's actual -- see the
   // click()/focus()/blur() test above for why a failing DOM-node assertion hangs the file.
-  expect(rows(el)[0].querySelectorAll('lr-flag').length).to.equal(0);
+  expect(requiredItem(rows(el), 0, 'French locale').querySelectorAll('lr-flag').length).to.equal(0);
 });
 
 it("a locales entry with country overrides that row's flag; a row without it keeps deriving from the tag", async () => {
   const el = (await fixture(
     html`<lr-locale-picker
       .locales=${[
-        { tag: 'ar', country: 'lb' },
+        { tag: 'ar', country: 'lbn' },
         { tag: 'fr' },
       ]}
     ></lr-locale-picker>`,
@@ -387,11 +395,11 @@ it("a locales entry with country overrides that row's flag; a row without it kee
   el.open = true;
   await el.updateComplete;
 
-  const arFlag = rows(el)[0].querySelector('lr-flag') as HTMLElement;
-  expect(arFlag.getAttribute('country')).to.equal('lb');
+  const arFlag = requiredItem(rows(el), 0, 'Arabic locale').querySelector('lr-flag') as HTMLElement;
+  expect(arFlag.getAttribute('country')).to.equal('lbn');
   expect(arFlag.hasAttribute('language')).to.be.false;
 
-  const frFlag = rows(el)[1].querySelector('lr-flag') as HTMLElement;
+  const frFlag = requiredItem(rows(el), 1, 'French locale').querySelector('lr-flag') as HTMLElement;
   expect(frFlag.getAttribute('language')).to.equal('fr');
   expect(frFlag.hasAttribute('country')).to.be.false;
 });
@@ -402,7 +410,7 @@ it('a plain string[] locales catalog never emits a country attribute', async () 
   )) as LyraLocalePicker;
   el.open = true;
   await el.updateComplete;
-  const flag = rows(el)[0].querySelector('lr-flag') as HTMLElement;
+  const flag = requiredItem(rows(el), 0, 'Arabic locale').querySelector('lr-flag') as HTMLElement;
   expect(flag.getAttribute('language')).to.equal('ar');
   expect(flag.hasAttribute('country')).to.be.false;
 });
@@ -444,7 +452,7 @@ it('selecting a row updates value, fires lr-change with {value, previousValue}, 
   let detail:
     | { value: string; previousValue: string; direction: string } | undefined;
   el.addEventListener('lr-change', (e) => (detail = (e as CustomEvent).detail));
-  setTimeout(() => rows(el)[1].click());
+  setTimeout(() => requiredItem(rows(el), 1, 'German locale').click());
   await oneEvent(el, 'lr-change');
   expect(el.value).to.equal('de');
   expect(detail).to.deep.equal({ value: 'de', previousValue: 'fr', direction: 'ltr' });
@@ -464,7 +472,7 @@ it('reports the picked locale writing direction in lr-change detail', async () =
 
   let detail: { direction: string } | undefined;
   el.addEventListener('lr-change', (e) => (detail = (e as CustomEvent).detail));
-  setTimeout(() => rows(el)[0].click());
+  setTimeout(() => requiredItem(rows(el), 0, 'Hebrew locale').click());
   await oneEvent(el, 'lr-change');
   expect(detail?.direction).to.equal('rtl');
   setLyraLocale('en');
@@ -480,7 +488,7 @@ it('event.preventDefault() on lr-change updates value but leaves the active loca
   el.open = true;
   await el.updateComplete;
 
-  setTimeout(() => rows(el)[0].click());
+  setTimeout(() => requiredItem(rows(el), 0, 'French locale').click());
   await oneEvent(el, 'lr-change');
   expect(el.value).to.equal('fr');
   expect(getLyraLocale()).to.equal('en');
@@ -501,7 +509,7 @@ it('with value unset, the trigger previews effectiveLocale but required stays in
 
   el.open = true;
   await el.updateComplete;
-  setTimeout(() => rows(el)[0].click());
+  setTimeout(() => requiredItem(rows(el), 0, 'French locale').click());
   await oneEvent(el, 'lr-change');
   expect(el.checkValidity()).to.be.true;
 });
@@ -620,7 +628,7 @@ it('type-ahead by native-name first letter jumps the active row to the match whi
   btn.dispatchEvent(new KeyboardEvent('keydown', { key: firstLetter, bubbles: true, cancelable: true }));
   await el.updateComplete;
   const active = el.shadowRoot!.querySelector('[part="option"][data-active]') as HTMLElement;
-  expect(active.dataset.value).to.equal('de');
+  expect(active.dataset['value']).to.equal('de');
 });
 
 it('Escape closes the listbox without changing value', async () => {
@@ -755,7 +763,7 @@ it('parses a plain show-flags="false" HTML attribute via fromAttribute, not just
   expect(el.showFlags).to.be.false;
   el.open = true;
   await el.updateComplete;
-  expect(rows(el)[0].querySelectorAll('lr-flag').length).to.equal(0);
+  expect(requiredItem(rows(el), 0, 'French locale').querySelectorAll('lr-flag').length).to.equal(0);
 });
 
 it('falls back to a no-op ElementInternals when attachInternals is unavailable', async () => {
@@ -877,7 +885,7 @@ it('resets the type-ahead buffer once the debounce window elapses', async () => 
   btn.dispatchEvent(new KeyboardEvent('keydown', { key: itFirstLetter, bubbles: true, cancelable: true }));
   await el.updateComplete;
   let active = el.shadowRoot!.querySelector('[part="option"][data-active]') as HTMLElement;
-  expect(active.dataset.value).to.equal('it');
+  expect(active.dataset['value']).to.equal('it');
 
   await aTimeout(600); // let the debounce timer clear the buffer
 
@@ -886,7 +894,7 @@ it('resets the type-ahead buffer once the debounce window elapses', async () => 
   active = el.shadowRoot!.querySelector('[part="option"][data-active]') as HTMLElement;
   // If the buffer had NOT been reset by the debounce timer, this keystroke would search for
   // "<i-letter><d-letter>" (no match) and the active row would stay on "it" instead of moving.
-  expect(active.dataset.value).to.equal('de');
+  expect(active.dataset['value']).to.equal('de');
 });
 
 it('type-ahead while closed commits the matching row immediately', async () => {
@@ -967,7 +975,7 @@ it('ignores listbox row clicks while disabled', async () => {
   const el = (await fixture(
     html`<lr-locale-picker disabled .locales=${['fr', 'de']}></lr-locale-picker>`,
   )) as LyraLocalePicker;
-  rows(el)[0].click();
+  requiredItem(rows(el), 0, 'French locale').click();
   await el.updateComplete;
   expect(el.value).to.equal('');
 });

@@ -476,12 +476,12 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
         ${rows.length === 0
           ? html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`
           : rows.map((span, index) => this.renderRow(span, view, index + 1, rows.length, firstId))}
-        ${this.sortedCacheTruncated
-          ? html`<p part="limit" role="note">${this.localize('spanProjectionLimit', undefined, {
-              count: MAX_RENDERED_LYRA_SPANS,
-            })}</p>`
-          : nothing}
       </div>
+      ${this.sortedCacheTruncated
+        ? html`<p part="limit" role="note">${this.localize('spanProjectionLimit', undefined, {
+            count: MAX_RENDERED_LYRA_SPANS,
+          })}</p>`
+        : nothing}
       <lr-live-region part="live-region" mode="polite"></lr-live-region>
     `;
   }

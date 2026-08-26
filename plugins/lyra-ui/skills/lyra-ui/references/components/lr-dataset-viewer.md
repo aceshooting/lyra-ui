@@ -6,9 +6,10 @@
 - **Class** `LyraDatasetViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/dataset-viewer/dataset-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `papaparse` — see `llms/peers.md`
-- **Themeable via** 11 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -29,8 +30,13 @@ whose document is replaced by a concurrent `src` reassignment mid-flight reports
 rather than a phantom success, and a header-row target scrolls with the same
 `prefers-reduced-motion`-gated smooth behavior every other row uses.
 
-**Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
-`max-height`); invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
+**Properties:** `src: string = ''`, `name: string = ''`, `maxHeight: string = ''` (attribute
+`max-height`), and `scrollMode: DatasetViewerScrollMode = 'self'` (attribute `scroll-mode`,
+reflected). Invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
+`scrollMode='self'` preserves contained horizontal scrolling and applies `maxHeight`.
+`scrollMode='page'` drops both the overflow container and height cap so an uncapped sticky header
+uses the page scrollport; the explicit tradeoff is that a wide dataset can overflow its host.
+Unsupported attribute and untyped property values normalize to `'self'`.
 Host `aria-label` names the table by attribute presence, including an explicitly empty value;
 `name` and the localized row-count caption are fallbacks. The same computed name (host `aria-label`,
 else `name`) also names a persistent `role="region"` landmark on `[part='base']` in _every_ fetch
@@ -63,15 +69,19 @@ every fetch state), `body`, `table`, `header-row`, `header-cell`, `data-row`, `c
 `cell-highlight-action` (the native button filling a highlighted cell — focusable, emits
 `lr-highlight-activate` on click or Enter/Space; its complete accessible name uses the localized
 `cellHighlightWithLabel` message with independent `{value}` and `{label}` placeholders), `spinner`,
-and `error`. `data-row`, `cell`,
+`error`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest anchor-jump
+message; the spoken copy is appended to the shared document-level polite sink only while the viewer
+and its composed ancestors are exposed to the accessibility tree). `data-row`, `cell`,
 `cell-highlight` and `cell-highlight-action` render inside the internal `<lr-virtual-list>` and are
 forwarded via `exportparts`, so `lr-dataset-viewer::part(cell)` reaches them from a consumer
 stylesheet.
 
-**Exports:** `DatasetTable` is `{ fields: string[]; rows: Record<string, string>[] }`.
+**Exports:** `DatasetTable` is `{ fields: string[]; rows: Record<string, string>[] }`;
+`DatasetViewerScrollMode` is `'self' | 'page'`.
 
 **Themeable custom properties:** `--lr-dataset-viewer-max-height` (default `none`) — maximum block
 size of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
+Page scroll mode deliberately ignores this cap.
 `--lr-dataset-viewer-highlight-color` (default `var(--lr-color-brand)`) — the outline color of a
 `cell-highlight` cell. The cell matching `activeHighlightId` receives a private warning-color
 default because a `[data-active]` selector can't be chained onto the `::part(cell-highlight)` the

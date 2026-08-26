@@ -6,6 +6,7 @@
 - **Class** `LyraStreamStatus`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/stream-status/stream-status.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -79,9 +80,9 @@ wins through the shadow cascade and is the supported per-instance override. The 
 longhands are indirected the same way: `--lr-stream-status-stalled-bg` (falls back to
 `--lr-color-warning-quiet`) and `--lr-stream-status-stalled-border-color` (falls back to
 `--lr-color-warning`) retheme the `base` part's background/border while stalled, and
-`--lr-stream-status-message-color` (also falling back to `--lr-color-warning`) retheme the
-`message` part's text color independently of the border — the two currently share a default value
-but are separate hooks, so overriding one never moves the other.
+`--lr-stream-status-message-color` (also falling back to `--lr-color-warning`) rethemes both the
+`phase` and `message` parts' stalled text color independently of the border — the text and border
+currently share a default value but are separate hooks, so overriding one never moves the other.
 
 **Optional peer deps:** none.
 

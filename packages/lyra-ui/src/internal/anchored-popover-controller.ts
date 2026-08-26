@@ -1,4 +1,4 @@
-import { place } from './positioner.js';
+import { deferredPlace as place } from './anchored-overlay-runtime.js';
 
 export type AnchoredPopoverPlacer = (anchor: Element, popup: HTMLElement) => () => void;
 
@@ -18,4 +18,3 @@ export class AnchoredPopoverController {
     this.#cleanup = undefined;
   }
 }
-

@@ -63,10 +63,11 @@ function shownIds(el: LyraRandomContent): string[] {
  *  one once exhausted. Returns a restore function -- always call it, even on
  *  a failing assertion, so a later test never inherits a stubbed RNG. */
 function stubRandomSequence(values: number[]): () => void {
+  if (values.length === 0) throw new Error('stubRandomSequence requires at least one value');
   const original = Math.random;
   let index = 0;
   Math.random = () => {
-    const value = values[Math.min(index, values.length - 1)];
+    const value = values[Math.min(index, values.length - 1)]!;
     index += 1;
     return value;
   };
@@ -102,7 +103,7 @@ it('renders exactly one child by default and marks the rest hidden', async () =>
   const hidden = children.filter((child) => child.hidden);
   expect(shown.length).to.equal(1);
   expect(hidden.length).to.equal(2);
-  expect(shown[0].getAttribute('aria-hidden')).to.equal('false');
+  expect(shown[0]!.getAttribute('aria-hidden')).to.equal('false');
   for (const child of hidden) {
     expect(child.getAttribute('aria-hidden')).to.equal('true');
   }
@@ -665,12 +666,16 @@ it('does not autoplay-tick when only one eligible child exists', async () => {
 
 it('disables autoplay ticking entirely under prefers-reduced-motion', async () => {
   const originalMatchMedia = window.matchMedia;
-  window.matchMedia = ((query: string) => ({
-    matches: query === '(prefers-reduced-motion: reduce)',
-    media: query,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-  })) as typeof window.matchMedia;
+  window.matchMedia = (query: string) => {
+    const nativeQuery = originalMatchMedia.call(window, query);
+    return new Proxy(nativeQuery, {
+      get(target, property) {
+        if (property === 'matches') return query === '(prefers-reduced-motion: reduce)';
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+  };
 
   try {
     const el = (await fixture(html`
@@ -759,10 +764,13 @@ it('gives an inline candidate a transformable box and real directional travel', 
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const animation = shown
     .getAnimations()
-    .find((candidate) => candidate.animationName === 'lr-random-content-fade-in-left');
+    .find(
+      (candidate) =>
+        'animationName' in candidate && candidate.animationName === 'lr-random-content-fade-in-left',
+    );
   expect(animation).to.exist;
   const keyframes = (animation!.effect as KeyframeEffect).getKeyframes();
-  expect(keyframes.some((frame) => frame.transform !== undefined && frame.transform !== 'none')).to.be.true;
+  expect(keyframes.some((frame) => frame['transform'] !== undefined && frame['transform'] !== 'none')).to.be.true;
 });
 
 it('supports mapped short animation CSS aliases while retaining the existing long names', async () => {
@@ -987,6 +995,56 @@ it('announces rendered shadow content and image alternatives without leaking an 
     'Rendered shadow selection Rendered assigned selection Selection diagram',
   );
   el.remove();
+});
+
+it('observes live accessible text inside a selected open shadow root', async () => {
+  const el = document.createElement('lr-random-content') as LyraRandomContent;
+  el.mode = 'sequence';
+  const candidate = document.createElement('div');
+  const shadow = candidate.attachShadow({ mode: 'open' });
+  const text = document.createElement('span');
+  text.textContent = 'Initial shadow selection';
+  shadow.append(text);
+  el.append(candidate);
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    await Promise.resolve();
+    const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
+    expect(sink.childElementCount, 'mount remains silent').to.equal(0);
+
+    text.textContent = 'Updated shadow selection';
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(sink.lastElementChild?.textContent).to.equal('Updated shadow selection');
+  } finally {
+    el.remove();
+  }
+});
+
+it('observes live text in an aria-labelledby target outside the selected subtree', async () => {
+  const container = (await fixture(html`
+    <div><span id="external-selection-label">Initial external label</span></div>
+  `)) as HTMLDivElement;
+  const label = container.querySelector('#external-selection-label')!;
+  const el = document.createElement('lr-random-content') as LyraRandomContent;
+  el.mode = 'sequence';
+  const candidate = document.createElement('div');
+  candidate.setAttribute('aria-labelledby', 'external-selection-label');
+  candidate.textContent = 'Ignored fallback';
+  el.append(candidate);
+  container.append(el);
+  await el.updateComplete;
+  await Promise.resolve();
+  const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
+  expect(sink.childElementCount, 'mount remains silent').to.equal(0);
+
+  label.textContent = 'Updated external label';
+  await Promise.resolve();
+  await Promise.resolve();
+
+  expect(sink.lastElementChild?.textContent).to.equal('Updated external label');
 });
 
 it('keeps explicit randomize() silent while the component host is hidden', async () => {
@@ -1387,16 +1445,41 @@ it('reacts to prefers-reduced-motion changing after mount', async () => {
   // Captures the media-query listener so the preference can flip while the component is live --
   // the only way to reach the change handler, since the real query can't be driven from the page.
   const originalMatchMedia = window.matchMedia;
-  const listeners = new Set<(e: MediaQueryListEvent) => void>();
+  const listeners = new Set<EventListenerOrEventListenerObject>();
   let matches = false;
-  window.matchMedia = ((query: string) => ({
-    get matches() {
-      return query === '(prefers-reduced-motion: reduce)' ? matches : false;
-    },
-    media: query,
-    addEventListener: (_t: string, fn: (e: MediaQueryListEvent) => void) => listeners.add(fn),
-    removeEventListener: (_t: string, fn: (e: MediaQueryListEvent) => void) => listeners.delete(fn),
-  })) as typeof window.matchMedia;
+  window.matchMedia = (query: string) => {
+    const nativeQuery = originalMatchMedia.call(window, query);
+    return new Proxy(nativeQuery, {
+      get(target, property) {
+        if (property === 'matches') {
+          return query === '(prefers-reduced-motion: reduce)' ? matches : false;
+        }
+        if (property === 'addEventListener') {
+          return (type: string, listener: EventListenerOrEventListenerObject | null) => {
+            if (type === 'change' && listener) listeners.add(listener);
+          };
+        }
+        if (property === 'removeEventListener') {
+          return (type: string, listener: EventListenerOrEventListenerObject | null) => {
+            if (type === 'change' && listener) listeners.delete(listener);
+          };
+        }
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+  };
+
+  const dispatchPreference = (nextMatches: boolean): void => {
+    const event = new MediaQueryListEvent('change', {
+      matches: nextMatches,
+      media: '(prefers-reduced-motion: reduce)',
+    });
+    for (const listener of [...listeners]) {
+      if (typeof listener === 'function') listener.call(window, event);
+      else listener.handleEvent(event);
+    }
+  };
 
   try {
     const el = (await fixture(html`
@@ -1409,12 +1492,12 @@ it('reacts to prefers-reduced-motion changing after mount', async () => {
     expect((el as unknown as { reduceMotion: boolean }).reduceMotion).to.be.false;
 
     matches = true;
-    for (const fn of [...listeners]) fn({ matches: true } as MediaQueryListEvent);
+    dispatchPreference(true);
     await el.updateComplete;
     expect((el as unknown as { reduceMotion: boolean }).reduceMotion, 'the preference is adopted').to.be.true;
 
     matches = false;
-    for (const fn of [...listeners]) fn({ matches: false } as MediaQueryListEvent);
+    dispatchPreference(false);
     await el.updateComplete;
     expect((el as unknown as { reduceMotion: boolean }).reduceMotion).to.be.false;
   } finally {

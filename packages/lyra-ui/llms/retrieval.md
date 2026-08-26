@@ -154,7 +154,9 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
   button per visible node/link/hull; the canvas repaints a non-color dashed/ring focus cue for the
   currently focused node, link, or hull and uses a system color under forced colors. In both renderers, node, link, and community-hull picking keeps at
   least 24 CSS px of screen-space geometry as the viewport zoom changes; this enlarges interaction
-  only, not the visible marks.
+  only, not the visible marks. Every data-driven and token-derived canvas color is resolved through
+  the live computed CSS cascade before painting, so CSS-wide keywords such as `inherit`/`unset`,
+  custom-property references, and modern color functions reach Canvas as concrete colors.
 
 **Methods:** `focusNode(id, options?: { zoom? })` and `fit(options?: { padding?: number })` control the
 camera; `getNodePosition(id)` returns the current `{ x, y }` in graph-local drawing coordinates, or
@@ -185,7 +187,9 @@ the peers loaded fine but `nodes` is empty),
 (`renderer="canvas"` only — the drawing surface, its hover tooltip replacing the SVG `<title>`, and
 the offscreen keyboard-roving items)
 
-**Themeable custom properties:** `--lr-node-fill` (set inline per-node from `LyraGraphNode.color`,
+**Themeable custom properties:** `--lr-canvas-reserved-height` (default
+`var(--lr-size-24rem)`) sets the host block size and is shared with the optional pre-upgrade
+reservation stylesheet; an explicit outer `block-size` still wins. `--lr-node-fill` (set inline per-node from `LyraGraphNode.color`,
 falls back to `--lr-color-brand`) and `--lr-link-color` (set inline per-link from
 `LyraGraphLink.color`, falling back to `--lr-color-border`); also uses `--lr-color-text` +
 `--lr-font` (label text), `--lr-focus-ring-*` (node/link `:focus-visible` outline).
@@ -353,11 +357,15 @@ with a `droppable` canvas on the `FLOW_PALETTE_MIME_TYPE` drag payload shape.
 
 **Properties:**
 
-- `items: PaletteItem[] = []` (attribute: false) — `PaletteItem { type: string; label: string;
+- `items: LyraPaletteItem[] = []` (attribute: false) — `LyraPaletteItem { type: string; label: string;
 description?: string; category?: string; keywords?: string[]; icon?: unknown; disabled?: boolean }`;
   `type` is the `FlowNode.type` a placement/drop creates, `category` groups items under
-  first-appearance-ordered headings, `disabled` renders an item visible but not draggable/placeable
-- `label: string = ''` — accessible name for the search field/listbox
+  first-appearance-ordered headings, `disabled` renders an item visible but not draggable/placeable.
+  A non-array value is treated as empty. Rows require nonblank string `type` and `label` values;
+  malformed optional `description`, `category`, `keywords`, or `disabled` values omit only that row,
+  preserving later valid entries
+- `label?: string` — accessible name for the search field/listbox; omission uses the localized
+  palette label, while an explicit empty string stays empty
 - `reorderable: boolean = false` (reflected) — opts into Ctrl/Cmd+ArrowUp/ArrowDown keyboard
   reordering of the catalog. Unset, no `lr-reorder` is ever emitted and Ctrl/Cmd+Arrow keeps
   behaving exactly like a plain Arrow press
@@ -428,9 +436,10 @@ same event-decoupled contract every sibling in this family follows.
 
 - `types: LyraNodeTypeStyle[] = []` (attribute: false) — `{ id: string; label: string; color?:
 string; shape?: 'circle' | 'square' | 'diamond' }`, the shared `lr-graph.nodeTypes` entry shape. A color is used only
-  when valid for CSS `color`; declaration breaks and `url()` fall back to the categorical palette
+  when valid for CSS `color`; declaration breaks and `url()` fall back to the categorical palette.
+  Rows require nonblank string `id` and `label` values, with later duplicate ids omitted first-wins
 - `counts?: Record<string, number>` (attribute: false) — optional per-type count shown alongside the
-  label
+  label; values are rendered as finite nonnegative integers (invalid or negative values become zero)
 - `hiddenTypes: string[] = []` (attribute: false) — controlled; the host assigns this back from
   `lr-visibility-change`
 - `interactive: boolean = true` (reflected) — renders each row as a toggle `<button>`; `false` renders
@@ -553,10 +562,10 @@ from tokens.
 
 **Known gotchas:**
 
-- The type badge's data-driven background uses an 8% (not this codebase's usual 16%) quiet-tint mix
-  against `--lr-color-surface` — the lower percentage is required to hold WCAG AA 4.5:1 text
-  contrast for arbitrary, unvetted type colors (even 10% isn't safe margin for every hue in the
-  palette).
+- The type badge's data-driven background uses a 12% quiet-tint mix against
+  `--lr-color-surface`, while its text continues to use `--lr-color-text`. Treat the percentage as
+  an implementation detail; override the documented nested badge properties together when a
+  product palette needs a different contrast-qualified treatment.
 - A blank `entity.id` renders the empty state. Blank/later duplicate `types[].id` entries cannot
   become badge lookup owners.
 
@@ -600,7 +609,7 @@ text/accent color), `--lr-entity-chip-bg` (default `var(--lr-color-brand-quiet)`
 <p>
   …first described by
   <lr-entity-chip entity-id="e1" text="Ada Lovelace" type="person">
-    <lr-entity-card slot=""></lr-entity-card> </lr-entity-chip
+    <lr-entity-card show-focus-button="false"></lr-entity-card> </lr-entity-chip
   >.
 </p>
 ```
@@ -609,6 +618,9 @@ text/accent color), `--lr-entity-chip-bg` (default `var(--lr-color-brand-quiet)`
 
 - Reuses `lr-citation-badge`'s exact "real preview content" detection (an assigned element with no
   other `slot`, or non-whitespace text) to decide whether a popover exists at all.
+- Preview content is supplementary and inert. Disable interactive actions on a slotted
+  `lr-entity-card` as shown above, and handle the chip's own `lr-entity-select`/`lr-entity-open`
+  events for navigation.
 - A blank `entityId` disables the chip and cannot produce an activation/open event.
 
 ---
@@ -627,7 +639,8 @@ graph data) and never mutates a graph.
   distinct `relation`
 - `expandable: boolean = false` — renders a per-row expand-in-graph icon button
 - `virtualizeAt: number = 100` (attribute `virtualize-at`) — row count above which the list virtualizes
-- `label: string = ''` — fallback name for the stable group. A non-empty host `aria-label` makes
+- `label?: string` — fallback name for the stable group. Omission uses the localized neighbor-list
+  label. A non-empty host `aria-label` makes
   the host the sole overall owner; an explicitly empty host label stays empty on the group
 
 **Events:** `lr-entity-select` (`detail: { entityId }`, a row's node button was activated),
@@ -670,6 +683,8 @@ wrapper, re-exported under the same name), `direction` (`aria-hidden` glyph), `r
   content into it), so a `::part(row)` rule applies once, not twice.
 - Rows with blank neighbor ids and later rows repeating the same node id are omitted first-wins
   before grouping, virtualization, rendering, or events.
+- A missing, blank, or nonstring `node.type` is omitted from that row's secondary metadata instead
+  of being passed to locale formatting; the neighbor label and any valid degree remain visible.
 
 ---
 
@@ -684,7 +699,8 @@ path finding, no branching, no per-element popovers.
 - `path: LyraPathElement[] = []` (attribute: false) — a flat alternating sequence:
   `{ kind: 'node'; node: LyraEntity } | { kind: 'edge'; relation: string; directed?: boolean;
 reverse?: boolean }`
-- `label: string = ''` — fallback name for the stable group. A non-empty host `aria-label` makes
+- `label?: string` — fallback name for the stable group. Omission uses the localized path label. A
+  non-empty host `aria-label` makes
   the host the sole overall owner; an explicitly empty host label stays empty on the group
 
 **Events:** `lr-entity-activate` (`detail: { entityId, occurrenceIndex }`, a node element activated),
@@ -861,8 +877,20 @@ Plus shared tokens otherwise.
 
 ```html
 <lr-chunk-inspector></lr-chunk-inspector>
+<lr-document-viewer id="document-viewer"></lr-document-viewer>
 <script>
   const inspector = document.querySelector("lr-chunk-inspector");
+  const documentViewer = document.getElementById("document-viewer");
+  const sourcesById = new Map([
+    [
+      "doc-1",
+      {
+        name: "Q3 report.pdf",
+        mimeType: "application/pdf",
+        src: "/reports/q3-report.pdf",
+      },
+    ],
+  ]);
   inspector.chunks = [
     {
       id: "c1",
@@ -871,11 +899,18 @@ Plus shared tokens otherwise.
       sourceId: "doc-1",
       title: "Q3 report",
       page: 4,
+      anchor: { kind: "page", page: 4 },
     },
   ];
-  inspector.addEventListener("lr-chunk-open", (e) =>
-    documentViewer.openAt(e.detail.sourceId, e.detail.anchor)
-  );
+  inspector.addEventListener("lr-chunk-open", (e) => {
+    const source = sourcesById.get(e.detail.sourceId);
+    if (!source) return;
+    documentViewer.name = source.name;
+    documentViewer.mimeType = source.mimeType;
+    documentViewer.src = source.src;
+    documentViewer.anchor = e.detail.anchor ?? null;
+    documentViewer.open = true;
+  });
 </script>
 ```
 
@@ -902,13 +937,15 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
   normalized once into a deterministic nonblank first-id-wins model with identity/cycle detection,
   a depth ceiling of 64 and a 2,000-node ceiling; blank/whitespace ids, duplicate ids, and other
   rejected/truncated input fail closed with localized visible status rather than recursing or
-  exposing ambiguous controls
+  exposing ambiguous controls. A nonempty raw payload with no valid root entries renders a localized
+  invalid-value error rather than the ordinary no-data state
 - `selectedSourceIds: string[] = []` (attribute: false) — controlled; blank ids, duplicates, and ids
   that are not leaves in the current `sources` tree are pruned, and the host assigns updates back from
   `lr-sources-change`
 - `showSelectAll: boolean = true` (attribute `show-select-all`)
 - `searchable: boolean = true`
-- `label: string = ''` — fallback name for the source tree
+- `label?: string` — fallback name for the source tree; omission uses the localized picker label,
+  while an explicit empty string stays empty
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
   the host attribute is absent, overrides the tree name. Authored host `aria-label` instead names
   the picker as a whole (including explicit-empty/dynamic values) and is not cloned onto the tree,
@@ -927,7 +964,8 @@ owner), `summary` ("{selected} of {total} selected"), `tree`
 `aria-selected` state), `disclosure` (a folder row's pointer-only expand/collapse indicator; the
 surrounding treeitem owns keyboard expansion),
 `checkbox` (tri-state glyph), `icon` (the `lr-file-icon` type badge), `label`, `empty` (`noData`
-when `sources` is empty, `noMatches` when a filter empties the tree), `limit` (bounded-normalizer
+when `sources` is empty, `noMatches` when a filter empties the tree), `error` (a nonempty raw
+payload containing no valid roots), `limit` (bounded-normalizer
 failure/truncation). Post-mount no-match and recovery transitions announce through the shared
 light-DOM polite sink; the shadow messages are visible mirrors, never live regions.
 
@@ -991,11 +1029,14 @@ component. Pure projection + event conduit: no fetching, no graph/viewer imports
 LyraEntity[]; relationships?: { path: LyraPathElement[] }[]; communities?: LyraCommunity[]; chunks?:
 LyraChunk[] }`; each present array renders through the matching sibling component (`lr-entity-
 chip` row, one `lr-path-strip` per relationship, `lr-community-card`, `lr-chunk-inspector`);
-  `null` or every section empty renders the overall empty state
+  `null` or every section empty renders the overall empty state. Non-array nested collections are
+  treated as empty; malformed relationship records and blank/later-duplicate entity, community, or
+  chunk ids are omitted without hiding valid neighboring records
 - `types: LyraNodeTypeStyle[] = []` (attribute: false) — forwarded to the Entities section's chips
 - `thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 }` (attribute: false) —
   forwarded to the Text chunks section's `lr-chunk-inspector`
-- `label: string = ''` — fallback name for the stable overall group. A non-empty host `aria-label`
+- `label?: string` — fallback name for the stable overall group; omission uses the localized panel
+  label. A non-empty host `aria-label`
   makes the host the sole overall owner; an explicitly empty host label stays empty
 
 **Events:** `lr-toggle` (`detail: { section, expanded }`, a section header was toggled —
@@ -1056,7 +1097,8 @@ radial layout is closed-form arithmetic, in its own `mind-map-layout.ts` module,
 
 - `topics: LyraTopic[] = []` (attribute: false) — `LyraTopic { id: string; label: string; children?:
 LyraTopic[] }`; a single root sits at the center, multiple roots hang off an implicit center hub
-- `label: string = ''` — accessible name for the SVG group and the implicit hub's text
+- `label?: string` — accessible name for the SVG group and the implicit hub's text; omission uses
+  the localized mind-map label, while an explicit empty string stays empty
 - `expandDepth: number = 1` (attribute `expand-depth`) — initial expansion depth (root + first
   ring); expansion state afterward is component-managed per topic id and survives `topics`
   reassignment
@@ -1227,7 +1269,7 @@ direct light-DOM children of the list (plain composition — no `.items` array p
 
 - `expanded: boolean = false` (reflected) — whether the card list is currently shown. Starts
   collapsed by default so a message's sources don't eat vertical space until asked for.
-- `label: string = ''` — header text used when `label-plural` isn't set, e.g. `"Sources"`.
+- `label?: string` — header text used when `label-plural` isn't set, e.g. `"Sources"`.
 - `labelPlural: string = ''` (attribute `label-plural`) — fully consumer-built, already-pluralized
   header summary, e.g. `"3 sources"` or `"1 source"`; this component never counts or pluralizes on
   its own. Takes precedence over `label` when both are set. If neither is set, the header falls back
@@ -1456,8 +1498,8 @@ label?: string }`. Independent of `assessment`; empty omits the whole evidence s
   0–1 fractions,
   applied to both `coverage` and `confidence`: `>= high` → `success` tone, `>= medium` → `warning`,
   below → `danger`
-- `label: string = ''` — fallback name for the stable group, using localized
-  `groundingSummaryLabel` when empty. A non-empty host `aria-label` makes the host the sole overall
+- `label?: string` — fallback name for the stable group, using localized
+  `groundingSummaryLabel` when omitted. A non-empty host `aria-label` makes the host the sole overall
   owner (the group omits its duplicate role/name); an explicitly empty host label stays empty
 - `showClaims: boolean = true` (attribute `show-claims`) — renders `assessment.claims` through
   `lr-claim-evidence`; set false to keep the aggregate scorecard only
@@ -1512,8 +1554,10 @@ embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here
   in-flight (in pipeline order), the last three terminal. `progress` is 0–100 _within the current
   stage_ (omitted/non-finite renders an indeterminate indicator, and it is only meaningful during an
   active non-`'queued'` stage). `embeddedChunkCount` renders only alongside a defined `chunkCount`.
-  `error` renders only while `stage === 'failed'`. Controlled — pass a new array to update
-- `label: string = ''` — fallback name for the stable region; defaults to localized
+  `error` renders only while `stage === 'failed'`. A missing or unrecognized runtime stage renders
+  as a localized neutral `unknown` state with no progress, retry, or cancel affordance, allowing a
+  newer backend stage to fail safely. Controlled — pass a new array to update
+- `label?: string` — fallback name for the stable region; omission uses localized
   `ingestionQueueLabel`. A non-empty host `aria-label` makes the host the sole overall owner (the
   region omits its duplicate role/name); an explicitly empty host label stays empty
 - `virtualizeAt: number = 100` (attribute `virtualize-at`) — item count above which the list renders
@@ -1590,16 +1634,19 @@ errorMessage?: string }` (all four types exported here), where
   ISO-8601); absent/unparseable renders "never synced". `errorMessage` shows only while
   `syncStatus === 'error'`. `id`/`name` follow `DocumentRef`'s spirit, but a source is a _connector
   feeding_ documents, not a document, so the rest of the fields are its own
-- `label: string = ''` — heading text and the table's accessible name; falls back to a localized default
+- `label?: string` — heading text and the table's accessible name; omission uses the localized
+  knowledge-base label, while an explicit empty string stays empty
 - `hideSummary: boolean = false` (attribute `hide-summary`, reflected) — hides the aggregate
   total/synced/syncing/needs-attention row
 - `hideCreate: boolean = false` (attribute `hide-create`, reflected) — hides the "Add source"
   affordance, e.g. for a read-only or permission-gated view
 
 Source ids must be nonblank and unique. Malformed rows and later duplicates are omitted first-wins
-before summary totals, empty state, table rows, or source actions.
+before summary totals, empty state, table rows, or source actions. A retained source whose `name` is
+missing, blank, or nonstring uses the localized “untitled source” label in both the row and its action
+names.
 
-**Events:** `lr-source-create` (`detail: undefined` — nothing exists yet to reference),
+**Events:** `lr-source-create` (`detail: null` — nothing exists yet to reference),
 `lr-source-sync` (`detail: { sourceId: string }`), `lr-source-pause` (`detail: { sourceId: string }`),
 `lr-source-delete` (`detail: { sourceId: string }`, no built-in confirmation, matching
 `lr-thread-list`'s `lr-thread-delete`). These were spelled `lr-kb-create`/`-sync`/`-pause`/`-delete`
@@ -1664,10 +1711,11 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   and `lr-graph.selectedNodeIds`; `null` shows no selection and keeps the popover closed
 - `pinnedNodeIds: string[] = []` (attribute: false) — exactly two pinned nodes reveals the "Find
   path" action
-- `searchQuery: string = ''` (attribute `search-query`) — the label/type filter applied to the node
+- `searchQuery: string = ''` (attribute `search-query`) — the id/label filter applied to the node
   set, driving `[part="search-results"]` and the search-match dimming forwarded to `lr-graph`.
   Presettable, so a host can deep-link straight into a filtered view; the toolbar's search box keeps
-  it up to date afterwards
+  it up to date afterwards. A missing or nonstring label is ignored for label matching while the
+  node's valid string id remains searchable
 
 (presentation)
 
@@ -1678,7 +1726,7 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   `'selection'` dims by the selected node's immediate neighborhood; `'hover'` additionally dims by
   the pointer-hovered node (falling back to selection while nothing is hovered); `'none'` forwards
   empty arrays regardless of search/selection state, for a host driving dimming its own way
-- `label: string = ''` — fallback name for the root group; defaults to localized
+- `label?: string` — fallback name for the root group; omission uses localized
   `graphExplorerLabel`. A non-empty host `aria-label` makes the host the sole overall owner; an
   explicitly empty host label stays empty on the group
 
@@ -1721,17 +1769,18 @@ composed `lr-graph-legend`), `search-results` (only while `searchQuery` is non-e
 `pinnedNodeIds` is non-empty), `pinned-heading`, `graph` (the composed `lr-graph`), `path` (only
 while `path` is non-empty), `detail-popover`, `detail-card`.
 
-**Themeable custom properties:** shared tokens only; retheme the graph through `lr-graph`'s own
-tokens (see above).
+**Themeable custom properties:** `--lr-canvas-reserved-height` (default
+`var(--lr-size-24rem)`) sets the explorer's host block size and matches its pre-upgrade
+reservation. Retheme the composed graph through `lr-graph`'s own tokens (see above).
 
 **Optional peer deps:** `lr-graph`'s `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` set, transitively.
 
 **Known gotchas:**
 
-- An explicit height on the host bounds the whole explorer: `[part="base"]` fills it and
+- The host defaults to `--lr-canvas-reserved-height` (`24rem`). An explicit height on the host
+  bounds the whole explorer: `[part="base"]` fills it and
   `[part="graph"]` takes whatever the toolbar, search results, pinned row and path strip leave over,
-  rather than the graph sizing itself from its own intrinsic aspect ratio. With no height on the
-  host the column still sizes itself from its content, unchanged.
+  rather than the graph sizing itself from its own intrinsic aspect ratio.
 - `lr-graph.getNodePosition()` and `lr-node-click`'s `{ x, y }` are graph-_local_ drawing
   coordinates, never viewport pixels. For `renderer="svg"` this component resolves the real viewport
   rect from `event.composedPath()`'s `[part="node"]` element; for `renderer="canvas"` (no per-node
@@ -1766,12 +1815,14 @@ shape?: 'circle' | 'square' | 'diamond' }`, forwarded verbatim to every expanded
 - `thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 }` (attribute: false) —
   confidence-tier boundaries (reusing `lr-citation-badge`'s high/medium/low confidence vocabulary and
   success/warning/danger tones), also forwarded as the provenance relevance tiers
-- `label: string = ''` — fallback name for the stable overall group. A non-empty host `aria-label`
+- `label?: string` — fallback name for the stable overall group; omission uses the localized memory
+  panel label. A non-empty host `aria-label`
   makes the host the sole overall owner; an explicitly empty host label stays empty
 
 Each memory list is canonicalized independently by nonblank `id`. Malformed rows and later
 duplicates are omitted first-wins before empty state, focus/disclosure state, confirmations, counts,
-rendering, or actions.
+rendering, or actions. Rows whose `text` is missing, nonstring, blank, or whitespace-only are also
+omitted without hiding later valid memories.
 
 **Events:**
 
@@ -1779,10 +1830,10 @@ rendering, or actions.
   long-term" was approved; the short-term item as-is. Only offered on short-term items.
 - `lr-remove` (`detail: LyraMemoryRemoveDetail` = `{ memoryId: string; scope: 'short-term' | 'long-term' }`)
   — a pending per-item removal was approved. Offered on every item.
-- `lr-forget` (`detail: undefined`) — the pending "forget all long-term memories" bulk action was
+- `lr-forget` (`detail: null`) — the pending "forget all long-term memories" bulk action was
   approved. Only rendered while `longTerm` is non-empty.
 - `lr-expand` (`detail: LyraMemoryExpandDetail` = `{ memoryId: string; scope: 'short-term' |
-  'long-term'; expanded: boolean }`) — an item's provenance disclosure was toggled.
+'long-term'; expanded: boolean }`) — an item's provenance disclosure was toggled.
 
 **Slots:** none.
 
@@ -1882,7 +1933,7 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
   replaces the whole result view with a neutral visible message. Caller-supplied text is not
   localized (app/network data, not library copy). A new non-empty value is announced through a
   shared assertive light-DOM region; initial and reconnect content is not replayed
-- `label: string = ''` — fallback name for the populated result group; defaults to localized
+- `label?: string` — fallback name for the populated result group; omission uses localized
   `chunkInspectorLabel`. A non-empty host `aria-label` makes the host the sole overall owner; an
   explicitly empty host label stays empty
 
@@ -1896,7 +1947,7 @@ region. Initial empty content, loading intermediates, and reconnects are not rep
   — the _complete_ updated selection, both as ids and as exactly one canonical record per id, so a
   host needn't re-look-up ids against its own copy on every toggle. This derived detail is always
   canonicalized nonblank/first-wins regardless of the legacy `dedupe` switch.
-- `lr-load-more` (`detail: undefined`) — from the virtual list's scroll-near-bottom detection while
+- `lr-load-more` (`detail: null`) — from the virtual list's scroll-near-bottom detection while
   virtualized, or the `[part="load-more"]` button otherwise. Only fires while `hasMore` is true and
   `loading` is false.
 - `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) — forwarded verbatim from a row's
@@ -1950,6 +2001,8 @@ lever, repainting every other brand surface with it. Plus shared tokens otherwis
   component's.
 - Below the virtualization threshold, scroll-near-bottom isn't a meaningful gesture, so a
   `[part="load-more"]` button takes its place (replaced by a spinner while `loading`).
+- Source-group fallback labels are re-evaluated when the effective locale or a `.strings`
+  override changes; a cached grouping never leaves the previous localized “untitled source” text.
 
 ---
 
@@ -1969,9 +2022,11 @@ at the same size tier, so the toolbar row renders as one flush line.
 - `mode: LyraRetrievalMode = 'hybrid'` — `LyraRetrievalMode = RetrievalQuery['mode'] = 'vector' |
 'keyword' | 'hybrid'`, re-exported here rather than redefined
 - `filters: Record<string, unknown> = {}` (attribute: false) — arbitrary metadata filters, rendered
-  as removable `"{key}: {value}"` chips. Controlled
+  as removable `"{key}: {value}"` chips. A non-record runtime value normalizes to an empty record.
+  Controlled
 - `scope: string[] = []` (attribute: false) — source-scope ids/labels this query is restricted to,
-  rendered as removable chips alongside `filters`. Controlled
+  rendered as removable chips alongside `filters`. A non-array runtime value normalizes empty;
+  blank entries and duplicates are omitted first-wins. Controlled
 - `loading: boolean = false` (reflected) — host-driven busy flag; this component cannot know when a
   request resolves
 - `errorText: string = ''` (attribute `error-text`) — last failed search's message, shown verbatim
@@ -1983,8 +2038,8 @@ at the same size tier, so the toolbar row renders as one flush line.
   through the shared polite light-DOM region; initial and reconnect content is not replayed
 - `placeholder: string = ''` — falls back to the localized generic "Search" placeholder, which also
   becomes the field's accessible name
-- `label: string = ''` — fallback name for the `role="search"` landmark; falls back to a localized
-  default
+- `label?: string` — fallback name for the `role="search"` landmark; omission uses the localized
+  retrieval-search label, while an explicit empty string stays empty
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
   the host attribute is absent, overrides the search-landmark name. A non-empty authored host
   `aria-label` makes the host the sole overall owner, so the inner shell omits its duplicate
@@ -2045,14 +2100,16 @@ RetrievalStageKind; label?: string; startMs: number; endMs?: number; status: 'pe
   default label for `kind`; `detail` is secondary text under the stage name. Pass in any order — the
   timeline sorts by `startMs`. Each stage projects to one `LyraSpan` with `kind` mapped
   `query-rewrite → 'llm'`, `embed → 'embedding'`, `retrieve → 'retriever'`,
-  `rerank`/`filter` → `'tool'`
-  . Stage ids must be nonempty, nonblank, and unique: invalid records and later duplicates are
+  `rerank`/`filter` → `'tool'`. Without a `label` override, an unknown runtime kind keeps its literal
+  string as the visible label and uses the generic `'tool'` span kind instead of aborting the trace.
+  Stage ids must be nonempty, nonblank, and unique: invalid records and later duplicates are
   omitted first-wins before timeline, evidence, controlled state, counts, or event paths
 - `RetrievalStageEvidence { text?: string; chunks?: RetrievalChunk[]; metadata?: Record<string,
 unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** verbatim, rendered
   through `lr-chunk-inspector` (`source.id → sourceId`, `source.name → title`, `locator → anchor`;
   page locators also supply the visible `page`); `text` is free-form (e.g. the rewritten query, an
-  embedding model id); `metadata` renders as a plain key/value list. A
+  embedding model id); `metadata` renders as a plain key/value list. Malformed runtime chunk rows
+  are omitted while valid neighboring chunks remain visible. A
   stage whose evidence has none of the three renders no disclosure row at all
 - `activeStageId: string | null = null` (attribute `active-stage-id`) — controlled selection,
   forwarded verbatim to the internal `lr-span-waterfall`'s `activeSpanId`
@@ -2104,7 +2161,8 @@ or source fetching.
 neutral visible caller text; new non-empty values announce through a shared assertive light-DOM
 region, while initial and reconnect content is not replayed — spelled plain `error` before 9.0.0);
 `showSources: boolean = true`; `showClaims: boolean = true`
-(attribute `show-claims`); `label: string = ''`; `accessibleLabel: string | null = null` (attribute
+(attribute `show-claims`); `label?: string` (omission uses the localized answer label; an explicit
+empty string stays empty); `accessibleLabel: string | null = null` (attribute
 `aria-label`). The same `<article>` remains the semantic shell in `idle`, `loading`, `answer`, and
 `error` states. With no non-empty host `aria-label` it owns the article role/name; a non-empty host
 label makes the host the sole overall owner, while an explicitly empty host label stays empty on
@@ -2173,7 +2231,8 @@ permissions, and connector settings go in the `settings` slot.
 
 **Properties:** `sources: KnowledgeSource[] = []` (attribute: false); `ingestionItems:
 IngestionQueueItem[] = []` (attribute: false); `activeTab: 'sources' | 'ingestion' = 'sources'`;
-`label: string = ''` (the visible heading and the tablist's distinct accessible name; authored host
+`label?: string` (the visible heading and the tablist's distinct accessible name; omission uses the
+localized admin label, while an explicit empty string stays empty; authored host
 `aria-label` independently names the admin component and is not cloned onto either);
 `hideIngestion: boolean = false`. If ingestion is active when it becomes hidden, `activeTab`
 normalizes to `'sources'`, emits `lr-tab-change`, and moves focus to the Sources tab when needed.
@@ -2216,7 +2275,8 @@ is clamped to 0–1 for localized percent display. `Citation` is the shared AI c
 
 Claims and citations are canonicalized independently by nonblank `id`. Malformed rows and later
 duplicates are omitted first-wins before empty state, controlled selection, evidence lookup,
-rendering, or events.
+rendering, or events. An unrecognized runtime claim status renders as localized “Unsupported” with
+the danger treatment instead of producing an empty or misleading badge.
 
 - `compact: boolean = false` (reflected) — tighter `claim-trigger` padding and column gap, for dense
   evidence lists — the same convention as `lr-source-card`'s/`lr-entity-card`'s `compact`. Purely a
@@ -2258,7 +2318,7 @@ dense/sparse/rerank/final score breakdowns.
 **Properties:** `sets: RetrievalComparisonSet[] = []` (attribute: false), where
 `RetrievalComparisonSet = { id: string; label: string; chunks: RetrievalChunk[] }`;
 `topK: number = 10` (attribute `top-k`, finite integer with minimum 1);
-`selectedChunkId: string = ''` (attribute `selected-chunk-id`); `label: string = ''` (fallback name
+`selectedChunkId: string = ''` (attribute `selected-chunk-id`); `label?: string` (fallback name
 for the overall comparison region; a non-empty host `aria-label` makes the host the sole overall
 owner, while an explicitly empty host label stays empty on the region).
 `RetrievalChunk` is the shared AI record carrying id/text/score/source plus optional rank, locator,
@@ -2293,7 +2353,7 @@ and run history. The host computes metrics and owns evaluation execution.
 **Properties:** `metrics: LyraRagEvaluationMetric[] = []` and
 `runs: LyraRagEvaluationRun[] = []`
 (attribute: false); `metricId: string = ''` (attribute `metric-id`, with the first metric used for
-display when unset/unmatched); `slice: string = ''`; `label: string = ''` (visible heading and
+display when unset/unmatched); `slice: string = ''`; `label?: string` (visible heading and
 fallback overall-region name; a non-empty host `aria-label` makes the host the sole overall owner,
 while an explicitly empty host label stays empty on the region);
 `showChart: boolean = true` (attribute `show-chart`, reflected, string-aware true-default
@@ -2312,7 +2372,11 @@ history, counts, rendering, or actions.
 corresponding selection properties.
 
 **CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
-`metric-selected`, `chart`, `runs`, `runs-heading`, `run`, `empty`.
+`metric-selected`, `metric-category` (the caller-supplied category rendered visibly on each metric),
+`chart`, `runs`, `runs-heading`, `run`, `empty`.
+
+**Themeable custom properties:** `--lr-rag-eval-dashboard-selected-border-color` (default
+`var(--lr-color-brand)`) — border color shared by the controlled active slice and metric.
 
 Percent values clamp to 0–1 and all numbers use `effectiveLocale`. The chart is built from the
 filtered run order; the host computes every metric and owns evaluation execution.

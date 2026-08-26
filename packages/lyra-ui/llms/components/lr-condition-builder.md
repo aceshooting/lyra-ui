@@ -6,8 +6,9 @@
 - **Class** `LyraConditionBuilder`, also available unregistered from `@aceshooting/lyra-ui/components/data/condition-builder/condition-builder.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `9.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
-- **Optional peers** `dompurify` — see `llms/peers.md`
+- **Optional peers** none
 - **Themeable via** 10 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -25,18 +26,30 @@ granular import path, class/type imports, selectors, and framework bindings toge
 **Properties:** clone-owned readonly `fields`, clone-owned readonly `value`, and `disabled`.
 Structured inputs are bounded (200 fields and conditions, 500 options per field, 256 characters
 per string), malformed records and blank field names/option values/condition ids are skipped,
-duplicates use the first valid record, and closed field/operator/combinator values normalize to
-their documented fallback.
+duplicates use the first valid record, and unknown closed-vocabulary values normalize to their
+documented fallback. A retained, known operator and its value payload are not rewritten merely
+because they disagree with the current field metadata. That preservation also applies when fields
+arrive after `value` or their operator/type definition later changes.
 Returned arrays and records are frozen snapshots, so mutate-and-reuse does not bypass Lit's
 assignment boundary. Create and reassign a new `fields` array or `value` record after changes.
 
-For a field declared as `type: 'number'`, non-finite controlled values normalize to `undefined`.
-The same applies when field metadata arrives after `value`, and when a numeric input string
-overflows to positive or negative infinity. The rendered blank number field therefore agrees with
-the model, and serializing the query cannot silently turn infinity into JSON `null`.
+`validationIssues` is a live frozen list of `{ conditionId, code }` rows, where `code` is
+`field-unavailable`, `operator-not-allowed`, `operator-arity`, or `value-type`.
+`invalidConditionIds` projects their ids in model order, `checkValidity()` tests the current model,
+and `reportValidity()` additionally focuses the first affected field/operator/value control. The
+root group and every condition render explicit `aria-invalid="true"|"false"`. A non-finite
+controlled number is therefore preserved and reported as `value-type`; numeric text entered through
+the UI still becomes unset when parsing overflows. Check validity before sending restored data to a
+backend, particularly because JSON serializes non-finite numbers as `null`.
+
+`ConditionBuilderField.min`/`max` accept finite numbers for `type: 'number'` and bounded strings for
+`type: 'date'`; `step` accepts a positive finite number for numeric fields. These constraints are
+forwarded to the composed `lr-input`/`lr-date-input`. They are omitted for other field types, and
+leaving all three unset preserves the previous unconstrained controls.
 
 **Methods:** `addCondition()` appends a condition using the first available field and emits a frozen
-`lr-add-condition`; it is a no-op while disabled or when there are no fields.
+`lr-add-condition`; it is a no-op while disabled or when there are no fields. `checkValidity()` and
+`reportValidity()` validate without changing `value`.
 `removeCondition(id)` removes the matching condition and emits `lr-remove-condition`
 (`detail: { conditionId }`); it is a
 no-op while disabled or when the id is absent.

@@ -9,7 +9,8 @@ import {
 import "./diff-view.js";
 import type { LyraDiffView } from "./diff-view.js";
 import type { LyraDiffOp } from "./diff-line-diff.js";
-import { styles } from "./diff-view.styles.js";
+import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { resolveLyraLocale } from "../../../internal/localization-runtime.js";
 
 function stubClipboard(target: Navigator, value: unknown): () => void {
   const descriptor = Object.getOwnPropertyDescriptor(target, "clipboard");
@@ -34,7 +35,7 @@ describe("lr-diff-view", () => {
 
     el.layout = "split";
     await el.updateComplete;
-    (el as unknown as Record<string, unknown>).layout = "columns";
+    (el as unknown as Record<string, unknown>)["layout"] = "columns";
     await el.updateComplete;
     expect(el.layout).to.equal("unified");
     expect(el.getAttribute("layout")).to.equal("unified");
@@ -271,9 +272,33 @@ describe("lr-diff-view", () => {
     expect(button.getAttribute("aria-label")).to.equal("Copy diff");
   });
 
-  it("gives the copy button a :hover treatment, matching every sibling copy button in the library", () => {
-    const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
-    expect(css).to.match(/\[part='copy-button'\]:hover\s*\{[^}]+\}/);
+  it("paints the copy-button hover treatment under a real pointer", async () => {
+    const el = await fixture<LyraDiffView>(html`
+      <lr-diff-view
+        copyable
+        style="--lr-color-brand: rgb(1, 2, 3)"
+        .oldText=${"a"}
+        .newText=${"b"}
+      ></lr-diff-view>
+    `);
+    const button = el.shadowRoot!.querySelector<HTMLElement>('[part="copy-button"]')!;
+    button.scrollIntoView({ block: "center" });
+    const rect = button.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: "move",
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => getComputedStyle(button).borderColor === "rgb(1, 2, 3)",
+        "the diff copy-button hover border never painted"
+      );
+    } finally {
+      await resetMouse();
+    }
   });
 
   it("reports a synchronous clipboard failure without falsely confirming success", async () => {
@@ -551,7 +576,7 @@ describe("lr-diff-view", () => {
       const handle = nativeSetTimeout(handler, timeout, ...args);
       if (timeout === 1500) {
         confirmationHandle = handle;
-        if (typeof handler === "function") confirmationCallback = handler;
+        if (typeof handler === "function") confirmationCallback = () => handler(...args);
       }
       return handle;
     }) as typeof frameWindow.setTimeout;
@@ -1381,7 +1406,7 @@ describe("contextLines", () => {
         .contextLines=${1}
       ></lr-diff-view>`
     )) as LyraDiffView;
-    const expected = new Intl.NumberFormat(el.effectiveLocale).format(1234);
+    const expected = new Intl.NumberFormat(resolveLyraLocale(el)).format(1234);
     expect(
       el.shadowRoot!.querySelector('[data-type="fold"]')!.textContent
     ).to.contain(expected);

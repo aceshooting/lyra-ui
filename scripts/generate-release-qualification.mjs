@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
-import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+
+import { isMainModule } from '../packages/lyra-ui/scripts/is-main-module.mjs';
 
 const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const outputFile = path.join(repoRoot, '.github', 'release-qualification.json');
@@ -287,10 +289,7 @@ function serialized(manifest) {
   return `${JSON.stringify(manifest, null, 2)}\n`;
 }
 
-const isMain =
-  process.argv[1] &&
-  realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
-if (isMain) {
+if (isMainModule(import.meta.url)) {
   const mode = process.argv[2] ?? '--check';
   const expected = serialized(generateReleaseQualification());
   if (mode === '--write') {

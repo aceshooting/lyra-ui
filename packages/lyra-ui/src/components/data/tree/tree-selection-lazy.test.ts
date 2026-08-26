@@ -81,7 +81,7 @@ describe('tree upstream-compatible selection and lazy lifecycle', () => {
   it('supports leaf and leaf-multiple without making branch rows selectable', async () => {
     const el = (await fixture(selectableTree())) as LyraTree;
     const parent = el.querySelector(':scope > lr-tree-item') as LyraTreeItem;
-    const [alpha, beta] = [...parent.querySelectorAll(':scope > lr-tree-item')] as LyraTreeItem[];
+    const [alpha] = [...parent.querySelectorAll(':scope > lr-tree-item')] as LyraTreeItem[];
 
     el.selection = 'leaf';
     await el.updateComplete;
@@ -313,12 +313,16 @@ describe('tree upstream-compatible selection and lazy lifecycle', () => {
 
   it('settles the expansion lifecycle immediately when reduced motion is requested', async () => {
     const originalMatchMedia = window.matchMedia;
-    window.matchMedia = ((query: string) => ({
+    window.matchMedia = (query: string): MediaQueryList => ({
       matches: query === '(prefers-reduced-motion: reduce)',
       media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
       addEventListener: () => {},
       removeEventListener: () => {},
-    })) as typeof window.matchMedia;
+      dispatchEvent: () => true,
+    });
     try {
       const el = (await fixture(html`
         <lr-tree label="Topics">

@@ -6,6 +6,7 @@
 - **Class** `LyraDialog`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/dialog/dialog.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 14 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -324,7 +325,7 @@ their `data-lr-confirm-action` attribute.
   `.remove()` itself. Because the close event is cancelable, `confirm()` waits through the full
   dispatch and remains pending/mounted when a listener calls `preventDefault()`.
 - The neutral confirm button pairs `--lr-color-on-brand` with `--lr-color-brand`; the danger
-  tone pairs `--lr-color-on-danger` with `--lr-color-danger`. Each of those resolves through its
+  variant pairs `--lr-color-on-danger` with `--lr-color-danger`. Each of those resolves through its
   variant's row of the semantic grid (`--lr-color-<variant>-fill-loud` /
   `--lr-color-<variant>-on-loud`), which in turn reads the matching `--lr-theme-color-*` hook and
   falls back to the shared neutral ramp — so retheming the grid retints the confirm button with no

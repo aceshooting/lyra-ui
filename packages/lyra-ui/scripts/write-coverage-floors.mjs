@@ -1,3 +1,5 @@
+import { isMainModule } from './is-main-module.mjs';
+
 // Maintains scripts/coverage-floors.json -- the per-metric coverage floors that
 // web-test-runner.config.js hands to `wtr`'s blocking threshold check.
 // Why a generated data file instead of literals in the runner config: floors
@@ -16,7 +18,7 @@
 // `--write-floors` never lowers a floor without `--allow-lower`: a coverage
 // regression must be an explicit, visible decision in the diff, not a silent
 // re-baseline by whoever last ran the command.
-import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const packageDir = fileURLToPath(new URL('..', import.meta.url));
@@ -218,7 +220,6 @@ function main() {
   }
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
+if (isMainModule(import.meta.url)) {
   main();
 }
-

@@ -160,8 +160,9 @@ export interface LyraZoomableFrameEventMap {
  * tokens are allowlisted, and `allow-scripts` is never combined with `allow-same-origin`.
  *
  * The scaled iframe is a physical pixel canvas, so its origin stays at physical top-left in both
- * directions. The zoom toolbar remains logical interface chrome and therefore appears at inline-end
- * (physical left in RTL).
+ * directions. The zoom-control group remains logical interface chrome and therefore appears at
+ * inline-end (physical left in RTL). Its two native buttons remain independent Tab stops; the
+ * group does not claim the roving-arrow-key contract of an ARIA toolbar.
  * `withoutInteraction` makes the browsing context genuinely unavailable: the iframe is native
  * `inert`, leaves sequential focus, refuses pointer and programmatic activation, and carries no
  * unsupported `aria-disabled` claim. Focus entry through Tab, pointer, or `focus()` is tracked on
@@ -180,7 +181,7 @@ export interface LyraZoomableFrameEventMap {
  * @event {FocusEvent} blur - Relayed once from the internal iframe as a bubbling, composed native
  *   event.
  * @csspart iframe - The internal `<iframe>` element.
- * @csspart controls - The zoom-controls toolbar.
+ * @csspart controls - The labelled zoom-control group.
  * @csspart zoom-in-button - The zoom-in button.
  * @csspart zoom-out-button - The zoom-out button.
  * @cssprop [--lr-zoomable-frame-control-hover-background=var(--lr-color-brand-quiet)] - Zoom
@@ -222,7 +223,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
    * normalized projection reads at most 16,384 UTF-16 code units and 256 whitespace-delimited
    * tokens, ignores a token cut by the source ceiling, and is cached until this string changes. */
   @property({ attribute: 'zoom-levels' }) zoomLevels = DEFAULT_ZOOM_LEVELS;
-  /** Removes the zoom toolbar. */
+  /** Removes the zoom-control group. */
   @property({ type: Boolean, attribute: 'without-controls', reflect: true }) withoutControls = false;
   /** Removes the iframe from sequential focus and disables pointer interaction. */
   @property({ type: Boolean, attribute: 'without-interaction', reflect: true }) withoutInteraction = false;
@@ -738,7 +739,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     if (this.withoutControls) return nothing;
     return html`<div
       part="controls"
-      role="toolbar"
+      role="group"
       aria-label=${this.localize('zoomControls')}
       @keydown=${this.onControlsKeyDown}
     >

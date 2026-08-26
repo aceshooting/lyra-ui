@@ -1,9 +1,18 @@
-import { html, nothing, svg, type SVGTemplateResult, type TemplateResult } from 'lit';
+import {
+  html,
+  nothing,
+  svg,
+  type SVGTemplateResult,
+  type TemplateResult,
+} from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import { finiteCount } from '../../../internal/numbers.js';
-import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
+import {
+  getDateTimeFormat,
+  getNumberFormat,
+} from '../../../internal/intl-cache.js';
 import { playIcon, pauseIcon } from '../../../internal/icons.js';
 import { styles } from './knowledge-base.styles.js';
 import type { TableColumn } from '../../data/table/table.class.js';
@@ -11,19 +20,31 @@ import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 import type { MenuItemSelectDetail } from '../../layout/menu/menu.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_knowledgeBaseActionsColumn, LYRA_DEFAULT_knowledgeBaseCreateSource, LYRA_DEFAULT_knowledgeBaseDeleteAction, LYRA_DEFAULT_knowledgeBaseDocumentCount, LYRA_DEFAULT_knowledgeBaseEmptyDescription, LYRA_DEFAULT_knowledgeBaseEmptyHeading, LYRA_DEFAULT_knowledgeBaseHeading, LYRA_DEFAULT_knowledgeBaseHealthColumn, LYRA_DEFAULT_knowledgeBaseHealthDegraded, LYRA_DEFAULT_knowledgeBaseHealthFailed, LYRA_DEFAULT_knowledgeBaseHealthHealthy, LYRA_DEFAULT_knowledgeBaseHealthUnknown, LYRA_DEFAULT_knowledgeBaseNameColumn, LYRA_DEFAULT_knowledgeBaseNeedsAttention, LYRA_DEFAULT_knowledgeBaseNeverSynced, LYRA_DEFAULT_knowledgeBasePauseAction, LYRA_DEFAULT_knowledgeBasePermissionColumn, LYRA_DEFAULT_knowledgeBasePermissionEditor, LYRA_DEFAULT_knowledgeBasePermissionOwner, LYRA_DEFAULT_knowledgeBasePermissionRestricted, LYRA_DEFAULT_knowledgeBasePermissionViewer, LYRA_DEFAULT_knowledgeBaseRowActionsLabel, LYRA_DEFAULT_knowledgeBaseSyncAction, LYRA_DEFAULT_knowledgeBaseSyncColumn, LYRA_DEFAULT_knowledgeBaseSyncError, LYRA_DEFAULT_knowledgeBaseSyncIdle, LYRA_DEFAULT_knowledgeBaseSyncPaused, LYRA_DEFAULT_knowledgeBaseSyncSynced, LYRA_DEFAULT_knowledgeBaseSyncSyncing, LYRA_DEFAULT_knowledgeBaseSyncedSources, LYRA_DEFAULT_knowledgeBaseSyncingSources, LYRA_DEFAULT_knowledgeBaseTotalSources } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_knowledgeBaseActionsColumn, LYRA_DEFAULT_knowledgeBaseCreateSource, LYRA_DEFAULT_knowledgeBaseDeleteAction, LYRA_DEFAULT_knowledgeBaseDocumentCount, LYRA_DEFAULT_knowledgeBaseEmptyDescription, LYRA_DEFAULT_knowledgeBaseEmptyHeading, LYRA_DEFAULT_knowledgeBaseHeading, LYRA_DEFAULT_knowledgeBaseHealthColumn, LYRA_DEFAULT_knowledgeBaseHealthDegraded, LYRA_DEFAULT_knowledgeBaseHealthFailed, LYRA_DEFAULT_knowledgeBaseHealthHealthy, LYRA_DEFAULT_knowledgeBaseHealthUnknown, LYRA_DEFAULT_knowledgeBaseNameColumn, LYRA_DEFAULT_knowledgeBaseNeedsAttention, LYRA_DEFAULT_knowledgeBaseNeverSynced, LYRA_DEFAULT_knowledgeBasePauseAction, LYRA_DEFAULT_knowledgeBasePermissionColumn, LYRA_DEFAULT_knowledgeBasePermissionEditor, LYRA_DEFAULT_knowledgeBasePermissionOwner, LYRA_DEFAULT_knowledgeBasePermissionRestricted, LYRA_DEFAULT_knowledgeBasePermissionViewer, LYRA_DEFAULT_knowledgeBaseRowActionsLabel, LYRA_DEFAULT_knowledgeBaseSyncAction, LYRA_DEFAULT_knowledgeBaseSyncColumn, LYRA_DEFAULT_knowledgeBaseSyncError, LYRA_DEFAULT_knowledgeBaseSyncIdle, LYRA_DEFAULT_knowledgeBaseSyncPaused, LYRA_DEFAULT_knowledgeBaseSyncSynced, LYRA_DEFAULT_knowledgeBaseSyncSyncing, LYRA_DEFAULT_knowledgeBaseSyncedSources, LYRA_DEFAULT_knowledgeBaseSyncingSources, LYRA_DEFAULT_knowledgeBaseTotalSources, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 /** Sync lifecycle state of one knowledge source, as last reported by the host. */
-export type KnowledgeSourceSyncStatus = 'idle' | 'syncing' | 'paused' | 'synced' | 'error';
+export type KnowledgeSourceSyncStatus =
+  | 'idle'
+  | 'syncing'
+  | 'paused'
+  | 'synced'
+  | 'error';
 
 /** Health of the most recent indexing pass over a source's content, as last reported by the host. */
-export type KnowledgeSourceIndexingHealth = 'healthy' | 'degraded' | 'failed' | 'unknown';
+export type KnowledgeSourceIndexingHealth =
+  | 'healthy'
+  | 'degraded'
+  | 'failed'
+  | 'unknown';
 
 /** The current viewer's access level on a source -- informational only (see the class doc's
  *  authorization note). */
-export type KnowledgeSourcePermission = 'owner' | 'editor' | 'viewer' | 'restricted';
+export type KnowledgeSourcePermission =
+  | 'owner'
+  | 'editor'
+  | 'viewer'
+  | 'restricted';
 
 /**
  * One connected knowledge-base source (e.g. a Drive/Notion connector, an uploaded document set, a
@@ -118,7 +139,9 @@ function kebabIcon(): SVGTemplateResult {
   `;
 }
 
-function normalizeTimestamp(value: Date | string | undefined): Date | undefined {
+function normalizeTimestamp(
+  value: Date | string | undefined
+): Date | undefined {
   if (value === undefined) return undefined;
   const date = value instanceof Date ? value : new Date(value);
   return Number.isNaN(date.getTime()) ? undefined : date;
@@ -218,10 +241,13 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     knowledgeBaseSyncedSources: LYRA_DEFAULT_knowledgeBaseSyncedSources,
     knowledgeBaseSyncingSources: LYRA_DEFAULT_knowledgeBaseSyncingSources,
     knowledgeBaseTotalSources: LYRA_DEFAULT_knowledgeBaseTotalSources,
+    untitledSource: LYRA_DEFAULT_untitledSource,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  protected static override readonly ownedCollectionProperties = Object.freeze(['sources']);
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'sources',
+  ]);
 
   static override styles = [LyraElement.styles, styles];
 
@@ -234,10 +260,12 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   @property() label?: string;
 
   /** Hides the aggregate summary row (total/synced/syncing/needs-attention). */
-  @property({ type: Boolean, attribute: 'hide-summary', reflect: true }) hideSummary = false;
+  @property({ type: Boolean, attribute: 'hide-summary', reflect: true })
+  hideSummary = false;
 
   /** Hides the toolbar's "Add source" affordance, e.g. for a read-only or permission-gated view. */
-  @property({ type: Boolean, attribute: 'hide-create', reflect: true }) hideCreate = false;
+  @property({ type: Boolean, attribute: 'hide-create', reflect: true })
+  hideCreate = false;
 
   private get normalizedSources(): KnowledgeSource[] {
     return firstByRetrievalIdentity(
@@ -287,11 +315,20 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     }
   }
 
+  private sourceName(source: KnowledgeSource): string {
+    return typeof source.name === 'string' && source.name.trim() !== ''
+      ? source.name
+      : this.localize('untitledSource');
+  }
+
   private renderNameCell(source: KnowledgeSource): TemplateResult {
+    const name = this.sourceName(source);
     return html`
       <div part="name-cell">
-        <span part="source-name">${source.name}</span>
-        ${source.type ? html`<span part="source-type">${source.type}</span>` : nothing}
+        <span part="source-name">${name}</span>
+        ${source.type
+          ? html`<span part="source-type">${source.type}</span>`
+          : nothing}
       </div>
     `;
   }
@@ -300,12 +337,17 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     const lastSynced = normalizeTimestamp(source.lastSyncedAt);
     return html`
       <div part="sync-cell">
-        <lr-badge part="sync-badge" variant=${SYNC_STATUS_VARIANT[source.syncStatus]}
+        <lr-badge
+          part="sync-badge"
+          variant=${SYNC_STATUS_VARIANT[source.syncStatus]}
           >${this.syncStatusLabel(source.syncStatus)}</lr-badge
         >
         <span part="sync-timestamp">
           ${lastSynced
-            ? getDateTimeFormat(this.effectiveLocale, { dateStyle: 'medium', timeStyle: 'short' }).format(lastSynced)
+            ? getDateTimeFormat(this.effectiveLocale, {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+              }).format(lastSynced)
             : this.localize('knowledgeBaseNeverSynced')}
         </span>
         ${source.syncStatus === 'error' && source.errorMessage
@@ -319,11 +361,15 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     const health = source.indexingHealth ?? 'unknown';
     return html`
       <div part="health-cell">
-        <lr-badge part="health-badge" variant=${HEALTH_VARIANT[health]}>${this.healthLabel(health)}</lr-badge>
+        <lr-badge part="health-badge" variant=${HEALTH_VARIANT[health]}
+          >${this.healthLabel(health)}</lr-badge
+        >
         ${source.documentCount != null
           ? html`<span part="document-count"
               >${this.localize('knowledgeBaseDocumentCount', undefined, {
-                count: getNumberFormat(this.effectiveLocale).format(finiteCount(source.documentCount)),
+                count: getNumberFormat(this.effectiveLocale).format(
+                  finiteCount(source.documentCount)
+                ),
               })}</span
             >`
           : nothing}
@@ -333,24 +379,37 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
 
   private renderPermissionCell(source: KnowledgeSource): TemplateResult {
     if (!source.permission) return html``;
-    return html`<lr-badge part="permission-badge" variant=${PERMISSION_VARIANT[source.permission]}
+    return html`<lr-badge
+      part="permission-badge"
+      variant=${PERMISSION_VARIANT[source.permission]}
       >${this.permissionLabel(source.permission)}</lr-badge
     >`;
   }
 
   private onRowAction(source: KnowledgeSource, action: string): void {
     if (action === 'sync') this.emit('lr-source-sync', { sourceId: source.id });
-    else if (action === 'pause') this.emit('lr-source-pause', { sourceId: source.id });
-    else if (action === 'delete') this.emit('lr-source-delete', { sourceId: source.id });
+    else if (action === 'pause')
+      this.emit('lr-source-pause', { sourceId: source.id });
+    else if (action === 'delete')
+      this.emit('lr-source-delete', { sourceId: source.id });
   }
 
   private renderActionsCell(source: KnowledgeSource): TemplateResult {
     const canPause = source.syncStatus === 'syncing';
     const canSync = source.syncStatus !== 'syncing';
-    const label = this.localize('knowledgeBaseRowActionsLabel', undefined, { name: source.name });
+    const label = this.localize('knowledgeBaseRowActionsLabel', undefined, {
+      name: this.sourceName(source),
+    });
     return html`
       <lr-dropdown part="actions-menu" placement="bottom-end">
-        <button slot="trigger" type="button" part="actions-trigger" aria-label=${label}>${kebabIcon()}</button>
+        <button
+          slot="trigger"
+          type="button"
+          part="actions-trigger"
+          aria-label=${label}
+        >
+          ${kebabIcon()}
+        </button>
         <lr-menu
           label=${label}
           @lr-select=${(e: CustomEvent<MenuItemSelectDetail>) => {
@@ -413,7 +472,10 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     const synced = sources.filter((s) => s.syncStatus === 'synced').length;
     const syncing = sources.filter((s) => s.syncStatus === 'syncing').length;
     const attention = sources.filter(
-      (s) => s.syncStatus === 'error' || s.indexingHealth === 'failed' || s.indexingHealth === 'degraded',
+      (s) =>
+        s.syncStatus === 'error' ||
+        s.indexingHealth === 'failed' ||
+        s.indexingHealth === 'degraded'
     ).length;
     const numberFormat = getNumberFormat(this.effectiveLocale);
     return html`
@@ -445,7 +507,8 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
 
   override render(): TemplateResult {
     const sources = this.normalizedSources;
-    const heading = this.label == null ? this.localize('knowledgeBaseHeading') : this.label;
+    const heading =
+      this.label == null ? this.localize('knowledgeBaseHeading') : this.label;
     return html`
       <div part="base">
         <div part="toolbar">
@@ -471,7 +534,9 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
           .rowKey=${(row: KnowledgeSource) => row.id}
           .accessibleLabel=${heading}
           empty-heading=${this.localize('knowledgeBaseEmptyHeading')}
-          empty-description=${this.localize('knowledgeBaseEmptyDescription', undefined,
+          empty-description=${this.localize(
+            'knowledgeBaseEmptyDescription',
+            undefined
           )}
           @lr-row-click=${(e: Event) => e.stopPropagation()}
         ></lr-table>

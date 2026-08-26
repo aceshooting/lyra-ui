@@ -15,10 +15,15 @@ import "../button/button.js";
 import "../token-input/token-input.js";
 import "../color-picker/color-picker.js";
 import "../../layout/segmented/segmented.js";
-import type { ComboboxFilterDetail, LyraCombobox } from "./combobox.js";
+import type {
+  ComboboxFilterDetail,
+  ComboboxSourceRow,
+  LyraCombobox,
+} from "./combobox.js";
 import type { LyraColorPicker } from "../color-picker/color-picker.js";
 import { styles } from "./combobox.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { setReducedMotion } from "../../../../test/wtr-media.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import {
   RESET_OPTION_SELECTED_FROM_OWNER,
@@ -28,6 +33,12 @@ import {
   __setAnchoredOverlayRuntimeLoaderForTesting,
   type AnchoredOverlayRuntime,
 } from '../../../internal/anchored-overlay-runtime.js';
+
+const requiredItem = <T>(items: ArrayLike<T>, index: number, description: string): T => {
+  const item = items[index];
+  if (item === undefined) throw new Error(`Missing ${description} at index ${index}.`);
+  return item;
+};
 
 function positionedRuntime(onPlace?: () => void): AnchoredOverlayRuntime {
   return {
@@ -198,14 +209,16 @@ it("exposes exactly one composed InputEvent when the user types", async () => {
   await typeQuery(el, "ban");
 
   expect(inputEvents.length).to.equal(1);
-  expect(inputEvents[0].constructor.name).to.equal("InputEvent");
-  expect(inputEvents[0].bubbles).to.be.true;
-  expect(inputEvents[0].composed).to.be.true;
-  expect(inputEvents[0].cancelable).to.be.false;
-  expect((inputEvents[0].target as Element).localName).to.equal("lr-combobox");
-  expect((inputEvents[0] as InputEvent).data).to.equal("ban");
-  expect((inputEvents[0] as InputEvent).inputType).to.equal("insertText");
-  expect((inputEvents[0] as InputEvent).isComposing).to.be.false;
+  const inputEvent = requiredItem(inputEvents, 0, 'input event');
+  if (!(inputEvent instanceof InputEvent)) throw new Error('The relayed input was not an InputEvent.');
+  expect(inputEvent.constructor.name).to.equal("InputEvent");
+  expect(inputEvent.bubbles).to.be.true;
+  expect(inputEvent.composed).to.be.true;
+  expect(inputEvent.cancelable).to.be.false;
+  expect((inputEvent.target as Element).localName).to.equal("lr-combobox");
+  expect(inputEvent.data).to.equal("ban");
+  expect(inputEvent.inputType).to.equal("insertText");
+  expect(inputEvent.isComposing).to.be.false;
   expect(changeCount).to.equal(0);
 });
 
@@ -565,7 +578,7 @@ it("forwards selection editing methods to the native input and handles an empty 
 
   el.setRangeText("X");
   expect(input.value).to.equal("Xple");
-  expect(el.query).to.equal("Xple");
+  expect((el as unknown as { query: string }).query).to.equal("Xple");
 
   el.name = "fruit";
   expect(el.getAttribute("name")).to.equal("fruit");
@@ -622,6 +635,104 @@ it("resolves selectedRows from local rows and uncached async rows", async () => 
   state._selectedRowCache.clear();
   state.asyncRows = [{ value: "remote", label: "Remote" }];
   expect(el.selectedRows[0]?.label).to.equal("Remote");
+});
+
+it('maps writable selectedRows onto current local values without user-change events', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.multiple = true;
+  el.value = ['a', 'b'];
+  await el.updateComplete;
+  const rows = el.selectedRows;
+  el.value = [];
+  const events: string[] = [];
+  for (const type of ['input', 'change', 'lr-input', 'lr-change']) {
+    el.addEventListener(type, () => events.push(type));
+  }
+
+  el.selectedRows = [
+    rows[1]!,
+    { value: 'detached', label: 'Detached' },
+    rows[0]!,
+    rows[1]!,
+  ];
+  await el.updateComplete;
+
+  expect(el.value).to.deep.equal(['b', 'a']);
+  expect(el.selectedRows.map((row) => row.value)).to.deep.equal(['b', 'a']);
+  expect(events, 'controlled structured selection stays silent').to.deep.equal([]);
+
+  el.multiple = false;
+  el.selectedRows = [rows[0]!, rows[1]!];
+  await el.updateComplete;
+  expect(el.value, 'single mode keeps the first current row').to.equal('a');
+
+  (el as unknown as { selectedRows: unknown }).selectedRows = null;
+  await el.updateComplete;
+  expect(el.value, 'a non-array write clears selection').to.equal('');
+  expect(events).to.deep.equal([]);
+});
+
+it('defers an initial selectedRows property binding until local options are collected', async () => {
+  const selected: ComboboxSourceRow[] = [{ value: 'b', label: 'Caller copy' }];
+  const el = (await fixture(html`
+    <lr-combobox multiple .selectedRows=${selected}>
+      <lr-option value="a">Apple</lr-option>
+      <lr-option value="b">Banana</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  await el.updateComplete;
+
+  expect(el.value).to.deep.equal(['b']);
+  expect(el.selectedRows.map((row) => row.label)).to.deep.equal(['Banana']);
+});
+
+it('canonicalizes writable selectedRows against the current async source', async () => {
+  const payload = { kind: 'city' };
+  const sourceRows: ComboboxSourceRow[] = [
+    { value: 'lux', label: 'Luxembourg', data: payload },
+    { value: 'par', label: 'Paris', data: { kind: 'city' } },
+  ];
+  const el = (await fixture(
+    html`<lr-combobox source-delay="0" open></lr-combobox>`,
+  )) as LyraCombobox;
+  el.source = async () => sourceRows;
+  await waitUntil(
+    () => el.shadowRoot!.querySelectorAll('[part="option"]').length === 2,
+    'the async source rows did not render',
+  );
+
+  el.selectedRows = [sourceRows[0]!, { value: 'unknown', label: 'Unknown' }];
+  await el.updateComplete;
+
+  expect(el.value).to.equal('lux');
+  expect(el.selectedRows).to.have.length(1);
+  expect(el.selectedRows[0]!.label).to.equal('Luxembourg');
+  expect(el.selectedRows[0]!.data).to.equal(payload);
+  expect(el.selectedRows[0]).to.not.equal(sourceRows[0]);
+});
+
+it('warms a closed async source to resolve an initial selectedRows binding', async () => {
+  const payload = { kind: 'city' };
+  const sourceRows: ComboboxSourceRow[] = [
+    { value: 'lux', label: 'Luxembourg', data: payload },
+  ];
+  let sourceCalls = 0;
+  const el = (await fixture(html`
+    <lr-combobox
+      source-delay="0"
+      .selectedRows=${[sourceRows[0]!]}
+      .source=${async () => {
+        sourceCalls += 1;
+        return sourceRows;
+      }}
+    ></lr-combobox>
+  `)) as LyraCombobox;
+
+  await waitUntil(() => el.value === 'lux', 'the deferred async selection did not resolve');
+
+  expect(el.open).to.equal(false);
+  expect(sourceCalls).to.equal(1);
+  expect(el.selectedRows[0]!.data).to.equal(payload);
 });
 
 it("participates in a form (single + multiple)", async () => {
@@ -1051,7 +1162,7 @@ it("uses shared svg icons instead of literal glyphs for chevron, clear, and tag-
   expect(styles.cssText).to.match(/\[part=["']expand-icon["']\]\s+svg/);
 });
 
-it("transitions the listbox with the shared fast-transition token and respects reduced motion", () => {
+it("transitions the listbox with the shared fast-transition token and respects reduced motion", async () => {
   const css = styles.cssText;
   const listboxBlock = /\[part=['"]?listbox['"]?]\s*{([^}]*)}/.exec(css);
   expect(listboxBlock, 'expected a base [part="listbox"] rule').to.not.equal(
@@ -1059,6 +1170,29 @@ it("transitions the listbox with the shared fast-transition token and respects r
   );
   expect(listboxBlock![1]).to.include("var(--lr-transition-fast)");
   expect(css).to.match(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
+
+  try {
+    await setReducedMotion("no-preference");
+    const el = (await fixture(html`
+      <lr-combobox style="--lr-transition-fast: 2s">
+        <lr-option value="a">Apple</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+    expect(
+      getComputedStyle(listbox)
+        .transitionDuration.split(", ")
+        .every((duration) => duration === "2s")
+    ).to.equal(true);
+
+    await setReducedMotion("reduce");
+    await waitUntil(
+      () => getComputedStyle(listbox).transitionDuration === "0s",
+      "combobox listbox transition did not stop under reduced motion"
+    );
+  } finally {
+    await setReducedMotion("no-preference");
+  }
 });
 
 it("uses the shared disabled-opacity token for the disabled host and disabled options", async () => {
@@ -1168,7 +1302,7 @@ it("gives the clear button and expand icon a real touch target instead of collap
     clearBlocks.length,
     'expected at least one [part="clear-button"] rule'
   ).to.be.greaterThan(0);
-  expect(clearBlocks.some((m) => m[1].includes("var(--lr-icon-button-size)")))
+  expect(clearBlocks.some((match) => match[1]?.includes("var(--lr-icon-button-size)")))
     .to.be.true;
   const expandBlocks = [
     ...css.matchAll(/\[part=['"]?expand-icon['"]?]\s*{([^}]*)}/g),
@@ -1177,7 +1311,7 @@ it("gives the clear button and expand icon a real touch target instead of collap
     expandBlocks.length,
     'expected at least one [part="expand-icon"] rule'
   ).to.be.greaterThan(0);
-  expect(expandBlocks.some((m) => m[1].includes("var(--lr-icon-button-size)")))
+  expect(expandBlocks.some((match) => match[1]?.includes("var(--lr-icon-button-size)")))
     .to.be.true;
 
   const el = (await fixture(basic())) as LyraCombobox;
@@ -1398,7 +1532,7 @@ it("renders a data-value on each option row for delegated click/mousedown handli
   el.open = true;
   await el.updateComplete;
   const first = el.shadowRoot!.querySelector('[part="option"]') as HTMLElement;
-  expect(first.dataset.value).to.equal("a");
+  expect(first.dataset['value']).to.equal("a");
 });
 
 it("resolves the correct row via a delegated listbox listener after a re-render reorders options", async () => {
@@ -1637,7 +1771,7 @@ it("clone-normalizes source rows, retains valid siblings, and contains hostile g
 
   const rows = el.shadowRoot!.querySelectorAll('[part="option"]');
   expect(rows).to.have.length(1);
-  expect(rows[0].textContent).to.contain("Safe row");
+  expect(requiredItem(rows, 0, 'normalized option').textContent).to.contain("Safe row");
   expect(el.sourceTruncated).to.be.true;
 });
 
@@ -1683,10 +1817,10 @@ it("ignores a stale source response that resolves after a newer query", async ()
   await aTimeout(250);
 
   expect(resolvers).to.have.length(2);
-  resolvers[0]([{ value: "stale", label: "Stale result" }]);
+  requiredItem(resolvers, 0, 'stale source resolver')([{ value: "stale", label: "Stale result" }]);
   await aTimeout(0);
   await el.updateComplete;
-  resolvers[1]([{ value: "fresh", label: "Fresh result" }]);
+  requiredItem(resolvers, 1, 'fresh source resolver')([{ value: "fresh", label: "Fresh result" }]);
   // See the comment in the "shows a loading row" test above: resolving triggers a `.then()` ->
   // set asyncRows -> render chain that needs a macrotask boundary to fully settle before a
   // subsequent `updateComplete` reliably reflects it.
@@ -2055,7 +2189,7 @@ it("uses a custom filter function instead of the default label/searchText matche
   // label contains "a"); only the custom filter narrows this to one row.
   const rows = el.shadowRoot!.querySelectorAll('[part="option"]');
   expect(rows.length).to.equal(1);
-  expect(rows[0].textContent).to.contain("Apple");
+  expect(requiredItem(rows, 0, 'filtered option').textContent).to.contain("Apple");
 });
 
 it("renders a group-label header when option rows are grouped", async () => {
@@ -2117,7 +2251,7 @@ it('caps visible tags at maxOptionsVisible and shows a "+N" overflow tag', async
 
   const tags = el.shadowRoot!.querySelectorAll('[part="tag"]');
   expect(tags.length).to.equal(3);
-  expect(tags[2].textContent?.trim()).to.equal("+2 more");
+  expect(requiredItem(tags, 2, 'overflow tag').textContent?.trim()).to.equal("+2 more");
 });
 
 it("shows the empty-state message with a custom emptyText when no rows match", async () => {
@@ -2754,7 +2888,7 @@ it('binds the outside-pointer listener only once when reopening races the queued
     parent.appendChild(el);
     el.open = true;
     await el.updateComplete;
-    await new Promise((resolve) => queueMicrotask(resolve));
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
     await el.updateComplete;
 
     expect(
@@ -2817,7 +2951,7 @@ it("recovers loading=false and does not throw when source() rejects", async () =
     await aTimeout(250);
     expect((el as unknown as { loading: boolean }).loading).to.be.false;
     expect(warnCalls.length).to.be.greaterThan(0);
-    expect(String(warnCalls[0][0])).to.include("rejected");
+    expect(String(requiredItem(requiredItem(warnCalls, 0, 'warning call'), 0, 'warning argument'))).to.include("rejected");
   } finally {
     console.warn = originalWarn;
   }
@@ -2843,7 +2977,7 @@ it("recovers loading=false when source() throws synchronously instead of returni
     console.warn = originalWarn;
   }
   expect(warnCalls.flat()).to.contain(error);
-  expect(String(warnCalls[0][0])).to.include("rejected");
+  expect(String(requiredItem(requiredItem(warnCalls, 0, 'warning call'), 0, 'warning argument'))).to.include("rejected");
 });
 
 it("resolves a programmatically-set value to its label from asyncRows, warming the fetch before the listbox ever opens (single-select)", async () => {
@@ -3845,7 +3979,7 @@ describe("native input surface", () => {
     ) as HTMLInputElement;
     const related = document.createElement("button");
     const nativeEvents: FocusEvent[] = [];
-    const aliases: CustomEvent<null>[] = [];
+    const aliases: Event[] = [];
     el.addEventListener("focus", (event) => nativeEvents.push(event));
     el.addEventListener("blur", (event) => nativeEvents.push(event));
     el.addEventListener("lr-focus", (event) => aliases.push(event));
@@ -3868,7 +4002,9 @@ describe("native input surface", () => {
       )
     ).to.be.true;
     expect(
-      nativeEvents.map((event) => event.relatedTarget?.nodeName)
+      nativeEvents.map((event) =>
+        event.relatedTarget instanceof Node ? event.relatedTarget.nodeName : null
+      )
     ).to.deep.equal(["BUTTON", "BUTTON"]);
     expect(aliases).to.deep.equal([]);
   });
@@ -4734,7 +4870,6 @@ describe("row state feedback on the already-selected option", () => {
     );
     if (control === null || selected === null) {
       this.skip();
-      return;
     }
     expect(control.hover, "an unselected row hovers to the row tint").to.equal(
       "rgb(1, 2, 3)"
@@ -5994,7 +6129,7 @@ it("re-runs source on reconnect while closed with a stale selection and empty as
   el.remove();
   await el.updateComplete;
   document.body.appendChild(el); // reconnect while still closed
-  await new Promise((resolve) => queueMicrotask(resolve));
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
   await el.updateComplete;
   await aTimeout(250);
 
@@ -6030,7 +6165,7 @@ it("rebinds positioning and refreshes empty async rows when reconnected while op
   ).to.equal(0);
 
   parent.appendChild(el);
-  await new Promise((resolve) => queueMicrotask(resolve));
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
   await el.updateComplete;
 
   const listbox = el.shadowRoot!.querySelector(

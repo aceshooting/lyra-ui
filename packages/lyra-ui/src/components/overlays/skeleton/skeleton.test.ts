@@ -16,6 +16,18 @@ it('defaults to a decorative text shape like the mirrored upstream skeletons', a
   expect(el.shadowRoot!.querySelector('[part~="indicator"]')).to.exist;
 });
 
+it('preserves an author-owned host role while announce is unset', async () => {
+  const presentation = (await fixture(
+    html`<lr-skeleton role="presentation"></lr-skeleton>`
+  )) as LyraSkeleton;
+  const image = (await fixture(
+    html`<lr-skeleton role="img" aria-label="Chart placeholder"></lr-skeleton>`
+  )) as LyraSkeleton;
+
+  expect(presentation.getAttribute('role')).to.equal('presentation');
+  expect(image.getAttribute('role')).to.equal('img');
+});
+
 it('applies explicit width/height as inline custom properties on the host', async () => {
   const el = (await fixture(
     html`<lr-skeleton shape="circle" width="3rem" height="3rem"></lr-skeleton>`,

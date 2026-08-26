@@ -43,6 +43,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { parseSync } from 'oxc-parser';
+import { isMainModule } from './is-main-module.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const srcRoot = path.join(packageDir, 'src');
@@ -529,8 +530,6 @@ function run() {
   }
 }
 
-const isMain = process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url));
-if (isMain) run();
+if (isMainModule(import.meta.url)) run();
 
 export { run };
-

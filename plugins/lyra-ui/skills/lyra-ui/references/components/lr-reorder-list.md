@@ -6,6 +6,7 @@
 - **Class** `LyraReorderList`, also available unregistered from `@aceshooting/lyra-ui/components/layout/reorder-list/reorder-list.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 1 part, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
@@ -30,8 +31,8 @@ the move open (mirroring `lr-confirm-bar`'s cancelable approve/deny pattern) unt
 
 **Properties:**
 
-- `label: string = ''` — accessible name for the internal `role="list"`; when empty, a host
-  `aria-label` is forwarded as a fallback.
+- `label: string = ''` — accessible-name fallback for the internal `role="list"`. A present host
+  `aria-label` always wins over `label`, including when the host value is explicitly empty.
 - `disabled: boolean = false` (reflected) — disables every item's move buttons and the Ctrl/Cmd+
   Arrow shortcut, without mutating any item's own `disabled` attribute.
 

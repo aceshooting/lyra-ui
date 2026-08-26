@@ -6,9 +6,10 @@
 - **Class** `LyraSpreadsheetViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `xlsx` — see `llms/peers.md`
-- **Themeable via** 12 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -50,9 +51,11 @@ grid viewer's event contract; its registry capabilities advertise `textSelect: f
 structural cell covered by a `highlights` entry), `cell-highlight-action` (the native button
 filling a highlighted cell; focusable and emits `lr-highlight-activate`; its complete accessible
 name uses the localized `cellHighlightWithLabel` message with independent `{value}` and `{label}`
-placeholders), `rows`, `spinner`, and
-`error`. `data-row`, `cell`, `cell-highlight`, and `cell-highlight-action` are rendered inside the
-internal `<lr-virtual-list>` and forwarded via
+placeholders), `rows`, `spinner`, `error`, and `anchor-live-region` (an aria-hidden, non-live shadow
+mirror of the latest anchor-jump message; the spoken copy is appended to the shared document-level
+polite sink only while the viewer and its composed ancestors are exposed to the accessibility tree).
+`data-row`, `cell`, `cell-highlight`, and `cell-highlight-action` are rendered inside the internal
+`<lr-virtual-list>` and forwarded via
 `exportparts`, so `lr-spreadsheet-viewer::part(cell)` reaches them from a consumer stylesheet.
 The spinner always includes visible localized loading text alongside its decorative ring; the text
 remains understandable without CSS or animation and the ring stops under reduced motion.
@@ -71,6 +74,7 @@ inline on `[part="base"]`.
 **Optional peer dependency:** install `xlsx` with `pnpm add https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`. The official CDN matches the
 `.xlsx` and `.xls` MIME types and filename extensions.
 
-Remote resources are capped at 25 MB, and each parsed sheet at 10,000 rows and 1,000 columns;
-exceeding any of these surfaces the localized `documentPreviewResourceTooLarge` message instead of
-the workbook.
+Remote resources are capped at 25 MB, each parsed sheet at 10,000 rows and 1,000 columns, and each
+workbook at 256 sheets and 1,000,000 aggregate expanded cells. Row limits are per sheet, not
+cumulative across a workbook. Exceeding any ceiling surfaces the localized
+`documentPreviewResourceTooLarge` message instead of the workbook.

@@ -145,10 +145,12 @@ export interface LyraConversationItemEventMap {
  * @customElement lr-conversation-item
  * @slot actions - Overflow/icon-button controls (for example a pin/delete
  * button or a `lr-menu` trigger) rendered at the trailing edge of the row.
- * @slot start - Non-interactive content such as an avatar, purpose icon, or status indicator,
- * rendered inside the selectable region before the label/excerpt content.
+ * @slot start - Content such as an avatar, purpose icon, or status indicator, rendered inside the
+ *   selectable region before the label/excerpt content. Only non-focusable content should be
+ *   slotted here because the selectable region owns `role="button"`.
  * @slot content - Replaces the built-in label, excerpt, and meta content area with host-supplied
- * non-interactive row content.
+ *   row content. Only non-focusable content should be slotted here because the selectable region
+ *   owns `role="button"`.
  * @slot excerpt - Full override of the excerpt presentation (e.g. a search-hit snippet with `<mark>`
  *   highlighting). Wins over the `excerpt` property whenever it has assigned content, even if
  *   `excerpt` is also set. Only non-focusable content should be slotted here — see the `excerpt`

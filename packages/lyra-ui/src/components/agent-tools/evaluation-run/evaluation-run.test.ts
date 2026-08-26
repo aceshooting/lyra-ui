@@ -56,12 +56,25 @@ it('defaults to examples=[], total=null, label=""', async () => {
   expect(el.label).to.equal('');
 });
 
-it('tolerates an example whose status is missing entirely instead of throwing', async () => {
-  const el = (await fixture(
-    html`<lr-eval-run .examples=${[{ id: 'e1', label: 'E' }] as never}></lr-eval-run>`,
-  )) as LyraEvalRun;
-  await el.updateComplete;
+it('defaults a missing runtime example status to idle without losing the run', async () => {
+  const el = await fixture<LyraEvalRun>(html`
+    <lr-eval-run .examples=${[{ id: 'e1', label: 'Example' }] as never}></lr-eval-run>
+  `);
+
   expect(el.shadowRoot!.querySelectorAll('[part="example"]')).to.have.length(1);
+  expect(el.shadowRoot!.querySelector('[part="example-status"]')!.textContent!.trim()).to.equal('Idle');
+  expect(el.shadowRoot!.querySelector('[part="progress"]')!.getAttribute('value')).to.equal('0');
+});
+
+it('renders an expanded streaming example before its input and output payloads arrive', async () => {
+  const el = await fixture<LyraEvalRun>(html`
+    <lr-eval-run
+      .examples=${[{ id: 'ex-1', label: 'Example 1', status: { kind: 'queued' } }] as unknown as EvalExampleResult[]}
+    ></lr-eval-run>
+  `);
+  const row = await expandExample(el);
+  expect((row.querySelector('[part="input"]') as HTMLElement & { content: string }).content).to.equal('');
+  expect((row.querySelector('[part="output"]') as HTMLElement & { content: string }).content).to.equal('');
 });
 
 it('renders a batch progress bar reflecting completed/total and a completed-of-total summary', async () => {
@@ -108,7 +121,7 @@ it('falls back to examples.length when total is unset', async () => {
 it('shows a running/failed count badge only when that count is nonzero', async () => {
   const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
   const counts = [...el.shadowRoot!.querySelectorAll('[part="count"]')] as HTMLElement[];
-  expect(counts.map((c) => c.dataset.kind)).to.deep.equal(['running', 'error']);
+  expect(counts.map((c) => c.dataset['kind'])).to.deep.equal(['running', 'error']);
 });
 
 it('renders an empty state when examples is []', async () => {
@@ -121,7 +134,7 @@ it('renders one lr-details[part="example"] per example, carrying data-status', a
   const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
   const rows = [...el.shadowRoot!.querySelectorAll('[part="example"]')] as HTMLElement[];
   expect(rows.length).to.equal(3);
-  expect(rows[1]!.dataset.status).to.equal('running');
+  expect(rows[1]!.dataset['status']).to.equal('running');
 });
 
 it('uses the example label when provided, and a localized "Example N" fallback otherwise', async () => {

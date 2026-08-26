@@ -6,6 +6,7 @@
 - **Class** `LyraDocumentPreview`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/document-preview/document-preview.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 18 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below

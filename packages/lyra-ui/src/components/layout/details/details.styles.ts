@@ -14,14 +14,9 @@ export const styles = css`
     --_lr-details-spacing: var(--lr-form-control-padding-inline);
   }
   [part~="base"] {
-    /* flex-wrap, not grid: header-actions must be a peer of the summary row, not nested inside it
-       -- an interactive control inside <summary> would make every press on it toggle the panel --
-       while [part="content"] still needs full width on the row below. A grid column spanned by
-       both a "row 1" item and content's "row 2" couples their track sizing, and content's
-       long-text max-content demand starves the row-1 columns. flex-basis: 100% gives content its
-       own wrapped line, so line 1 sizes independently of line 2. */
-    display: flex;
-    flex-wrap: wrap;
+    /* Native details places every non-summary child in its generated details-content box. The
+       summary owns the complete header row, including non-toggling header actions, while content
+       follows in the native disclosure block below. */
     border: var(--lr-border-width-thin) solid
       var(--lr-details-outlined-border-color, var(--lr-color-border));
     border-radius: var(--lr-details-radius, var(--lr-radius));
@@ -51,7 +46,6 @@ export const styles = css`
   }
   [part="summary"] {
     display: block;
-    flex: 1 1 auto;
     padding-block: var(
       --spacing,
       var(--lr-details-spacing, var(--_lr-details-spacing))
@@ -72,11 +66,11 @@ export const styles = css`
   [part="header"] {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: var(--lr-details-gap, var(--lr-space-s));
     min-inline-size: 0;
   }
   .summary-content {
+    flex: 1 1 auto;
     min-inline-size: 0;
     overflow-wrap: anywhere;
   }
@@ -131,16 +125,11 @@ export const styles = css`
     flex: 0 0 auto;
     display: flex;
     align-items: center;
-    padding-inline-end: var(
-      --spacing,
-      var(--lr-details-spacing, var(--_lr-details-spacing))
-    );
   }
   [part~="header-actions"][hidden] {
     display: none;
   }
   [part="content"] {
-    flex: 1 1 100%;
     padding-block-end: var(
       --spacing,
       var(--lr-details-spacing, var(--_lr-details-spacing))

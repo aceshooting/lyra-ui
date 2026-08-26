@@ -6,6 +6,9 @@
  */
 export declare function flagUrl(code: string): Promise<string | undefined>;
 
+/** Resolves every shipped standard-tier flag URL without reaching another fidelity tier. */
+export declare function flagUrls(): Promise<Record<string, string>>;
+
 /**
  * Builds a `flagUrl`-shaped resolver backed by one shared eager map of every standard-tier flag
  * URL, for a page that renders most/all flags at once instead of resolving each `<lr-flag>`

@@ -10,10 +10,10 @@ import "./ebook-viewer.js";
 import { __setEpubJsForTesting } from "./ebook-loader.js";
 import type { LyraEbookViewer } from "./ebook-viewer.js";
 import { DEFAULT_MAX_RESOURCE_BYTES } from "../../../internal/resource-loader.js";
-import { styles } from "./ebook-viewer.styles.js";
 import { MINIMAL_EPUB_BASE64 } from "./fixtures/minimal-epub-fixture.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { VIEWER_SEARCH_QUERY_LIMIT } from "../viewer-search-limits.js";
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import {
   TEXT_QUOTE_LIMITS,
   TEXT_SELECTION_RECT_LIMIT,
@@ -93,7 +93,7 @@ it("resolves highlight tokens through the adopted document window", async () => 
   let calls = 0;
   ownerWindow.getComputedStyle = (() => {
     calls++;
-    return { getPropertyValue: () => "rgb(1, 2, 3)" } as CSSStyleDeclaration;
+    return { getPropertyValue: () => "rgb(1, 2, 3)" } as unknown as CSSStyleDeclaration;
   }) as typeof ownerWindow.getComputedStyle;
   try {
     iframe.contentDocument!.body.append(el);
@@ -1073,12 +1073,12 @@ describe("location", () => {
     __setEpubJsForTesting(fake.factory as never);
     const restore = stubFetch();
     try {
-      const el = (await fixture(
+      await fixture(
         html`<lr-ebook-viewer
           src="https://example.test/book.epub"
           location="epubcfi(/6/4!)"
         ></lr-ebook-viewer>`
-      )) as LyraEbookViewer;
+      );
       await aTimeout(20);
       expect(fake.displayedCfis).to.include("epubcfi(/6/4!)");
     } finally {
@@ -1271,7 +1271,7 @@ describe("lr-ebook-viewer search", () => {
 
   it("caps peer-produced search results at 10,000 matches", async () => {
     const fake = fakeBookWithFeatures({ "ch1.xhtml": "needle" });
-    fake.book.spine.spineItems[0].find = () =>
+    fake.book.spine.spineItems[0]!.find = () =>
       Array.from({ length: 25_000 }, (_unused, index) => ({
         cfi: `epubcfi(/6/2!/4/${index})`,
         excerpt: `match ${index}`,
@@ -1304,7 +1304,7 @@ describe("lr-ebook-viewer search", () => {
   it("rejects an oversized query before loading or searching a spine section", async () => {
     const fake = fakeBookWithFeatures({ "ch1.xhtml": "needle" });
     let findCalls = 0;
-    fake.book.spine.spineItems[0].find = () => {
+    fake.book.spine.spineItems[0]!.find = () => {
       findCalls++;
       return [];
     };
@@ -1575,7 +1575,7 @@ describe("lr-ebook-viewer search", () => {
       "ch1.xhtml": "apple",
       "ch2.xhtml": "banana",
     });
-    fake.book.spine.spineItems[0].find = () => {
+    fake.book.spine.spineItems[0]!.find = () => {
       throw new Error("boom");
     };
     __setEpubJsForTesting(fake.factory as never);
@@ -1749,8 +1749,8 @@ describe("lr-ebook-viewer search", () => {
   it("re-runs the active search after an effective locale change", async () => {
     const fake = fakeBookWithFeatures({ "ch1.xhtml": "the treasure map" });
     let findCalls = 0;
-    const originalFind = fake.book.spine.spineItems[0].find;
-    fake.book.spine.spineItems[0].find = (query: string) => {
+    const originalFind = fake.book.spine.spineItems[0]!.find;
+    fake.book.spine.spineItems[0]!.find = (query: string) => {
       findCalls++;
       return originalFind(query);
     };
@@ -1895,7 +1895,7 @@ describe("scrollToAnchor (ebook)", () => {
   it("prevents a delayed stale text-quote anchor from displaying after a newer anchor", async () => {
     const fake = fakeBookWithFeatures({ "ch1.xhtml": "old quote" });
     const delayedFind = deferred<Array<{ cfi: string; excerpt: string }>>();
-    fake.book.spine.spineItems[0].find = () => delayedFind.promise as never;
+    fake.book.spine.spineItems[0]!.find = () => delayedFind.promise as never;
     __setEpubJsForTesting(fake.factory as never);
     const restore = stubFetch();
     try {
@@ -2061,7 +2061,7 @@ describe("scrollToAnchor (ebook)", () => {
       "ch1.xhtml": "apple",
       "ch2.xhtml": "banana",
     });
-    fake.book.spine.spineItems[0].find = () => {
+    fake.book.spine.spineItems[0]!.find = () => {
       throw new Error("boom");
     };
     __setEpubJsForTesting(fake.factory as never);
@@ -2174,7 +2174,7 @@ describe("scrollToAnchor (ebook)", () => {
       ];
       await el.updateComplete;
       expect(fake.highlightCalls).to.have.lengthOf(1);
-      expect(fake.highlightCalls[0].cfi).to.equal("epubcfi(/6/6!)");
+      expect(fake.highlightCalls[0]!.cfi).to.equal("epubcfi(/6/6!)");
     } finally {
       restore();
     }
@@ -2300,9 +2300,9 @@ describe("scrollToAnchor (ebook)", () => {
       const dangerCall = fake.highlightCalls.find(
         (call) => call.cfi === "epubcfi(/6/8!)"
       );
-      expect(successCall?.styles?.fill).to.be.a("string").and.not.equal("");
-      expect(dangerCall?.styles?.fill).to.be.a("string").and.not.equal("");
-      expect(successCall?.styles?.fill).to.not.equal(dangerCall?.styles?.fill);
+      expect(successCall?.styles?.['fill']).to.be.a("string").and.not.equal("");
+      expect(dangerCall?.styles?.['fill']).to.be.a("string").and.not.equal("");
+      expect(successCall?.styles?.['fill']).to.not.equal(dangerCall?.styles?.['fill']);
     } finally {
       restore();
     }
@@ -2456,8 +2456,8 @@ describe("scrollToAnchor (ebook)", () => {
       const search = fake.highlightCalls
         .filter((call) => call.className === "lr-ebook-search")
         .at(-1)!;
-      expect(highlight.styles.fill).to.equal("rgb(1, 2, 3)");
-      expect(search.styles.fill).to.equal("rgb(4, 5, 6)");
+      expect(highlight.styles['fill']).to.equal("rgb(1, 2, 3)");
+      expect(search.styles['fill']).to.equal("rgb(4, 5, 6)");
       expect(fake.removeCalls.length).to.be.greaterThan(removeCount);
     } finally {
       restore();
@@ -2479,7 +2479,7 @@ describe("scrollToAnchor (ebook)", () => {
       const searchCall = fake.highlightCalls.find(
         (call) => call.className === "lr-ebook-search"
       );
-      expect(searchCall?.styles?.fill).to.be.a("string").and.not.equal("");
+      expect(searchCall?.styles?.['fill']).to.be.a("string").and.not.equal("");
     } finally {
       restore();
     }
@@ -2601,10 +2601,39 @@ describe("maxHeight", () => {
 });
 
 describe("styling", () => {
-  it("gives previous-button and next-button a hover state", () => {
-    const css = styles.cssText.replace(/\s+/g, " ");
-    expect(css).to.match(/\[part=["']previous-button["']\]:hover/);
-    expect(css).to.match(/\[part=["']next-button["']\]:hover/);
+  it("changes both rendered chapter buttons under real pointer hover", async () => {
+    const el = await fixture<LyraEbookViewer>(html`
+      <lr-ebook-viewer
+        style="--lr-color-brand-quiet: rgb(1, 2, 3)"
+      ></lr-ebook-viewer>
+    `);
+    try {
+      for (const selector of [
+        '[part="previous-button"]',
+        '[part="next-button"]',
+      ]) {
+        const button = el.shadowRoot!.querySelector(selector) as HTMLElement;
+        const resting = getComputedStyle(button).backgroundColor;
+        const box = button.getBoundingClientRect();
+        await resetMouse();
+        await sendMouse({
+          type: 'move',
+          position: [
+            Math.round(box.left + box.width / 2),
+            Math.round(box.top + box.height / 2),
+          ],
+        });
+        await waitUntil(
+          () => getComputedStyle(button).backgroundColor !== resting,
+          `${selector} never entered its rendered hover state`,
+        );
+        expect(getComputedStyle(button).backgroundColor).to.equal(
+          'rgb(1, 2, 3)',
+        );
+      }
+    } finally {
+      await resetMouse();
+    }
   });
 });
 

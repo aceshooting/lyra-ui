@@ -554,7 +554,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     }
     if (this.limitAnnouncementInitialized && this.renderedProjectionTruncated && !this.previouslyTruncated) {
       this.limitAnnouncementSink?.announce(this.localize('spanProjectionLimit', undefined, {
-        count: MAX_RENDERED_LYRA_SPANS,
+        count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_LYRA_SPANS),
       }));
     }
     this.limitAnnouncementInitialized = true;
@@ -685,7 +685,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
           : html`${this.showTokens || this.showCost ? this.renderHeader() : nothing}${rows.map((row) => this.renderRow(row, firstId, extent))}`}
         ${hierarchy.truncated
           ? html`<p part="limit" role="note">${this.localize('spanProjectionLimit', undefined, {
-              count: MAX_RENDERED_LYRA_SPANS,
+              count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_LYRA_SPANS),
             })}</p>`
           : nothing}
       </div>

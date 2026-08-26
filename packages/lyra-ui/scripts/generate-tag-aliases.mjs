@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isMainModule } from './is-main-module.mjs';
 
 // Generates stable, tag-shaped component entry points such as
 // `@aceshooting/lyra-ui/components/lr-input.js`. The alias is intentionally
@@ -6,7 +7,7 @@
 // existing registration entry so importing it keeps the normal define-once
 // behavior.
 
-import { existsSync, readFileSync, readdirSync, realpathSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -128,4 +129,4 @@ function main() {
   );
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) main();
+if (isMainModule(import.meta.url)) main();

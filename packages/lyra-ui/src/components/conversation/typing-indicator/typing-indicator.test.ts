@@ -259,9 +259,9 @@ describe('ambient transition token', () => {
   it('dots variant bounce animation uses the ambient token, with staggered delays scaled to it', async () => {
     const el = (await fixture(html`<lr-typing-indicator shape="dots"></lr-typing-indicator>`)) as LyraTypingIndicator;
     const dots = el.shadowRoot!.querySelectorAll('[part="dot"]');
-    expect(getComputedStyle(dots[0]).animationDuration).to.equal('1.8s');
-    expect(getComputedStyle(dots[1]).animationDelay).to.equal('0.6s');
-    expect(getComputedStyle(dots[2]).animationDelay).to.equal('1.2s');
+    expect(getComputedStyle(dots[0]!).animationDuration).to.equal('1.8s');
+    expect(getComputedStyle(dots[1]!).animationDelay).to.equal('0.6s');
+    expect(getComputedStyle(dots[2]!).animationDelay).to.equal('1.2s');
   });
 
   it('pulse variant uses the ambient token', async () => {
@@ -281,7 +281,7 @@ describe('dedicated duration token', () => {
   it('defaults --lr-typing-duration through the --lr-transition-ambient alias to 1.8s (unset regression)', async () => {
     const el = (await fixture(html`<lr-typing-indicator shape="dots"></lr-typing-indicator>`)) as LyraTypingIndicator;
     const dots = el.shadowRoot!.querySelectorAll('[part="dot"]');
-    expect(getComputedStyle(dots[0]).animationDuration).to.equal('1.8s');
+    expect(getComputedStyle(dots[0]!).animationDuration).to.equal('1.8s');
   });
 
   it('honors a --lr-typing-duration override on the host for every variant', async () => {
@@ -335,8 +335,8 @@ describe('themeable stagger delays', () => {
   it('defaults dot stagger delays to 600ms/1200ms', async () => {
     const el = (await fixture(html`<lr-typing-indicator shape="dots"></lr-typing-indicator>`)) as LyraTypingIndicator;
     const dots = el.shadowRoot!.querySelectorAll('[part="dot"]');
-    expect(getComputedStyle(dots[1]).animationDelay).to.equal('0.6s');
-    expect(getComputedStyle(dots[2]).animationDelay).to.equal('1.2s');
+    expect(getComputedStyle(dots[1]!).animationDelay).to.equal('0.6s');
+    expect(getComputedStyle(dots[2]!).animationDelay).to.equal('1.2s');
   });
 
   it('honors --lr-typing-dot-stagger-1/-2 overrides', async () => {
@@ -347,7 +347,7 @@ describe('themeable stagger delays', () => {
       ></lr-typing-indicator>`,
     )) as LyraTypingIndicator;
     const dots = el.shadowRoot!.querySelectorAll('[part="dot"]');
-    expect(getComputedStyle(dots[1]).animationDelay).to.equal('0.3s');
-    expect(getComputedStyle(dots[2]).animationDelay).to.equal('0.6s');
+    expect(getComputedStyle(dots[1]!).animationDelay).to.equal('0.3s');
+    expect(getComputedStyle(dots[2]!).animationDelay).to.equal('0.6s');
   });
 });

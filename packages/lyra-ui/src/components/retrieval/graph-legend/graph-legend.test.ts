@@ -4,20 +4,31 @@ import type { LyraGraphLegend } from './graph-legend.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 
 function sinkElement(): HTMLElement | null {
-  return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
+  return document.querySelector<HTMLElement>(
+    `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
+  );
 }
 
 function sinkTexts(): string[] {
-  return Array.from(sinkElement()?.children ?? []).map((child) => child.textContent ?? '');
+  return Array.from(sinkElement()?.children ?? []).map(
+    (child) => child.textContent ?? ''
+  );
 }
 
 const types = [
   { id: 'person', label: 'Person' },
-  { id: 'org', label: 'Organization', color: '#7c3aed', shape: 'square' as const },
+  {
+    id: 'org',
+    label: 'Organization',
+    color: '#7c3aed',
+    shape: 'square' as const,
+  },
 ];
 
 it('defaults to empty types/counts/hiddenTypes, interactive=true, empty label', async () => {
-  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
+  const el = (await fixture(
+    html`<lr-graph-legend></lr-graph-legend>`
+  )) as LyraGraphLegend;
   expect(el.types).to.deep.equal([]);
   expect(el.counts).to.equal(undefined);
   expect(el.hiddenTypes).to.deep.equal([]);
@@ -26,7 +37,9 @@ it('defaults to empty types/counts/hiddenTypes, interactive=true, empty label', 
 });
 
 it('renders one [part="item"] button per type, with visible text = label (+ count when given)', async () => {
-  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
+  const el = (await fixture(
+    html`<lr-graph-legend></lr-graph-legend>`
+  )) as LyraGraphLegend;
   el.types = types;
   el.counts = { person: 3 };
   await el.updateComplete;
@@ -38,23 +51,51 @@ it('renders one [part="item"] button per type, with visible text = label (+ coun
   expect(items[1]!.textContent).to.not.match(/\d/); // no count entry for 'org'
 });
 
+it('omits malformed or blank type labels while retaining a valid neighboring type', async () => {
+  const el = await fixture<LyraGraphLegend>(
+    html`<lr-graph-legend></lr-graph-legend>`
+  );
+  (el as unknown as { types: unknown }).types = [
+    { id: 'empty', label: '' },
+    { id: 'blank', label: '   ' },
+    { id: 'numeric', label: 42 },
+    { id: 'valid', label: 'Valid type' },
+  ];
+  await el.updateComplete;
+
+  const items = [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="item"]'),
+  ];
+  expect(items.map((item) => item.textContent?.trim())).to.deep.equal([
+    'Valid type',
+  ]);
+  await expect(el).to.be.accessible();
+});
+
 it("uses a type's own color for its swatch when set, and a palette fallback otherwise", async () => {
-  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
+  const el = (await fixture(
+    html`<lr-graph-legend></lr-graph-legend>`
+  )) as LyraGraphLegend;
   el.types = types;
   await el.updateComplete;
   const swatches = el.shadowRoot!.querySelectorAll('[part~="swatch"]');
-  expect(swatches[1]!.getAttribute('fill') ?? swatches[1]!.querySelector('[fill]')?.getAttribute('fill')).to.equal(
-    '#7c3aed',
-  );
+  expect(
+    swatches[1]!.getAttribute('fill') ??
+      swatches[1]!.querySelector('[fill]')?.getAttribute('fill')
+  ).to.equal('#7c3aed');
   // 'person' has no explicit color -- falls back to the categorical palette. The design tokens
   // define `--lr-graph-cat-1` (specialist-tokens.styles.ts), so the computed style resolves to
   // that real token value rather than this component's own hardcoded FALLBACK_PALETTE[0].
-  const personFill = swatches[0]!.getAttribute('fill') ?? swatches[0]!.querySelector('[fill]')?.getAttribute('fill');
+  const personFill =
+    swatches[0]!.getAttribute('fill') ??
+    swatches[0]!.querySelector('[fill]')?.getAttribute('fill');
   expect(personFill).to.equal('#8250df');
 });
 
 it('rejects url paint servers and falls back to the categorical palette', async () => {
-  const el = await fixture<LyraGraphLegend>(html`<lr-graph-legend></lr-graph-legend>`);
+  const el = await fixture<LyraGraphLegend>(
+    html`<lr-graph-legend></lr-graph-legend>`
+  );
   el.types = [
     {
       id: 'unsafe',
@@ -64,15 +105,21 @@ it('rejects url paint servers and falls back to the categorical palette', async 
   ];
   await el.updateComplete;
   const swatch = el.shadowRoot!.querySelector('[part~="swatch"]')!;
-  const fill = swatch.getAttribute('fill') ?? swatch.querySelector('[fill]')?.getAttribute('fill');
+  const fill =
+    swatch.getAttribute('fill') ??
+    swatch.querySelector('[fill]')?.getAttribute('fill');
   expect(fill).to.equal('#8250df');
 });
 
 it('toggles hiddenTypes and emits lr-visibility-change with the full updated array on click', async () => {
-  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
+  const el = (await fixture(
+    html`<lr-graph-legend></lr-graph-legend>`
+  )) as LyraGraphLegend;
   el.types = types;
   await el.updateComplete;
-  const button = el.shadowRoot!.querySelectorAll('[part~="item"]')[0] as HTMLButtonElement;
+  const button = el.shadowRoot!.querySelectorAll(
+    '[part~="item"]'
+  )[0] as HTMLButtonElement;
   expect(button.getAttribute('aria-pressed')).to.equal('true');
 
   const listener = oneEvent(el, 'lr-visibility-change');
@@ -89,34 +136,36 @@ it('toggles hiddenTypes and emits lr-visibility-change with the full updated arr
   expect(event2.detail.hiddenTypes).to.deep.equal([]);
 });
 
-it("wires the Default story to visible hide and restore feedback", async () => {
-  const { Default } = await import("./graph-legend.stories.js");
+it('wires the Default story to visible hide and restore feedback', async () => {
+  const { Default } = await import('./graph-legend.stories.js');
   const root = (await fixture(
     Default.render!({}, null as never)
   )) as HTMLElement;
-  const legend = root.querySelector<LyraGraphLegend>("lr-graph-legend")!;
+  const legend = root.querySelector<LyraGraphLegend>('lr-graph-legend')!;
   const feedback = root.querySelector<HTMLElement>(
-    "[data-visibility-feedback]"
+    '[data-visibility-feedback]'
   )!;
   const first =
     legend.shadowRoot!.querySelector<HTMLButtonElement>('[part~="item"]')!;
 
-  expect(feedback.textContent?.trim()).to.equal("All types are visible.");
+  expect(feedback.textContent?.trim()).to.equal('All types are visible.');
   first.click();
   await legend.updateComplete;
-  expect(feedback.textContent?.trim()).to.equal("Hidden types: person");
+  expect(feedback.textContent?.trim()).to.equal('Hidden types: person');
   first.click();
   await legend.updateComplete;
-  expect(feedback.textContent?.trim()).to.equal("All types are visible.");
+  expect(feedback.textContent?.trim()).to.equal('All types are visible.');
 });
 
-it("announces the toggle through the shared light-DOM region and keeps the shadow part inert", async () => {
+it('announces the toggle through the shared light-DOM region and keeps the shadow part inert', async () => {
   const el = (await fixture(
     html`<lr-graph-legend></lr-graph-legend>`
   )) as LyraGraphLegend;
   el.types = types;
   await el.updateComplete;
-  const button = el.shadowRoot!.querySelectorAll('[part~="item"]')[0] as HTMLButtonElement;
+  const button = el.shadowRoot!.querySelectorAll(
+    '[part~="item"]'
+  )[0] as HTMLButtonElement;
   button.click();
   await el.updateComplete;
   const live = el.shadowRoot!.querySelector('[part="live-region"]')!;
@@ -128,7 +177,9 @@ it("announces the toggle through the shared light-DOM region and keeps the shado
 });
 
 it('releases and reacquires its shared announcement sink across disconnect and reconnect', async () => {
-  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
+  const el = (await fixture(
+    html`<lr-graph-legend></lr-graph-legend>`
+  )) as LyraGraphLegend;
   expect(sinkElement() !== null).to.be.true;
   el.remove();
   expect(sinkElement() === null).to.be.true;
@@ -139,28 +190,39 @@ it('releases and reacquires its shared announcement sink across disconnect and r
 });
 
 it('renders plain (non-interactive) items with no button and no toggling when interactive=false', async () => {
-  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
+  const el = (await fixture(
+    html`<lr-graph-legend></lr-graph-legend>`
+  )) as LyraGraphLegend;
   el.types = types;
   el.interactive = false;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelectorAll('button[part~="item"]').length).to.equal(0);
+  expect(
+    el.shadowRoot!.querySelectorAll('button[part~="item"]').length
+  ).to.equal(0);
   expect(el.shadowRoot!.querySelectorAll('[part~="item"]').length).to.equal(2);
 });
 
 it('names the group from label, falling back to the localized default', async () => {
-  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
+  const el = (await fixture(
+    html`<lr-graph-legend></lr-graph-legend>`
+  )) as LyraGraphLegend;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Graph legend');
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
+  ).to.equal('Graph legend');
   el.label = 'Entity types';
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Entity types');
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
+  ).to.equal('Entity types');
 });
 
 it('keeps exactly one owner across explicit-empty and dynamic host naming', async () => {
   const el = (await fixture(
-    html`<lr-graph-legend label="Entity types" aria-label=""></lr-graph-legend>`,
+    html`<lr-graph-legend label="Entity types" aria-label=""></lr-graph-legend>`
   )) as LyraGraphLegend;
-  const group = () => el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const group = () =>
+    el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
 
   expect(el.hasAttribute('aria-label')).to.equal(true);
   expect(el.getAttribute('aria-label')).to.equal('');
@@ -181,7 +243,9 @@ it('keeps exactly one owner across explicit-empty and dynamic host naming', asyn
 });
 
 it('is accessible with types, counts, and a hidden type', async () => {
-  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
+  const el = (await fixture(
+    html`<lr-graph-legend></lr-graph-legend>`
+  )) as LyraGraphLegend;
   el.types = types;
   el.counts = { person: 3 };
   el.hiddenTypes = ['org'];
@@ -190,18 +254,29 @@ it('is accessible with types, counts, and a hidden type', async () => {
 });
 
 it('honors a .strings override of graphLegendLabel on the group aria-label', async () => {
-  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
+  const el = (await fixture(
+    html`<lr-graph-legend></lr-graph-legend>`
+  )) as LyraGraphLegend;
   el.strings = { graphLegendLabel: 'Étiquette du graphe' };
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Étiquette du graphe');
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
+  ).to.equal('Étiquette du graphe');
 });
 
 it('honors a .strings override of legendTypeHidden/legendTypeShown in the live-region announcement', async () => {
-  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
-  el.strings = { legendTypeHidden: '{label} masqué', legendTypeShown: '{label} affiché' };
+  const el = (await fixture(
+    html`<lr-graph-legend></lr-graph-legend>`
+  )) as LyraGraphLegend;
+  el.strings = {
+    legendTypeHidden: '{label} masqué',
+    legendTypeShown: '{label} affiché',
+  };
   el.types = types;
   await el.updateComplete;
-  const button = el.shadowRoot!.querySelectorAll('[part~="item"]')[0] as HTMLButtonElement;
+  const button = el.shadowRoot!.querySelectorAll(
+    '[part~="item"]'
+  )[0] as HTMLButtonElement;
   const live = el.shadowRoot!.querySelector('[part="live-region"]')!;
 
   button.click();
@@ -215,26 +290,37 @@ it('honors a .strings override of legendTypeHidden/legendTypeShown in the live-r
 });
 
 it('interactive="false" (plain HTML attribute) renders a read-only legend, matching the .interactive=false property path', async () => {
-  const el = (await fixture(html`<lr-graph-legend interactive="false"></lr-graph-legend>`)) as LyraGraphLegend;
+  const el = (await fixture(
+    html`<lr-graph-legend interactive="false"></lr-graph-legend>`
+  )) as LyraGraphLegend;
   expect(el.interactive).to.be.false;
   el.types = types;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelectorAll('button[part~="item"]').length).to.equal(0);
+  expect(
+    el.shadowRoot!.querySelectorAll('button[part~="item"]').length
+  ).to.equal(0);
   expect(el.shadowRoot!.querySelectorAll('[part~="item"]').length).to.equal(2);
 });
 
 it('declares a --lr-graph-legend-hidden-color cssprop indirection layer for a hidden row, independent of the shared quiet-text token', async () => {
-  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
+  const el = (await fixture(
+    html`<lr-graph-legend></lr-graph-legend>`
+  )) as LyraGraphLegend;
   el.types = types;
   el.hiddenTypes = ['person'];
   await el.updateComplete;
-  const label = el.shadowRoot!.querySelector('[part~="item"][data-hidden] [part="label"]') as HTMLElement;
+  const label = el.shadowRoot!.querySelector(
+    '[part~="item"][data-hidden] [part="label"]'
+  ) as HTMLElement;
 
   const unset = getComputedStyle(label).color;
   el.style.setProperty('--lr-graph-legend-hidden-color', 'rgb(10, 20, 30)');
   expect(getComputedStyle(label).color).to.equal('rgb(10, 20, 30)');
 
-  el.style.setProperty('--lr-graph-legend-hidden-color', 'var(--lr-color-text-quiet)');
+  el.style.setProperty(
+    '--lr-graph-legend-hidden-color',
+    'var(--lr-color-text-quiet)'
+  );
   expect(getComputedStyle(label).color).to.equal(unset);
 });
 
@@ -251,16 +337,24 @@ it('contains an unbroken public type label within a 320px allocation', async () 
   const label = item.querySelector('[part="label"]') as HTMLElement;
 
   expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
-  expect(item.getBoundingClientRect().width).to.be.at.most(el.getBoundingClientRect().width);
-  expect(label.getBoundingClientRect().width).to.be.at.most(item.getBoundingClientRect().width);
+  expect(item.getBoundingClientRect().width).to.be.at.most(
+    el.getBoundingClientRect().width
+  );
+  expect(label.getBoundingClientRect().width).to.be.at.most(
+    item.getBoundingClientRect().width
+  );
 });
 
 it('exposes the hidden swatch opacity through a component-scoped theme token', async () => {
-  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
+  const el = (await fixture(
+    html`<lr-graph-legend></lr-graph-legend>`
+  )) as LyraGraphLegend;
   el.types = types;
   el.hiddenTypes = ['person'];
   await el.updateComplete;
-  const swatch = el.shadowRoot!.querySelector('[part~="item"][data-hidden] [part="swatch"]') as SVGElement;
+  const swatch = el.shadowRoot!.querySelector(
+    '[part~="item"][data-hidden] [part="swatch"]'
+  ) as SVGElement;
 
   expect(getComputedStyle(swatch).opacity).to.equal('0.5');
   el.style.setProperty('--lr-graph-legend-hidden-swatch-opacity', '0.23');
@@ -268,10 +362,28 @@ it('exposes the hidden swatch opacity through a component-scoped theme token', a
 });
 
 it('formats visible counts with the effective locale', async () => {
-  const el = (await fixture(html`<lr-graph-legend lang="ar-EG"></lr-graph-legend>`)) as LyraGraphLegend;
+  const el = (await fixture(
+    html`<lr-graph-legend lang="ar-EG"></lr-graph-legend>`
+  )) as LyraGraphLegend;
   el.types = types;
   el.counts = { person: 1234 };
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="count"]')!.textContent)
-    .to.equal(new Intl.NumberFormat('ar-EG').format(1234));
+  expect(el.shadowRoot!.querySelector('[part="count"]')!.textContent).to.equal(
+    new Intl.NumberFormat('ar-EG').format(1234)
+  );
+});
+
+it('normalizes non-finite public counts to a finite non-negative fallback', async () => {
+  const el = await fixture<LyraGraphLegend>(
+    html`<lr-graph-legend></lr-graph-legend>`
+  );
+  el.types = types;
+  el.counts = { person: Number.NaN, org: Number.POSITIVE_INFINITY };
+  await el.updateComplete;
+
+  expect(
+    [...el.shadowRoot!.querySelectorAll('[part="count"]')].map(
+      (count) => count.textContent
+    )
+  ).to.deep.equal(['0', '0']);
 });

@@ -1,3 +1,5 @@
+import { isMainModule } from './is-main-module.mjs';
+
 // Runs the coverage suite across several isolated `wtr` sessions instead of one long-lived
 // single-session sweep across all ~500 files, then merges the results into the same
 // coverage/lcov.info + coverage/coverage-summary.json + coverage/junit.xml a plain coverage run
@@ -18,7 +20,6 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
-  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -339,9 +340,7 @@ export async function executeCoverageCommand(
   return failed ? 1 : 0;
 }
 
-const isMain =
-  process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
-if (isMain) {
+if (isMainModule(import.meta.url)) {
   const command = parseCoverageArguments(process.argv.slice(2));
   process.exitCode = await executeCoverageCommand(command);
 }

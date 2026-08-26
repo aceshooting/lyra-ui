@@ -349,7 +349,9 @@ describe('compact and frame', () => {
         <lr-confirm-bar tool-name="run_shell"></lr-confirm-bar>
       </div>
     `);
-    const [compact, regular] = [...wrap.querySelectorAll('lr-confirm-bar')] as LyraConfirmBar[];
+    const compact = wrap.querySelector<LyraConfirmBar>('lr-confirm-bar[compact]');
+    const regular = wrap.querySelector<LyraConfirmBar>('lr-confirm-bar:not([compact])');
+    if (!compact || !regular) throw new Error('Expected both compact and regular confirm bars.');
 
     expect(getComputedStyle(compact).containerType).to.equal('normal');
     expect(getComputedStyle(part(compact, 'deny-button')).flexGrow).to.equal('0');

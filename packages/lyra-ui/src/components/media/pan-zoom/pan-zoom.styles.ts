@@ -20,7 +20,7 @@ export const styles = css`
     outline: none;
   }
   [part='viewport']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   /* no-pressed-state: the viewport is a focusable scroll surface, not an activation target. */
@@ -92,7 +92,7 @@ export const styles = css`
   [part='zoom-out']:focus-visible,
   [part='zoom-in']:focus-visible,
   [part='reset']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
 `;

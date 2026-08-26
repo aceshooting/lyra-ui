@@ -6,9 +6,10 @@
 - **Class** `LyraImageViewer`, also available unregistered from `@aceshooting/lyra-ui/components/media/image-viewer/image-viewer.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -56,7 +57,9 @@ text.
 embedded `lr-pan-zoom`), forwarded aliases `frame-viewport`, `frame-content`, `frame-controls`,
 `rotation-frame` (the axis-swapped 90°/270° layout footprint), `image-wrapper`, `image`,
 `highlight-layer`, `highlight` (carries `data-tone`/`data-active`), `highlight-label`,
-`annotation-box`, and `error`.
+`annotation-box`, `error`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror of the
+latest anchor-jump message; the spoken copy is appended to the shared document-level polite sink
+only while the viewer and its composed ancestors are exposed to the accessibility tree).
 
 `error` is ordinary localized visible text, not a shadow live region. A fresh post-mount image
 failure or transition to an unsafe source appends the localized message to the document's

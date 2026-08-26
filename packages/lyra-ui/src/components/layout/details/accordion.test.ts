@@ -25,8 +25,8 @@ async function renderAccordion(
   </div>`);
   const accordion = wrapper.querySelector('lr-accordion') as LyraAccordion;
   if (attributes) {
-    for (const [name, value = ''] of Array.from(attributes.matchAll(/([\w-]+)(?:="([^"]*)")?/g)).map(
-      (match) => [match[1]!, match[2]],
+    for (const [name, value] of Array.from(attributes.matchAll(/([\w-]+)(?:="([^"]*)")?/g)).map(
+      (match): [string, string] => [match[1]!, match[2] ?? ''],
     )) {
       accordion.setAttribute(name, value);
     }
@@ -592,26 +592,26 @@ describe('<lr-accordion>', () => {
     expect([item.appearance, item.headingLevel, item.iconPlacement]).to.deep.equal([
       'outlined', '4', 'end',
     ]);
-    expect(base().dataset.appearance).to.equal('filled');
+    expect(base().dataset['appearance']).to.equal('filled');
     expect(item.shadowRoot!.querySelector('h2')).to.exist;
 
     item.appearance = 'plain';
     item.headingLevel = '6';
     item.iconPlacement = 'start';
     await item.updateComplete;
-    expect(base().dataset.appearance).to.equal('filled');
+    expect(base().dataset['appearance']).to.equal('filled');
     expect(item.shadowRoot!.querySelector('h2')).to.exist;
 
     item.remove();
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     await item.updateComplete;
-    expect(base().dataset.appearance).to.equal('plain');
+    expect(base().dataset['appearance']).to.equal('plain');
     expect(item.shadowRoot!.querySelector('h6')).to.exist;
 
     second.append(item);
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     await item.updateComplete;
-    expect(base().dataset.appearance).to.equal('filled-outlined');
+    expect(base().dataset['appearance']).to.equal('filled-outlined');
     expect(item.shadowRoot!.querySelector('h5')).to.exist;
     expect([item.appearance, item.headingLevel, item.iconPlacement]).to.deep.equal([
       'plain', '6', 'start',
@@ -688,7 +688,7 @@ describe('<lr-accordion>', () => {
   });
 
   it('does not reclaim foreign focus while a previous roving item becomes unavailable', async () => {
-    const wrapper = await fixture(html`<div>
+    const wrapper = await fixture<HTMLElement>(html`<div>
       <lr-accordion>
         <lr-accordion-item id="external-one" label="One">One</lr-accordion-item>
         <lr-accordion-item id="external-two" label="Two">Two</lr-accordion-item>
@@ -732,7 +732,7 @@ describe('<lr-accordion>', () => {
   });
 
   it('removes roving stops under a composed inert ancestor and restores the prior stop', async () => {
-    const wrapper = await fixture(html`<div id="accordion-inert-ancestor"><div id="accordion-shadow-host"></div></div>`);
+    const wrapper = await fixture<HTMLElement>(html`<div id="accordion-inert-ancestor"><div id="accordion-shadow-host"></div></div>`);
     const host = wrapper.querySelector<HTMLElement>('#accordion-shadow-host')!;
     const shadow = host.attachShadow({ mode: 'open' });
     const accordion = document.createElement('lr-accordion') as LyraAccordion;
@@ -765,7 +765,7 @@ describe('<lr-accordion>', () => {
   });
 
   it('rearms availability observation after document adoption', async () => {
-    const wrapper = await fixture(html`<div>
+    const wrapper = await fixture<HTMLElement>(html`<div>
       <lr-accordion>
         <lr-accordion-item label="One">One</lr-accordion-item>
         <lr-accordion-item label="Two">Two</lr-accordion-item>

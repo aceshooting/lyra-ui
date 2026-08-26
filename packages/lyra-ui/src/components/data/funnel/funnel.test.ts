@@ -183,6 +183,28 @@ describe('<lr-funnel>', () => {
     expect(parts(el, 'bar').map((bar) => bar.style.inlineSize)).to.deep.equal(['100%', '0%', '0%']);
   });
 
+  it('omits malformed stage records while retaining valid neighbors in both series', async () => {
+    const stages = [
+      { label: 'Visited', value: 200 },
+      null,
+      { label: 'Converted', value: 50 },
+    ] as unknown as LyraFunnelStage[];
+    const comparison = [
+      { label: 'Visited', value: 100 },
+      null,
+      { label: 'Converted', value: 40 },
+    ] as unknown as LyraFunnelStage[];
+    const el = await fixture<LyraFunnel>(html`
+      <lr-funnel .stages=${stages} .comparison=${comparison}></lr-funnel>
+    `);
+    await el.updateComplete;
+
+    expect(el.stages).to.equal(stages);
+    expect(el.comparison).to.equal(comparison);
+    expect(parts(el, 'stage-label').map(text)).to.deep.equal(['Visited', 'Converted']);
+    expect(parts(el, 'comparison-value').map(text)).to.deep.equal(['Comparison: 100%', 'Comparison: 40%']);
+  });
+
   it('formats values and shares through the effective locale, never a hardcoded English one', async () => {
     const el = await fixture<LyraFunnel>(
       html`<lr-funnel

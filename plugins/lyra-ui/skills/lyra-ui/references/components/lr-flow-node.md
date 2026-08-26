@@ -6,6 +6,7 @@
 - **Class** `LyraFlowNode`, also available unregistered from `@aceshooting/lyra-ui/components/data/flow-node/flow-node.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -46,7 +47,8 @@ owns none of that.
 **Events:** none — purely presentational, activation/drag/connect all live on `lr-flow-canvas`.
 
 **Slots:** default (body content), `icon` (leading header glyph), `header` (replaces the built-in
-heading row entirely), `toolbar` (action row at the block-end edge).
+heading row entirely), `toolbar` (action row at the block-end edge; revealed by hover/focus on
+hover-capable devices and always visible with a coarse pointer or no hover).
 
 **CSS parts:** `base` (the row wrapping the input handles, the card and the output handles — it
 carries no card chrome of its own), `card` (the bordered, filled node card), `header`, `icon`,
@@ -97,7 +99,9 @@ changing a library-wide semantic token.
 - All card chrome lives on `[part="card"]`, not `[part="base"]` — `base` is only the flex row that
   holds the input handles, the card and the output handles. Style the box through `::part(card)`.
 - Empty `header`, body, and toolbar rows are removed from layout and update when slot contents are
-  added or removed. Invalid status/orientation inputs normalize to the documented canonical values.
+  added or removed. A populated toolbar remains visible on coarse-pointer/no-hover devices rather
+  than depending on an unavailable hover gesture. Invalid status/orientation inputs normalize to
+  the documented canonical values.
 - Selection uses an outline, while the running lifecycle uses its own border and glow; the two
   remain simultaneously visible.
 - `--lr-flow-node-min-inline-size` was previously overridden by a duplicate declaration and had no

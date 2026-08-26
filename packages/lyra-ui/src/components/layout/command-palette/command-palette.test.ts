@@ -191,8 +191,8 @@ it("wires aria-activedescendant to a stable id on the active command row", async
   await el.updateComplete;
   const input = el.shadowRoot!.querySelector("input")!;
   const rows = el.shadowRoot!.querySelectorAll('[part="command"]');
-  expect(rows[0].id).to.not.equal("");
-  expect(input.getAttribute("aria-activedescendant")).to.equal(rows[0].id);
+  expect(rows[0]!.id).to.not.equal("");
+  expect(input.getAttribute("aria-activedescendant")).to.equal(rows[0]!.id);
   input.dispatchEvent(
     new KeyboardEvent("keydown", {
       key: "ArrowDown",
@@ -201,7 +201,7 @@ it("wires aria-activedescendant to a stable id on the active command row", async
     })
   );
   await el.updateComplete;
-  expect(input.getAttribute("aria-activedescendant")).to.equal(rows[1].id);
+  expect(input.getAttribute("aria-activedescendant")).to.equal(rows[1]!.id);
 });
 
 it("keeps aria-activedescendant-owned command options out of the sequential tab order", async () => {
@@ -243,8 +243,8 @@ it("skips disabled commands during arrow navigation and marks them aria-disabled
   await el.updateComplete;
   const input = el.shadowRoot!.querySelector("input")!;
   const rows = el.shadowRoot!.querySelectorAll('[part="command"]');
-  expect(rows[0].getAttribute("aria-disabled")).to.equal("false");
-  expect(rows[1].getAttribute("aria-disabled")).to.equal("true");
+  expect(rows[0]!.getAttribute("aria-disabled")).to.equal("false");
+  expect(rows[1]!.getAttribute("aria-disabled")).to.equal("true");
   input.dispatchEvent(
     new KeyboardEvent("keydown", {
       key: "ArrowDown",
@@ -253,7 +253,7 @@ it("skips disabled commands during arrow navigation and marks them aria-disabled
     })
   );
   await el.updateComplete;
-  expect(input.getAttribute("aria-activedescendant")).to.equal(rows[2].id);
+  expect(input.getAttribute("aria-activedescendant")).to.equal(rows[2]!.id);
   input.dispatchEvent(
     new KeyboardEvent("keydown", {
       key: "ArrowUp",
@@ -262,7 +262,7 @@ it("skips disabled commands during arrow navigation and marks them aria-disabled
     })
   );
   await el.updateComplete;
-  expect(input.getAttribute("aria-activedescendant")).to.equal(rows[0].id);
+  expect(input.getAttribute("aria-activedescendant")).to.equal(rows[0]!.id);
 });
 
 it("never rests the active option on a disabled command when one leads the list", async () => {
@@ -278,7 +278,7 @@ it("never rests the active option on a disabled command when one leads the list"
   await el.updateComplete;
   const input = el.shadowRoot!.querySelector("input")!;
   const rows = el.shadowRoot!.querySelectorAll('[part="command"]');
-  expect(input.getAttribute("aria-activedescendant")).to.equal(rows[1].id);
+  expect(input.getAttribute("aria-activedescendant")).to.equal(rows[1]!.id);
   input.dispatchEvent(
     new KeyboardEvent("keydown", {
       key: "ArrowUp",
@@ -287,7 +287,7 @@ it("never rests the active option on a disabled command when one leads the list"
     })
   );
   await el.updateComplete;
-  expect(input.getAttribute("aria-activedescendant")).to.equal(rows[1].id);
+  expect(input.getAttribute("aria-activedescendant")).to.equal(rows[1]!.id);
 });
 
 it("scrolls the newly active row into view when navigating with arrow keys", async () => {
@@ -383,6 +383,25 @@ it("requires unique nonempty commandId values and deterministically keeps the fi
   expect((await selected).detail.command.commandId).to.equal("same");
 });
 
+it('drops commands with empty or whitespace-only labels while retaining an accessible valid row', async () => {
+  const el = (await fixture(html`
+    <lr-command-palette
+      .commands=${[
+        { commandId: 'empty', label: '' },
+        { commandId: 'blank', label: '   ' },
+        { commandId: 'valid', label: 'Valid command' },
+      ]}
+    ></lr-command-palette>
+  `)) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+
+  const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="command"]')];
+  expect(rows.length).to.equal(1);
+  expect(rows[0]!.textContent?.trim()).to.equal('Valid command');
+  await expect(el).to.be.accessible();
+});
+
 it('omits a command whose identity accessor throws while retaining valid neighbors', async () => {
   const hostile = { label: 'Hostile' } as { label: string; commandId: string };
   Object.defineProperty(hostile, 'commandId', {
@@ -407,6 +426,27 @@ it('omits a command whose identity accessor throws while retaining valid neighbo
   expect(rows.map((row) => row.textContent?.trim())).to.deep.equal(['Before', 'After']);
 });
 
+it('ignores malformed keyword collections without dropping valid commands or search', async () => {
+  const el = (await fixture(
+    html`<lr-command-palette></lr-command-palette>`
+  )) as LyraCommandPalette;
+  el.commands = [
+    { commandId: 'number', label: 'Numeric keywords', keywords: 42 },
+    { commandId: 'object', label: 'Object keywords', keywords: {} },
+    { commandId: 'valid', label: 'Valid keywords', keywords: ['find-me'] },
+  ] as unknown as typeof el.commands;
+
+  el.openPalette();
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  input.value = 'find-me';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await el.updateComplete;
+
+  const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="command"]')];
+  expect(rows.map((row) => row.textContent?.trim())).to.deep.equal(['Valid keywords']);
+});
+
 it("case-folds command search with the effective locale", async () => {
   const el = (await fixture(
     html`<lr-command-palette
@@ -425,7 +465,7 @@ it("case-folds command search with the effective locale", async () => {
   await el.updateComplete;
   const rows = el.shadowRoot!.querySelectorAll('[part="command"]');
   expect(rows).to.have.length(1);
-  expect(rows[0].textContent).to.contain("İstanbul");
+  expect(rows[0]!.textContent).to.contain("İstanbul");
 });
 
 it("owns grouped options through labeled ARIA groups", async () => {
@@ -1022,10 +1062,10 @@ it("renders a leading icon on a command that has one, and omits the part for com
   el.openPalette();
   await el.updateComplete;
   const rows = el.shadowRoot!.querySelectorAll('[part="command"]');
-  expect(rows[0].querySelector('[part="icon"] svg.save-icon')).to.not.equal(
+  expect(rows[0]!.querySelector('[part="icon"] svg.save-icon')).to.not.equal(
     null
   );
-  expect((rows[1].querySelector('[part="icon"]')) === (null)).to.equal(true);
+  expect((rows[1]!.querySelector('[part="icon"]')) === (null)).to.equal(true);
 });
 
 it("renders localized strings from a .strings override for the dialog label, placeholder, results label, and empty message", async () => {

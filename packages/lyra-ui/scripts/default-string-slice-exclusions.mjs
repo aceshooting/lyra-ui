@@ -43,7 +43,6 @@ export const DEFAULT_STRING_SLICE_EXCLUSIONS = Object.freeze({
 
   // Not form-associated at all; form-associated.ts only reaches this graph transitively through
   // the composed form controls it renders, and each of those owns its own slice.
-  'src/components/layout/drilldown-panel/drilldown-panel.class.ts': Object.freeze(['fieldRequired']),
 
   // The composed date/combobox controls put a dynamic segment-key map in this graph, which makes
   // the conservative fallback inspect transitive helpers. These generic catalog-shaped literals

@@ -90,7 +90,6 @@ describe('lr-avatar', () => {
         </lr-avatar>
       </div>
     `);
-    const avatar = root.querySelector<LyraAvatar>('lr-avatar')!;
     const previous = root.querySelector<HTMLButtonElement>('#previous')!;
     const glyph = root.querySelector<HTMLButtonElement>('#glyph')!;
     previous.focus();

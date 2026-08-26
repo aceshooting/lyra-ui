@@ -3,6 +3,7 @@ import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './split-panel.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -20,7 +21,7 @@ const MAX_SNAP_SOURCE_CODE_UNITS = 16_384;
 const MAX_SNAP_TOKENS = 256;
 const POSITION_EPSILON = 0.000_1;
 
-export type LyraSplitPanelOrientation = 'horizontal' | 'vertical';
+export type LyraSplitPanelOrientation = LyraOrientation;
 export type LyraSplitPanelPrimary = 'start' | 'end';
 
 export interface LyraSplitPanelSnapFunctionParams {

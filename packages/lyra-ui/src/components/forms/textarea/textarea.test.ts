@@ -18,9 +18,11 @@ it("emits one cancelable lr-invalid alias when a validity check fails", async ()
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
-  expect(aliases[0].target === el).to.equal(true);
-  expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
-  expect(aliases[0].cancelable).to.be.true;
+  const alias = aliases[0];
+  if (!alias) throw new Error('The invalid alias was not emitted.');
+  expect(alias.target === el).to.equal(true);
+  expect(alias.bubbles && alias.composed).to.be.true;
+  expect(alias.cancelable).to.be.true;
 });
 
 it("forwards preventDefault() on lr-invalid to the native invalid event", async () => {
@@ -37,9 +39,10 @@ it("forwards preventDefault() on lr-invalid to the native invalid event", async 
 
   expect(el.checkValidity()).to.be.false;
   expect(natives).to.have.lengthOf(1);
-  expect(natives[0].cancelable, "the native invalid event is cancelable").to.be
-    .true;
-  expect(natives[0].defaultPrevented).to.be.true;
+  const native = natives[0];
+  if (!native) throw new Error('The native invalid event was not emitted.');
+  expect(native.cancelable, "the native invalid event is cancelable").to.be.true;
+  expect(native.defaultPrevented).to.be.true;
 });
 
 it("leaves the native invalid event alone when the lr-invalid alias is not cancelled", async () => {
@@ -51,7 +54,9 @@ it("leaves the native invalid event alone when the lr-invalid alias is not cance
 
   expect(el.checkValidity()).to.be.false;
   expect(natives).to.have.lengthOf(1);
-  expect(natives[0].defaultPrevented).to.be.false;
+  const native = natives[0];
+  if (!native) throw new Error('The native invalid event was not emitted.');
+  expect(native.defaultPrevented).to.be.false;
 });
 
 it("bars constraint validation while disabled, fieldset-disabled or readonly", async () => {
@@ -273,21 +278,26 @@ it("relays exactly one native InputEvent payload and one Event change plus their
     "change",
     "lr-change",
   ]);
-  const inputEvent = seen[0].event as InputEvent;
+  const [inputEntry, inputAlias, changeEntry, changeAlias] = seen;
+  if (!inputEntry || !inputAlias || !changeEntry || !changeAlias) {
+    throw new Error('The textarea event sequence was incomplete.');
+  }
+  const inputEvent = inputEntry.event;
+  if (!(inputEvent instanceof InputEvent)) throw new Error('The relayed input was not an InputEvent.');
   expect(inputEvent instanceof InputEvent).to.be.true;
   expect(inputEvent.target === el && inputEvent.bubbles && inputEvent.composed)
     .to.be.true;
   expect(inputEvent.data).to.equal("o");
   expect(inputEvent.inputType).to.equal("insertText");
   expect(inputEvent.isComposing).to.be.true;
-  expect(seen[2].event.constructor === Event).to.be.true;
+  expect(changeEntry.event.constructor === Event).to.be.true;
   expect(
-    seen[2].event.target === el &&
-      seen[2].event.bubbles &&
-      seen[2].event.composed
+    changeEntry.event.target === el &&
+      changeEntry.event.bubbles &&
+      changeEntry.event.composed
   ).to.be.true;
-  expect(seen[1].event instanceof CustomEvent).to.be.true;
-  expect(seen[3].event instanceof CustomEvent).to.be.true;
+  expect(inputAlias.event instanceof CustomEvent).to.be.true;
+  expect(changeAlias.event instanceof CustomEvent).to.be.true;
 });
 
 it("contains stale native edit and focus events delivered during same-task disablement", async () => {
@@ -959,7 +969,7 @@ it('normalizes a nullish selectionDirection assignment to "none" before forwardi
     el.selectionDirection = null;
     expect(written).to.equal("none");
   } finally {
-    delete (ta as unknown as Record<string, unknown>).selectionDirection;
+    Reflect.deleteProperty(ta, 'selectionDirection');
   }
 });
 
@@ -1506,7 +1516,10 @@ describe("lr-textarea with-count live announcement", () => {
 
     const frameWindow = frame.contentWindow!;
     const frameDocument = frame.contentDocument!;
-    const originalFrameResizeObserver = frameWindow.ResizeObserver;
+    const frameResizeObserverDescriptor = Object.getOwnPropertyDescriptor(
+      frameWindow,
+      'ResizeObserver',
+    );
     const originalFrameRequestAnimationFrame =
       frameWindow.requestAnimationFrame;
     const originalFrameCancelAnimationFrame = frameWindow.cancelAnimationFrame;
@@ -1533,7 +1546,11 @@ describe("lr-textarea with-count live announcement", () => {
       disconnect(): void {}
     }
 
-    frameWindow.ResizeObserver = TrackingResizeObserver;
+    Object.defineProperty(frameWindow, 'ResizeObserver', {
+      configurable: true,
+      writable: true,
+      value: TrackingResizeObserver,
+    });
     frameWindow.requestAnimationFrame = (() => {
       frameAnimationFrames += 1;
       return 71;
@@ -1541,7 +1558,7 @@ describe("lr-textarea with-count live announcement", () => {
     frameWindow.cancelAnimationFrame = ((handle: number) => {
       if (handle === 71) frameAnimationCancels += 1;
     }) as typeof frameWindow.cancelAnimationFrame;
-    frameWindow.setTimeout = ((handler: TimerHandler, timeout?: number) => {
+    frameWindow.setTimeout = ((_handler: TimerHandler, timeout?: number) => {
       if (timeout === 1000) frameCountTimers += 1;
       return 72;
     }) as typeof frameWindow.setTimeout;
@@ -1592,7 +1609,11 @@ describe("lr-textarea with-count live announcement", () => {
       expect(frameAnimationCancels).to.equal(1);
     } finally {
       el?.remove();
-      frameWindow.ResizeObserver = originalFrameResizeObserver;
+      if (frameResizeObserverDescriptor) {
+        Object.defineProperty(frameWindow, 'ResizeObserver', frameResizeObserverDescriptor);
+      } else {
+        Reflect.deleteProperty(frameWindow, 'ResizeObserver');
+      }
       frameWindow.requestAnimationFrame = originalFrameRequestAnimationFrame;
       frameWindow.cancelAnimationFrame = originalFrameCancelAnimationFrame;
       frameWindow.setTimeout = originalFrameSetTimeout;

@@ -6,6 +6,7 @@
 - **Class** `LyraEntityCard`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/entity-card/entity-card.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -83,10 +84,10 @@ from tokens.
 
 **Known gotchas:**
 
-- The type badge's data-driven background uses an 8% (not this codebase's usual 16%) quiet-tint mix
-  against `--lr-color-surface` — the lower percentage is required to hold WCAG AA 4.5:1 text
-  contrast for arbitrary, unvetted type colors (even 10% isn't safe margin for every hue in the
-  palette).
+- The type badge's data-driven background uses a 12% quiet-tint mix against
+  `--lr-color-surface`, while its text continues to use `--lr-color-text`. Treat the percentage as
+  an implementation detail; override the documented nested badge properties together when a
+  product palette needs a different contrast-qualified treatment.
 - A blank `entity.id` renders the empty state. Blank/later duplicate `types[].id` entries cannot
   become badge lookup owners.
 

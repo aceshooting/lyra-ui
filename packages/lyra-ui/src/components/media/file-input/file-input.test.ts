@@ -8,6 +8,7 @@ import { styles } from "./file-input.styles.js";
 import { resolveValidityAnchor } from "../../../internal/anchored-validity.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { setForcedColors } from "../../../../test/wtr-media.js";
+import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 function sinkElement(politeness: "polite" | "assertive"): HTMLElement | null {
   return document.querySelector<HTMLElement>(
@@ -840,9 +841,25 @@ it("adds a :focus-visible outline to the dropzone base using the shared focus-ri
   expect(baseStyle.outlineOffset).to.equal(expectedOffset);
 });
 
-it("gives the dropzone base a :hover treatment, so a mouse user gets feedback before clicking (regression)", () => {
-  const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
-  expect(css).to.match(/\[part~='base'\]:hover/);
+it("renders the dropzone hover treatment before a mouse user clicks", async () => {
+  const el = await fixture<LyraFileInput>(html`
+    <lr-file-input style="--lr-color-brand: rgb(1, 2, 3)"></lr-file-input>
+  `);
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  base.scrollIntoView({ block: "center" });
+  const rect = base.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: "move",
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    await waitUntil(
+      () => getComputedStyle(base).borderTopColor === "rgb(1, 2, 3)",
+      "the rendered dropzone hover border never appeared",
+    );
+  } finally {
+    await resetMouse();
+  }
 });
 
 it("lets a consumer retint the drag accept/reject highlight independently via --lr-file-input-accept-*/--lr-file-input-reject-*", async () => {
@@ -2227,11 +2244,12 @@ it("captures unnamed multiple files in restoration state while keeping submissio
       second,
     ]);
   } finally {
-    delete (
+    Reflect.deleteProperty(
       internals as ElementInternals & {
         setFormValue?: ElementInternals["setFormValue"];
-      }
-    ).setFormValue;
+      },
+      'setFormValue',
+    );
   }
 });
 
@@ -2688,7 +2706,7 @@ it("emits a cancelable lr-invalid alias whose cancellation cancels the native in
 
   expect(el.checkValidity()).to.equal(false);
   expect(aliases).to.have.lengthOf(1);
-  expect(aliases[0].cancelable, "lr-invalid is a real veto point").to.equal(
+  expect(aliases[0]!.cancelable, "lr-invalid is a real veto point").to.equal(
     true
   );
   expect(nativePrevented).to.deep.equal([false]);
@@ -2785,7 +2803,7 @@ it("trims files to a single entry when multiple flips off while several are sele
   await el.updateComplete;
 
   expect(el.files.length).to.equal(1);
-  expect(el.files[0].name).to.equal("a.csv");
+  expect(el.files[0]!.name).to.equal("a.csv");
 });
 
 it("falls back to a null multiple form value when FormData cannot be constructed", async () => {

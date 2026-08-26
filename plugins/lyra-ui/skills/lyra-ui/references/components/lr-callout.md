@@ -6,6 +6,7 @@
 - **Class** `LyraCallout`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/callout/callout.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 7 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -82,8 +83,10 @@ Three more, all new in 8.0.0: `--lr-callout-font-size` (private default
 default `var(--lr-form-control-padding-inline, var(--lr-space-m))` — the panel's padding on _both_
 axes; each `size` tier changes that private default from the ladder's inline-padding knob, because
 a panel's block rhythm is generous like a control's inline padding rather than tight like its block
-padding, which only exists to fit text inside a fixed control height; `inline` removes the private
-default entirely). Inherited or direct public font-size and padding values remain authoritative.
+padding, which only exists to fit text inside a fixed control height). The padding hook applies to
+the panel treatment; `inline` intentionally forces host padding to zero. Inherited or direct public
+font-size values remain authoritative in either treatment, while inherited/direct padding is
+authoritative only for the panel.
 `--lr-callout-gap` (default `var(--lr-space-s)` — the space between the icon, the
 content and the close action. It deliberately does _not_ vary by `size`: it separates three adjacent
 boxes rather than setting the panel's density, and shrinking it at the small tiers only crowds

@@ -191,6 +191,22 @@ it('treats supplied heading and search labels literally, including former Englis
   expect(search().placeholder).to.equal('Werkzeuge suchen…');
 });
 
+it('keeps an empty search placeholder visually empty while retaining a localized accessible name', async () => {
+  const el = await fixture<LyraToolSelectDialog>(html`
+    <lr-tool-select-dialog
+      open
+      search-placeholder=""
+      .strings=${{ searchToolsPlaceholder: 'Filter available tools' }}
+      .tools=${TOOLS}
+    ></lr-tool-select-dialog>
+  `);
+  const search = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
+
+  expect(search.placeholder).to.equal('');
+  expect(search.getAttribute('aria-label')).to.equal('Filter available tools');
+  await expect(el).to.be.accessible();
+});
+
 it('hides the subtitle entirely when no tools are supplied', async () => {
   const el = (await fixture(
     html`<lr-tool-select-dialog .tools=${[]}></lr-tool-select-dialog>`,
@@ -348,9 +364,7 @@ it('keeps the tool name as the checkbox name and bridges description/reason as s
   )) as LyraToolSelectDialog;
   const checkbox = checkboxFor(el, 'run_shell');
   await checkbox.updateComplete;
-  const owner = checkbox.shadowRoot!.querySelector<HTMLElement>('[part~="base"]') as HTMLElement & {
-    ariaDescribedByElements?: Element[] | null;
-  };
+  const owner = checkbox.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
   const label = checkbox.shadowRoot!.querySelector<HTMLElement>('[part="label"]')!;
   const hint = checkbox.shadowRoot!.querySelector<HTMLElement>('[part~="hint"]')!;
   const assignedText = (container: HTMLElement) => [...container.querySelectorAll('slot')]
@@ -361,8 +375,9 @@ it('keeps the tool name as the checkbox name and bridges description/reason as s
     .trim();
 
   expect(owner.getAttribute('aria-labelledby')).to.equal(label.id);
-  if ('ariaDescribedByElements' in owner) {
-    expect(owner.ariaDescribedByElements).to.include(hint);
+  const describedByElements = Reflect.get(owner, 'ariaDescribedByElements') as unknown;
+  if (Array.isArray(describedByElements)) {
+    expect(describedByElements).to.include(hint);
   } else {
     expect(owner.getAttribute('aria-describedby')).to.equal(hint.id);
   }
@@ -549,6 +564,24 @@ describe('selection', () => {
     expect(count).to.equal(1);
   });
 
+  it('contains the tool checkbox native and prefixed input/change events at the dialog boundary', async () => {
+    const el = await fixture<LyraToolSelectDialog>(html`
+      <lr-tool-select-dialog .tools=${TOOLS}></lr-tool-select-dialog>
+    `);
+    const leaked = { input: 0, change: 0, lrInput: 0 };
+    let aggregateChanges = 0;
+    el.addEventListener('input', () => leaked.input++);
+    el.addEventListener('change', () => leaked.change++);
+    el.addEventListener('lr-input', () => leaked.lrInput++);
+    el.addEventListener('lr-change', () => aggregateChanges++);
+
+    clickCheckbox(checkboxFor(el, 'web_search'));
+    await el.updateComplete;
+
+    expect(leaked).to.deep.equal({ input: 0, change: 0, lrInput: 0 });
+    expect(aggregateChanges).to.equal(1);
+  });
+
   it('ignores clicks on a data-disabled tool row', async () => {
     const el = (await fixture(
       html`<lr-tool-select-dialog .tools=${TOOLS} .selectedToolIds=${[]}></lr-tool-select-dialog>`,
@@ -647,6 +680,25 @@ describe('useDefaults', () => {
 
     expect(count).to.equal(1);
   });
+
+  it('contains the defaults switch native and prefixed input/change events at the dialog boundary', async () => {
+    const el = await fixture<LyraToolSelectDialog>(html`
+      <lr-tool-select-dialog use-defaults .tools=${TOOLS}></lr-tool-select-dialog>
+    `);
+    const toggle = el.shadowRoot!.querySelector('[part="defaults-toggle"]') as LyraSwitch;
+    const leaked = { input: 0, change: 0, lrInput: 0 };
+    let aggregateChanges = 0;
+    el.addEventListener('input', () => leaked.input++);
+    el.addEventListener('change', () => leaked.change++);
+    el.addEventListener('lr-input', () => leaked.lrInput++);
+    el.addEventListener('lr-change', () => aggregateChanges++);
+
+    (toggle.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click();
+    await el.updateComplete;
+
+    expect(leaked).to.deep.equal({ input: 0, change: 0, lrInput: 0 });
+    expect(aggregateChanges).to.equal(1);
+  });
 });
 
 describe('dismissal', () => {
@@ -663,10 +715,24 @@ describe('dismissal', () => {
     expect(el.open).to.be.false;
   });
 
-  it('closes on backdrop click and emits lr-close with reason "backdrop"', async () => {
-    const el = (await fixture(
-      html`<lr-tool-select-dialog open></lr-tool-select-dialog>`,
-    )) as LyraToolSelectDialog;
+  it('does not light-dismiss on a backdrop click unless explicitly enabled', async () => {
+    const el = await fixture<LyraToolSelectDialog>(html`
+      <lr-tool-select-dialog open></lr-tool-select-dialog>
+    `);
+    const reasons: string[] = [];
+    el.addEventListener('lr-close', (event) => reasons.push(event.detail));
+    (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
+    await el.updateComplete;
+
+    expect(el.lightDismiss).to.be.false;
+    expect(el.open).to.be.true;
+    expect(reasons).to.deep.equal([]);
+  });
+
+  it('closes on backdrop click with reason "backdrop" when light dismissal is enabled', async () => {
+    const el = await fixture<LyraToolSelectDialog>(html`
+      <lr-tool-select-dialog open light-dismiss></lr-tool-select-dialog>
+    `);
     const listener = oneEvent(el, 'lr-close');
     (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
     const { detail } = await listener;
@@ -956,7 +1022,7 @@ it('renders the native search field without cancel or decoration chrome', async 
       position: [Math.floor(bounds.right - 8), Math.floor(bounds.top + bounds.height / 2)],
     });
     expect(input.value).to.equal('python');
-    expect(el.query).to.equal('python');
+    expect((el as unknown as { query: string }).query).to.equal('python');
   } finally {
     await resetMouse();
   }
@@ -1055,20 +1121,21 @@ it('omits blank tool and selected identities before grouping, counting, and even
   expect((await pending).detail.selectedToolIds).to.deep.equal(['kept']);
 });
 
-it('drops malformed tool rows instead of throwing (regression)', async () => {
+it('drops malformed tool identities while retaining a valid neighboring tool', async () => {
   const el = await fixture<LyraToolSelectDialog>(html`
     <lr-tool-select-dialog
       open
-      .tools=${[{ name: 'Analyzer' }, { id: 'good', name: 'Good' }] as never}
+      .tools=${[
+        null,
+        { name: 'Missing id' },
+        { id: 42, name: 'Numeric id' },
+        { id: 'kept', name: 'Kept' },
+      ] as unknown as ToolSelectDialogTool[]}
     ></lr-tool-select-dialog>
   `);
-  expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]')).to.have.length(1);
-  expect(el.shadowRoot!.querySelector('[part="tool-name"]')!.textContent!.trim()).to.equal('Good');
 
-  const nullRows = await fixture<LyraToolSelectDialog>(html`
-    <lr-tool-select-dialog open .tools=${[null, { id: 42 }] as never}></lr-tool-select-dialog>
-  `);
-  expect(nullRows.shadowRoot!.querySelectorAll('[part="tool-row"]')).to.have.length(0);
+  expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]')).to.have.length(1);
+  expect(el.shadowRoot!.querySelector('[part="tool-name"]')!.textContent!.trim()).to.equal('Kept');
 });
 
 it('bounds a large catalog while reserving selected identities and a keyboard-reachable continuation', async () => {

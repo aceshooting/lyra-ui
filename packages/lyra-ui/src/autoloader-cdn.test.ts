@@ -81,30 +81,30 @@ afterEach(() => {
 
 describe('autoloader CDN entry', () => {
   it('auto-starts, keeps optional peers isolated by default, and reads explicit script options', async () => {
-    const tag = 'lr-flag';
+    const tag = 'lr-pdf-viewer';
     let calls = 0;
     override(tag, async () => {
       calls += 1;
       return class extends HTMLElement {};
     });
-    await fixture<HTMLElement>(html`<main><lr-flag></lr-flag></main>`);
+    await fixture<HTMLElement>(html`<main><lr-pdf-viewer></lr-pdf-viewer></main>`);
 
     await loadCdnEntry();
     await aTimeout(0);
     expect(calls).to.equal(0);
-    expect(customElements.get(tag)).to.equal(undefined);
+    expect(typeof customElements.get(tag)).to.equal('undefined');
 
     const loadedEvent = oneEvent(document, 'lr-autoload-loaded');
     await loadCdnEntry({
       'data-lyra-autoloader': '',
       'data-lyra-autoload-events': '',
-      'data-lyra-optional-peers': '@aceshooting/lyra-flags',
+      'data-lyra-optional-peers': 'pdfjs-dist',
     }, true);
     const event = await loadedEvent as CustomEvent<{ tag: string; optionalPeers: readonly string[] }>;
     expect(event.detail.tag).to.equal(tag);
-    expect(event.detail.optionalPeers.join(',')).to.equal('@aceshooting/lyra-flags');
+    expect(event.detail.optionalPeers.join(',')).to.equal('pdfjs-dist');
     expect(calls).to.equal(1);
-    expect(customElements.get(tag)).to.be.a('function');
+    expect(typeof customElements.get(tag)).to.equal('function');
   });
 
   it('splits, trims, and drops empty entries from a comma-separated optional-peers list', async () => {
@@ -126,7 +126,7 @@ describe('autoloader CDN entry', () => {
     const event = await loadedEvent as CustomEvent<{ tag: string; optionalPeers: readonly string[] }>;
     expect(event.detail.tag).to.equal(tag);
     expect(calls).to.equal(1);
-    expect(customElements.get(tag)).to.be.a('function');
+    expect(typeof customElements.get(tag)).to.equal('function');
   });
 
   it("treats an explicit 'all' optional-peers policy as eligible regardless of the tag's required peers", async () => {
@@ -146,7 +146,7 @@ describe('autoloader CDN entry', () => {
     const event = await loadedEvent as CustomEvent<{ tag: string; optionalPeers: readonly string[] }>;
     expect(event.detail.tag).to.equal(tag);
     expect(calls).to.equal(1);
-    expect(customElements.get(tag)).to.be.a('function');
+    expect(typeof customElements.get(tag)).to.equal('function');
   });
 
   it('falls back to undefined when neither an exact match nor a marker script is present', async () => {
@@ -157,7 +157,7 @@ describe('autoloader CDN entry', () => {
     await aTimeout(0);
     // No script-local options were discoverable, so the loader falls back to the default,
     // isolated policy (confirmed unreachable component tags stay undefined).
-    expect(customElements.get('lr-qr-code')).to.equal(undefined);
+    expect(typeof customElements.get('lr-qr-code')).to.equal('undefined');
   });
 
   // NOTE: keep this the LAST test/load in this file. `@web/test-runner-coverage-v8` maps every

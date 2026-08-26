@@ -312,7 +312,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     return this._status;
   }
   set status(value: ChatMessageStatus) {
-    const normalized = CHAT_MESSAGE_STATUS.normalize(value);
+    const normalized = CHAT_MESSAGE_STATUS.normalizeReflected(this, 'status', value);
     const old = this._status;
     if (normalized === old) return;
     this.previousStatus = old;

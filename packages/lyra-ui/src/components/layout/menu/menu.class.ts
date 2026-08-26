@@ -5,7 +5,11 @@ import {
   LyraElement,
   type LyraEventDetailSnapshot,
 } from '../../../internal/lyra-element.js';
-import { place } from '../../../internal/positioner.js';
+import {
+  deferredPlaceReady as place,
+  waitForDeferredPlacement,
+  type DeferredOperationHandle,
+} from '../../../internal/anchored-overlay-runtime.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { nextId, resolveAccessibleTrigger } from '../../../internal/a11y.js';
 import type { LyraSize } from '../../../internal/variants.js';
@@ -197,7 +201,8 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private items: LyraMenuItem[] = [];
   private activeIndex = -1;
 
-  private cleanup?: () => void;
+  private cleanup?: DeferredOperationHandle;
+  private presentationPositioned = false;
   private itemStateObserver?: MutationObserver;
   private pointerDocument?: Document;
   private pendingFocus: MenuFocusTarget = 'first';
@@ -245,6 +250,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         if (!menu.submenuAnchor) return;
         menu.openPresentation(focus);
         await menu.updateComplete;
+        await menu.focusAfterPlacement(focus);
       },
       async hide(options): Promise<void> {
         menu.closePresentation(options);
@@ -339,12 +345,16 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     ) {
       this.cleanup?.();
       this.cleanup = undefined;
+      this.presentationPositioned = false;
       if (this.presentationOpen) {
         if (this.submenuAnchor) {
           this.bindDocumentPointer();
           this.reposition();
-        } else this.unbindDocumentPointer();
-        this.focusRoving(this.pendingFocus);
+        } else {
+          this.unbindDocumentPointer();
+          this.presentationPositioned = true;
+          this.focusRoving(this.pendingFocus);
+        }
       } else {
         this.unbindDocumentPointer();
         this.resetTypeAhead();
@@ -363,6 +373,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private reposition(): void {
     this.cleanup?.();
     this.cleanup = undefined;
+    this.presentationPositioned = false;
     const popup = this.renderRoot.querySelector(
       '.submenu-surface'
     ) as HTMLElement | null;
@@ -372,10 +383,25 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     }
   }
 
+  private async focusAfterPlacement(focus: MenuFocusTarget): Promise<void> {
+    if (!this.presentationOpen || !this.submenuAnchor) return;
+    const positioned = this.cleanup !== undefined &&
+      (this.presentationPositioned || await waitForDeferredPlacement(() => this.cleanup));
+    if (!this.presentationOpen || !this.submenuAnchor) return;
+    if (!positioned) {
+      this.closePresentation();
+      await this.updateComplete;
+      return;
+    }
+    this.presentationPositioned = true;
+    this.focusRoving(focus);
+  }
+
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
+    this.presentationPositioned = false;
     this.clearOwnedTimeout(this.typeAheadTimer);
     this.typeAheadTimer = undefined;
     this.typeAheadBuffer = '';
@@ -435,7 +461,9 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       return;
     }
     this.pendingFocus = focus;
-    if (this.presentationOpen) this.focusRoving(focus);
+    if (this.presentationOpen) {
+      if (!this.submenuAnchor || this.presentationPositioned) this.focusRoving(focus);
+    }
     else {
       this.presentationOpen = true;
       this.submenuStateChange?.(true);

@@ -66,7 +66,7 @@ export const styles = css`
     );
   }
   [part="base"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   /* Chrome escape hatch for a dense list/feed of cards -- the library-wide
@@ -139,7 +139,7 @@ export const styles = css`
     );
   }
   [part="open-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part="open-button"] svg {

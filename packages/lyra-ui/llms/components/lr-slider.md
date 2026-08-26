@@ -6,6 +6,7 @@
 - **Class** `LyraSlider`, also available unregistered from `@aceshooting/lyra-ui/components/forms/slider/slider.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 25 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -90,7 +91,9 @@ single numeric string entry.
 - `tooltipPlacement: 'top' | 'right' | 'bottom' | 'left' = 'top'` and
   `tooltipDistance: number = 8` control physical tooltip layout in either orientation and RTL.
 - `tooltip: 'top' | 'bottom' | 'none' = 'none'` and `tooltipFormatter?: (value) => string` are
-  Shoelace-compatible aliases layered over the richer Lyra/Web Awesome tooltip surface.
+  Shoelace-compatible aliases layered over the richer Lyra/Web Awesome tooltip surface. Lyra's
+  default is `none`, while `<sl-range>` defaults to `top`; the bundled migration codemod inserts
+  `tooltip="top"`, and a manual tag rename must set it explicitly to retain Shoelace's behavior.
 - `valueFormatter?: SliderValueFormatter` (attribute: false) —
   `(value: number, handle: 'value' | 'min' | 'max') => string | null | undefined`. Maps the finite,
   clamped `aria-valuenow` number to optional human-readable `aria-valuetext`, and supplies the

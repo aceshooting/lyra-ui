@@ -1,4 +1,5 @@
-import { realpathSync } from 'node:fs';
+import { isMainModule } from './is-main-module.mjs';
+
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -14,7 +15,7 @@ async function javascriptFiles(directory) {
   const nested = await Promise.all(entries.map(async (entry) => {
     const fullPath = path.join(directory, entry.name);
     if (entry.isDirectory()) return javascriptFiles(fullPath);
-    return entry.isFile() && entry.name.endsWith('.js') ? [fullPath] : [];
+    return entry.isFile() && /\.m?js$/u.test(entry.name) ? [fullPath] : [];
   }));
   return nested.flat();
 }
@@ -55,7 +56,7 @@ export async function compactBuildJavaScript(directory) {
   return { files: files.length, beforeBytes, afterBytes };
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
+if (isMainModule(import.meta.url)) {
   const directory = process.argv[2] ? path.resolve(process.argv[2]) : path.join(packageDir, 'dist');
   const result = await compactBuildJavaScript(directory);
   console.log(

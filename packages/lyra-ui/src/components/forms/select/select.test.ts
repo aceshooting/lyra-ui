@@ -19,6 +19,10 @@ import {
 } from "../../../internal/option-selection.js";
 import { styles } from "./select.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import {
+  __setAnchoredOverlayRuntimeLoaderForTesting,
+  type AnchoredOverlayRuntime,
+} from "../../../internal/anchored-overlay-runtime.js";
 
 const basic = () => html`
   <lr-select>
@@ -27,6 +31,55 @@ const basic = () => html`
     <lr-option value="c">Cherry</lr-option>
   </lr-select>
 `;
+
+function requiredItem<T>(
+  items: ArrayLike<T>,
+  index: number,
+  description: string
+): T {
+  const item = items[index];
+  if (item === undefined) {
+    throw new Error(`Expected ${description} at index ${index}.`);
+  }
+  return item;
+}
+
+it('keeps a cold-open listbox hidden and defers after-show until placement succeeds', async () => {
+  let resolveRuntime!: (runtime: AnchoredOverlayRuntime) => void;
+  const pendingRuntime = new Promise<AnchoredOverlayRuntime>((resolve) => {
+    resolveRuntime = resolve;
+  });
+  __setAnchoredOverlayRuntimeLoaderForTesting(() => pendingRuntime);
+  try {
+    const el = await fixture<LyraSelect>(basic());
+    el.style.setProperty('--show-duration', '0ms');
+    let afterShow = false;
+    el.addEventListener('lr-after-show', () => {
+      afterShow = true;
+    });
+
+    const shown = el.show();
+    await el.updateComplete;
+    await aTimeout(50);
+    const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+    expect(getComputedStyle(listbox).visibility).to.equal('hidden');
+    expect(afterShow).to.equal(false);
+
+    resolveRuntime({
+      place: (_anchor, _popup, options = {}) => {
+        queueMicrotask(() => options.onPlaced?.({ placement: options.placement ?? 'bottom-start' }));
+        return () => undefined;
+      },
+      trackRect: () => () => undefined,
+    } as AnchoredOverlayRuntime);
+    await shown;
+
+    expect(getComputedStyle(listbox).visibility).to.equal('visible');
+    expect(afterShow).to.equal(true);
+  } finally {
+    __setAnchoredOverlayRuntimeLoaderForTesting(undefined);
+  }
+});
 
 it("collects an option constructed by a same-origin foreign custom-element realm", async () => {
   const frame = document.createElement("iframe");
@@ -90,12 +143,13 @@ it("emits one cancelable lr-invalid alias when a validity check fails", async ()
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
-  expect(aliases[0].target === el).to.equal(true);
-  expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
-  expect(aliases[0].cancelable).to.be.true;
+  const alias = requiredItem(aliases, 0, 'invalid alias');
+  expect(alias.target === el).to.equal(true);
+  expect(alias.bubbles && alias.composed).to.be.true;
+  expect(alias.cancelable).to.be.true;
   // Nothing cancelled it, so the browser's own validation UI stays enabled.
   expect(natives).to.have.lengthOf(1);
-  expect(natives[0].defaultPrevented).to.be.false;
+  expect(requiredItem(natives, 0, 'native invalid event').defaultPrevented).to.be.false;
 });
 
 it("cancels the native invalid event when the lr-invalid alias is cancelled", async () => {
@@ -110,7 +164,7 @@ it("cancels the native invalid event when the lr-invalid alias is cancelled", as
 
   expect(el.checkValidity()).to.be.false;
   expect(natives).to.have.lengthOf(1);
-  expect(natives[0].defaultPrevented).to.be.true;
+  expect(requiredItem(natives, 0, 'native invalid event').defaultPrevented).to.be.true;
 });
 
 it("emits a cancelable lr-show/lr-hide pair and non-cancelable after-events", async () => {
@@ -124,12 +178,12 @@ it("emits a cancelable lr-show/lr-hide pair and non-cancelable after-events", as
     el.addEventListener(type, (event) => events.push(event as CustomEvent));
   }
 
+  const afterShow = oneEvent(el, 'lr-after-show');
   el.open = true;
-  await el.updateComplete;
-  await aTimeout(80);
+  await afterShow;
+  const afterHide = oneEvent(el, 'lr-after-hide');
   el.open = false;
-  await el.updateComplete;
-  await aTimeout(80);
+  await afterHide;
 
   expect(events.map((event) => event.type)).to.deep.equal([
     "lr-show",
@@ -431,7 +485,7 @@ it("selects an option by clicking it and emits change + input", async () => {
   el.open = true;
   await el.updateComplete;
 
-  setTimeout(() => rows(el)[1].click());
+  setTimeout(() => requiredItem(rows(el), 1, 'second option row').click());
   await oneEvent(el, "change");
   expect(el.value).to.equal("b");
   expect(el.open).to.be.false;
@@ -444,7 +498,7 @@ it("emits input alongside change on selection, matching a native <select>", asyn
 
   let inputFired = false;
   el.addEventListener("input", () => (inputFired = true));
-  setTimeout(() => rows(el)[0].click());
+  setTimeout(() => requiredItem(rows(el), 0, 'first option row').click());
   await oneEvent(el, "change");
   expect(inputFired).to.be.true;
 });
@@ -463,7 +517,7 @@ it("emits exactly one native event pair and typed aliases with the new value", a
       })
     );
   }
-  rows(el)[1].click();
+  requiredItem(rows(el), 1, 'second option row').click();
   await el.updateComplete;
 
   expect(seen.map((s) => s.type)).to.deep.equal([
@@ -472,21 +526,25 @@ it("emits exactly one native event pair and typed aliases with the new value", a
     "change",
     "lr-change",
   ]);
-  expect(seen[0].detail).to.equal(0);
-  expect(seen[1].detail).to.deep.equal({ value: "b" });
-  expect(seen[2].detail).to.be.undefined;
-  expect(seen[3].detail).to.deep.equal({ value: "b" });
-  expect(Object.isFrozen(seen[1].detail)).to.equal(true);
-  expect(Object.isFrozen(seen[3].detail)).to.equal(true);
-  expect(seen[0].event instanceof InputEvent).to.be.true;
-  expect(seen[2].event.constructor === Event).to.be.true;
+  const nativeInput = requiredItem(seen, 0, 'native input event');
+  const inputAlias = requiredItem(seen, 1, 'input alias event');
+  const nativeChange = requiredItem(seen, 2, 'native change event');
+  const changeAlias = requiredItem(seen, 3, 'change alias event');
+  expect(nativeInput.detail).to.equal(0);
+  expect(inputAlias.detail).to.deep.equal({ value: "b" });
+  expect(nativeChange.detail).to.be.undefined;
+  expect(changeAlias.detail).to.deep.equal({ value: "b" });
+  expect(Object.isFrozen(inputAlias.detail)).to.equal(true);
+  expect(Object.isFrozen(changeAlias.detail)).to.equal(true);
+  expect(nativeInput.event instanceof InputEvent).to.be.true;
+  expect(nativeChange.event.constructor === Event).to.be.true;
   expect(
-    [seen[0].event, seen[2].event].every(
+    [nativeInput.event, nativeChange.event].every(
       (event) => event.target === el && event.bubbles && event.composed
     )
   ).to.be.true;
-  expect(seen[1].event instanceof CustomEvent).to.be.true;
-  expect(seen[3].event instanceof CustomEvent).to.be.true;
+  expect(inputAlias.event instanceof CustomEvent).to.be.true;
+  expect(changeAlias.event instanceof CustomEvent).to.be.true;
 });
 
 it("stays silent on native and prefixed value events for a programmatic value assignment", async () => {
@@ -514,7 +572,7 @@ it("does not refire change/input when reopening and re-clicking the already-sele
   let inputFired = false;
   el.addEventListener("change", () => (changeFired = true));
   el.addEventListener("input", () => (inputFired = true));
-  rows(el)[1].click();
+  requiredItem(rows(el), 1, 'second option row').click();
   await el.updateComplete;
 
   expect(el.value).to.equal("b");
@@ -732,6 +790,9 @@ it("prefers the following option on an equal-distance rehome and clears the curs
   const [apple, banana, cherry] = [
     ...el.querySelectorAll("lr-option"),
   ] as LyraOption[];
+  if (!apple || !banana || !cherry) {
+    throw new Error('Expected the three basic options.');
+  }
 
   banana.disabled = true;
   await banana.updateComplete;
@@ -1062,6 +1123,9 @@ it("updates the reset baseline from defaultSelected without changing a dirty liv
   `)) as HTMLFormElement;
   const el = form.querySelector("lr-select") as LyraSelect;
   const [apple, banana] = [...el.querySelectorAll("lr-option")] as LyraOption[];
+  if (!apple || !banana) {
+    throw new Error('Expected both reset-baseline options.');
+  }
   await el.updateComplete;
 
   el.value = "b";
@@ -3222,7 +3286,7 @@ it("does not select a disabled option row via a direct click, even though the ro
   `)) as LyraSelect;
   el.open = true;
   await el.updateComplete;
-  const disabledRow = [...rows(el)].find((r) => r.dataset.value === "b")!;
+  const disabledRow = [...rows(el)].find((r) => r.dataset['value'] === "b")!;
   disabledRow.click();
   await el.updateComplete;
   expect(el.value).to.equal("");
@@ -3598,7 +3662,6 @@ describe("row state feedback on the already-selected option", () => {
     );
     if (control === null || selected === null) {
       this.skip();
-      return;
     }
     expect(control.hover, "an unselected row hovers to the row tint").to.equal(
       "rgb(1, 2, 3)"
@@ -3609,6 +3672,37 @@ describe("row state feedback on the already-selected option", () => {
     // keeps it. Equality is the contract either way -- the selected row must not be the only one
     // without pressed feedback.
     expect(selected.press, "pressed selected row").to.equal(control.press);
+  });
+
+  it('does not paint hover or pressed feedback on a disabled option row', async function () {
+    const el = (await fixture(html`
+      <lr-select style="--lr-transition-fast: 0s; --lr-select-option-active-bg: rgb(1, 2, 3);">
+        <lr-option value="disabled" disabled>Disabled</lr-option>
+        <lr-option value="enabled">Enabled</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    el.open = true;
+    await el.updateComplete;
+    await aTimeout(50);
+    const row = el.shadowRoot!.querySelector<HTMLElement>(
+      '[part="option"][aria-disabled="true"]'
+    )!;
+    const resting = getComputedStyle(row).backgroundColor;
+
+    try {
+      await sendMouse({ type: 'move', position: centerOf(row) });
+      if (!(await settle(() => row.matches(':hover')))) {
+        this.skip();
+      }
+      expect(getComputedStyle(row).backgroundColor, 'disabled hover').to.equal(resting);
+
+      await sendMouse({ type: 'down' });
+      await aTimeout(20);
+      expect(getComputedStyle(row).backgroundColor, 'disabled press').to.equal(resting);
+    } finally {
+      await sendMouse({ type: 'up' });
+      await resetMouse();
+    }
   });
 });
 
@@ -3644,7 +3738,6 @@ describe("lr-select filled (Shoelace compatibility alias)", () => {
       // silently dropped the move would otherwise report this cascade fix as broken.
       if (!(await settle(() => button.matches(":hover")))) {
         this.skip();
-        return;
       }
       await settle(
         () => getComputedStyle(button).backgroundColor !== resting
@@ -3855,10 +3948,10 @@ describe("multiple", () => {
 
     el.open = true;
     await el.updateComplete;
-    rows(el)[0].click();
+    requiredItem(rows(el), 0, 'first option row').click();
     await el.updateComplete;
     expect(el.open, "the listbox stays open in multiple mode").to.be.true;
-    rows(el)[2].click();
+    requiredItem(rows(el), 2, 'third option row').click();
     await el.updateComplete;
 
     expect(el.value).to.deep.equal(["a", "c"]);
@@ -3877,7 +3970,7 @@ describe("multiple", () => {
     el.addEventListener("lr-change", (e) =>
       detail.push((e as CustomEvent).detail)
     );
-    rows(el)[0].click();
+    requiredItem(rows(el), 0, 'first option row').click();
     await el.updateComplete;
 
     expect(el.value).to.deep.equal(["b"]);
@@ -3961,8 +4054,8 @@ describe("multiple", () => {
     const options = [...el.querySelectorAll("lr-option")] as LyraOption[];
     el.open = true;
     await el.updateComplete;
-    rows(el)[0].click();
-    rows(el)[1].click();
+    requiredItem(rows(el), 0, 'first duplicate option row').click();
+    requiredItem(rows(el), 1, 'second duplicate option row').click();
     await el.updateComplete;
 
     expect(el.value).to.deep.equal(["same", "same"]);
@@ -3978,7 +4071,7 @@ describe("multiple", () => {
         '[part~="tag__remove-button"]'
       ),
     ];
-    removeButtons[1].click();
+    requiredItem(removeButtons, 1, 'second tag remove button').click();
     await el.updateComplete;
     expect(el.value).to.deep.equal(["same"]);
     expect(el.selectedOptions).to.deep.equal([options[0]]);
@@ -4192,8 +4285,8 @@ describe("multiple", () => {
     el.open = true;
     await el.updateComplete;
     const optionRows = rows(el);
-    optionRows[0].click();
-    optionRows[2].click();
+    requiredItem(optionRows, 0, 'first type-ahead option row').click();
+    requiredItem(optionRows, 2, 'third type-ahead option row').click();
     el.open = false;
     await el.updateComplete;
 
@@ -5213,6 +5306,9 @@ describe("lr-select mapped Select parity surface", () => {
     const [first, second, banana] = [
       ...el.querySelectorAll("lr-option"),
     ] as LyraOption[];
+    if (!first || !second || !banana) {
+      throw new Error('Expected all selected-options fixtures.');
+    }
     const events: string[] = [];
     el.addEventListener("input", () => events.push("input"));
     el.addEventListener("change", () => events.push("change"));
@@ -5415,7 +5511,7 @@ it("skips inert options when moving the active descendant", async () => {
   `)) as LyraSelect;
   el.open = true;
   await el.updateComplete;
-  const inertRow = rows(el)[1];
+  const inertRow = requiredItem(rows(el), 1, 'inert option row');
   expect(inertRow.getAttribute("aria-disabled")).to.equal("true");
   let changes = 0;
   el.addEventListener("change", () => {

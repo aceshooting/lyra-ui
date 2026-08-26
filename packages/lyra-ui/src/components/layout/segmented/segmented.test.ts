@@ -1,14 +1,14 @@
-import { fixture, expect, html, oneEvent } from "@open-wc/testing";
+import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { html as litHtml } from "lit";
 import "./segmented.js";
-import type { LyraSegmented } from "./segmented.js";
+import type { LyraSegmented, LyraSegmentedItem } from "./segmented.js";
 import { styles } from "./segmented.styles.js";
 import "../../forms/select/select.js";
 import type { LyraSelect } from "../../forms/select/select.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { setForcedColors } from "../../../../test/wtr-media.js";
 
-const items = () => [
+const items = (): LyraSegmentedItem[] => [
   { value: "day", label: "Day" },
   { value: "week", label: "Week" },
   { value: "month", label: "Month" },
@@ -955,22 +955,38 @@ it("exposes component-scoped track gap, radius, and padding hooks", async () => 
 
 describe("segment hover specificity", () => {
   it("keeps the internal hover rule :where()-wrapped so a ::part(segment):hover override wins without !important", async () => {
-    // Mirrors lr-attachment-trigger's identical "trigger-button hover specificity" test: jsdom/
-    // browser test runners don't synthesize a real :hover pseudo-class from a dispatched event, so
-    // this asserts the internal rule's own specificity-lowering shape (read off the real adopted
-    // stylesheet, not the exported .cssText string) rather than a simulated hover paint.
-    const el = (await fixture(
-      html`<lr-segmented .items=${items()} value="week"></lr-segmented>`
-    )) as LyraSegmented;
-    const internalHoverRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
-      .flatMap((sheet) => Array.from(sheet.cssRules))
-      .map((rule) => rule.cssText)
-      // CSSOM re-serializes attribute selectors with double quotes regardless of the source's own
-      // quoting, so match quote-insensitively (mirrors the ruleFor() helper above).
-      .find(
-        (text) => text.includes(":hover") && /part=['"]segment['"]/.test(text)
+    const wrapper = await fixture<HTMLElement>(html`
+      <div>
+        <style>
+          lr-segmented::part(segment):hover { color: rgb(7, 8, 9); }
+        </style>
+        <lr-segmented
+          style="--lr-transition-fast: 0ms"
+          .items=${items()}
+          value="week"
+        ></lr-segmented>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-segmented") as LyraSegmented;
+    const target = segmentButtons(el)[0]!;
+    const rect = target.getBoundingClientRect();
+    try {
+      await resetMouse();
+      await sendMouse({
+        type: "move",
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => getComputedStyle(target).color === "rgb(7, 8, 9)",
+        "consumer segment hover color did not win"
       );
-    expect(internalHoverRule).to.contain(":where(");
+      expect(getComputedStyle(target).color).to.equal("rgb(7, 8, 9)");
+    } finally {
+      await resetMouse();
+    }
   });
 });
 
@@ -989,22 +1005,6 @@ function resolvedInShadow(
   const value = getComputedStyle(probe).getPropertyValue(property);
   probe.remove();
   return value;
-}
-
-/** The single declaration block of the first rule whose selector matches `selector`, read off the
- *  component's own constructed stylesheet rather than its serialized text. */
-function ruleFor(selector: string): CSSStyleDeclaration {
-  const sheet = new CSSStyleSheet();
-  sheet.replaceSync(styles.cssText);
-  // CSSOM re-serializes attribute selectors with double quotes; compare quote-insensitively.
-  const normalize = (text: string) => text.replace(/"/g, "'");
-  const rule = [...sheet.cssRules].find(
-    (candidate) =>
-      candidate instanceof CSSStyleRule &&
-      normalize(candidate.selectorText) === normalize(selector)
-  ) as CSSStyleRule | undefined;
-  expect(rule, `no rule for ${selector}`).to.exist;
-  return rule!.style;
 }
 
 describe("selected-state cssprops", () => {
@@ -1049,54 +1049,59 @@ describe("selected-state cssprops", () => {
   it("leaves the hover treatment of an UNCHECKED segment untouched -- the coupling the props exist to break", async () => {
     const el = await themed(overrides);
     const unchecked = segmentButtons(el)[0]!;
-    // The hover rule resolves through its own prop, never through any selected-state prop: before
-    // this hook existed the only way to recolor the checked pill was to hijack library-wide
-    // --lr-color-surface/--lr-color-text, which necessarily repainted hovered-unselected segments
-    // too (they read the very same token).
-    const hover = ruleFor(
-      ":where([part='segment']):hover:where(:not([aria-disabled='true']):not([aria-checked='true']))"
-    );
-    expect(hover.getPropertyValue("color")).to.equal(
-      "var(--lr-segmented-hover-color, var(--lr-color-text))"
-    );
-    expect(hover.cssText).to.not.include("selected");
-    // ...and with the selected props set, that hover color still resolves to the untouched
-    // --lr-color-text token on the segment that would receive it.
-    expect(
-      getComputedStyle(unchecked).getPropertyValue("--lr-segmented-hover-color")
-    ).to.equal("");
-    expect(
-      resolvedInShadow(el, "color: var(--lr-color-text)", "color")
-    ).to.equal(
-      resolvedInShadow(
-        el,
-        "color: var(--lr-segmented-hover-color, var(--lr-color-text))",
-        "color"
-      )
-    );
+    const expected = resolvedInShadow(el, "color: var(--lr-color-text)", "color");
+    const rect = unchecked.getBoundingClientRect();
+    try {
+      await resetMouse();
+      await sendMouse({
+        type: "move",
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => getComputedStyle(unchecked).color === expected,
+        "selected-state tokens leaked into the unchecked hover treatment"
+      );
+      expect(getComputedStyle(unchecked).color).to.equal(expected);
+    } finally {
+      await resetMouse();
+    }
   });
 
   it("recolors the hover treatment on its own, without touching the checked segment", async () => {
     const el = await themed("--lr-segmented-hover-color: rgb(7, 8, 9);");
+    const unchecked = segmentButtons(el)[0]!;
     const checked = segmentButtons(el)[1]!;
-    expect(getComputedStyle(checked).color).to.equal(
-      resolvedInShadow(el, "color: var(--lr-color-text)", "color")
-    );
-    expect(getComputedStyle(checked).backgroundColor).to.equal(
-      resolvedInShadow(
-        el,
-        "background: var(--lr-color-surface)",
-        "background-color"
-      )
-    );
-    // The value the hover rule (asserted above) resolves for an unchecked segment.
-    expect(
-      resolvedInShadow(
-        el,
-        "color: var(--lr-segmented-hover-color, var(--lr-color-text))",
-        "color"
-      )
-    ).to.equal("rgb(7, 8, 9)");
+    const rect = unchecked.getBoundingClientRect();
+    try {
+      await resetMouse();
+      await sendMouse({
+        type: "move",
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => getComputedStyle(unchecked).color === "rgb(7, 8, 9)",
+        "segmented hover token did not reach the rendered unchecked segment"
+      );
+      expect(getComputedStyle(unchecked).color).to.equal("rgb(7, 8, 9)");
+      expect(getComputedStyle(checked).color).to.equal(
+        resolvedInShadow(el, "color: var(--lr-color-text)", "color")
+      );
+      expect(getComputedStyle(checked).backgroundColor).to.equal(
+        resolvedInShadow(
+          el,
+          "background: var(--lr-color-surface)",
+          "background-color"
+        )
+      );
+    } finally {
+      await resetMouse();
+    }
   });
 
   it("renders identically to the pre-cssprop output when every prop is unset", async () => {

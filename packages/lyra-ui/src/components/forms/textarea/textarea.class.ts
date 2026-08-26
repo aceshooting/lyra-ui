@@ -16,6 +16,10 @@ import { lengthViolations } from '../../../internal/length-constraints.js';
 import { styles } from './textarea.styles.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
+import type {
+  LyraSelectionDirection,
+  LyraTextWrap,
+} from '../../../internal/shared-unions.js';
 import {
   autocorrectConverter,
   normalizeAutocorrect,
@@ -41,8 +45,8 @@ export type TextareaResize =
   | 'horizontal'
   | 'both'
   | 'auto';
-export type TextareaWrap = 'hard' | 'soft' | 'off';
-export type TextareaSelectionDirection = 'forward' | 'backward' | 'none';
+export type TextareaWrap = LyraTextWrap;
+export type TextareaSelectionDirection = LyraSelectionDirection;
 /** Scroll offsets read from, or written to, the internal native `<textarea>`. */
 export interface TextareaScrollPosition {
   top: number;

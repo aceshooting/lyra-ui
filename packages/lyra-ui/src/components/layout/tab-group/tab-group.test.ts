@@ -192,24 +192,45 @@ it("keeps the edge fade opaque when a consumer themes the shadow color transluce
   expect(mask).to.not.contain("0.25");
 });
 
-it('the internal [part="tab"]:hover rule is :where()-wrapped, so a consumer ::part(tab):hover override wins without needing !important', async () => {
-  const el = (await fixture(basic())) as LyraTabGroup;
-  // Same technique as attachment-trigger.test.ts's identically-shaped specificity test: real
-  // browser test runners don't synthesize a :hover pseudo-class from a dispatched event, so
-  // assert via the rendered stylesheet's own selector text instead of a paint result.
-  const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
-    .flatMap((sheet) => Array.from(sheet.cssRules))
-    .map((rule) => rule.cssText)
-    .find((text) => text.includes(":hover") && text.includes("aria-disabled"));
-  expect(internalRule, 'expected a [part="tab"]:hover rule').to.not.equal(
-    undefined
-  );
-  expect(internalRule).to.contain(":where(");
+it('lets a consumer ::part(tab):hover color win in the rendered cascade', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <style>
+        lr-tab-group::part(tab):hover { color: rgb(7, 8, 9); }
+      </style>
+      ${basic()}
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-tab-group') as LyraTabGroup;
+  el.style.setProperty('--lr-transition-fast', '0ms');
+  const target = tabButtons(el)[1]!;
+  try {
+    await resetMouse();
+    await moveMouseTo(target);
+    await waitUntil(
+      () => getComputedStyle(target).color === 'rgb(7, 8, 9)',
+      'consumer tab hover color did not win'
+    );
+    expect(getComputedStyle(target).color).to.equal('rgb(7, 8, 9)');
+  } finally {
+    await resetMouse();
+  }
 });
 
-it("gives keyboard-focusable tab panels a hover affordance", () => {
-  const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
-  expect(css).to.match(/\[part='panel'\]:hover/);
+it('paints the keyboard-focusable panel hover affordance in computed style', async () => {
+  const el = (await fixture(basic())) as LyraTabGroup;
+  const panel = panels(el)[0]!;
+  try {
+    await resetMouse();
+    await moveMouseTo(panel);
+    await waitUntil(
+      () => getComputedStyle(panel).outlineStyle === 'solid',
+      'panel hover outline did not paint'
+    );
+    expect(getComputedStyle(panel).outlineWidth).to.not.equal('0px');
+  } finally {
+    await resetMouse();
+  }
 });
 
 it("is accessible with no panel children (empty state)", async () => {
@@ -234,8 +255,8 @@ it("builds one tab per canonical descriptor, defaulting active to the first", as
     "Settings",
   ]);
   expect(el.active).to.equal("input");
-  expect(buttons[0].getAttribute("aria-selected")).to.equal("true");
-  expect(buttons[1].getAttribute("aria-selected")).to.equal("false");
+  expect(buttons[0]!.getAttribute("aria-selected")).to.equal("true");
+  expect(buttons[1]!.getAttribute("aria-selected")).to.equal("false");
 });
 
 it("an unpaired panel never produces a tab or rendered panel", async () => {
@@ -274,7 +295,11 @@ it("a plain slot/label child produces no tab and no rendered panel", async () =>
 
 it("only the active panel is visible; the others are hidden", async () => {
   const el = (await fixture(basic())) as LyraTabGroup;
-  const [input, preview, settings] = panels(el);
+  const [input, preview, settings] = panels(el) as [
+    HTMLElement,
+    HTMLElement,
+    HTMLElement,
+  ];
   expect(input.hidden).to.be.false;
   expect(preview.hidden).to.be.true;
   expect(settings.hidden).to.be.true;
@@ -292,8 +317,16 @@ it('roving tabindex: only the active tab button is tabindex="0"', async () => {
 
 it("each tab button aria-controls its own panel, and each panel is aria-labelledby its tab", async () => {
   const el = (await fixture(basic())) as LyraTabGroup;
-  const [inputTab, previewTab] = tabButtons(el);
-  const [inputPanel, previewPanel] = panels(el);
+  const [inputTab, previewTab] = tabButtons(el) as [
+    HTMLButtonElement,
+    HTMLButtonElement,
+    HTMLButtonElement,
+  ];
+  const [inputPanel, previewPanel] = panels(el) as [
+    HTMLElement,
+    HTMLElement,
+    HTMLElement,
+  ];
   expect(inputTab.getAttribute("aria-controls")).to.equal(inputPanel.id);
   expect(previewTab.getAttribute("aria-controls")).to.equal(previewPanel.id);
   expect(inputPanel.getAttribute("aria-labelledby")).to.equal(inputTab.id);
@@ -307,8 +340,8 @@ it("uses opaque ARIA ids when a public panel name contains whitespace or selecto
       <lr-tab-panel name=${panelName}>Content</lr-tab-panel>
     </lr-tab-group>
   `)) as LyraTabGroup;
-  const tab = tabButtons(el)[0];
-  const panel = panels(el)[0];
+  const tab = tabButtons(el)[0]!;
+  const panel = panels(el)[0]!;
   expect(tab.id).to.match(/^lr-tab-group-\d+-\d+-tab$/);
   expect(panel.id).to.match(/^lr-tab-group-\d+-\d+-panel$/);
   expect(tab.id).to.not.include(panelName);
@@ -319,22 +352,22 @@ it("uses opaque ARIA ids when a public panel name contains whitespace or selecto
 it("clicking a tab activates it and fires lr-tab-show with only the canonical name", async () => {
   const el = (await fixture(basic())) as LyraTabGroup;
   const listener = oneEvent(el, "lr-tab-show");
-  tabButtons(el)[1].click();
+  tabButtons(el)[1]!.click();
   const event = await listener;
   expect((event as CustomEvent<{ name: string }>).detail).to.deep.equal({
     name: "preview",
   });
   expect(el.active).to.equal("preview");
   await el.updateComplete;
-  expect(panels(el)[1].hidden).to.be.false;
-  expect(panels(el)[0].hidden).to.be.true;
+  expect(panels(el)[1]!.hidden).to.be.false;
+  expect(panels(el)[0]!.hidden).to.be.true;
 });
 
 it("clicking the already-active tab is a no-op: no event, no change", async () => {
   const el = (await fixture(basic())) as LyraTabGroup;
   let fired = false;
   el.addEventListener("lr-tab-show", () => (fired = true));
-  tabButtons(el)[0].click();
+  tabButtons(el)[0]!.click();
   await el.updateComplete;
   expect(fired).to.be.false;
   expect(el.active).to.equal("input");
@@ -351,12 +384,12 @@ it("a disabled descriptor renders its tab, but clicking it never activates it", 
   `)) as LyraTabGroup;
   const buttons = tabButtons(el);
   expect(buttons.length).to.equal(2);
-  expect(buttons[1].getAttribute("aria-disabled")).to.equal("true");
-  expect(buttons[1].getAttribute("tabindex")).to.equal("-1");
+  expect(buttons[1]!.getAttribute("aria-disabled")).to.equal("true");
+  expect(buttons[1]!.getAttribute("tabindex")).to.equal("-1");
 
   let fired = false;
   el.addEventListener("lr-tab-show", () => (fired = true));
-  buttons[1].click();
+  buttons[1]!.click();
   await el.updateComplete;
   expect(fired).to.be.false;
   expect(el.active).to.equal("input");
@@ -386,7 +419,7 @@ it("honors an explicit active attribute that points at a valid, enabled tab", as
     </lr-tab-group>
   `)) as LyraTabGroup;
   expect(el.active).to.equal("settings");
-  expect(panels(el)[2].hidden).to.be.false;
+  expect(panels(el)[2]!.hidden).to.be.false;
 });
 
 it("falls back to the first enabled tab when active points at a disabled or unknown tab", async () => {
@@ -443,16 +476,16 @@ it("ArrowRight moves focus and selection to the next tab, wrapping from the last
   const el = (await fixture(basic())) as LyraTabGroup;
   const buttons = tabButtons(el);
 
-  press(buttons[0], "ArrowRight");
+  press(buttons[0]!, "ArrowRight");
   await el.updateComplete;
   expect(el.active).to.equal("preview");
   expect(el.shadowRoot!.activeElement === tabButtons(el)[1]).to.equal(true);
 
-  press(tabButtons(el)[1], "ArrowRight");
+  press(tabButtons(el)[1]!, "ArrowRight");
   await el.updateComplete;
   expect(el.active).to.equal("settings");
 
-  press(tabButtons(el)[2], "ArrowRight");
+  press(tabButtons(el)[2]!, "ArrowRight");
   await el.updateComplete;
   expect(el.active).to.equal("input");
 });
@@ -481,7 +514,7 @@ it("uses a directly dispatched tab event ahead of remembered roving state", asyn
 
 it("ArrowLeft moves focus and selection to the previous tab, wrapping from the first to the last", async () => {
   const el = (await fixture(basic())) as LyraTabGroup;
-  press(tabButtons(el)[0], "ArrowLeft");
+  press(tabButtons(el)[0]!, "ArrowLeft");
   await el.updateComplete;
   expect(el.active).to.equal("settings");
 });
@@ -497,7 +530,7 @@ it("ArrowRight skips a disabled tab", async () => {
       <lr-tab-panel name="settings">Settings form</lr-tab-panel>
     </lr-tab-group>
   `)) as LyraTabGroup;
-  press(tabButtons(el)[0], "ArrowRight");
+  press(tabButtons(el)[0]!, "ArrowRight");
   await el.updateComplete;
   expect(el.active).to.equal("settings");
 });
@@ -515,11 +548,11 @@ it('swaps ArrowLeft/ArrowRight under dir="rtl", matching lr-multi-split/lr-tree 
   `)) as LyraTabGroup;
   const buttons = tabButtons(el);
 
-  press(buttons[0], "ArrowLeft");
+  press(buttons[0]!, "ArrowLeft");
   await el.updateComplete;
   expect(el.active).to.equal("preview");
 
-  press(tabButtons(el)[1], "ArrowRight");
+  press(tabButtons(el)[1]!, "ArrowRight");
   await el.updateComplete;
   expect(el.active).to.equal("input");
 });
@@ -528,11 +561,11 @@ it("Home and End jump to the first and last enabled tabs", async () => {
   const el = (await fixture(basic())) as LyraTabGroup;
   const buttons = tabButtons(el);
 
-  press(buttons[1], "End");
+  press(buttons[1]!, "End");
   await el.updateComplete;
   expect(el.active).to.equal("settings");
 
-  press(tabButtons(el)[2], "Home");
+  press(tabButtons(el)[2]!, "Home");
   await el.updateComplete;
   expect(el.active).to.equal("input");
 });
@@ -540,7 +573,7 @@ it("Home and End jump to the first and last enabled tabs", async () => {
 it("emits lr-tab-show on keyboard-driven activation too", async () => {
   const el = (await fixture(basic())) as LyraTabGroup;
   const listener = oneEvent(el, "lr-tab-show");
-  press(tabButtons(el)[0], "ArrowRight");
+  press(tabButtons(el)[0]!, "ArrowRight");
   const event = await listener;
   expect((event as CustomEvent<{ name: string }>).detail).to.deep.equal({
     name: "preview",
@@ -560,7 +593,7 @@ it("picks up a tab added dynamically after connect", async () => {
   await aTimeout(0);
   await el.updateComplete;
 
-  expect(tabButtons(el).map((b) => b.dataset.slot)).to.deep.equal([
+  expect(tabButtons(el).map((b) => b.dataset["slot"])).to.deep.equal([
     "input",
     "preview",
     "settings",
@@ -577,7 +610,7 @@ it("picks up a disabled attribute toggled on an already-rendered child", async (
   await el.updateComplete;
 
   const buttons = tabButtons(el);
-  expect(buttons[1].getAttribute("aria-disabled")).to.equal("true");
+  expect(buttons[1]!.getAttribute("aria-disabled")).to.equal("true");
 });
 
 it("a mutation on a nested descendant (not a direct child) never forces a tabs recompute", async () => {
@@ -631,7 +664,7 @@ it("reassigns active when the currently-active child is removed", async () => {
 
 it("rehomes focus when the focused active tab is removed", async () => {
   const el = (await fixture(basic())) as LyraTabGroup;
-  tabButtons(el)[0].focus();
+  tabButtons(el)[0]!.focus();
   el.querySelector('lr-tab[panel="input"]')!.remove();
 
   await aTimeout(0);
@@ -657,19 +690,19 @@ it("ArrowRight steps past an inert tab, which never holds the roving tabindex", 
   const buttons = tabButtons(el);
   // The button standing in for inert content is itself inert, so it refuses focus outright --
   // which is exactly why arrow navigation must never step onto it.
-  expect(buttons[0].inert).to.be.false;
-  expect(buttons[1].inert).to.be.true;
-  expect(buttons[1].getAttribute("tabindex")).to.equal("-1");
+  expect(buttons[0]!.inert).to.be.false;
+  expect(buttons[1]!.inert).to.be.true;
+  expect(buttons[1]!.getAttribute("tabindex")).to.equal("-1");
 
-  press(buttons[0], "ArrowRight");
+  press(buttons[0]!, "ArrowRight");
   await el.updateComplete;
   expect(el.active).to.equal("settings");
 
-  press(tabButtons(el)[2], "ArrowLeft");
+  press(tabButtons(el)[2]!, "ArrowLeft");
   await el.updateComplete;
   expect(el.active).to.equal("input");
 
-  press(tabButtons(el)[0], "End");
+  press(tabButtons(el)[0]!, "End");
   await el.updateComplete;
   expect(el.active).to.equal("settings");
 });
@@ -764,7 +797,7 @@ it("binds its child observer to the adopted owner and rejects the retired callba
       "disconnect retires the destination observer"
     ).to.equal(1);
     adoptedObserver!.callback(
-      [{ type: "childList", target: el } as MutationRecord],
+      [{ type: "childList", target: el } as unknown as MutationRecord],
       {} as MutationObserver
     );
     expect(
@@ -800,7 +833,7 @@ it("never activates an inert tab, and skips it when resolving the default active
 
 it("rehomes focus when the focused active tab becomes inert", async () => {
   const el = (await fixture(basic())) as LyraTabGroup;
-  tabButtons(el)[0].focus();
+  tabButtons(el)[0]!.focus();
   (el.querySelector('lr-tab[panel="input"]') as HTMLElement).inert = true;
 
   await aTimeout(0);
@@ -834,13 +867,13 @@ it("leaves selection and panels alone when an ancestor inerts the whole group", 
   await el.updateComplete;
 
   expect(el.active).to.equal("input");
-  expect(tabButtons(el)[0].inert).to.be.false;
-  expect(panels(el)[0].hasAttribute("hidden")).to.be.false;
+  expect(tabButtons(el)[0]!.inert).to.be.false;
+  expect(panels(el)[0]!.hasAttribute("hidden")).to.be.false;
 });
 
 it("rehomes focus when the focused active tab becomes disabled", async () => {
   const el = (await fixture(basic())) as LyraTabGroup;
-  tabButtons(el)[0].focus();
+  tabButtons(el)[0]!.focus();
   el.querySelector('lr-tab[panel="input"]')!.setAttribute("disabled", "");
 
   await aTimeout(0);
@@ -854,9 +887,9 @@ it("rehomes focus when the focused active tab becomes disabled", async () => {
 
 it("keeps real keyboard focus on the active tab when a tab BEFORE it is removed", async () => {
   const el = (await fixture(basic())) as LyraTabGroup;
-  tabButtons(el)[1].click();
+  tabButtons(el)[1]!.click();
   await el.updateComplete;
-  tabButtons(el)[1].focus();
+  tabButtons(el)[1]!.focus();
   expect(el.active).to.equal("preview");
   expect(el.shadowRoot!.activeElement === tabButtons(el)[1]).to.equal(true);
 
@@ -866,7 +899,7 @@ it("keeps real keyboard focus on the active tab when a tab BEFORE it is removed"
 
   const focused = el.shadowRoot!.activeElement as HTMLButtonElement | null;
   expect(el.active).to.equal("preview");
-  expect(focused?.dataset.slot).to.equal("preview");
+  expect(focused?.dataset["slot"]).to.equal("preview");
   expect(focused?.getAttribute("aria-selected")).to.equal("true");
 });
 
@@ -932,22 +965,6 @@ describe("selected/hover cssprops", () => {
     return value;
   }
 
-  /** The declaration block of the first rule matching `selector`, read off the component's own
-   *  constructed stylesheet rather than its serialized text. */
-  function ruleFor(selector: string): CSSStyleDeclaration {
-    const sheet = new CSSStyleSheet();
-    sheet.replaceSync(styles.cssText);
-    // CSSOM re-serializes attribute selectors with double quotes; compare quote-insensitively.
-    const normalize = (text: string) => text.replace(/"/g, "'");
-    const rule = [...sheet.cssRules].find(
-      (candidate) =>
-        candidate instanceof CSSStyleRule &&
-        normalize(candidate.selectorText) === normalize(selector)
-    ) as CSSStyleRule | undefined;
-    expect(rule, `no rule for ${selector}`).to.exist;
-    return rule!.style;
-  }
-
   async function themed(style: string): Promise<LyraTabGroup> {
     const wrapper = (await fixture(
       html`<div style=${style}>${basic()}</div>`
@@ -981,41 +998,48 @@ describe("selected/hover cssprops", () => {
 
   it("leaves the hover treatment of an UNSELECTED tab untouched -- the coupling the props exist to break", async () => {
     const el = await themed(overrides);
-    // The hover rule resolves through its own prop, never through the selected-state props: before
-    // this hook existed the only way to recolor the selected tab was to hijack library-wide
-    // --lr-color-brand/--lr-color-text, which repainted hovered-unselected tabs with it too.
-    const hover = ruleFor(
-      ":where([part='tab']):hover:where(:not([aria-disabled='true']))"
+    const [selected, unselected] = tabButtons(el);
+    const expectedHover = resolvedInShadow(
+      el,
+      "color: var(--lr-color-text)",
+      "color"
     );
-    expect(hover.getPropertyValue("color")).to.equal(
-      "var(--lr-tab-group-hover-color, var(--lr-color-text))"
-    );
-    expect(hover.cssText).to.not.include("selected");
-    expect(hover.cssText).to.not.include("indicator");
-    expect(
-      resolvedInShadow(el, "color: var(--lr-color-text)", "color")
-    ).to.equal(
-      resolvedInShadow(
-        el,
-        "color: var(--lr-tab-group-hover-color, var(--lr-color-text))",
-        "color"
-      )
-    );
+
+    try {
+      await resetMouse();
+      await moveMouseTo(unselected!);
+      await waitUntil(
+        () => getComputedStyle(unselected!).color === expectedHover,
+        "selected-state overrides leaked into the unselected tab hover"
+      );
+      expect(getComputedStyle(unselected!).color).to.equal(expectedHover);
+      expect(getComputedStyle(selected!).color).to.equal("rgb(0, 51, 102)");
+      expect(getComputedStyle(selected!).borderBlockEndColor).to.equal(
+        "rgb(0, 102, 51)"
+      );
+    } finally {
+      await resetMouse();
+    }
   });
 
   it("recolors the hover treatment on its own, without touching the selected tab", async () => {
     const el = await themed("--lr-tab-group-hover-color: rgb(7, 8, 9);");
-    const selected = tabButtons(el)[0]!;
+    const [selected, unselected] = tabButtons(el);
     const brand = resolvedInShadow(el, "color: var(--lr-color-brand)", "color");
-    expect(getComputedStyle(selected).color).to.equal(brand);
-    expect(getComputedStyle(selected).borderBlockEndColor).to.equal(brand);
-    expect(
-      resolvedInShadow(
-        el,
-        "color: var(--lr-tab-group-hover-color, var(--lr-color-text))",
-        "color"
-      )
-    ).to.equal("rgb(7, 8, 9)");
+
+    try {
+      await resetMouse();
+      await moveMouseTo(unselected!);
+      await waitUntil(
+        () => getComputedStyle(unselected!).color === "rgb(7, 8, 9)",
+        "the tab-group hover token never reached the rendered unselected tab"
+      );
+      expect(getComputedStyle(unselected!).color).to.equal("rgb(7, 8, 9)");
+      expect(getComputedStyle(selected!).color).to.equal(brand);
+      expect(getComputedStyle(selected!).borderBlockEndColor).to.equal(brand);
+    } finally {
+      await resetMouse();
+    }
   });
 
   it("renders identically to the pre-cssprop output when every prop is unset", async () => {
@@ -1554,6 +1578,83 @@ it("gives an <lr-tab> with no panel attribute a stable synthetic name rather tha
   expect(el.active).to.equal(firstName);
 });
 
+it('mirrors selection back onto an active unpaneled <lr-tab> with a synthetic panel key', async () => {
+  const el = (await fixture(html`
+    <lr-tab-group>
+      <lr-tab active>Overview</lr-tab>
+      <lr-tab panel="details">Details</lr-tab>
+      <lr-tab-panel name="details">Details body</lr-tab-panel>
+    </lr-tab-group>
+  `)) as LyraTabGroup;
+  await el.updateComplete;
+  const [overview, details] = [...el.querySelectorAll<LyraTab>('lr-tab')];
+
+  expect(tabButtons(el)[0]!.getAttribute('aria-selected')).to.equal('true');
+  expect(overview!.active).to.equal(true);
+  tabButtons(el)[1]!.click();
+  await el.updateComplete;
+  expect(overview!.active).to.equal(false);
+  expect(details!.active).to.equal(true);
+});
+
+it('omits an empty unpaneled descriptor instead of exposing its synthetic key as a tab name', async () => {
+  const el = (await fixture(html`
+    <lr-tab-group aria-label="Views">
+      <lr-tab><span aria-hidden="true">Decorative only</span></lr-tab>
+      <lr-tab panel="details">Details</lr-tab>
+      <lr-tab-panel name="details">Details body</lr-tab-panel>
+    </lr-tab-group>
+  `)) as LyraTabGroup;
+  await el.updateComplete;
+
+  expect(tabButtons(el)).to.have.lengthOf(1);
+  expect(tabButtons(el)[0]!.getAttribute('aria-label')).to.equal('Details');
+  expect(el.active).to.equal('details');
+
+  el.querySelector('lr-tab')!.textContent = 'Decorative only';
+  await aTimeout(0);
+  await el.updateComplete;
+  expect(tabButtons(el).map((button) => button.getAttribute('aria-label'))).to.deep.equal([
+    'Decorative only',
+    'Details',
+  ]);
+});
+
+it('preserves an authored panel name as the fallback for an empty paired descriptor', async () => {
+  const el = (await fixture(html`
+    <lr-tab-group aria-label="Views">
+      <lr-tab panel="details"></lr-tab>
+      <lr-tab-panel name="details">Details body</lr-tab-panel>
+    </lr-tab-group>
+  `)) as LyraTabGroup;
+  await el.updateComplete;
+
+  expect(tabButtons(el)).to.have.lengthOf(1);
+  expect(tabButtons(el)[0]!.getAttribute('aria-label')).to.equal('details');
+  expect(el.active).to.equal('details');
+});
+
+it('keeps synthetic names distinct from every authored tab and panel name', async () => {
+  const el = (await fixture(html`
+    <lr-tab-group aria-label="Views">
+      <lr-tab>Unpaneled</lr-tab>
+      <lr-tab panel="lr-tab-0">Authored</lr-tab>
+      <lr-tab-panel name="lr-tab-0">Authored body</lr-tab-panel>
+    </lr-tab-group>
+  `)) as LyraTabGroup;
+  await el.updateComplete;
+
+  expect(tabButtons(el)).to.have.lengthOf(2);
+  expect(tabButtons(el).map((button) => button.getAttribute('aria-label'))).to.deep.equal([
+    'Unpaneled',
+    'Authored',
+  ]);
+  expect(tabButtons(el).map((button) => button.dataset['slot'])).to.have.members([
+    'lr-tab-0',
+    'lr-tab-0-1',
+  ]);
+});
+
 it("adopts a tab added after first render", async () => {
   const el = (await fixture(elementModel())) as LyraTabGroup;
   await el.updateComplete;
@@ -1599,7 +1700,7 @@ it("resyncs post-mount element-model identity mutations through properties and a
   const buttons = tabButtons(el);
   const wrappers = panels(el);
   expect(el.active).to.equal("overview");
-  expect(buttons.map((button) => button.dataset.slot)).to.deep.equal([
+  expect(buttons.map((button) => button.dataset["slot"])).to.deep.equal([
     "overview",
     "workspace",
     "danger",
@@ -1792,6 +1893,7 @@ it("bounds and ellipsizes long vertical labels at an exact 320px allocation in L
     await el.updateComplete;
     const nav = el.shadowRoot!.querySelector('[part="nav"]') as HTMLElement;
     const longTab = tabButtons(el)[0]!;
+    const labelBox = longTab.querySelector<HTMLElement>('[data-tab-label]')!;
     const panel = panels(el)[0]!;
     const groupBox = el.getBoundingClientRect();
     const navBox = nav.getBoundingClientRect();
@@ -1827,10 +1929,12 @@ it("bounds and ellipsizes long vertical labels at an exact 320px allocation in L
       groupBox.right + 1
     );
     expect(
-      longTab.scrollWidth,
+      labelBox.scrollWidth,
       `${direction}/${placement} long label clipping`
-    ).to.be.greaterThan(longTab.clientWidth);
-    expect(getComputedStyle(longTab).textOverflow).to.equal("ellipsis");
+    ).to.be.greaterThan(labelBox.clientWidth);
+    expect(getComputedStyle(labelBox).display).to.equal('block');
+    expect(getComputedStyle(labelBox).overflow).to.equal('hidden');
+    expect(getComputedStyle(labelBox).textOverflow).to.equal("ellipsis");
   }
 });
 
@@ -1866,6 +1970,7 @@ it("contains unbroken element-model tab labels and panel content at an exact 320
     const navBounds = nav.getBoundingClientRect();
     const panelBounds = panel.getBoundingClientRect();
     const activeTab = tabButtons(el)[0]!;
+    const activeLabel = activeTab.querySelector<HTMLElement>('[data-tab-label]')!;
 
     expect(Math.round(groupBounds.width), `${direction} group width`).to.equal(
       320
@@ -1877,9 +1982,9 @@ it("contains unbroken element-model tab labels and panel content at an exact 320
       groupBounds.right + 1
     );
     expect(
-      activeTab.scrollWidth,
+      activeLabel.scrollWidth,
       `${direction} long tab clipping`
-    ).to.be.greaterThan(activeTab.clientWidth);
+    ).to.be.greaterThan(activeLabel.clientWidth);
     expect(
       panel.scrollWidth,
       `${direction} panel horizontal overflow`
@@ -2388,7 +2493,7 @@ it("scrolls instantly under prefers-reduced-motion", async () => {
     media: query,
     addEventListener: () => {},
     removeEventListener: () => {},
-  })) as typeof window.matchMedia;
+  })) as unknown as typeof window.matchMedia;
   try {
     const calls = await recordScroll(el, "end");
     // `instant`, not `auto`: `auto` defers to the stylesheet, so a consumer's own
@@ -2407,7 +2512,7 @@ it("scrolls smoothly when motion is allowed", async () => {
     media: query,
     addEventListener: () => {},
     removeEventListener: () => {},
-  })) as typeof window.matchMedia;
+  })) as unknown as typeof window.matchMedia;
   try {
     const calls = await recordScroll(el, "end");
     expect(calls[0]!.behavior).to.equal("smooth");

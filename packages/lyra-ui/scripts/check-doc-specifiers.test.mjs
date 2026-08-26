@@ -2,18 +2,29 @@ import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import {
   DOC_SPECIFIER_EXCEPTIONS,
   checkDocumentedSpecifiers,
+  checkWorkspaceDocumentedSpecifiers,
   collectDocumentedSpecifiers,
 } from './check-doc-specifiers.mjs';
 
 // The production tree must always pass -- this is the gate itself, run against reality.
 assert.deepEqual(
-  checkDocumentedSpecifiers().findings,
+  checkWorkspaceDocumentedSpecifiers().findings,
   [],
   'every specifier a shipped file documents must resolve through package.json#exports'
+);
+const productionFlagsDir = join(
+  dirname(dirname(dirname(fileURLToPath(import.meta.url)))),
+  'lyra-flags',
+);
+const productionFlagSpecifiers = collectDocumentedSpecifiers(productionFlagsDir);
+assert.ok(
+  productionFlagSpecifiers.has('@aceshooting/lyra-flags/standard'),
+  'the workspace gate must actually scan lyra-flags documentation',
 );
 
 const root = mkdtempSync(join(tmpdir(), 'lyra-doc-specifiers-'));
@@ -119,6 +130,40 @@ try {
   );
 } finally {
   rmSync(root, { recursive: true, force: true });
+}
+
+const flagsRoot = mkdtempSync(join(tmpdir(), 'lyra-flags-doc-specifiers-'));
+try {
+  const writeFlags = (relativePath, contents) => {
+    const target = join(flagsRoot, relativePath);
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, contents);
+  };
+  writeFlags(
+    'package.json',
+    `${JSON.stringify(
+      {
+        name: '@aceshooting/lyra-flags',
+        exports: {
+          '.': './index.js',
+          './standard': './standard.js',
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  writeFlags(
+    'README.md',
+    "import { flagUrl } from '@aceshooting/lyra-flags/compact';\n",
+  );
+
+  assert.deepEqual(checkDocumentedSpecifiers(flagsRoot).findings, [
+    '@aceshooting/lyra-flags/compact is documented as an import in README.md but does not '
+      + 'resolve through package.json#exports',
+  ]);
+} finally {
+  rmSync(flagsRoot, { recursive: true, force: true });
 }
 
 console.log('documented package specifier checks passed.');

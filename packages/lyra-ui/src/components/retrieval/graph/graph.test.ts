@@ -8,17 +8,66 @@ import {
 } from '@open-wc/testing';
 import { select } from 'd3-selection';
 import './graph.js';
-import { LyraGraph } from './graph.js';
+import {
+  LyraGraph as LyraGraphElement,
+  type LyraGraphLink,
+  type LyraGraphNode,
+} from './graph.js';
+import type {
+  D3SimulationLinkDatum,
+  D3SimulationNodeDatum,
+} from './graph-loader.js';
 import { layeredLayout } from '../../../internal/layered-layout.js';
 import { invalidateLyraTheme } from '../../../internal/theme-watcher.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+
+type GraphSimulationNode = LyraGraphNode & D3SimulationNodeDatum;
+type GraphSimulationLink = Omit<LyraGraphLink, 'source' | 'target'> &
+  D3SimulationLinkDatum<GraphSimulationNode> & { dangling?: boolean };
+
+/** The graph simulation is intentionally private production state. These tests exercise its
+ *  coordinate continuity and hit-testing contracts through one exact, test-only structural seam
+ *  instead of weakening the component's encapsulation. */
+type LyraGraph = Pick<LyraGraphElement, keyof LyraGraphElement> & {
+  simNodes: GraphSimulationNode[];
+  simLinks: GraphSimulationLink[];
+};
+
+function asTestGraph(element: LyraGraphElement): LyraGraph {
+  return element as unknown as LyraGraph;
+}
+
+function mediaQueryOverride(
+  ownerWindow: Window,
+  matches: (query: string) => boolean
+): typeof window.matchMedia {
+  const originalMatchMedia = ownerWindow.matchMedia;
+  return (query: string) => {
+    const nativeQuery = originalMatchMedia.call(ownerWindow, query);
+    return new Proxy(nativeQuery, {
+      get(target, property) {
+        if (property === 'matches') return matches(query);
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+  };
+}
 
 const nodes = [
   { id: 'a', label: 'A' },
   { id: 'b', label: 'B' },
 ];
 const links = [{ source: 'a', target: 'b' }];
+
+it('uses the same canvas-height token as the pre-upgrade reservation', async () => {
+  const el = (await fixture(html`
+    <lr-graph style="--lr-canvas-reserved-height: 275px"></lr-graph>
+  `)) as LyraGraph;
+  expect(getComputedStyle(el).blockSize).to.equal('275px');
+  expect(el.getBoundingClientRect().height).to.be.closeTo(275, 1);
+});
 
 function announcementSink(
   doc: Document = document,
@@ -101,7 +150,7 @@ function stubNoOwnerWindow(el: LyraGraph): () => void {
     value: fake,
   });
   return () => {
-    delete (el as unknown as Record<string, unknown>).ownerDocument;
+    Reflect.deleteProperty(el, 'ownerDocument');
   };
 }
 
@@ -320,7 +369,7 @@ it('announces graph navigation through one light-DOM sink without speaking the i
 it('releases and reacquires its announcement sink when adopted into another document', async () => {
   const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
   const foreignDocument = frame.contentDocument!;
-  const el = document.createElement('lr-graph') as LyraGraph;
+  const el = asTestGraph(document.createElement('lr-graph'));
   el.seed = 7;
   el.selectionMode = 'single';
   el.nodes = nodes;
@@ -391,7 +440,7 @@ it('rebinds canvas observers, DPR/media state, frames, styles, and offscreen sur
   const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
   const foreignDocument = frame.contentDocument!;
   const foreignWindow = frame.contentWindow!;
-  const el = document.createElement('lr-graph') as LyraGraph;
+  const el = asTestGraph(document.createElement('lr-graph'));
   el.renderer = 'canvas';
   el.seed = 7;
   el.nodes = nodes;
@@ -615,7 +664,6 @@ it('keeps SVG node, link, and conditional-hull pointer geometry at least 24px un
   expect(await el.focusNode('a', { zoom: 0.25 })).to.equal(true);
   el.scrollIntoView({ block: 'center', inline: 'center' });
   await aTimeout(0);
-  const nodeHit = hits.node[0] as SVGLineElement;
   const renderedNode =
     el.shadowRoot!.querySelector<SVGGraphicsElement>('[part="node"]')!;
   const renderedNodeRect = renderedNode.getBoundingClientRect();
@@ -1501,9 +1549,9 @@ it('applies a per-node LyraGraphNode.color as the actual rendered fill', async (
   // A stylesheet rule always beats a bare presentation attribute in the SVG/CSS
   // cascade, so this must actually change the computed fill (not just the
   // attribute) to prove the per-node color isn't silently overridden.
-  expect(getComputedStyle(coloredEl).fill).to.equal('rgb(255, 0, 0)');
-  expect(getComputedStyle(coloredEl).fill).to.not.equal(
-    getComputedStyle(defaultEl).fill
+  expect(getComputedStyle(coloredEl!).fill).to.equal('rgb(255, 0, 0)');
+  expect(getComputedStyle(coloredEl!).fill).to.not.equal(
+    getComputedStyle(defaultEl!).fill
   );
 });
 
@@ -2129,7 +2177,10 @@ describe('focus and camera fit', () => {
       /translate\(([-\d.]+),\s*([-\d.]+)\)\s*scale\(([-\d.]+)\)/
     );
     expect(match, `unexpected transform string: ${transform}`).to.exist;
-    const [, tx, ty, k] = match!.map(Number);
+    const values = match!.map(Number);
+    const tx = values[1]!;
+    const ty = values[2]!;
+    const k = values[3]!;
     expect(k).to.be.closeTo(2, 0.01);
     // The node's world position, transformed by (k, tx, ty), must land at the viewport center.
     expect(k * target.x! + tx).to.be.closeTo(400, 1);
@@ -2156,12 +2207,9 @@ describe('focus and camera fit', () => {
 
   it('jumps in a single transform write under prefers-reduced-motion (no rAF tween)', async () => {
     const originalMatchMedia = window.matchMedia;
-    window.matchMedia = ((query: string) => ({
-      matches: query.includes('prefers-reduced-motion'),
-      media: query,
-      addEventListener() {},
-      removeEventListener() {},
-    })) as typeof window.matchMedia;
+    window.matchMedia = mediaQueryOverride(window, (query) =>
+      query.includes('prefers-reduced-motion')
+    );
     try {
       const el = await mountWide();
       let rafCalls = 0;
@@ -2190,12 +2238,9 @@ describe('focus and camera fit', () => {
     // a real tween instead emits progressively across every frame, and this only needs to prove
     // the payload shape/value, not the tween's own settling behavior.
     const originalMatchMedia = window.matchMedia;
-    window.matchMedia = ((query: string) => ({
-      matches: query.includes('prefers-reduced-motion'),
-      media: query,
-      addEventListener() {},
-      removeEventListener() {},
-    })) as typeof window.matchMedia;
+    window.matchMedia = mediaQueryOverride(window, (query) =>
+      query.includes('prefers-reduced-motion')
+    );
     try {
       const el = await mountWide();
       const changed = oneEvent(el, 'lr-viewport-change');
@@ -2287,7 +2332,10 @@ describe('focus and camera fit', () => {
       /translate\(([-\d.]+),\s*([-\d.]+)\)\s*scale\(([-\d.]+)\)/
     );
     expect(match, `unexpected transform string: ${transform}`).to.exist;
-    const [, tx, ty, k] = match!.map(Number);
+    const values = match!.map(Number);
+    const tx = values[1]!;
+    const ty = values[2]!;
+    const k = values[3]!;
     // Both nodes' world positions, transformed by (k, tx, ty), must land within [10, width/height-10].
     for (const n of el.simNodes) {
       const sx = k * n.x! + tx;
@@ -3907,7 +3955,7 @@ describe('canvas renderer — interaction and a11y', () => {
         ></lr-graph>
       </div>
     `)) as HTMLElement;
-    const el = container.querySelector('lr-graph') as LyraGraph;
+    const el = asTestGraph(container.querySelector('lr-graph')!);
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -4083,7 +4131,7 @@ describe('canvas renderer — interaction and a11y', () => {
     // resolved the module-level lazy d3 loader for earlier tests -- a fresh element's loadD3()
     // .then() callback could plausibly settle before a later assertion runs, making "still loading
     // right after mount" an unreliable thing to assert on here specifically.
-    const el = document.createElement('lr-graph') as LyraGraph;
+    const el = asTestGraph(document.createElement('lr-graph'));
     el.renderer = 'canvas';
     expect((el as unknown as { loading: boolean }).loading).to.be.true;
   });
@@ -4111,8 +4159,8 @@ it('does not let a LyraGraphNode.color value inject extra CSS declarations via t
   // which reports 'static' for SVG shape elements regardless of what's
   // declared) — this is what actually detects a second CSS declaration
   // having been injected into the style attribute via string concatenation.
-  expect(coloredEl.style.position).to.equal('');
-  expect(coloredEl.style.top).to.equal('');
+  expect(coloredEl!.style.position).to.equal('');
+  expect(coloredEl!.style.top).to.equal('');
 });
 
 it('rejects url paint servers from node, type, link, and community colors', async () => {
@@ -4669,12 +4717,10 @@ it('does not reassign simNodes/simLinks references on tick, only positions (avoi
 
 it('skips the settle animation under prefers-reduced-motion (jumps straight to a converged layout)', async () => {
   const originalMatchMedia = window.matchMedia;
-  window.matchMedia = ((query: string) => ({
-    matches: query === '(prefers-reduced-motion: reduce)',
-    media: query,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-  })) as typeof window.matchMedia;
+  window.matchMedia = mediaQueryOverride(
+    window,
+    (query) => query === '(prefers-reduced-motion: reduce)'
+  );
 
   try {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
@@ -4735,7 +4781,7 @@ it('seeded layout: two separate instances with the same nodes/links/seed converg
   )) as LyraGraph;
   // Deliberately reorder the nodes array between the two instances — a
   // reproducible seeded layout must be keyed by node id, not array index.
-  elB.nodes = [seededNodes[2], seededNodes[0], seededNodes[1]];
+  elB.nodes = [seededNodes[2]!, seededNodes[0]!, seededNodes[1]!];
   elB.links = seededLinks;
   await elB.updateComplete;
   await waitUntil(
@@ -5179,7 +5225,7 @@ describe('RTL keyboard navigation', () => {
     const wrapper = (await fixture(
       html`<div dir="rtl"><lr-graph></lr-graph></div>`
     )) as HTMLDivElement;
-    const el = wrapper.querySelector('lr-graph') as LyraGraph;
+    const el = asTestGraph(wrapper.querySelector('lr-graph')!);
     el.nodes = nodes;
     el.links = links;
     await el.updateComplete;
@@ -5426,7 +5472,7 @@ describe('canvas visibility gating (perf)', () => {
       );
 
       expect(io.observedTargets).to.include(el);
-      const latest = io.instances[io.instances.length - 1];
+      const latest = io.instances[io.instances.length - 1]!;
 
       type Internals = { drawCanvas(): void; markCanvasDirty(): void };
       const internals = el as unknown as Internals;
@@ -5470,7 +5516,7 @@ describe('canvas visibility gating (perf)', () => {
         html`<lr-graph renderer="canvas"></lr-graph>`
       )) as LyraGraph;
       await el.updateComplete;
-      const latest = io.instances[io.instances.length - 1];
+      const latest = io.instances[io.instances.length - 1]!;
       expect(latest.disconnected).to.be.false;
       el.remove();
       expect(latest.disconnected).to.be.true;
@@ -5486,7 +5532,7 @@ describe('canvas visibility gating (perf)', () => {
         html`<lr-graph renderer="canvas"></lr-graph>`
       )) as LyraGraph;
       await el.updateComplete;
-      const latest = io.instances[io.instances.length - 1];
+      const latest = io.instances[io.instances.length - 1]!;
       const internal = el as unknown as { visible: boolean };
 
       // Force it false first so the `?? true` fallback's result is actually observable as a flip,
@@ -5514,7 +5560,7 @@ describe('lifecycle: super calls', () => {
     // itself and confirming lr-graph's own override still reaches it via `super.<method>()` --
     // mirrors csv-viewer/docx-viewer/pdf-viewer's identical super.willUpdate() call reaching
     // DocumentAnchorTarget's mixin logic.
-    const proto = Object.getPrototypeOf(LyraGraph.prototype) as {
+    const proto = Object.getPrototypeOf(LyraGraphElement.prototype) as {
       willUpdate?: (changed: unknown) => void;
       updated?: (changed: unknown) => void;
     };
@@ -5578,7 +5624,7 @@ describe('coverage: private-helper direct branches', () => {
     // A fresh, never-connected element: this.d3 is still undefined, so tweenCamera()'s own internal
     // guard (the same shape as focusNode()/fit()'s public-facing guards, but exercised directly here
     // since both public callers already gate on the identical condition before ever reaching it).
-    const el = document.createElement('lr-graph') as LyraGraph;
+    const el = asTestGraph(document.createElement('lr-graph'));
     const resolved = await (
       el as unknown as { tweenCamera: (fn: () => unknown) => Promise<boolean> }
     ).tweenCamera(() => ({ k: 1, x: 0, y: 0 }));
@@ -6138,6 +6184,88 @@ describe('coverage: canvas renderer internals', () => {
     expect(scene.links[0]!.color).to.not.equal('');
   });
 
+  it('resolves inherited node, link, and community colors before canvas paint assignment', async () => {
+    const el = await fixture<LyraGraph>(html`
+      <lr-graph
+        renderer="canvas"
+        width="400"
+        height="300"
+        style="width:400px;height:300px;color:rgb(12, 34, 56)"
+      ></lr-graph>
+    `);
+    el.communities = [{ id: 'team', memberIds: ['a', 'b'], color: 'inherit' }];
+    el.nodes = [
+      { id: 'a', label: 'A', communityId: 'team', color: 'inherit' },
+      { id: 'b', label: 'B', communityId: 'team' },
+    ];
+    el.links = [{ source: 'a', target: 'b', color: 'unset' }];
+    await el.updateComplete;
+    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
+    type Internals = {
+      canvasScene?: {
+        hulls: { fill: string }[];
+        links: { color: string }[];
+        nodes: { fill: string }[];
+      };
+    };
+    await waitUntil(
+      () => !!(el as unknown as Internals).canvasScene,
+      undefined,
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+
+    const scene = (el as unknown as Internals).canvasScene!;
+    expect(scene.hulls[0]!.fill).to.equal('rgb(12, 34, 56)');
+    expect(scene.links[0]!.color).to.equal('rgb(12, 34, 56)');
+    expect(scene.nodes[0]!.fill).to.equal('rgb(12, 34, 56)');
+  });
+
+  it('shares one computed-color probe across a navigable-link scan', async () => {
+    const el = await fixture<LyraGraph>(html`<lr-graph></lr-graph>`);
+    el.nodes = [
+      { id: 'a' },
+      { id: 'b' },
+      { id: 'c' },
+      { id: 'd' },
+    ];
+    el.links = [
+      { source: 'a', target: 'b', color: 'inherit' },
+      { source: 'b', target: 'c', color: 'unset' },
+      { source: 'c', target: 'd', color: 'initial' },
+    ];
+    await el.updateComplete;
+    await waitUntil(
+      () =>
+        (el as unknown as { readonly simNodes: readonly unknown[] }).simNodes
+          .length === 4,
+      undefined,
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
+    (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
+    type Internals = {
+      navigableLinksCache?: unknown[];
+      navigableLinks(): unknown[];
+      createCanvasColorProbe(): HTMLElement;
+    };
+    const internals = el as unknown as Internals;
+    internals.navigableLinksCache = undefined;
+    const createProbe = internals.createCanvasColorProbe;
+    let probeCount = 0;
+    internals.createCanvasColorProbe = () => {
+      probeCount += 1;
+      return createProbe.call(el);
+    };
+    try {
+      expect(internals.navigableLinks().length).to.equal(3);
+      expect(probeCount).to.equal(1);
+    } finally {
+      internals.createCanvasColorProbe = createProbe;
+    }
+  });
+
   it('reuses the cached canvas scene on a same-band pan/zoom repaint instead of rebuilding it every frame', async () => {
     const el = (await fixture(
       html`<lr-graph
@@ -6671,7 +6799,12 @@ describe('coverage: canvas renderer internals', () => {
       dispatchEvent: () => true,
     })) as typeof window.matchMedia;
     try {
-      expect(build().haloColor).to.equal('CanvasText');
+      const probe = document.createElement('span');
+      probe.style.color = 'CanvasText';
+      el.shadowRoot!.append(probe);
+      const expected = getComputedStyle(probe).color;
+      probe.remove();
+      expect(build().haloColor).to.equal(expected);
     } finally {
       window.matchMedia = originalMatchMedia;
     }
@@ -7357,7 +7490,7 @@ describe('coverage: canvas surface setup edge cases', () => {
   });
 
   it('edgeLabelWidth falls back to a sans-serif font family when --lr-font resolves empty (disconnected element, no cascade)', async () => {
-    const el = document.createElement('lr-graph') as LyraGraph;
+    const el = asTestGraph(document.createElement('lr-graph'));
     const width = (
       el as unknown as { edgeLabelWidth: (t: string) => number }
     ).edgeLabelWidth('probe');
@@ -7427,7 +7560,7 @@ describe('coverage: announcement-sink re-sync and camera/color-resolution edge c
     expect(() => el.fit()).to.not.throw();
   });
 
-  it('resolveCssColorValue returns a plain color as-is, and falls back to the original var() string when the referenced token is unset', async () => {
+  it('resolves both plain colors and unset custom properties to concrete canvas colors', async () => {
     const el = (await fixture(
       html`<lr-graph renderer="canvas" width="200" height="200"></lr-graph>`
     )) as LyraGraph;
@@ -7452,8 +7585,9 @@ describe('coverage: announcement-sink re-sync and camera/color-resolution edge c
       { timeout: NODE_COUNT_TIMEOUT }
     );
     const scene = (el as unknown as Internals).canvasScene!;
-    expect(scene.links[0]!.color).to.equal('#ff0000'); // no var() match -- returned as-is
-    expect(scene.links[1]!.color).to.equal('var(--totally-unset-token-xyz)'); // match found, resolves empty -> falls back
+    expect(scene.links[0]!.color).to.equal('rgb(255, 0, 0)');
+    expect(scene.links[1]!.color).to.equal(getComputedStyle(el).color);
+    expect(scene.links[1]!.color).to.not.include('var(');
   });
 });
 
@@ -7488,7 +7622,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
   });
 
   it('bindCanvasZoom no-ops when called before d3 has loaded (defensive guard, direct call)', async () => {
-    const el = document.createElement('lr-graph') as LyraGraph;
+    const el = asTestGraph(document.createElement('lr-graph'));
     el.renderer = 'canvas';
     expect(() =>
       (el as unknown as { bindCanvasZoom: () => void }).bindCanvasZoom()
@@ -8546,7 +8680,7 @@ describe('coverage: dangling link DOM-cache shrink', () => {
 
 describe('coverage: connectedCallback lazy-load resolution edge case', () => {
   it('bails out of the post-load resolution when updateComplete rejects mid-flight (catch branch)', async () => {
-    const el = document.createElement('lr-graph') as LyraGraph;
+    const el = asTestGraph(document.createElement('lr-graph'));
     let descriptor: PropertyDescriptor | undefined;
     for (
       let proto = Object.getPrototypeOf(el) as object | null;
@@ -8568,7 +8702,7 @@ describe('coverage: connectedCallback lazy-load resolution edge case', () => {
     } finally {
       el.remove();
       if (descriptor) Object.defineProperty(el, 'updateComplete', descriptor);
-      else delete (el as unknown as Record<string, unknown>).updateComplete;
+      else Reflect.deleteProperty(el, 'updateComplete');
     }
   });
 });
@@ -8584,7 +8718,7 @@ describe('styling', () => {
     property: string
   ): string {
     const normalize = (text: string) =>
-      text.replace(/"/g, '\'').replace(/\s+/g, ' ').trim();
+      text.replace(/"/g, "'").replace(/\s+/g, ' ').trim();
     for (const sheet of root.adoptedStyleSheets ?? []) {
       for (const rule of sheet.cssRules) {
         if (
@@ -8683,7 +8817,7 @@ describe('styling', () => {
     // the empty plot area; the drawn nodes, links and labels keep the colours the renderer computed.
     const resting = probes.render('transparent');
     const hovered = probes.render(
-      declaredValue(root, '[part=\'canvas\']:hover', 'background')
+      declaredValue(root, "[part='canvas']:hover", 'background')
     );
     expect(hovered).to.not.equal(resting);
 

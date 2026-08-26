@@ -347,6 +347,8 @@ const strings: LyraLocaleStrings = {
     'תוויות הנתונים אינן זמינות, אך התרשים הראשי נשאר זמין.',
   chartStackTotalsUnavailable:
     'סכומי הערימות אינם זמינים, אך התרשים הראשי נשאר זמין.',
+  chartAnnotationsUnavailable:
+    'הערות התרשים אינן זמינות, אך התרשים הראשי נשאר זמין.',
   chart: 'תרשים',
   chartTypeLine: 'קווי',
   chartTypeBar: 'עמודות',
@@ -749,6 +751,7 @@ const strings: LyraLocaleStrings = {
   emailViewerSubject: 'נושא',
   emailViewerDate: 'תאריך',
   emailViewerAttachments: 'קבצים מצורפים',
+  emailViewerUnnamedAttachment: 'קובץ מצורף ללא שם',
   emailViewerNoSubject: '(ללא נושא)',
   emailViewerOpenAttachment: 'פתח את {filename}',
   emailViewerShowQuoted: 'הצג טקסט מצוטט',
@@ -1262,6 +1265,7 @@ const strings: LyraLocaleStrings = {
   ingestionStageDone: 'הושלם',
   ingestionStageFailed: 'נכשל',
   ingestionStageCancelled: 'בוטל',
+  ingestionStageUnknown: 'שלב לא ידוע',
   ingestionQueueLabel: 'תור קליטה',
   ingestionQueueEmpty: 'אין מסמכים בתור',
   documentLibraryFreshnessFresh: 'עדכני',
@@ -1306,6 +1310,7 @@ const strings: LyraLocaleStrings = {
   drilldownDocuments: 'מסמכים',
   drilldownRuns: 'הרצות סוכן',
   drilldownEmpty: 'לא נבחר פריט',
+  drilldownUntitledNode: 'שלב ללא כותרת',
   evaluationRunStatusIdle: 'לא פעילה',
   evaluationRunStatusWaitingInput: 'ממתינה לקלט',
   evaluationRunStatusWaitingApproval: 'ממתינה לאישור',

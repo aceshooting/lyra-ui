@@ -6,6 +6,13 @@ const meta: Meta = { title: 'Feedback/Progress ring', component: 'lr-progress-ri
 export default meta;
 export const Default: StoryObj = { render: () => html`<lr-progress-ring value="65" show-value label="Upload progress">65%</lr-progress-ring>` };
 
+/** The named label slot is the progress-bar-compatible alias for center content. */
+export const LabelSlot: StoryObj = {
+  render: () => html`
+    <lr-progress-ring value="65"><span slot="label">Syncing</span></lr-progress-ring>
+  `,
+};
+
 export const UpstreamThemeHooks: StoryObj = {
   render: () => html`
     <lr-progress-ring

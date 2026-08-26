@@ -1,14 +1,8 @@
 import { fixture, expect, html } from "@open-wc/testing";
 import "./heatmap.js";
 import type { LyraHeatmap } from "./heatmap.js";
-import { styles } from "./heatmap.styles.js";
 
 it("mirrors the low-to-high legend ramp in RTL", async () => {
-  const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
-  expect(css).to.include(
-    ":host(:dir(rtl)) [part='legend'] .bar { transform: scaleX(-1); }"
-  );
-
   const wrapper = await fixture(html`
     <div dir="rtl">
       <lr-heatmap

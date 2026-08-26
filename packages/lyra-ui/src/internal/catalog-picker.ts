@@ -11,7 +11,8 @@ export interface LyraCatalogEntry {
 /**
  * A homogeneous, readonly catalog. String shorthand uses the same string for the row id and
  * label; object catalogs retain the caller's extended row type. Ids are stable occurrence
- * identities: empty ids are omitted and later duplicates lose to the first occurrence.
+ * identities: empty ids, rows without a nonblank string label, and later duplicates are omitted,
+ * with the first valid occurrence winning.
  */
 export type LyraCatalog<T extends LyraCatalogEntry = LyraCatalogEntry> =
   | readonly string[]
@@ -25,7 +26,14 @@ export function normalizeCatalog<T extends LyraCatalogEntry>(catalog: LyraCatalo
   for (const entry of catalog ?? []) {
     const record = typeof entry === 'string' ? ({ id: entry, label: entry } as T) : entry;
     const id = record?.id;
-    if (typeof id !== 'string' || id.trim() === '' || seen.has(id)) continue;
+    const label = record?.label;
+    if (
+      typeof id !== 'string' ||
+      id.trim() === '' ||
+      typeof label !== 'string' ||
+      label.trim() === '' ||
+      seen.has(id)
+    ) continue;
     seen.add(id);
     normalized.push(record);
   }

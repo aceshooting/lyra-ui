@@ -343,6 +343,8 @@ const strings: LyraLocaleStrings = {
     'データラベルは利用できませんが、チャート本体は引き続き利用できます。',
   chartStackTotalsUnavailable:
     '積み上げ合計は利用できませんが、チャート本体は引き続き利用できます。',
+  chartAnnotationsUnavailable:
+    'チャートの注釈は利用できませんが、チャート本体は引き続き利用できます。',
   chart: 'チャート',
   chartTypeLine: '折れ線',
   chartTypeBar: '棒',
@@ -742,6 +744,7 @@ const strings: LyraLocaleStrings = {
   emailViewerSubject: '件名',
   emailViewerDate: '日付',
   emailViewerAttachments: '添付ファイル',
+  emailViewerUnnamedAttachment: '名前のない添付ファイル',
   emailViewerNoSubject: '（件名なし）',
   emailViewerOpenAttachment: '{filename} を開く',
   emailViewerShowQuoted: '引用文を表示',
@@ -1253,6 +1256,7 @@ const strings: LyraLocaleStrings = {
   ingestionStageDone: '完了',
   ingestionStageFailed: '失敗',
   ingestionStageCancelled: 'キャンセル済み',
+  ingestionStageUnknown: '不明なステージ',
   ingestionQueueLabel: '取り込みキュー',
   ingestionQueueEmpty: 'キューにドキュメントがありません',
   documentLibraryFreshnessFresh: '最新',
@@ -1296,6 +1300,7 @@ const strings: LyraLocaleStrings = {
   drilldownDocuments: 'ドキュメント',
   drilldownRuns: 'エージェントの実行',
   drilldownEmpty: '項目が選択されていません',
+  drilldownUntitledNode: '無題のステップ',
   evaluationRunStatusIdle: '待機中',
   evaluationRunStatusWaitingInput: '入力待ち',
   evaluationRunStatusWaitingApproval: '承認待ち',

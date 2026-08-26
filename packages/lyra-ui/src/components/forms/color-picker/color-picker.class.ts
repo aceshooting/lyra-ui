@@ -5,7 +5,10 @@ import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
 import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
-import { place } from '../../../internal/positioner.js';
+import {
+  deferredPlaceReady as place,
+  type DeferredOperationHandle,
+} from '../../../internal/anchored-overlay-runtime.js';
 import { isRtl, rtlAwarePlacement } from '../../../internal/rtl.js';
 import {
   activateNonmodalOverlay,
@@ -299,7 +302,8 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   /** Serializes `value` in upper case (`#FF0000` rather than `#ff0000`). */
   @property({ type: Boolean }) uppercase = false;
   /** Predefined palette. A `;`-separated string, an array of colour strings, or an array of
-   *  `{ color, label }` objects. Every colour the picker can parse is accepted. */
+   *  `{ color, label }` objects. Every colour the picker can parse is accepted. A blank object
+   *  label is treated as absent so the localized raw-colour accessible-name fallback remains. */
   @property() swatches: string | string[] | LyraColorPickerSwatch[] = '';
   /** Removes the button that cycles between formats. */
   @property({ type: Boolean, attribute: 'without-format-toggle' }) withoutFormatToggle = false;
@@ -329,7 +333,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     // deliberately not vetoable: initial declarative markup (no transition to veto), a disconnect
     // (the element is already gone), and a disablement-forced close (a disabled control must not
     // be held open by a listener).
-    if (this.forcedOpenChange || !this.hasRenderedOnce || !this.isConnected) {
+    if (!this.hasRenderedOnce || !this.isConnected) {
       this.applyOpenState(normalized);
       return;
     }
@@ -372,15 +376,15 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   private dragWindow?: Window;
   private dragChanged = false;
   private keyboardChanged = false;
-  private cleanupPositioner?: () => void;
+  private cleanupPositioner?: DeferredOperationHandle;
   private overlayHandle?: OverlayHandle;
   private restoreFocusOnClose = true;
   private lightDismissDocument?: Document;
   private eyeDropperAbort?: AbortController;
   private eyeDropperGeneration = 0;
   private suppressDisconnectedClose = false;
-  /** Set while a close is imposed by disablement, which no listener may veto. */
-  private forcedOpenChange = false;
+  /** Bit 1 announces opening; bit 2 moves initial focus after placement settles. */
+  private pendingPlacementEffects = 0;
   private interactionGeneration = 0;
   private hasRenderedOnce = false;
 
@@ -456,14 +460,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     // `disabled` can flip (directly, or through an ancestor fieldset) while the panel is already
     // showing; the open-guard in the setter only covers the opening direction.
     if (this.effectiveDisabled) {
-      if (this.open) {
-        this.forcedOpenChange = true;
-        try {
-          this.open = false;
-        } finally {
-          this.forcedOpenChange = false;
-        }
-      }
+      if (this.open) this.applyOpenState(false);
       this.keyboardChanged = false;
       this.cancelDrag();
     }
@@ -486,11 +483,15 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('open')) {
-      const suppressClose = this.suppressDisconnectedClose && !this.open;
+      const suppressClose = !this.open && this.suppressDisconnectedClose;
       this.suppressDisconnectedClose = false;
+      const announceOpen =
+        this.open && this.hasRenderedOnce && this.isConnected;
       if (this.open && !this.inline) {
+        this.pendingPlacementEffects = announceOpen ? 3 : 2;
         this.activatePanel();
       } else {
+        this.pendingPlacementEffects = 0;
         this.teardownOverlay(this.restoreFocusOnClose);
         // An abandoned half-typed entry must not reappear the next time the panel opens.
         this.pendingInput = '';
@@ -500,12 +501,16 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
       // `lr-show`/`lr-hide` already fired from the `open` setter, one step earlier, so a listener
       // can still veto the transition; only the settled notifications remain here.
       if (this.hasRenderedOnce && this.isConnected && !suppressClose) {
-        this.emit(this.open ? 'lr-after-show' : 'lr-after-hide');
+        if (this.open && this.inline) this.emit('lr-after-show');
+        else if (!this.open) this.emit('lr-after-hide');
       }
     } else if (changed.has('inline')) {
       if (this.inline) {
         this.teardownOverlay();
         this.panelEl()?.style.removeProperty('position');
+        const announceOpen = (this.pendingPlacementEffects & 1) !== 0;
+        this.pendingPlacementEffects = 0;
+        if (announceOpen) this.emit('lr-after-show');
       } else if (this.open) {
         this.activatePanel();
       }
@@ -656,7 +661,10 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
         const color = entry.trim();
         if (color) result.push({ color });
       } else if (entry && typeof entry.color === 'string' && entry.color.trim()) {
-        result.push({ color: entry.color.trim(), label: entry.label });
+        const label = typeof entry.label === 'string' && entry.label.trim()
+          ? entry.label
+          : undefined;
+        result.push({ color: entry.color.trim(), ...(label === undefined ? {} : { label }) });
       }
     }
     return result;
@@ -680,14 +688,29 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     const anchor = this.triggerEl();
     const panel = this.panelEl();
     if (!anchor || !panel) return;
-    this.cleanupPositioner = place(anchor, panel, {
+    const handle = place(anchor, panel, {
       placement: rtlAwarePlacement(this.placement, this),
       strategy: this.hoist ? 'fixed' : 'absolute',
+    });
+    this.cleanupPositioner = handle;
+    void handle.ready.then((positioned) => {
+      if (this.cleanupPositioner !== handle || !this.open || this.inline || !this.isConnected) return;
+      if (!positioned) {
+        this.pendingPlacementEffects = 0;
+        this.suppressDisconnectedClose = true;
+        this.applyOpenState(false);
+        return;
+      }
+      const effects = this.pendingPlacementEffects;
+      this.pendingPlacementEffects = 0;
+      if (effects & 2) this.overlayHandle?.focusInitial();
+      if (effects & 1) this.emit('lr-after-show');
     });
   }
 
   private activatePanel(): void {
     if (!this.isConnected || this.inline) return;
+    this.pendingPlacementEffects |= 2;
     this.positionPanel();
     this.restoreFocusOnClose = true;
     this.overlayHandle = activateNonmodalOverlay({
@@ -701,7 +724,6 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
       },
       restoreFocusTo: this.triggerEl(),
     });
-    this.overlayHandle.focusInitial();
     this.lightDismissDocument = this.ownerDocument;
     this.lightDismissDocument.addEventListener('pointerdown', this.onDocumentPointerDown, true);
   }

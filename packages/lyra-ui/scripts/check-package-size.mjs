@@ -1,5 +1,7 @@
+import { isMainModule } from './is-main-module.mjs';
+
 import assert from 'node:assert/strict';
-import { readFileSync, realpathSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,28 +18,100 @@ function formatBytes(bytes) {
 }
 
 export function validatePackageBudgets(budgets) {
+  assert.equal(
+    budgets?.minimumPackedByteReductionPercent,
+    25,
+    'package budget minimumPackedByteReductionPercent must retain the approved 25% target',
+  );
+  assert.equal(
+    budgets?.minimumUnpackedByteReductionPercent,
+    25,
+    'package budget minimumUnpackedByteReductionPercent must remain the approved 25%',
+  );
   for (const metric of ['packedBytes', 'unpackedBytes', 'fileCount']) {
     assert.ok(Number.isInteger(budgets?.baseline?.[metric]) && budgets.baseline[metric] > 0,
       `package budget baseline.${metric} must be a positive integer`);
     assert.ok(Number.isInteger(budgets?.maximum?.[metric]) && budgets.maximum[metric] > 0,
       `package budget maximum.${metric} must be a positive integer`);
   }
-  for (const metric of ['packedBytes', 'unpackedBytes']) {
+  const reductionFactor = 1 - budgets.minimumUnpackedByteReductionPercent / 100;
+  assert.ok(
+    budgets.maximum.unpackedBytes <= Math.floor(budgets.baseline.unpackedBytes * reductionFactor),
+    'package budget maximum.unpackedBytes must enforce at least a 25% reduction from its baseline',
+  );
+
+  const packedBudget = budgets.packedBudgetPolicy;
+  assert.equal(
+    packedBudget?.strategy,
+    'measured-required-artifact-exception',
+    'package budget packed strategy must name the reviewed required-artifact exception',
+  );
+  assert.equal(
+    packedBudget?.exceptionReason,
+    'required-public-artifacts-exceed-25-percent-target',
+    'package budget packed exception must retain its measured infeasibility reason',
+  );
+  for (const field of [
+    'reviewedMeasurementBytes',
+    'headroomBytes',
+    'targetAt25PercentBytes',
+    'favorableIncompletePackageProbeBytes',
+  ]) {
     assert.ok(
-      budgets.maximum[metric] < budgets.baseline[metric],
-      `package budget maximum.${metric} must stay below its baseline`,
+      Number.isInteger(packedBudget?.[field]) && packedBudget[field] > 0,
+      `package budget packedBudgetPolicy.${field} must be a positive integer`,
     );
   }
+  const packedTarget = Math.floor(
+    budgets.baseline.packedBytes * (1 - budgets.minimumPackedByteReductionPercent / 100),
+  );
+  assert.equal(
+    packedBudget.targetAt25PercentBytes,
+    packedTarget,
+    'package budget packedBudgetPolicy.targetAt25PercentBytes must match the baseline calculation',
+  );
+  assert.ok(
+    packedBudget.favorableIncompletePackageProbeBytes > packedTarget,
+    'package budget packed probe must record why 25% is not achievable before restoring omitted public artifacts',
+  );
+  assert.ok(
+    packedBudget.reviewedMeasurementBytes > packedBudget.favorableIncompletePackageProbeBytes,
+    'package budget reviewed packed measurement must exceed the favorable incomplete-package probe',
+  );
+  assert.ok(
+    packedBudget.headroomBytes <= Math.ceil(packedBudget.reviewedMeasurementBytes * 0.005),
+    'package budget packed headroom must remain at or below 0.5% of the reviewed measurement',
+  );
+  assert.equal(
+    budgets.maximum.packedBytes,
+    packedBudget.reviewedMeasurementBytes + packedBudget.headroomBytes,
+    'package budget maximum.packedBytes must equal the reviewed measurement plus tight headroom',
+  );
+  assert.ok(
+    budgets.maximum.packedBytes < budgets.baseline.packedBytes,
+    'package budget maximum.packedBytes must remain below the pre-8 baseline',
+  );
   const fileBudget = budgets.fileCountBudget;
   for (const field of [
     'baseArtifactCeiling',
     'stableTagAliasCount',
     'emittedFilesPerAlias',
+    'measuredEntrypointRemainder',
+    'nextComponentArtifactHeadroom',
     'entrypointHeadroom',
   ]) {
     assert.ok(Number.isInteger(fileBudget?.[field]) && fileBudget[field] >= 0,
       `package budget fileCountBudget.${field} must be a non-negative integer`);
   }
+  assert.ok(
+    fileBudget.nextComponentArtifactHeadroom > 0,
+    'package budget fileCountBudget.nextComponentArtifactHeadroom must reserve real scaffold headroom',
+  );
+  assert.equal(
+    fileBudget.entrypointHeadroom,
+    fileBudget.measuredEntrypointRemainder + fileBudget.nextComponentArtifactHeadroom,
+    'package budget fileCountBudget.entrypointHeadroom must include the measured remainder plus next-component allowance',
+  );
   assert.equal(
     budgets.maximum.fileCount,
     fileBudget.baseArtifactCeiling +
@@ -86,6 +160,17 @@ export function metricsFromPackResult(result) {
   };
 }
 
+export function formatPackageSummary(metrics, budgets) {
+  const packedReduction = percentReduction(budgets.baseline.packedBytes, metrics.packedBytes);
+  const unpackedReduction = percentReduction(budgets.baseline.unpackedBytes, metrics.unpackedBytes);
+  return (
+    `package: ${formatBytes(metrics.packedBytes)} packed ` +
+    `(${packedReduction.toFixed(1)}% reduction; reviewed exception to the 25% target), ` +
+    `${formatBytes(metrics.unpackedBytes)} unpacked (${unpackedReduction.toFixed(1)}% reduction), ` +
+    `${metrics.fileCount.toLocaleString('en')} files`
+  );
+}
+
 function readPackedMetrics() {
   const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
   const packed = spawnSync(
@@ -110,12 +195,7 @@ function main() {
   const budgets = validatePackageBudgets(JSON.parse(readFileSync(budgetsPath, 'utf8')));
   const metrics = readPackedMetrics();
   const findings = packageBudgetFindings(metrics, budgets);
-  const packedReduction = percentReduction(budgets.baseline.packedBytes, metrics.packedBytes);
-  const unpackedReduction = percentReduction(budgets.baseline.unpackedBytes, metrics.unpackedBytes);
-  const summary =
-    `package: ${formatBytes(metrics.packedBytes)} packed (${packedReduction.toFixed(1)}% reduction), ` +
-    `${formatBytes(metrics.unpackedBytes)} unpacked (${unpackedReduction.toFixed(1)}% reduction), ` +
-    `${metrics.fileCount.toLocaleString('en')} files`;
+  const summary = formatPackageSummary(metrics, budgets);
   if (findings.length > 0) {
     console.error(`${summary}\n${findings.join('\n')}`);
     process.exitCode = 1;
@@ -124,4 +204,4 @@ function main() {
   console.log(`${summary} — within hard package budgets`);
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) main();
+if (isMainModule(import.meta.url)) main();

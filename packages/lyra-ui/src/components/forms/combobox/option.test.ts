@@ -398,7 +398,7 @@ it('constructs its label observer in the adopted owner realm', async () => {
     if (observerDescriptor) {
       Object.defineProperty(frameWindow, 'MutationObserver', observerDescriptor);
     } else {
-      delete (frameWindow as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+      Reflect.deleteProperty(frameWindow, 'MutationObserver');
     }
     frame.remove();
   }
@@ -682,6 +682,35 @@ it('contains unbroken labels and end adornments in a 320px LTR or RTL allocation
     expect(wrapper.scrollWidth, `${direction} wrapper scroll width`).to.be.at.most(wrapper.clientWidth);
     expect(base.scrollWidth, `${direction} base scroll width`).to.be.at.most(base.clientWidth);
   }
+});
+
+it('sizes a small start adornment to its content instead of a percentage flex basis', async () => {
+  const label = 'New workspace';
+  const reference = (await fixture(html`
+    <lr-option value="reference" style="inline-size: max-content">${label}</lr-option>
+  `)) as LyraOption;
+  const naturalLabelWidth = part(reference, 'label').scrollWidth;
+
+  const el = (await fixture(html`
+    <lr-option value="workspace" style="inline-size: ${Math.ceil(naturalLabelWidth) + 60}px">
+      <svg slot="start" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+        <circle r="8" cx="8" cy="8"></circle>
+      </svg>
+      ${label}
+    </lr-option>
+  `)) as LyraOption;
+  await el.updateComplete;
+
+  const startBox = part(el, 'start').getBoundingClientRect();
+  const labelPart = part(el, 'label');
+  expect(
+    startBox.width,
+    'the wrapper follows the 16px glyph instead of reserving 40% of the row'
+  ).to.be.lessThan(30);
+  expect(
+    labelPart.scrollWidth,
+    'the small glyph does not starve an otherwise fitting label'
+  ).to.be.at.most(labelPart.clientWidth + 1);
 });
 
 it('keeps a consumer hover retint visible on the option that is also current', async function () {

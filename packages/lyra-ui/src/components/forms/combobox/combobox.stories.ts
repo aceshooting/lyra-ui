@@ -3,6 +3,7 @@ import { html } from "lit";
 import type {
   ComboboxFilterDetail,
   ComboboxSource,
+  ComboboxSourceRow,
   LyraCombobox,
   LyraComboboxValidator,
   OptionFilter,
@@ -39,6 +40,35 @@ export const Default: Story = {
       <lr-option value="d">Date</lr-option>
     </lr-combobox>
   `,
+};
+
+export const ControlledSelectedRows: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`selectedRows` accepts detached read snapshots or equivalent current-source rows, canonicalizes them by `value`, and updates the controlled selection without firing user-change events.',
+      },
+    },
+  },
+  render: () => {
+    const selected: readonly ComboboxSourceRow[] = [
+      { value: 'b', label: 'Caller-owned label is canonicalized' },
+      { value: 'c', label: 'Caller-owned label is canonicalized' },
+    ];
+    return html`
+      <lr-combobox
+        multiple
+        label="Controlled fruit"
+        style="max-width: 20rem"
+        .selectedRows=${selected}
+      >
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+        <lr-option value="c">Cherry</lr-option>
+      </lr-combobox>
+    `;
+  },
 };
 
 export const SpellcheckDefaultRestoration: Story = {

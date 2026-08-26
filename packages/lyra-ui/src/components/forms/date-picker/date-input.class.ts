@@ -15,7 +15,11 @@ import {
   SET_ANCHORED_VALIDITY,
   VALIDITY_ANCHOR,
 } from '../../../internal/anchored-validity.js';
-import { place } from '../../../internal/positioner.js';
+import {
+  deferredPlaceReady as place,
+  waitForDeferredPlacement,
+  type DeferredOperationHandle,
+} from '../../../internal/anchored-overlay-runtime.js';
 import { nextId } from '../../../internal/a11y.js';
 import {
   closeIcon,
@@ -44,6 +48,7 @@ import {
 } from './calendar-core.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
+import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { styles } from './date-input.styles.js';
 import {
   LyraDatePicker,
@@ -175,7 +180,7 @@ const pageByConverter: ComplexAttributeConverter<LyraDatePickerPageBy> = {
   toAttribute: normalizeDateInputPageBy,
 };
 
-export type LyraDateInputSelectionDirection = 'forward' | 'backward' | 'none';
+export type LyraDateInputSelectionDirection = LyraSelectionDirection;
 export type LyraDateInputPlacement =
   | 'top'
   | 'top-start'
@@ -567,7 +572,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
    *  input/change sequence without duplicating real browser input events. */
   private inputRelayedSinceCommit = false;
 
-  private cleanupFn?: () => void;
+  private cleanupFn?: DeferredOperationHandle;
   private pointerListenerDocument?: Document;
   private pointerListener?: (event: PointerEvent) => void;
   private visibilityListenerDocument?: Document;
@@ -1269,6 +1274,17 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     const token = ++this.transitionToken;
     await this.updateComplete;
     if (this.transitionToken !== token) return;
+    if (event === 'lr-after-show') {
+      const positioned = await waitForDeferredPlacement(() => this.cleanupFn);
+      if (this.transitionToken !== token || !this.open) return;
+      if (!positioned) {
+        this.resolveTransitionWaiters('lr-after-show');
+        this.open = false;
+        return;
+      }
+      await this.updateComplete;
+      if (this.transitionToken !== token) return;
+    }
     if (this.isConnected) {
       const view = this.ownerDocument.defaultView;
       if (view)

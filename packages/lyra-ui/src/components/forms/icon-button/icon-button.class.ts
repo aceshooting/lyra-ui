@@ -79,7 +79,15 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  *
  * This icon-only primitive is intentionally an action/link, not a form submitter. Use
  * `<lr-button circle type="submit|reset">` with an icon-only default slot when a form action is
- * required; that component owns the complete native submitter contract.
+ * required; that component owns the complete native submitter contract. Because this tag is not
+ * form-associated, ancestor `<fieldset disabled>` state does not reach it and it is absent from
+ * `form.elements`; disable each icon button explicitly.
+ *
+ * The mirrored upstream's icon-name vocabulary is not bundled. The nested `<lr-icon>` default
+ * library contains only `add`, `check`, `close`, `search`, `menu`, `chevron-left`,
+ * `chevron-right`, `chevron-down`, `calendar`, `command`, and `trash`; any other `icon`/`name`
+ * renders no glyph unless a matching library is registered, including through
+ * `registerIconLibrary('default', { resolver })`.
  *
  * A safe `href` switches the interactive root to a native anchor. `target` derives
  * `rel="noopener noreferrer"`; `download` narrows URL validation to downloadable schemes. A

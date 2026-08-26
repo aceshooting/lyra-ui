@@ -44,6 +44,55 @@ describe("<lr-scroller>", () => {
     expect(end.hidden).to.be.false;
   });
 
+  it("creates a real vertical scrollport from the host block allocation", async () => {
+    const el = await fixture<LyraScroller>(html`
+      <lr-scroller
+        controls
+        orientation="vertical"
+        label="Tall items"
+        style="block-size:100px"
+      >
+        <div style="block-size:400px">tall content</div>
+      </lr-scroller>
+    `);
+    const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    const next = el.shadowRoot!.querySelector('[part~="next"]') as HTMLButtonElement;
+    await waitUntil(
+      () => viewport.scrollHeight > viewport.clientHeight,
+      "vertical viewport never overflowed"
+    );
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getBoundingClientRect().height).to.be.closeTo(100, 2);
+    expect(viewport.clientHeight).to.be.greaterThan(0);
+    expect(viewport.clientHeight).to.be.at.most(100);
+    expect(viewport.scrollHeight).to.be.greaterThan(viewport.clientHeight);
+    expect(next.disabled).to.be.false;
+  });
+
+  it("honors a max-block-size vertical allocation with long content", async () => {
+    const el = await fixture<LyraScroller>(html`
+      <lr-scroller
+        controls
+        orientation="vertical"
+        label="Recent events"
+        style="max-block-size:12rem"
+      >
+        ${Array.from({ length: 24 }, (_, index) => html`<span>Event ${index + 1}</span>`)}
+      </lr-scroller>
+    `);
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    const next = el.shadowRoot!.querySelector('[part~="next"]') as HTMLButtonElement;
+    await waitUntil(
+      () => viewport.scrollHeight > viewport.clientHeight,
+      "max-sized vertical viewport never overflowed"
+    );
+    expect(base.getBoundingClientRect().height).to.be.closeTo(el.getBoundingClientRect().height, 2);
+    const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+    expect(el.getBoundingClientRect().height).to.be.at.most(12 * rootFontSize + 2);
+    expect(next.disabled).to.be.false;
+  });
+
   it("without-shadow removes both cues without disabling native scrolling", async () => {
     const el = await fixture<LyraScroller>(html`
       <lr-scroller without-shadow label="Items" style="inline-size: 100px;">

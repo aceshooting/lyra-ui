@@ -138,14 +138,15 @@ export interface LyraTreeItemEventMap {
  * @csspart tree-item - The outer wrapper around the row and child group. It is the same node as
  *   `base`.
  * @csspart row - The tree row.
- * @csspart toggle - The expand/collapse button.
+ * @csspart toggle - The expand/collapse button, with pointer hover/pressed feedback while enabled.
  * @csspart icon - The optional decorative leading icon.
  * @csspart content - The primary and secondary text wrapper.
  * @csspart label - The node label.
  * @csspart description - The optional secondary description.
  * @csspart badge - One optional chip per `item.badges` entry, tone-mapped via `data-tone`.
  * @csspart group - The wrapper around a node's expanded child items.
- * @csspart item - The row container, excluding nested children.
+ * @csspart item - The painted row container, excluding nested children; state backgrounds and
+ *   opacity applied through the mirrored item parts reach the visible row.
  * @csspart item--disabled - The item container while disabled.
  * @csspart item--expanded - The item container while expanded.
  * @csspart item--indeterminate - The item container while partially selected.
@@ -880,6 +881,21 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
     this.focus();
   };
 
+  /** Firefox suppresses native `:active` when the mousedown default is prevented above. */
+  private onTogglePointerDown = (event: PointerEvent): void => {
+    const toggle = event.currentTarget as HTMLElement | null;
+    if (toggle?.nodeType !== 1) return;
+    toggle.setAttribute('data-pressed', '');
+    toggle.setPointerCapture(event.pointerId);
+  };
+
+  private onTogglePointerEnd = (event: PointerEvent): void => {
+    const toggle = event.currentTarget as HTMLElement | null;
+    if (toggle?.nodeType !== 1) return;
+    toggle.removeAttribute('data-pressed');
+    if (toggle.hasPointerCapture(event.pointerId)) toggle.releasePointerCapture(event.pointerId);
+  };
+
   private get multipleSelection(): boolean {
     const selection = this.ownerContext.selection;
     return selection === 'multiple' || selection === 'leaf-multiple';
@@ -960,6 +976,10 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
             aria-hidden="true"
             ?disabled=${this.isDisabled || this._loading}
             ?hidden=${!this.hasChildren}
+            @pointerdown=${this.onTogglePointerDown}
+            @pointerup=${this.onTogglePointerEnd}
+            @pointercancel=${this.onTogglePointerEnd}
+            @lostpointercapture=${this.onTogglePointerEnd}
             @mousedown=${this.onToggleMouseDown}
             @click=${(e: Event) => {
               e.stopPropagation();
@@ -1013,7 +1033,11 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
           label: item.label,
           description: item.description ? html`<span part="description">${item.description}</span>` : nothing,
           badges: html`${(item.badges ?? []).map(
-            (b) => html`<span part="badge" data-tone=${b.tone ?? 'neutral'} aria-label=${b.label ?? b.text}
+            (b) => html`<span
+                part="badge"
+                data-tone=${b.tone ?? 'neutral'}
+                role=${b.label ? 'img' : nothing}
+                aria-label=${b.label || nothing}
               >${b.text}</span
             >`
           )}`,

@@ -129,12 +129,12 @@ const FRESHNESS_TONE: Record<
  * Post-mount selection-count changes announce through the document's shared light-DOM polite
  * sink, including zero and repeated equal counts; initial declarative selection stays silent. The
  * visible selection bar remains ordinary, non-live content.
- * Document identity is a unique nonempty `id`: malformed, blank-id, and later duplicate records
- * are omitted at assignment, so the first valid occurrence owns filtering, counts, selection,
- * rows, and open events.
- * Internal search, tag-filter, and checkbox native/prefixed value-event aliases, plus table
- * selection/pagination events, are consumed at their translation boundary; hosts receive only the
- * documented library-level events.
+ * Document identity is a unique nonempty `id`: malformed records (including a missing/non-string
+ * `name` or non-string `tags` entry), blank ids, and later duplicate records are omitted at
+ * assignment, so the first valid occurrence owns filtering, counts, selection, rows, and events.
+ * Internal search, tag-filter, and checkbox native/prefixed value-event aliases, the tag
+ * combobox's show/hide lifecycle, plus table selection/pagination events, are consumed at their
+ * translation boundary; hosts receive only the documented library-level events.
  *
  * @customElement lr-document-library
  * @event lr-filter-change - The search term or tag facet changed. Frozen readonly
@@ -205,9 +205,10 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   private _documents: readonly LibraryDocument[] = Object.freeze([]);
   /** Clone-owned readonly inventory, bounded to the first 10,000 source documents and 10,000 tags
    * per document. Document records, nested tag arrays, and dates are snapshotted at assignment
-   * time; blank ids and later duplicate ids are omitted first-wins before filters, counts,
-   * selection, rows, and events. Reads return detached snapshots so even `Date` mutators cannot
-   * reach retained state. Reassign the collection to update. */
+   * time; records without a string name or with non-string tag entries, blank ids, and later
+   * duplicate ids are omitted first-wins before filters, counts, selection, rows, and events. Reads
+   * return detached snapshots so even `Date` mutators cannot reach retained state. Reassign the
+   * collection to update. */
   @property({ attribute: false })
   get documents(): readonly LibraryDocument[] {
     return this.snapshotDocuments(this._documents);
@@ -310,6 +311,12 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
       try {
         const id = document?.id;
         if (typeof id !== 'string' || id.trim().length === 0 || seen.has(id)) continue;
+        if (typeof document.name !== 'string') continue;
+        if (
+          document.tags !== undefined &&
+          (!Array.isArray(document.tags) ||
+            document.tags.some((tag) => typeof tag !== 'string'))
+        ) continue;
         const updatedAt = document.updatedAt instanceof Date ? new Date(document.updatedAt.getTime()) : document.updatedAt;
         const tags = document.tags === undefined
           ? undefined
@@ -754,6 +761,13 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
                 @lr-input=${this.stopOwnedEvent}
                 @change=${this.onTagFilterChange}
                 @lr-change=${this.stopOwnedEvent}
+                @lr-show=${this.stopOwnedEvent}
+                @lr-after-show=${this.stopOwnedEvent}
+                @lr-hide=${this.stopOwnedEvent}
+                @lr-after-hide=${this.stopOwnedEvent}
+                @lr-filter=${this.stopOwnedEvent}
+                @lr-clear=${this.stopOwnedEvent}
+                @lr-invalid=${this.stopOwnedEvent}
               >
                 ${tags.map(
                   (tag) => html`<lr-option value=${tag}>${tag}</lr-option>`
@@ -790,6 +804,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
           @lr-sort-request=${this.onTableSortRequest}
           @lr-sort=${this.onTableSortCommit}
           @lr-page-change=${this.stopOwnedEvent}
+          @lr-priority-columns-visibility-change=${this.stopOwnedEvent}
           @lr-selection-change=${this.onTableSelectionChange}
           @lr-row-click=${(event: CustomEvent<{ row: LibraryDocument }>) => {
             event.stopPropagation();

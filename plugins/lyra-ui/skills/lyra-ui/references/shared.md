@@ -35,6 +35,16 @@ customary M+1 warning period — `lr-usage-badge`'s `compact`, `lr-chart`'s `hor
 a mechanical migration listed in the 9.0.0 changelog entry and in `migration.md`. From 9.0.0 onward
 the M+2 rule applies as written; treat the above as a documented exception, not a precedent.
 
+### Release history and upgrade notes
+
+`since` records when a tag first appeared; it is not a history of later additions, fixes, or
+breaking changes. For every release after 9.0.0 — including minor and patch releases — read the
+package's shipped [CHANGELOG.md](../CHANGELOG.md) before upgrading. Family-wide breaking-change
+summaries sit at the start of the applicable authored `llms/<family>.md` file; each generated
+`llms/components/<tag>.md` header links that family summary when one exists. Component-specific
+version notes remain in the component's own section. `llms/migration.md` is narrower: it covers
+`wa-*`/`sl-*` renames and compatibility decisions, not Lyra release history.
+
 ### The support window
 
 Compatibility promises are bounded by a published support window, not by "evergreen browsers":
@@ -81,9 +91,9 @@ export.
 
 **Breaking in 8.0.0 — the package root no longer registers anything.** Through 7.x, importing the
 bare `@aceshooting/lyra-ui` root had the side effect of defining every non-optional-peer tag, so a
-project that only wanted a type or a helper from it silently pulled 268 component definitions into
-its eager bundle. The root is now a pure, side-effect-free export surface, and the registrations
-moved to an explicit entry:
+project that only wanted a type or a helper from it silently pulled the then-current 268 component
+definitions into its eager bundle. The root is now a pure, side-effect-free export surface, and the
+registrations moved to an explicit entry:
 
 ```js
 import "@aceshooting/lyra-ui/all.js"; // exactly the pre-8 root behaviour, opted into by name
@@ -121,7 +131,7 @@ The entry points, then:
   but it is not an exhaustive promise that every component-owned type or future export is present.
   Prefer the owning component entry in application code, both for the smallest bundle and the
   complete contract of that component.
-- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 268
+- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 269
   root-included tags — everything **except** the 16 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
@@ -442,9 +452,11 @@ activation.
   is numeric (and its range submission has two entries), `lr-combobox` because its value
   can be an array in `multiple` mode, `lr-select` because its default comes from a `selected`
   `<lr-option>` rather than a `value` attribute. Divergences are documented per component.
-  `lr-button` and `lr-icon-button` are form-associated only to act as submit/reset controls: they
-  carry no value and no validity. `lr-time-range` is form-associated only for fieldset-cascaded
-  disablement: no submission value, no state restoration.
+  `lr-button` is form-associated only to act as a submit/reset control: it carries no value and no
+  validity. `lr-icon-button` is deliberately an action/link primitive rather than a form-associated
+  submitter; use an icon-only `lr-button` when the action must submit or reset a form.
+  `lr-time-range` is form-associated only for fieldset-cascaded disablement: no submission value,
+  no state restoration.
 
 ### Enter submits the form
 
@@ -530,19 +542,21 @@ required field still matches `:state(required)`. Style the barred case through
 
 The states are published the same way whether a control uses the `FormAssociated` mixin or drives
 `ElementInternals` directly, so a rule written against `lr-input` behaves identically on
-`lr-checkbox`. `lr-button` and `lr-icon-button` are the exception noted above: form-associated, but
-with no value and therefore no validity to publish. Where an engine cannot register a custom state
-at all, the styling hook is simply absent — validity, submission blocking and
-`checkValidity()`/`reportValidity()` are unaffected, so never make a `:state()` rule the only signal
-that a field is wrong.
+`lr-checkbox`. `lr-button` is the form-associated exception noted above: it has no value and
+therefore no validity to publish. `lr-icon-button` is not form-associated at all. Where an engine
+cannot register a custom state, the styling hook is simply absent — validity, submission blocking
+and `checkValidity()`/`reportValidity()` are unaffected, so never make a `:state()` rule the only
+signal that a field is wrong.
 
 ## The required-field marker
 
 A labelled control with `required` set paints a marker after its label text — by default ` *` in
-`--lr-color-danger`. It is **one shared rule**, rendered as an `::after` on the `form-control-label`
-part, so it looks and sits identically on every control that has that part, in every family: the
-labelled form controls, plus `lr-file-input`, `lr-model-select`, `lr-voice-picker`, and
-`lr-tool-param-form`, which marks its _per-field_ labels the same way. A control with no
+`--lr-color-danger`. It is one shared contract and, with one fieldset-specific exception, one shared
+rule rendered as an `::after` on the `form-control-label` part: the labelled form controls, plus
+`lr-file-input`, `lr-model-select`, `lr-voice-picker`, and `lr-tool-param-form`, which marks its
+_per-field_ labels the same way. `lr-known-date` reads the same three properties but paints the
+marker on its `legend` box, after the complete label; its `form-control-label` part owns only the
+label content and cannot retheme that marker. A control with no
 `form-control-label` part — `lr-checkbox`, `lr-switch`, `lr-radio`, whose default slot _is_ the
 visible label — has no label box to hang a marker on and paints none; a control that renders the
 part with no label text set paints none either, so no stray glyph is ever orphaned.
@@ -1208,7 +1222,8 @@ rendering and retains no document or stylesheet after the last canvas consumer d
 
 An undefined custom element is an inline box with no intrinsic size, so every `lr-*` in the initial
 viewport contributes a reflow as its definition loads. Components that additionally defer on an
-optional peer (`lr-chart`, `lr-map`, `lr-flag`, `lr-flow-canvas`, `lr-knowledge-graph-explorer`)
+optional peer (`lr-chart`, `lr-map`, `lr-flag`, `lr-flow-canvas`, `lr-graph`,
+`lr-knowledge-graph-explorer`)
 render a skeleton while that peer resolves, which can cost a second shift when the real content
 replaces it. Each component is individually well-behaved; the aggregate on a first paint is what
 costs a Lighthouse Cumulative Layout Shift score.
@@ -1226,6 +1241,7 @@ no `:root` rules.
 
 **Every reservation is expressed with the same custom property and fallback token the component's
 own stylesheet uses** — `--lr-chart-height` / `--lr-size-280px` for the chart family,
+`--lr-map-height` for `lr-map`, `--lr-canvas-reserved-height` for graph/canvas surfaces,
 `--lr-flag-aspect-ratio` for `lr-flag`, `--lr-form-control-height` for the field controls, and so
 on. That is the point of shipping it rather than documenting measured pixel values: a hand-written
 reservation rots silently the moment a component's default changes, whereas these track it, and
@@ -1669,7 +1685,7 @@ preferred in production.
 
 ## Optional peer dependencies
 
-All 28 peers are optional, in two groups. The 25 component-facing peers remain outside the default
+All 29 peers are optional, in two groups. The 26 component-facing peers remain outside the default
 install; components load them on demand where applicable. React, Svelte, and Vue are
 compile-time-only peers for their matching
 opt-in declaration entries (`custom-elements-jsx`, `svelte`, and `vue`): those entries emit empty
@@ -1918,7 +1934,9 @@ readonly string[] | readonly T[]`. A catalog is homogeneous: use string shorthan
 activeHighlightId: string | null; anchor: LyraAnchor | string | null; readonly anchorKinds:
 readonly LyraAnchorKind[]; scrollToAnchor(target: LyraAnchor | string): Promise<boolean> }`.
   Assigning `highlights` synchronously creates a frozen array of copied, frozen highlight records;
-  each record's opaque `anchor` retains caller identity so reference-based anchor jumps still work.
+  malformed records without a non-empty string `anchor.kind` are omitted, while each accepted
+  record's otherwise-opaque `anchor` retains caller identity so reference-based anchor jumps still
+  work.
 - **`positioner` → `place(anchor, popup, opts?): () => void`, `trackRect(target, onUpdate(rect)): () =>
 void`, and `virtualAnchorFromRect()`** — thin wrapper over `@floating-ui/dom`'s
   `computePosition` + `autoUpdate`. Forces `strategy: 'fixed'` (matching the

@@ -61,11 +61,14 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
   /** Element root or mapped element-ID string. */
   @property() root: Element | string | null = null;
   @property({ attribute: 'intersect-class' }) intersectClass = '';
+  /** Stops observing each target after its first intersection. Consumed targets stay consumed
+   * across option-driven observer rebuilds and reconnects; setting `once` to false resets them. */
   @property({ type: Boolean, reflect: true }) once = false;
 
   private observer?: IntersectionObserver;
   private observerDocument?: Document;
   private observerGeneration = 0;
+  private onceIntersectedTargets = new WeakSet<Element>();
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -94,6 +97,11 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (changed.has('once') && !this.once) {
+      // Turning the one-shot behavior off is the explicit reset boundary. Observer option
+      // rebuilds and disconnect/reconnect cycles must otherwise retain consumed targets.
+      this.onceIntersectedTargets = new WeakSet<Element>();
+    }
     // Routed through the base class's connection-aware scheduler rather than
     // a bare queueMicrotask: Lit still runs a scheduled update (and this
     // method) even for an element that disconnects before that update's own
@@ -123,7 +131,9 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
     const ownerDocument = this.ownerDocument;
     const IntersectionObserverCtor = ownerDocument.defaultView?.IntersectionObserver;
     if (this.disabled || !this.isConnected || !IntersectionObserverCtor) return;
-    const targets = slottedElementTargets(this.renderRoot);
+    const targets = slottedElementTargets(this.renderRoot).filter(
+      (target) => !this.once || !this.onceIntersectedTargets.has(target),
+    );
     if (targets.length === 0) return;
     const generation = this.observerGeneration;
     let observer: IntersectionObserver;
@@ -136,9 +146,13 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
     );
     const callback: IntersectionObserverCallback = (entries) => {
       if (!isCurrentObserver()) return;
-      const batch = [...entries];
+      const batch = [...entries].filter(
+        (entry) => !this.once || !this.onceIntersectedTargets.has(entry.target),
+      );
+      if (batch.length === 0) return;
       for (const entry of batch) {
         if (!isCurrentObserver()) return;
+        if (this.once && entry.isIntersecting) this.onceIntersectedTargets.add(entry.target);
         for (const token of this.intersectClass.trim().split(/\s+/).filter(Boolean)) {
           entry.target.classList.toggle(token, entry.isIntersecting);
         }

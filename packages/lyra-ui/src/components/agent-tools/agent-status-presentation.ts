@@ -25,37 +25,42 @@ const BADGE_VARIANTS = new Set<BadgeVariant>([
 ]);
 
 export function agentStatusKind(status: AgentStatusValue): AgentStatusKind {
-  return typeof status === 'string'
-    ? status
-    : typeof status === 'object' && status !== null && typeof status.kind === 'string'
-      ? status.kind
-      : 'idle';
+  if (typeof status === 'string') return status;
+  return status !== null
+    && typeof status === 'object'
+    && typeof status.kind === 'string'
+    ? status.kind
+    : 'idle';
 }
 
 export function agentStatusLabel(status: AgentStatusValue): string | undefined {
-  return typeof status === 'object' && typeof status.label === 'string' ? status.label : undefined;
+  return status !== null && typeof status === 'object' && typeof status.label === 'string'
+    ? status.label
+    : undefined;
 }
 
 export function agentStatusMessage(status: AgentStatusValue): string | undefined {
-  return typeof status === 'object' && typeof status.message === 'string' ? status.message : undefined;
+  return status !== null && typeof status === 'object' && typeof status.message === 'string'
+    ? status.message
+    : undefined;
 }
 
 export function agentStatusVariant(
   status: AgentStatusValue,
   fallback: BadgeVariant,
 ): BadgeVariant {
-  const variant = typeof status === 'object' ? status.variant : undefined;
+  const variant = status !== null && typeof status === 'object' ? status.variant : undefined;
   return variant != null && BADGE_VARIANTS.has(variant) ? variant : fallback;
 }
 
 export function isAgentStatusTerminal(status: AgentStatusValue): boolean {
-  if (typeof status === 'object' && typeof status.terminal === 'boolean') return status.terminal;
+  if (status !== null && typeof status === 'object' && typeof status.terminal === 'boolean') return status.terminal;
   const kind = agentStatusKind(status);
   return kind === 'done' || kind === 'error' || kind === 'cancelled';
 }
 
 export function isAgentStatusActive(status: AgentStatusValue): boolean {
-  if (typeof status === 'object' && typeof status.active === 'boolean') return status.active;
+  if (status !== null && typeof status === 'object' && typeof status.active === 'boolean') return status.active;
   const kind = agentStatusKind(status);
   return kind === 'running' || kind === 'collecting';
 }

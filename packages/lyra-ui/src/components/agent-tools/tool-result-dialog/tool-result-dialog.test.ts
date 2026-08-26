@@ -217,10 +217,24 @@ it('toggles maximized and emits lr-maximize-change when the maximize button is c
   expect(el.hasAttribute('maximized')).to.be.false;
 });
 
-it('closes on backdrop click and emits lr-close with reason "backdrop"', async () => {
-  const el = (await fixture(
-    html`<lr-tool-result-dialog tool-name="run_python" open></lr-tool-result-dialog>`,
-  )) as LyraToolResultDialog;
+it('does not light-dismiss on a backdrop click unless explicitly enabled', async () => {
+  const el = await fixture<LyraToolResultDialog>(html`
+    <lr-tool-result-dialog tool-name="run_python" open></lr-tool-result-dialog>
+  `);
+  const reasons: string[] = [];
+  el.addEventListener('lr-close', (event) => reasons.push(event.detail));
+  (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
+  await el.updateComplete;
+
+  expect(el.lightDismiss).to.be.false;
+  expect(el.open).to.be.true;
+  expect(reasons).to.deep.equal([]);
+});
+
+it('closes on backdrop click with reason "backdrop" when light dismissal is enabled', async () => {
+  const el = await fixture<LyraToolResultDialog>(html`
+    <lr-tool-result-dialog tool-name="run_python" open light-dismiss></lr-tool-result-dialog>
+  `);
   const listener = oneEvent(el, 'lr-close');
   (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
   const { detail } = await listener;

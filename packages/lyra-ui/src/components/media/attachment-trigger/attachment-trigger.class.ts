@@ -116,14 +116,20 @@ function ownCapabilitySnapshot(values: LyraAttachmentCapability[]): readonly Lyr
 }
 
 const DEFAULT_CAPABILITIES: readonly LyraAttachmentCapability[] = ownCapabilitySnapshot(['files']);
+const MAX_ATTACHMENT_CAPABILITIES = 4;
+const ATTACHMENT_CAPABILITY_SCAN_LIMIT = 64;
 
 function normalizeCapabilities(value: unknown): readonly LyraAttachmentCapability[] {
   try {
     if (!Array.isArray(value)) return DEFAULT_CAPABILITIES;
     if (OWNED_CAPABILITY_SNAPSHOTS.has(value)) return value as readonly LyraAttachmentCapability[];
     const normalized: LyraAttachmentCapability[] = [];
-    const length = Math.min(value.length, 4);
-    for (let index = 0; index < length; index++) {
+    const length = Math.min(value.length, ATTACHMENT_CAPABILITY_SCAN_LIMIT);
+    for (
+      let index = 0;
+      index < length && normalized.length < MAX_ATTACHMENT_CAPABILITIES;
+      index++
+    ) {
       const candidate: unknown = value[index];
       if (
         typeof candidate === 'string' &&
@@ -246,8 +252,10 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
     'lr-files',
   ]);
 
-  /** Which attachment capabilities to offer, in display order. A single
-   *  entry renders a plain button; more than one renders a menu. */
+  /** Which attachment capabilities to offer, in display order. Normalization scans at most 64
+   *  candidates and retains the first four unique recognized values, so duplicates and unknown
+   *  entries do not consume the four-capability output budget. A single retained entry renders a
+   *  plain button; more than one renders a menu. */
   @property({ attribute: false }) capabilities: readonly LyraAttachmentCapability[] = DEFAULT_CAPABILITIES;
 
   /** Native-file-input-style accept string (e.g. `'image/*'` or

@@ -202,29 +202,38 @@ describe('lr-stack-trace', () => {
     expect(first.internalPatterns).not.to.equal(second.internalPatterns);
   });
 
-  it('keeps a RegExp entry (and the string after it) instead of silently dropping the whole array', async () => {
+  it('clone-owns string and RegExp internal patterns without truncating valid trailing entries', async () => {
     const el = (await fixture(html`<lr-stack-trace></lr-stack-trace>`)) as LyraStackTrace;
-    el.internalPatterns = [/vendor/, 'node_modules/'];
-    expect(el.internalPatterns.length).to.equal(2);
+    const matcher = /vendor\//gi;
+
+    el.internalPatterns = [matcher, '', {} as RegExp, 'node_modules/'];
+
+    expect(el.internalPatterns).to.have.lengthOf(2);
+    expect(el.internalPatterns[0] instanceof RegExp).to.equal(true);
+    expect(el.internalPatterns[0] === matcher).to.equal(false);
+    expect((el.internalPatterns[0] as RegExp).source).to.equal(matcher.source);
+    expect((el.internalPatterns[0] as RegExp).flags).to.equal(matcher.flags);
+    expect(el.internalPatterns[1]).to.equal('node_modules/');
+    expect(Object.isFrozen(el.internalPatterns)).to.equal(true);
   });
 
-  it('classifies frames as internal via a RegExp pattern and renders the fold toggle', async () => {
+  it('uses RegExp internal patterns to fold matching frame runs', async () => {
     const el = (await fixture(html`<lr-stack-trace></lr-stack-trace>`)) as LyraStackTrace;
     el.internalPatterns = [/vendor\//];
     el.trace = [
-      'Error: boom',
+      'Error: vendor failure',
       '    at first (/app/vendor/a.js:1:1)',
       '    at second (/app/vendor/b.js:2:1)',
       '    at app (/app/src/app.js:3:1)',
     ].join('\n');
+
     await el.updateComplete;
-    const toggle = el.shadowRoot!.querySelector('[part~="internal-toggle"]') as HTMLButtonElement;
-    expect(toggle == null).to.equal(false);
+
+    const toggle = el.shadowRoot!.querySelector('[part="internal-toggle"]') as HTMLButtonElement;
+    expect(toggle != null).to.equal(true);
     toggle.click();
     await el.updateComplete;
-    expect(
-      el.shadowRoot!.querySelector('[part="frame"][data-internal]') == null,
-    ).to.equal(false);
+    expect(el.shadowRoot!.querySelectorAll('[part="frame"][data-internal]')).to.have.lengthOf(2);
   });
 
   it('copy button emits lr-copy with the raw trace text', async () => {
@@ -420,6 +429,13 @@ describe('lr-stack-trace', () => {
     const el = (await fixture(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`)) as LyraStackTrace;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Stack trace');
+  });
+
+  it('honors a programmatic accessibleLabel binding on the owned stack region', async () => {
+    const el = await fixture<LyraStackTrace>(html`
+      <lr-stack-trace .accessibleLabel=${'Worker failure'}></lr-stack-trace>
+    `);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Worker failure');
   });
 
   it('honors a .strings override for the internal-frame toggle label', async () => {

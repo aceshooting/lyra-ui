@@ -6,6 +6,7 @@
 - **Class** `LyraTimeInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/input/time-input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 23 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -136,9 +137,11 @@ appearance surface; `--lr-time-input-focus-border-color`;
 `--lr-time-input-column-selected-color`, `--lr-time-input-column-selected-font-weight`,
 `--lr-time-input-column-selected-hover-bg`, and `--lr-time-input-column-selected-active-bg`.
 Every state hook falls back to the exact semantic token or color mix used previously, and remains
-undeclared on the host so ancestor themes work. The upstream-compatible
-`--column-item-height`, `--column-width`, `--show-duration`, and
-`--hide-duration`, each with a Lyra design-token fallback.
+undeclared on the host so ancestor themes work. The upstream-compatible `--column-item-height`
+(default `calc(var(--lr-size-1em) * 2.25)`) and `--column-width`
+(default `calc(var(--lr-size-1em) * 3)`) retain their component-font-relative sizing through the
+Lyra `--lr-size-1em` token. `--show-duration` and `--hide-duration` similarly use Lyra
+duration-token fallbacks.
 
 ```html
 <lr-time-input

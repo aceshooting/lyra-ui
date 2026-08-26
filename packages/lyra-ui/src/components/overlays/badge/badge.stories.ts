@@ -19,6 +19,22 @@ export const Variants: StoryObj = {
   </div>`,
 };
 
+export const Semantics: StoryObj = {
+  name: 'Static and opt-in live semantics',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Badges are static text by default. Add `role="status"` only when later label changes should be announced as a live status; any other author-supplied role is preserved too.',
+      },
+    },
+  },
+  render: () => html`<div style=${row}>
+    <lr-badge variant="neutral">Static category</lr-badge>
+    <lr-badge variant="success" role="status">Live deployment status</lr-badge>
+  </div>`,
+};
+
 export const Appearance: StoryObj = {
   name: 'Appearance',
   render: () => html`<div style="display:grid;gap:0.5rem">
@@ -88,7 +104,7 @@ export const UpstreamWriteAliases: StoryObj = {
     docs: {
       description: {
         story:
-          '`primary`, `small`, `medium`, and `large` remain the reflected/read-back values a migrated app authored while resolving to the same visual treatments as `brand`, `s`, `m`, and `l`. `lr-tag` likewise preserves `text` and renders its neutral plain treatment. The badge host owns `role="status"`; the tag deliberately does not inherit it.',
+          '`primary`, `small`, `medium`, and `large` remain the reflected/read-back values a migrated app authored while resolving to the same visual treatments as `brand`, `s`, `m`, and `l`. `lr-tag` likewise preserves `text` and renders its neutral plain treatment. Badge and tag semantics stay author-owned; neither becomes a live status unless the author supplies that role.',
       },
     },
   },

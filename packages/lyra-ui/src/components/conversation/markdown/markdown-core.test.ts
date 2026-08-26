@@ -65,6 +65,30 @@ it("explains how to preload the optional parser when core getMarked() is called 
   );
 });
 
+it("clears aria-busy when optional-peer loading settles without changing the fallback render", async () => {
+  const el = (await fixture(
+    html`<lr-markdown-core></lr-markdown-core>`
+  )) as LyraMarkdownCore;
+  await loadMarkdownDeps();
+  await el.updateComplete;
+  const originalRenderMarkdown = LyraMarkdownCoreClass.prototype.renderMarkdown;
+  LyraMarkdownCoreClass.prototype.renderMarkdown = function (): void {};
+  try {
+    (el as unknown as { deps?: unknown }).deps = undefined;
+    el.requestUpdate();
+    await el.updateComplete;
+    expect(el.getAttribute("aria-busy")).to.equal("true");
+
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+    expect(el.hasAttribute("aria-busy")).to.be.false;
+  } finally {
+    LyraMarkdownCoreClass.prototype.renderMarkdown = originalRenderMarkdown;
+  }
+});
+
 describe("lr-markdown-core", () => {
   it("renders sanitized GFM content (heading/bold/link/blockquote/table) identically to lr-markdown", async () => {
     const content = `# Heading
@@ -178,7 +202,7 @@ Some **bold** text with a [link](https://example.com/docs).
       );
       expect(second.shadowRoot!.querySelector("strong") === null).to.be.true;
     } finally {
-      parser.defaults = originalDefaults;
+      Reflect.set(parser, 'defaults', originalDefaults);
     }
   });
 
@@ -209,7 +233,7 @@ Some **bold** text with a [link](https://example.com/docs).
         "global core"
       );
     } finally {
-      parser.defaults = originalDefaults;
+      Reflect.set(parser, 'defaults', originalDefaults);
       LyraMarkdownCoreClass.updateAll();
     }
   });
@@ -1157,7 +1181,7 @@ describe("fallback matrix", () => {
       const { detail } = await listener;
       expect(detail.error).to.exist;
       expect(calls).to.have.length(1);
-      expect(calls[0][0]).to.contain("dompurify");
+      expect(calls[0]![0]).to.contain("dompurify");
     } finally {
       console.warn = originalWarn;
     }
@@ -1375,8 +1399,8 @@ describe("paragraph/list/inline-code/image parts", () => {
       () => el.shadowRoot!.querySelector('[part="table"]') !== null
     );
     const ths = el.shadowRoot!.querySelectorAll('[part="table"] th');
-    expect(ths[0].getAttribute("align")).to.equal("left");
-    expect(ths[1].getAttribute("align")).to.equal("right");
+    expect(ths[0]!.getAttribute("align")).to.equal("left");
+    expect(ths[1]!.getAttribute("align")).to.equal("right");
     expect(el.shadowRoot!.querySelector('[part="table"] tbody') == null).to.be
       .true;
   });
@@ -1681,8 +1705,8 @@ describe("scrollToAnchor / highlights (text-quote)", () => {
       new MouseEvent("click", {
         bubbles: true,
         composed: true,
-        clientX: rect.left + rect.width / 2,
-        clientY: rect.top + rect.height / 2,
+        clientX: rect!.left + rect!.width / 2,
+        clientY: rect!.top + rect!.height / 2,
       })
     );
     const event = await listener;
@@ -1806,12 +1830,13 @@ describe("scrollToAnchor / highlights (text-quote)", () => {
       "getSelection"
     );
     if (needsSelectionFacade) {
-      const composedRange = {
+      const composedRange: StaticRange = {
         startContainer: textNode,
         startOffset: 10,
         endContainer: textNode,
         endOffset: 15,
-      } as StaticRange;
+        collapsed: false,
+      };
       const facade = {
         rangeCount: 1,
         isCollapsed: false,

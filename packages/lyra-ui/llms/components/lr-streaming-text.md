@@ -6,6 +6,7 @@
 - **Class** `LyraStreamingText`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/streaming-text/streaming-text.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 2 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below

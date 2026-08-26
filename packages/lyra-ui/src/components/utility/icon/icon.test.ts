@@ -26,6 +26,17 @@ it('renders a named SVG path as a decorative icon', async () => {
   expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-hidden')).to.equal('true');
 });
 
+it('keeps an unknown built-in name blank while preserving its accessible label', async () => {
+  const el = (await fixture(
+    html`<lr-icon name="gear" label="Settings"></lr-icon>`,
+  )) as LyraIcon;
+  const owner = el.shadowRoot!.querySelector('.semantic-owner')!;
+
+  expect(el.shadowRoot!.querySelectorAll('svg path')).to.have.length(0);
+  expect(owner.getAttribute('role')).to.equal('img');
+  expect(owner.getAttribute('aria-label')).to.equal('Settings');
+});
+
 it('is accessible when given a label', async () => {
   const el = await fixture(html`<lr-icon name="search" label="Search"></lr-icon>`);
   await expect(el).to.be.accessible();
@@ -53,7 +64,7 @@ it('forwards the host accessible name to one stable semantic owner, including la
 });
 
 it('renders custom SVG nodes inside the shadow SVG', async () => {
-  const el = await fixture(html`
+  const el = await fixture<HTMLElement & { updateComplete: Promise<unknown> }>(html`
     <lr-icon>
       <path d="M4 12h16"></path>
       <circle cx="12" cy="12" r="3"></circle>
@@ -1193,7 +1204,7 @@ describe('lr-icon presentation knobs', () => {
     const middleTransform = (): string => {
       const animation = svg.getAnimations()[0];
       const frames = (animation?.effect as KeyframeEffect | undefined)?.getKeyframes() ?? [];
-      return String(frames.find((frame) => frame.offset === 0.5)?.transform ?? '');
+      return String(frames.find((frame) => frame.offset === 0.5)?.['transform'] ?? '');
     };
     expect(middleTransform()).to.match(/1\.25/);
     expect(middleTransform()).not.to.match(/1\.5625/);

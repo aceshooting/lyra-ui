@@ -198,7 +198,7 @@ it('removes reverse regional fallback when an existing catalog becomes exact-onl
 it('snapshots hostile catalogs without invoking accessors or retaining live traps', () => {
   let getterCalls = 0;
   const accessorCatalog = Object.create(null) as Record<string, string>;
-  accessorCatalog.retained = 'yes';
+  accessorCatalog['retained'] = 'yes';
   Object.defineProperty(accessorCatalog, 'unsafe', {
     enumerable: true,
     get() {
@@ -207,7 +207,7 @@ it('snapshots hostile catalogs without invoking accessors or retaining live trap
     },
   });
   registerLyraLocale('x-accessor-catalog', accessorCatalog);
-  accessorCatalog.retained = 'mutated';
+  accessorCatalog['retained'] = 'mutated';
   expect(resolveLyraString(localeHost('x-accessor-catalog'), 'retained')).to.equal('yes');
   expect(resolveLyraString(localeHost('x-accessor-catalog'), 'unsafe')).to.equal('unsafe');
   expect(getterCalls).to.equal(0);

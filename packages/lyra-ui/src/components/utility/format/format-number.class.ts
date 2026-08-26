@@ -13,6 +13,10 @@ import {
 
 export type { LyraFormatCurrencyDisplay, LyraFormatNumberNotation, LyraFormatNumberType } from './format-options.js';
 
+const INTEGER_DIGIT_BOUNDS = { minimum: 1, maximum: 21 } as const;
+const FRACTION_DIGIT_BOUNDS = { minimum: 0, maximum: 100 } as const;
+const SIGNIFICANT_DIGIT_BOUNDS = { minimum: 1, maximum: 21 } as const;
+
 /**
  * `<lr-format-number>` — locale-aware `Intl.NumberFormat` output.
  *
@@ -27,7 +31,8 @@ export class LyraFormatNumber extends LyraElement {
   @property() type: LyraFormatNumberType = 'decimal';
   @property() currency = 'USD';
   @property({ attribute: 'currency-display' }) currencyDisplay: LyraFormatCurrencyDisplay = 'symbol';
-  /** Web Awesome grouping alias. */
+  /** Web Awesome grouping alias. When both grouping aliases are false, `Intl` keeps the locale's
+   * default grouping policy rather than being forced on. */
   @property({ type: Boolean, attribute: 'without-grouping' }) withoutGrouping = false;
   /** Shoelace grouping alias; equivalent to `withoutGrouping`. */
   @property({ type: Boolean, attribute: 'no-grouping' }) noGrouping = false;
@@ -39,25 +44,63 @@ export class LyraFormatNumber extends LyraElement {
   @property({ attribute: 'maximum-significant-digits', type: Number }) maximumSignificantDigits?: number;
 
   override render(): TemplateResult {
-    const minimumIntegerDigits = this.minimumIntegerDigits === undefined
-      ? undefined
-      : finiteInteger(this.minimumIntegerDigits, 1, 1, 21);
-    let minimumFractionDigits = this.minimumFractionDigits === undefined
-      ? undefined
-      : finiteInteger(this.minimumFractionDigits, 0, 0, 100);
-    let maximumFractionDigits = this.maximumFractionDigits === undefined
-      ? undefined
-      : finiteInteger(this.maximumFractionDigits, 100, 0, 100);
-    let minimumSignificantDigits = this.minimumSignificantDigits === undefined
-      ? undefined
-      : finiteInteger(this.minimumSignificantDigits, 1, 1, 21);
-    let maximumSignificantDigits = this.maximumSignificantDigits === undefined
-      ? undefined
-      : finiteInteger(this.maximumSignificantDigits, 21, 1, 21);
-    if (minimumFractionDigits !== undefined && maximumFractionDigits !== undefined && minimumFractionDigits > maximumFractionDigits) {
+    const minimumIntegerDigits =
+      this.minimumIntegerDigits === undefined
+        ? undefined
+        : finiteInteger(
+            this.minimumIntegerDigits,
+            INTEGER_DIGIT_BOUNDS.minimum,
+            INTEGER_DIGIT_BOUNDS.minimum,
+            INTEGER_DIGIT_BOUNDS.maximum,
+          );
+    let minimumFractionDigits =
+      this.minimumFractionDigits === undefined
+        ? undefined
+        : finiteInteger(
+            this.minimumFractionDigits,
+            FRACTION_DIGIT_BOUNDS.minimum,
+            FRACTION_DIGIT_BOUNDS.minimum,
+            FRACTION_DIGIT_BOUNDS.maximum,
+          );
+    let maximumFractionDigits =
+      this.maximumFractionDigits === undefined
+        ? undefined
+        : finiteInteger(
+            this.maximumFractionDigits,
+            FRACTION_DIGIT_BOUNDS.maximum,
+            FRACTION_DIGIT_BOUNDS.minimum,
+            FRACTION_DIGIT_BOUNDS.maximum,
+          );
+    let minimumSignificantDigits =
+      this.minimumSignificantDigits === undefined
+        ? undefined
+        : finiteInteger(
+            this.minimumSignificantDigits,
+            SIGNIFICANT_DIGIT_BOUNDS.minimum,
+            SIGNIFICANT_DIGIT_BOUNDS.minimum,
+            SIGNIFICANT_DIGIT_BOUNDS.maximum,
+          );
+    let maximumSignificantDigits =
+      this.maximumSignificantDigits === undefined
+        ? undefined
+        : finiteInteger(
+            this.maximumSignificantDigits,
+            SIGNIFICANT_DIGIT_BOUNDS.maximum,
+            SIGNIFICANT_DIGIT_BOUNDS.minimum,
+            SIGNIFICANT_DIGIT_BOUNDS.maximum,
+          );
+    if (
+      minimumFractionDigits !== undefined &&
+      maximumFractionDigits !== undefined &&
+      minimumFractionDigits > maximumFractionDigits
+    ) {
       [minimumFractionDigits, maximumFractionDigits] = [maximumFractionDigits, minimumFractionDigits];
     }
-    if (minimumSignificantDigits !== undefined && maximumSignificantDigits !== undefined && minimumSignificantDigits > maximumSignificantDigits) {
+    if (
+      minimumSignificantDigits !== undefined &&
+      maximumSignificantDigits !== undefined &&
+      minimumSignificantDigits > maximumSignificantDigits
+    ) {
       [minimumSignificantDigits, maximumSignificantDigits] = [maximumSignificantDigits, minimumSignificantDigits];
     }
     const options = numberFormatOptions({

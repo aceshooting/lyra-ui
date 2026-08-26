@@ -4,7 +4,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   build,
+  buildComponentFile,
   buildMigration,
+  buildPeers,
   COMPOUND_USAGE_REGISTRATIONS,
   readTagFacts,
   TYPE_ONLY_DECLARATION_PEERS,
@@ -16,6 +18,18 @@ import { compactManifest } from './manifest-compact.mjs';
 const inventory = JSON.parse(
   readFileSync(new URL('./fixtures/component-inventory.json', import.meta.url), 'utf8'),
 );
+const packageMetadata = JSON.parse(
+  readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+);
+const sharedReference = readFileSync(new URL('../llms/shared.md', import.meta.url), 'utf8');
+const layoutReference = readFileSync(new URL('../llms/layout.md', import.meta.url), 'utf8');
+const mediaReference = readFileSync(new URL('../llms/media.md', import.meta.url), 'utf8');
+const viewersReference = readFileSync(new URL('../llms/viewers.md', import.meta.url), 'utf8');
+const readmeReference = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+const llmsIntroReference = readFileSync(
+  new URL('../llms/00-llms-txt-intro.md', import.meta.url),
+  'utf8',
+);
 assert.deepEqual(
   COMPOUND_USAGE_REGISTRATIONS,
   {
@@ -25,6 +39,193 @@ assert.deepEqual(
   },
   'the compound usage policy must retain every authored group child registration',
 );
+const releaseNavigationFixture = buildComponentFile(
+  'lr-fixture',
+  {
+    tags: ['lr-fixture'],
+    text: '## `lr-fixture`\n\nFixture component.',
+  },
+  new Map([
+    [
+      'lr-fixture',
+      {
+        family: 'forms',
+        className: 'LyraFixture',
+        importPath: '@aceshooting/lyra-ui/components/forms/fixture/fixture.js',
+        status: 'stable',
+        since: '1.0.0',
+        deprecations: [],
+        cssParts: [],
+        cssProperties: [],
+      },
+    ],
+  ]),
+  new Map(),
+  { familyHasBreakingNotes: true },
+);
+assert.match(
+  releaseNavigationFixture,
+  /\[CHANGELOG\.md\]\(\.\.\/\.\.\/CHANGELOG\.md\)/u,
+  'every narrow component reference must link the shipped chronological release history',
+);
+assert.match(
+  releaseNavigationFixture,
+  /\[llms-full\.txt\]\(\.\.\/\.\.\/llms-full\.txt\)/u,
+  'a narrow component reference must link the shipped family-wide breaking-change summaries when present',
+);
+assert.doesNotMatch(
+  releaseNavigationFixture,
+  /\[llms\/forms\.md\]/u,
+  'a narrow component reference must not link its unpublished authored family input',
+);
+const currentManifest = JSON.parse(
+  readFileSync(new URL('../custom-elements.json', import.meta.url), 'utf8'),
+);
+const currentTagFacts = readTagFacts(currentManifest);
+const focusedPeerTags = [
+  'lr-video',
+  'lr-video-playlist',
+  'lr-phone-input',
+  'lr-command-palette',
+  'lr-condition-builder',
+  'lr-flag',
+  'lr-locale-picker',
+];
+const focusedPeerFacts = new Map(
+  focusedPeerTags.map((tag) => {
+    const facts = currentTagFacts.get(tag);
+    assert.ok(facts, `${tag} must remain in the manifest peer-reachability fixture`);
+    return [tag, facts];
+  }),
+);
+const focusedPeersReference = buildPeers(focusedPeerFacts);
+const dompurifyPeerRow = focusedPeersReference
+  .split('\n')
+  .find((line) => line.startsWith('| `dompurify` |'));
+assert.match(
+  dompurifyPeerRow ?? '',
+  /`lr-video`, `lr-video-playlist`/u,
+  'video registrations expose icon-library forwarding and therefore genuinely reach dompurify',
+);
+for (const tag of ['lr-command-palette', 'lr-condition-builder']) {
+  assert.ok(
+    !dompurifyPeerRow?.includes(`\`${tag}\``),
+    `${tag} must not inherit dompurify from a composed child whose sanitizer capability it cannot reach`,
+  );
+}
+const libphonenumberPeerRow = focusedPeersReference
+  .split('\n')
+  .find((line) => line.startsWith('| `libphonenumber-js` |'));
+assert.doesNotMatch(
+  libphonenumberPeerRow ?? '',
+  /`lr-phone-input`/u,
+  'phone-input documentation examples must not become runtime peer reachability',
+);
+const flagsSourceRange = packageMetadata.peerDependencies['@aceshooting/lyra-flags'];
+const flagsPublishedRange = flagsSourceRange.replace(/^workspace:/u, '');
+const flagsPeerRow = focusedPeersReference
+  .split('\n')
+  .find((line) => line.startsWith('| `@aceshooting/lyra-flags` |'));
+assert.ok(
+  flagsPeerRow?.includes(`| \`${flagsPublishedRange}\` |`),
+  'generated install guidance must publish the npm-resolvable flags range',
+);
+assert.doesNotMatch(
+  flagsPeerRow ?? '',
+  /`lr-flag`|`lr-locale-picker`/u,
+  'flag peer registration helpers must not become prerequisites of the base flag registrations',
+);
+assert.doesNotMatch(
+  focusedPeersReference,
+  /workspace:/u,
+  'generated references shipped in the tarball must not retain pnpm-only workspace ranges',
+);
+assert.match(
+  focusedPeersReference,
+  /Loading and failure behavior is component-specific:[\s\S]*Consult the owning component section/u,
+  'peer guidance must defer component-specific loading and failure signals to the owning contract',
+);
+assert.doesNotMatch(
+  focusedPeersReference,
+  /rendering an `<lr-skeleton>` placeholder[\s\S]*`console\.warn`/u,
+  'peer guidance must not promise one loading and failure shape for every component',
+);
+
+const totalPeerCount = Object.keys(packageMetadata.peerDependencies ?? {}).length;
+const componentPeerCount = totalPeerCount - Object.keys(TYPE_ONLY_DECLARATION_PEERS).length;
+assert.match(
+  sharedReference,
+  new RegExp(
+    `All ${totalPeerCount} peers are optional, in two groups\\. The ${componentPeerCount} component-facing peers`,
+    'u',
+  ),
+  'the authored shared peer summary must agree with package metadata',
+);
+
+const rootIncludedCount = inventory.components.filter((component) => component.rootIncluded).length;
+const rootExcludedCount = inventory.components.length - rootIncludedCount;
+assert.match(
+  sharedReference,
+  new RegExp(
+    `registers the ${rootIncludedCount}\\s+root-included tags — everything \\*\\*except\\*\\* the ${rootExcludedCount}`,
+    'u',
+  ),
+  'the authored shared all.js arithmetic must agree with the current inventory',
+);
+assert.match(
+  readmeReference,
+  new RegExp(
+    `registers ${rootIncludedCount} tags — every component \\*\\*except\\*\\* the ${rootExcludedCount}`,
+    'u',
+  ),
+  'the package README all.js arithmetic must agree with the current inventory',
+);
+assert.match(
+  sharedReference,
+  /every release after 9\.0\.0[\s\S]*\[CHANGELOG\.md\]\(\.\.\/CHANGELOG\.md\)/u,
+  'the shared status policy must route post-9.0 upgrades to the shipped changelog',
+);
+assert.match(
+  llmsIntroReference,
+  /\[CHANGELOG\.md\]\(\.\/CHANGELOG\.md\): chronological release notes/u,
+  'the short package reference index must expose the shipped changelog',
+);
+assert.match(
+  layoutReference,
+  /enumerates its interactive items by local tag\s+name \(`lr-menu-item` or `lr-dropdown-item`\), not `instanceof`/u,
+  'menu-label guidance must describe the realm-neutral menu enrollment predicate',
+);
+assert.doesNotMatch(
+  layoutReference,
+  /enumerates its items by `instanceof LyraMenuItem`/u,
+  'menu-label guidance must not reintroduce a realm-local enrollment claim',
+);
+assert.match(
+  mediaReference,
+  /`lr-video-change`[\s\S]*`video` is a fresh detached, recursively frozen plain-data snapshot/u,
+  'video-playlist docs must match the recursively frozen event-detail boundary',
+);
+assert.doesNotMatch(
+  mediaReference,
+  /`lr-video-change`[\s\S]{0,500}mutable plain-data snapshot/u,
+  'video-playlist docs must not promise a mutable event detail',
+);
+const viewerSection = (tag) => viewersReference
+  .split(`## \`${tag}\``)[1]
+  ?.split('\n## `')[0] ?? '';
+for (const [tag, contract] of [
+  ['lr-docx-viewer', /passive-document[\s\S]*anchors, form controls, and\s+custom elements are unwrapped[\s\S]*remote navigation\/resource\s+attributes are removed/u],
+  ['lr-email-viewer', /passive-document[\s\S]*anchors, form controls, and custom elements are\s+unwrapped[\s\S]*remote navigation\/resource attributes are removed/u],
+  ['lr-html-viewer', /passive-document[\s\S]*links, form controls, and custom\s+elements are unwrapped[\s\S]*remote navigation and resource\s+attributes are removed/u],
+  ['lr-include', /network-silent and non-interactive[\s\S]*only resolvable same-document `#fragment` links survive[\s\S]*Form controls and custom elements[\s\S]*unwrapped/u],
+  ['lr-notebook-viewer', /passive-document[\s\S]*anchors, form controls, and custom\s+elements are unwrapped[\s\S]*remote navigation\/resource attributes[\s\S]*removed[\s\S]*`image\/svg\+xml`[\s\S]*network-silent and non-interactive/u],
+]) {
+  assert.match(
+    viewerSection(tag),
+    contract,
+    `${tag} docs must disclose the exact passive, network-silent sanitizer profile`,
+  );
+}
 const migration = buildMigration();
 
 const conversationReference = readFileSync(new URL('../llms/conversation.md', import.meta.url), 'utf8');
@@ -132,6 +333,11 @@ assert.doesNotMatch(migration, /pnpm migrate-wa/, 'consumer migration docs must 
 assert.match(migration, /`@aceshooting\/lyra-ui\/all\.js`/);
 assert.match(migration, /root-excluded targets receive granular registration imports/);
 assert.match(migration, /`OPTIONAL_PEER_REQUIRED`/);
+assert.match(
+  migration,
+  /`BEHAVIOR_REVIEW_REQUIRED`[\s\S]*registerIconLibrary\('default', \{ resolver \}\)/u,
+  'generated migration guidance must expose the icon-name vocabulary review and its remedy',
+);
 assert.match(migration, /`REGISTRATION_CLOSURE_REQUIRED`/);
 assert.match(migration, /`@awesome\.me\/webawesome` and `@awesome\.me\/webawesome-pro`/);
 assert.match(migration, /standalone CSS/);
@@ -249,6 +455,16 @@ assert.match(index, /components\/lr-table\.js/);
 assert.doesNotMatch(index, /path is NOT `components\/<tag>\/`/);
 assert.match(table, /import '@aceshooting\/lyra-ui\/components\/lr-table\.js';/);
 assert.match(table, /components\/data\/table\/table\.class\.js/);
+assert.match(
+  table,
+  /\[CHANGELOG\.md\]\(\.\.\/\.\.\/CHANGELOG\.md\)/u,
+  'every generated component reference must link chronological release history',
+);
+assert.match(
+  table,
+  /\[llms-full\.txt\]\(\.\.\/\.\.\/llms-full\.txt\)/u,
+  'generated component references must expose their shipped family-wide breaking-change summaries',
+);
 assert.match(
   streamingText,
   /- \*\*Optional peers\*\* `dompurify`, `katex`, `marked`, `shiki` — see `llms\/peers\.md`/,

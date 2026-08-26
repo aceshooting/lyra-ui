@@ -5,6 +5,11 @@ import type { LyraDateInput } from "./date-input.js";
 import type { LyraDatePicker } from "./date-picker.js";
 import { styles } from "./date-input.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { setReducedMotion } from "../../../../test/wtr-media.js";
+
+interface WindowWithDate extends Window {
+  Date: DateConstructor;
+}
 
 it("renders inherited action hover/pressed hooks while direct host values still win", async () => {
   const wrapper = await fixture(html`
@@ -1077,12 +1082,29 @@ it("uses shared svg icons instead of literal glyphs for clear and calendar toggl
   expect(expandIcon.textContent?.trim()).to.equal("");
 });
 
-it("transitions the popup with the shared fast-transition token and respects reduced motion", () => {
+it("transitions the popup with the shared fast-transition token and respects reduced motion", async () => {
   const css = styles.cssText;
   const popupBlock = /\[part=['"]?popup['"]?]\s*{([^}]*)}/.exec(css);
   expect(popupBlock, 'expected a base [part="popup"] rule').to.not.equal(null);
   expect(popupBlock![1]).to.include("var(--lr-transition-fast)");
   expect(css).to.match(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
+
+  try {
+    await setReducedMotion("no-preference");
+    const el = (await fixture(
+      html`<lr-date-input style="--lr-transition-fast: 2s"></lr-date-input>`
+    )) as LyraDateInput;
+    const popup = el.shadowRoot!.querySelector<HTMLElement>('[part="popup"]')!;
+    expect(getComputedStyle(popup).transitionDuration).to.equal("2s");
+
+    await setReducedMotion("reduce");
+    await waitUntil(
+      () => getComputedStyle(popup).transitionDuration === "0s",
+      "date-input popup transition did not stop under reduced motion"
+    );
+  } finally {
+    await setReducedMotion("no-preference");
+  }
 });
 
 it("gives the clear/expand buttons a real touch target instead of collapsing to bare glyph height", async () => {
@@ -2664,8 +2686,7 @@ it("leaves focus on the newly pressed target when an outside pointer closes the 
     '[part="expand-button"]'
   ) as HTMLButtonElement;
   expand.focus();
-  el.show();
-  await el.updateComplete;
+  await el.show();
   const picker = el.shadowRoot!.querySelector(
     "lr-date-picker"
   ) as LyraDatePicker;
@@ -2714,8 +2735,7 @@ it("restores the opener when the popup is closed by assigning open = false", asy
     '[part="expand-button"]'
   ) as HTMLButtonElement;
   expand.focus();
-  el.show();
-  await el.updateComplete;
+  await el.show();
   const picker = el.shadowRoot!.querySelector(
     "lr-date-picker"
   ) as LyraDatePicker;
@@ -3055,7 +3075,9 @@ describe("reviewed date-input parity surface", () => {
 
   it("accepts branded Date values from another realm for values, ranges, and disabled dates", async () => {
     const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
-    const ForeignDate = frame.contentWindow!.Date;
+    const frameWindow = frame.contentWindow as WindowWithDate | null;
+    if (!frameWindow) throw new Error('The iframe window was unavailable.');
+    const ForeignDate = frameWindow.Date;
     const el = (await fixture(
       html`<lr-date-input value="2026-07-15"></lr-date-input>`
     )) as LyraDateInput;
@@ -3898,7 +3920,7 @@ describe("lr-date-input cross-document and reconnect listener guards", () => {
     el.open = true; // force a still-open state going into the reconnect
 
     document.body.appendChild(el);
-    await new Promise((resolve) => queueMicrotask(resolve));
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
     await el.updateComplete;
 
     const priv = el as unknown as {
@@ -3958,7 +3980,7 @@ describe("lr-date-input cross-document and reconnect listener guards", () => {
     expect(lower.open, "disconnect resets open").to.be.false;
     (lower as unknown as { open: boolean }).open = true; // still-open state going into the reconnect
     wrapper.appendChild(lower);
-    await new Promise((resolve) => queueMicrotask(resolve));
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
     await lower.updateComplete;
     expect(lower.open, "lower stays open across the reconnect").to.be.true;
 
@@ -4584,17 +4606,16 @@ describe('coverage-gap fixes', () => {
     // resolve to null. Under real usage this can never happen (the only caller,
     // `connectedCallback()`, gates on `hasUpdated` first), so it is exercised the same
     // direct-invocation way as the guard above.
-    const el = document.createElement(
-      "lr-date-input"
-    ) as unknown as LyraDateInput & {
+    const el = document.createElement('lr-date-input') as LyraDateInput;
+    const priv = el as unknown as {
       reconnectOpenPopup(): void;
       cleanupFn?: () => void;
     };
     document.body.appendChild(el);
     (el as unknown as { open: boolean }).open = true;
-    el.reconnectOpenPopup();
+    priv.reconnectOpenPopup();
     expect(
-      el.cleanupFn,
+      priv.cleanupFn,
       "no reposition when the popup/anchor parts do not exist in the render root yet"
     ).to.equal(undefined);
     el.remove();
@@ -4640,6 +4661,24 @@ describe('range presets forwarding', () => {
     const buttons = inner.shadowRoot!.querySelectorAll('[part~="preset-button"]');
 
     expect(buttons.length, 'the row renders inside the popover').to.equal(2);
+  });
+
+  it('keeps the forwarded picker renderable for malformed runtime collections', async () => {
+    const el = (await fixture(
+      html`<lr-date-input mode="range" open></lr-date-input>`,
+    )) as LyraDateInput;
+
+    el.presets = null as unknown as typeof PRESETS;
+    await el.updateComplete;
+    let inner = picker(el) as LyraDatePicker;
+    await inner.updateComplete;
+    expect(inner.shadowRoot!.querySelectorAll('[part~="preset-button"]')).to.have.lengthOf(0);
+
+    el.presets = [null, PRESETS[0]] as unknown as typeof PRESETS;
+    await el.updateComplete;
+    inner = picker(el) as LyraDatePicker;
+    await inner.updateComplete;
+    expect(inner.shadowRoot!.querySelectorAll('[part~="preset-button"]')).to.have.lengthOf(1);
   });
 
   it('exposes the presets and preset-button parts through exportparts', async () => {

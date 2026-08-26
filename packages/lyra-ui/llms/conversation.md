@@ -155,6 +155,7 @@ placed first and preserved inside both ceilings.
 **CSS parts:** `content` (the wrapper around the rendered or plain-text-fallback output; carries
 `data-fallback` while showing the plain-text fallback — still-loading peers or a failed render —
 so a consumer can target `lr-markdown [part='content'][data-fallback]` to style it distinctly),
+`anchor-live-region` (the aria-hidden, non-live shadow mirror of the latest anchor-jump message),
 `heading` (every rendered `<h1>`–`<h6>`, shifted by `heading-offset`), `paragraph` (every rendered
 `<p>`), `list` (every rendered `<ul>`/`<ol>`), `code-block` (every rendered fenced/indented `<pre>`),
 `inline-code` (every rendered inline `<code>` span — backtick spans, not fenced blocks), `link`
@@ -164,7 +165,7 @@ carrying `data-display="inline"|"block"`)
 
 **Themeable custom properties:** `--lr-markdown-font-mono` (default `var(--lr-font-mono)` — the
 code/code-block font, resolving through the library's shared monospace stack so a
-`--lr-theme-font-mono` override reaches it), `--lr-code-block-tab-size` (default `2` — tab width inside a
+`--lr-theme-font-family-mono` override reaches it), `--lr-code-block-tab-size` (default `2` — tab width inside a
 rendered fenced or indented `code-block`), plus shared tokens `--lr-space-xs/-s/-m/-l`,
 `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`, `--lr-color-text-quiet`,
 `--lr-radius`.
@@ -311,8 +312,9 @@ as the full class; the core route exports its own `Marked` alias.
 
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
-**CSS parts:** `content`, `heading`, `paragraph`, `list`, `code-block`, `inline-code`, `link`,
-`table`, `blockquote`, `img`, `math` — identical to `<lr-markdown>`'s own parts.
+**CSS parts:** `anchor-live-region` (the aria-hidden, non-live shadow mirror of the latest
+anchor-jump message), `content`, `heading`, `paragraph`, `list`, `code-block`, `inline-code`,
+`link`, `table`, `blockquote`, `img`, `math` — identical to `<lr-markdown>`'s own parts.
 
 **Themeable custom properties:** `--lr-code-block-tab-size` (default `2` — tab width inside a
 rendered fenced or indented `code-block`), with exactly the mechanics described under
@@ -357,7 +359,7 @@ const view = html`<lr-markdown-core
 A role-based message bubble _shell_ for a chat/agent conversation surface. It renders none of the
 message content itself — the default slot carries whatever a consumer wants to display (plain text,
 a `<lr-markdown>`, a custom template, anything) and this component only supplies the surrounding
-chrome: alignment/coloring by `role`, an avatar/badges header row, an optional collapse toggle, an
+chrome: alignment/coloring by `messageRole`, an avatar/badges header row, an optional collapse toggle, an
 attachments strip, and a status-aware footer (a live-updating status dot + text, the formatted
 `timestamp`, a built-in retry affordance for `status="failed"`, and an `actions` slot for everything
 else). No built-in copy button is rendered — slot a copy control into `actions` and fire
@@ -371,7 +373,7 @@ level).
   `message-role`, reflected) — identifies the author without colliding with the platform `role`
   attribute. The role-owning internal article receives the localized author name directly through
   `aria-label`; a host `aria-label` overrides it by attribute presence (including an explicitly
-  empty override). Styling exposes the same state through `data-role`; a bare `role="assistant"`
+  empty override). Styling keys off the same reflected `message-role` host attribute; a bare `role="assistant"`
   is never an authoring API.
 - `status: ChatMessageStatus = 'sent'` (`'sending' | 'sent' | 'failed' | 'streaming'`, reflected) —
   drives the footer's status dot/text, `status="failed"`'s danger treatment on the bubble, and the
@@ -424,9 +426,9 @@ properties:
 - `--lr-chat-message-bubble-color` (default `var(--lr-color-text)`) — bubble text color for those
   same roles.
 - `--lr-chat-message-user-bubble-bg` (default `var(--lr-color-brand-quiet)`) — bubble fill for
-  `data-role="user"`.
+  `message-role="user"`.
 - `--lr-chat-message-user-bubble-color` (default `var(--lr-color-text)`) — bubble text color for
-  `data-role="user"`.
+  `message-role="user"`.
 
 Prefer these over re-pointing the shared token a default happens to reference. Overriding
 `--lr-color-brand-quiet` on the host also retints `[part='collapse-button']:hover` within this same
@@ -508,8 +510,8 @@ undefined`, i.e. not the very first update) triggers the live-region announcemen
   `appendChild` after first paint still triggers native `slotchange`, so this works transparently,
   but any code that manually re-parents already-slotted nodes without a real slot-assignment change
   won't refresh the corresponding wrapper's visibility.
-- `messageRole` reflects as `message-role`; the shadow tree separately mirrors it to `data-role` for
-  component styling. Never use `[role="user"]` as author state.
+- `messageRole` reflects as `message-role`, which is also the host selector used by component
+  styling. Never use `[role="user"]` as author state.
 
 **Additional API surface:**
 
@@ -839,9 +841,9 @@ wins through the shadow cascade and is the supported per-instance override. The 
 longhands are indirected the same way: `--lr-stream-status-stalled-bg` (falls back to
 `--lr-color-warning-quiet`) and `--lr-stream-status-stalled-border-color` (falls back to
 `--lr-color-warning`) retheme the `base` part's background/border while stalled, and
-`--lr-stream-status-message-color` (also falling back to `--lr-color-warning`) retheme the
-`message` part's text color independently of the border — the two currently share a default value
-but are separate hooks, so overriding one never moves the other.
+`--lr-stream-status-message-color` (also falling back to `--lr-color-warning`) rethemes both the
+`phase` and `message` parts' stalled text color independently of the border — the text and border
+currently share a default value but are separate hooks, so overriding one never moves the other.
 
 **Optional peer deps:** none.
 
@@ -1088,8 +1090,9 @@ focus move.
 - `LyraCatalog<T extends LyraCatalogEntry = LyraCatalogEntry> = readonly string[] | readonly T[]`
   — a homogeneous catalog shared by model-select, voice-picker, and composed controls. String
   shorthand uses the same string for both id and label; readonly tuples/arrays are accepted. Ids
-  must be nonempty and unique: malformed rows and later duplicates are omitted first-wins before
-  mode selection, rendering, focus reconciliation, selection, or preview lookup.
+  must be nonempty and unique and object rows require a nonblank string label: malformed rows and
+  later duplicates are omitted first-wins before mode selection, rendering, focus reconciliation,
+  selection, or preview lookup.
 - `LyraModelCatalogEntry extends LyraCatalogEntry { icon?: string }` — one model row. An
   optional literal `icon` (for example, an emoji) renders decoratively before `label`; it does not
   change the option's accessible name.
@@ -2109,6 +2112,9 @@ properties: `state: PushToTalkState` (`'idle' | 'requesting' | 'denied' | 'recor
 mirrored to `data-state`) and `stream: MediaStream | null` (the live capture stream, assignable straight onto
 `lr-audio-visualizer.stream`).
 
+A host `aria-label` names the internal trigger by attribute presence; an explicitly empty value is
+preserved instead of being replaced by the generated Hold/Start/Stop label.
+
 `levelEvents`, `maxDurationMs`, and `showTimer` stay reactive during an active recording: changing
 them starts or stops their audio-analysis, deadline, or elapsed-time work immediately. A changed
 maximum remains measured from the original recording start rather than granting a fresh duration;
@@ -2125,7 +2131,8 @@ APIs, so do not place a second interactive control there.
 **Events:** `lr-record-start` (`detail: { stream: MediaStream }`), `lr-record-chunk` (`detail: { blob:
 Blob }`, only when `timeslice-ms > 0`), `lr-record-stop` (`detail: { blob: Blob; durationMs: number
 }`), `lr-record-cancel` (`detail: null`), `lr-record-error`
-(`detail: { error: DOMException | Error }`, including recorder runtime errors), `lr-level`
+(`detail: { error: DOMException | Error }`, covering permission, recorder construction/start, and
+recorder runtime failures), `lr-level`
 (`detail: { level: number }` — 0–1 amplitude, opt-in via `level-events`), and `lr-record-state-change`
 (`detail: { state: 'idle' | 'requesting' | 'denied' | 'recording' | 'error' }`).
 
@@ -2166,7 +2173,8 @@ transcript sync is a separate concern.
 **Properties:** `entries: LyraTranscriptEntry[] = []` (attribute: false) — `LyraTranscriptEntry { id:
 string; speaker?: string; text: string; interim?: boolean; timestamp?: LyraTimestamp }` (exported by
 this module; `LyraTimestamp = Date | string | number`, normalized through Date/TimeClip). Reconciled
-keyed by nonempty, nonblank, first-wins `id` via Lit's `repeat()`: a
+keyed by nonempty, nonblank, first-wins `id` via Lit's `repeat()`; rows whose required `text` is not
+a string are omitted before rendering or announcement. A
 same-`id` entry with new `text` replaces in place, and a same-`id` entry whose `interim` flips from
 `true` to unset/`false` moves from the interim area into the `role="log"` region and announces
 exactly once. A collection with no valid entry renders the empty state. Interim entries render
@@ -2183,8 +2191,8 @@ render only records them. `follow: boolean = true`
 `max-rendered-entries`) — `0` explicitly renders every entry; a positive value keeps only the newest N,
 `sessionId: string = ''` (attribute `session-id`) — changing session identity clears finalized-ID
 announcement history and treats the new session's current entries as a silent baseline,
-`label: string = ''` — accessible name for the `role="log"` region
-(default: the localized `transcriptFeedLabel`), and `accessibleLabel: string | null = null`
+`label?: string` — accessible name for the `role="log"` region. Omitting it uses the localized
+`transcriptFeedLabel`; an explicit empty string intentionally leaves the role unnamed. `accessibleLabel: string | null = null`
 (attribute `aria-label`) — overrides the log's computed accessible name, winning over `label` and
 the localized default; attribute-reflects from a host-level `aria-label`.
 
@@ -2193,7 +2201,9 @@ entry. The built-in jump action delegates to this method.
 
 **Slots:** `empty` — custom empty state (default: the localized "No transcript yet").
 
-**Events:** `lr-follow-change` — `detail: { following }`, fires on every `follow` transition.
+**Events:** `lr-follow-change` — `detail: { following }`, fired when a user scroll changes follow
+state or the built-in jump action re-engages it. Direct `follow` assignments and
+`scrollToBottom()` calls are controlled input and do not echo an event.
 
 **CSS parts:** `base` (the scroll container), `log` (the `role="log"` region wrapping final entries
 only), `entry`, `speaker` (omitted for a row repeating the previous row's speaker), `text`
@@ -2330,8 +2340,9 @@ the first valid occurrence winning. The input is clone-owned, bounded, and froze
 array after changing the sequence or a row. `icon` is an optional
 peer-neutral literal hint (for example, an emoji), rendered decoratively before the text, and
 `detail` is an optional secondary line. Empty renders nothing at all. `wrap: boolean = false`
-(reflected) — wraps into multiple rows instead of a single horizontally scrollable line. `label:
-string = ''` — accessible name for the group, defaults to the localized `suggestionsLabel`.
+(reflected) — wraps into multiple rows instead of a single horizontally scrollable line. `label?:
+string` — accessible name for the group. Omitting it uses the localized `suggestionsLabel`; an
+explicit empty string intentionally leaves the group unnamed.
 
 **Events:** `lr-suggestion-select` — `detail: { suggestionId, label }`.
 
@@ -2355,7 +2366,7 @@ on `:host`. Plus shared tokens `--lr-space-xs/-m/-2xs`,
 
 Keyboard: roving tabindex across chips; ArrowLeft/ArrowRight (direction-aware) plus Home/End;
 Enter/Space activate. Renders inside an internal `lr-scroller` (`orientation="horizontal"`,
-`hide-scrollbar`) unless `wrap` is set.
+`without-scrollbar`) unless `wrap` is set.
 
 ```html
 <lr-suggestion-chips></lr-suggestion-chips>
@@ -2395,9 +2406,10 @@ string | number; pinned?: boolean; archived?: boolean }`; `ThreadRowAction = 'pi
 date?: Date }`. `LyraThreadList` and `LyraThreadListEventMap` are exported alongside them. The class
 module, normal and stable tag-shaped registration entries, conversation family entry, and package
 root all retain this complete thread-list surface; the former `ChatThread` name is not retained.
-Data-mode thread ids must be nonempty, nonblank, and unique; invalid rows and later duplicates are
-omitted with the first valid occurrence winning before the mode is selected, so focus, actions,
-slot ownership, and emitted `conversationId` values remain unambiguous.
+Data-mode thread ids must be nonempty, nonblank, and unique, and every row must have a string
+`title`; invalid rows and later duplicates are omitted with the first valid occurrence winning
+before the mode is selected, so focus, actions, slot ownership, and emitted `conversationId`
+values remain unambiguous.
 
 **Properties:** `threads: LyraChatThread[] = []` (attribute: false). `activeConversationId: string = ''`
 (attribute `active-conversation-id`) — data mode:
@@ -2436,8 +2448,9 @@ this renders an `aria-hidden` copy of the header into the internal `lr-virtual-l
 the real row keeps the `role="heading"`/`aria-level` semantics and the tab order (the copy's toggle
 is not a second tab stop), while the pinned copy stays clickable and requests the same
 `lr-group-toggle` collapse. Default `false` renders exactly as before; `grouping="none"` has no
-headers to pin, so it is a no-op there. `label: string = ''` — accessible name for the list region,
-defaults to the localized `threadListLabel`. `wrapRow?: (thread: LyraChatThread, row: TemplateResult) =>
+headers to pin, so it is a no-op there. `label?: string` — accessible name for the list region.
+Omitting it uses the localized `threadListLabel`; an explicit empty string intentionally leaves the
+list unnamed. `wrapRow?: (thread: LyraChatThread, row: TemplateResult) =>
 TemplateResult` (attribute: false) — data mode only: wraps each row's built-in
 `lr-conversation-item` with host-supplied content that has no home in the item's own `label`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose
 icon — the item has no default slot to receive one); unset renders the built-in row unwrapped.
@@ -3412,6 +3425,8 @@ detail), `lr-record-error` (`{ error }`), `lr-level` (`{ level }`), and
 `lr-record-state-change` (`{ state }`). These are the child's original bubbling/composed events rather than
 parent re-emissions;
 normal Shadow DOM retargeting means a listener outside the session observes the session as `target`.
+The composed transcript's internal `lr-follow-change` event is contained and is not part of this
+session shell's public event surface.
 
 **CSS parts:** `base`, `header`, `status`, `activity`, `controls`, `connect`, `disconnect`, `mute`,
 `interrupt`, `capture`, `transcript`, `error`.
@@ -3459,6 +3474,14 @@ These named interfaces and helper signatures are available to typed integrations
     getLoadedLanguages: unknown;
     loadLanguage: unknown;
     language: unknown;
+  }`
+  `ShikiLanguageRegistration {
+    name: unknown;
+    scopeName: unknown;
+    displayName: unknown;
+    aliases: unknown;
+    patterns: unknown;
+    repository: unknown;
   }`
   `ShikiLanguageInput {
     name: unknown;

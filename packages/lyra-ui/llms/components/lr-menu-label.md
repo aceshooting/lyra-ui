@@ -6,6 +6,7 @@
 - **Class** `LyraMenuLabel`, also available unregistered from `@aceshooting/lyra-ui/components/layout/menu/menu-label.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 1 part, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -19,9 +20,10 @@ A non-interactive section heading inside `<lr-menu>`'s default slot. Mirrors `sl
 
 The host takes `role="presentation"` on connect (a `role="menu"` may only contain menu-item roles,
 so a heading with a generic role would make the menu's own children invalid) — unless the consumer
-already set a `role`, which is left alone. `<lr-menu>` enumerates its items by `instanceof
-LyraMenuItem`, so a label is never enrolled in the roving tabindex and can never become a focus
-stop; nothing on `<lr-menu>` has to know this element exists.
+already set a `role`, which is left alone. `<lr-menu>` enumerates its interactive items by local tag
+name (`lr-menu-item` or `lr-dropdown-item`), not `instanceof`, so an adopted same-origin
+foreign-realm item remains enrollable. A label matches neither tag, is never enrolled in the roving
+tabindex, and can never become a focus stop; nothing on `<lr-menu>` has to know this element exists.
 
 To announce a _named group_ rather than a caption, wrap the labelled items in an element with
 `role="group"` and give it a matching `aria-label`. `aria-labelledby` pointing at this element's

@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { isMainModule } from './is-main-module.mjs';
+
 // Orthogonal component qualification gate. Semver maturity says whether a public API is covered by
 // compatibility policy; this gate independently records what evidence exists for that component.
 // Every public tag, stable or experimental, must own a populated/open axe assertion against the
@@ -138,7 +140,7 @@ async function main() {
   console.log(`${summary} — populated/open axe evidence is exact for every tag or narrowly reviewed`);
 }
 
-if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))) {
+if (isMainModule(import.meta.url)) {
   main().catch((error) => {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;

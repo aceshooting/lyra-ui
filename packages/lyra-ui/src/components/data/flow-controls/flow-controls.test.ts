@@ -1,4 +1,5 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import '../flow-canvas/flow-canvas.js';
 import './flow-controls.js';
 import type { LyraFlowControls } from './flow-controls.js';
@@ -270,13 +271,23 @@ it('adopts a same-id replacement canvas and unsubscribes from the removed target
   const replacement = document.createElement('lr-flow-canvas') as LyraFlowCanvas;
   replacement.id = 'wf';
   replacement.nodes = nodes;
+  replacement.maxZoom = 4;
+  replacement.locked = true;
   root.prepend(replacement);
   await replacement.updateComplete;
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const lock = controls.shadowRoot!.querySelector('[part="lock"]') as HTMLButtonElement;
+  await waitUntil(
+    () => lock.getAttribute('aria-pressed') === 'true',
+    'the controls did not adopt the locked replacement canvas',
+  );
+  replacement.locked = false;
+  await replacement.updateComplete;
+  await waitUntil(() => lock.getAttribute('aria-pressed') === 'false');
+  const zoomIn = controls.shadowRoot!.querySelector('[part="zoom-in"]') as HTMLButtonElement;
+  await waitUntil(() => !zoomIn.disabled);
   const oldZoom = original.viewport.zoom;
   const newZoom = replacement.viewport.zoom;
-  (controls.shadowRoot!.querySelector('[part="zoom-in"]') as HTMLButtonElement).click();
+  zoomIn.click();
 
   expect(original.viewport.zoom).to.equal(oldZoom);
   expect(replacement.viewport.zoom).to.be.greaterThan(newZoom);
@@ -502,16 +513,32 @@ describe('frame', () => {
 });
 
 describe('toolbar button hover specificity', () => {
-  it('wraps the internal hover rule in :where() so a ::part(zoom-in):hover override does not need !important', async () => {
-    const el = (await fixture(html`<lr-flow-controls></lr-flow-controls>`)) as LyraFlowControls;
-    // jsdom/browser test runners don't synthesize a real :hover pseudo-class from a dispatched
-    // event, so assert via the stylesheet source directly, mirroring lr-attachment-trigger's
-    // identical hover-specificity regression test.
-    const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
-      .flatMap((sheet) => Array.from(sheet.cssRules))
-      .map((rule) => rule.cssText)
-      .find((text) => text.includes(':hover') && text.includes('button'));
-    expect(internalRule).to.contain(':where(');
+  it('lets a consumer ::part(zoom-in):hover rule win in the rendered cascade', async function () {
+    if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
+    const style = document.createElement('style');
+    style.textContent = 'lr-flow-controls.hover-probe::part(zoom-in):hover { background: rgb(7, 8, 9); }';
+    document.head.append(style);
+    try {
+      const wrapper = (await fixture(html`
+        <lr-flow-canvas>
+          <lr-flow-controls class="hover-probe" slot="bottom-start"></lr-flow-controls>
+        </lr-flow-canvas>
+      `)) as LyraFlowCanvas;
+      wrapper.nodes = nodes;
+      await wrapper.updateComplete;
+      const controls = wrapper.querySelector('lr-flow-controls') as LyraFlowControls;
+      await controls.updateComplete;
+      const button = controls.shadowRoot!.querySelector<HTMLElement>('[part="zoom-in"]')!;
+      const rect = button.getBoundingClientRect();
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(7, 8, 9)');
+    } finally {
+      await resetMouse();
+      style.remove();
+    }
   });
 });
 

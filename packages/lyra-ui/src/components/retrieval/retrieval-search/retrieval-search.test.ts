@@ -1,8 +1,9 @@
-import { fixture, expect, html, oneEvent } from "@open-wc/testing";
-import "./retrieval-search.js";
-import type { LyraRetrievalSearch } from "./retrieval-search.js";
-import type { RetrievalQuery, CancelEventDetail } from "../../../ai/types.js";
-import type { RetrievalFiltersChangeDetail } from "./retrieval-search.class.js";
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import './retrieval-search.js';
+import type { LyraRetrievalSearch } from './retrieval-search.js';
+import type { RetrievalQuery, CancelEventDetail } from '../../../ai/types.js';
+import type { RetrievalFiltersChangeDetail } from './retrieval-search.class.js';
 
 function queryInputOf(el: LyraRetrievalSearch): HTMLElement {
   return el.shadowRoot!.querySelector('[part="query"]') as HTMLElement;
@@ -29,7 +30,7 @@ function declaredValue(
   property: string
 ): string {
   const normalize = (text: string) =>
-    text.replace(/"/g, "'").replace(/\s+/g, " ").trim();
+    text.replace(/"/g, "'").replace(/\s+/g, ' ').trim();
   for (const sheet of root.adoptedStyleSheets ?? []) {
     for (const rule of sheet.cssRules) {
       if (
@@ -41,13 +42,13 @@ function declaredValue(
       }
     }
   }
-  return "";
+  return '';
 }
 
 function declaredBackground(root: ShadowRoot, selector: string): string {
   return (
-    declaredValue(root, selector, "background") ||
-    declaredValue(root, selector, "background-color")
+    declaredValue(root, selector, 'background') ||
+    declaredValue(root, selector, 'background-color')
   );
 }
 
@@ -56,7 +57,7 @@ function paintProbe(root: ShadowRoot) {
     apply: (probe: HTMLElement) => void,
     read: (style: CSSStyleDeclaration) => string
   ) => {
-    const probe = document.createElement("span");
+    const probe = document.createElement('span');
     apply(probe);
     root.appendChild(probe);
     const computed = read(getComputedStyle(probe));
@@ -90,76 +91,76 @@ function channelDistance(left: string, right: string): number {
 }
 
 function enterKeydown(init: KeyboardEventInit = {}): KeyboardEvent {
-  return new KeyboardEvent("keydown", {
-    key: "Enter",
+  return new KeyboardEvent('keydown', {
+    key: 'Enter',
     bubbles: true,
     cancelable: true,
     ...init,
   });
 }
 
-it("defaults to an empty query, hybrid mode, no filters/scope, not loading, no error, not empty", async () => {
+it('defaults to an empty query, hybrid mode, no filters/scope, not loading, no error, not empty', async () => {
   const el = (await fixture(
     html`<lr-retrieval-search></lr-retrieval-search>`
   )) as LyraRetrievalSearch;
-  expect(el.query).to.equal("");
-  expect(el.mode).to.equal("hybrid");
+  expect(el.query).to.equal('');
+  expect(el.mode).to.equal('hybrid');
   expect(el.filters).to.deep.equal({});
   expect(el.scope).to.deep.equal([]);
   expect(el.loading).to.be.false;
-  expect(el.errorText).to.equal("");
+  expect(el.errorText).to.equal('');
   expect(el.empty).to.be.false;
 });
 
-it("renders a query lr-input, a 3-item vector/keyword/hybrid mode segmented, and a submit button", async () => {
+it('renders a query lr-input, a 3-item vector/keyword/hybrid mode segmented, and a submit button', async () => {
   const el = (await fixture(
     html`<lr-retrieval-search></lr-retrieval-search>`
   )) as LyraRetrievalSearch;
-  expect(queryInputOf(el).tagName.toLowerCase()).to.equal("lr-input");
+  expect(queryInputOf(el).tagName.toLowerCase()).to.equal('lr-input');
   const segmented = modeOf(el) as HTMLElement & {
     items: { value: string; label: string }[];
   };
-  expect(segmented.tagName.toLowerCase()).to.equal("lr-segmented");
+  expect(segmented.tagName.toLowerCase()).to.equal('lr-segmented');
   expect(segmented.items.map((i) => i.value)).to.deep.equal([
-    "vector",
-    "keyword",
-    "hybrid",
+    'vector',
+    'keyword',
+    'hybrid',
   ]);
   expect(submitButtonOf(el) != null).to.equal(true);
 });
 
-it("updates query as the composed lr-input reports user edits", async () => {
+it('updates query as the composed lr-input reports user edits', async () => {
   const el = (await fixture(
     html`<lr-retrieval-search></lr-retrieval-search>`
   )) as LyraRetrievalSearch;
   queryInputOf(el).dispatchEvent(
-    new CustomEvent("lr-input", {
-      detail: { value: "solar inverter faults" },
+    new CustomEvent('lr-input', {
+      detail: { value: 'solar inverter faults' },
       bubbles: true,
     })
   );
   await el.updateComplete;
-  expect(el.query).to.equal("solar inverter faults");
+  expect(el.query).to.equal('solar inverter faults');
 });
 
-it("suppresses raw child input and mode-change events after consuming them", async () => {
+it('suppresses raw child input and mode-change events after consuming them', async () => {
   const el = (await fixture(
     html`<lr-retrieval-search></lr-retrieval-search>`
   )) as LyraRetrievalSearch;
   let inputLeaks = 0;
   let changeLeaks = 0;
-  el.addEventListener("lr-input", () => inputLeaks++);
-  el.addEventListener("lr-change", () => changeLeaks++);
+  el.addEventListener('lr-input', () => inputLeaks++);
+  el.addEventListener('lr-change', () => changeLeaks++);
   queryInputOf(el).dispatchEvent(
-    new CustomEvent("lr-input", {
-      detail: { value: "solar" },
+    new CustomEvent('lr-input', {
+      detail: { value: 'solar' },
       bubbles: true,
       composed: true,
     })
   );
   modeOf(el).dispatchEvent(
-    new CustomEvent("lr-change", {
-      detail: { value: "vector" },
+    new CustomEvent('lr-change', {
+      detail: { value: 'vector' },
       bubbles: true,
       composed: true,
     })
@@ -169,103 +170,103 @@ it("suppresses raw child input and mode-change events after consuming them", asy
   expect(changeLeaks).to.equal(0);
 });
 
-it("updates mode as the composed lr-segmented reports a change", async () => {
+it('updates mode as the composed lr-segmented reports a change', async () => {
   const el = (await fixture(
     html`<lr-retrieval-search></lr-retrieval-search>`
   )) as LyraRetrievalSearch;
   modeOf(el).dispatchEvent(
-    new CustomEvent("lr-change", { detail: { value: "vector" }, bubbles: true })
+    new CustomEvent('lr-change', { detail: { value: 'vector' }, bubbles: true })
   );
   await el.updateComplete;
-  expect(el.mode).to.equal("vector");
+  expect(el.mode).to.equal('vector');
 });
 
-it("Enter in the query field submits, emitting lr-search with the full RetrievalQuery", async () => {
+it('Enter in the query field submits, emitting lr-search with the full RetrievalQuery', async () => {
   const el = (await fixture(
     html`<lr-retrieval-search></lr-retrieval-search>`
   )) as LyraRetrievalSearch;
-  el.query = "panel degradation";
-  el.mode = "keyword";
-  el.filters = { type: "pdf" };
-  el.scope = ["engineering-docs"];
+  el.query = 'panel degradation';
+  el.mode = 'keyword';
+  el.filters = { type: 'pdf' };
+  el.scope = ['engineering-docs'];
   await el.updateComplete;
 
-  const listener = oneEvent(el, "lr-search");
+  const listener = oneEvent(el, 'lr-search');
   queryInputOf(el).dispatchEvent(enterKeydown());
   const ev = await listener;
   expect(ev.detail).to.deep.equal({
-    text: "panel degradation",
-    mode: "keyword",
-    filters: { type: "pdf" },
-    scope: ["engineering-docs"],
+    text: 'panel degradation',
+    mode: 'keyword',
+    filters: { type: 'pdf' },
+    scope: ['engineering-docs'],
   } satisfies RetrievalQuery);
 });
 
-it("clicking the submit button while idle also submits", async () => {
+it('clicking the submit button while idle also submits', async () => {
   const el = (await fixture(
     html`<lr-retrieval-search query="inverter trip"></lr-retrieval-search>`
   )) as LyraRetrievalSearch;
-  const listener = oneEvent(el, "lr-search");
+  const listener = oneEvent(el, 'lr-search');
   submitButtonOf(el).click();
   const ev = await listener;
-  expect((ev.detail as RetrievalQuery).text).to.equal("inverter trip");
+  expect((ev.detail as RetrievalQuery).text).to.equal('inverter trip');
 });
 
-it("never treats an IME composition Enter as a submit trigger (isComposing)", async () => {
+it('never treats an IME composition Enter as a submit trigger (isComposing)', async () => {
   const el = (await fixture(
     html`<lr-retrieval-search></lr-retrieval-search>`
   )) as LyraRetrievalSearch;
   let submitted = false;
-  el.addEventListener("lr-search", () => (submitted = true));
+  el.addEventListener('lr-search', () => (submitted = true));
   queryInputOf(el).dispatchEvent(enterKeydown({ isComposing: true }));
   await el.updateComplete;
   expect(submitted).to.be.false;
 });
 
-it("never treats an IME composition Enter as a submit trigger (keyCode 229 fallback)", async () => {
+it('never treats an IME composition Enter as a submit trigger (keyCode 229 fallback)', async () => {
   const el = (await fixture(
     html`<lr-retrieval-search></lr-retrieval-search>`
   )) as LyraRetrievalSearch;
   let submitted = false;
-  el.addEventListener("lr-search", () => (submitted = true));
+  el.addEventListener('lr-search', () => (submitted = true));
   const ev = enterKeydown();
-  Object.defineProperty(ev, "keyCode", { value: 229 });
+  Object.defineProperty(ev, 'keyCode', { value: 229 });
   queryInputOf(el).dispatchEvent(ev);
   await el.updateComplete;
   expect(submitted).to.be.false;
 });
 
-describe("loading / cancellation", () => {
-  it("renders a Cancel affordance instead of Search while loading", async () => {
+describe('loading / cancellation', () => {
+  it('renders a Cancel affordance instead of Search while loading', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
-    expect(submitButtonOf(el).textContent!.trim()).to.equal("Search");
+    expect(submitButtonOf(el).textContent!.trim()).to.equal('Search');
     el.loading = true;
     await el.updateComplete;
-    expect(submitButtonOf(el).textContent!.trim()).to.equal("Cancel");
+    expect(submitButtonOf(el).textContent!.trim()).to.equal('Cancel');
   });
 
-  it("clicking Cancel while loading emits only lr-cancel, never lr-search", async () => {
+  it('clicking Cancel while loading emits only lr-cancel, never lr-search', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search loading></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
     let searched = false;
-    el.addEventListener("lr-search", () => (searched = true));
-    const listener = oneEvent(el, "lr-cancel");
+    el.addEventListener('lr-search', () => (searched = true));
+    const listener = oneEvent(el, 'lr-cancel');
     submitButtonOf(el).click();
     const ev = await listener;
     expect((ev.detail as CancelEventDetail).reason).to.be.undefined;
     expect(searched).to.be.false;
   });
 
-  it("submitting again (Enter) while loading supersedes: emits lr-cancel then lr-search", async () => {
+  it('submitting again (Enter) while loading supersedes: emits lr-cancel then lr-search', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search loading query="first"></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
-    const cancelPromise = oneEvent(el, "lr-cancel");
-    const searchPromise = oneEvent(el, "lr-search");
-    el.query = "second";
+    const cancelPromise = oneEvent(el, 'lr-cancel');
+    const searchPromise = oneEvent(el, 'lr-search');
+    el.query = 'second';
     await el.updateComplete;
     queryInputOf(el).dispatchEvent(enterKeydown());
     const [cancelEv, searchEv] = await Promise.all([
@@ -273,26 +274,42 @@ describe("loading / cancellation", () => {
       searchPromise,
     ]);
     expect((cancelEv.detail as CancelEventDetail).reason).to.equal(
-      "superseded"
+      'superseded'
     );
-    expect((searchEv.detail as RetrievalQuery).text).to.equal("second");
+    expect((searchEv.detail as RetrievalQuery).text).to.equal('second');
   });
 });
 
-describe("active filters/scope chips", () => {
-  it("renders no chip-group when there are no filters and no scope", async () => {
+describe('active filters/scope chips', () => {
+  it('treats non-record filters and non-array scope assignments as empty collections', async () => {
+    const el = await fixture<LyraRetrievalSearch>(html`
+      <lr-retrieval-search query="solar"></lr-retrieval-search>
+    `);
+    (el as unknown as { filters: unknown }).filters = null;
+    (el as unknown as { scope: unknown }).scope = { id: 'not-an-array' };
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('[part="filters"]') === null).to.equal(
+      true
+    );
+    const pending = oneEvent(el, 'lr-search');
+    submitButtonOf(el).click();
+    expect((await pending).detail).to.deep.include({ filters: {}, scope: [] });
+  });
+
+  it('renders no chip-group when there are no filters and no scope', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
     expect(el.shadowRoot!.querySelector('[part="filters"]') == null).to.be.true;
   });
 
-  it("renders removable chips for scope entries and filter entries", async () => {
+  it('renders removable chips for scope entries and filter entries', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
-    el.scope = ["engineering-docs"];
-    el.filters = { type: "pdf" };
+    el.scope = ['engineering-docs'];
+    el.filters = { type: 'pdf' };
     await el.updateComplete;
     const chips = Array.from(
       el.shadowRoot!.querySelectorAll('[part="filters"] lr-chip')
@@ -301,65 +318,65 @@ describe("active filters/scope chips", () => {
     const scopeChip = el.shadowRoot!.querySelector(
       '[part="filters"] lr-chip[value="engineering-docs"]'
     )!;
-    expect(scopeChip.textContent!.trim()).to.equal("engineering-docs");
+    expect(scopeChip.textContent!.trim()).to.equal('engineering-docs');
     const filterChip = el.shadowRoot!.querySelector(
       '[part="filters"] lr-chip[value="type"]'
     )!;
-    expect(filterChip.textContent!.trim()).to.equal("type: pdf");
+    expect(filterChip.textContent!.trim()).to.equal('type: pdf');
   });
 
-  it("removing a scope chip updates scope and emits lr-filters-change with the full next state", async () => {
+  it('removing a scope chip updates scope and emits lr-filters-change with the full next state', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
-    el.scope = ["engineering-docs", "support-tickets"];
-    el.filters = { type: "pdf" };
+    el.scope = ['engineering-docs', 'support-tickets'];
+    el.filters = { type: 'pdf' };
     await el.updateComplete;
     const chip = el.shadowRoot!.querySelector(
       '[part="filters"] lr-chip[value="engineering-docs"]'
     )!;
-    const listener = oneEvent(el, "lr-filters-change");
+    const listener = oneEvent(el, 'lr-filters-change');
     chip.dispatchEvent(
-      new CustomEvent("lr-remove", {
-        detail: { value: "engineering-docs" },
+      new CustomEvent('lr-remove', {
+        detail: { value: 'engineering-docs' },
         bubbles: true,
       })
     );
     const ev = await listener;
-    expect(el.scope).to.deep.equal(["support-tickets"]);
+    expect(el.scope).to.deep.equal(['support-tickets']);
     expect(ev.detail as RetrievalFiltersChangeDetail).to.deep.equal({
-      filters: { type: "pdf" },
-      scope: ["support-tickets"],
+      filters: { type: 'pdf' },
+      scope: ['support-tickets'],
     });
   });
 
-  it("removing a filter chip updates filters and emits lr-filters-change", async () => {
+  it('removing a filter chip updates filters and emits lr-filters-change', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
-    el.scope = ["engineering-docs"];
-    el.filters = { type: "pdf", year: 2025 };
+    el.scope = ['engineering-docs'];
+    el.filters = { type: 'pdf', year: 2025 };
     await el.updateComplete;
     const chip = el.shadowRoot!.querySelector(
       '[part="filters"] lr-chip[value="type"]'
     )!;
-    const listener = oneEvent(el, "lr-filters-change");
+    const listener = oneEvent(el, 'lr-filters-change');
     chip.dispatchEvent(
-      new CustomEvent("lr-remove", { detail: { value: "type" }, bubbles: true })
+      new CustomEvent('lr-remove', { detail: { value: 'type' }, bubbles: true })
     );
     const ev = await listener;
     expect(el.filters).to.deep.equal({ year: 2025 });
     expect(ev.detail as RetrievalFiltersChangeDetail).to.deep.equal({
       filters: { year: 2025 },
-      scope: ["engineering-docs"],
+      scope: ['engineering-docs'],
     });
   });
 
-  it("moves focus to the next surviving chip after keyboard removal", async () => {
+  it('moves focus to the next surviving chip after keyboard removal', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
-    el.scope = ["first", "second", "third"];
+    el.scope = ['first', 'second', 'third'];
     await el.updateComplete;
     const chip = el.shadowRoot!.querySelector(
       'lr-chip[value="second"]'
@@ -373,17 +390,17 @@ describe("active filters/scope chips", () => {
     ).click();
     await el.updateComplete;
 
-    expect(el.shadowRoot!.activeElement?.localName).to.equal("lr-chip");
-    expect(el.shadowRoot!.activeElement?.getAttribute("value")).to.equal(
-      "third"
+    expect(el.shadowRoot!.activeElement?.localName).to.equal('lr-chip');
+    expect(el.shadowRoot!.activeElement?.getAttribute('value')).to.equal(
+      'third'
     );
   });
 
-  it("moves focus to the query field after removing the last chip", async () => {
+  it('moves focus to the query field after removing the last chip', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
-    el.scope = ["only"];
+    el.scope = ['only'];
     await el.updateComplete;
     const chip = el.shadowRoot!.querySelector(
       'lr-chip[value="only"]'
@@ -397,29 +414,29 @@ describe("active filters/scope chips", () => {
     ).click();
     await el.updateComplete;
 
-    expect(el.shadowRoot!.activeElement?.localName).to.equal("lr-input");
+    expect(el.shadowRoot!.activeElement?.localName).to.equal('lr-input');
     expect(queryInputOf(el).shadowRoot?.activeElement?.localName).to.equal(
-      "input"
+      'input'
     );
   });
 
-  it("formats a non-string filter value for its chip label", async () => {
+  it('formats a non-string filter value for its chip label', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
-    el.filters = { verified: true, tags: ["solar", "inverter"] };
+    el.filters = { verified: true, tags: ['solar', 'inverter'] };
     await el.updateComplete;
     const verifiedChip = el.shadowRoot!.querySelector(
       '[part="filters"] lr-chip[value="verified"]'
     )!;
-    expect(verifiedChip.textContent!.trim()).to.equal("verified: true");
+    expect(verifiedChip.textContent!.trim()).to.equal('verified: true');
     const tagsChip = el.shadowRoot!.querySelector(
       '[part="filters"] lr-chip[value="tags"]'
     )!;
-    expect(tagsChip.textContent!.trim()).to.equal("tags: solar and inverter");
+    expect(tagsChip.textContent!.trim()).to.equal('tags: solar and inverter');
   });
 
-  it("formats numeric and list filter values with the effective locale", async () => {
+  it('formats numeric and list filter values with the effective locale', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search lang="ar-u-nu-arab"></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
@@ -427,13 +444,13 @@ describe("active filters/scope chips", () => {
     await el.updateComplete;
     expect(
       el.shadowRoot!.querySelector('lr-chip[value="year"]')!.textContent
-    ).to.include("٢٬٠٢٥");
+    ).to.include('٢٬٠٢٥');
     expect(
       el.shadowRoot!.querySelector('lr-chip[value="pages"]')!.textContent
-    ).to.include("١ و٢");
+    ).to.include('١ و٢');
   });
 
-  it("normalizes non-finite numeric filter values before Intl formatting", async () => {
+  it('normalizes non-finite numeric filter values before Intl formatting', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
@@ -442,24 +459,24 @@ describe("active filters/scope chips", () => {
 
     expect(
       el.shadowRoot!.querySelector('lr-chip[value="score"]')!.textContent
-    ).to.include("score: 0");
+    ).to.include('score: 0');
     expect(
       el.shadowRoot!.querySelector('lr-chip[value="distance"]')!.textContent
-    ).to.include("distance: 0");
+    ).to.include('distance: 0');
   });
 
-  it("formats cyclic, deeply nested, and wide filter values within deterministic bounds", async () => {
-    const cycle: Record<string, unknown> = { label: "cycle" };
+  it('formats cyclic, deeply nested, and wide filter values within deterministic bounds', async () => {
+    const cycle: Record<string, unknown> = { label: 'cycle' };
     cycle['self'] = cycle;
-    let deep: unknown = "leaf";
+    let deep: unknown = 'leaf';
     for (let index = 0; index < 20; index++) deep = { child: deep };
     const wide = Array.from({ length: 80 }, (_, index) => index);
     const el = (await fixture(
       html`<lr-retrieval-search
-        .strings=${{ valueInvalid: "Invalid filter value" }}
+        .strings=${{ valueInvalid: 'Invalid filter value' }}
       ></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
-    el.filters = { cycle, deep, wide, long: "x".repeat(400) };
+    el.filters = { cycle, deep, wide, long: 'x'.repeat(400) };
     await el.updateComplete;
 
     const labels = new Map(
@@ -468,14 +485,14 @@ describe("active filters/scope chips", () => {
           '[part="filters"] lr-chip'
         ),
       ].map((chip) => [
-        chip.getAttribute("value"),
-        chip.textContent?.trim() ?? "",
+        chip.getAttribute('value'),
+        chip.textContent?.trim() ?? '',
       ])
     );
-    expect(labels.get("cycle")).to.include("Invalid filter value");
-    expect(labels.get("deep")).to.include("Invalid filter value");
-    expect(labels.get("wide")).to.include("Invalid filter value");
-    expect(labels.get("long")!.length).to.be.lessThan(300);
+    expect(labels.get('cycle')).to.include('Invalid filter value');
+    expect(labels.get('deep')).to.include('Invalid filter value');
+    expect(labels.get('wide')).to.include('Invalid filter value');
+    expect(labels.get('long')!.length).to.be.lessThan(300);
     expect(
       [...labels.values()].every((label) => label.length < 1_000)
     ).to.equal(true);
@@ -487,23 +504,23 @@ describe("active filters/scope chips", () => {
       ...el.shadowRoot!.querySelectorAll<HTMLElement>(
         '[part="filters"] lr-chip'
       ),
-    ].map((chip) => chip.textContent?.trim() ?? "");
+    ].map((chip) => chip.textContent?.trim() ?? '');
     expect(second).to.deep.equal(first);
   });
 
-  it("suppresses a raw child remove event after consuming it", async () => {
+  it('suppresses a raw child remove event after consuming it', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
-    el.scope = ["engineering-docs"];
+    el.scope = ['engineering-docs'];
     await el.updateComplete;
     let leaked = 0;
-    el.addEventListener("lr-remove", () => leaked++);
+    el.addEventListener('lr-remove', () => leaked++);
     el.shadowRoot!.querySelector(
       'lr-chip[value="engineering-docs"]'
     )!.dispatchEvent(
-      new CustomEvent("lr-remove", {
-        detail: { value: "engineering-docs" },
+      new CustomEvent('lr-remove', {
+        detail: { value: 'engineering-docs' },
         bubbles: true,
         composed: true,
       })
@@ -513,8 +530,8 @@ describe("active filters/scope chips", () => {
   });
 });
 
-describe("loading / error / empty status region", () => {
-  it("keeps explicit-empty and dynamic host naming distinct from the spinner", async () => {
+describe('loading / error / empty status region', () => {
+  it('keeps explicit-empty and dynamic host naming distinct from the spinner', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search
         loading
@@ -530,54 +547,54 @@ describe("loading / error / empty status region", () => {
     const spinnerLabel = () =>
       spinner.shadowRoot
         .querySelector('[role="progressbar"]')!
-        .getAttribute("aria-label");
+        .getAttribute('aria-label');
 
     expect(spinner != null).to.be.true;
-    expect(spinnerLabel()).to.equal("Loading…");
+    expect(spinnerLabel()).to.equal('Loading…');
     expect(el.shadowRoot!.querySelector('[part="error"]') == null).to.be.true;
     expect(el.shadowRoot!.querySelector('[part="empty"]') == null).to.be.true;
 
-    el.setAttribute("aria-label", "Loading support knowledge");
+    el.setAttribute('aria-label', 'Loading support knowledge');
     await el.updateComplete;
     await spinner.updateComplete;
-    expect(el.getAttribute("aria-label")).to.equal("Loading support knowledge");
-    expect(spinnerLabel()).to.equal("Loading…");
+    expect(el.getAttribute('aria-label')).to.equal('Loading support knowledge');
+    expect(spinnerLabel()).to.equal('Loading…');
 
-    el.setAttribute("aria-label", "");
+    el.setAttribute('aria-label', '');
     await el.updateComplete;
     await spinner.updateComplete;
-    expect(el.getAttribute("aria-label")).to.equal("");
-    expect(spinnerLabel()).to.equal("Loading…");
+    expect(el.getAttribute('aria-label')).to.equal('');
+    expect(spinnerLabel()).to.equal('Loading…');
 
-    el.removeAttribute("aria-label");
+    el.removeAttribute('aria-label');
     await el.updateComplete;
     await spinner.updateComplete;
-    expect(el.getAttribute("aria-label")).to.equal(null);
-    expect(spinnerLabel()).to.equal("Loading…");
+    expect(el.getAttribute('aria-label')).to.equal(null);
+    expect(spinnerLabel()).to.equal('Loading…');
   });
 
-  it("shows errors neutrally and announces only later failures from light DOM", async () => {
+  it('shows errors neutrally and announces only later failures from light DOM', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search
         error-text="The retrieval service timed out."
       ></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
     const error = el.shadowRoot!.querySelector('[part="error"]')!;
-    expect(error.getAttribute("role")).to.be.null;
+    expect(error.getAttribute('role')).to.be.null;
     expect(error.textContent!.trim()).to.equal(
-      "The retrieval service timed out."
+      'The retrieval service timed out.'
     );
     const sink = () =>
       document.querySelector('[data-lr-live-region="assertive"]')!;
     expect(
       sink().children.length,
-      "initial content is not replayed as an announcement"
+      'initial content is not replayed as an announcement'
     ).to.equal(0);
 
-    el.errorText = "The retry also failed.";
+    el.errorText = 'The retry also failed.';
     await el.updateComplete;
     expect(sink().lastElementChild?.textContent).to.equal(
-      "The retry also failed."
+      'The retry also failed.'
     );
 
     const parent = el.parentElement!;
@@ -586,26 +603,24 @@ describe("loading / error / empty status region", () => {
     await el.updateComplete;
     expect(
       sink().children.length,
-      "reconnect does not replay the current error"
+      'reconnect does not replay the current error'
     ).to.equal(0);
   });
 
-  it("shows a compact lr-empty when empty is true and there is no error/loading", async () => {
+  it('shows a compact lr-empty when empty is true and there is no error/loading', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search empty></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
     const empty = el.shadowRoot!.querySelector('[part="empty"]')!;
     expect(empty != null).to.equal(true);
-    expect(empty.tagName.toLowerCase()).to.equal("lr-empty");
+    expect(empty.tagName.toLowerCase()).to.equal('lr-empty');
   });
 
   it('announces only a later settled zero-result transition from light DOM', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
-    const sink = document.querySelector(
-      '[data-lr-live-region="polite"]'
-    )!;
+    const sink = document.querySelector('[data-lr-live-region="polite"]')!;
     const initialCount = sink.children.length;
 
     el.loading = true;
@@ -627,7 +642,7 @@ describe("loading / error / empty status region", () => {
     expect(reconnectedSink.children.length).to.equal(0);
   });
 
-  it("prioritizes loading over error and empty", async () => {
+  it('prioritizes loading over error and empty', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search
         loading
@@ -640,7 +655,7 @@ describe("loading / error / empty status region", () => {
     expect(el.shadowRoot!.querySelector('[part="empty"]') == null).to.be.true;
   });
 
-  it("prioritizes error over empty", async () => {
+  it('prioritizes error over empty', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search
         error-text="failed"
@@ -652,14 +667,14 @@ describe("loading / error / empty status region", () => {
   });
 });
 
-describe("accessible naming", () => {
+describe('accessible naming', () => {
   it('keeps the host as the sole overall owner when it has a non-empty name', async () => {
     const el1 = (await fixture(
       html`<lr-retrieval-search></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
     const base1 = el1.shadowRoot!.querySelector('[part="base"]')!;
-    expect(base1.getAttribute("role")).to.equal("search");
-    expect(base1.getAttribute("aria-label")).to.equal("Retrieval search");
+    expect(base1.getAttribute('role')).to.equal('search');
+    expect(base1.getAttribute('aria-label')).to.equal('Retrieval search');
 
     const el2 = (await fixture(
       html`<lr-retrieval-search
@@ -667,11 +682,11 @@ describe("accessible naming", () => {
       ></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
     expect(
-      el2.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
-    ).to.equal("Knowledge base search");
+      el2.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
+    ).to.equal('Knowledge base search');
     expect(
-      el2.shadowRoot!.querySelector('[part="base"]')!.getAttribute("role")
-    ).to.equal("search");
+      el2.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')
+    ).to.equal('search');
 
     const el3 = (await fixture(
       html`<lr-retrieval-search
@@ -680,41 +695,41 @@ describe("accessible naming", () => {
       ></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
     expect(
-      el3.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
+      el3.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
     ).to.equal(null);
     expect(
-      el3.shadowRoot!.querySelector('[part="base"]')!.getAttribute("role")
+      el3.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')
     ).to.equal(null);
-    expect(el3.getAttribute("aria-label")).to.equal("Support search");
+    expect(el3.getAttribute('aria-label')).to.equal('Support search');
   });
 
-  it("honors an explicitly empty label as genuinely empty, distinct from omitting it", async () => {
+  it('honors an explicitly empty label as genuinely empty, distinct from omitting it', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
     expect(el.label).to.equal(undefined);
     expect(
-      el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
-    ).to.equal("Retrieval search");
+      el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
+    ).to.equal('Retrieval search');
 
-    el.label = "";
+    el.label = '';
     await el.updateComplete;
     expect(
-      el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
-    ).to.equal("");
+      el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
+    ).to.equal('');
   });
 });
 
-describe("localization", () => {
-  it("resolves the mode segmented labels and submit/cancel button text through this.strings overrides", async () => {
+describe('localization', () => {
+  it('resolves the mode segmented labels and submit/cancel button text through this.strings overrides', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search
         loading
         .strings=${{
-          retrievalModeVector: "Vecteur",
-          retrievalModeKeyword: "Mot-clé",
-          retrievalModeHybrid: "Hybride",
-          cancel: "Annuler",
+          retrievalModeVector: 'Vecteur',
+          retrievalModeKeyword: 'Mot-clé',
+          retrievalModeHybrid: 'Hybride',
+          cancel: 'Annuler',
         }}
       ></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
@@ -722,60 +737,60 @@ describe("localization", () => {
       items: { value: string; label: string }[];
     };
     expect(segmented.items.map((i) => i.label)).to.deep.equal([
-      "Vecteur",
-      "Mot-clé",
-      "Hybride",
+      'Vecteur',
+      'Mot-clé',
+      'Hybride',
     ]);
-    expect(submitButtonOf(el).textContent!.trim()).to.equal("Annuler");
+    expect(submitButtonOf(el).textContent!.trim()).to.equal('Annuler');
   });
 
-  it("resolves the filter-chip label template and empty description through this.strings overrides", async () => {
+  it('resolves the filter-chip label template and empty description through this.strings overrides', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search
         empty
         .strings=${{
-          retrievalFilterChipLabel: "{key} = {value}",
-          retrievalSearchEmptyDescription: "Aucun résultat.",
+          retrievalFilterChipLabel: '{key} = {value}',
+          retrievalSearchEmptyDescription: 'Aucun résultat.',
         }}
       ></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
-    el.filters = { type: "pdf" };
+    el.filters = { type: 'pdf' };
     await el.updateComplete;
     const chip = el.shadowRoot!.querySelector(
       '[part="filters"] lr-chip[value="type"]'
     )!;
-    expect(chip.textContent!.trim()).to.equal("type = pdf");
+    expect(chip.textContent!.trim()).to.equal('type = pdf');
     const empty = el.shadowRoot!.querySelector(
       '[part="empty"]'
     ) as HTMLElement & { description: string };
-    expect(empty.description).to.equal("Aucun résultat.");
+    expect(empty.description).to.equal('Aucun résultat.');
   });
 });
 
-describe("RTL", () => {
+describe('RTL', () => {
   it('renders and functions correctly under dir="rtl" (mode selection, chip removal)', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search dir="rtl"></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
-    el.scope = ["engineering-docs"];
+    el.scope = ['engineering-docs'];
     await el.updateComplete;
 
     modeOf(el).dispatchEvent(
-      new CustomEvent("lr-change", {
-        detail: { value: "keyword" },
+      new CustomEvent('lr-change', {
+        detail: { value: 'keyword' },
         bubbles: true,
       })
     );
     await el.updateComplete;
-    expect(el.mode).to.equal("keyword");
+    expect(el.mode).to.equal('keyword');
 
     const chip = el.shadowRoot!.querySelector(
       '[part="filters"] lr-chip[value="engineering-docs"]'
     )!;
-    const listener = oneEvent(el, "lr-filters-change");
+    const listener = oneEvent(el, 'lr-filters-change');
     chip.dispatchEvent(
-      new CustomEvent("lr-remove", {
-        detail: { value: "engineering-docs" },
+      new CustomEvent('lr-remove', {
+        detail: { value: 'engineering-docs' },
         bubbles: true,
       })
     );
@@ -784,8 +799,8 @@ describe("RTL", () => {
   });
 });
 
-describe("320px allocation", () => {
-  it("can shrink to a 320px allocation without overflowing", async () => {
+describe('320px allocation', () => {
+  it('can shrink to a 320px allocation without overflowing', async () => {
     const wrapper = await fixture(html`
       <div style="display: flex; inline-size: 320px;">
         <lr-retrieval-search
@@ -794,24 +809,24 @@ describe("320px allocation", () => {
       </div>
     `);
     const el = wrapper.querySelector(
-      "lr-retrieval-search"
+      'lr-retrieval-search'
     ) as LyraRetrievalSearch;
-    el.scope = ["engineering-docs", "support-tickets", "release-notes"];
-    el.filters = { type: "pdf", year: 2025 };
+    el.scope = ['engineering-docs', 'support-tickets', 'release-notes'];
+    el.filters = { type: 'pdf', year: 2025 };
     await el.updateComplete;
     expect(el.getBoundingClientRect().width).to.be.at.most(320);
   });
 
-  it("contains long unbroken filter and scope chip labels", async () => {
+  it('contains long unbroken filter and scope chip labels', async () => {
     const wrapper = await fixture(html`
       <div style="box-sizing: border-box; inline-size: 320px; overflow: auto;">
         <lr-retrieval-search></lr-retrieval-search>
       </div>
     `);
     const el = wrapper.querySelector(
-      "lr-retrieval-search"
+      'lr-retrieval-search'
     ) as LyraRetrievalSearch;
-    const long = `identifier-${"segment".repeat(40)}`;
+    const long = `identifier-${'segment'.repeat(40)}`;
     el.scope = [long];
     el.filters = { [long]: long };
     await el.updateComplete;
@@ -819,7 +834,7 @@ describe("320px allocation", () => {
       '[part="filters"]'
     ) as HTMLElement;
     const chips = Array.from(
-      filters.querySelectorAll("lr-chip")
+      filters.querySelectorAll('lr-chip')
     ) as HTMLElement[];
 
     const firstChip = chips[0]!;
@@ -855,8 +870,35 @@ describe("320px allocation", () => {
   });
 });
 
-describe("hover and pressed treatment", () => {
-  it("mixes the submit fill toward the shared partner on hover and further again on press", async () => {
+describe('hover and pressed treatment', () => {
+  it('keeps a visible hover affordance when the submit action becomes Cancel', async () => {
+    const el = await fixture<LyraRetrievalSearch>(html`
+      <lr-retrieval-search
+        loading
+        style="--lr-transition-fast: 0ms"
+      ></lr-retrieval-search>
+    `);
+    const button = submitButtonOf(el);
+    const resting = getComputedStyle(button).backgroundColor;
+    const rect = button.getBoundingClientRect();
+
+    await resetMouse();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+      await waitUntil(() => button.matches(':hover'));
+      expect(getComputedStyle(button).backgroundColor).to.not.equal(resting);
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('mixes the submit fill toward the shared partner on hover and further again on press', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search
         query="inverter fault codes"
@@ -885,7 +927,7 @@ describe("hover and pressed treatment", () => {
     );
   });
 
-  it("leaves the button label alone -- the state lives on the fill, not on a subtree filter", async () => {
+  it('leaves the button label alone -- the state lives on the fill, not on a subtree filter', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search
         query="inverter fault codes"
@@ -898,27 +940,27 @@ describe("hover and pressed treatment", () => {
     // the fill. Rendering whatever the rules declare and reading it back proves none survives.
     expect(
       probes.renderFilter(
-        declaredValue(root, "[part='submit']:hover", "filter")
+        declaredValue(root, "[part='submit']:hover", 'filter')
       )
-    ).to.equal("none");
+    ).to.equal('none');
     expect(
       probes.renderFilter(
-        declaredValue(root, "[part='submit']:active", "filter")
+        declaredValue(root, "[part='submit']:active", 'filter')
       )
-    ).to.equal("none");
+    ).to.equal('none');
   });
 });
 
-describe("accessibility", () => {
-  it("is accessible in a populated state (query, mode, filters, scope chips)", async () => {
+describe('accessibility', () => {
+  it('is accessible in a populated state (query, mode, filters, scope chips)', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search
         query="inverter fault codes"
       ></lr-retrieval-search>`
     )) as LyraRetrievalSearch;
-    el.mode = "vector";
-    el.scope = ["engineering-docs"];
-    el.filters = { type: "pdf" };
+    el.mode = 'vector';
+    el.scope = ['engineering-docs'];
+    el.filters = { type: 'pdf' };
     await el.updateComplete;
     expect(
       el.shadowRoot!.querySelectorAll('[part="filters"] lr-chip').length
@@ -926,7 +968,7 @@ describe("accessibility", () => {
     await expect(el).to.be.accessible();
   });
 
-  it("is accessible while loading", async () => {
+  it('is accessible while loading', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search
         loading
@@ -937,7 +979,7 @@ describe("accessibility", () => {
     await expect(el).to.be.accessible();
   });
 
-  it("is accessible with an error", async () => {
+  it('is accessible with an error', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search
         error-text="The retrieval service timed out."
@@ -946,7 +988,7 @@ describe("accessibility", () => {
     await expect(el).to.be.accessible();
   });
 
-  it("is accessible in the empty state", async () => {
+  it('is accessible in the empty state', async () => {
     const el = (await fixture(
       html`<lr-retrieval-search
         empty
@@ -957,7 +999,7 @@ describe("accessibility", () => {
   });
 });
 
-it("renders the query field, mode selector, and submit button at one flush toolbar height", async () => {
+it('renders the query field, mode selector, and submit button at one flush toolbar height', async () => {
   const el = (await fixture(
     html`<lr-retrieval-search></lr-retrieval-search>`
   )) as LyraRetrievalSearch;
@@ -974,13 +1016,13 @@ it("renders the query field, mode selector, and submit button at one flush toolb
   );
   expect(
     heights[0],
-    "the query field sits on the shared form-control height"
+    'the query field sits on the shared form-control height'
   ).to.be.greaterThan(0);
-  expect(heights[1], "the mode selector matches the query field").to.be.closeTo(
+  expect(heights[1], 'the mode selector matches the query field').to.be.closeTo(
     heights[0]!,
     1
   );
-  expect(heights[2], "and so does the submit button").to.be.closeTo(
+  expect(heights[2], 'and so does the submit button').to.be.closeTo(
     heights[0]!,
     1
   );

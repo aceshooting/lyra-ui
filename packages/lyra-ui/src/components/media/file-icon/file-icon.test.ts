@@ -118,6 +118,37 @@ describe('lr-file-icon', () => {
     probe.remove();
   });
 
+  it('references consumer metadata descriptions only while label mode renders their target', async () => {
+    const registry = createFileTypeMetadataRegistry([{
+      mimeTypes: 'application/x-analysis',
+      metadata: {
+        label: 'Analysis',
+        description: 'Analysis document',
+        icon: 'code',
+        category: 'code',
+      },
+    }]);
+    const el = await fixture<LyraFileIcon>(html`
+      <lr-file-icon mime-type="application/x-analysis" .registry=${registry}></lr-file-icon>
+    `);
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+    expect(el.mode).to.equal('icon');
+    expect(el.shadowRoot!.querySelectorAll('[part="description"]').length).to.equal(0);
+    expect(base.hasAttribute('aria-describedby')).to.equal(false);
+
+    el.mode = 'label';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('#metadata-description').length).to.equal(1);
+    expect(base.getAttribute('aria-describedby')).to.equal('metadata-description');
+
+    el.mode = 'icon';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('#metadata-description').length).to.equal(0);
+    expect(base.hasAttribute('aria-describedby')).to.equal(false);
+    await expect(el).to.be.accessible();
+  });
+
   it('normalizes invalid mode and preserves an explicit empty host aria-label', async () => {
     const el = await fixture<LyraFileIcon>(html`
       <lr-file-icon mime-type="application/pdf" mode="unknown" aria-label=""></lr-file-icon>

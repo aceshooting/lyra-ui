@@ -268,6 +268,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('live')) this.syncAnnouncementSink();
+    this.unreadBoundaryEl?.setAttribute('aria-label', this.localize('newMessages'));
     const wasMounting = this.isMounting;
     this.isMounting = false;
     if (changed.has('follow')) {

@@ -6,6 +6,7 @@
 - **Class** `LyraKnownDate`, also available unregistered from `@aceshooting/lyra-ui/components/utility/known-date/known-date.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecated part** `label` since `8.0.0`; use part `::part(form-control-label)`; removal not before `10.0.0` — The form-control-label part matches the shared form-control vocabulary; label remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-known-date` still publishes its own deprecated `label` part, so this alias is removed only when upstream's is.
 - **Optional peers** none
 - **Themeable via** 17 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -83,7 +84,8 @@ all are filled); `blur()` blurs whichever field currently has focus; `resetValid
 consumer-supplied custom error and republishes intrinsic constraints;
 `formStateRestoreCallback(state)` restores a string state and clears for other shapes.
 
-**Events:** native bubbling/composed `InputEvent` `input` (every keystroke) and native
+**Events:** native bubbling/composed `InputEvent` `input` (every keystroke, preserving the private
+field edit's `inputType`) and native
 bubbling/composed `Event` `change` (a field blur where the composite value newly transitioned),
 plus re-dispatched bubbling/composed `focus` and `blur` (`blur` fires once when focus
 leaves all three fields, not per field-to-field Tab; each entry into the control likewise produces
@@ -129,9 +131,10 @@ labelled control in the library does: `--lr-form-control-required-content` (the 
 CSS `content` string; `''` suppresses it), `--lr-form-control-required-color` (default
 `var(--lr-color-danger)`) and `--lr-form-control-required-offset` (default `0`). One declaration on
 an ancestor — `:root` included — retunes this marker along with every other one in the page. The
-one detail specific to this component: `[part="form-control-label"]` is the marker owner inside the
-`<legend>`, so known-date consumes the same shared primitive and public marker hooks as every other
-form control. With no label the legend is hidden and nothing is painted. Full description in
+one detail specific to this component: `[part="legend"]` owns the marker, while
+`[part="form-control-label"]` owns only the label content inside that legend. A
+`::part(form-control-label)` rule therefore cannot retheme the marker; use the three public marker
+properties above. With no label the legend is hidden and nothing is painted. Full description in
 `llms/shared.md` → "The required-field marker".
 
 **CSS states:** `:state(blank)` while the composite value is empty/incomplete;

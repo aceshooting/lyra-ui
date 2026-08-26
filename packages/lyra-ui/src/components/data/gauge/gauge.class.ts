@@ -66,6 +66,9 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 /**
  * `<lr-gauge>` — a radial, full-circle ring, or linear meter. First-party invention; no
  * generic gauge widget exists in Web Awesome.
+ * The host defaults to `role="meter"` (or `img` when no finite range can be announced), while an
+ * author-supplied role remains authoritative. Visually abbreviated SVG captions retain their full
+ * caller-owned text in a nested `<title>` tooltip.
  *
  * @customElement lr-gauge
  * @csspart base - The root `<svg>`.
@@ -89,6 +92,10 @@ export class LyraGauge extends LyraElement {
 
   static override styles = [LyraElement.styles, styles];
 
+  static override get observedAttributes(): string[] {
+    return [...new Set([...super.observedAttributes, 'role'])];
+  }
+
   @property({ type: Number }) value = 0;
   @property({ type: Number }) min = 0;
   @property({ type: Number }) max = 100;
@@ -104,6 +111,19 @@ export class LyraGauge extends LyraElement {
   // later label updates remain distinguishable from author attribute edits.
   private appliedAriaLabel: string | null = null;
   private explicitAriaLabel: string | null = null;
+  private authorRole: string | null = null;
+  private syncingGeneratedRole = false;
+
+  override attributeChangedCallback(
+    name: string,
+    oldValue: string | null,
+    value: string | null
+  ): void {
+    super.attributeChangedCallback(name, oldValue, value);
+    if (name !== 'role' || oldValue === value || this.syncingGeneratedRole) return;
+    this.authorRole = value;
+    this.requestUpdate();
+  }
 
   // Normalizes a reversed min > max domain by swapping lo/hi, but only once
   // both bounds are finite -- shared by `ratio` (fill geometry) and
@@ -130,6 +150,21 @@ export class LyraGauge extends LyraElement {
     );
   }
 
+  private truncatedTooltip(
+    fullText: string,
+    renderedText: string,
+    renderedLabel: string
+  ): string {
+    if (renderedText === fullText && renderedLabel === this.label) return '';
+    if (this.label && fullText) {
+      return this.localize('gaugeValueLabel', undefined, {
+        label: this.label,
+        value: fullText,
+      });
+    }
+    return this.label || fullText;
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     // Normalize a reversed min > max domain the same way `ratio` does, so the
@@ -139,7 +174,14 @@ export class LyraGauge extends LyraElement {
     const { lo, hi } = this.domain;
     const finiteTrio =
       Number.isFinite(this.value) && Number.isFinite(lo) && Number.isFinite(hi) && lo !== hi;
-    this.setAttribute('role', finiteTrio ? 'meter' : 'img');
+    if (this.authorRole === null) {
+      this.syncingGeneratedRole = true;
+      try {
+        this.setAttribute('role', finiteTrio ? 'meter' : 'img');
+      } finally {
+        this.syncingGeneratedRole = false;
+      }
+    }
     if (finiteTrio) {
       const clamped = Math.min(hi, Math.max(lo, this.value));
       this.setAttribute('aria-valuenow', String(clamped));
@@ -184,6 +226,7 @@ export class LyraGauge extends LyraElement {
     const fullText = this.displayText;
     const text = abbreviateSvgText(fullText, RADIAL_VALUE_CHARACTERS);
     const label = abbreviateSvgText(this.label, RADIAL_LABEL_CHARACTERS);
+    const tooltip = this.truncatedTooltip(fullText, text, label);
     // Dashoffset counts down from the full arc length (nothing revealed) to 0
     // (whole sweep revealed) as ratio goes 0 -> 1 — the classic "draw an SVG
     // path" technique, which transitions smoothly via plain CSS.
@@ -192,8 +235,8 @@ export class LyraGauge extends LyraElement {
       part="base"
       viewBox="0 0 100 100"
       aria-hidden="true"
-      title=${this.label && fullText ? `${this.label}: ${fullText}` : this.label || fullText}
     >
+      ${tooltip ? svg`<title>${tooltip}</title>` : nothing}
       <path part="track" stroke-width=${STROKE} d=${RADIAL_ARC_D}></path>
       <path
         part="fill"
@@ -223,6 +266,7 @@ export class LyraGauge extends LyraElement {
     const fullText = this.displayText;
     const text = abbreviateSvgText(fullText, LINEAR_VALUE_CHARACTERS);
     const label = abbreviateSvgText(this.label, LINEAR_LABEL_CHARACTERS);
+    const tooltip = this.truncatedTooltip(fullText, text, label);
     const dashoffset = LINEAR_LENGTH * (1 - this.ratio);
     // Under RTL the meter must still visually fill and read in the same
     // start-to-end order as the surrounding text, so the physical x=0/x=100
@@ -237,8 +281,8 @@ export class LyraGauge extends LyraElement {
       viewBox="0 0 100 20"
       preserveAspectRatio="none"
       aria-hidden="true"
-      title=${this.label && fullText ? `${this.label}: ${fullText}` : this.label || fullText}
     >
+      ${tooltip ? svg`<title>${tooltip}</title>` : nothing}
       <line part="track" x1=${startX} y1=${LINEAR_BAR_Y} x2=${endX} y2=${LINEAR_BAR_Y} stroke-width=${LINEAR_STROKE}></line>
       <line
         part="fill"
@@ -271,13 +315,14 @@ export class LyraGauge extends LyraElement {
     const fullText = this.displayText;
     const text = abbreviateSvgText(fullText, RADIAL_VALUE_CHARACTERS);
     const label = abbreviateSvgText(this.label, RADIAL_LABEL_CHARACTERS);
+    const tooltip = this.truncatedTooltip(fullText, text, label);
     const dashoffset = RING_CIRCUMFERENCE * (1 - this.ratio);
     return html`<svg
       part="base"
       viewBox="0 0 100 100"
       aria-hidden="true"
-      title=${this.label && fullText ? `${this.label}: ${fullText}` : this.label || fullText}
     >
+      ${tooltip ? svg`<title>${tooltip}</title>` : nothing}
       <circle part="track" cx=${CENTER} cy=${CENTER} r=${RADIUS} stroke-width=${STROKE}></circle>
       <circle
         part="fill"

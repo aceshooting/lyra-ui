@@ -32,6 +32,11 @@ stays unchanged with `REGISTRATION_CLOSURE_REQUIRED`; include the registration-o
 in the scan instead of accepting an inert `lr-*` result.
 Targets with optional runtime peers also emit an `OPTIONAL_PEER_REQUIRED` report entry naming
 each package that must be installed.
+Migrated Web Awesome and Shoelace icon tags emit `BEHAVIOR_REVIEW_REQUIRED` because Lyra's
+dependency-free default library contains only `add`, `check`, `close`, `search`, `menu`,
+`chevron-left`, `chevron-right`, `chevron-down`, `calendar`, `command`, and `trash`.
+Replace other names explicitly or provide their vocabulary with
+`registerIconLibrary('default', { resolver })`.
 Re-running the tool is idempotent; comments, prose, partial strings, and unrelated packages are
 left alone.
 
@@ -135,7 +140,7 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-progress-ring>` | `<lr-progress-ring>` | `exact` | Automatic: tag and supported side-effect registration import. Determinate or indeterminate progress indicators. |
 | `<wa-qr-code>` | `<lr-qr-code>` | `exact` | Automatic: tag and supported side-effect registration import. Canvas QR renderer; needs the optional peer `qrcode`. |
 | `<wa-radar-chart>` | `<lr-radar-chart>` | `exact` | Automatic: tag and supported side-effect registration import. Typed `<lr-chart>` subclasses with tag-specific defaults and the full writable `LyraChartType` vocabulary — same optional peer deps as `<lr-chart>`. |
-| `<wa-radio>` | `<lr-radio>` | `exact` | Automatic: tag and supported side-effect registration import. Equivalent surface representation: name defaults null ≡ ; no source rewrite. Form-associated single-choice controls with roving arrow-key navigation and group validation. |
+| `<wa-radio>` | `<lr-radio>` | `exact` | Automatic: tag and supported side-effect registration import. Equivalent surface representation: name defaults null ≡ ; no source rewrite. Form-associated single-choice controls with roving arrow-key navigation and group validation; Lyra's group `name` defaults empty while Shoelace defaults to `option`, so the codemod inserts `name="option"` (set it for a manual rename). |
 | `<wa-radio-group>` | `<lr-radio-group>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
 | `<wa-random-content>` | `<lr-random-content>` | `warning-required` | Manual: Lyra returns frozen readonly selection snapshots instead of mutable arrays. The migrator also reports the exercised behavior differences: host and multi-item layout, bounded unique selection, forwarded-slot candidates, and autoplay semantics. |
 | `<wa-rating>` | `<lr-rating>` | `rewritten` | Automatic: tag/import plus events: wa-hover → lr-hover; events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; getSymbol is analyzer-inferred for property-only getSymbol; no source rewrite. |
@@ -200,7 +205,7 @@ Shoelace relationships are classified independently; a same-suffix tag is never 
 | `<sl-include>` | `<lr-include>` | `warning-required` | Manual: Lyra intentionally sanitizes included markup and keeps a same-origin default; uses that depend on cross-origin or script-executing behavior require an explicit security warning rather than a silent rename. |
 | `<sl-input>` | `<lr-input>` | `rewritten` | Automatic: tag/import plus events: sl-blur → blur; events: sl-change → lr-change; events: sl-clear → lr-clear; events: sl-focus → focus; events: sl-input → lr-input; events: sl-invalid → lr-invalid. Equivalent surface representation: form defaults  ≡ null; size defaults medium ≡ m; no source rewrite. |
 | `<sl-menu>` | `<lr-menu>` | `rewritten` | Automatic: tag/import plus events: sl-select → lr-select. |
-| `<sl-menu-item>` | `<lr-menu-item>` | `exact` | Automatic: tag and supported side-effect registration import. Anchored dropdown menu around a consumer-supplied trigger; WAI-ARIA "menu button" pattern with real roving focus (not a listbox). |
+| `<sl-menu-item>` | `<lr-menu-item>` | `exact` | Automatic: tag and supported side-effect registration import. Focusable action row owned by `<lr-menu>`, including checkbox items, nested submenus, and the canonical parent `lr-select` event. |
 | `<sl-menu-label>` | `<lr-menu-label>` | `exact` | Automatic: tag and supported side-effect registration import. Non-interactive section heading inside `<lr-menu>`; `role="presentation"`, never a focus stop. |
 | `<sl-mutation-observer>` | `<lr-mutation-observer>` | `rewritten` | Automatic: tag/import plus events: sl-mutation → lr-mutation. |
 | `<sl-option>` | `<lr-option>` | `exact` | Automatic: tag and supported side-effect registration import. `defaultSelected`/the `selected` attribute is the reset default; live `selected` is property-only. Review option and value events. |

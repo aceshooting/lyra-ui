@@ -95,7 +95,7 @@ describe('lite-chart forced-colors encodings', () => {
 
       const swatches = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="legend-swatch"]')];
       expect(swatches).to.have.lengthOf(8);
-      expect(new Set(swatches.map((swatch) => swatch.dataset.encoding)).size).to.equal(8);
+      expect(new Set(swatches.map((swatch) => swatch.dataset['encoding'])).size).to.equal(8);
       expect(new Set(swatches.map((swatch) => getComputedStyle(swatch).backgroundImage)).size).to.equal(8);
     } finally {
       window.matchMedia = originalMatchMedia;
@@ -159,6 +159,6 @@ describe('lite-chart forced-colors encodings', () => {
     const bars = [...el.shadowRoot!.querySelectorAll('[part="bar"]')];
     expect(bars.every((bar) => !(bar.getAttribute('fill') ?? '').startsWith('url('))).to.equal(true);
     const swatches = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="legend-swatch"]')];
-    expect(swatches.every((swatch) => swatch.dataset.encoding === undefined)).to.equal(true);
+    expect(swatches.every((swatch) => swatch.dataset['encoding'] === undefined)).to.equal(true);
   });
 });

@@ -6,6 +6,7 @@
 - **Class** `LyraIngestionQueue`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/ingestion-queue/ingestion-queue.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 17 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
@@ -30,8 +31,10 @@ embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here
   in-flight (in pipeline order), the last three terminal. `progress` is 0–100 _within the current
   stage_ (omitted/non-finite renders an indeterminate indicator, and it is only meaningful during an
   active non-`'queued'` stage). `embeddedChunkCount` renders only alongside a defined `chunkCount`.
-  `error` renders only while `stage === 'failed'`. Controlled — pass a new array to update
-- `label: string = ''` — fallback name for the stable region; defaults to localized
+  `error` renders only while `stage === 'failed'`. A missing or unrecognized runtime stage renders
+  as a localized neutral `unknown` state with no progress, retry, or cancel affordance, allowing a
+  newer backend stage to fail safely. Controlled — pass a new array to update
+- `label?: string` — fallback name for the stable region; omission uses localized
   `ingestionQueueLabel`. A non-empty host `aria-label` makes the host the sole overall owner (the
   region omits its duplicate role/name); an explicitly empty host label stays empty
 - `virtualizeAt: number = 100` (attribute `virtualize-at`) — item count above which the list renders

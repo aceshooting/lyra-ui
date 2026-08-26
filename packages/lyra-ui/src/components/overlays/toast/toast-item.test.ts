@@ -5,6 +5,8 @@ import './toast.js';
 import type { LyraToastItem, LyraToastSize, LyraToastVariant } from './toast-item.js';
 import { styles } from './toast-item.styles.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { setReducedMotion } from '../../../../test/wtr-media.js';
+import { sendKeys } from '@web/test-runner-commands';
 
 function announcementTexts(politeness: 'polite' | 'assertive', ownerDocument = document): string[] {
   const sink = ownerDocument.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
@@ -801,7 +803,8 @@ it('rehomes focus to an adjacent toast when a focused action toast is removed', 
       </lr-toast>
     </div>
   `);
-  const [first, second] = [...wrapper.querySelectorAll('lr-toast-item')] as LyraToastItem[];
+  const [first, second] = [...wrapper.querySelectorAll<LyraToastItem>('lr-toast-item')];
+  if (!first || !second) throw new Error('expected two toast items');
   const before = wrapper.querySelector('#before') as HTMLButtonElement;
   const action = first.querySelector('#action') as HTMLButtonElement;
   const secondClose = second.shadowRoot!.querySelector('[part="close-button"]') as HTMLButtonElement;
@@ -1350,7 +1353,7 @@ it('derives its initial close label without MutationObserver support', async () 
     expect(button.getAttribute('aria-label')).to.equal('Close: Upload complete');
   } finally {
     if (descriptor) Object.defineProperty(window, 'MutationObserver', descriptor);
-    else delete (window as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+    else Reflect.deleteProperty(window, 'MutationObserver');
   }
 });
 
@@ -1474,7 +1477,7 @@ it('rebinds its observer, animation frame, and timers to the adopted owner realm
     frameWindow.setTimeout = originalSetTimeout;
     frameWindow.clearTimeout = originalClearTimeout;
     if (observerDescriptor) Object.defineProperty(frameWindow, 'MutationObserver', observerDescriptor);
-    else delete (frameWindow as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+    else Reflect.deleteProperty(frameWindow, 'MutationObserver');
     frame.remove();
   }
 });
@@ -1646,11 +1649,11 @@ it('keeps shared item geometry fallbacks available at compact and large sizes', 
 });
 
 it('inherits close-button hover and active state hooks without changing their defaults', async () => {
-  const wrapper = await fixture(html`
+  const wrapper = (await fixture(html`
     <div>
       <lr-toast-item duration="0">Themed close button</lr-toast-item>
     </div>
-  `);
+  `)) as HTMLElement;
   const item = wrapper.querySelector<LyraToastItem>('lr-toast-item')!;
   const close = item.shadowRoot!.querySelector<HTMLButtonElement>('[part="close-button"]')!;
   await waitUntil(() => item.hasAttribute('data-visible'));
@@ -1744,9 +1747,34 @@ it('completes a hide on transitionend without waiting for the fallback timeout',
   expect(el.isConnected).to.be.false;
 });
 
-it('collapses the show/hide transition duration under prefers-reduced-motion', () => {
+it('collapses the show/hide transition duration under prefers-reduced-motion', async () => {
   expect(styles.cssText).to.match(/@media \(prefers-reduced-motion: reduce\)/);
   expect(styles.cssText).to.match(/transition-duration:\s*0\.01ms/);
+
+  try {
+    await setReducedMotion('no-preference');
+    const el = (await fixture(
+      html`<lr-toast-item
+        duration="0"
+        style="--lr-toast-show-duration: 2s linear"
+      >Motion</lr-toast-item>`,
+    )) as LyraToastItem;
+    await waitUntil(() => el.hasAttribute('data-visible'));
+    const surface = el.shadowRoot!.querySelector<HTMLElement>('[part="toast-item"]')!;
+    expect(
+      getComputedStyle(surface)
+        .transitionDuration.split(', ')
+        .every((duration) => duration === '2s'),
+    ).to.equal(true);
+
+    await setReducedMotion('reduce');
+    await waitUntil(
+      () => parseFloat(getComputedStyle(surface).transitionDuration) < 0.001,
+      'toast transition duration did not collapse under reduced motion',
+    );
+  } finally {
+    await setReducedMotion('no-preference');
+  }
 });
 
 it('stops the visible progress-ring animation under prefers-reduced-motion', async () => {
@@ -1791,7 +1819,7 @@ it('skips the JS-side show/hide delay (not just the CSS transition) under prefer
     media: query,
     addEventListener: () => {},
     removeEventListener: () => {},
-  })) as typeof window.matchMedia;
+  })) as unknown as typeof window.matchMedia;
 
   try {
     const el = (await fixture(
@@ -1810,11 +1838,25 @@ it('skips the JS-side show/hide delay (not just the CSS transition) under prefer
   }
 });
 
-it('defines a focus-visible outline for the close button using the shared focus-ring tokens', () => {
-  expect(styles.cssText).to.match(/\[part=['"]close-button['"]\]:focus-visible/);
-  expect(styles.cssText).to.match(
-    /outline:\s*var\(--lr-focus-ring-width\)\s*solid\s*var\(--lr-focus-ring-color\)/,
-  );
+it('renders the close-button focus-visible outline from the shared focus-ring tokens', async () => {
+  const el = await fixture<LyraToastItem>(html`
+    <lr-toast-item
+      duration="0"
+      style="--lr-focus-ring-width: 6px; --lr-focus-ring-color: rgb(1, 2, 3); --lr-focus-ring-offset: 4px"
+    >Focus test</lr-toast-item>
+  `);
+  await waitUntil(() => el.hasAttribute('data-visible'));
+  const close = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="close-button"]')!;
+  await sendKeys({ press: 'Tab' });
+  close.focus();
+  await waitUntil(() => {
+    const computed = getComputedStyle(close);
+    return (
+      computed.outlineWidth === '6px' &&
+      computed.outlineColor === 'rgb(1, 2, 3)' &&
+      computed.outlineOffset === '4px'
+    );
+  }, 'the rendered toast close-button focus ring never appeared');
 });
 
 it('keeps the inactive subtree inert and hidden, then releases a vetoed initial show', async () => {
@@ -1825,7 +1867,7 @@ it('keeps the inactive subtree inert and hidden, then releases a vetoed initial 
   let inertDuringRequest = false;
   el.addEventListener('lr-show', (event) => {
     const requestedSurface = el.shadowRoot!.querySelector<HTMLElement>('[part="toast-item"]')!;
-    hiddenDuringRequest = requestedSurface.hidden;
+    hiddenDuringRequest = requestedSurface.hidden === true;
     inertDuringRequest = requestedSurface.inert;
     event.preventDefault();
   });

@@ -8,6 +8,7 @@ import { composedAccessibilityText } from '../../../internal/announcement-text.j
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import { hasRealContent } from '../../../internal/a11y.js';
 import { styles } from './empty.styles.js';
 
 /**
@@ -157,7 +158,10 @@ export class LyraEmpty extends LyraElement {
   }
 
   private reconcileSlotHidden(slot: HTMLSlotElement, wrapper: HTMLElement, hasFallbackContent = false): void {
-    wrapper.toggleAttribute('hidden', !hasFallbackContent && slot.assignedElements({ flatten: true }).length === 0);
+    wrapper.toggleAttribute(
+      'hidden',
+      !hasFallbackContent && !hasRealContent(slot.assignedNodes({ flatten: true })),
+    );
   }
 
   private announcementObservationOptions(): MutationObserverInit {

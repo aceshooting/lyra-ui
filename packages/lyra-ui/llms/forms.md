@@ -986,6 +986,8 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
   clamping and the `input`-then-`change` pair are identical and a consumer's change handler cannot
   tell them apart. A reversed preset normalizes; a malformed one is ignored rather than clearing the
   current value, so a bad entry in a config-driven list never reads as "the user picked nothing".
+  Non-array runtime assignments normalize to the empty collection, and null/non-object entries in
+  an otherwise valid array are omitted from the rendered row rather than aborting the calendar.
   The active button carries `aria-pressed="true"` and `data-active`. Deliberately the same
   `label`/`start`/`end` shape as `<lr-time-range>`'s `TimeRangePreset`, so the library has one
   preset vocabulary rather than two — the only difference is the unit (ISO dates, not numbers)
@@ -1624,8 +1626,10 @@ unsafe/unparseable `href` falls back to the native `<button>`.
 - `size: LyraSize = 'm'` (reflected) — the shared control ladder. `'2xs'` is the tightest tier,
   below `'xs'`, for dense chrome; `'m'` is the standard one. Both spellings of every tier are
   accepted — `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large` — and the same ladder drives
-  `lr-input`/`lr-select`/`lr-combobox`/`lr-date-input`, so same-`size` controls share a height by
-  construction rather than by two lists agreeing
+  `lr-input`/`lr-select`/`lr-combobox`/`lr-date-input`, so same-`size` controls share density and
+  minimum-height tokens rather than separate scales. That is not a blanket pixel-height promise:
+  content and nested action hit-target floors can make a composed control such as `lr-date-input`
+  taller
 - `pill: boolean = false` (reflected) — fully rounded ends. It changes the private radius default
   to `--lr-radius-pill` rather than declaring a radius on `[part="base"]`, so an inherited or
   direct `--lr-button-radius` remains authoritative. `appearance="link"` renders with zero chrome,
@@ -1777,14 +1781,17 @@ The per-`size` `min-block-size` floors are `--lr-button-size-2xs`, `--lr-button-
 `--lr-button-size-s`, `--lr-button-size-m`, `--lr-button-size-l` and
 `--lr-button-size-xl`. Each defaults to the matching tier of the shared form-control ladder
 (`--lr-form-control-height-2xs` … `-xl`, i.e. 1.25rem, 1.5rem, 1.875rem, 2.5rem, 3rem, 3.5rem), so a
-button is the same height as an input, select, combobox or date input of the same tier _by
-construction_ rather than by two hand-maintained lists agreeing — which is exactly how they drifted
-apart before 8.0.0. Each is read only by its own tier (`--lr-button-size-s` also serves
-`size="small"`, and so on for the other two aliases), and all are ignored by `appearance="link"`.
+button shares the same minimum-height ladder as sibling form controls rather than relying on a
+second hand-maintained list — which is exactly how the scales drifted apart before 8.0.0. This is
+density/floor parity, not guaranteed pixel-height parity: content and nested actions can make a
+composed control such as `lr-date-input` taller. Each token is read only by its own tier
+(`--lr-button-size-s` also serves `size="small"`, and so on for the other two aliases), and all are
+ignored by `appearance="link"`.
 Retheming `--lr-theme-form-control-height-*` moves every control on the ladder together.
 Circle and automatically detected icon-only buttons add the shared `--lr-icon-button-size` floor
 on both axes, so the compact `2xs`/`xs` tiers cannot collapse those standalone targets below 40px.
-Ordinary labelled buttons keep the exact shared form-control ladder heights above.
+Ordinary single-line labelled buttons keep the exact ladder heights above unless their content
+requires more room.
 
 `--lr-button-gap` (default `--lr-form-control-gap`, the gap between the icon/label and any slotted
 content) does not vary by tier. `--lr-button-radius` (default `--lr-form-control-radius`, the corner
@@ -1890,7 +1897,9 @@ box no matter what tier or override is in play.
 
 An accessible icon-only action/link with a native `<button>` inside. It is deliberately not a
 form-associated submitter; use `<lr-button circle type="submit|reset">` with an icon-only default
-slot when a form action is required.
+slot when a form action is required. Because it is not form-associated, an ancestor
+`<fieldset disabled>` does not disable it and it is absent from `form.elements`; set `disabled`
+directly on each icon button.
 
 Its public `--lr-icon-button-*` theme inputs stay undeclared on the host, so an ancestor theme
 wrapper can override the built-in fallbacks; a value set directly on the element still wins.
@@ -2047,8 +2056,9 @@ shared hit target (42px including the row border at the default theme); `l` and 
 - `clearable: boolean = false` (reflected) — shows a localized clear action while a `text` or
   `search` input has a value; clearing preserves input focus
 - `withClear: boolean = false` (attribute `with-clear`) — Web Awesome's spelling of `clearable`;
-  either one shows the same action. Inherited by `lr-number-input` and `lr-time-input`, where it is
-  inert for the same reason `clearable` is (neither type renders a clear action)
+  either one shows the same action. Inherited by `lr-number-input`, where it is inert because that
+  type renders no clear action, and by `lr-time-input`, where it enables the segmented field's
+  localized clear action
 - `readonly: boolean = false` (reflected) — forwarded to the native input and disables clearing
 - `label: string = ''`
 - `hint: string = ''`
@@ -2239,9 +2249,10 @@ what is specific to it.
 - **`setCustomValidity(message)` and `resetValidity()` are on every form-associated _value_ control
   here** — every one
   that submits something, whether it drives `ElementInternals` through the shared mixin or by hand.
-  (`lr-button` and `lr-icon-button` are form-associated so an ancestor `<fieldset disabled>` and
-  `form.elements` reach them, but they carry no value or validity, so they have no such method.) It
-  is the standard channel for a rejection no client-side constraint can express — a server-side
+  (`lr-button` is a form-associated submitter, so an ancestor `<fieldset disabled>` and
+  `form.elements` reach it, but it carries no value or validity and therefore has no such method;
+  `lr-icon-button` is deliberately not form-associated.) It is the standard channel for a rejection
+  no client-side constraint can express — a server-side
   "that email is already registered". A non-empty message raises `customError` and becomes
   `validationMessage`, so the control fails `checkValidity()`, blocks submission, and matches
   `:invalid`/`:state(invalid)`.
@@ -2620,9 +2631,11 @@ appearance surface; `--lr-time-input-focus-border-color`;
 `--lr-time-input-column-selected-color`, `--lr-time-input-column-selected-font-weight`,
 `--lr-time-input-column-selected-hover-bg`, and `--lr-time-input-column-selected-active-bg`.
 Every state hook falls back to the exact semantic token or color mix used previously, and remains
-undeclared on the host so ancestor themes work. The upstream-compatible
-`--column-item-height`, `--column-width`, `--show-duration`, and
-`--hide-duration`, each with a Lyra design-token fallback.
+undeclared on the host so ancestor themes work. The upstream-compatible `--column-item-height`
+(default `calc(var(--lr-size-1em) * 2.25)`) and `--column-width`
+(default `calc(var(--lr-size-1em) * 3)`) retain their component-font-relative sizing through the
+Lyra `--lr-size-1em` token. `--show-duration` and `--hide-duration` similarly use Lyra
+duration-token fallbacks.
 
 ```html
 <lr-time-input
@@ -2952,10 +2965,11 @@ into the shadow-root group. `startLabel` and `endLabel` continue to name the ind
 - `start: number = 0`
 - `end: number = 100`
 - `step: number = 1`
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — visual size; proportionally
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected) — visual size; proportionally
   scales the handle, track, and preset buttons via a single `--lr-time-range-size-scale` multiplier
   (not pixel-matched to `lr-input`'s row-height scale — this component's own dimensions aren't on
-  that ladder); the drag hit-area never shrinks below 24px (WCAG 2.5.8)
+  that ladder); `small`/`medium`/`large` are exact aliases for `s`/`m`/`l`, and the drag hit-area
+  never shrinks below 24px (WCAG 2.5.8)
 - `disabled: boolean = false` (reflected)
 - `startLabel?: string` (attribute `start-label`) — caller-owned `aria-label` override for the start
   handle; absence resolves localized `rangeStart` (`"Range start"` in English), while every
@@ -2975,6 +2989,13 @@ label: string; start: number; end: number }`; a bounded frozen snapshot of optio
   native/prefixed input and change sequences a committed drag or keyboard step would. Preset
   endpoints are clamped and ordered once, and that same normalized pair drives both application
   and `aria-pressed`/`data-active` projection
+- `appliedPreset: TimeRangePreset | undefined` (read-only, attribute: false) — the frozen
+  `presets` snapshot whose button produced the current range. Preset application updates this
+  identity before its synchronous event sequence, so it can be read inside `input`/`change` or
+  `lr-input`/`lr-change` handlers. It remains `undefined` before a preset is selected and is
+  cleared by a real manual handle move, a controlled endpoint change away from that preset, a
+  preset-collection replacement, or a form reset. Numeric equality never infers identity; no-op
+  endpoint writes and reassigning the same preset snapshot preserve it
 - `customError: string | null` (attribute `custom-error`, reflected) — consumer validation message
 
 **Events:** a native-style composed `input` (no detail) then `lr-input` (`detail: { start, end }`),
@@ -3673,7 +3694,9 @@ single numeric string entry.
 - `tooltipPlacement: 'top' | 'right' | 'bottom' | 'left' = 'top'` and
   `tooltipDistance: number = 8` control physical tooltip layout in either orientation and RTL.
 - `tooltip: 'top' | 'bottom' | 'none' = 'none'` and `tooltipFormatter?: (value) => string` are
-  Shoelace-compatible aliases layered over the richer Lyra/Web Awesome tooltip surface.
+  Shoelace-compatible aliases layered over the richer Lyra/Web Awesome tooltip surface. Lyra's
+  default is `none`, while `<sl-range>` defaults to `top`; the bundled migration codemod inserts
+  `tooltip="top"`, and a manual tag rename must set it explicitly to retain Shoelace's behavior.
 - `valueFormatter?: SliderValueFormatter` (attribute: false) —
   `(value: number, handle: 'value' | 'min' | 'max') => string | null | undefined`. Maps the finite,
   clamped `aria-valuenow` number to optional human-readable `aria-valuetext`, and supplies the
@@ -4261,6 +4284,10 @@ authoritative through each option's `effectiveSize`/`effectiveName`, but never r
 authored public properties or attributes; late child writes are restored immediately on removal or
 reparenting.
 
+When renaming `<sl-radio-group>` manually, set `name="option"` if the old markup relied on
+Shoelace's implicit form-data key. Lyra deliberately defaults `name` to empty; the bundled migration
+codemod inserts the compatibility value automatically.
+
 The group is the sole aggregate form-associated owner. A non-empty selected value contributes one
 `name=value` entry; owned radios suppress their own entries and validity while a standalone radio
 continues to participate independently. `form`, `getForm()`, `labels`, native validity, external
@@ -4268,6 +4295,9 @@ form ownership, fieldset disablement, reset, and session restoration all live on
 `value` is non-reflecting live state; `defaultValue`/the `value` attribute is the current reset
 default and cannot overwrite a dirty selection. Reset restores that current default, and session
 restore selects the stored value silently even when it arrives before the radio children.
+A required but pristine group keeps `aria-invalid="false"` on its internal radiogroup; the value
+error is projected only after interaction or a native validity check (`checkValidity()`,
+`reportValidity()`, or form-level validation), while explicit error chrome is immediate.
 
 **Events:** per owned selection — including keyboard activation — the group emits, in order,
 a bubbling/composed `InputEvent` named `input`, `lr-input`, a bubbling/composed `Event` named
@@ -4403,9 +4433,10 @@ a `.value=${...}` binding on first render) is applied once they arrive.
 
 ## `lr-token-input`
 
-An editable form-associated token list. Enter, comma, or blur commits a token; Backspace removes
-the last token. `value` is a readonly owned `readonly string[]` snapshot and repeated values are
-submitted under `name`; mutate a new array and reassign it to change the list.
+An editable form-associated token list. Enter, comma, Tab, or blur commits a token; Tab is not
+prevented, so focus still advances normally. Backspace removes the last token. `value` is a
+readonly owned `readonly string[]` snapshot and repeated values are submitted under `name`; mutate
+a new array and reassign it to change the list.
 
 **Properties:** live, non-reflecting `value`, reflected `defaultValue` (attribute `value`, encoded
 as a JSON string array), `customError` (`custom-error`), `label`, `hint`, `errorText`
@@ -4567,7 +4598,9 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
   same supplemental length validity as user edits.
 - `resize: 'none' | 'both' | 'horizontal' | 'vertical' | 'auto' = 'both'` — written as the
   textarea's inline `resize`; `auto` grows the owned surface to its content without a manual drag
-  handle, and an invalid runtime value falls back to `'both'`
+  handle. A consumer `max-block-size` on the `textarea` part caps that growth and restores vertical
+  scrolling; changing away from `auto` clears its inline block-size and overflow state. An invalid
+  runtime value falls back to `'both'`
 - `size: LyraSize = 'm'` (reflected) — visual size on the shared control ladder, the same scale as
   `lr-textarea`/`lr-input`/`lr-select`, accepting both spellings of every tier (`2xs`/`xs`/`s`/`m`/
   `l`/`xl` and `small`/`medium`/`large`). Governs the gutter's and textarea's padding and font size,
@@ -4721,9 +4754,9 @@ and:
   `{ color: string; label?: string }` objects. Any colour the picker can parse is accepted; blank
   entries are dropped. An entry that is _not_ parseable is kept in the list and still renders a
   swatch — it just paints no colour (the bare checkerboard) and clicking it does nothing, so filter
-  the palette yourself if that matters. `label` becomes the swatch's accessible name — without one
-  the raw colour string is announced. The palette container renders only while the normalized list
-  is non-empty
+  the palette yourself if that matters. `label` becomes the swatch's accessible name; a missing,
+  empty, or whitespace-only label falls back to announcing the raw colour string. The palette
+  container renders only while the normalized list is non-empty
 - `withoutFormatToggle: boolean = false` (attribute `without-format-toggle`) — removes the button
   that cycles between formats. `noFormatToggle` (`no-format-toggle`) is the Shoelace spelling and
   reaches the same behavior; either one wins
@@ -4948,8 +4981,9 @@ Groups returned by the built-in loader carry private provenance, letting their f
 headings follow `registerLyraLocale()`/`.strings` without exposing localization keys as consumer
 data. Empty (the default, before the auto-loader
 resolves) renders just the search input and the empty state. `accessibleLabel` (`aria-label`)
-forwards a host-supplied accessible name to the internal `role="listbox"` grid; empty falls back to
-the localized default grid label. `label: string = ''` — visible label rendered above the
+forwards a host-supplied accessible name to the internal `role="listbox"` grid. Only omission falls
+back to the visible label or localized default; an explicit `aria-label=""` remains empty.
+`label: string = ''` — visible label rendered above the
 search/grid; unset renders no label chrome. When `label` (or the `label` slot) is set and
 `accessibleLabel`/a host `aria-label` is not, the grid's accessible name switches from the
 localized default to `aria-labelledby` pointing at the visible label. `hint: string = ''` —
@@ -5094,9 +5128,11 @@ intrinsic messages use their rubric key and a consumer-owned whole-form rejectio
 
 Every value path — direct writes, child edits, schema changes, state restoration, reset, events,
 rendering, validity, and FormData — uses one canonical object. Finite scores clamp and snap to the
-current range/step; nonfinite scores are absent; categories retain only current option values (and
-their available occurrence counts); comments must be strings; undeclared keys are dropped. This
-prevents a rendered value, public readout, validity result, and submitted JSON from disagreeing.
+current range/step; a wide slider score without an explicit default records its rendered, snapped
+midpoint in both `defaultValue` and the pristine live value, while segmented scores remain
+unselected. Nonfinite scores are absent; categories retain only current option values (and their
+available occurrence counts); comments must be strings; undeclared keys are dropped. This prevents
+a rendered value, public readout, validity result, and submitted JSON from disagreeing.
 `form.reset()` restores a fresh clone of `defaultValue`, clears touched/error-reveal state, and
 preserves any consumer `setCustomValidity()` message. Changing `defaultValue` updates a pristine
 live value but never overwrites a dirty edit.
@@ -5111,6 +5147,8 @@ errors and own/fieldset validation barring), `lr-submit` (`detail: { value, item
 (`detail: { itemId }`, `skippable` only). `lr-invalid` (no detail) is the one bubbling/composed,
 cancelable alias emitted when the complete rubric fails a native validity check; preventing it also
 suppresses the native event's default validation UI.
+Native and prefixed input/change events from the composed child controls are contained; consumers
+above the rubric receive only the rubric-owned aggregate event shape.
 
 **Methods:** `getForm()` returns the owning form. `setCustomValidity(message)` sets or clears a
 form-level error no per-key rule can
@@ -5176,7 +5214,7 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
   including an authoritative `[]`, overrides it entirely — a curated subset, custom order,
   custom labels, or a locale offered before its strings are registered. Explicit catalogs are
   capped, cloned and frozen at assignment; mutate a new array/entry and reassign it to update the
-  list. `country` (ISO 3166-1 alpha-2) overrides a row's derived flag — e.g.
+  list. `country` (ISO 3166-1 alpha-2 or alpha-3) overrides a row's derived flag — e.g.
   showing Lebanon's flag for an `'ar'` row instead of the library's default Saudi Arabia mapping;
   only available on the `{tag,label,country}` object form, not the bare `string[]` form. Replacing
   the catalog while the listbox is open keeps keyboard navigation valid: an active row beyond the

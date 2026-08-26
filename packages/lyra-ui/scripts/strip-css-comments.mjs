@@ -1,4 +1,5 @@
-import { realpathSync } from 'node:fs';
+import { isMainModule } from './is-main-module.mjs';
+
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -358,7 +359,7 @@ export async function stripCssComments(directory) {
   return { files: files.length, filesChanged, templates, removedBytes };
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
+if (isMainModule(import.meta.url)) {
   const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
   const directory = process.argv[2] ? path.resolve(process.argv[2]) : path.join(packageDir, 'dist');
   const result = await stripCssComments(directory);

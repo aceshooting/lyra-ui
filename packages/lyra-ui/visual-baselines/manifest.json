@@ -49,9 +49,27 @@
         "narrow": "This fixture covers repeated-system-color chart encodings; narrow allocation is covered separately."
       }
     },
+    "forced-colors-evidence": {
+      "axes": ["forced-colors"],
+      "exemptions": {
+        "light": "This fixture exists only to preserve intrinsic data colors under forced-colors emulation.",
+        "dark": "This fixture exists only to preserve intrinsic data colors under forced-colors emulation.",
+        "rtl": "This fixture exists only to preserve intrinsic data colors under forced-colors emulation.",
+        "narrow": "This fixture covers intrinsic painted colors; narrow allocation is covered separately."
+      }
+    },
     "narrow-responsive": {
       "axes": ["light", "dark", "rtl", "narrow"],
       "exemptions": {
+        "forced-colors": "This fixture covers 320px allocation; forced-colors semantics are covered separately."
+      }
+    },
+    "narrow-evidence": {
+      "axes": ["narrow"],
+      "exemptions": {
+        "light": "This fixture exists only to exercise the component's 320px allocation branch.",
+        "dark": "This fixture exists only to exercise the component's 320px allocation branch.",
+        "rtl": "This fixture exists only to exercise the component's 320px allocation branch.",
         "forced-colors": "This fixture covers 320px allocation; forced-colors semantics are covered separately."
       }
     }
@@ -108,6 +126,11 @@
       "id": "form-color-picker--inline-compatibility",
       "profile": "forced-colors-intrinsic",
       "forcedColorsProbe": "intrinsic-color"
+    },
+    {
+      "id": "swatch-picker--forced-colors-intrinsic",
+      "profile": "forced-colors-evidence",
+      "forcedColorsProbe": "swatch-colors"
     },
     {
       "id": "forms-phoneinput--default",
@@ -218,7 +241,12 @@
     },
     { "id": "charts-bubble--default", "profile": "standard" },
     { "id": "charts-histogram--default", "profile": "standard" },
-    { "id": "charts-boxplot--default", "profile": "standard" },
+    {
+      "id": "charts-boxplot--default",
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "box-plot.class.ts now applies the resolved --lr-chart-grid-color and --lr-chart-tick-color to the x axis as well as the y axis, replacing Chart.js defaults with the documented theme contract. The current capture reflects that intentional consistency fix and awaits human visual review."
+    },
     {
       "id": "qr-code--default",
       "profile": "standard",
@@ -285,6 +313,13 @@
       "narrowProbe": "viewport-fit",
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The current v8 capture differs from its historical baseline and awaits human visual review."
+    },
+    {
+      "id": "data-display-funnel--narrow-320",
+      "profile": "narrow-evidence",
+      "narrowProbe": "viewport-fit",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "This new 320px long-label fixture is enrolled as automated evidence pending human visual review."
     },
     {
       "id": "navigation-tree-node--declarative",
@@ -385,6 +420,7 @@
     "lr-docx-viewer": ["docxviewer--default"],
     "lr-drawer": ["drawer--end"],
     "lr-dropdown": ["overlay-dropdown--default"],
+    "lr-funnel": ["data-display-funnel--narrow-320"],
     "lr-gauge": ["gauge--radial"],
     "lr-graph": ["graph--default"],
     "lr-heatmap": ["heatmap--default"],
@@ -429,6 +465,7 @@
     "lr-multi-split": ["multi-split--default"],
     "lr-split-panel": ["layout-split-panel--default"],
     "lr-switch": ["switch--default"],
+    "lr-swatch-picker": ["swatch-picker--forced-colors-intrinsic"],
     "lr-tab-group": ["tabs--default", "tabs--element-model-long-content-narrow"],
     "lr-table": ["table--default"],
     "lr-textarea": ["textarea--default"],
@@ -469,7 +506,7 @@
     "reviewedAt": null,
     "knownLimitations": [
       "The historical 249 light/dark/RTL baselines and current evidence captures have not received human visual review.",
-      "Four forced-colors/narrow captures and 78 changed light/dark/RTL captures remain ephemeral evidence and are not approved baseline updates.",
+      "Forced-colors/narrow captures and light/dark/RTL captures awaiting review remain ephemeral evidence and are not approved baseline updates.",
       "Chromium forced-colors emulation is targeted browser evidence, not a manual Windows High Contrast or assistive-technology review.",
       "The matrix is a risk-weighted sample and does not provide a baseline for every component or state."
     ]

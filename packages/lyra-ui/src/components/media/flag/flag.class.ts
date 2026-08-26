@@ -307,7 +307,7 @@ function loadFlagUrlResolver(): Promise<LyraFlagUrlResolver | null> {
  *   Distinct from the peer-resolver failure that produces `[part="error"]`: an unresolvable code is
  *   data, not a defect.
  * @csspart fallback-image - The `fallback` property's placeholder image, when no `fallback` slot
- *   content is supplied.
+ *   content is supplied. It uses the same frame sizing, object fit, and shape clipping as `image`.
  * @csspart error - Ordinary localized visible error rendered when the optional peer resolver is
  *   unavailable or fails; each fresh resolution failure appends the same localized message to the
  *   shared light-DOM assertive announcement sink.

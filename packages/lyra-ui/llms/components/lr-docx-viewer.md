@@ -6,9 +6,10 @@
 - **Class** `LyraDocxViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `mammoth` — see `llms/peers.md`
-- **Themeable via** 10 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -21,6 +22,10 @@ Mammoth preserves document structure such as headings, paragraphs, lists, tables
 inline raster images; it is not intended to reproduce pixel-exact Word page layout. There is no
 unsanitized rendering escape
 hatch: if `dompurify` is unavailable, rendering is blocked even when Mammoth converted successfully.
+Converted markup then passes through the passive-document profile: anchors, form controls, and
+custom elements are unwrapped to ordinary text/children where safe, remote navigation/resource
+attributes are removed, and an `<a>` itself never remains. Images render only inline base64 GIF,
+JPEG, PNG, or WebP data; same-document SVG fragment references may remain.
 
 Every rendered heading's slug (the same GitHub-slugger-style algorithm `<lr-markdown>` uses) is
 stamped as its `id` and cached into `getHeadingTree()`'s document-ordered outline. Duplicate
@@ -67,7 +72,9 @@ content. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` as
 highlight), `highlight-actions` (keyboard-accessible actions for resolved highlights),
 `highlight-action` (one native highlight activation button), `search-match` (a painted in-document
 search match), and `search-match-active` (the currently active search match, also carries
-`search-match`).
+`search-match`), plus `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest
+anchor-jump message; the spoken copy is appended to the shared document-level polite sink only
+while the viewer and its composed ancestors are exposed to the accessibility tree).
 
 **Themeable custom properties:** `--lr-docx-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.

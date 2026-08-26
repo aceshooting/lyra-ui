@@ -6,6 +6,7 @@
 - **Class** `LyraKnowledgeBase`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/knowledge-base/knowledge-base.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 20 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -33,16 +34,19 @@ errorMessage?: string }` (all four types exported here), where
   ISO-8601); absent/unparseable renders "never synced". `errorMessage` shows only while
   `syncStatus === 'error'`. `id`/`name` follow `DocumentRef`'s spirit, but a source is a _connector
   feeding_ documents, not a document, so the rest of the fields are its own
-- `label: string = ''` — heading text and the table's accessible name; falls back to a localized default
+- `label?: string` — heading text and the table's accessible name; omission uses the localized
+  knowledge-base label, while an explicit empty string stays empty
 - `hideSummary: boolean = false` (attribute `hide-summary`, reflected) — hides the aggregate
   total/synced/syncing/needs-attention row
 - `hideCreate: boolean = false` (attribute `hide-create`, reflected) — hides the "Add source"
   affordance, e.g. for a read-only or permission-gated view
 
 Source ids must be nonblank and unique. Malformed rows and later duplicates are omitted first-wins
-before summary totals, empty state, table rows, or source actions.
+before summary totals, empty state, table rows, or source actions. A retained source whose `name` is
+missing, blank, or nonstring uses the localized “untitled source” label in both the row and its action
+names.
 
-**Events:** `lr-source-create` (`detail: undefined` — nothing exists yet to reference),
+**Events:** `lr-source-create` (`detail: null` — nothing exists yet to reference),
 `lr-source-sync` (`detail: { sourceId: string }`), `lr-source-pause` (`detail: { sourceId: string }`),
 `lr-source-delete` (`detail: { sourceId: string }`, no built-in confirmation, matching
 `lr-thread-list`'s `lr-thread-delete`). These were spelled `lr-kb-create`/`-sync`/`-pause`/`-delete`

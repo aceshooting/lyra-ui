@@ -96,6 +96,14 @@ export const RetintedProgress: Story = {
 };
 
 export const WithSlots: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Toolbar actions reveal on card hover or focus and remain visible when the device has no hover or uses a coarse pointer.',
+      },
+    },
+  },
   render: () => html`
     <lr-flow-node heading="Review" status="running">
       <span slot="icon">👁</span>

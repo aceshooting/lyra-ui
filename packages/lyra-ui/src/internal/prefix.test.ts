@@ -92,8 +92,10 @@ describe('defineElement registration diagnostics', () => {
   });
 
   it('shares provenance and conflict de-duplication across separate module instances', async () => {
-    const copyA = await import('../../dist/internal/prefix.js?diagnostics-copy=a');
-    const copyB = await import('../../dist/internal/prefix.js?diagnostics-copy=b');
+    const copyAPath = '../../dist/internal/prefix.js?diagnostics-copy=a';
+    const copyBPath = '../../dist/internal/prefix.js?diagnostics-copy=b';
+    const copyA = await import(copyAPath);
+    const copyB = await import(copyBPath);
     const name = uniqueName('copies');
     class ExistingConstructor extends HTMLElement {}
     class IncomingConstructor extends HTMLElement {}

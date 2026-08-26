@@ -1,7 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { place } from '../../../internal/positioner.js';
+import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
 import { nextId } from '../../../internal/a11y.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { finiteInteger } from '../../../internal/numbers.js';

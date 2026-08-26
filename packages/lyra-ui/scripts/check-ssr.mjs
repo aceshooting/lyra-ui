@@ -635,15 +635,31 @@ const badgeSemanticHtml = await collectResult(
   })
 );
 const badgeOpeningTag = openingTag(badgeSemanticHtml, 'lr-badge');
-assert.match(
+assert.doesNotMatch(
   badgeOpeningTag,
   /\srole="status"/,
-  'lr-badge must serialize its status role on the host'
+  'lr-badge must keep static content out of a live-region role by default'
 );
 assert.equal(
   serializedAttributeCount(badgeSemanticHtml, 'role', 'status'),
+  0,
+  'lr-badge SSR must expose no default status role in either host or shadow DOM'
+);
+
+const liveBadgeSemanticHtml = await collectResult(
+  render(html`<lr-badge role="status">Deployment complete</lr-badge>`, {
+    elementRenderers: animatedImageContext.elementRenderers,
+  })
+);
+assert.match(
+  openingTag(liveBadgeSemanticHtml, 'lr-badge'),
+  /\srole="status"/,
+  'lr-badge must serialize an author-supplied status role on the host'
+);
+assert.equal(
+  serializedAttributeCount(liveBadgeSemanticHtml, 'role', 'status'),
   1,
-  'lr-badge SSR must expose exactly one host-owned status role and no shadow duplicate'
+  'lr-badge SSR must keep an authored status role host-owned with no shadow duplicate'
 );
 
 const tagSemanticHtml = await collectResult(

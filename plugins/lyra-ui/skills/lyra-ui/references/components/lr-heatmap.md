@@ -6,6 +6,7 @@
 - **Class** `LyraHeatmap`, also available unregistered from `@aceshooting/lyra-ui/components/data/heatmap/heatmap.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 18 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -55,13 +56,17 @@ base when no cell exists. A newer external focus destination is never reclaimed.
 string[]; values: readonly (readonly number[])[] }`
   - `HeatmapCalendarData { kind: 'calendar'; days: readonly CalendarDay[]; firstDayOfWeek?:
 number; columnX?: (index:number)=>number; rowY?: (weekday:number)=>number;
-weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
+weekdayLabelWidth?: number|'auto'; weekdayLabelText?: (jsWeekday:number)=>string|undefined; monthLabelText?:
 (jsMonth:number,year:number)=>string|undefined }`
     Matrix `-1` or non-finite values are no-data. Calendar identity is ISO date; invalid dates are
     omitted and duplicates use one deterministic **first-valid-wins** entry before count, scale,
     paint, selection, focus and event paths.
     Collections are snapshotted into a bounded canonical projection; reassign `data` after changing
     caller-owned input.
+    `weekdayLabelWidth` controls the calendar weekday-label gutter: a nonnegative CSS-pixel number
+    pins its width, while `'auto'` measures the widest rendered weekday label without shrinking
+    below the built-in `28px` gutter or growing beyond 40% of the host. Unset preserves the original
+    `28px` geometry; malformed values are ignored.
 - `cellSize: number = 22` (attribute `cell-size` — default `22` in matrix mode, `11` in calendar
   mode when left unset; explicitly setting it now governs both modes' per-cell size alike, and it's
   ignored in either mode when `fitToWidth` is set)

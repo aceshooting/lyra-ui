@@ -13,6 +13,7 @@ import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { overallSemanticLabel } from '../semantic-owner.js';
 import type { ApprovalAction } from '../approval-state.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { firstByIdentity } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry, LYRA_DEFAULT_toolTimelineDetailsFor, LYRA_DEFAULT_toolTimelineLimit } from '../../../internal/default-strings.generated.js';
@@ -110,10 +111,6 @@ const MAX_REDACTION_PATHS = 100;
 const MAX_REDACTION_DEPTH = 64;
 const MAX_REDACTION_NODES = 10_000;
 const TOOL_STATUSES = new Set<ToolCallStatus>(['pending', 'running', 'success', 'error', 'denied']);
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function normalizeEntry(entry: ToolTimelineEntry): ToolTimelineEntry {
   const status = TOOL_STATUSES.has(entry.status) ? entry.status : 'pending';
@@ -412,18 +409,19 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   }
 
   private rebuildProjection(): void {
-    const entries: readonly unknown[] = Array.isArray(this.entries) ? this.entries : [];
+    const entries = Array.isArray(this.entries) ? this.entries : [];
     const projected: ToolTimelineEntry[] = [];
     const projectedIndex = new Map<string, number>();
     const reservedKeys = new Set(this.openedEntryIds);
     if (this.reviewingEntryKey !== undefined) reservedKeys.add(this.reviewingEntryKey);
     const displacedReserved = new Map<string, ToolTimelineEntry>();
     const seen = new Set<string>();
-    for (const sourceEntry of entries) {
-      if (!isRecord(sourceEntry) || typeof sourceEntry['id'] !== 'string' || sourceEntry['id'].trim().length === 0) {
-        continue;
-      }
-      const entry = normalizeEntry(sourceEntry as unknown as ToolTimelineEntry);
+    for (const sourceEntry of firstByIdentity(entries, (entry) =>
+      typeof entry?.id === 'string' && entry.id.trim().length > 0
+        ? entryIdentity(entry)
+        : undefined
+    )) {
+      const entry = normalizeEntry(sourceEntry);
       const key = entryIdentity(entry);
       if (seen.has(key)) continue;
       seen.add(key);

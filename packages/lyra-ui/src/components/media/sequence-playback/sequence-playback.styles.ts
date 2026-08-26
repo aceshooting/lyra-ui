@@ -59,7 +59,7 @@ export const styles = css`
     cursor: not-allowed;
   }
   [part="play-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part="slider"] {
@@ -92,7 +92,7 @@ export const styles = css`
     cursor: not-allowed;
   }
   [part="slider"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
 `;

@@ -6,6 +6,7 @@
 - **Class** `LyraSparkline`, also available unregistered from `@aceshooting/lyra-ui/components/data/sparkline/sparkline.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecated part** `base` since `8.0.0`; use part `::part(sparkline)`; removal not before `10.0.0` — The sparkline part names the rendered SVG wrapper unambiguously; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-sparkline` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is.
 - **Optional peers** none
 - **Themeable via** 6 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -41,8 +42,10 @@ both dimensions through the aspect ratio.
   mirrored `appearance` axis
 - `min?: number` (defaults to data minimum)
 - `max?: number` (defaults to data maximum)
-- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the localized
-  generated summary for the additive `values` path; `label` takes precedence when both are set
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — programmatic compatibility
+  name for the additive `values` path. Naming precedence is an authored host `aria-label`
+  (including an intentional empty value), then nonempty `label`, then a nonempty programmatic
+  `accessibleLabel`, then the localized generated summary
 
 **Events:** none.
 

@@ -10,6 +10,7 @@ import "./slider.js";
 import type { LyraSlider } from "./slider.js";
 import { styles } from "./slider.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { setReducedMotion } from "../../../../test/wtr-media.js";
 
 function mockTrackWidth(el: LyraSlider, width: number): void {
   const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
@@ -118,12 +119,16 @@ it("emits one cancelable lr-invalid alias when a validity check fails", async ()
 
   expect(el.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
-  expect(aliases[0].target === el).to.equal(true);
-  expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
-  expect(aliases[0].cancelable).to.be.true;
+  const alias = aliases[0];
+  if (!alias) throw new Error("The invalid alias was not emitted.");
+  expect(alias.target === el).to.equal(true);
+  expect(alias.bubbles && alias.composed).to.be.true;
+  expect(alias.cancelable).to.be.true;
   // Nothing cancelled it, so the browser's own validation UI stays enabled.
   expect(natives).to.have.lengthOf(1);
-  expect(natives[0].defaultPrevented).to.be.false;
+  const native = natives[0];
+  if (!native) throw new Error("The native invalid event was not emitted.");
+  expect(native.defaultPrevented).to.be.false;
 });
 
 it("cancels the native invalid event when the lr-invalid alias is cancelled", async () => {
@@ -137,7 +142,9 @@ it("cancels the native invalid event when the lr-invalid alias is cancelled", as
 
   expect(el.checkValidity()).to.be.false;
   expect(natives).to.have.lengthOf(1);
-  expect(natives[0].defaultPrevented).to.be.true;
+  const native = natives[0];
+  if (!native) throw new Error("The native invalid event was not emitted.");
+  expect(native.defaultPrevented).to.be.true;
 });
 
 /** Vertical counterpart of mockTrackWidth: a track box spanning `height` px
@@ -282,38 +289,40 @@ describe("mapped numeric and form contract", () => {
     expect(el.reportValidity()).to.be.true;
   });
 
-  it('exposes the implicit ancestor form through the form getter without an explicit override', async () => {
+  it("exposes the implicit ancestor form through the form getter without an explicit override", async () => {
     const form = (await fixture(html`
       <form id="implicit-slider-form"><lr-slider name="gain"></lr-slider></form>
     `)) as HTMLFormElement;
-    const el = form.querySelector('lr-slider') as LyraSlider;
-    expect(el.form?.id).to.equal('implicit-slider-form');
-    expect(el.getForm()?.id).to.equal('implicit-slider-form');
+    const el = form.querySelector("lr-slider") as LyraSlider;
+    expect(el.form?.id).to.equal("implicit-slider-form");
+    expect(el.getForm()?.id).to.equal("implicit-slider-form");
   });
 
-  it('publishes a WA-compatible static validators catalog observing the intrinsic constraint attributes', async () => {
+  it("publishes a WA-compatible static validators catalog observing the intrinsic constraint attributes", async () => {
     const el = (await fixture(
       html`<lr-slider aria-label="Volume" required></lr-slider>`
     )) as LyraSlider;
-    const catalog = (customElements.get('lr-slider') as typeof LyraSlider)
+    const catalog = (customElements.get("lr-slider") as typeof LyraSlider)
       .validators;
     expect(catalog).to.have.lengthOf(1);
-    expect(catalog[0].observedAttributes).to.deep.equal([
-      'required',
-      'disabled',
-      'value',
-      'min',
-      'max',
-      'step',
+    const validator = catalog[0];
+    if (!validator) throw new Error("The slider validator was not registered.");
+    expect(validator.observedAttributes).to.deep.equal([
+      "required",
+      "disabled",
+      "value",
+      "min",
+      "max",
+      "step",
     ]);
     // The catalog entry's own checkValidity reads the live element's current
     // ValidityState, matching el.checkValidity()/el.validity exactly.
-    expect(catalog[0].checkValidity(el).isValid).to.equal(el.checkValidity());
-    el.setCustomValidity('Nope');
-    const result = catalog[0].checkValidity(el);
+    expect(validator.checkValidity(el).isValid).to.equal(el.checkValidity());
+    el.setCustomValidity("Nope");
+    const result = validator.checkValidity(el);
     expect(result.isValid).to.be.false;
-    expect(result.invalidKeys).to.deep.equal(['customError']);
-    expect(result.message).to.equal('Nope');
+    expect(result.invalidKeys).to.deep.equal(["customError"]);
+    expect(result.message).to.equal("Nope");
   });
 });
 
@@ -771,12 +780,16 @@ it("moves by one step on ArrowRight/ArrowUp and emits lr-input on keydown, lr-ch
     "change",
     "lr-change",
   ]);
-  expect(sequence[0].event instanceof InputEvent).to.be.true;
-  expect(sequence[2].event.constructor === Event).to.be.true;
-  expect(sequence[0].event.target === el && sequence[2].event.target === el).to
+  const [nativeInput, aliasInput, nativeChange] = sequence;
+  if (!nativeInput || !aliasInput || !nativeChange) {
+    throw new Error("The slider event sequence was incomplete.");
+  }
+  expect(nativeInput.event instanceof InputEvent).to.be.true;
+  expect(nativeChange.event.constructor === Event).to.be.true;
+  expect(nativeInput.event.target === el && nativeChange.event.target === el).to
     .be.true;
-  expect(sequence[1].event instanceof CustomEvent).to.be.true;
-  expect((sequence[1].event as CustomEvent).detail.handle).to.equal("value");
+  expect(aliasInput.event instanceof CustomEvent).to.be.true;
+  expect((aliasInput.event as CustomEvent).detail.handle).to.equal("value");
 });
 
 it("moves by one step on ArrowLeft/ArrowDown", async () => {
@@ -1326,7 +1339,7 @@ it("clicking the track (not the thumb) jumps the thumb to that point and continu
   expect(changeDetail!.value).to.equal(50);
 });
 
-it('still begins a continuable drag from a track click that lands exactly on the current value', async () => {
+it("still begins a continuable drag from a track click that lands exactly on the current value", async () => {
   const el = (await fixture(
     html`<lr-slider min="0" max="100" value="50" step="1"></lr-slider>`
   )) as LyraSlider;
@@ -1336,23 +1349,27 @@ it('still begins a continuable drag from a track click that lands exactly on the
   mockTrackWidth(el, 200);
 
   let inputs = 0;
-  el.addEventListener('lr-input', () => inputs++);
+  el.addEventListener("lr-input", () => inputs++);
   // x=100 on a 200px track is exactly the current value's own 50% position,
   // so the jump-to-click assignment is a no-op (setValueFor returns false,
   // emitting no lr-input) -- but the drag itself must still arm so the
   // gesture can continue seamlessly as soon as the pointer actually moves.
   track.dispatchEvent(
-    new PointerEvent('pointerdown', { bubbles: true, pointerId: 3, clientX: 100 })
+    new PointerEvent("pointerdown", {
+      bubbles: true,
+      pointerId: 3,
+      clientX: 100,
+    })
   );
   expect(inputs).to.equal(0);
   expect(el.valueAsNumber).to.equal(50);
 
   window.dispatchEvent(
-    new PointerEvent('pointermove', { pointerId: 3, clientX: 150 })
+    new PointerEvent("pointermove", { pointerId: 3, clientX: 150 })
   );
   expect(inputs).to.equal(1);
   expect(el.valueAsNumber).to.equal(75);
-  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 3 }));
+  window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 3 }));
 });
 
 it("maps zero-area track geometry to stable domain endpoints", async () => {
@@ -1615,7 +1632,7 @@ it("removes the window pointermove/pointerup listeners on disconnect so a detach
   expect(el.valueAsNumber).to.equal(before);
 });
 
-it('tolerates releasePointerCapture throwing while aborting a drag on disconnect', async () => {
+it("tolerates releasePointerCapture throwing while aborting a drag on disconnect", async () => {
   // A real UA can already have released capture on its own (element removed,
   // gesture interrupted) by the time abortActiveDrags() gets to call
   // releasePointerCapture() itself -- that call is documented (see the
@@ -1628,11 +1645,11 @@ it('tolerates releasePointerCapture throwing while aborting a drag on disconnect
   thumb.setPointerCapture = () => {};
   thumb.hasPointerCapture = () => true;
   thumb.releasePointerCapture = () => {
-    throw new DOMException('already released', 'InvalidStateError');
+    throw new DOMException("already released", "InvalidStateError");
   };
 
   thumb.dispatchEvent(
-    new PointerEvent('pointerdown', {
+    new PointerEvent("pointerdown", {
       bubbles: true,
       pointerId: 1,
       clientX: 40,
@@ -1644,7 +1661,7 @@ it('tolerates releasePointerCapture throwing while aborting a drag on disconnect
   // id no longer moves the (now-detached) value.
   const before = el.valueAsNumber;
   window.dispatchEvent(
-    new PointerEvent('pointermove', { pointerId: 1, clientX: 180 })
+    new PointerEvent("pointermove", { pointerId: 1, clientX: 180 })
   );
   expect(el.valueAsNumber).to.equal(before);
 });
@@ -1882,7 +1899,7 @@ it("rounds exponential step values without collapsing them to zero", async () =>
   expect(el.value).to.equal(1e-7);
 });
 
-it('falls back to the unrounded stepped candidate when its own rounding precision factor would overflow', async () => {
+it("falls back to the unrounded stepped candidate when its own rounding precision factor would overflow", async () => {
   // clampValue()'s step-rounding path multiplies the stepped candidate by
   // 10**decimalPlaces(step) to round back to the step's own decimal
   // precision. With a huge domain and a step whose decimal-place count
@@ -1896,14 +1913,14 @@ it('falls back to the unrounded stepped candidate when its own rounding precisio
       <lr-slider name="huge" min="0" max="1e300" step="5e-15"></lr-slider>
     </form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lr-slider') as LyraSlider;
+  const el = form.querySelector("lr-slider") as LyraSlider;
   el.valueAsNumber = 5e293;
   await elementUpdated(el);
   expect(Number.isFinite(el.valueAsNumber)).to.be.true;
   expect(el.valueAsNumber).to.be.closeTo(5e293, 1e280);
-  const submitted = new FormData(form).get('huge') as string;
-  expect(submitted).to.not.equal('Infinity');
-  expect(submitted).to.not.equal('NaN');
+  const submitted = new FormData(form).get("huge") as string;
+  expect(submitted).to.not.equal("Infinity");
+  expect(submitted).to.not.equal("NaN");
   expect(Number.isFinite(Number(submitted))).to.be.true;
 });
 
@@ -1994,7 +2011,7 @@ it("sanitizes and submits a declared default synchronously during form.reset()",
   expect(new FormData(form).get("temperature")).to.equal("80");
 });
 
-it('clears the interacted flag but preserves a custom validity error across form.reset()', async function () {
+it("clears the interacted flag but preserves a custom validity error across form.reset()", async function () {
   // formResetCallback() restores the declared default and clears the
   // dirty/interacted flags, but a setCustomValidity() error is a separate
   // consumer-supplied layer (AnchoredValidityController) that deliberately
@@ -2003,8 +2020,8 @@ it('clears the interacted flag but preserves a custom validity error across form
   let supported = false;
   try {
     supported =
-      typeof CustomStateSet === 'function' &&
-      document.createElement('div').matches(':state(x)') === false;
+      typeof CustomStateSet === "function" &&
+      document.createElement("div").matches(":state(x)") === false;
   } catch {
     supported = false;
   }
@@ -2013,35 +2030,35 @@ it('clears the interacted flag but preserves a custom validity error across form
   const form = (await fixture(html`
     <form><lr-slider name="gain" value="30"></lr-slider></form>
   `)) as HTMLFormElement;
-  const el = form.querySelector('lr-slider') as LyraSlider;
+  const el = form.querySelector("lr-slider") as LyraSlider;
   const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
 
-  el.setCustomValidity('Rejected by server.');
+  el.setCustomValidity("Rejected by server.");
   thumb.dispatchEvent(
-    new FocusEvent('focusout', { bubbles: true, composed: true })
+    new FocusEvent("focusout", { bubbles: true, composed: true })
   );
   await elementUpdated(el);
   expect(
-    el.matches(':state(user-invalid)'),
-    'interacted while invalid marks user-invalid'
+    el.matches(":state(user-invalid)"),
+    "interacted while invalid marks user-invalid"
   ).to.be.true;
 
   el.valueAsNumber = 90;
   form.reset();
   await elementUpdated(el);
 
-  expect(el.value, 'value restores to the declared default').to.equal(30);
-  expect(el.validity.customError, 'the custom error survives the reset').to.be
+  expect(el.value, "value restores to the declared default").to.equal(30);
+  expect(el.validity.customError, "the custom error survives the reset").to.be
     .true;
-  expect(el.validationMessage).to.equal('Rejected by server.');
+  expect(el.validationMessage).to.equal("Rejected by server.");
   expect(el.checkValidity()).to.be.false;
   expect(
-    el.matches(':state(user-invalid)'),
-    'the interacted flag is cleared by reset even though the error persists'
+    el.matches(":state(user-invalid)"),
+    "the interacted flag is cleared by reset even though the error persists"
   ).to.be.false;
   expect(
-    el.matches(':state(invalid)'),
-    'still invalid -- just no longer counted as user-interacted-with'
+    el.matches(":state(invalid)"),
+    "still invalid -- just no longer counted as user-interacted-with"
   ).to.be.true;
 });
 
@@ -2196,6 +2213,39 @@ it("is accessible in a populated, labeled state with a fractional step", async (
     ></lr-slider>`
   )) as LyraSlider;
   await expect(el).to.be.accessible();
+});
+
+it("projects both aria-invalid polarities to every focusable range thumb", async () => {
+  const el = (await fixture(html`
+    <lr-slider
+      range
+      aria-label="Allowed interval"
+      min="0"
+      max="100"
+      min-value="20"
+      max-value="80"
+    ></lr-slider>
+  `)) as LyraSlider;
+  const thumbs = [
+    ...el.shadowRoot!.querySelectorAll('[role="slider"]'),
+  ] as HTMLElement[];
+  expect(
+    thumbs.map((thumb) => thumb.getAttribute("aria-invalid"))
+  ).to.deep.equal(["false", "false"]);
+
+  el.setCustomValidity("Choose another interval.");
+  await el.updateComplete;
+  expect(el.checkValidity()).to.equal(false);
+  expect(
+    thumbs.map((thumb) => thumb.getAttribute("aria-invalid"))
+  ).to.deep.equal(["true", "true"]);
+  await expect(el).to.be.accessible();
+
+  el.setCustomValidity("");
+  await el.updateComplete;
+  expect(
+    thumbs.map((thumb) => thumb.getAttribute("aria-invalid"))
+  ).to.deep.equal(["false", "false"]);
 });
 
 // ---------------------------------------------------------------------------
@@ -3166,22 +3216,33 @@ it("keeps a numeric tooltip when valueFormatter intentionally omits aria-valuete
 });
 
 it("transitions the tooltip with motion tokens and stops under prefers-reduced-motion", async () => {
-  const el = (await fixture(
-    html`<lr-slider with-tooltip value="20"></lr-slider>`
-  )) as LyraSlider;
-  const tooltip = el.shadowRoot!.querySelector(
-    '[part~="tooltip"]'
-  ) as HTMLElement;
-  // Rendered result, not stylesheet text: the transition really resolves.
-  expect(getComputedStyle(tooltip).transitionDuration).to.not.equal("0s");
-
-  // The reduced-motion branch cannot be emulated from inside the page, so the
-  // media-query arm itself is asserted structurally (as elsewhere in this
-  // package).
   const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
   expect(css).to.match(
     /@media \(prefers-reduced-motion: reduce\) \{[^]*\[part~='tooltip'\]\s*\{[^}]*transition: none/
   );
+
+  try {
+    await setReducedMotion("no-preference");
+    const el = (await fixture(
+      html`<lr-slider
+        style="--lr-transition-fast: 2s"
+        with-tooltip
+        value="20"
+      ></lr-slider>`
+    )) as LyraSlider;
+    const tooltip = el.shadowRoot!.querySelector(
+      '[part~="tooltip"]'
+    ) as HTMLElement;
+    expect(getComputedStyle(tooltip).transitionDuration).to.equal("2s");
+
+    await setReducedMotion("reduce");
+    await waitUntil(
+      () => getComputedStyle(tooltip).transitionDuration === "0s",
+      "slider tooltip transition did not stop under reduced motion"
+    );
+  } finally {
+    await setReducedMotion("no-preference");
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -3290,6 +3351,7 @@ it("leaves the single-handle contract unchanged when none of the new properties 
   expect(el.readonly).to.be.false;
   expect(el.withMarkers).to.be.false;
   expect(el.withTooltip).to.be.false;
+  expect(el.tooltip).to.equal("none");
   expect(el.showValue).to.be.false;
   expect(el.orientation).to.equal("horizontal");
   expect(el.hint).to.equal("");
@@ -3908,8 +3970,8 @@ it("prefers a handle-aware value formatter over the tooltip formatter", async ()
   await elementUpdated(el);
   expect(tooltipText()).to.deep.equal(["min:20", "max:80"]);
 
-  el.valueFormatter = null;
-  el.tooltipFormatter = null;
+  Reflect.set(el, "valueFormatter", null);
+  Reflect.set(el, "tooltipFormatter", null);
   await elementUpdated(el);
   expect(tooltipText()).to.deep.equal(["20", "80"]);
 });
@@ -4034,9 +4096,7 @@ it("falls back to its default when ownerless FormData restore state cannot be re
 });
 
 it("saturates when a finite step overflows only after it is added to the current value", async () => {
-  const el = await fixture<LyraSlider>(html`
-    <lr-slider></lr-slider>
-  `);
+  const el = await fixture<LyraSlider>(html` <lr-slider></lr-slider> `);
   el.min = -Number.MAX_VALUE;
   el.max = Number.MAX_VALUE;
   el.step = Number.MAX_VALUE;

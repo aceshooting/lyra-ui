@@ -1793,7 +1793,10 @@ test('the checked-in inventory rewrites free-tier icon imports from both ecosyst
   );
   assert.deepEqual(
     waResult.warnings.map((entry) => [entry.warningCode, entry.target]),
-    [['OPTIONAL_PEER_REQUIRED', 'dompurify']],
+    [
+      ['BEHAVIOR_REVIEW_REQUIRED', 'lr-icon'],
+      ['OPTIONAL_PEER_REQUIRED', 'dompurify'],
+    ],
   );
 
   const slInput = [
@@ -1812,7 +1815,10 @@ test('the checked-in inventory rewrites free-tier icon imports from both ecosyst
   );
   assert.deepEqual(
     slResult.warnings.map((entry) => [entry.warningCode, entry.target]),
-    [['OPTIONAL_PEER_REQUIRED', 'dompurify']],
+    [
+      ['BEHAVIOR_REVIEW_REQUIRED', 'lr-icon'],
+      ['OPTIONAL_PEER_REQUIRED', 'dompurify'],
+    ],
   );
 });
 
@@ -1834,7 +1840,85 @@ test('the checked-in inventory rewrites the free-tier icon-button deep import wi
   );
   assert.deepEqual(
     result.warnings.map((entry) => [entry.warningCode, entry.target]),
-    [['OPTIONAL_PEER_REQUIRED', 'dompurify']],
+    [
+      ['BEHAVIOR_REVIEW_REQUIRED', 'lr-icon-button'],
+      ['OPTIONAL_PEER_REQUIRED', 'dompurify'],
+    ],
+  );
+});
+
+test('Shoelace content-only menus remain a structure-preserving inline migration', () => {
+  const checkedContract = buildMigrationContract(checkedInventory);
+  const mapping = checkedContract.mappings.get('sl-menu');
+  assert.equal(mapping.targetTag, 'lr-menu');
+  assert.equal(mapping.classification, 'rewritten');
+
+  const input = [
+    '<sl-menu>',
+    '  <sl-menu-item value="open">Open</sl-menu-item>',
+    '  <sl-menu-label>Recent</sl-menu-label>',
+    '</sl-menu>',
+    '',
+  ].join('\n');
+  const result = migrateText(input, checkedContract, { file: 'inline-menu.html' });
+
+  assert.equal(
+    result.content,
+    [
+      '<lr-menu>',
+      '  <lr-menu-item value="open">Open</lr-menu-item>',
+      '  <lr-menu-label>Recent</lr-menu-label>',
+      '</lr-menu>',
+      '',
+    ].join('\n'),
+  );
+  assert.deepEqual(result.warnings, []);
+
+  const readme = fs.readFileSync(path.join(scriptDir, '..', 'README.md'), 'utf8');
+  const rows = readme.split('\n');
+  const menuRow = rows.find((line) => /^\| `<lr-menu>`\s+\| `sl-menu`\s+\|/u.test(line));
+  const itemRow = rows.find((line) => /^\| `<lr-menu-item>`\s+\| `sl-menu-item`\s+\|/u.test(line));
+  assert.match(
+    menuRow ?? '',
+    /Inline semantic menu controller/u,
+    'the executable mirror table must not present content-only sl-menu as an anchored overlay',
+  );
+  assert.doesNotMatch(menuRow ?? '', /Anchored dropdown/iu);
+  assert.match(itemRow ?? '', /Focusable action row/u);
+});
+
+test('icon migrations require review of the intentionally smaller built-in name vocabulary', () => {
+  const checkedContract = buildMigrationContract(checkedInventory);
+  const input = [
+    '<sl-icon name="gear" label="Settings"></sl-icon>',
+    '<wa-icon name="user" family="classic" variant="solid"></wa-icon>',
+    '<sl-icon-button name="gear" label="Settings"></sl-icon-button>',
+    '',
+  ].join('\n');
+
+  const result = migrateText(input, checkedContract, { file: 'icon-names.html' });
+  const reviews = result.warnings.filter(
+    (entry) => entry.warningCode === 'BEHAVIOR_REVIEW_REQUIRED',
+  );
+
+  assert.deepEqual(
+    reviews.map(({ upstreamTag, behaviorReviewFlags }) => ({
+      upstreamTag,
+      behaviorReviewFlags,
+    })),
+    [
+      { upstreamTag: 'sl-icon', behaviorReviewFlags: ['icon-name-vocabulary'] },
+      { upstreamTag: 'wa-icon', behaviorReviewFlags: ['icon-name-vocabulary'] },
+      { upstreamTag: 'sl-icon-button', behaviorReviewFlags: ['icon-name-vocabulary'] },
+    ],
+  );
+  assert.ok(reviews.every(({ message }) => /registerIconLibrary/u.test(message)));
+  assert.ok(
+    reviews.every(({ message }) =>
+      /only add, check, close, search, menu, chevron-left, chevron-right, chevron-down, calendar, command, and trash/u.test(
+        message,
+      ),
+    ),
   );
 });
 
@@ -2188,6 +2272,7 @@ test('the checked-in inventory grants a Pro chart target its granular registrati
     assert.deepEqual(
       new Set(report.warnings.map((entry) => `${entry.warningCode}|${entry.target}`)),
       new Set([
+        'BEHAVIOR_REVIEW_REQUIRED|lr-icon',
         'OPTIONAL_PEER_REQUIRED|dompurify',
         'OPTIONAL_PEER_REQUIRED|chart.js',
         'OPTIONAL_PEER_REQUIRED|chartjs-plugin-annotation',
@@ -2579,6 +2664,31 @@ test('warns about upstream references it cannot rewrite', () => {
   // rename by name alone silently tightens every gap.
   assert.match(result.content, /--wa-space-m/, 'tokens stay verbatim, reported rather than guessed');
   assert.match(result.content, /wa-card \{ padding/, 'css`` selectors stay verbatim too');
+});
+
+test('rewrites upstream selectors inside style blocks in html tagged templates', () => {
+  const source = [
+    "import { LitElement, html } from 'lit';",
+    "import '@awesome.me/webawesome/dist/components/widget/widget.js';",
+    'export class A extends LitElement {',
+    '  render() {',
+    '    return html`<style>wa-widget { color: red; }</style><wa-widget></wa-widget>`;',
+    '  }',
+    '}',
+  ].join('\n');
+
+  const result = migrateText(source, contract, {});
+
+  assert.match(result.content, /<style>lr-widget \{ color: red; \}<\/style>/);
+  assert.match(result.content, /<lr-widget\b[^>]*><\/lr-widget>/);
+  assert.ok(
+    !result.warnings.some(
+      (warning) =>
+        warning.warningCode === 'CSS_IN_JS_SELECTOR_REVIEW' &&
+        warning.upstreamMember === 'style-template',
+    ),
+    'a selector that was safely rewritten must not also be reported as left behind',
+  );
 });
 
 test('stays quiet on a file with nothing left to migrate', () => {

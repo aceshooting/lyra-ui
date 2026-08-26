@@ -6,7 +6,8 @@
 ## `contract-policy` (most of `pnpm lint`'s time)
 
 `pnpm lint` recurses through the workspace. For `@aceshooting/lyra-ui`, its exact expansion is
-`pnpm run contract-policy && tsc --noEmit -p tsconfig.json && pnpm run test:types`.
+`pnpm run contract-policy && tsc --noEmit -p tsconfig.json && pnpm run test:types && pnpm run
+check:test-types`.
 
 The authoritative ordered `contract-policy` chain is
 `packages/lyra-ui/package.json#scripts.contract-policy`; do not maintain a second command list in
@@ -81,8 +82,9 @@ gates run in parallel instead of queueing behind each other. If a check goes red
 the PR checks list tells you which of these to reproduce locally:
 
 1. **`lint`** — three `lint_shard` workers independently install, then run a deterministic weighted
-   partition of the package's `contract-policy` commands plus `tsc --noEmit -p tsconfig.json` and
-   `test:types`. The runner reads those commands directly from `package.json`; there is no second
+   partition of the package's `contract-policy` commands plus `tsc --noEmit -p tsconfig.json`,
+   `test:types`, and `check:test-types`. The runner reads those commands directly from
+   `package.json`; there is no second
    gate list to drift. Occurrence ordinals make the split disjoint and exhaustive even if a command
    is deliberately repeated, source-controlled observations weight the expensive checks, and a new
    valid command receives unit cost rather than disappearing. Every worker restores original policy
@@ -91,7 +93,7 @@ the PR checks list tells you which of these to reproduce locally:
    the entire matrix concluded `success`.
 
    The reference run's sequential `pnpm lint` step took 8m22s. Its three estimated lane weights are
-   167/166/166, bounded by the 163-unit component-inventory test, so a fourth worker would add setup
+   170/170/170, bounded by the 163-unit component-inventory test, so a fourth worker would add setup
    and concurrency pressure without shortening the critical path. Local `pnpm lint`, `scripts/ci.sh`,
    and release generation remain complete and sequential; the shard entry is CI-only. No lint lane
    needs Playwright or a build because every command is static analysis.
@@ -225,7 +227,7 @@ everything else) had most Node 22 legs finishing in 50-110s, of which roughly ha
 per-job overhead (checkout/install/browser setup) rather than test execution against the 26-file
 `test:platform` suite -- oversharded legs pay that fixed cost repeatedly for little parallelism
 gain. Node 20 uses the pnpm version pinned in `.github/ci-pnpm10.json` (`pnpm@10.34.5`); Node 22
-uses `package.json#packageManager` (`pnpm@11.22.0`). The package's supported engine remains
+uses `package.json#packageManager` (`pnpm@11.24.0`). The package's supported engine remains
 `node >=20`; this matrix uses 11 legs total (9 on Node 22, 2 on Node 20), well under the public-repo
 20-job throughput limit, so `max-parallel` no longer needs to chase that cap. The Firefox/Node 20
 leg runs the same packed contract mode as the primary contract lane: every runtime, install,
@@ -309,7 +311,7 @@ the same checksum-pinned actionlint workflow gate as `static-checks`.
 - `./scripts/ci.sh --platform-matrix` (or `--all`) runs the primary aggregate and then the exact
   local counterpart of CI's platform matrix. Its 11 legs are source-derived: Node 20 runs Firefox
   (1 shard) and Safari (1 shard); Node 22 runs Chromium (2 shards), Chrome (1 shard), Edge (1 shard),
-  Firefox (4 shards), and Safari (1 shard). Node 20 needs pnpm 10.34.5; Node 22 needs pnpm 11.22.0.
+  Firefox (4 shards), and Safari (1 shard). Node 20 needs pnpm 10.34.5; Node 22 needs pnpm 11.24.0.
   The `CI_SH_NODE20_BIN`, `CI_SH_NODE22_BIN`, `CI_SH_PNPM20_BIN`, and `CI_SH_PNPM22_BIN` overrides
   accept explicit executable paths. NVM installations are discovered by major version, with the
   newest installed patch selected by version order.
@@ -512,11 +514,47 @@ alongside the floors.
   "aspirational" budget that's red the moment it lands, which trains everyone to ignore that gate
   entirely rather than fix it. This has recurred independently in the package-size budget
   (`check:package-size`'s minimum-reduction figure) and the qualification axe scanner's evidence
-  requirements — both are now measurement-derived, matching the floors approach above. Any new
-  budget/threshold should start from a measured baseline, not a target number picked in advance.
+  requirements. The package gate's reviewed exception and hard ceilings are detailed in
+  "Package-delivery budget" below; qualification thresholds are measurement-derived, matching the
+  floors approach above. Any new budget/threshold should start from a measured baseline, not a
+  target number picked in advance.
 - It prefers `coverage/coverage-summary.json` (exact statement totals) and falls back to
   `coverage/lcov.info`, which carries no statement records — in that mode the statements figure
   reuses the line figure, and the script says so.
+
+## Package-delivery budget
+
+`pnpm --filter @aceshooting/lyra-ui check:package-size` measures `npm pack --dry-run --json
+--ignore-scripts` after a build and fails closed against `scripts/package-budgets.json`. The
+pre-8.0.0 baseline is 7,829,794 packed bytes, 38,510,084 unpacked bytes, and 4,441 files. The 25%
+unpacked reduction is a hard requirement: its ceiling may not exceed 28,882,563 bytes. Source and
+map rejection is independent, so staying below a byte ceiling can never excuse a dangling map or a
+published TypeScript source file.
+
+The packed 25% target remains recorded as 5,872,345 bytes, but it has one explicit measured
+exception; the gate never claims that target was met. A deliberately favorable lower-bound probe
+kept all required consumer docs, editor data, and custom-elements metadata, fully
+identifier-minified the runtime JavaScript, and omitted declarations, CSS, and other required
+runtime artifacts. Even that incomplete package was 6,088,928 packed bytes — 216,583 bytes over
+the target before restoring the omitted public artifacts. Deleting those artifacts or weakening
+their content is not an acceptable package-size fix.
+
+The exception therefore uses a hard measurement-derived regression ceiling. Final authored
+documentation corrections and canonical regeneration grew the required public payload by 3,688
+packed bytes and 14,084 unpacked bytes from the prior reviewed complete package, including the
+14,080-byte growth of `llms-full.txt`. The reviewed complete package is therefore 6,929,625 packed
+bytes, and its 6,932,540-byte ceiling retains exactly 2,915 bytes (0.042%) of tool/version headroom.
+`validatePackageBudgets()` rejects a missing/renamed exception, a probe that does not exceed the
+mathematical target, headroom over 0.5%, or a ceiling that is not exactly the reviewed measurement
+plus headroom. Any future ceiling increase needs a new reproducible measurement and review
+rationale; never edit the number merely to make a red check green.
+
+The file-count ceiling is derived, not an already-consumed snapshot: 2,500 base artifacts, two
+emitted files for each of the 285 stable tag aliases, the measured 82-file entrypoint remainder,
+and seven non-alias files reserved for the next component scaffold. Incrementing the stable alias
+count budgets that component's two alias files separately. Validation requires the reserve to be
+positive and the 3,159-file ceiling to equal that derivation, so a legitimate new component has
+room while unrelated inventory growth still fails closed.
 
 ## `tsconfig.build.json` and dist hygiene
 
@@ -568,7 +606,11 @@ Defer to `ci.yml` and `package.json#scripts` for when each runs:
   gzip-size regressions against `scripts/bundle-budgets.json`, and re-measures every
   per-component entry so the sizes in `scripts/bundle-stats.json` (read by the README size badges
   and the lyra-ui.com hero) cannot go stale — refresh measured statistics with `--write-stats`.
-  Budgets are reviewed release policy and are never loosened by a generator.
+  Every hard entry and component-aggregate ceiling is paired with its exact reviewed gzip byte
+  measurement. The schema fails closed if either side is missing, if a ceiling is already below its
+  measurement, or if it carries more than 4% headroom. `--print-budget-review` emits a read-only
+  exact-measurement/maximum-ceiling proposal after the integrated source set is final; it never
+  writes or loosens policy, and an existing tighter canary stays tighter unless separately reviewed.
 - `pnpm test:visual` runs the visual-regression screenshot suite against `visual-baselines/`.
 
 `check:hit-area` (WCAG 2.5.8 tappable-size floor) and `check:numeric-guards` (finite-number guards

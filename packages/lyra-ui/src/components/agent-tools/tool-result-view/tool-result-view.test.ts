@@ -5,6 +5,8 @@ import type { LyraToolResultView } from './tool-result-view.js';
 import {
   registerToolRenderer,
   clearToolRenderers,
+  type DirectToolRendererDefinition,
+  type ToolRenderContext,
   type ToolRendererDefinition,
   type ToolRendererRegistry,
 } from './registry.js';
@@ -44,6 +46,7 @@ it('normalizes unsupported fallback property and attribute values to the reflect
 it('resets renderer-owned status when falling back to a different unsupported tool', async () => {
   registerToolRenderer('denied', {
     render: (_result, _args, context) => {
+      if (!context) throw new Error('Expected the tool renderer context.');
       context.reportStatus('denied');
       return litHtml`denied`;
     },
@@ -215,8 +218,8 @@ it('emits lr-render-error and falls back when a candidate matches() predicate th
 });
 
 it('shows a lr-skeleton while an async load() is pending, then renders its resolved output', async () => {
-  let resolveLoad!: (mod: { default: ToolRendererDefinition }) => void;
-  const loadPromise = new Promise<{ default: ToolRendererDefinition }>((resolve) => {
+  let resolveLoad!: (mod: { default: DirectToolRendererDefinition }) => void;
+  const loadPromise = new Promise<{ default: DirectToolRendererDefinition }>((resolve) => {
     resolveLoad = resolve;
   });
   registerToolRenderer('slow_tool', { load: () => loadPromise });
@@ -267,8 +270,8 @@ it('emits lr-render-error and falls back when load() rejects', async () => {
 });
 
 it('ignores a stale load() resolution superseded by a newer tool-name before it settles', async () => {
-  let resolveSlow!: (mod: { default: ToolRendererDefinition }) => void;
-  const slowPromise = new Promise<{ default: ToolRendererDefinition }>((resolve) => {
+  let resolveSlow!: (mod: { default: DirectToolRendererDefinition }) => void;
+  const slowPromise = new Promise<{ default: DirectToolRendererDefinition }>((resolve) => {
     resolveSlow = resolve;
   });
   registerToolRenderer('slow_tool', { load: () => slowPromise });
@@ -393,6 +396,7 @@ describe('status / context.reportStatus', () => {
   it('threads context.reportStatus through render(), setting status while keeping the renderer\'s own content mounted', async () => {
     registerToolRenderer('flaky_tool', {
       render: (_result, _args, context) => {
+        if (!context) throw new Error('Expected the tool renderer context.');
         context.reportStatus('error');
         return litHtml`<span class="flaky-result">partial</span>`;
       },
@@ -409,6 +413,7 @@ describe('status / context.reportStatus', () => {
   it('resets status back to "success" on the next resolve when the newly-matched renderer stays quiet', async () => {
     registerToolRenderer('flaky_tool', {
       render: (_result, _args, context) => {
+        if (!context) throw new Error('Expected the tool renderer context.');
         context.reportStatus('error');
         return litHtml`<span class="flaky-result">partial</span>`;
       },
@@ -429,7 +434,8 @@ describe('status / context.reportStatus', () => {
     registerToolRenderer('slow_status_tool', {
       load: () =>
         Promise.resolve({
-          render: (_result: unknown, _args: unknown, context: { reportStatus: (s: string) => void }) => {
+          render: (_result: unknown, _args: unknown, context?: ToolRenderContext) => {
+            if (!context) throw new Error('Expected the lazy tool renderer context.');
             context.reportStatus('denied');
             return litHtml`<span class="lazy-status">lazy</span>`;
           },

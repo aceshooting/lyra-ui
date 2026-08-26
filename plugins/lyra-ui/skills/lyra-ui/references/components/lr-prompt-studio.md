@@ -6,6 +6,7 @@
 - **Class** `LyraPromptStudio`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 19 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -27,6 +28,7 @@ persistence.
 `versions: readonly PromptStudioVersion[] = []` is a property-only host-controlled input;
 empty/blank message and version ids are omitted and later duplicates use deterministic first-wins
 identity before rendering, editing, focus, selection, and events;
+runtime `null`/non-array values for any of the three not-yet-loaded collections render as empty;
 `selectedVersionId: string | null = null` (attribute `selected-version-id`); `label: string = ''`;
 `heading: string = ''` — visible toolbar heading, falling back to the localized Prompt Studio
 label when unset;

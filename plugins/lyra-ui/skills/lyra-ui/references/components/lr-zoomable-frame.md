@@ -6,6 +6,7 @@
 - **Class** `LyraZoomableFrame`, also available unregistered from `@aceshooting/lyra-ui/components/media/zoomable-frame/zoomable-frame.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 4 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -38,7 +39,7 @@ allocated inline size with a 16:9 aspect ratio by default (override `aspect-rati
   a token cut by the source ceiling is ignored, and later source text cannot affect the controls.
 - `withoutControls: boolean = false`, `withoutInteraction: boolean = false`, and
   `withThemeSync: boolean = false` (reflected attributes `without-controls`,
-  `without-interaction`, `with-theme-sync`) — respectively remove the toolbar, remove pointer and
+  `without-interaction`, `with-theme-sync`) — respectively remove the zoom controls, remove pointer and
   sequential-keyboard iframe interaction by making the browsing context native `inert`, and opt
   into best-effort same-origin theme sync. The inert frame also refuses programmatic focus/click
   and carries no unsupported `aria-disabled` claim.
@@ -58,11 +59,13 @@ removed in v9. They were never part of the registration, root, or documented com
 configure the corresponding public properties instead of depending on sink-policy internals.
 
 **Methods:** `zoomIn()` selects the nearest configured level above the current value;
-`zoomOut()` selects the nearest below it. The toolbar also accepts `+`/`=` and `-`/`_` while one
+`zoomOut()` selects the nearest below it. The control group also accepts `+`/`=` and `-`/`_` while one
 of its controls has focus. `focus(options?)`, `blur()`, and `click()` forward to the internal
 iframe — the component's primary interactive surface — only while the component is connected and
 interaction is enabled. Under `without-interaction` they are deliberate no-ops rather than an
-escape around native `inert`; the two-button zoom toolbar has no single primary action.
+escape around native `inert`; the two-button zoom-control group has no single primary action. Both
+buttons are ordinary independent Tab stops inside a labelled `role="group"`; the container does not
+claim the roving-arrow-key contract of an ARIA toolbar.
 
 **Slots:** `zoom-in-icon` and `zoom-out-icon` replace the decorative control glyphs. Their
 flattened subtrees are always inert and hidden from assistive technology, so use an SVG or glyph
@@ -87,7 +90,7 @@ property and applied to the internal iframe scale; and `--lr-zoomable-frame-cont
 for its active color.
 
 **RTL behavior:** the scaled iframe is a physical canvas and remains pinned to physical top-left in
-both directions. Its zoom controls remain logical interface chrome, so RTL places the toolbar at
+both directions. Its zoom controls remain logical interface chrome, so RTL places the control group at
 inline-end (the physical left edge).
 
 **Security and theme sync:** the iframe always keeps a `sandbox` attribute. The secure Lyra default

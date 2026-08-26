@@ -262,15 +262,31 @@ export function aggregateValues<Row>(
   const numeric = defined.map(finiteValue).filter((value): value is number => value !== undefined);
   if (numeric.length === 0) return aggregation === 'extent' ? [] : undefined;
   const sorted = [...numeric].sort((left, right) => left - right);
-  if (aggregation === 'sum') return numeric.reduce((sum, value) => sum + value, 0);
+  let scale = 0;
+  for (const value of numeric) scale = Math.max(scale, Math.abs(value));
+  let scaledTotal = 0;
+  if (scale > 0) {
+    for (const value of numeric) scaledTotal += value / scale;
+  }
+  if (aggregation === 'sum') {
+    const sum = scale === 0 ? 0 : scaledTotal * scale;
+    return Number.isFinite(sum) ? sum : undefined;
+  }
   if (aggregation === 'min') return sorted[0];
   if (aggregation === 'max') return sorted.at(-1);
-  if (aggregation === 'mean') return numeric.reduce((sum, value) => sum + value, 0) / numeric.length;
+  if (aggregation === 'mean') {
+    const mean = scale === 0 ? 0 : (scaledTotal / numeric.length) * scale;
+    return Number.isFinite(mean) ? mean : undefined;
+  }
   if (aggregation === 'median') {
     const middle = Math.floor(sorted.length / 2);
-    return sorted.length % 2 === 0
-      ? ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2
-      : sorted[middle];
+    if (sorted.length % 2 !== 0) return sorted[middle];
+    const left = sorted[middle - 1] ?? 0;
+    const right = sorted[middle] ?? 0;
+    const median = Math.sign(left) === Math.sign(right)
+      ? left + (right - left) / 2
+      : left / 2 + right / 2;
+    return Number.isFinite(median) ? median : undefined;
   }
   return [sorted[0], sorted.at(-1)];
 }

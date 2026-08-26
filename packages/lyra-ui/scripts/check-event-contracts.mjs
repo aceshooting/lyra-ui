@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isMainModule } from './is-main-module.mjs';
 
 // Keeps the four public event-name surfaces synchronized:
 //   * a component's EventMap type,
@@ -14,7 +15,7 @@
 // present in its effective (inherited) EventMap. Ordinary subclass aliases inherit both the base
 // class JSDoc and EventMap so their CEM surface remains checkable without duplicating @event tags.
 
-import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -2156,7 +2157,6 @@ async function main() {
   );
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
+if (isMainModule(import.meta.url)) {
   await main();
 }
-

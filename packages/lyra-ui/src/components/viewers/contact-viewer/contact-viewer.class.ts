@@ -34,8 +34,9 @@ class LyraContactViewerBase extends LyraElement<LyraContactViewerEventMap> {}
  * Fetches a vCard document and renders one accessible card per contact. Contact names retain
  * level-three heading semantics by default; set `heading-level` from `1`–`6` to fit the surrounding
  * outline, or `none` for visual-only names. At most 250 contacts and 2 MiB of rendered contact text
- * are accepted so eager DOM remains bounded while search, selection and anchors cover every
- * accepted contact.
+ * are accepted so eager DOM remains bounded while search, selection and text-quote anchors cover
+ * every accepted contact. The inherited fragment path performs an exact DOM `id` lookup, but
+ * generated contact cards have no fragment ids; such a jump reports `found: false`.
  *
  * @customElement lr-contact-viewer
  * @event lr-render-error - Fired when fetching or parsing the document fails.

@@ -1,7 +1,9 @@
+import { isMainModule } from './is-main-module.mjs';
+
 // Replaces the broad component/AI wildcard package exports with the exact supported public
 // routes. Component registration/class entries and stable lr-* aliases come from the authoritative
 // component inventory; the small helper list contains only deliberately documented public modules.
-import { existsSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -429,6 +431,6 @@ function run(argv) {
   return 0;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
+if (isMainModule(import.meta.url)) {
   process.exitCode = run(process.argv.slice(2));
 }

@@ -6,6 +6,7 @@
 - **Class** `LyraToolResultDialog`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-result-dialog/tool-result-dialog.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -27,6 +28,8 @@ overlay stack.
 
 - `open: boolean = false` (reflected) — whether the dialog is open; set it directly or use the
   lifecycle methods below
+- `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop-click
+  dismissal; Escape and the built-in close button remain available without it
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — a host attribute names the
   host itself, while the dialog panel remains labelled by its visible tool-name title instead of
   cloning that name. A direct property assignment made without the attribute can name the panel
@@ -42,12 +45,14 @@ overlay stack.
 void` is the reasoned API dismissal;
 `close(reason: ToolResultDialogCloseReason = 'api'): void` closes the dialog (no-op if already
 closed), emits `lr-close` with `reason`, and returns focus to whatever had it before
-the dialog opened. Built-in triggers call this with `'escape'`/`'backdrop'`/`'close-button'`; a
+the dialog opened. Built-in triggers call this with `'escape'`, `'backdrop'` when `lightDismiss` is
+enabled, or `'close-button'`; a
 consumer's own close affordance (e.g. a footer action button) should call it directly with its own
 reason string so every dismissal path funnels through the same event.
 
 **Events:** `lr-close` (`detail: ToolResultDialogCloseReason` — `'escape'|'backdrop'|
-'close-button'|'api'|string`) fired exactly once per dismissal; `lr-maximize-change` (`detail:
+'close-button'|'api'|string`) fired exactly once per dismissal (`'backdrop'` requires
+`lightDismiss`); `lr-maximize-change` (`detail:
 { readonly maximized: boolean }`, the new `maximized` state) fired when the header's
 maximize/restore toggle is clicked.
 
@@ -102,6 +107,8 @@ element, since the trigger typically lives entirely outside this component). `ma
 between the constrained modal size and a near-fullscreen size within the same open dialog and
 open/close lifecycle — unlike `<lr-widget>`'s fullscreen mode there's no separate non-modal resting
 state, so no additional scroll-lock/focus-trap bookkeeping is needed for that transition alone.
+Backdrop clicks leave the dialog open by default; add `light-dismiss` to opt in, matching
+`<lr-dialog>`, `<lr-drawer>`, and `<lr-lightbox>`.
 
 **Known gotchas:**
 

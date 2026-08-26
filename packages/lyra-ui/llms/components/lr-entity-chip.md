@@ -6,6 +6,7 @@
 - **Class** `LyraEntityChip`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/entity-chip/entity-chip.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 3 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -51,7 +52,7 @@ text/accent color), `--lr-entity-chip-bg` (default `var(--lr-color-brand-quiet)`
 <p>
   …first described by
   <lr-entity-chip entity-id="e1" text="Ada Lovelace" type="person">
-    <lr-entity-card slot=""></lr-entity-card> </lr-entity-chip
+    <lr-entity-card show-focus-button="false"></lr-entity-card> </lr-entity-chip
   >.
 </p>
 ```
@@ -60,6 +61,9 @@ text/accent color), `--lr-entity-chip-bg` (default `var(--lr-color-brand-quiet)`
 
 - Reuses `lr-citation-badge`'s exact "real preview content" detection (an assigned element with no
   other `slot`, or non-whitespace text) to decide whether a popover exists at all.
+- Preview content is supplementary and inert. Disable interactive actions on a slotted
+  `lr-entity-card` as shown above, and handle the chip's own `lr-entity-select`/`lr-entity-open`
+  events for navigation.
 - A blank `entityId` disables the chip and cannot produce an activation/open event.
 
 ---

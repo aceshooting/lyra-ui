@@ -6,6 +6,7 @@
 - **Class** `LyraChip`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/chip/chip.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 6 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -40,9 +41,11 @@ relied on `<lr-chip selected>` to create an action.
 
 **Properties:**
 
-- `size: '3xs' | '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — standard visual-density
-  scale for typography, padding, gap, and icon size; `m` preserves the original chip dimensions.
-  Unsupported attributes and untyped property writes normalize to reflected `m`
+- `size: '3xs' | '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'`
+  (reflected) — standard visual-density scale for typography, padding, gap, and icon size; `m`
+  preserves the original chip dimensions. The `small`/`medium`/`large` spellings are exact aliases
+  of `s`/`m`/`l` and round-trip unchanged. Unsupported attributes and untyped property writes
+  normalize to reflected `m`.
 - `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected) —
   **renamed from `tone` in 8.0.0, with no alias** (see above). `<lr-badge>`, `<lr-callout>` and
   `<lr-toast-item>` all already spelled it `variant`. It tints the whole surface using the

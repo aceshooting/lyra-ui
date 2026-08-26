@@ -6,9 +6,10 @@
 - **Class** `LyraGraph`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
-- **Themeable via** 19 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -99,7 +100,9 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
   button per visible node/link/hull; the canvas repaints a non-color dashed/ring focus cue for the
   currently focused node, link, or hull and uses a system color under forced colors. In both renderers, node, link, and community-hull picking keeps at
   least 24 CSS px of screen-space geometry as the viewport zoom changes; this enlarges interaction
-  only, not the visible marks.
+  only, not the visible marks. Every data-driven and token-derived canvas color is resolved through
+  the live computed CSS cascade before painting, so CSS-wide keywords such as `inherit`/`unset`,
+  custom-property references, and modern color functions reach Canvas as concrete colors.
 
 **Methods:** `focusNode(id, options?: { zoom? })` and `fit(options?: { padding?: number })` control the
 camera; `getNodePosition(id)` returns the current `{ x, y }` in graph-local drawing coordinates, or
@@ -130,7 +133,9 @@ the peers loaded fine but `nodes` is empty),
 (`renderer="canvas"` only — the drawing surface, its hover tooltip replacing the SVG `<title>`, and
 the offscreen keyboard-roving items)
 
-**Themeable custom properties:** `--lr-node-fill` (set inline per-node from `LyraGraphNode.color`,
+**Themeable custom properties:** `--lr-canvas-reserved-height` (default
+`var(--lr-size-24rem)`) sets the host block size and is shared with the optional pre-upgrade
+reservation stylesheet; an explicit outer `block-size` still wins. `--lr-node-fill` (set inline per-node from `LyraGraphNode.color`,
 falls back to `--lr-color-brand`) and `--lr-link-color` (set inline per-link from
 `LyraGraphLink.color`, falling back to `--lr-color-border`); also uses `--lr-color-text` +
 `--lr-font` (label text), `--lr-focus-ring-*` (node/link `:focus-visible` outline).

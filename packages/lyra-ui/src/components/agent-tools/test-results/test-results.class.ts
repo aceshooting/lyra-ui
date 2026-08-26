@@ -166,6 +166,8 @@ export interface LyraTestResultsEventMap {
  * @cssprop [--lr-test-results-failed-color=var(--lr-color-danger)] - Failed-state foreground.
  * @cssprop [--lr-test-results-skipped-color=var(--lr-color-text-quiet)] - Skipped-state foreground.
  * @cssprop [--lr-test-results-running-color=var(--lr-color-brand)] - Running-state foreground.
+ * @cssprop [--lr-test-results-spinner-size=var(--lr-size-1em)] - Diameter of the composed spinner
+ *   in a running test row.
  * @status stable
  * @since 4.0.0
  */

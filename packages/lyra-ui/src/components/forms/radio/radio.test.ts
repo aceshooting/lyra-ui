@@ -6,6 +6,18 @@ import type { LyraRadio } from "./radio.js";
 import type { LyraRadioGroup } from "./radio-group.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
+function requiredItem<T>(
+  items: ArrayLike<T>,
+  index: number,
+  description: string
+): T {
+  const item = items[index];
+  if (item === undefined) {
+    throw new Error(`Expected ${description} at index ${index}.`);
+  }
+  return item;
+}
+
 it("contains a horizontal button group with long content at 320px in LTR and RTL", async () => {
   const label =
     "InternationalizedRadioGroupLabelWithoutAnyNaturalBreakOpportunity";
@@ -155,12 +167,15 @@ it("emits one cancelable group-owned lr-invalid alias when its aggregate validit
 
   expect(group.checkValidity()).to.be.false;
   expect(aliases).to.have.lengthOf(1);
-  expect(aliases[0].target === group).to.equal(true);
-  expect(aliases[0].bubbles && aliases[0].composed).to.be.true;
-  expect(aliases[0].cancelable).to.be.true;
+  const alias = requiredItem(aliases, 0, "group invalid alias");
+  expect(alias.target === group).to.equal(true);
+  expect(alias.bubbles && alias.composed).to.be.true;
+  expect(alias.cancelable).to.be.true;
   // Nothing cancelled it, so the browser's own validation UI stays enabled.
   expect(natives).to.have.lengthOf(1);
-  expect(natives[0].defaultPrevented).to.be.false;
+  expect(
+    requiredItem(natives, 0, "native group invalid event").defaultPrevented
+  ).to.be.false;
 });
 
 it("cancels the native invalid event when the group-owned lr-invalid alias is cancelled", async () => {
@@ -178,7 +193,9 @@ it("cancels the native invalid event when the group-owned lr-invalid alias is ca
 
   expect(group.checkValidity()).to.be.false;
   expect(natives).to.have.lengthOf(1);
-  expect(natives[0].defaultPrevented).to.be.true;
+  expect(
+    requiredItem(natives, 0, "native group invalid event").defaultPrevented
+  ).to.be.true;
 });
 
 it("recreates the group membership observer in the adopted owner realm and ignores its stale callback", async () => {
@@ -527,9 +544,7 @@ it("constructs its label observer in the adopted owner realm", async () => {
         observerDescriptor
       );
     } else {
-      delete (
-        frameWindow as Window & { MutationObserver?: typeof MutationObserver }
-      ).MutationObserver;
+      Reflect.deleteProperty(frameWindow, "MutationObserver");
     }
     frame.remove();
   }
@@ -642,13 +657,15 @@ it("moves selection and DOM focus when arrow navigation is used", async () => {
     </lr-radio-group>
   `)) as LyraRadioGroup;
   const radios = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
-  const firstBase = radios[0].shadowRoot!.querySelector(
+  const first = requiredItem(radios, 0, "first arrow-navigation radio");
+  const second = requiredItem(radios, 1, "second arrow-navigation radio");
+  const firstBase = first.shadowRoot!.querySelector(
     '[part="base"]'
   ) as HTMLElement;
-  const secondBase = radios[1].shadowRoot!.querySelector(
+  const secondBase = second.shadowRoot!.querySelector(
     '[part="base"]'
   ) as HTMLElement;
-  radios[0].checked = true;
+  first.checked = true;
   firstBase.focus();
   const eventPromise = oneEvent(group, "lr-change");
   firstBase.dispatchEvent(
@@ -661,8 +678,8 @@ it("moves selection and DOM focus when arrow navigation is used", async () => {
   );
   const event = await eventPromise;
   expect(event.detail.value).to.equal("b");
-  expect(radios[1].checked).to.be.true;
-  expect(radios[1].shadowRoot!.activeElement === secondBase).to.be.true;
+  expect(second.checked).to.be.true;
+  expect(second.shadowRoot!.activeElement === secondBase).to.be.true;
   await expect(group).to.be.accessible();
 });
 
@@ -674,13 +691,15 @@ it('swaps ArrowLeft/ArrowRight under dir="rtl" so "forward" follows reading dire
     </lr-radio-group>
   `)) as LyraRadioGroup;
   const radios = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
-  const firstBase = radios[0].shadowRoot!.querySelector(
+  const first = requiredItem(radios, 0, "first RTL radio");
+  const second = requiredItem(radios, 1, "second RTL radio");
+  const firstBase = first.shadowRoot!.querySelector(
     '[part="base"]'
   ) as HTMLElement;
-  const secondBase = radios[1].shadowRoot!.querySelector(
+  const secondBase = second.shadowRoot!.querySelector(
     '[part="base"]'
   ) as HTMLElement;
-  radios[0].checked = true;
+  first.checked = true;
   firstBase.focus();
 
   // ArrowLeft is "forward" under RTL -- the mirror image of ArrowRight's LTR meaning
@@ -695,8 +714,8 @@ it('swaps ArrowLeft/ArrowRight under dir="rtl" so "forward" follows reading dire
     })
   );
   expect((await forwardEvent).detail.value).to.equal("b");
-  expect(radios[1].checked).to.be.true;
-  expect(radios[1].shadowRoot!.activeElement === secondBase).to.be.true;
+  expect(second.checked).to.be.true;
+  expect(second.shadowRoot!.activeElement === secondBase).to.be.true;
 
   // ArrowRight is "backward" under RTL, so it should return selection/focus to the first radio.
   const backwardEvent = oneEvent(group, "lr-change");
@@ -709,8 +728,8 @@ it('swaps ArrowLeft/ArrowRight under dir="rtl" so "forward" follows reading dire
     })
   );
   expect((await backwardEvent).detail.value).to.equal("a");
-  expect(radios[0].checked).to.be.true;
-  expect(radios[0].shadowRoot!.activeElement === firstBase).to.be.true;
+  expect(first.checked).to.be.true;
+  expect(first.shadowRoot!.activeElement === firstBase).to.be.true;
 });
 
 it("uses roving tabindex: only the checked (or first enabled) radio is a Tab stop", async () => {
@@ -724,13 +743,15 @@ it("uses roving tabindex: only the checked (or first enabled) radio is a Tab sto
   const radios = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
   const base = (r: LyraRadio) =>
     r.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  expect(base(radios[0]).tabIndex).to.equal(0);
-  expect(base(radios[1]).tabIndex).to.equal(-1);
+  const first = requiredItem(radios, 0, "first roving-tabindex radio");
+  const second = requiredItem(radios, 1, "second roving-tabindex radio");
+  expect(base(first).tabIndex).to.equal(0);
+  expect(base(second).tabIndex).to.equal(-1);
 
-  base(radios[1]).click();
+  base(second).click();
   await group.updateComplete;
-  expect(base(radios[0]).tabIndex).to.equal(-1);
-  expect(base(radios[1]).tabIndex).to.equal(0);
+  expect(base(first).tabIndex).to.equal(-1);
+  expect(base(second).tabIndex).to.equal(0);
 });
 
 it("keeps an enabled tab stop when the selected radio itself is disabled", async () => {
@@ -741,6 +762,7 @@ it("keeps an enabled tab stop when the selected radio itself is disabled", async
     </lr-radio-group>
   `)) as LyraRadioGroup;
   const [a, b] = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
+  if (!a || !b) throw new Error("Expected both selected-disabled radios.");
   await Promise.all([group.updateComplete, a.updateComplete, b.updateComplete]);
   const base = (radio: LyraRadio) =>
     radio.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
@@ -786,6 +808,7 @@ it("restores the declarative default-checked state on form reset", async () => {
     </form>
   `)) as HTMLFormElement;
   const [a, b] = [...form.querySelectorAll("lr-radio")] as LyraRadio[];
+  if (!a || !b) throw new Error("Expected both reset radios.");
   expect(a.checked).to.be.true;
 
   b.checked = true;
@@ -833,6 +856,7 @@ it("leaves group-owned radio restoration to its owning group", async () => {
     </lr-radio-group>
   `)) as LyraRadioGroup;
   const [a, b] = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
+  if (!a || !b) throw new Error("Expected both group-restoration radios.");
   await Promise.all([group.updateComplete, a.updateComplete, b.updateComplete]);
 
   b.formStateRestoreCallback("checked", "restore");
@@ -854,6 +878,7 @@ it("temporarily disables a bare radio through an ancestor fieldset without overw
     </form>
   `)) as HTMLFormElement;
   const [a, b] = [...form.querySelectorAll("lr-radio")] as LyraRadio[];
+  if (!a || !b) throw new Error("Expected both fieldset radios.");
   const fieldset = form.querySelector("fieldset") as HTMLFieldSetElement;
 
   expect(a.effectiveDisabled).to.be.false;
@@ -943,6 +968,7 @@ it("cascades fieldset-disabled state down to radios nested inside a lr-radio-gro
   `)) as HTMLFormElement;
   const group = form.querySelector("lr-radio-group") as LyraRadioGroup;
   const [a, b] = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
+  if (!a || !b) throw new Error("Expected both nested fieldset radios.");
   const fieldset = form.querySelector("fieldset") as HTMLFieldSetElement;
   await group.updateComplete;
 
@@ -984,6 +1010,7 @@ it("wires hint/error text to aria-describedby on the radiogroup", async () => {
   await group.updateComplete;
   const errorId = group.shadowRoot!.querySelector('[part="error"]')!.id;
   expect(errorId).to.be.ok;
+  expect(base.getAttribute("aria-invalid")).to.equal("true");
   expect(base.getAttribute("aria-describedby")).to.equal(
     `${hintId} ${errorId}`
   );
@@ -1019,8 +1046,9 @@ it("treats required as a group constraint that becomes valid when any owned radi
   expect(form.checkValidity(), "an empty required group is invalid").to.be
     .false;
 
-  radios[1].click();
-  expect(radios[1].checked).to.be.true;
+  const second = requiredItem(radios, 1, "second required-group radio");
+  second.click();
+  expect(second.checked).to.be.true;
   expect(form.checkValidity(), "one checked option satisfies the whole group")
     .to.be.true;
   expect(radios.every((radio) => radio.validity.valid)).to.be.true;
@@ -1130,6 +1158,7 @@ describe("aggregate form ownership", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
       await group.updateComplete;
       const [a, b] = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
+      if (!a || !b) throw new Error("Expected both early-restoration radios.");
       expect(group.value).to.equal("b");
       expect([a.checked, b.checked]).to.deep.equal([false, true]);
       expect(restored).to.deep.equal([]);
@@ -1158,6 +1187,7 @@ it("normalizes declarative, programmatic, restored, and reset state to one check
   `)) as HTMLFormElement;
   const group = form.querySelector("lr-radio-group") as LyraRadioGroup;
   const [a, b] = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
+  if (!a || !b) throw new Error("Expected both normalization radios.");
   await group.updateComplete;
 
   expect(
@@ -1224,6 +1254,7 @@ it("exposes exactly one aggregate lr-change shape when an owned radio is clicked
     </lr-radio-group>
   `)) as LyraRadioGroup;
   const [a, b] = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
+  if (!a || !b) throw new Error("Expected both aggregate-event radios.");
   const events: CustomEvent[] = [];
   group.addEventListener("lr-change", (event) =>
     events.push(event as CustomEvent)
@@ -1346,7 +1377,7 @@ it("honors disabled-group membership and releases imposed state during synchrono
   expect(radioEvents).to.have.length(0);
   expect(groupEvents).to.have.length(0);
 
-  await new Promise((resolve) => queueMicrotask(resolve));
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
   await Promise.all([group.updateComplete, radio.updateComplete]);
   expect(radio.effectiveDisabled).to.be.true;
 
@@ -1371,9 +1402,12 @@ it("synchronously reconciles both groups when a checked radio moves between name
   const [source, destination] = [
     ...form.querySelectorAll("lr-radio-group"),
   ] as LyraRadioGroup[];
+  if (!source || !destination)
+    throw new Error("Expected both reparenting radio groups.");
   const [moved, remaining] = [
     ...source.querySelectorAll("lr-radio"),
   ] as LyraRadio[];
+  if (!moved || !remaining) throw new Error("Expected both source radios.");
   await Promise.all([source.updateComplete, destination.updateComplete]);
   expect(
     form.checkValidity(),
@@ -1459,7 +1493,7 @@ it("preserves author-provided names while effective group authority changes", as
   expect(radio.effectiveName).to.equal("second-group-name");
 
   radio.remove();
-  await new Promise((resolve) => queueMicrotask(resolve));
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
   await radio.updateComplete;
   expect(radio.name).to.equal("author-name");
   expect(radio.getAttribute("name")).to.equal("author-name");
@@ -1507,6 +1541,8 @@ it("keeps the author name through a direct move between already-connected named 
   const [destination, source] = [
     ...root.querySelectorAll("lr-radio-group"),
   ] as LyraRadioGroup[];
+  if (!destination || !source)
+    throw new Error("Expected both connected radio groups.");
   const radio = source.querySelector("lr-radio") as LyraRadio;
   destination.append(radio);
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -1531,7 +1567,9 @@ it("clears group-imposed disabled/required on every radio when turned back off",
     </lr-radio-group>
   `)) as LyraRadioGroup;
   const radios = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
-  expect(radios[0].effectiveDisabled).to.be.true;
+  const first = requiredItem(radios, 0, "first group-authority radio");
+  const second = requiredItem(radios, 1, "second group-authority radio");
+  expect(first.effectiveDisabled).to.be.true;
   expect(
     radios.every((radio) => !radio.effectiveRequired),
     "disabled radios do not own an active form-validity constraint"
@@ -1545,11 +1583,11 @@ it("clears group-imposed disabled/required on every radio when turned back off",
   group.disabled = false;
   group.required = false;
   await group.updateComplete;
-  await new Promise((resolve) => queueMicrotask(resolve));
-  expect(radios[0].effectiveDisabled).to.be.false;
-  expect(radios[1].effectiveDisabled).to.be.false;
-  expect(radios[0].effectiveRequired).to.be.false;
-  expect(radios[1].effectiveRequired).to.be.false;
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  expect(first.effectiveDisabled).to.be.false;
+  expect(second.effectiveDisabled).to.be.false;
+  expect(first.effectiveRequired).to.be.false;
+  expect(second.effectiveRequired).to.be.false;
   expect(groupBase.getAttribute("aria-disabled")).to.equal("false");
 });
 
@@ -1567,6 +1605,7 @@ it("does not move or select from keyboard while the group or fieldset is disable
   const group = form.querySelector("lr-radio-group") as LyraRadioGroup;
   const fieldset = form.querySelector("fieldset") as HTMLFieldSetElement;
   const [a, b] = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
+  if (!a || !b) throw new Error("Expected both disabled-navigation radios.");
   a.checked = true;
 
   group.disabled = true;
@@ -1824,6 +1863,69 @@ it("is accessible as a label-less radio named only by aria-label", async () => {
   await expect(el).to.be.accessible();
 });
 
+it("retains the base flex layout when disabled state adds a second part token", async () => {
+  const el = (await fixture(
+    html`<lr-radio disabled>Disabled option</lr-radio>`
+  )) as LyraRadio;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+
+  expect(base.part.contains("disabled")).to.be.true;
+  expect(getComputedStyle(base).display).to.equal("inline-flex");
+  expect(getComputedStyle(base).alignItems).to.equal("center");
+});
+
+it("does not select either radio rendering from nested native or authored actions", async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <lr-radio value="plain">
+        Plain
+        <details><summary>More details</summary></details>
+        <span tabindex="0">Focusable detail</span>
+      </lr-radio>
+      <lr-radio-button value="button">
+        Button
+        <details><summary>More details</summary></details>
+        <span tabindex="0">Focusable detail</span>
+      </lr-radio-button>
+    </div>
+  `);
+  const radios = [
+    ...wrapper.querySelectorAll("lr-radio, lr-radio-button"),
+  ] as LyraRadio[];
+
+  for (const radio of radios) radio.querySelector("summary")!.click();
+  const mouseSelections = radios.map((radio) => radio.checked);
+
+  const keySelections: boolean[] = [];
+  const keyCancellations: boolean[] = [];
+  for (const radio of radios) {
+    radio.checked = false;
+    await radio.updateComplete;
+    const event = new KeyboardEvent("keydown", {
+      key: " ",
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    radio.querySelector<HTMLElement>('[tabindex="0"]')!.dispatchEvent(event);
+    keySelections.push(radio.checked);
+    keyCancellations.push(event.defaultPrevented);
+  }
+
+  expect(mouseSelections, "clicking nested summary actions").to.deep.equal([
+    false,
+    false,
+  ]);
+  expect(keySelections, "Space on nested authored tab stops").to.deep.equal([
+    false,
+    false,
+  ]);
+  expect(
+    keyCancellations,
+    "the outer radio does not consume the nested key action"
+  ).to.deep.equal([false, false]);
+});
+
 describe("lifecycle: attachInternals guard", () => {
   it("degrades gracefully instead of throwing when ElementInternals is unavailable", async () => {
     const original = (globalThis as { ElementInternals?: unknown })
@@ -1968,10 +2070,12 @@ it("fires input and change for arrow-key selection, matching click and Space", a
     </lr-radio-group>
   `)) as LyraRadioGroup;
   const radios = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
-  const firstBase = radios[0]!.shadowRoot!.querySelector(
+  const first = requiredItem(radios, 0, "first arrow-event radio");
+  const second = requiredItem(radios, 1, "second arrow-event radio");
+  const firstBase = first.shadowRoot!.querySelector(
     '[part="base"]'
   ) as HTMLElement;
-  radios[0]!.checked = true;
+  first.checked = true;
   firstBase.focus();
 
   const seen: Array<{ type: string; event: Event }> = [];
@@ -1990,7 +2094,7 @@ it("fires input and change for arrow-key selection, matching click and Space", a
   );
   await pending;
 
-  expect(radios[1]!.checked, "arrow navigation moves the selection").to.be.true;
+  expect(second.checked, "arrow navigation moves the selection").to.be.true;
   // Native <input type=radio> fires input+change on arrow navigation; a consumer bound to the
   // native-mirroring events must not silently miss keyboard selection.
   expect(seen.map(({ type }) => type)).to.deep.equal([
@@ -1999,12 +2103,16 @@ it("fires input and change for arrow-key selection, matching click and Space", a
     "change",
     "lr-change",
   ]);
-  expect(seen[0].event instanceof InputEvent).to.be.true;
-  expect(seen[2].event.constructor === Event).to.be.true;
-  expect(seen[0].event.target === group && seen[2].event.target === group).to.be
-    .true;
-  expect(seen[1].event instanceof CustomEvent).to.be.true;
-  expect((seen[1].event as CustomEvent).detail.value).to.equal("m");
+  const nativeInput = requiredItem(seen, 0, "native arrow input event");
+  const inputAlias = requiredItem(seen, 1, "arrow input alias");
+  const nativeChange = requiredItem(seen, 2, "native arrow change event");
+  expect(nativeInput.event instanceof InputEvent).to.be.true;
+  expect(nativeChange.event.constructor === Event).to.be.true;
+  expect(
+    nativeInput.event.target === group && nativeChange.event.target === group
+  ).to.be.true;
+  expect(inputAlias.event instanceof CustomEvent).to.be.true;
+  expect((inputAlias.event as CustomEvent).detail.value).to.equal("m");
 });
 
 describe("size", () => {
@@ -2173,12 +2281,12 @@ describe("lr-radio-group size", () => {
     el.size = "s";
     await el.updateComplete;
     await Promise.all(
-      [...el.querySelectorAll("lr-radio, lr-radio-button")].map(
+      [...el.querySelectorAll<LyraRadio>("lr-radio, lr-radio-button")].map(
         (radio) => radio.updateComplete
       )
     );
     expect(
-      [...el.querySelectorAll("lr-radio, lr-radio-button")].map(
+      [...el.querySelectorAll<LyraRadio>("lr-radio, lr-radio-button")].map(
         (radio) => radio.effectiveSize
       )
     ).to.deep.equal(["s", "s", "s"]);
@@ -2240,6 +2348,7 @@ describe("lr-radio-group orientation, focus, and compatibility aliases", () => {
       </lr-radio-group>
     `)) as LyraRadioGroup & { orientation: "horizontal" | "vertical" };
     const [a, b] = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
+    if (!a || !b) throw new Error("Expected both vertical-orientation radios.");
     const aBase = a.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     const radiogroup = group.shadowRoot!.querySelector(
       '[role="radiogroup"]'
@@ -2280,6 +2389,7 @@ describe("lr-radio-group orientation, focus, and compatibility aliases", () => {
       </lr-radio-group>
     `)) as LyraRadioGroup;
     const [a, , c] = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
+    if (!a || !c) throw new Error("Expected the enabled horizontal radios.");
     const changed = oneEvent(group, "change");
     (
       a.shadowRoot!.querySelector('[part~="base"]') as HTMLElement
@@ -2309,6 +2419,7 @@ describe("lr-radio-group orientation, focus, and compatibility aliases", () => {
       </lr-radio-group>
     `)) as LyraRadioGroup;
     const [, b, c] = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
+    if (!b || !c) throw new Error("Expected the enabled focus-target radios.");
     group.focus();
     expect(
       c.shadowRoot!.activeElement ===
@@ -2332,6 +2443,7 @@ describe("lr-radio-group orientation, focus, and compatibility aliases", () => {
       </lr-radio-group>
     `)) as LyraRadioGroup;
     const [, b] = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
+    if (!b) throw new Error("Expected the non-selected focused radio.");
 
     b.focus();
     expect(
@@ -2349,6 +2461,7 @@ describe("lr-radio-group orientation, focus, and compatibility aliases", () => {
       </lr-radio-group>
     `)) as LyraRadioGroup;
     const [a, b] = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
+    if (!a || !b) throw new Error("Expected both host-activation radios.");
     await Promise.all([
       group.updateComplete,
       a.updateComplete,
@@ -2743,6 +2856,64 @@ it("exposes the group willValidate flag and reports validity on demand", async (
   expect(group.reportValidity()).to.equal(true);
 });
 
+it("keeps pristine required group ARIA neutral until validation is revealed", async () => {
+  const group = (await fixture(html`
+    <lr-radio-group required label="Choice">
+      <lr-radio value="a">A</lr-radio>
+      <lr-radio value="b">B</lr-radio>
+    </lr-radio-group>
+  `)) as LyraRadioGroup;
+  await group.updateComplete;
+  const radiogroup = group.shadowRoot!.querySelector('[role="radiogroup"]')!;
+
+  expect(group.validity.valueMissing).to.be.true;
+  expect(radiogroup.getAttribute("aria-invalid")).to.equal("false");
+
+  expect(group.checkValidity()).to.equal(false);
+  await group.updateComplete;
+  expect(radiogroup.getAttribute("aria-invalid")).to.equal("true");
+
+  group.value = "a";
+  await group.updateComplete;
+  expect(radiogroup.getAttribute("aria-invalid")).to.equal("false");
+});
+
+it("reveals aggregate ARIA through native form validation exactly once and remains barred in a disabled fieldset", async () => {
+  const form = (await fixture(html`
+    <form>
+      <fieldset>
+        <lr-radio-group required label="Choice">
+          <lr-radio value="a">A</lr-radio>
+          <lr-radio value="b">B</lr-radio>
+        </lr-radio-group>
+      </fieldset>
+    </form>
+  `)) as HTMLFormElement;
+  const fieldset = form.querySelector("fieldset")!;
+  const group = form.querySelector("lr-radio-group") as LyraRadioGroup;
+  await group.updateComplete;
+  const radiogroup = group.shadowRoot!.querySelector('[role="radiogroup"]')!;
+  let aliases = 0;
+  group.addEventListener("lr-invalid", (event) => {
+    if (event.target === group) aliases += 1;
+  });
+
+  expect(radiogroup.getAttribute("aria-invalid")).to.equal("false");
+  expect(form.reportValidity()).to.equal(false);
+  await group.updateComplete;
+  expect(radiogroup.getAttribute("aria-invalid")).to.equal("true");
+  expect(aliases).to.equal(1);
+
+  form.reset();
+  fieldset.disabled = true;
+  await group.updateComplete;
+  expect(radiogroup.getAttribute("aria-invalid")).to.equal("false");
+  expect(form.reportValidity()).to.equal(true);
+  await group.updateComplete;
+  expect(aliases).to.equal(1);
+  expect(radiogroup.getAttribute("aria-invalid")).to.equal("false");
+});
+
 it("bars the group from constraint validation while disabled, like a native disabled control", async () => {
   const group = (await fixture(html`
     <lr-radio-group required disabled label="Choice">
@@ -3023,6 +3194,7 @@ describe("lr-radio-group branch-coverage edge cases", () => {
     `)) as LyraRadioGroup;
     await group.updateComplete;
     const [a, b] = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
+    if (!a || !b) throw new Error("Expected both selection-refusal radios.");
     const bare = document.createElement("lr-radio") as LyraRadio;
     bare.value = "c";
 
@@ -3181,6 +3353,7 @@ describe("lr-radio-group branch-coverage edge cases", () => {
       </lr-radio-group>
     `)) as LyraRadioGroup;
     const [a, b, c] = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
+    if (!a || !b || !c) throw new Error("Expected all plain-LTR radios.");
     await group.updateComplete;
     const aBase = a.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 
@@ -3220,6 +3393,7 @@ describe("lr-radio-group branch-coverage edge cases", () => {
       </lr-radio-group>
     `)) as LyraRadioGroup;
     const [a, b, c] = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
+    if (!a || !b || !c) throw new Error("Expected all Home/End radios.");
     await group.updateComplete;
     const bBase = b.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
 
@@ -3257,6 +3431,7 @@ describe("lr-radio-group branch-coverage edge cases", () => {
       </lr-radio-group>
     `)) as LyraRadioGroup;
     const [a, b] = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
+    if (!a || !b) throw new Error("Expected both disabled-keydown radios.");
     await group.updateComplete;
 
     // A disabled radio is never a real keyboard focus target, but a synthetic event dispatched
@@ -3285,6 +3460,9 @@ describe("lr-radio-group branch-coverage edge cases", () => {
     const [a, b, c, d, e] = [
       ...group.querySelectorAll("lr-radio"),
     ] as LyraRadio[];
+    if (!a || !b || !c || !d || !e) {
+      throw new Error("Expected all availability-filter radios.");
+    }
     await group.updateComplete;
 
     const changed = oneEvent(group, "change");
@@ -3309,6 +3487,7 @@ describe("lr-radio-group branch-coverage edge cases", () => {
       </lr-radio-group>
     `)) as LyraRadioGroup;
     const [a, b] = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
+    if (!a || !b) throw new Error("Expected both live-availability radios.");
     const firstWrap = group.querySelector<HTMLElement>("#first-wrap")!;
     await group.updateComplete;
 
@@ -3335,6 +3514,7 @@ describe("lr-radio-group branch-coverage edge cases", () => {
     `)) as LyraRadioGroup;
     await outer.updateComplete;
     const [p] = [...outer.querySelectorAll(":scope > lr-radio")] as LyraRadio[];
+    if (!p) throw new Error("Expected the outer-group radio.");
     // `:scope > lr-radio-group lr-radio` (not the ambiguous `lr-radio-group lr-radio`, which would
     // also match `p` itself as a descendant of the outer group) unambiguously reaches the inner
     // group's own radio.
@@ -3453,6 +3633,7 @@ describe("lr-radio-group branch-coverage edge cases", () => {
       </lr-radio-group>
     `)) as LyraRadioGroup;
     const [a, b] = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
+    if (!a || !b) throw new Error("Expected both group-default reset radios.");
     await group.updateComplete;
     expect(a.checked).to.be.true;
 
@@ -3486,6 +3667,7 @@ describe("lr-radio-group branch-coverage edge cases", () => {
     `)) as HTMLFormElement;
     const group = form.querySelector("lr-radio-group") as LyraRadioGroup;
     const [a, b] = [...group.querySelectorAll("lr-radio")] as LyraRadio[];
+    if (!a || !b) throw new Error("Expected both form-reset radios.");
     await group.updateComplete;
 
     b.click();

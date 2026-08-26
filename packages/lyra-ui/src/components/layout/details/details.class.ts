@@ -52,9 +52,9 @@ export interface LyraDetailsEventMap {
  * @slot summary - Summary content. Takes priority over `summary` when any light-DOM child
  *   carries `slot="summary"` — the fallback localized "Details" text only appears when neither
  *   is set.
- * @slot header-actions - Extra controls rendered as a peer of the summary row (e.g. a trailing
- *   "add" button), never a descendant of the native `<summary>` toggle target — nesting an
- *   interactive control inside `summary` would make every press on it also toggle the panel.
+ * @slot header-actions - Extra controls rendered in the summary row (e.g. a trailing "add"
+ *   button). Activating the wrapper or an interactive slotted descendant does not toggle the
+ *   panel.
  * @slot expand-icon - Icon shown while the panel is closed.
  * @slot collapse-icon - Icon shown while the panel is open.
  * @slot - Panel content.
@@ -323,6 +323,15 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
     // already exempts such controls from disclosure activation, so leaving their click alone is
     // both the platform contract and the only way a slotted link can navigate.
     const path = event.composedPath();
+    if (
+      path.some(
+        (node) =>
+          (node as Partial<Node> | null)?.nodeType === 1 &&
+          (node as Element).matches('[part~="header-actions"]')
+      )
+    ) {
+      return;
+    }
     const summaryIndex = path.findIndex(
       (node) =>
         (node as Partial<Node> | null)?.nodeType === 1 &&
@@ -400,6 +409,9 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
               >${this.summary}</slot
             ></span
           >
+          <span part="header-actions" ?hidden=${!this.hasHeaderActionsSlot}>
+            <slot name="header-actions" @slotchange=${this.onHeaderActionsSlotChange}></slot>
+          </span>
           <span part="icon summary-icon" aria-hidden="true" inert>
             <slot name=${this.open ? 'collapse-icon' : 'expand-icon'}
               ><span class="icon-fallback">${chevronIcon()}</span></slot
@@ -407,9 +419,6 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
           </span>
         </span>
       </summary>
-      <span part="header-actions" ?hidden=${!this.hasHeaderActionsSlot}>
-        <slot name="header-actions" @slotchange=${this.onHeaderActionsSlotChange}></slot>
-      </span>
       <div part="content"><slot></slot></div>
     </details>`;
   }

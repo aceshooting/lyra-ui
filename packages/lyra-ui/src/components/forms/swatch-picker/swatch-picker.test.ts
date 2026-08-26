@@ -1,5 +1,6 @@
-import { fixture, expect, html, oneEvent } from "@open-wc/testing";
+import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { setReducedMotion } from "../../../../test/wtr-media.js";
 import "./swatch-picker.js";
 import type { LyraSwatchPicker } from "./swatch-picker.js";
 import { styles } from "./swatch-picker.styles.js";
@@ -57,6 +58,23 @@ describe("lr-swatch-picker", () => {
     expect(swatches(el).map((swatch) => swatch.dataset["value"])).to.deep.equal(
       ["red", "green", "blue"]
     );
+  });
+
+  it('drops swatches with empty or whitespace-only labels while retaining an accessible valid option', async () => {
+    const el = (await fixture(html`
+      <lr-swatch-picker
+        .items=${[
+          { value: 'blue', color: '#0969da', label: 'Blue' },
+          { value: 'empty', color: '#1a7f37', label: '' },
+          { value: 'blank', color: '#cf222e', label: '   ' },
+        ]}
+      ></lr-swatch-picker>
+    `)) as LyraSwatchPicker;
+
+    expect(el.items.length).to.equal(1);
+    expect(swatches(el).length).to.equal(1);
+    expect(swatches(el)[0]!.getAttribute('aria-label')).to.equal('Blue');
+    await expect(el).to.be.accessible();
   });
   it("rejects unsafe option colors from both CSS and gemstone SVG paint sinks", async () => {
     const el = await fixture<LyraSwatchPicker>(
@@ -656,6 +674,45 @@ describe("lr-swatch-picker", () => {
     expect(getComputedStyle(fill).backgroundColor).to.equal("rgb(9, 105, 218)");
   });
 
+  it('limits the forced-colors opt-out to the rendered data-color surfaces', async () => {
+    const el = (await fixture(html`
+      <lr-swatch-picker
+        .items=${[
+          { value: 'plain', color: '#0969da', label: 'Plain' },
+          {
+            value: 'icon',
+            color: '#1a7f37',
+            label: 'Icon',
+            icon: html`<svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="5"></circle></svg>`,
+          },
+        ]}
+      ></lr-swatch-picker>
+    `)) as LyraSwatchPicker;
+    const buttons = swatches(el);
+    const fill = buttons[0]!.querySelector<HTMLElement>('[part="swatch-fill"]')!;
+    const icon = buttons[1]!.querySelector<HTMLElement>('[part="swatch-icon"]')!;
+    const fillAdjustment = getComputedStyle(fill).getPropertyValue('forced-color-adjust');
+    const iconAdjustment = getComputedStyle(icon).getPropertyValue('forced-color-adjust');
+    if (!CSS.supports('forced-color-adjust', 'none')) {
+      expect(
+        fillAdjustment,
+        'unsupported engines expose no computed forced-color adjustment',
+      ).to.equal('');
+      expect(
+        iconAdjustment,
+        'unsupported engines expose no computed forced-color adjustment',
+      ).to.equal('');
+      return;
+    }
+
+    expect(fillAdjustment).to.equal('none');
+    expect(iconAdjustment).to.equal('none');
+    expect(
+      getComputedStyle(buttons[0]!).getPropertyValue('forced-color-adjust'),
+      'the interactive chrome remains controlled by the forced-colors theme',
+    ).to.equal('auto');
+  });
+
   it("gives the swatch hit target the shared minimum touch-target size without inflating the visible fill", async () => {
     const el = (await fixture(
       html`<lr-swatch-picker
@@ -864,11 +921,36 @@ describe("lr-swatch-picker", () => {
     expect(filter).to.contain("brightness");
   });
 
-  it("disables the shine animation outright under prefers-reduced-motion, independent of the transform-easing rule", () => {
+  it("disables the shine animation outright under prefers-reduced-motion, independent of the transform-easing rule", async () => {
     const css = normalizedStyles();
     expect(css).to.match(
       /@media \(prefers-reduced-motion: reduce\) \{[^]*\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\][^]*\[part='swatch-icon'\]\s*\{[^}]*animation:\s*none[^}]*\}[^]*\}/
     );
+
+    try {
+      await setReducedMotion("no-preference");
+      const el = (await fixture(html`
+        <lr-swatch-picker
+          .items=${options()}
+          value="green"
+          style="--lr-swatch-picker-shine-duration: 2s"
+        ></lr-swatch-picker>
+      `)) as LyraSwatchPicker;
+      const fill = swatches(el)[1]!.querySelector<HTMLElement>(
+        '[part="swatch-fill"]'
+      )!;
+      expect(getComputedStyle(fill).animationName).to.equal(
+        "lr-swatch-picker-shine"
+      );
+
+      await setReducedMotion("reduce");
+      await waitUntil(
+        () => getComputedStyle(fill).animationName === "none",
+        "swatch shine animation did not stop under reduced motion"
+      );
+    } finally {
+      await setReducedMotion("no-preference");
+    }
   });
 
   it("is accessible", async () => {

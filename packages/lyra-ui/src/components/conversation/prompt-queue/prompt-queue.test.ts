@@ -119,6 +119,23 @@ it("uses first-wins unique nonempty item ids before rendering and mutation", asy
   ).to.equal("Fine");
 });
 
+it("drops malformed item identities while retaining a valid neighboring prompt", async () => {
+  const el = (await fixture(html`
+    <lr-prompt-queue .items=${[
+      null,
+      { value: "Missing id" },
+      { id: 42, value: "Numeric id" },
+      { id: "kept", value: "Fine" },
+    ] as unknown as PromptQueueItem[]}></lr-prompt-queue>
+  `)) as LyraPromptQueue;
+
+  const rows = el.shadowRoot!.querySelectorAll('[part~="item"]');
+  expect(rows).to.have.lengthOf(1);
+  expect(
+    (rows[0]!.querySelector("lr-textarea") as HTMLElement & { value: string }).value
+  ).to.equal("Fine");
+});
+
 it("emits the complete reordered value without mutating the controlled items property", async () => {
   const el = (await fixture(
     html`<lr-prompt-queue .items=${items}></lr-prompt-queue>`

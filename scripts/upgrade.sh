@@ -57,9 +57,12 @@ pnpm --filter @aceshooting/lyra-ui run framework-types
 pnpm --filter @aceshooting/lyra-ui run design-tokens
 
 echo
-echo "==> Regenerating editor data, upstream inventory, component metadata, and component quality"
-pnpm --filter @aceshooting/lyra-ui run generate-editor-data
+echo "==> Regenerating upstream inventory, editor data, component metadata, and component quality"
+# The editor files are a published projection of the manifest. Refresh and validate the parity
+# inventory first so a parity failure cannot leave newly written editor files beside a stale
+# inventory (the next generator/check would otherwise report a misleading half-fresh state).
 node packages/lyra-ui/scripts/check-pinned-upstream-manifests.mjs --write-inventory
+pnpm --filter @aceshooting/lyra-ui run generate-editor-data
 node packages/lyra-ui/scripts/generate-component-metadata.mjs --write
 node packages/lyra-ui/scripts/generate-component-quality.mjs --write --measure-gzip
 

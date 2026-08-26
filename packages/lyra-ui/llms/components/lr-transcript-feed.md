@@ -6,6 +6,7 @@
 - **Class** `LyraTranscriptFeed`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/transcript-feed/transcript-feed.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 10 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -23,7 +24,8 @@ transcript sync is a separate concern.
 **Properties:** `entries: LyraTranscriptEntry[] = []` (attribute: false) — `LyraTranscriptEntry { id:
 string; speaker?: string; text: string; interim?: boolean; timestamp?: LyraTimestamp }` (exported by
 this module; `LyraTimestamp = Date | string | number`, normalized through Date/TimeClip). Reconciled
-keyed by nonempty, nonblank, first-wins `id` via Lit's `repeat()`: a
+keyed by nonempty, nonblank, first-wins `id` via Lit's `repeat()`; rows whose required `text` is not
+a string are omitted before rendering or announcement. A
 same-`id` entry with new `text` replaces in place, and a same-`id` entry whose `interim` flips from
 `true` to unset/`false` moves from the interim area into the `role="log"` region and announces
 exactly once. A collection with no valid entry renders the empty state. Interim entries render
@@ -40,8 +42,8 @@ render only records them. `follow: boolean = true`
 `max-rendered-entries`) — `0` explicitly renders every entry; a positive value keeps only the newest N,
 `sessionId: string = ''` (attribute `session-id`) — changing session identity clears finalized-ID
 announcement history and treats the new session's current entries as a silent baseline,
-`label: string = ''` — accessible name for the `role="log"` region
-(default: the localized `transcriptFeedLabel`), and `accessibleLabel: string | null = null`
+`label?: string` — accessible name for the `role="log"` region. Omitting it uses the localized
+`transcriptFeedLabel`; an explicit empty string intentionally leaves the role unnamed. `accessibleLabel: string | null = null`
 (attribute `aria-label`) — overrides the log's computed accessible name, winning over `label` and
 the localized default; attribute-reflects from a host-level `aria-label`.
 
@@ -50,7 +52,9 @@ entry. The built-in jump action delegates to this method.
 
 **Slots:** `empty` — custom empty state (default: the localized "No transcript yet").
 
-**Events:** `lr-follow-change` — `detail: { following }`, fires on every `follow` transition.
+**Events:** `lr-follow-change` — `detail: { following }`, fired when a user scroll changes follow
+state or the built-in jump action re-engages it. Direct `follow` assignments and
+`scrollToBottom()` calls are controlled input and do not echo an event.
 
 **CSS parts:** `base` (the scroll container), `log` (the `role="log"` region wrapping final entries
 only), `entry`, `speaker` (omitted for a row repeating the previous row's speaker), `text`

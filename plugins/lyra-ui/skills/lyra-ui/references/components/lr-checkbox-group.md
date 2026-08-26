@@ -7,6 +7,7 @@
 - **Class** `LyraCheckboxGroup`, also available unregistered from `@aceshooting/lyra-ui/components/forms/checkbox-group/checkbox-group.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 6 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below

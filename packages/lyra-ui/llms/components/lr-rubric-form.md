@@ -6,6 +6,7 @@
 - **Class** `LyraRubricForm`, also available unregistered from `@aceshooting/lyra-ui/components/forms/rubric-form/rubric-form.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 20 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -44,9 +45,11 @@ intrinsic messages use their rubric key and a consumer-owned whole-form rejectio
 
 Every value path — direct writes, child edits, schema changes, state restoration, reset, events,
 rendering, validity, and FormData — uses one canonical object. Finite scores clamp and snap to the
-current range/step; nonfinite scores are absent; categories retain only current option values (and
-their available occurrence counts); comments must be strings; undeclared keys are dropped. This
-prevents a rendered value, public readout, validity result, and submitted JSON from disagreeing.
+current range/step; a wide slider score without an explicit default records its rendered, snapped
+midpoint in both `defaultValue` and the pristine live value, while segmented scores remain
+unselected. Nonfinite scores are absent; categories retain only current option values (and their
+available occurrence counts); comments must be strings; undeclared keys are dropped. This prevents
+a rendered value, public readout, validity result, and submitted JSON from disagreeing.
 `form.reset()` restores a fresh clone of `defaultValue`, clears touched/error-reveal state, and
 preserves any consumer `setCustomValidity()` message. Changing `defaultValue` updates a pristine
 live value but never overwrites a dirty edit.
@@ -61,6 +64,8 @@ errors and own/fieldset validation barring), `lr-submit` (`detail: { value, item
 (`detail: { itemId }`, `skippable` only). `lr-invalid` (no detail) is the one bubbling/composed,
 cancelable alias emitted when the complete rubric fails a native validity check; preventing it also
 suppresses the native event's default validation UI.
+Native and prefixed input/change events from the composed child controls are contained; consumers
+above the rubric receive only the rubric-owned aggregate event shape.
 
 **Methods:** `getForm()` returns the owning form. `setCustomValidity(message)` sets or clears a
 form-level error no per-key rule can

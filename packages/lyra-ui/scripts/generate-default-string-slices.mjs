@@ -1,6 +1,6 @@
 #!/usr/bin/env node
+import { isMainModule } from './is-main-module.mjs';
 
-import { realpathSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -925,7 +925,7 @@ export function generationFailures(result, { write = false } = {}) {
   return failures;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
+if (isMainModule(import.meta.url)) {
   const write = process.argv.includes('--write');
   const result = await generateDefaultStringSlices({ write });
   const failures = generationFailures(result, { write });

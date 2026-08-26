@@ -52,7 +52,7 @@ function parseColor(value: string): [number, number, number] {
   probe.remove();
   const channels = resolved.match(/[\d.]+/g)?.slice(0, 3).map(Number);
   if (!channels || channels.length !== 3) throw new Error(`Could not resolve test color ${value}`);
-  return channels as [number, number, number];
+  return [channels[0]!, channels[1]!, channels[2]!];
 }
 
 function contrast(left: string, right: string): number {
@@ -63,7 +63,7 @@ function contrast(left: string, right: string): number {
         ? normalized / 12.92
         : ((normalized + 0.055) / 1.055) ** 2.4;
     });
-    return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+    return channels[0]! * 0.2126 + channels[1]! * 0.7152 + channels[2]! * 0.0722;
   };
   const a = luminance(left);
   const b = luminance(right);
@@ -145,14 +145,24 @@ describe('theme runtime', () => {
   it('supports legacy MediaQueryList listeners and removes them when leaving auto', () => {
     const originalMatchMedia = window.matchMedia;
     const listeners = new Set<(event: MediaQueryListEvent) => void>();
-    const media = {
+    const media: MediaQueryList = {
       matches: false,
       media: '(prefers-color-scheme: dark)',
       onchange: null,
-      addListener: (listener: (event: MediaQueryListEvent) => void) => listeners.add(listener),
-      removeListener: (listener: (event: MediaQueryListEvent) => void) => listeners.delete(listener),
+      addEventListener(): void {},
+      removeEventListener(): void {},
+      addListener(listener: (event: MediaQueryListEvent) => void): void {
+        listeners.add(listener);
+      },
+      removeListener(listener: (event: MediaQueryListEvent) => void): void {
+        listeners.delete(listener);
+      },
       dispatchEvent: () => true,
-    } as MediaQueryList;
+    };
+    Object.defineProperties(media, {
+      addEventListener: { configurable: true, value: undefined },
+      removeEventListener: { configurable: true, value: undefined },
+    });
     window.matchMedia = (() => media) as typeof window.matchMedia;
     try {
       setLyraTheme({ mode: 'auto' });
@@ -272,8 +282,13 @@ describe('theme runtime', () => {
 
   it('treats missing canvas pixel channels as zero instead of throwing', () => {
     const originalGetImageData = CanvasRenderingContext2D.prototype.getImageData;
-    CanvasRenderingContext2D.prototype.getImageData = (() =>
-      ({ data: new Uint8ClampedArray(0) })) as typeof CanvasRenderingContext2D.prototype.getImageData;
+    const emptyPixel: ImageData = {
+      colorSpace: 'srgb',
+      data: new Uint8ClampedArray(0),
+      height: 0,
+      width: 0,
+    };
+    CanvasRenderingContext2D.prototype.getImageData = () => emptyPixel;
     try {
       expect(() => setLyraTheme({ mode: 'light', accent: '#e63950' })).to.not.throw();
       // A fully-empty pixel resolves every channel (including alpha) to 0 via the `?? 0`

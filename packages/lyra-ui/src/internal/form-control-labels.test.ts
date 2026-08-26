@@ -47,6 +47,21 @@ import '../components/media/file-input/file-input.js';
 import '../components/overlays/rating/rating.js';
 import '../components/utility/known-date/known-date.js';
 
+function reactiveHost<T extends HTMLElement>(host: T): T & ReactiveControllerHost {
+  return Object.assign(host, {
+    addController: () => {},
+    removeController: () => {},
+    requestUpdate: () => {},
+    updateComplete: Promise.resolve(true),
+  });
+}
+
+class EmptyInternalsProbe extends HTMLElement {
+  static formAssociated = true;
+  readonly internals = this.attachInternals();
+}
+customElements.define(tag('empty-internals-probe'), EmptyInternalsProbe);
+
 interface TestControl extends HTMLElement {
   disabled?: boolean;
   checked?: boolean;
@@ -1063,7 +1078,7 @@ describe('external FACE label contract', () => {
     const frame = document.createElement('iframe');
     document.body.append(frame);
     const foreignDocument = frame.contentDocument!;
-    const host = foreignDocument.createElement('div');
+    const host = reactiveHost(foreignDocument.createElement('div'));
     host.id = `external-label-control-${++nextFixtureId}`;
     const shadow = host.attachShadow({ mode: 'open' });
     const first = foreignDocument.createElement('button');
@@ -1076,9 +1091,7 @@ describe('external FACE label contract', () => {
     const label = foreignDocument.createElement('label');
     label.htmlFor = host.id;
     label.textContent = 'Foreign document label';
-    const controller = new ExternalLabelController(
-      host as ExternalLabelHost & ReactiveControllerHost,
-    );
+    const controller = new ExternalLabelController(host);
     try {
       foreignDocument.body.append(label, host);
       controller.hostConnected();
@@ -1100,13 +1113,13 @@ describe('external FACE label contract', () => {
   });
 
   it('names and activates a form control whose host owns its role and focus', async () => {
-    const host = document.createElement('div') as ExternalLabelHost & ReactiveControllerHost & {
-      authoredName: string | null;
-      externalName: string | null;
-      [EXTERNAL_LABEL_HOST_SEMANTICS](operation: ExternalLabelHostSemanticOperation): boolean | void;
-    };
-    host.authoredName = null;
-    host.externalName = null;
+    const host = Object.assign(reactiveHost(document.createElement('div')), {
+      authoredName: null as string | null,
+      externalName: null as string | null,
+      [EXTERNAL_LABEL_HOST_SEMANTICS](_operation: ExternalLabelHostSemanticOperation): boolean | void {
+        return;
+      },
+    });
     host[EXTERNAL_LABEL_HOST_SEMANTICS] = (operation) => {
       if (operation.type === 'has-authored-name') return host.authoredName !== null;
       if (operation.type === 'apply') {
@@ -1118,6 +1131,7 @@ describe('external FACE label contract', () => {
       if (host.getAttribute('aria-label') !== operation.appliedName) return;
       if (operation.hadPrevious) host.setAttribute('aria-label', operation.previous ?? '');
       else host.removeAttribute('aria-label');
+      return;
     };
     host.tabIndex = 0;
     host.id = `external-label-control-${++nextFixtureId}`;
@@ -1236,9 +1250,8 @@ describe('external FACE label contract', () => {
     document.body.append(label, host);
 
     try {
-      captureFormInternals(host, {
-        labels: document.querySelectorAll('.nonexistent-empty-set'),
-      } as ElementInternals);
+      const probe = document.createElement(tag('empty-internals-probe')) as EmptyInternalsProbe;
+      captureFormInternals(host, probe.internals);
 
       expect(resolveExternalLabels(host as ExternalLabelHost)).to.deep.equal([]);
     } finally {

@@ -593,10 +593,11 @@ jobs:
         with:
           name: lyra-ui-dist
           path: packages/lyra-ui/dist
-      # Downloads the latest published package into an isolated temporary directory and compares
-      # its normalized CEM/exports/declarations with this built tree. The pure parser/semver tests
-      # run in static-checks; this is the networked release gate.
+      # Downloads each latest published package into an isolated temporary directory and compares
+      # its normalized CEM/exports/declarations with this tree. The pure parser/semver tests run in
+      # static-checks; these are the networked release gates for both publishable workspaces.
       - run: pnpm --filter @aceshooting/lyra-ui check:public-api
+      - run: pnpm --filter @aceshooting/lyra-flags check:public-api
 
   # release-qualification: required
   packed-consumer:
@@ -791,11 +792,11 @@ jobs:
           exit "$failed"
 
   # Blocking as of the 2026-07-20 font-substitution determinism fix (see
-  # packages/lyra-ui/visual-baselines/README.md): the manifest's 83 stories now produce 253
+  # packages/lyra-ui/visual-baselines/README.md): the manifest's 85 stories now produce 255
   # live light/dark/RTL plus applicable forced-colors/narrow captures. Pending human review leaves
-  # 207 compared with retained baselines and 46 as explicit ephemeral semantic/pixel evidence; all
+  # 129 compared with retained baselines and 126 as explicit ephemeral semantic/pixel evidence; all
   # capture or console errors remain blocking. The axis-level capture inventory is sorted and
-  # round-robin partitioned into three deterministic shards (85/84/84 captures) so the historical
+  # round-robin partitioned into three deterministic shards (85/85/85 captures) so the historical
   # ~3.5min browser sweep no longer sits on one runner's critical path.
   visual-regression:
     name: visual-regression / shard ${{ matrix.shard }}/3

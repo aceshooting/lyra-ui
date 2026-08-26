@@ -54,7 +54,7 @@ export const UnavailableSlottedControl: Story = {
 
 export const RevealOnInteraction: Story = {
   render: () => html`
-    <lr-chat-message data-role="assistant">
+    <lr-chat-message message-role="assistant">
       This response has a hover-revealed action bar.
       <lr-message-actions slot="actions" reveal-on-interaction copy-text="hi" .controls=${['copy', 'regenerate']}>
       </lr-message-actions>

@@ -3,11 +3,11 @@ import "./image-viewer.js";
 import type { LyraImageViewer, LyraImageRotation } from "./image-viewer.js";
 import type { LyraHighlight } from "../../viewers/document-viewer/anchors.js";
 import type { LyraPanZoom } from "../pan-zoom/pan-zoom.class.js";
-import { styles } from "./image-viewer.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { setForcedColors } from "../../../../test/wtr-media.js";
+import { sendKeys } from "@web/test-runner-commands";
 
 const PNG_SRC = "https://example.test/photo.png";
 
@@ -95,6 +95,19 @@ it("omits invalid public highlight rectangles and renders finite ones", async ()
   expect(highlights[0]!.dataset["tone"]).to.equal("accent");
   expect(highlights[0]!.style.left).to.equal("10%");
   expect(highlights[0]!.style.position).to.equal("");
+});
+
+it('keeps the loaded image rendered when a highlight omits its anchor', async () => {
+  const el = await fixture<LyraImageViewer>(
+    html`<lr-image-viewer src=${LOADABLE_PNG}></lr-image-viewer>`,
+  );
+  await stubImageLoad(el);
+
+  el.highlights = [{ id: 'missing-anchor' }] as unknown as LyraHighlight[];
+  await el.updateComplete;
+
+  expect(el.highlights.map((highlight) => highlight.id)).to.deep.equal([]);
+  expect(el.shadowRoot!.querySelectorAll('img').length).to.equal(1);
 });
 
 describe("defaults", () => {
@@ -358,8 +371,8 @@ describe("region highlights", () => {
       ...el.shadowRoot!.querySelectorAll('[part="highlight"]'),
     ] as HTMLButtonElement[];
     expect(boxes.length).to.equal(2);
-    expect(boxes[0].getAttribute("aria-label")).to.equal("Zone A");
-    expect(boxes[1].getAttribute("aria-label")).to.include("2");
+    expect(boxes[0]!.getAttribute("aria-label")).to.equal("Zone A");
+    expect(boxes[1]!.getAttribute("aria-label")).to.include("2");
   });
 
   it("marks the active highlight with data-active and emits lr-highlight-activate on click", async () => {
@@ -374,10 +387,10 @@ describe("region highlights", () => {
     const boxes = [
       ...el.shadowRoot!.querySelectorAll('[part="highlight"]'),
     ] as HTMLButtonElement[];
-    expect(boxes[0].hasAttribute("data-active")).to.be.true;
-    expect(boxes[1].hasAttribute("data-active")).to.be.false;
+    expect(boxes[0]!.hasAttribute("data-active")).to.be.true;
+    expect(boxes[1]!.hasAttribute("data-active")).to.be.false;
     const eventPromise = oneEvent(el, "lr-highlight-activate");
-    boxes[1].click();
+    boxes[1]!.click();
     expect((await eventPromise).detail).to.deep.equal({ highlightId: "h2" });
     await el.updateComplete;
     expect(el.activeHighlightId).to.equal("h2");
@@ -421,8 +434,8 @@ describe("region highlights", () => {
     ] as HTMLElement[];
     expect(boxes.length).to.equal(2);
 
-    const plainFill = getComputedStyle(boxes[0]).backgroundColor;
-    const dangerFill = getComputedStyle(boxes[1]).backgroundColor;
+    const plainFill = getComputedStyle(boxes[0]!).backgroundColor;
+    const dangerFill = getComputedStyle(boxes[1]!).backgroundColor;
     expect(plainFill, "the untoned fill is not empty").to.not.equal("");
     expect(
       dangerFill,
@@ -1702,11 +1715,14 @@ describe("active-state cssprop escape hatches", () => {
 });
 
 describe("native control theming", () => {
-  it("resets native appearance on the fit-control, themes its option list, adds a chevron, and gives all three toolbar controls hover/focus", async () => {
+  it("renders native fit-control theming and all three toolbar controls' hover/focus treatment", async () => {
     const el = (await fixture(
-      html`<lr-image-viewer src=${PNG_SRC}></lr-image-viewer>`
+      html`<lr-image-viewer
+        src=${LOADABLE_PNG}
+        style="--lr-color-surface: rgb(7, 8, 9); --lr-color-text: rgb(10, 11, 12); --lr-color-brand-quiet: rgb(1, 2, 3); --lr-focus-ring: 6px solid rgb(4, 5, 6)"
+      ></lr-image-viewer>`
     )) as LyraImageViewer;
-    await el.updateComplete;
+    await stubImageLoad(el);
     const select = el.shadowRoot!.querySelector(
       '[part="fit-control"]'
     ) as HTMLSelectElement;
@@ -1714,23 +1730,34 @@ describe("native control theming", () => {
     const wrapper = select.closest(".fit-control-wrapper");
     expect(wrapper != null).to.equal(true);
     expect(wrapper!.querySelector(".fit-control-chevron svg")).to.exist;
-    const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
-    expect(css).to.match(
-      /\[part='fit-control'\] option[^{]*\{[^}]*background:/
-    );
-    for (const part of ["fit-control", "rotate-button", "annotate-toggle"]) {
-      expect(css, `${part} must get a hover rule`).to.match(
-        new RegExp(`\\[part='${part}'\\]:hover`)
-      );
-      expect(css, `${part} must get a focus-visible rule`).to.match(
-        new RegExp(`\\[part='${part}'\\]:focus-visible[^{]*\\{[^}]*outline:`)
-      );
-    }
-  });
+    const optionStyle = getComputedStyle(select.options[0]!);
+    expect(optionStyle.backgroundColor).to.equal("rgb(7, 8, 9)");
+    expect(optionStyle.color).to.equal("rgb(10, 11, 12)");
 
-  it("gives the clickable highlight boxes a hover state matching their focus-visible affordance", () => {
-    const css = styles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
-    expect(css).to.match(/\[part='highlight'\]:hover/);
+    for (const part of ["fit-control", "rotate-button", "annotate-toggle"]) {
+      const control = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+      control.scrollIntoView({ block: "center" });
+      const rect = control.getBoundingClientRect();
+      try {
+        await sendMouse({
+          type: "move",
+          position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+        });
+        await waitUntil(
+          () => getComputedStyle(control).backgroundColor === "rgb(1, 2, 3)",
+          `${part} never painted its hover background`,
+        );
+      } finally {
+        await resetMouse();
+      }
+
+      await sendKeys({ press: "Tab" });
+      control.focus();
+      await waitUntil(() => {
+        const computed = getComputedStyle(control);
+        return computed.outlineWidth === "6px" && computed.outlineColor === "rgb(4, 5, 6)";
+      }, `${part} never painted its keyboard focus ring`);
+    }
   });
 });
 

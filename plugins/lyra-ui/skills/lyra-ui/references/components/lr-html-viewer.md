@@ -6,9 +6,10 @@
 - **Class** `LyraHtmlViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/html-viewer/html-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify` — see `llms/peers.md`
-- **Themeable via** 5 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -17,6 +18,11 @@
 
 Fetches an HTML document, sanitizes it with the optional `dompurify` peer, and renders the safe markup
 inside a bounded, scrollable body.
+Its passive-document profile is network-silent and non-interactive: links, form controls, and custom
+elements are unwrapped to their ordinary text/children where safe; remote navigation and resource
+attributes are removed. Images load only inline base64 GIF, JPEG, PNG, or WebP data, while
+same-document SVG fragment references may remain; an `<a>` itself never remains in the rendered
+preview.
 
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
 `max-height`); invalid CSS
@@ -44,7 +50,10 @@ highlights are passive and cannot be activated.
 
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
-**CSS parts:** `base`, `body`, `html`, `spinner`, and `error`.
+**CSS parts:** `base`, `body`, `html`, `spinner`, `error`, and `anchor-live-region` (an aria-hidden,
+non-live shadow mirror of the latest anchor-jump message; the spoken copy is appended to the shared
+document-level polite sink only while the viewer and its composed ancestors are exposed to the
+accessibility tree).
 
 **Themeable custom properties:** `--lr-html-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.

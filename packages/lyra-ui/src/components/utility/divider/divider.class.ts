@@ -1,9 +1,10 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './divider.styles.js';
 
-export type LyraDividerOrientation = 'horizontal' | 'vertical';
+export type LyraDividerOrientation = LyraOrientation;
 
 /**
  * `<lr-divider>` — a themeable semantic separator.

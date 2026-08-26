@@ -297,8 +297,8 @@ it('gives the default toggle an exact controls/expanded contract and supports it
   `)) as LyraPage;
   access(page).applyMeasuredInlineSize(320);
   await page.updateComplete;
-  const toggle = byPart(page, 'navigation-toggle');
   const drawer = byPart(page, 'drawer');
+  const toggle = byPart(page, 'navigation-toggle');
   expect(toggle.getAttribute('aria-expanded')).to.equal('false');
   expect(toggle.getAttribute('aria-controls')).to.equal(drawer.id);
   const iconSlot = page.shadowRoot!.querySelector<HTMLSlotElement>(
@@ -343,7 +343,6 @@ it('keeps slotted skip content and toggle glyph controls decorative while preser
   )!;
   const skip = byPart(page, 'skip-to-content');
   const main = byPart(page, 'main');
-  const toggle = byPart(page, 'navigation-toggle');
   const skipSlot = page.shadowRoot!.querySelector<HTMLSlotElement>(
     'slot[name="skip-to-content"]'
   )!;
@@ -560,8 +559,10 @@ it('owns the real custom-toggle control and retargets focus restoration after re
   expect(firstControl.getAttribute('aria-haspopup')).to.equal('dialog');
   expect(firstControl.getAttribute('aria-expanded')).to.equal('false');
   if ('ariaControlsElements' in firstControl) {
-    expect(firstControl.ariaControlsElements.length).to.equal(1);
-    expect(firstControl.ariaControlsElements[0] === page).to.equal(true);
+    const controlledElements = firstControl.ariaControlsElements;
+    expect(controlledElements).to.not.equal(null);
+    expect(controlledElements!.length).to.equal(1);
+    expect(controlledElements![0] === page).to.equal(true);
   }
 
   firstControl.click();
@@ -598,8 +599,10 @@ it('gives a custom navigation toggle a cross-shadow controls reference and clean
     '[slot="navigation-toggle"]'
   )!;
   if ('ariaControlsElements' in custom) {
+    const controlledElements = custom.ariaControlsElements;
+    expect(controlledElements).to.not.equal(null);
     expect(
-      custom.ariaControlsElements.map((element) => element.id)
+      controlledElements!.map((element) => element.id)
     ).to.deep.equal([page.id]);
   }
 
@@ -1224,6 +1227,29 @@ it('supports whitespace-token disable-sticky without disabling unrelated regions
   expect(getComputedStyle(byPart(page, 'header')).position).to.equal('static');
   expect(getComputedStyle(byPart(page, 'aside')).position).to.equal('static');
   expect(getComputedStyle(byPart(page, 'banner')).position).to.equal('sticky');
+});
+
+it('keeps default and partially configured sticky offsets as valid lengths', async () => {
+  const page = (await fixture(html`
+    <lr-page>
+      <span slot="subheader">Subheader</span>
+      <span slot="menu">Menu</span>
+      <span slot="aside">Aside</span>
+    </lr-page>
+  `)) as LyraPage;
+  const menu = byPart(page, 'menu');
+  const aside = byPart(page, 'aside');
+  const subheader = byPart(page, 'subheader');
+
+  expect(getComputedStyle(menu).insetBlockStart).to.equal('0px');
+  expect(getComputedStyle(menu).maxBlockSize).to.not.equal('none');
+  expect(getComputedStyle(aside).insetBlockStart).to.equal('0px');
+  expect(getComputedStyle(aside).maxBlockSize).to.not.equal('none');
+  expect(getComputedStyle(subheader).insetBlockStart).to.equal('0px');
+
+  page.style.setProperty('--lr-page-header-height', '48px');
+  expect(getComputedStyle(menu).insetBlockStart).to.equal('48px');
+  expect(getComputedStyle(subheader).insetBlockStart).to.equal('48px');
 });
 
 it('uses token-driven drawer motion and renders the reduced-motion branch with no transition', async () => {

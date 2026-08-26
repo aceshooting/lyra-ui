@@ -6,6 +6,7 @@
 - **Class** `LyraThreadList`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/thread-list/thread-list.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 33 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -40,9 +41,10 @@ string | number; pinned?: boolean; archived?: boolean }`; `ThreadRowAction = 'pi
 date?: Date }`. `LyraThreadList` and `LyraThreadListEventMap` are exported alongside them. The class
 module, normal and stable tag-shaped registration entries, conversation family entry, and package
 root all retain this complete thread-list surface; the former `ChatThread` name is not retained.
-Data-mode thread ids must be nonempty, nonblank, and unique; invalid rows and later duplicates are
-omitted with the first valid occurrence winning before the mode is selected, so focus, actions,
-slot ownership, and emitted `conversationId` values remain unambiguous.
+Data-mode thread ids must be nonempty, nonblank, and unique, and every row must have a string
+`title`; invalid rows and later duplicates are omitted with the first valid occurrence winning
+before the mode is selected, so focus, actions, slot ownership, and emitted `conversationId`
+values remain unambiguous.
 
 **Properties:** `threads: LyraChatThread[] = []` (attribute: false). `activeConversationId: string = ''`
 (attribute `active-conversation-id`) — data mode:
@@ -81,8 +83,9 @@ this renders an `aria-hidden` copy of the header into the internal `lr-virtual-l
 the real row keeps the `role="heading"`/`aria-level` semantics and the tab order (the copy's toggle
 is not a second tab stop), while the pinned copy stays clickable and requests the same
 `lr-group-toggle` collapse. Default `false` renders exactly as before; `grouping="none"` has no
-headers to pin, so it is a no-op there. `label: string = ''` — accessible name for the list region,
-defaults to the localized `threadListLabel`. `wrapRow?: (thread: LyraChatThread, row: TemplateResult) =>
+headers to pin, so it is a no-op there. `label?: string` — accessible name for the list region.
+Omitting it uses the localized `threadListLabel`; an explicit empty string intentionally leaves the
+list unnamed. `wrapRow?: (thread: LyraChatThread, row: TemplateResult) =>
 TemplateResult` (attribute: false) — data mode only: wraps each row's built-in
 `lr-conversation-item` with host-supplied content that has no home in the item's own `label`/`excerpt`/`meta`/`actions` surface (e.g. a leading purpose
 icon — the item has no default slot to receive one); unset renders the built-in row unwrapped.

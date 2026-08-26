@@ -774,9 +774,11 @@ export type LyraArchiveViewerReactProps = LyraReactElementProps<
   | 'activeHighlightId'
   | 'anchor'
   | 'highlights'
+  | 'locale'
   | 'maxHeight'
   | 'name'
-  | 'src',
+  | 'src'
+  | 'strings',
   {},
   LyraArchiveViewerEventMap,
   | 'lr-anchor-result'
@@ -2378,6 +2380,7 @@ export type LyraComboboxReactProps = LyraReactElementProps<
   | 'placeholder'
   | 'placement'
   | 'required'
+  | 'selectedRows'
   | 'selectionDirection'
   | 'selectionEnd'
   | 'selectionStart'
@@ -2882,6 +2885,9 @@ export type LyraDataGridReactProps = LyraReactElementProps<
   | '--header-row-height'
   | '--header-text-color'
   | '--indent-size'
+  | '--lr-data-grid-cell-color'
+  | '--lr-data-grid-cell-link-color'
+  | '--lr-data-grid-cell-link-hover-color'
   | '--max-height'
   | '--row-height'
   | '--row-hover-background'
@@ -2913,6 +2919,7 @@ export type LyraDatasetViewerReactProps = LyraReactElementProps<
   | 'locale'
   | 'maxHeight'
   | 'name'
+  | 'scrollMode'
   | 'src'
   | 'strings',
   {},
@@ -2926,6 +2933,7 @@ export type LyraDatasetViewerReactProps = LyraReactElementProps<
   {
     'active-highlight-id'?: LyraDatasetViewer['activeHighlightId'];
     'max-height'?: LyraDatasetViewer['maxHeight'];
+    'scroll-mode'?: LyraDatasetViewer['scrollMode'];
   }
 >;
 
@@ -3076,6 +3084,7 @@ export type LyraDatePickerReactProps = LyraReactElementProps<
   | 'presets'
   | 'previousLabel'
   | 'readonly'
+  | 'selection'
   | 'size'
   | 'strings'
   | 'today'
@@ -3415,7 +3424,8 @@ export type LyraDocumentViewerReactProps = LyraReactElementProps<
   LyraDocumentViewerEventMap,
   | 'lr-anchor-result'
   | 'lr-close'
-  | 'lr-download',
+  | 'lr-download'
+  | 'lr-render-error',
   | '--lr-document-viewer-max-height',
   {
     'mime-type'?: LyraDocumentViewer['mimeType'];
@@ -4009,6 +4019,7 @@ export type LyraEvalResultReactProps = LyraReactElementProps<
   | 'baselineRunId'
   | 'columns'
   | 'disabled'
+  | 'label'
   | 'locale'
   | 'reviewSkippable'
   | 'rubricKeys'
@@ -4256,6 +4267,7 @@ export type LyraFlowCanvasReactProps = LyraReactElementProps<
   | 'lr-selection-change'
   | 'lr-selection-delete'
   | 'lr-viewport-change',
+  | '--lr-canvas-reserved-height'
   | '--lr-flow-canvas-drop-active-outline-color'
   | '--lr-flow-canvas-edge-brand-color'
   | '--lr-flow-canvas-edge-danger-color'
@@ -4605,6 +4617,7 @@ export type LyraGraphReactProps = LyraReactElementProps<
   | 'lr-node-leave'
   | 'lr-selection-change'
   | 'lr-viewport-change',
+  | '--lr-canvas-reserved-height'
   | '--lr-graph-cat-1'
   | '--lr-graph-cat-2'
   | '--lr-graph-cat-3'
@@ -5461,7 +5474,7 @@ export type LyraKnowledgeGraphExplorerReactProps = LyraReactElementProps<
   | 'lr-relation-activate'
   | 'lr-search-change'
   | 'lr-selection-change',
-never,
+  | '--lr-canvas-reserved-height',
   {
     'search-query'?: LyraKnowledgeGraphExplorer['searchQuery'];
     'selected-node-id'?: LyraKnowledgeGraphExplorer['selectedNodeId'];
@@ -5837,6 +5850,7 @@ export type LyraMapReactProps = LyraReactElementProps<
   | 'lr-map-load'
   | 'lr-map-marker-activate',
   | '--lr-map-choropleth-fill-opacity'
+  | '--lr-map-height'
   | '--lr-map-popup-close-button-active-bg'
   | '--lr-map-popup-close-button-active-color'
   | '--lr-map-popup-close-button-hover-bg'
@@ -7950,7 +7964,7 @@ export type LyraRagEvalDashboardReactProps = LyraReactElementProps<
   | 'lr-metric-change'
   | 'lr-run-change'
   | 'lr-slice-change',
-never,
+  | '--lr-rag-eval-dashboard-selected-border-color',
   {
     'chart-height'?: LyraRagEvalDashboard['chartHeight'];
     'metric-id'?: LyraRagEvalDashboard['metricId'];
@@ -9576,7 +9590,8 @@ export type LyraTestResultsReactProps = LyraReactElementProps<
   | '--lr-test-results-filter-active-color'
   | '--lr-test-results-passed-color'
   | '--lr-test-results-running-color'
-  | '--lr-test-results-skipped-color',
+  | '--lr-test-results-skipped-color'
+  | '--lr-test-results-spinner-size',
   {
     'auto-expand-failures'?: LyraTestResults['autoExpandFailures'];
     'run-id'?: LyraTestResults['runId'];
@@ -10066,6 +10081,7 @@ export type LyraToolApprovalDialogReactProps = LyraReactElementProps<
   | 'editable'
   | 'enterKeyHint'
   | 'inputMode'
+  | 'lightDismiss'
   | 'locale'
   | 'open'
   | 'pending'
@@ -10090,6 +10106,7 @@ export type LyraToolApprovalDialogReactProps = LyraReactElementProps<
     'autocorrect'?: LyraToolApprovalDialog['autoCorrect'];
     'enterkeyhint'?: LyraToolApprovalDialog['enterKeyHint'];
     'inputmode'?: LyraToolApprovalDialog['inputMode'];
+    'light-dismiss'?: LyraToolApprovalDialog['lightDismiss'];
     'proposal-key'?: LyraToolApprovalDialog['proposalKey'];
     'tool-name'?: LyraToolApprovalDialog['toolName'];
   }
@@ -10152,6 +10169,7 @@ export type LyraToolResultDialogReactProps = LyraReactElementProps<
   LyraToolResultDialog,
   | 'accessibleLabel'
   | 'durationMs'
+  | 'lightDismiss'
   | 'locale'
   | 'maximized'
   | 'open'
@@ -10178,6 +10196,7 @@ export type LyraToolResultDialogReactProps = LyraReactElementProps<
   {
     'aria-label'?: LyraToolResultDialog['accessibleLabel'];
     'duration-ms'?: LyraToolResultDialog['durationMs'];
+    'light-dismiss'?: LyraToolResultDialog['lightDismiss'];
     'tool-name'?: LyraToolResultDialog['toolName'];
   }
 >;
@@ -10212,6 +10231,7 @@ export type LyraToolSelectDialogReactProps = LyraReactElementProps<
   | 'filter'
   | 'inputMode'
   | 'label'
+  | 'lightDismiss'
   | 'locale'
   | 'open'
   | 'searchPlaceholder'
@@ -10232,6 +10252,7 @@ export type LyraToolSelectDialogReactProps = LyraReactElementProps<
     'autocorrect'?: LyraToolSelectDialog['autoCorrect'];
     'enterkeyhint'?: LyraToolSelectDialog['enterKeyHint'];
     'inputmode'?: LyraToolSelectDialog['inputMode'];
+    'light-dismiss'?: LyraToolSelectDialog['lightDismiss'];
     'search-placeholder'?: LyraToolSelectDialog['searchPlaceholder'];
     'use-defaults'?: LyraToolSelectDialog['useDefaults'];
   }
@@ -10767,6 +10788,7 @@ never,
 
 export type LyraWordCloudReactProps = LyraReactElementProps<
   LyraWordCloud,
+  | 'domain'
   | 'legend'
   | 'locale'
   | 'maxFontSize'

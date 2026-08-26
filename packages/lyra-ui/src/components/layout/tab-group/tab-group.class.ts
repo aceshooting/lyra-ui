@@ -90,8 +90,8 @@ export type LyraTabGroupPlacement = 'top' | 'bottom' | 'start' | 'end';
  */
 export type LyraTabGroupActivation = 'auto' | 'manual';
 
-/** Fallback panel name for an `<lr-tab>` with no `panel` attribute -- keyed by position so it is
- *  stable across re-syncs, and prefixed so it cannot collide with an author-chosen name. */
+/** Fallback panel-name stem for a labeled `<lr-tab>` with no `panel` attribute. Allocation is keyed
+ *  by position, stable across re-syncs, and checked against every authored tab/panel name. */
 const SYNTHETIC_PANEL_PREFIX = 'lr-tab-';
 
 /** How much of the visible tab row one press of a scroll control travels. Short of a full viewport
@@ -122,6 +122,10 @@ export interface LyraTabGroupEventMap {
  * names the real tab button rather than leaving an interactive descendant inside it. Author
  * `aria-hidden`, hidden, inert, and CSS-hidden branches never leak into that name, and visibility
  * or text changes refresh it.
+ * A labeled direct tab without `panel` receives a stable synthetic panel key that cannot collide
+ * with an authored tab or panel name. An unpaneled descriptor with no accessibility-exposed label
+ * is omitted instead of speaking that internal key; an explicitly paneled empty descriptor retains
+ * its authored panel name as the accessible fallback.
  *
  * **`inert` on a source child excludes its tab exactly as `disabled` does** — it never takes
  * selection, never holds the roving `tabindex`, and arrow keys step past it — and the rendered tab
@@ -439,8 +443,11 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    * `slot` here rather than asking consumers to is what keeps the upstream markup a pure rename --
    * and it is idempotent, so the mutation observer that sees the write does not re-enter.
    *
-   * A tab with no `panel` still gets a stable synthetic name from its position, so an unpaired tab
-   * renders a button with an empty panel instead of silently disappearing.
+   * A labeled tab with no `panel` still gets a stable, collision-free synthetic name from its
+   * position, so it renders a button with an empty panel. An unpaneled descriptor with no
+   * accessibility-exposed label has neither a usable name nor a panel relationship and is omitted
+   * rather than exposing that internal key as its accessible name. An empty tab with an explicit
+   * panel keeps that authored name as its stable fallback.
    */
   private readElementModel(
     children: Element[],
@@ -451,22 +458,53 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     const panels = children.filter(
       (child) => child.localName === tag('tab-panel')
     );
+    const authoredNames = new Set(
+      children.flatMap((child) => {
+        if (child.localName === tag('tab')) {
+          const name = child.getAttribute('panel');
+          return name ? [name] : [];
+        }
+        if (child.localName === tag('tab-panel')) {
+          const name = child.getAttribute('name');
+          return name ? [name] : [];
+        }
+        return [];
+      })
+    );
     let index = 0;
     for (const child of children) {
       if (child.localName !== tag('tab')) continue;
-      const slotName =
-        child.getAttribute('panel') || `${SYNTHETIC_PANEL_PREFIX}${index}`;
+      const authoredPanel = child.getAttribute('panel') || undefined;
+      let slotName = authoredPanel ?? `${SYNTHETIC_PANEL_PREFIX}${index}`;
+      if (!authoredPanel) {
+        let collision = 0;
+        while (authoredNames.has(slotName) || seen.has(slotName)) {
+          collision += 1;
+          slotName = `${SYNTHETIC_PANEL_PREFIX}${index}-${collision}`;
+        }
+      }
       index += 1;
+      if (
+        !authoredPanel &&
+        !this.readElementLabel(child as LyraTab, { allowUnprojected: true })
+      ) {
+        continue;
+      }
       if (seen.has(slotName)) continue;
       seen.add(slotName);
       const tabSlot = this.tabSlotName(slotName);
       // Project before reading: the descriptor's default-slot content must be in the same
       // composed tree as the real tab button before the visibility-aware text walk can inspect
-      // it. An empty descriptor gets its stable panel key as a last-resort accessible name, so it
-      // remains a safe, addressable choice instead of producing an unnamed tab or destabilizing
-      // the projection observer.
+      // it. The unprojected preflight above ignores only the descriptor's currently-unrendered
+      // ancestor path; each label branch's own hidden/inert/CSS state still excludes it. That lets
+      // an omitted descriptor stay in its author slot and re-enrol after a later content mutation,
+      // without a project/restore mutation loop.
       this.projectSlot(child, tabSlot, projectedSlots);
-      const label = this.readElementLabel(child as LyraTab) || slotName;
+      const visibleLabel = this.readElementLabel(child as LyraTab);
+      if (!authoredPanel && !visibleLabel) continue;
+      // A named empty descriptor gets its author-provided panel key as a last-resort accessible
+      // name; only an unpaneled descriptor is omitted for having no accessibility-exposed label.
+      const label = visibleLabel || slotName;
       const panel = panels.find(
         (candidate) => candidate.getAttribute('name') === slotName
       );
@@ -487,7 +525,10 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    * made inert by this group, but the outer real tab still needs the author-visible, accessible
    * label text. Read that text through the same flattened slot shape while preserving every
    * author-owned accessibility exclusion. */
-  private readElementLabel(tab: LyraTab): string {
+  private readElementLabel(
+    tab: LyraTab,
+    options: { allowUnprojected?: boolean } = {}
+  ): string {
     const labelNodes = Array.from(tab.childNodes).filter(
       (node) =>
         node.nodeType !== Node.ELEMENT_NODE ||
@@ -497,6 +538,8 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     return composedAccessibilityText(labelNodes, {
       ancestorBoundary: tab,
       isSubtreeExcluded: (element) => this.isTabLabelSubtreeExcluded(element),
+      requireRendered: !options.allowUnprojected,
+      skipRootAncestorValidation: options.allowUnprojected,
     })
       .replace(/\s+/g, ' ')
       .trim();
@@ -766,9 +809,10 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   private syncElementActiveState(): void {
     for (const child of Array.from(this.children)) {
       if (child.localName === tag('tab')) {
+        const definition = this.tabs.find((tab) => tab.element === child);
         child.toggleAttribute(
           'active',
-          child.getAttribute('panel') === this.active
+          definition?.slotName === this.active
         );
       } else if (child.localName === tag('tab-panel')) {
         child.toggleAttribute(
@@ -1106,7 +1150,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       tabindex=${tab.slotName === this.rovingTab ? '0' : '-1'}
       @click=${() => this.selectTab(tab)}
     >
-      ${html`<slot name=${this.tabSlotName(tab.slotName)}></slot>`}${tab.label
+      <span data-tab-label><slot name=${this.tabSlotName(tab.slotName)}></slot></span>${tab.label
         ? html`<span hidden aria-hidden="true">${tab.label}</span>`
         : nothing}${selected
         ? html`<span part="active-tab-indicator" aria-hidden="true"></span>`

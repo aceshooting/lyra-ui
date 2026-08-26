@@ -6,6 +6,7 @@
 - **Class** `LyraStackTrace`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/stack-trace/stack-trace.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 10 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -97,18 +98,22 @@ the shared quiet/brand tokens used by surrounding UI. Plus shared tokens
 </script>
 ```
 
-The package root also exports the pure `parseStackTrace(trace: string, internalPatterns: (string |
-RegExp)[]): StackGroup[]` helper (plus `DEFAULT_INTERNAL_PATTERNS`, and the `StackFrame`/
-`StackGroup` types) — the same parsing function this component's own `willUpdate()` calls, exposed
-standalone so a consumer can parse or unit-test traces without instantiating the element at all.
+The package root also exports the pure
+`parseStackTrace(trace: string, options?: StackTraceParseOptions): StackTraceParseResult` helper
+(plus `DEFAULT_INTERNAL_PATTERNS`, `STACK_TRACE_LIMITS`, and the `StackFrame`, `StackGroup`,
+`StackTraceParseOptions`, and `StackTraceParseResult` types) — the same parser this component uses,
+exposed standalone so a consumer can parse or unit-test traces without instantiating the element.
+Pass custom classifiers as `{ internalPatterns: ['node_modules/', /vendor\//] }`. The result is
+`{ groups, truncated, source }`, where `source` is the bounded raw-text fallback.
 
 **Known gotchas:**
 
 - an internal-frame run only collapses behind the `internal-toggle` when it is two or more
   consecutive internal frames; a single isolated internal frame renders as a normal `frame` button
   (there is nothing useful to fold).
-- when `trace` doesn't match any of the supported formats, `parseStackTrace()` returns `[]` and the
-  component renders the text verbatim in a `raw` part instead of silently dropping content.
+- when `trace` doesn't match any supported format, `parseStackTrace().groups` is empty and the
+  component renders the result's bounded `source` verbatim in a `raw` part instead of silently
+  dropping content.
 - every coordinate of an activatable frame must be a JavaScript safe integer. A malformed or
   overlarge location remains visible as a non-activatable raw row; if no safe frame is left, the
   component uses the verbatim `raw` fallback.

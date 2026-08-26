@@ -90,7 +90,7 @@ export const styles = css`
     outline-width: var(--lr-border-width-medium);
   }
   [part='rect-target']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='highlight-actions'] {
@@ -120,7 +120,7 @@ export const styles = css`
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='highlight-action']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='rect']:where([data-flash]) {

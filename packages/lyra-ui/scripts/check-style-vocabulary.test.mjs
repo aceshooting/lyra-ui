@@ -4,7 +4,11 @@
 // Run: node scripts/check-style-vocabulary.test.mjs
 
 import assert from 'node:assert/strict';
-import { key, readStringUnions } from './check-style-vocabulary.mjs';
+import {
+  buildSharedVocabulary,
+  key,
+  readStringUnions,
+} from './check-style-vocabulary.mjs';
 
 let passed = 0;
 function check(name, fn) {
@@ -53,5 +57,26 @@ check('a renamed copy of the same members still collides', () => {
   assert.equal(key(shared.get('LyraVariant')), key(local.get('BadgeTone')));
 });
 
-console.log(`Style-vocabulary checker self-test passed (${passed} cases).`);
+check('combines styling and shared-value vocabulary owners without losing their module', () => {
+  const owners = buildSharedVocabulary([
+    {
+      modulePath: 'internal/variants.ts',
+      source: `export type LyraVariant = 'neutral' | 'brand';`,
+    },
+    {
+      modulePath: 'internal/shared-unions.ts',
+      source: `export type LyraOrientation = 'horizontal' | 'vertical';`,
+    },
+  ]);
 
+  assert.deepEqual(owners.get(key(['brand', 'neutral'])), {
+    name: 'LyraVariant',
+    modulePath: 'internal/variants.ts',
+  });
+  assert.deepEqual(owners.get(key(['vertical', 'horizontal'])), {
+    name: 'LyraOrientation',
+    modulePath: 'internal/shared-unions.ts',
+  });
+});
+
+console.log(`Style-vocabulary checker self-test passed (${passed} cases).`);

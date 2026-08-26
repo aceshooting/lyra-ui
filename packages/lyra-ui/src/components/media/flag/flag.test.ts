@@ -438,7 +438,7 @@ describe('loadFlagUrl (uncached, dependency-injectable)', () => {
       console.warn = originalWarn;
     }
     expect(calls.length).to.equal(1);
-    expect(calls[0][0]).to.contain('@aceshooting/lyra-flags');
+    expect(calls[0]![0]).to.contain('@aceshooting/lyra-flags');
   });
 
   it('accepts a validated default-shaped peer and rejects malformed capabilities', async () => {
@@ -509,7 +509,7 @@ describe('loadBulkFlagUrl (uncached, dependency-injectable)', () => {
       console.warn = originalWarn;
     }
     expect(calls.length).to.equal(1);
-    expect(calls[0][0]).to.contain('@aceshooting/lyra-flags');
+    expect(calls[0]![0]).to.contain('@aceshooting/lyra-flags');
   });
 
   it('accepts a validated default-shaped peer and rejects malformed capabilities', async () => {
@@ -1023,13 +1023,13 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
 
       // Reject the stale 'fr' call first: the guard must recognize it as superseded and no-op,
       // leaving the still-in-flight 'de' call's loading state untouched.
-      rejecters[0](new Error('stale fr failure'));
+      rejecters[0]!(new Error('stale fr failure'));
       await aTimeout(20);
       expect(el.loading, 'the stale rejection must not touch loading').to.be.true;
 
       // Now reject the current 'de' call: its own .catch() branch (token === resolveToken) must
       // still fire and recover to loading=false.
-      rejecters[1](new Error('de failure'));
+      rejecters[1]!(new Error('de failure'));
       await aTimeout(20);
     } finally {
       window.removeEventListener('unhandledrejection', onUnhandled);
@@ -1177,6 +1177,43 @@ describe('alpha-3 country codes and the unresolved fallback', () => {
     expect(image!.getAttribute('src')).to.equal('/placeholder.svg');
   });
 
+  it('sizes and clips a fallback image exactly like the primary image for both flag shapes', async () => {
+    setFlagUrlResolver(async (code: string) => stubFlagSrc(code));
+
+    for (const shape of ['rect', 'circle'] as const) {
+      const primary = (await fixture(html`
+        <lr-flag
+          src=${TEST_FLAG_SRC}
+          shape=${shape}
+          style="font-size: 30px; --lr-flag-object-fit: contain"
+        ></lr-flag>
+      `)) as LyraFlag;
+      const fallback = (await fixture(html`
+        <lr-flag
+          country="SUN"
+          fallback="/placeholder.svg"
+          shape=${shape}
+          style="font-size: 30px; --lr-flag-object-fit: contain"
+        ></lr-flag>
+      `)) as LyraFlag;
+      await primary.updateComplete;
+      await fallback.updateComplete;
+      const primaryImage = primary.shadowRoot!.querySelector<HTMLImageElement>('[part="image"]')!;
+      const fallbackImage = fallback.shadowRoot!
+        .querySelector<HTMLImageElement>('[part="fallback-image"]')!;
+      const primaryStyle = getComputedStyle(primaryImage);
+      const fallbackStyle = getComputedStyle(fallbackImage);
+      const hostBox = fallback.getBoundingClientRect();
+      const imageBox = fallbackImage.getBoundingClientRect();
+
+      expect(fallbackStyle.display, `${shape} display`).to.equal(primaryStyle.display);
+      expect(fallbackStyle.objectFit, `${shape} object-fit`).to.equal(primaryStyle.objectFit);
+      expect(fallbackStyle.borderRadius, `${shape} clipping`).to.equal(primaryStyle.borderRadius);
+      expect(imageBox.width, `${shape} inline size`).to.be.closeTo(hostBox.width, 1);
+      expect(imageBox.height, `${shape} block size`).to.be.closeTo(hostBox.height, 1);
+    }
+  });
+
   it('leaves a resolvable code untouched, so the fallback is inert by default', async () => {
     setFlagUrlResolver(async (code: string) => stubFlagSrc(code));
     const el = (await fixture(
@@ -1291,8 +1328,8 @@ describe('peer capability diagnostics', () => {
 
     expect(absent.calls.length).to.equal(1);
     expect(outdated.calls.length).to.equal(1);
-    const absentText = String(absent.calls[0][0]);
-    const outdatedText = String(outdated.calls[0][0]);
+    const absentText = String(absent.calls[0]![0]);
+    const outdatedText = String(outdated.calls[0]![0]);
     expect(absentText, 'an absent peer is still told to install it').to.contain('install');
     expect(
       outdatedText,
@@ -1310,7 +1347,7 @@ describe('peer capability diagnostics', () => {
       outdated.restore();
     }
     expect(outdated.calls.length).to.equal(1);
-    expect(String(outdated.calls[0][0])).to.contain('flagUrl');
-    expect(String(outdated.calls[0][0])).to.not.contain('install it with');
+    expect(String(outdated.calls[0]![0])).to.contain('flagUrl');
+    expect(String(outdated.calls[0]![0])).to.not.contain('install it with');
   });
 });

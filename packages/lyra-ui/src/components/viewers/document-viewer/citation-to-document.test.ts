@@ -74,7 +74,8 @@ describe('citation-badge -> document-viewer end-to-end recipe', () => {
       badge.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
       await waitUntil(() => dv.shadowRoot!.querySelector('lr-pdf-viewer') !== null, undefined, { timeout: 2000 });
-      const pdfViewer = dv.shadowRoot!.querySelector('lr-pdf-viewer') as unknown as LyraPdfViewer & {
+      const pdfViewer = dv.shadowRoot!.querySelector('lr-pdf-viewer') as LyraPdfViewer;
+      const pdfAccess = pdfViewer as unknown as {
         loadLibrary: () => Promise<unknown>;
         load: () => Promise<void>;
         anchorRetryIntervalMs: number;
@@ -84,9 +85,9 @@ describe('citation-badge -> document-viewer end-to-end recipe', () => {
       expect(pdfViewer.highlights).to.deep.equal([highlight]);
       expect(pdfViewer.anchor).to.equal('cite-1');
 
-      pdfViewer.anchorRetryIntervalMs = 10;
-      pdfViewer.anchorTimeoutMs = 2000;
-      pdfViewer.loadLibrary = () =>
+      pdfAccess.anchorRetryIntervalMs = 10;
+      pdfAccess.anchorTimeoutMs = 2000;
+      pdfAccess.loadLibrary = () =>
         Promise.resolve({
           getDocument: () => ({ promise: Promise.resolve(fakeDocument()) }),
           GlobalWorkerOptions: { workerSrc: '' },
@@ -101,7 +102,7 @@ describe('citation-badge -> document-viewer end-to-end recipe', () => {
         } as Response)) as typeof window.fetch;
 
       const anchorResultPromise = oneEvent(dv, 'lr-anchor-result');
-      void pdfViewer.load(); // direct call bypasses property-change detection -- `src` didn't change
+      void pdfAccess.load(); // direct call bypasses property-change detection -- `src` didn't change
       const result = await anchorResultPromise;
       expect(result.detail).to.deep.equal({ found: true });
       expect(pdfViewer.activeHighlightId).to.equal('cite-1');
@@ -111,10 +112,9 @@ describe('citation-badge -> document-viewer end-to-end recipe', () => {
   });
 
   it('reverse direction: a text selection inside the pdf emits lr-text-select with a citable anchor', async () => {
-    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer & {
-      loadLibrary: () => Promise<unknown>;
-    };
-    el.loadLibrary = () =>
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    const access = el as unknown as { loadLibrary: () => Promise<unknown> };
+    access.loadLibrary = () =>
       Promise.resolve({
         getDocument: () => ({ promise: Promise.resolve(fakeDocument()) }),
         GlobalWorkerOptions: { workerSrc: '' },
@@ -152,7 +152,7 @@ describe('citation-badge -> document-viewer end-to-end recipe', () => {
         getRangeAt: () => range,
         isCollapsed: false,
         rangeCount: 1,
-      })) as typeof window.getSelection;
+      })) as unknown as typeof window.getSelection;
       try {
         const eventPromise = oneEvent(el, 'lr-text-select');
         el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));

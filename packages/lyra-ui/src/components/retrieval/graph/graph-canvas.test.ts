@@ -165,8 +165,8 @@ describe("drawGraphScene", () => {
         font: "10px sans-serif",
       }
     );
-    const dimmedAlpha = dimmedCtx.getImageData(50, 50, 1, 1).data[3];
-    const brightAlpha = brightCtx.getImageData(50, 50, 1, 1).data[3];
+    const dimmedAlpha = dimmedCtx.getImageData(50, 50, 1, 1).data[3]!;
+    const brightAlpha = brightCtx.getImageData(50, 50, 1, 1).data[3]!;
     expect(dimmedAlpha).to.be.lessThan(brightAlpha);
   });
 

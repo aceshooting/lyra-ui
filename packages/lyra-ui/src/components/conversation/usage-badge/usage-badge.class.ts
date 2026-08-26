@@ -2,7 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
-import { place } from '../../../internal/positioner.js';
+import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { styles } from './usage-badge.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';

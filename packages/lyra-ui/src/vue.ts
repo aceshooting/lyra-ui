@@ -769,9 +769,11 @@ export type LyraArchiveViewerVueProps = LyraVueCustomElement<
   | 'activeHighlightId'
   | 'anchor'
   | 'highlights'
+  | 'locale'
   | 'maxHeight'
   | 'name'
-  | 'src',
+  | 'src'
+  | 'strings',
   {},
   LyraArchiveViewerEventMap,
   | 'lr-anchor-result'
@@ -2373,6 +2375,7 @@ export type LyraComboboxVueProps = LyraVueCustomElement<
   | 'placeholder'
   | 'placement'
   | 'required'
+  | 'selectedRows'
   | 'selectionDirection'
   | 'selectionEnd'
   | 'selectionStart'
@@ -2877,6 +2880,9 @@ export type LyraDataGridVueProps = LyraVueCustomElement<
   | '--header-row-height'
   | '--header-text-color'
   | '--indent-size'
+  | '--lr-data-grid-cell-color'
+  | '--lr-data-grid-cell-link-color'
+  | '--lr-data-grid-cell-link-hover-color'
   | '--max-height'
   | '--row-height'
   | '--row-hover-background'
@@ -2908,6 +2914,7 @@ export type LyraDatasetViewerVueProps = LyraVueCustomElement<
   | 'locale'
   | 'maxHeight'
   | 'name'
+  | 'scrollMode'
   | 'src'
   | 'strings',
   {},
@@ -2921,6 +2928,7 @@ export type LyraDatasetViewerVueProps = LyraVueCustomElement<
   {
     'active-highlight-id'?: LyraDatasetViewer['activeHighlightId'];
     'max-height'?: LyraDatasetViewer['maxHeight'];
+    'scroll-mode'?: LyraDatasetViewer['scrollMode'];
   }
 >;
 
@@ -3071,6 +3079,7 @@ export type LyraDatePickerVueProps = LyraVueCustomElement<
   | 'presets'
   | 'previousLabel'
   | 'readonly'
+  | 'selection'
   | 'size'
   | 'strings'
   | 'today'
@@ -3410,7 +3419,8 @@ export type LyraDocumentViewerVueProps = LyraVueCustomElement<
   LyraDocumentViewerEventMap,
   | 'lr-anchor-result'
   | 'lr-close'
-  | 'lr-download',
+  | 'lr-download'
+  | 'lr-render-error',
   | '--lr-document-viewer-max-height',
   {
     'mime-type'?: LyraDocumentViewer['mimeType'];
@@ -4004,6 +4014,7 @@ export type LyraEvalResultVueProps = LyraVueCustomElement<
   | 'baselineRunId'
   | 'columns'
   | 'disabled'
+  | 'label'
   | 'locale'
   | 'reviewSkippable'
   | 'rubricKeys'
@@ -4251,6 +4262,7 @@ export type LyraFlowCanvasVueProps = LyraVueCustomElement<
   | 'lr-selection-change'
   | 'lr-selection-delete'
   | 'lr-viewport-change',
+  | '--lr-canvas-reserved-height'
   | '--lr-flow-canvas-drop-active-outline-color'
   | '--lr-flow-canvas-edge-brand-color'
   | '--lr-flow-canvas-edge-danger-color'
@@ -4600,6 +4612,7 @@ export type LyraGraphVueProps = LyraVueCustomElement<
   | 'lr-node-leave'
   | 'lr-selection-change'
   | 'lr-viewport-change',
+  | '--lr-canvas-reserved-height'
   | '--lr-graph-cat-1'
   | '--lr-graph-cat-2'
   | '--lr-graph-cat-3'
@@ -5456,7 +5469,7 @@ export type LyraKnowledgeGraphExplorerVueProps = LyraVueCustomElement<
   | 'lr-relation-activate'
   | 'lr-search-change'
   | 'lr-selection-change',
-never,
+  | '--lr-canvas-reserved-height',
   {
     'search-query'?: LyraKnowledgeGraphExplorer['searchQuery'];
     'selected-node-id'?: LyraKnowledgeGraphExplorer['selectedNodeId'];
@@ -5832,6 +5845,7 @@ export type LyraMapVueProps = LyraVueCustomElement<
   | 'lr-map-load'
   | 'lr-map-marker-activate',
   | '--lr-map-choropleth-fill-opacity'
+  | '--lr-map-height'
   | '--lr-map-popup-close-button-active-bg'
   | '--lr-map-popup-close-button-active-color'
   | '--lr-map-popup-close-button-hover-bg'
@@ -7945,7 +7959,7 @@ export type LyraRagEvalDashboardVueProps = LyraVueCustomElement<
   | 'lr-metric-change'
   | 'lr-run-change'
   | 'lr-slice-change',
-never,
+  | '--lr-rag-eval-dashboard-selected-border-color',
   {
     'chart-height'?: LyraRagEvalDashboard['chartHeight'];
     'metric-id'?: LyraRagEvalDashboard['metricId'];
@@ -9571,7 +9585,8 @@ export type LyraTestResultsVueProps = LyraVueCustomElement<
   | '--lr-test-results-filter-active-color'
   | '--lr-test-results-passed-color'
   | '--lr-test-results-running-color'
-  | '--lr-test-results-skipped-color',
+  | '--lr-test-results-skipped-color'
+  | '--lr-test-results-spinner-size',
   {
     'auto-expand-failures'?: LyraTestResults['autoExpandFailures'];
     'run-id'?: LyraTestResults['runId'];
@@ -10061,6 +10076,7 @@ export type LyraToolApprovalDialogVueProps = LyraVueCustomElement<
   | 'editable'
   | 'enterKeyHint'
   | 'inputMode'
+  | 'lightDismiss'
   | 'locale'
   | 'open'
   | 'pending'
@@ -10085,6 +10101,7 @@ export type LyraToolApprovalDialogVueProps = LyraVueCustomElement<
     'autocorrect'?: LyraToolApprovalDialog['autoCorrect'];
     'enterkeyhint'?: LyraToolApprovalDialog['enterKeyHint'];
     'inputmode'?: LyraToolApprovalDialog['inputMode'];
+    'light-dismiss'?: LyraToolApprovalDialog['lightDismiss'];
     'proposal-key'?: LyraToolApprovalDialog['proposalKey'];
     'tool-name'?: LyraToolApprovalDialog['toolName'];
   }
@@ -10147,6 +10164,7 @@ export type LyraToolResultDialogVueProps = LyraVueCustomElement<
   LyraToolResultDialog,
   | 'accessibleLabel'
   | 'durationMs'
+  | 'lightDismiss'
   | 'locale'
   | 'maximized'
   | 'open'
@@ -10173,6 +10191,7 @@ export type LyraToolResultDialogVueProps = LyraVueCustomElement<
   {
     'aria-label'?: LyraToolResultDialog['accessibleLabel'];
     'duration-ms'?: LyraToolResultDialog['durationMs'];
+    'light-dismiss'?: LyraToolResultDialog['lightDismiss'];
     'tool-name'?: LyraToolResultDialog['toolName'];
   }
 >;
@@ -10207,6 +10226,7 @@ export type LyraToolSelectDialogVueProps = LyraVueCustomElement<
   | 'filter'
   | 'inputMode'
   | 'label'
+  | 'lightDismiss'
   | 'locale'
   | 'open'
   | 'searchPlaceholder'
@@ -10227,6 +10247,7 @@ export type LyraToolSelectDialogVueProps = LyraVueCustomElement<
     'autocorrect'?: LyraToolSelectDialog['autoCorrect'];
     'enterkeyhint'?: LyraToolSelectDialog['enterKeyHint'];
     'inputmode'?: LyraToolSelectDialog['inputMode'];
+    'light-dismiss'?: LyraToolSelectDialog['lightDismiss'];
     'search-placeholder'?: LyraToolSelectDialog['searchPlaceholder'];
     'use-defaults'?: LyraToolSelectDialog['useDefaults'];
   }
@@ -10762,6 +10783,7 @@ never,
 
 export type LyraWordCloudVueProps = LyraVueCustomElement<
   LyraWordCloud,
+  | 'domain'
   | 'legend'
   | 'locale'
   | 'maxFontSize'

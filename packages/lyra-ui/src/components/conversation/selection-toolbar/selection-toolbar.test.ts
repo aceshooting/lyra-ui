@@ -755,6 +755,26 @@ it("shows a localized failure and emits the full denied clipboard outcome withou
     expect(
       el.shadowRoot!.querySelector('[data-action="copy"]')!.textContent?.trim()
     ).to.equal("Échec de la copie");
+
+    el.text = "new selection";
+    await el.updateComplete;
+    expect(
+      el.shadowRoot!.querySelector('[data-action="copy"]')!.textContent?.trim()
+    ).to.equal("Copy");
+
+    const secondFailure = oneEvent(el, "lr-copy-error");
+    (
+      el.shadowRoot!.querySelector('[data-action="copy"]') as HTMLElement
+    ).click();
+    await secondFailure;
+    await el.updateComplete;
+    el.open = false;
+    await el.updateComplete;
+    el.open = true;
+    await el.updateComplete;
+    expect(
+      el.shadowRoot!.querySelector('[data-action="copy"]')!.textContent?.trim()
+    ).to.equal("Copy");
   } finally {
     if (originalClipboard)
       Object.defineProperty(navigator, "clipboard", originalClipboard);

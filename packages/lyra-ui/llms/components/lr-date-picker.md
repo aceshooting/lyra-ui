@@ -6,6 +6,7 @@
 - **Class** `LyraDatePicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/date-picker/date-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 38 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -48,6 +49,8 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
   clamping and the `input`-then-`change` pair are identical and a consumer's change handler cannot
   tell them apart. A reversed preset normalizes; a malformed one is ignored rather than clearing the
   current value, so a bad entry in a config-driven list never reads as "the user picked nothing".
+  Non-array runtime assignments normalize to the empty collection, and null/non-object entries in
+  an otherwise valid array are omitted from the rendered row rather than aborting the calendar.
   The active button carries `aria-pressed="true"` and `data-active`. Deliberately the same
   `label`/`start`/`end` shape as `<lr-time-range>`'s `TimeRangePreset`, so the library has one
   preset vocabulary rather than two — the only difference is the unit (ISO dates, not numbers)

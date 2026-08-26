@@ -5389,7 +5389,7 @@
           {
             "name": "aria-label",
             "property": "accessibleLabel",
-            "type": "| string | null",
+            "type": "string | null",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -6491,6 +6491,16 @@
             "default": null
           },
           {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "max-height",
             "property": "maxHeight",
             "type": "string",
@@ -6563,6 +6573,16 @@
             "default": "[]"
           },
           {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "maxHeight",
             "attribute": "max-height",
             "type": "string",
@@ -6621,6 +6641,10 @@
           }
         ],
         "parts": [
+          {
+            "name": "anchor-live-region",
+            "deprecated": null
+          },
           {
             "name": "base",
             "deprecated": null
@@ -8758,6 +8782,10 @@
         ],
         "parts": [
           {
+            "name": "anchor-live-region",
+            "deprecated": null
+          },
+          {
             "name": "base",
             "deprecated": null
           },
@@ -10198,7 +10226,7 @@
           {
             "name": "type",
             "property": "type",
-            "type": "'bar'",
+            "type": "LyraChartType",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -10498,7 +10526,7 @@
           {
             "name": "type",
             "attribute": "type",
-            "type": "'bar'",
+            "type": "LyraChartType",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -11082,8 +11110,7 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
+            "hasDefault": false
           },
           {
             "name": "dataTableToggle",
@@ -12566,7 +12593,7 @@
           {
             "name": "type",
             "property": "type",
-            "type": "'bubble'",
+            "type": "LyraChartType",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -12866,7 +12893,7 @@
           {
             "name": "type",
             "attribute": "type",
-            "type": "'bubble'",
+            "type": "LyraChartType",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -15101,6 +15128,10 @@
         ],
         "parts": [
           {
+            "name": "anchor-live-region",
+            "deprecated": null
+          },
+          {
             "name": "base",
             "deprecated": null
           },
@@ -17151,8 +17182,7 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
+            "hasDefault": false
           },
           {
             "name": "dataTableToggle",
@@ -22538,13 +22568,13 @@
         "events": [
           {
             "name": "lr-citation-select",
-            "type": "CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>",
+            "type": "CustomEvent< LyraEventDetailSnapshot<CitationSelectEventDetail> >",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-claim-select",
-            "type": "CustomEvent<LyraEventDetailSnapshot<{ claim: GroundedClaim }>>",
+            "type": "CustomEvent< LyraEventDetailSnapshot<{ claim: GroundedClaim }> >",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -22901,8 +22931,7 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
+            "hasDefault": false
           },
           {
             "name": "language",
@@ -23395,8 +23424,7 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
+            "hasDefault": false
           },
           {
             "name": "language",
@@ -26715,7 +26743,7 @@
             "name": "selectedRows",
             "attribute": null,
             "type": "ComboboxSourceRow[]",
-            "readonly": true,
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
@@ -27602,9 +27630,7 @@
       "registrationModule": "src/components/layout/command-palette/command-palette.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [
-        "dompurify"
-      ],
+      "optionalPeers": [],
       "maturity": {
         "status": "stable",
         "since": "4.0.0",
@@ -28784,9 +28810,7 @@
       "registrationModule": "src/components/data/condition-builder/condition-builder.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [
-        "dompurify"
-      ],
+      "optionalPeers": [],
       "maturity": {
         "status": "stable",
         "since": "9.0.0",
@@ -28863,6 +28887,15 @@
             "hasDefault": false
           },
           {
+            "name": "invalidConditionIds",
+            "attribute": null,
+            "type": "readonly string[]",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "locale",
             "attribute": "locale",
             "type": "string",
@@ -28871,6 +28904,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "validationIssues",
+            "attribute": null,
+            "type": "readonly ConditionBuilderValidationIssue[]",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "value",
@@ -28958,6 +29000,15 @@
             ]
           },
           {
+            "name": "checkValidity",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
             "name": "removeCondition",
             "overloads": [
               {
@@ -28972,6 +29023,15 @@
                 "returnType": "void"
               }
             ]
+          },
+          {
+            "name": "reportValidity",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "boolean"
+              }
+            ]
           }
         ],
         "staticProperties": [],
@@ -28983,7 +29043,10 @@
             "disabled",
             "value"
           ],
-          "methods": []
+          "methods": [
+            "checkValidity",
+            "reportValidity"
+          ]
         },
         "native": {
           "forwardedEvents": [],
@@ -29566,6 +29629,10 @@
           }
         ],
         "parts": [
+          {
+            "name": "anchor-live-region",
+            "deprecated": null
+          },
           {
             "name": "base",
             "deprecated": null
@@ -31478,6 +31545,10 @@
         ],
         "parts": [
           {
+            "name": "anchor-live-region",
+            "deprecated": null
+          },
+          {
             "name": "base",
             "deprecated": null
           },
@@ -31938,7 +32009,7 @@
             "name": "--lr-dashboard-grid-interaction-shadow",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-shadow)"
+            "default": "var(--lr-shadow-m)"
           },
           {
             "name": "--lr-dashboard-grid-row-height",
@@ -33106,6 +33177,24 @@
             "default": "var(--lr-size-1-25rem)"
           },
           {
+            "name": "--lr-data-grid-cell-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-data-grid-cell-link-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-data-grid-cell-link-hover-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-data-grid-cell-link-color,var(--lr-color-brand))"
+          },
+          {
             "name": "--max-height",
             "deprecated": null,
             "hasDefault": true,
@@ -33595,6 +33684,15 @@
             "default": ""
           },
           {
+            "name": "scroll-mode",
+            "property": "scrollMode",
+            "type": "DatasetViewerScrollMode",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "src",
             "property": "src",
             "type": "string",
@@ -33677,6 +33775,15 @@
             "default": ""
           },
           {
+            "name": "scrollMode",
+            "attribute": "scroll-mode",
+            "type": "DatasetViewerScrollMode",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "src",
             "attribute": "src",
             "type": "string",
@@ -33715,6 +33822,10 @@
           }
         ],
         "parts": [
+          {
+            "name": "anchor-live-region",
+            "deprecated": null
+          },
           {
             "name": "base",
             "deprecated": null
@@ -36181,7 +36292,7 @@
             "name": "selection",
             "attribute": null,
             "type": "DateRange",
-            "readonly": true,
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
@@ -39762,6 +39873,12 @@
             "type": "CustomEvent<{ src: string; filename: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-render-error",
+            "type": "CustomEvent<{ error: unknown }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -40009,6 +40126,10 @@
           }
         ],
         "parts": [
+          {
+            "name": "anchor-live-region",
+            "deprecated": null
+          },
           {
             "name": "base",
             "deprecated": null
@@ -40436,7 +40557,7 @@
           {
             "name": "type",
             "property": "type",
-            "type": "'doughnut'",
+            "type": "LyraChartType",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -40736,7 +40857,7 @@
           {
             "name": "type",
             "attribute": "type",
-            "type": "'doughnut'",
+            "type": "LyraChartType",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -43393,6 +43514,10 @@
         ],
         "parts": [
           {
+            "name": "anchor-live-region",
+            "deprecated": null
+          },
+          {
             "name": "base",
             "deprecated": null
           },
@@ -43749,6 +43874,10 @@
           }
         ],
         "parts": [
+          {
+            "name": "anchor-live-region",
+            "deprecated": null
+          },
           {
             "name": "attachment-button",
             "deprecated": null
@@ -46632,6 +46761,16 @@
             "default": false
           },
           {
+            "name": "label",
+            "property": "label",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -46692,6 +46831,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "locale",
@@ -49012,7 +49161,16 @@
         ],
         "staticProperties": [],
         "staticMethods": [],
-        "moduleExports": [],
+        "moduleExports": [
+          {
+            "module": "src/components/data/file-tree/file-tree.class.ts",
+            "name": "GIT_STATUSES",
+            "kind": "variable",
+            "type": "ReadonlySet<GitStatus>",
+            "readonly": false,
+            "deprecated": null
+          }
+        ],
         "form": {
           "associated": false,
           "properties": [],
@@ -49353,9 +49511,7 @@
       "registrationModule": "src/components/media/flag/flag.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [
-        "@aceshooting/lyra-flags"
-      ],
+      "optionalPeers": [],
       "maturity": {
         "status": "stable",
         "since": "4.0.0",
@@ -50180,6 +50336,12 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-canvas-reserved-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-24rem)"
+          },
           {
             "name": "--lr-flow-canvas-drop-active-outline-color",
             "deprecated": null,
@@ -53180,6 +53342,10 @@
         ],
         "parts": [
           {
+            "name": "anchor-live-region",
+            "deprecated": null
+          },
+          {
             "name": "base",
             "deprecated": null
           },
@@ -53469,6 +53635,10 @@
           }
         ],
         "parts": [
+          {
+            "name": "anchor-live-region",
+            "deprecated": null
+          },
           {
             "name": "base",
             "deprecated": null
@@ -54054,7 +54224,7 @@
           },
           {
             "name": "lr-selection-change",
-            "type": "CustomEvent<LyraEventDetailSnapshot<{ nodeIds: string[]; linkIds: string[] }>>",
+            "type": "CustomEvent< LyraEventDetailSnapshot<{ nodeIds: string[]; linkIds: string[] }> >",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -54144,6 +54314,12 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-canvas-reserved-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-24rem)"
+          },
           {
             "name": "--lr-graph-cat-1",
             "deprecated": null,
@@ -54441,7 +54617,7 @@
         "events": [
           {
             "name": "lr-visibility-change",
-            "type": "CustomEvent<LyraEventDetailSnapshot<LyraGraphLegendVisibilityDetail>>",
+            "type": "CustomEvent< LyraEventDetailSnapshot<LyraGraphLegendVisibilityDetail> >",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -56084,7 +56260,12 @@
             "hasDefault": false
           }
         ],
-        "slots": [],
+        "slots": [
+          {
+            "name": "legend",
+            "deprecated": null
+          }
+        ],
         "events": [
           {
             "name": "lr-cell-click",
@@ -56851,7 +57032,7 @@
           {
             "name": "type",
             "property": "type",
-            "type": "LyraChartType",
+            "type": "'bar'",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -57171,7 +57352,7 @@
           {
             "name": "type",
             "attribute": "type",
-            "type": "LyraChartType",
+            "type": "'bar'",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -57852,6 +58033,10 @@
           }
         ],
         "parts": [
+          {
+            "name": "anchor-live-region",
+            "deprecated": null
+          },
           {
             "name": "base",
             "deprecated": null
@@ -59861,6 +60046,10 @@
         ],
         "parts": [
           {
+            "name": "anchor-live-region",
+            "deprecated": null
+          },
+          {
             "name": "annotate-toggle",
             "deprecated": null
           },
@@ -60309,6 +60498,10 @@
           }
         ],
         "parts": [
+          {
+            "name": "anchor-live-region",
+            "deprecated": null
+          },
           {
             "name": "base",
             "deprecated": null
@@ -63882,7 +64075,7 @@
           {
             "name": "entityDetails",
             "attribute": null,
-            "type": "Readonly<Record< string, Readonly<LyraKnowledgeGraphEntityDetails> >>",
+            "type": "Readonly< Record<string, Readonly<LyraKnowledgeGraphEntityDetails>> >",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -64046,7 +64239,7 @@
           },
           {
             "name": "lr-hidden-types-change",
-            "type": "CustomEvent<LyraEventDetailSnapshot<{ hiddenTypes: string[] }>>",
+            "type": "CustomEvent< LyraEventDetailSnapshot<{ hiddenTypes: string[] }> >",
             "cancelable": "never",
             "constructor": "CustomEvent",
             "composed": true
@@ -64082,7 +64275,7 @@
           },
           {
             "name": "lr-pin-change",
-            "type": "CustomEvent<LyraEventDetailSnapshot<{ pinnedNodeIds: string[] }>>",
+            "type": "CustomEvent< LyraEventDetailSnapshot<{ pinnedNodeIds: string[] }> >",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -64161,7 +64354,14 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-canvas-reserved-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-24rem)"
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -65857,7 +66057,7 @@
           {
             "name": "type",
             "property": "type",
-            "type": "'line'",
+            "type": "LyraChartType",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -66157,7 +66357,7 @@
           {
             "name": "type",
             "attribute": "type",
-            "type": "'line'",
+            "type": "LyraChartType",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -66919,8 +67119,7 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
+            "hasDefault": false
           },
           {
             "name": "dataTableToggle",
@@ -67611,9 +67810,7 @@
       "registrationModule": "src/components/forms/locale-picker/locale-picker.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [
-        "@aceshooting/lyra-flags"
-      ],
+      "optionalPeers": [],
       "maturity": {
         "status": "stable",
         "since": "6.0.0",
@@ -68680,6 +68877,12 @@
             "default": 0.75
           },
           {
+            "name": "--lr-map-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-24rem)"
+          },
+          {
             "name": "--lr-map-popup-close-button-active-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -69145,6 +69348,10 @@
           }
         ],
         "parts": [
+          {
+            "name": "anchor-live-region",
+            "deprecated": null
+          },
           {
             "name": "blockquote",
             "deprecated": null
@@ -69700,6 +69907,10 @@
           }
         ],
         "parts": [
+          {
+            "name": "anchor-live-region",
+            "deprecated": null
+          },
           {
             "name": "blockquote",
             "deprecated": null
@@ -77226,6 +77437,10 @@
         ],
         "parts": [
           {
+            "name": "anchor-live-region",
+            "deprecated": null
+          },
+          {
             "name": "base",
             "deprecated": null
           },
@@ -83075,6 +83290,10 @@
         ],
         "parts": [
           {
+            "name": "anchor-live-region",
+            "deprecated": null
+          },
+          {
             "name": "base",
             "deprecated": null
           },
@@ -83367,10 +83586,7 @@
       "registrationModule": "src/components/forms/phone-input/phone-input.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [
-        "@aceshooting/lyra-flags",
-        "libphonenumber-js"
-      ],
+      "optionalPeers": [],
       "maturity": {
         "status": "stable",
         "since": "4.0.0",
@@ -84832,7 +85048,7 @@
           {
             "name": "type",
             "property": "type",
-            "type": "'pie'",
+            "type": "LyraChartType",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -85132,7 +85348,7 @@
           {
             "name": "type",
             "attribute": "type",
-            "type": "'pie'",
+            "type": "LyraChartType",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -85800,7 +86016,7 @@
           {
             "name": "type",
             "property": "type",
-            "type": "'polarArea'",
+            "type": "LyraChartType",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -86100,7 +86316,7 @@
           {
             "name": "type",
             "attribute": "type",
-            "type": "'polarArea'",
+            "type": "LyraChartType",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -88301,6 +88517,10 @@
         ],
         "parts": [
           {
+            "name": "anchor-live-region",
+            "deprecated": null
+          },
+          {
             "name": "base",
             "deprecated": null
           },
@@ -89038,6 +89258,10 @@
           {
             "name": "",
             "deprecated": null
+          },
+          {
+            "name": "label",
+            "deprecated": null
           }
         ],
         "events": [],
@@ -89393,8 +89617,7 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "voice",
@@ -89707,8 +89930,7 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "voice",
@@ -92114,7 +92336,7 @@
           {
             "name": "type",
             "property": "type",
-            "type": "'radar'",
+            "type": "LyraChartType",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -92414,7 +92636,7 @@
           {
             "name": "type",
             "attribute": "type",
-            "type": "'radar'",
+            "type": "LyraChartType",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -95808,6 +96030,10 @@
             "deprecated": null
           },
           {
+            "name": "metric-category",
+            "deprecated": null
+          },
+          {
             "name": "metric-selected",
             "deprecated": null
           },
@@ -95840,7 +96066,14 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-rag-eval-dashboard-selected-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -99204,7 +99437,7 @@
         "events": [
           {
             "name": "lr-chunk-open",
-            "type": "CustomEvent<LyraEventDetailSnapshot<{ chunkId: string; sourceId: string; anchor?: DocumentLocator; }>>",
+            "type": "CustomEvent< LyraEventDetailSnapshot<{ chunkId: string; sourceId: string; anchor?: DocumentLocator; }> >",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -99216,7 +99449,7 @@
           },
           {
             "name": "lr-select",
-            "type": "CustomEvent<LyraEventDetailSnapshot<RetrievalResultsSelectDetail>>",
+            "type": "CustomEvent< LyraEventDetailSnapshot<RetrievalResultsSelectDetail> >",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -99612,7 +99845,7 @@
           },
           {
             "name": "lr-filters-change",
-            "type": "CustomEvent<LyraEventDetailSnapshot<RetrievalFiltersChangeDetail>>",
+            "type": "CustomEvent< LyraEventDetailSnapshot<RetrievalFiltersChangeDetail> >",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -100886,7 +101119,7 @@
           {
             "name": "type",
             "property": "type",
-            "type": "'scatter'",
+            "type": "LyraChartType",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -101186,7 +101419,7 @@
           {
             "name": "type",
             "attribute": "type",
-            "type": "'scatter'",
+            "type": "LyraChartType",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -106514,7 +106747,7 @@
         "events": [
           {
             "name": "lr-sources-change",
-            "type": "CustomEvent<LyraEventDetailSnapshot<{ selectedSourceIds: string[] }>>",
+            "type": "CustomEvent< LyraEventDetailSnapshot<{ selectedSourceIds: string[] }> >",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -106534,6 +106767,10 @@
           },
           {
             "name": "empty",
+            "deprecated": null
+          },
+          {
+            "name": "error",
             "deprecated": null
           },
           {
@@ -108043,6 +108280,10 @@
         ],
         "parts": [
           {
+            "name": "anchor-live-region",
+            "deprecated": null
+          },
+          {
             "name": "base",
             "deprecated": null
           },
@@ -108341,8 +108582,7 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "[...DEFAULT_INTERNAL_PATTERNS]"
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -110456,6 +110696,10 @@
           }
         ],
         "parts": [
+          {
+            "name": "anchor-live-region",
+            "deprecated": null
+          },
           {
             "name": "base",
             "deprecated": null
@@ -114770,8 +115014,7 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -115398,6 +115641,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-test-results-spinner-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-1em)"
           }
         ],
         "cssStates": [],
@@ -118462,13 +118711,13 @@
             "name": "--column-item-height",
             "deprecated": null,
             "hasDefault": true,
-            "default": "2.25em"
+            "default": "calc(var(--lr-size-1em)*2.25)"
           },
           {
             "name": "--column-width",
             "deprecated": null,
             "hasDefault": true,
-            "default": "3em"
+            "default": "calc(var(--lr-size-1em)*3)"
           },
           {
             "name": "--hide-duration",
@@ -118965,6 +119214,15 @@
           }
         ],
         "properties": [
+          {
+            "name": "appliedPreset",
+            "attribute": null,
+            "type": "TimeRangePreset | undefined",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
           {
             "name": "customError",
             "attribute": "custom-error",
@@ -121734,6 +121992,16 @@
             "default": ""
           },
           {
+            "name": "light-dismiss",
+            "property": "lightDismiss",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -121884,6 +122152,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "lightDismiss",
+            "attribute": "light-dismiss",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "locale",
@@ -123048,6 +123326,16 @@
             "hasDefault": false
           },
           {
+            "name": "light-dismiss",
+            "property": "lightDismiss",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -123117,6 +123405,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "lightDismiss",
+            "attribute": "light-dismiss",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "locale",
@@ -123702,6 +124000,16 @@
             "hasDefault": false
           },
           {
+            "name": "light-dismiss",
+            "property": "lightDismiss",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -123830,6 +124138,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "lightDismiss",
+            "attribute": "light-dismiss",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "locale",
@@ -127529,7 +127847,9 @@
       "registrationModule": "src/components/media/video/video.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [],
+      "optionalPeers": [
+        "dompurify"
+      ],
       "maturity": {
         "status": "experimental",
         "since": "8.0.0",
@@ -128325,7 +128645,9 @@
       "registrationModule": "src/components/media/video-playlist/video-playlist.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [],
+      "optionalPeers": [
+        "dompurify"
+      ],
       "maturity": {
         "status": "experimental",
         "since": "8.0.0",
@@ -131079,6 +131401,15 @@
         ],
         "properties": [
           {
+            "name": "domain",
+            "attribute": null,
+            "type": "[number, number] | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "legend",
             "attribute": null,
             "type": "readonly WordCloudLegendItem[]",
@@ -131567,6 +131898,10 @@
           }
         ],
         "parts": [
+          {
+            "name": "anchor-live-region",
+            "deprecated": null
+          },
           {
             "name": "attribute",
             "deprecated": null
@@ -187788,7 +188123,7 @@
             "memberKind": "attribute",
             "member": "type",
             "upstream": "ChartType",
-            "target": "'bar'"
+            "target": "LyraChartType"
           },
           {
             "memberKind": "property",
@@ -188142,7 +188477,7 @@
             "memberKind": "attribute",
             "member": "type",
             "upstream": "ChartType",
-            "target": "'bubble'"
+            "target": "LyraChartType"
           },
           {
             "memberKind": "property",
@@ -191026,7 +191361,7 @@
             "memberKind": "attribute",
             "member": "type",
             "upstream": "ChartType",
-            "target": "'doughnut'"
+            "target": "LyraChartType"
           },
           {
             "memberKind": "property",
@@ -192717,7 +193052,7 @@
             "memberKind": "attribute",
             "member": "type",
             "upstream": "ChartType",
-            "target": "'line'"
+            "target": "LyraChartType"
           },
           {
             "memberKind": "property",
@@ -193725,7 +194060,7 @@
             "memberKind": "attribute",
             "member": "type",
             "upstream": "ChartType",
-            "target": "'pie'"
+            "target": "LyraChartType"
           },
           {
             "memberKind": "property",
@@ -193935,7 +194270,7 @@
             "memberKind": "attribute",
             "member": "type",
             "upstream": "ChartType",
-            "target": "'polarArea'"
+            "target": "LyraChartType"
           },
           {
             "memberKind": "property",
@@ -194745,7 +195080,7 @@
             "memberKind": "attribute",
             "member": "type",
             "upstream": "ChartType",
-            "target": "'radar'"
+            "target": "LyraChartType"
           },
           {
             "memberKind": "property",
@@ -195618,7 +195953,7 @@
             "memberKind": "attribute",
             "member": "type",
             "upstream": "ChartType",
-            "target": "'scatter'"
+            "target": "LyraChartType"
           },
           {
             "memberKind": "property",
@@ -197310,6 +197645,20 @@
         ],
         "cssDefaultEquivalences": [
           {
+            "member": "--column-item-height",
+            "upstreamHasDefault": true,
+            "upstream": "2.25em",
+            "targetHasDefault": true,
+            "target": "calc(var(--lr-size-1em)*2.25)"
+          },
+          {
+            "member": "--column-width",
+            "upstreamHasDefault": true,
+            "upstream": "3em",
+            "targetHasDefault": true,
+            "target": "calc(var(--lr-size-1em)*3)"
+          },
+          {
             "member": "--hide-duration",
             "upstreamHasDefault": true,
             "upstream": "var(--wa-transition-fast)",
@@ -197952,7 +198301,9 @@
         "lightDom": "surface-only",
         "runtime": {
           "registration": "all",
-          "optionalPeers": []
+          "optionalPeers": [
+            "dompurify"
+          ]
         },
         "accessibility": {
           "reviewStatus": "complete",
@@ -198053,7 +198404,9 @@
         "lightDom": "surface-only",
         "runtime": {
           "registration": "all",
-          "optionalPeers": []
+          "optionalPeers": [
+            "dompurify"
+          ]
         },
         "accessibility": {
           "reviewStatus": "complete",

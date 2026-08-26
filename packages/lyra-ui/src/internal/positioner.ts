@@ -10,6 +10,14 @@ import {
   type Boundary,
   type Placement,
 } from '@floating-ui/dom';
+import {
+  finiteGeometry,
+  PositionerGeometryError,
+  validatedClientRect,
+  type VirtualAnchor,
+} from './positioner-geometry.js';
+
+export { virtualAnchorFromRect, type VirtualAnchor } from './positioner-geometry.js';
 
 /** What `place()` reports back after each recomputation, for a caller that renders an arrow or
  *  reflects the resolved side (which `flip()` may have changed) into a part name or attribute. */
@@ -435,45 +443,6 @@ async function popupRectAtPosition(
   };
 }
 
-/**
- * A synthetic anchor for `place()` -- structurally matches Floating UI's own `VirtualElement`
- * (`@floating-ui/dom`), so it can be passed to `computePosition()`/`autoUpdate()` wherever a real
- * `Element` is accepted. Lets a popup be positioned against an arbitrary rectangle (a graph node,
- * a canvas pixel, a chart datum, a text-selection range) instead of a real DOM element. See
- * `virtualAnchorFromRect()` to build one from a plain `{x, y, width?, height?}` rect.
- */
-export interface VirtualAnchor {
-  getBoundingClientRect(): DOMRect;
-  /** A real element `place()`'s underlying platform can use for scale/RTL context that a plain
-   *  rect can't supply on its own. Optional -- omitting it still works, but `autoUpdate()`'s
-   *  ancestor-scroll/resize tracking has nothing to observe, so a caller whose anchor point moves
-   *  on its own (e.g. a graph pan/zoom tick) must re-supply a fresh anchor itself. */
-  contextElement?: Element;
-}
-
-class PositionerGeometryError extends RangeError {}
-
-function finiteGeometry(value: number, label: string, nonnegative = false): number {
-  if (!Number.isFinite(value) || (nonnegative && value < 0)) {
-    throw new PositionerGeometryError(
-      `${label} must be a ${nonnegative ? 'finite nonnegative' : 'finite'} number`,
-    );
-  }
-  return value;
-}
-
-function validatedClientRect(rect: DOMRect, label: string): DOMRect {
-  finiteGeometry(rect.x, `${label}.x`);
-  finiteGeometry(rect.y, `${label}.y`);
-  finiteGeometry(rect.width, `${label}.width`, true);
-  finiteGeometry(rect.height, `${label}.height`, true);
-  finiteGeometry(rect.top, `${label}.top`);
-  finiteGeometry(rect.right, `${label}.right`);
-  finiteGeometry(rect.bottom, `${label}.bottom`);
-  finiteGeometry(rect.left, `${label}.left`);
-  return rect;
-}
-
 function validatePlaceNumericOptions(opts: PlaceOptions): void {
   for (const [name, value] of [
     ['offset', opts.offset],
@@ -490,28 +459,6 @@ function validatePlaceNumericOptions(opts: PlaceOptions): void {
   ] as const) {
     if (value !== undefined) finiteGeometry(value, `place() ${name}`, true);
   }
-}
-
-/**
- * Builds a `VirtualAnchor` from a plain rect, for `showAt()`-style APIs that anchor a popup to an
- * arbitrary point or box instead of a real DOM element. `width`/`height` default to `0` (a point).
- * An optional `contextElement` is forwarded verbatim -- see `VirtualAnchor.contextElement`.
- * Throws `RangeError` unless every coordinate/dimension is finite and each dimension is
- * nonnegative.
- */
-export function virtualAnchorFromRect(rect: {
-  x: number;
-  y: number;
-  width?: number;
-  height?: number;
-  contextElement?: Element;
-}): VirtualAnchor {
-  const x = finiteGeometry(rect.x, 'virtualAnchorFromRect() x');
-  const y = finiteGeometry(rect.y, 'virtualAnchorFromRect() y');
-  const width = finiteGeometry(rect.width ?? 0, 'virtualAnchorFromRect() width', true);
-  const height = finiteGeometry(rect.height ?? 0, 'virtualAnchorFromRect() height', true);
-  const domRect = new DOMRect(x, y, width, height);
-  return { getBoundingClientRect: () => domRect, contextElement: rect.contextElement };
 }
 
 function validateAnchorBeforeSetup(anchor: Element | VirtualAnchor): void {

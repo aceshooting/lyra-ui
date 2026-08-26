@@ -1,4 +1,4 @@
-import { aTimeout, fixture, expect, html } from "@open-wc/testing";
+import { aTimeout, fixture, expect, html, waitUntil } from "@open-wc/testing";
 import "./heatmap.js";
 import type { CalendarCellPos, LyraHeatmap, MatrixCellPos } from "./heatmap.js";
 import {
@@ -9,12 +9,12 @@ import {
   normalizeBucketCount,
   resolveRgb,
 } from "./heatmap.js";
-import { styles } from "./heatmap.styles.js";
 // Type-only (erased before the browser ever sees this file), so importing the package root here
 // costs the test bundle nothing while still proving the union is reachable from it -- see the
 // package-root re-export test at the end of the sticky-labels block.
 import type { LyraHeatmapStickyLabels as RootHeatmapStickyLabels } from "../../../lyra.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
+import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 type MatrixData = Extract<LyraHeatmap["data"], { kind: "matrix" }>;
 type CalendarData = Extract<LyraHeatmap["data"], { kind: "calendar" }>;
@@ -68,7 +68,9 @@ async function settleLayout(): Promise<void> {
   // frames cover the notification -> scheduled draw -> layout/observer feedback cycle without
   // guessing at a wall-clock delay.
   for (let frame = 0; frame < 4; frame++) {
-    await new Promise<void>((resolve) => requestAnimationFrame(resolve));
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve())
+    );
   }
 }
 
@@ -1096,7 +1098,7 @@ it('moves focus through accessible cells with physical (non-mirrored) arrow keys
   await el.updateComplete;
   await aTimeout(0);
   expect(
-    (el.shadowRoot!.activeElement as HTMLElement).dataset.cellKey
+    (el.shadowRoot!.activeElement as HTMLElement).dataset["cellKey"]
   ).to.equal("matrix-0-1");
 
   const event = new Promise<CustomEvent>((resolve) =>
@@ -3123,7 +3125,7 @@ describe("cellColor", () => {
   it("lets a consumer force an exact cell color bypassing the ramp entirely", async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
     setMatrixData(el, { values: [[0, 5]] });
-    el.cellColor = (pos, value) =>
+    el.cellColor = (_pos, value) =>
       value === 0 ? "rgb(200, 200, 200)" : undefined;
     await el.updateComplete;
     const internals = el as unknown as { draw(): void };
@@ -3344,6 +3346,78 @@ describe("weekdayLabelText", () => {
     // A render callback may be consulted again when the canvas redraws; its semantic contract is
     // the real weekday domain, not an exact invocation count.
     expect([...new Set(seen)].sort()).to.deep.equal([1, 3, 5]);
+  });
+});
+
+describe("calendar weekday-label gutter", () => {
+  const LONG = "Wednesday (localized long label)";
+
+  async function calendarWith(
+    weekdayLabelWidth: unknown,
+    weekdayLabelText: (weekday: number) => string | undefined = () => LONG
+  ): Promise<LyraHeatmap> {
+    const el = (await fixture(html`<lr-heatmap cell-size="20"></lr-heatmap>`)) as LyraHeatmap;
+    el.data = {
+      kind: "calendar",
+      days: [{ date: "2026-01-05", value: 3 }],
+      weekdayLabelText,
+      ...(weekdayLabelWidth === undefined ? {} : { weekdayLabelWidth }),
+    } as never;
+    await el.updateComplete;
+    await aTimeout(0);
+    return el;
+  }
+
+  const firstColumnX = (el: LyraHeatmap): number =>
+    (el as unknown as { columnXFor(week: number): number }).columnXFor(0);
+
+  it("keeps the built-in 28px gutter by default", async () => {
+    const el = await calendarWith(undefined, (weekday) => `W${weekday}`);
+    expect(firstColumnX(el)).to.equal(28);
+  });
+
+  it("pins the gutter to an explicit calendar weekdayLabelWidth", async () => {
+    const el = await calendarWith(96);
+    expect(firstColumnX(el)).to.equal(96);
+  });
+
+  it("measures the widest calendar weekday label under weekdayLabelWidth='auto'", async () => {
+    const el = await calendarWith("auto");
+    expect(firstColumnX(el)).to.be.greaterThan(28);
+  });
+
+  it("ignores a malformed calendar weekdayLabelWidth", async () => {
+    const el = await calendarWith("not-a-number");
+    expect(firstColumnX(el)).to.equal(28);
+  });
+
+  it("keeps calendar hit testing aligned with an explicit weekday gutter", async () => {
+    const el = await calendarWith(96);
+    const pos = (
+      el as unknown as {
+        hitTestCalendar(x: number, y: number): CalendarCellPos | null;
+      }
+    ).hitTestCalendar(106, 26);
+    expect(pos?.week).to.equal(0);
+  });
+
+  it("ellipsizes a weekday label that is wider than the resolved gutter", async () => {
+    const el = await calendarWith(28);
+    const canvas = el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement;
+    const ctx = canvas.getContext("2d")!;
+    const originalFillText = ctx.fillText;
+    const painted: string[] = [];
+    ctx.fillText = ((text: string, ...args: [number, number, number?]) => {
+      painted.push(text);
+      originalFillText.call(ctx, text, ...args);
+    }) as typeof ctx.fillText;
+    try {
+      (el as unknown as { draw(): void }).draw();
+    } finally {
+      ctx.fillText = originalFillText;
+    }
+    expect(painted).to.not.include(LONG);
+    expect(painted.some((label) => label.endsWith("…"))).to.be.true;
   });
 });
 
@@ -3622,7 +3696,7 @@ describe("coverage: color/theme helper edge cases", () => {
         ).formatNumericValue(1234)
       ).to.not.throw();
     } finally {
-      delete (el as unknown as Record<string, unknown>).effectiveLocale;
+      delete (el as unknown as Record<string, unknown>)["effectiveLocale"];
     }
   });
 });
@@ -3714,7 +3788,9 @@ describe("visibility-gated canvas redraws", () => {
       expect(observed, "the observer watches the heatmap host").to.equal(true);
 
       callback!(
-        [{ target: el, isIntersecting: false } as IntersectionObserverEntry],
+        [
+          { target: el, isIntersecting: false } as unknown as IntersectionObserverEntry,
+        ],
         {} as IntersectionObserver
       );
       let draws = 0;
@@ -3735,7 +3811,9 @@ describe("visibility-gated canvas redraws", () => {
       );
 
       callback!(
-        [{ target: el, isIntersecting: true } as IntersectionObserverEntry],
+        [
+          { target: el, isIntersecting: true } as unknown as IntersectionObserverEntry,
+        ],
         {} as IntersectionObserver
       );
       await new Promise<void>((resolve) =>
@@ -3815,7 +3893,9 @@ describe("visibility-gated canvas redraws", () => {
       expect(records.length).to.equal(2);
 
       records[0]!.callback(
-        [{ target: el, isIntersecting: false } as IntersectionObserverEntry],
+        [
+          { target: el, isIntersecting: false } as unknown as IntersectionObserverEntry,
+        ],
         records[0]!.observer
       );
       setMatrixData(el, { values: [[2]] });
@@ -3901,7 +3981,7 @@ describe("coverage: draw guard branches", () => {
       if (originalDescriptor)
         Object.defineProperty(window, "devicePixelRatio", originalDescriptor);
       else
-        delete (window as unknown as Record<string, unknown>).devicePixelRatio;
+        delete (window as unknown as Record<string, unknown>)["devicePixelRatio"];
     }
     // With dpr forced to 1 (0 || 1), canvas.width equals the CSS width exactly.
     expect(canvas.width).to.equal(parseInt(canvas.style.width, 10));
@@ -4594,7 +4674,7 @@ describe("coverage: miscellaneous cell-text/navigation/accessible-cells branches
     const cells = [
       ...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]'),
     ];
-    const match = cells.find((c) => c.dataset.cellKey === "calendar-0-0");
+    const match = cells.find((c) => c.dataset["cellKey"] === "calendar-0-0");
     expect(match != null).to.equal(true);
     expect(match!.getAttribute("aria-selected")).to.equal("true");
     expect(
@@ -4670,8 +4750,8 @@ function stripLitMarkers(root: Element): string {
 }
 
 describe("legendStops", () => {
-  /** The exact legend markup `<lr-heatmap>` has always rendered for a 3..9 matrix. Pinned so the
-   *  new `legendStops` branch cannot alter the default output of a consumer who never sets it. */
+  /** The exact built-in legend markup for a 3..9 matrix, followed only by the additive empty custom
+   * legend slot. Pinned so the `legendStops` branch cannot alter the default scale output. */
   const BASELINE_LEGEND =
     '\n          <span part="legend-lo">3</span>\n' +
     '          <span class="bar"></span>\n' +
@@ -4679,9 +4759,11 @@ describe("legendStops", () => {
     // The trailing valueLabel caption gained `part="legend-value-label"` so the whole legend row
     // is addressable from outside; every other node here is pinned unchanged.
     '          <span part="legend-value-label">value</span>\n' +
-    "          \n        ";
+    '          \n' +
+    '          <slot name="legend"></slot>\n' +
+    "        ";
 
-  it("left unset, renders byte-identical lo/hi gradient legend markup", async () => {
+  it("left unset, preserves the lo/hi gradient markup ahead of the empty custom slot", async () => {
     const el = (await fixture(html`
       <lr-heatmap
         .data=${{
@@ -5063,6 +5145,19 @@ describe("legendStops", () => {
   });
 });
 
+it("assigns custom legend content inside the heatmap's own legend layout", async () => {
+  const el = await fixture<LyraHeatmap>(html`
+    <lr-heatmap>
+      <span slot="legend" id="custom-heatmap-legend">Custom key</span>
+    </lr-heatmap>
+  `);
+  const legend = el.shadowRoot!.querySelector('[part="legend"]')!;
+  const slot = legend.querySelector<HTMLSlotElement>('slot[name="legend"]')!;
+  expect(slot.assignedElements({ flatten: true }).map((node) => node.id)).to.deep.equal([
+    "custom-heatmap-legend",
+  ]);
+});
+
 it("wraps long legend-stop, value-label, and annotation text inside a 320px allocation", async () => {
   const token = `LEGEND_${"IDENTIFIER".repeat(40)}`;
   const wrapper = (await fixture(html`
@@ -5377,7 +5472,7 @@ describe("CalendarCellPos.date", () => {
     for (const button of el.shadowRoot!.querySelectorAll<HTMLButtonElement>(
       '[part="cell"]'
     )) {
-      out[button.dataset.cellKey!] = button.getAttribute("aria-label") ?? "";
+      out[button.dataset["cellKey"]!] = button.getAttribute("aria-label") ?? "";
     }
     return out;
   }
@@ -5610,18 +5705,46 @@ describe("mouse-hover feedback (states-hover-missing-with-focus-visible)", () =>
     expect(getComputedStyle(canvas).pointerEvents).to.equal("auto");
   });
 
-  // :hover cannot be synthesized in this test runner (no real pointer), so per this repo's
-  // documented exception for genuinely-unsynthesizable pseudo-classes, this asserts against the
-  // stylesheet source instead of a rendered/computed effect -- mirroring the existing
-  // reduced-motion/RTL-mirror cssText assertions already used elsewhere in this suite.
-  it("declares [part='cell']:hover and [part='canvas']:hover rules using the same focus-ring color token", () => {
-    const css = styles.cssText.replace(/\s+/g, " ");
-    expect(css).to.match(
-      /\[part=["']cell["']\]:hover\s*\{\s*outline:[^}]*--lr-heatmap-focus-ring-color/
-    );
-    expect(css).to.match(
-      /\[part=["']canvas["']\]:hover\s*\{\s*outline:[^}]*--lr-heatmap-focus-ring-color/
-    );
+  it("renders [part='cell'] and [part='canvas'] hover outlines from the same focus-ring tokens", async () => {
+    const data = {
+      kind: "matrix" as const,
+      rowLabels: ["A"],
+      colLabels: ["X"],
+      values: [[1]],
+    };
+    const canvasHeatmap = (await fixture(html`
+      <lr-heatmap
+        style="--lr-heatmap-focus-ring-color: rgb(1, 2, 3); --lr-size-1px: 5px"
+        .data=${data}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    const cellHeatmap = (await fixture(html`
+      <lr-heatmap
+        accessible-cells
+        style="--lr-heatmap-focus-ring-color: rgb(1, 2, 3); --lr-size-1px: 5px"
+        .data=${data}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    const targets = [
+      canvasHeatmap.shadowRoot!.querySelector<HTMLElement>('[part="canvas"]')!,
+      cellHeatmap.shadowRoot!.querySelector<HTMLElement>('[part="cell"]')!,
+    ];
+
+    for (const target of targets) {
+      const rect = target.getBoundingClientRect();
+      try {
+        await sendMouse({
+          type: "move",
+          position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+        });
+        await waitUntil(() => {
+          const computed = getComputedStyle(target);
+          return computed.outlineColor === "rgb(1, 2, 3)" && computed.outlineWidth === "5px";
+        }, `${target.getAttribute("part")} never painted its hover outline`);
+      } finally {
+        await resetMouse();
+      }
+    }
   });
 });
 
@@ -6562,7 +6685,7 @@ describe("coverage: additional edge-path gaps", () => {
         (el as unknown as { drawCalendar(): void }).drawCalendar()
       ).to.not.throw();
     } finally {
-      delete (el as unknown as Record<string, unknown>).effectiveLocale;
+      delete (el as unknown as Record<string, unknown>)["effectiveLocale"];
     }
   });
 
@@ -6596,7 +6719,7 @@ describe("coverage: additional edge-path gaps", () => {
       ) as HTMLElement;
       expect(tooltip.hidden).to.equal(false);
     } finally {
-      delete (el as unknown as Record<string, unknown>).effectiveLocale;
+      delete (el as unknown as Record<string, unknown>)["effectiveLocale"];
     }
   });
 
@@ -6666,7 +6789,7 @@ describe("coverage: additional edge-path gaps", () => {
       if (originalDescriptor)
         Object.defineProperty(window, "devicePixelRatio", originalDescriptor);
       else
-        delete (window as unknown as Record<string, unknown>).devicePixelRatio;
+        delete (window as unknown as Record<string, unknown>)["devicePixelRatio"];
     }
     // With dpr forced to 1 (0 || 1), canvas.width equals the CSS width exactly.
     expect(canvas.width).to.equal(parseInt(canvas.style.width, 10));
@@ -7070,7 +7193,7 @@ describe("coverage: additional edge-path gaps", () => {
       ).focusAccessibleCell({ row: 0, col: 0 });
       await el.updateComplete;
     } finally {
-      delete (el as unknown as Record<string, unknown>).shadowRoot;
+      delete (el as unknown as Record<string, unknown>)["shadowRoot"];
     }
   });
 
@@ -7234,6 +7357,97 @@ describe("signed data: domain and midpoint", () => {
       cellPixel(a, 0, 1),
       "same value, same colour across two charts sharing a domain"
     ).to.equal(cellPixel(b, 0, 0));
+  });
+
+  it('repaints and re-announces when only domain is assigned after first paint', async () => {
+    const el = await build([
+      [1, 2],
+      [3, 4],
+    ]);
+    await settleLayout();
+    const beforePixel = cellPixel(el, 0, 1);
+    const beforeLabel = el.getAttribute('aria-label') ?? '';
+
+    el.domain = [0, 1000];
+    await el.updateComplete;
+    await settleLayout();
+
+    expect(cellPixel(el, 0, 1)).to.not.equal(beforePixel);
+    expect(beforeLabel).to.contain('1–4');
+    expect(el.getAttribute('aria-label')).to.contain('0–1,000');
+  });
+
+  it('opts into signed data when only midpoint is assigned after first paint', async () => {
+    const el = await build([[-5, 4]]);
+    await settleLayout();
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const noData = resolveTokenRgb(el, '--lr-heatmap-no-data-fill');
+    const before = pixelRgb(ctx, 60 + 5, 20 + 5);
+    expectCloseRgb(before, noData);
+
+    el.midpoint = 0;
+    await el.updateComplete;
+    await settleLayout();
+
+    expect(pixelRgb(ctx, 60 + 5, 20 + 5)).to.not.deep.equal(before);
+    expect(el.getAttribute('aria-label')).to.contain('-5–4');
+  });
+
+  it('keeps sparse calendar gaps no-data when a signed domain makes real -1 values data', async () => {
+    const el = (await fixture(
+      html`<lr-heatmap .data=${{ kind: 'calendar', days: [] }}></lr-heatmap>`
+    )) as LyraHeatmap;
+    el.domain = [-1, 1];
+    el.accessibleCells = true;
+    el.cellText = (_pos, value) =>
+      Number.isFinite(value) ? `value ${value}` : 'gap';
+    const paintedValues = new Map<string, number>();
+    el.cellColor = (pos, value) => {
+      if ('week' in pos) paintedValues.set(`${pos.week}:${pos.weekday}`, value);
+      return value === -1 ? 'rgb(255, 0, 0)' : undefined;
+    };
+    setCalendarData(el, {
+      days: [
+        { date: '2026-03-01', value: -1 },
+        { date: '2026-03-08', value: 1 },
+      ],
+    });
+    await el.updateComplete;
+    await settleLayout();
+
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const geometry = el as unknown as {
+      columnXFor(week: number): number;
+      rowYFor(weekday: number): number;
+    };
+    expect(paintedValues.get('0:0')).to.equal(-1);
+    expect(Number.isNaN(paintedValues.get('0:1'))).to.equal(true);
+    expect(
+      pixelRgb(ctx, geometry.columnXFor(0) + 5, geometry.rowYFor(0) + 5)
+    ).to.deep.equal([255, 0, 0]);
+    expectCloseRgb(
+      pixelRgb(ctx, geometry.columnXFor(0) + 5, geometry.rowYFor(1) + 5),
+      resolveTokenRgb(el, '--lr-heatmap-no-data-fill')
+    );
+
+    const actual = el.shadowRoot!.querySelector<HTMLElement>(
+      '[data-cell-key="calendar-0-0"]'
+    )!;
+    const gap = el.shadowRoot!.querySelector<HTMLElement>(
+      '[data-cell-key="calendar-0-1"]'
+    )!;
+    expect(actual.getAttribute('aria-label')).to.equal('value -1');
+    expect(gap.getAttribute('aria-label')).to.equal('gap');
+
+    let detail: { date: string; value: number } | undefined;
+    el.addEventListener('lr-cell-click', (event) => {
+      detail = (event as CustomEvent<{ date: string; value: number }>).detail;
+    });
+    gap.click();
+    expect(detail?.date).to.equal('2026-03-02');
+    expect(Number.isNaN(detail?.value)).to.equal(true);
   });
 
   it("anchors a diverging ramp's neutral colour on midpoint", async () => {
@@ -7596,6 +7810,51 @@ describe("matrixGeometry / lr-matrix-geometry-change", () => {
       el.matrixGeometry,
       "the getter must report what was painted, not what live layout would paint now"
     ).to.deep.equal({ padLeft: 140, padTop: 20, cellSize: 20 });
+  });
+
+  it("keeps accessible cell buttons on the last-painted geometry until the canvas redraws", async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        accessible-cells
+        cell-size="50"
+        row-label-width="140"
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    setMatrixData(el, { rowLabels: ["a"], colLabels: ["x"], values: [[1]] });
+    await el.updateComplete;
+    await settleLayout();
+    const cellInset = (): string =>
+      el.shadowRoot!.querySelector<HTMLElement>('[part="cell"]')!.style.insetInlineStart;
+    expect(cellInset()).to.equal("140px");
+
+    el.rowLabelWidth = 300;
+    await el.updateComplete;
+    await aTimeout(0);
+
+    expect(el.matrixGeometry?.padLeft).to.equal(140);
+    expect(cellInset(), "the semantic overlay must stay on the canvas's painted cell").to.equal("140px");
+  });
+
+  it("moves accessible cell buttons after a new geometry snapshot is painted", async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        accessible-cells
+        cell-size="50"
+        row-label-width="140"
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    setMatrixData(el, { rowLabels: ["a"], colLabels: ["x"], values: [[1]] });
+    await el.updateComplete;
+    await settleLayout();
+
+    el.cellSize = 60;
+    await el.updateComplete;
+    await aTimeout(0);
+    await el.updateComplete;
+
+    const cell = el.shadowRoot!.querySelector<HTMLElement>('[part="cell"]')!;
+    expect(el.matrixGeometry?.cellSize).to.equal(60);
+    expect(cell.style.inlineSize).to.equal("59px");
   });
 
   it("returns the very object the geometry event carried, so the two can never disagree", async () => {

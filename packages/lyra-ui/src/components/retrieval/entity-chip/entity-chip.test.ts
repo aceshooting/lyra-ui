@@ -478,9 +478,9 @@ describe('disabled affordance (an entity-less chip)', () => {
         <lr-entity-chip text="Marie Curie"></lr-entity-chip>
       </div>
     `);
-    const [enabled, disabled] = [
-      ...wrapper.querySelectorAll('lr-entity-chip'),
-    ] as LyraEntityChip[];
+    const chips = [...wrapper.querySelectorAll('lr-entity-chip')];
+    const enabled = chips[0]!;
+    const disabled = chips[1]!;
     await enabled.updateComplete;
     await disabled.updateComplete;
     const enabledBase = base(enabled);

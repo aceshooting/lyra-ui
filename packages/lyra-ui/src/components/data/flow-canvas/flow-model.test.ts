@@ -148,6 +148,14 @@ describe('snapshotFlowNodes', () => {
     expect(node!.outputs!.map((h) => h.id)).to.deep.equal(['out']);
   });
 
+  it('retains finite negative coordinates on the canvas model', () => {
+    const [node] = snapshotFlowNodes([
+      { id: 'negative', position: { x: -100, y: -50 } },
+    ]);
+    expect(node!.position).to.deep.equal({ x: -100, y: -50 });
+    expect(Object.isFrozen(node!.position)).to.be.true;
+  });
+
   it('ignores a non-record data value instead of throwing or including it', () => {
     const [node] = snapshotFlowNodes([{ id: 'array-data', data: ['not', 'a', 'record'] as unknown as Record<string, unknown> }]);
     expect('data' in node!).to.be.false;

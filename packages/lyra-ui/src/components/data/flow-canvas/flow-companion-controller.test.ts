@@ -65,7 +65,9 @@ it('waits for late flow-canvas registration in the owner realm and retries capab
   const ownerWindow = iframe.contentWindow!;
   const candidate = ownerDocument.createElement('lr-flow-canvas');
   candidate.id = 'late-canvas';
-  const host = ownerDocument.createElement('div') as HTMLElement & { for: string };
+  const host = ownerDocument.createElement('div') as unknown as HTMLElement & {
+    for: string;
+  };
   host.for = 'late-canvas';
   ownerDocument.body.append(candidate, host);
   const targetIds: Array<string | null> = [];

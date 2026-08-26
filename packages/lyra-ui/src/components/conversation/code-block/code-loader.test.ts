@@ -2,6 +2,18 @@ import { expect } from "@open-wc/testing";
 import jsonGrammar from "shiki/langs/json.mjs";
 import { loadShikiHighlighter, loadShikiLanguage } from "./code-loader.js";
 import { loadShikiHighlighterCore } from "./shiki-types.js";
+import type { ShikiHighlighter } from "./shiki-types.js";
+
+function loadedThemes(highlighter: ShikiHighlighter): string[] {
+  if (!('getLoadedThemes' in highlighter) || typeof highlighter.getLoadedThemes !== 'function') {
+    throw new TypeError('Expected the real Shiki highlighter theme capability.');
+  }
+  const themes: unknown = highlighter.getLoadedThemes();
+  if (!Array.isArray(themes) || !themes.every((theme) => typeof theme === 'string')) {
+    throw new TypeError('Expected Shiki to return string theme ids.');
+  }
+  return themes;
+}
 
 /**
  * Building the shared highlighter — importing shiki, compiling its regex engine, parsing both seed
@@ -26,7 +38,7 @@ it("resolves a highlighter seeded with the light+dark themes and zero language g
   this.timeout(20_000);
   const hl = await loadShikiHighlighter();
   expect(hl).to.not.be.null;
-  expect(hl!.getLoadedThemes()).to.include.members([
+  expect(loadedThemes(hl!)).to.include.members([
     "github-light",
     "github-dark",
   ]);
@@ -126,7 +138,7 @@ describe("loadShikiHighlighterCore", () => {
     const hl = await loadShikiHighlighterCore(languages);
     expect(hl).to.not.be.null;
     expect(hl!.getLoadedLanguages()).to.include("json");
-    expect(hl!.getLoadedThemes()).to.include.members([
+    expect(loadedThemes(hl!)).to.include.members([
       "github-light",
       "github-dark",
     ]);

@@ -12,6 +12,10 @@ import {
   wrapTimeMilliseconds,
 } from './time-input-shared.js';
 
+interface WindowWithDate extends Window {
+  Date: DateConstructor;
+}
+
 describe('time-input shared value helpers', () => {
   it('accepts only strict 24-hour wire values and preserves their precision', () => {
     expect(normalizeTimeValue('09:04')).to.equal('09:04');
@@ -37,7 +41,9 @@ describe('time-input shared value helpers', () => {
 
   it('accepts a branded Date from another realm and rejects a structural lookalike', async () => {
     const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
-    const foreignDate = new frame.contentWindow!.Date(2026, 6, 15, 23, 4, 5, 6);
+    const frameWindow = frame.contentWindow as WindowWithDate | null;
+    if (!frameWindow) throw new Error('The iframe window was unavailable.');
+    const foreignDate = new frameWindow.Date(2026, 6, 15, 23, 4, 5, 6);
     const forgedDate = {
       getTime: () => foreignDate.getTime(),
       getHours: () => 23,

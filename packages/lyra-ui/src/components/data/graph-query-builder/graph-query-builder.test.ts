@@ -184,7 +184,7 @@ describe('lr-graph-query-builder', () => {
     expect(el.value.relationshipTypes).to.deep.equal(['works_for']);
     const chips = el.shadowRoot!.querySelectorAll('[part="relationship-chips"] lr-chip');
     expect(chips.length).to.equal(1);
-    expect(chips[0].textContent!.trim()).to.equal('Works for');
+    expect(chips[0]!.textContent!.trim()).to.equal('Works for');
     const pickerOptions = (
       el.shadowRoot!.querySelector('[part="relationship-picker"]') as HTMLElement
     ).querySelectorAll('lr-option');
@@ -312,6 +312,29 @@ describe('lr-graph-query-builder', () => {
     await el.updateComplete;
     expect(el.checkValidity()).to.be.false;
     expect(el.errors['max-hops']).to.exist;
+  });
+
+  it('projects explicit valid and invalid states onto the group role', async () => {
+    const el = (await fixture(
+      html`<lr-graph-query-builder
+        .value=${query({ startId: 'node-1' })}
+      ></lr-graph-query-builder>`
+    )) as LyraGraphQueryBuilder;
+    await el.updateComplete;
+    const group = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+    expect(group.getAttribute('role')).to.equal('group');
+    expect(group.getAttribute('aria-invalid')).to.equal('false');
+
+    el.setCustomValidity('No graph is loaded for that tenant.');
+    await el.updateComplete;
+    expect(el.checkValidity()).to.be.false;
+    expect(group.getAttribute('aria-invalid')).to.equal('true');
+
+    el.setCustomValidity('');
+    await el.updateComplete;
+    expect(el.checkValidity()).to.be.true;
+    expect(group.getAttribute('aria-invalid')).to.equal('false');
   });
 
   it('does not emit lr-query-run when invalid, and reveals the start-entity error', async () => {
@@ -772,7 +795,9 @@ describe('lr-graph-query-builder', () => {
     const builder = el.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
     await builder.updateComplete;
     expect(builder.shadowRoot!.querySelector('[part="base"]')).to.exist;
-    expect(builder.effectiveDirection).to.equal('rtl');
+    expect(
+      (builder as unknown as { effectiveDirection: string }).effectiveDirection
+    ).to.equal('rtl');
   });
 
   it('registers every composed sibling control as a side effect of importing graph-query-builder.js (regression)', async () => {
@@ -887,7 +912,7 @@ describe('lr-graph-query-builder', () => {
     const el = form.querySelector('lr-graph-query-builder') as LyraGraphQueryBuilder;
     await el.updateComplete;
     const circular: Record<string, unknown> = { startId: 'node-1' };
-    circular.self = circular;
+    circular['self'] = circular;
     el.value = circular as unknown as GraphQuery;
     await el.updateComplete;
     const data = new FormData(form);
@@ -1087,8 +1112,8 @@ describe('lr-graph-query-builder', () => {
     };
     internal.runQuery();
     internal.saveQuery();
-    internal.loadQuery(saved[0]);
-    internal.deleteQuery(saved[0]);
+    internal.loadQuery(saved[0]!);
+    internal.deleteQuery(saved[0]!);
 
     expect(runFired).to.be.false;
     expect(saveFired).to.be.false;

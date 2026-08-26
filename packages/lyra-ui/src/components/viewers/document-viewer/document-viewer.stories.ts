@@ -45,6 +45,37 @@ export const FallbackToDocumentPreview: Story = {
   `,
 };
 
+export const FallbackRenderError: Story = {
+  name: 'Fallback render error event',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The fallback preview\'s composed `lr-render-error` is part of the document-viewer contract and reaches the shell unchanged.',
+      },
+    },
+  },
+  render: (_args, context) => {
+    const onError = (event: Event) => {
+      const viewer = event.currentTarget as HTMLElement;
+      const output = viewer.nextElementSibling;
+      if (output) output.textContent = 'lr-render-error received';
+    };
+    return html`
+      <div>
+        <lr-document-viewer
+          .open=${context.viewMode !== 'docs'}
+          name="unsafe.txt"
+          mime-type="text/plain"
+          src="javascript:alert(1)"
+          @lr-render-error=${onError}
+        ></lr-document-viewer>
+        <output aria-live="polite"></output>
+      </div>
+    `;
+  },
+};
+
 const demoRegistry = createDocumentRendererRegistry([
   [
     "application/x-lr-demo",

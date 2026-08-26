@@ -22,8 +22,9 @@ export const styles = css`
       var(--_lr-csv-viewer-max-height)
     );
   }
-  /* [part='body'] above caps and scrolls vertical overflow; horizontal overflow of the grid is
-     this element's own concern. Both axes pinned non-visible deliberately: per the CSS overflow
+  /* [part='body'] above caps the allocation while the nested virtual-list owns data-row scrolling;
+     horizontal overflow of the grid is this element's own concern. Both axes pinned non-visible
+     deliberately: per the CSS overflow
      spec, pinning only overflow-x forces overflow-y's used value to 'auto', risking a phantom
      scrollbar from sub-pixel rounding on a grid that never overflows vertically. Same fix as
      tabs.styles.ts. */
@@ -35,9 +36,6 @@ export const styles = css`
     display: grid;
     min-inline-size: max-content;
     align-items: center;
-    position: sticky;
-    inset-block-start: 0;
-    z-index: var(--lr-layer-content);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font-weight: var(--lr-font-weight-semibold);
@@ -121,7 +119,7 @@ export const styles = css`
   }
   [part='cell-highlight-action']:focus-visible,
   lr-virtual-list::part(cell-highlight-action):focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
   }
   [part='rows'] {

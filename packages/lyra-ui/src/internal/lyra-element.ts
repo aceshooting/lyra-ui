@@ -19,6 +19,12 @@ import { warnUnknownAttributes } from './dev-mode-attribute-warning.js';
 type FormInternalsHook = (host: LyraElement<any>, internals: ElementInternals) => void;
 type ExternalLabelFactory = (host: LyraElement<any>) => ReactiveController;
 
+/** @internal Per-constructor override for controls with a deliberately lean label bridge. */
+export const FORM_CONTROL_LABEL_FACTORY = Symbol('lr-form-control-label-factory');
+interface FormControlLabelFactoryConstructor {
+  [FORM_CONTROL_LABEL_FACTORY]?: ExternalLabelFactory;
+}
+
 let formInternalsHook: FormInternalsHook | undefined;
 let externalLabelFactory: ExternalLabelFactory | undefined;
 
@@ -35,14 +41,18 @@ let externalLabelFactory: ExternalLabelFactory | undefined;
  * form-associated) simply never registers the hook, which is the same no-op outcome
  * `formAssociated` being unset already produced.
  *
- * @internal Called only by `installFormControlLabelSupport()`.
+ * An omitted factory updates only internals capture and deliberately preserves any generic factory
+ * installed earlier; this is the import-order-safe lean path for a constructor that supplies its
+ * own `FORM_CONTROL_LABEL_FACTORY`.
+ *
+ * @internal Called only by the installers in `form-control-labels.ts`.
  */
 export function registerFormControlLabelSupport(
   hook: FormInternalsHook,
-  factory: ExternalLabelFactory,
+  factory?: ExternalLabelFactory,
 ): void {
   formInternalsHook = hook;
-  externalLabelFactory = factory;
+  if (factory) externalLabelFactory = factory;
 }
 
 /**
@@ -1232,7 +1242,10 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     // via `externalLabelFactory`, nothing in the *bundle* of a component that never imports
     // `form-control-labels.js` either. See `registerFormControlLabelSupport()`'s own doc.
     if ((this.constructor as { formAssociated?: boolean }).formAssociated) {
-      const controller = externalLabelFactory?.(this);
+      const localFactory = (this.constructor as FormControlLabelFactoryConstructor)[
+        FORM_CONTROL_LABEL_FACTORY
+      ];
+      const controller = (localFactory ?? externalLabelFactory)?.(this);
       if (controller) this.addController(controller);
     }
   }

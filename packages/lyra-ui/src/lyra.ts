@@ -1022,7 +1022,10 @@ export type {
 export { LyraSvgViewer } from './components/viewers/svg-viewer/svg-viewer.class.js';
 export { LyraHtmlViewer } from './components/viewers/html-viewer/html-viewer.class.js';
 export { LyraDatasetViewer } from './components/viewers/dataset-viewer/dataset-viewer.class.js';
-export type { DatasetTable } from './components/viewers/dataset-viewer/dataset-viewer.class.js';
+export type {
+  DatasetTable,
+  DatasetViewerScrollMode,
+} from './components/viewers/dataset-viewer/dataset-viewer.class.js';
 export { LyraContactViewer } from './components/viewers/contact-viewer/contact-viewer.class.js';
 export type {
   VCardAddress,
@@ -1529,7 +1532,10 @@ export type {
   MarkdownKatexState,
   PendingHighlight,
 } from './components/conversation/markdown/markdown-shared.js';
-export type { ShikiLanguageInput } from './components/conversation/code-block/shiki-types.js';
+export type {
+  ShikiLanguageInput,
+  ShikiLanguageRegistration,
+} from './components/conversation/code-block/shiki-types.js';
 export type { LyraMediaCardEventMap } from './components/media/media-card/media-card.class.js';
 export type { LyraMentionPopoverEventMap } from './components/utility/mention-popover/mention-popover.class.js';
 export type { LyraMenuItemEventMap } from './components/layout/menu/menu-item.class.js';

@@ -231,7 +231,8 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
   /** The batch's examples so far. Controlled -- never mutated by this component; pass a new array
    *  to update it (e.g. as each example finishes, or as the whole batch streams in). Empty/blank ids
    *  are omitted and duplicates normalize first-wins before expansion, counts, announcements,
-   *  rendering, and events. */
+   *  rendering, and events. A valid-id partial streaming row keeps rendering with idle status and
+   *  empty Markdown content until its status/input/output payloads arrive. */
   @property({ attribute: false }) examples: readonly EvalExampleResult[] = [];
 
   /** The batch's expected total example count. `null` (the default) derives it from
@@ -414,11 +415,12 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
     event.stopPropagation();
   }
 
-  private renderContent(content: EvalContent, part: 'input' | 'output'): TemplateResult {
-    if (content.format === 'code') {
+  private renderContent(content: EvalContent | null | undefined, part: 'input' | 'output'): TemplateResult {
+    const text = typeof content?.text === 'string' ? content.text : '';
+    if (content?.format === 'code') {
       return html`<lr-code-block
         part=${part}
-        code=${content.text}
+        code=${text}
         language=${content.language ?? ''}
         @lr-copy=${this.stopOwnedEvent}
         @lr-error=${this.stopOwnedEvent}
@@ -431,7 +433,7 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
     }
     return html`<lr-markdown
       part=${part}
-      content=${content.text}
+      content=${text}
       @lr-link-click=${this.stopOwnedEvent}
       @lr-render-error=${this.stopOwnedEvent}
       @lr-highlight-activate=${this.stopOwnedEvent}

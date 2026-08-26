@@ -57,6 +57,29 @@ it("keeps native normalization scoped to descendants of an explicit .lr-native c
   expect(getComputedStyle(marker).minBlockSize).to.not.equal("55px");
 });
 
+it('lets the composite --lr-focus-ring token style native controls', async () => {
+  const el = await fixture(html`
+    <div
+      class="lr-native"
+      style="
+        --lr-focus-ring: 6px dashed rgb(1, 2, 3);
+        --lr-focus-ring-width: 1px;
+        --lr-focus-ring-color: rgb(4, 5, 6);
+      "
+    >
+      <button type="button">Focus target</button>
+    </div>
+  `);
+  const button = el.querySelector<HTMLButtonElement>('button')!;
+  button.focus();
+
+  expect(button.matches(':focus-visible')).to.be.true;
+  const style = getComputedStyle(button);
+  expect(style.outlineWidth).to.equal('6px');
+  expect(style.outlineStyle).to.equal('dashed');
+  expect(style.outlineColor).to.equal('rgb(1, 2, 3)');
+});
+
 it("uses a logical quote edge that mirrors under RTL", async () => {
   const el = await fixture(html`
     <div class="lr-native" style="--lr-native-quote-border-width: 5px">
@@ -332,6 +355,35 @@ describe("reservations.css", () => {
     expect(
       el.querySelector("lr-chart")!.getBoundingClientRect().height
     ).to.be.closeTo(500, 2);
+  });
+
+  it('reserves map and graph/canvas surfaces through their height tokens before upgrade', async () => {
+    await loadStylesheet('reservations.css');
+    const el = await fixture<HTMLElement>(html`
+      <div
+        style="inline-size: 400px; --lr-canvas-reserved-height: 275px; --lr-map-height: 260px"
+      >
+        <lr-flow-canvas></lr-flow-canvas>
+        <lr-graph></lr-graph>
+        <lr-map></lr-map>
+      </div>
+    `);
+    expect(customElements.get('lr-flow-canvas')).to.equal(undefined);
+    expect(customElements.get('lr-graph')).to.equal(undefined);
+    expect(customElements.get('lr-map')).to.equal(undefined);
+
+    for (const tagName of ['lr-flow-canvas', 'lr-graph']) {
+      const surface = el.querySelector<HTMLElement>(tagName)!;
+      expect(getComputedStyle(surface).display, `${tagName} display`).to.equal('block');
+      expect(surface.getBoundingClientRect().height, `${tagName} reserved height`).to.be.closeTo(
+        275,
+        2
+      );
+    }
+
+    const map = el.querySelector<HTMLElement>('lr-map')!;
+    expect(getComputedStyle(map).display, 'lr-map display').to.equal('block');
+    expect(map.getBoundingClientRect().height, 'lr-map reserved height').to.be.closeTo(260, 2);
   });
 
   it("reserves a flag's aspect-ratio box from the surrounding font size", async () => {

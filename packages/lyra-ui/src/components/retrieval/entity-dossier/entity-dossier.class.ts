@@ -36,7 +36,7 @@ import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import type { LyraScoreThresholds } from '../graph/graph.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_neighborListLabel, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_provenancePanelLabel, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_neighborListLabel, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_progress, LYRA_DEFAULT_provenancePanelLabel, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** The three tab ids this component renders -- also `lr-tab-group`' own `slot`/`tabId` values, so a
@@ -152,7 +152,6 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
     chunkInspectorLabel: LYRA_DEFAULT_chunkInspectorLabel,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     neighborListLabel: LYRA_DEFAULT_neighborListLabel,
@@ -161,7 +160,6 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
     popover: LYRA_DEFAULT_popover,
     progress: LYRA_DEFAULT_progress,
     provenancePanelLabel: LYRA_DEFAULT_provenancePanelLabel,
-    restore: LYRA_DEFAULT_restore,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
   };

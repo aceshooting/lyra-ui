@@ -431,6 +431,30 @@ describe('lr-artifact-panel', () => {
       expect(getComputedStyle(pressed).color).to.equal('rgb(40, 50, 60)');
     });
 
+    it('preserves the selected-view cssprops while the selected button is physically pressed', async () => {
+      const el = await pressedFixture();
+      el.style.setProperty('--lr-artifact-panel-view-active-bg', 'rgb(10, 20, 30)');
+      el.style.setProperty('--lr-artifact-panel-view-active-color', 'rgb(40, 50, 60)');
+      const pressed = el.shadowRoot!.querySelector('[part="view-button"][aria-pressed="true"]') as HTMLElement;
+      const rect = pressed.getBoundingClientRect();
+      try {
+        await sendMouse({
+          type: 'move',
+          position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+        });
+        expect(getComputedStyle(pressed).backgroundColor).to.equal('rgb(10, 20, 30)');
+        expect(getComputedStyle(pressed).color).to.equal('rgb(40, 50, 60)');
+        await sendMouse({
+          type: 'down',
+        });
+        await waitUntil(() => pressed.matches(':active'));
+        expect(getComputedStyle(pressed).backgroundColor).to.equal('rgb(10, 20, 30)');
+        expect(getComputedStyle(pressed).color).to.equal('rgb(40, 50, 60)');
+      } finally {
+        await resetMouse();
+      }
+    });
+
     it('renders byte-identically to the token defaults when unset', async () => {
       const el = await pressedFixture();
       const pressed = el.shadowRoot!.querySelector('[part="view-button"][aria-pressed="true"]') as HTMLElement;

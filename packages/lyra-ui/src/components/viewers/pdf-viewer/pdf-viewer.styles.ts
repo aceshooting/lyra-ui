@@ -54,7 +54,7 @@ export const styles = css`
     cursor: default;
   }
   [part="toolbar"] button:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part="page-indicator"],

@@ -64,8 +64,8 @@ it('normalizes unsupported closed-set attributes and untyped property writes', a
   el.variant = 'success';
   await el.updateComplete;
   const foreign = el as unknown as Record<string, unknown>;
-  foreign.size = 'huge';
-  foreign.variant = 'primary';
+  foreign['size'] = 'huge';
+  foreign['variant'] = 'primary';
   await el.updateComplete;
   expect(el.size).to.equal('m');
   expect(el.getAttribute('size')).to.equal('m');
@@ -989,7 +989,7 @@ describe('selected', () => {
     } finally {
       el.remove();
       if (descriptor) Object.defineProperty(frameWindow, 'MutationObserver', descriptor);
-      else delete (frameWindow as Window & { MutationObserver?: typeof MutationObserver }).MutationObserver;
+      else Reflect.deleteProperty(frameWindow, 'MutationObserver');
       frame.remove();
     }
   });

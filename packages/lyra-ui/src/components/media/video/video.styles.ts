@@ -126,7 +126,7 @@ export const styles = css`
   [part='controls'] select:focus-visible,
   [data-control='volume']:focus-visible,
   [part='progress']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
 

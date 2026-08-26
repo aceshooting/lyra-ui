@@ -254,11 +254,23 @@ export class LyraStreamingText extends LyraElement {
     return this.lastScannedResult;
   }
 
+  private stopOwnedEvent(event: Event): void {
+    event.stopPropagation();
+  }
+
   override render(): TemplateResult {
     return html`
       <div part="base">
         ${this.effectiveMarkdown
-          ? html`<lr-markdown .content=${this.displayedContent} .streaming=${this.streaming}></lr-markdown>`
+          ? html`<lr-markdown
+              .content=${this.displayedContent}
+              .streaming=${this.streaming}
+              @lr-render-error=${this.stopOwnedEvent}
+              @lr-link-click=${this.stopOwnedEvent}
+              @lr-highlight-activate=${this.stopOwnedEvent}
+              @lr-text-select=${this.stopOwnedEvent}
+              @lr-anchor-result=${this.stopOwnedEvent}
+            ></lr-markdown>`
           : html`<span class="plain">${this.displayedContent}</span>`}
         ${this.streaming ? html`<span part="cursor" aria-hidden="true"></span>` : nothing}
       </div>

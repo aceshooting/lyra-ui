@@ -475,6 +475,43 @@ it("applies per-instance strings to retry controls", async () => {
   const retry = el.shadowRoot!.querySelector("lr-button") as HTMLElement;
   expect(retry.getAttribute("aria-label")).to.equal("Réessayer cette section");
   expect(retry.textContent?.trim()).to.equal("Réessayer");
+  const retried = oneEvent(el, "lr-part-retry");
+  retry.click();
+  expect((await retried).detail.part).to.deep.equal(parts[8]);
+});
+
+it("keeps an unbroken error message and retry action inside a narrow row", async () => {
+  const el = (await fixture(html`
+    <lr-message-parts
+      style="display:block; inline-size:160px;"
+      .parts=${[
+        {
+          id: "narrow-error",
+          type: "error",
+          message: "ThisUnbrokenFailureMessageCannotWrapAtOrdinaryWordBoundaries",
+          retryable: true,
+        },
+      ]}
+    ></lr-message-parts>
+  `)) as LyraMessageParts;
+  await el.updateComplete;
+  const error = el.shadowRoot!.querySelector('[part~="error"]') as HTMLElement;
+  const message = error.querySelector("span") as HTMLSpanElement;
+  const retry = error.querySelector('[part="retry"]') as HTMLElement;
+  const errorRect = error.getBoundingClientRect();
+  const messageRect = message.getBoundingClientRect();
+  const retryRect = retry.getBoundingClientRect();
+
+  expect(error.scrollWidth, "the error row must not overflow horizontally").to.be.at.most(
+    Math.ceil(errorRect.width) + 1
+  );
+  expect(messageRect.right, "the message stays inside the row").to.be.at.most(
+    errorRect.right + 1
+  );
+  expect(retryRect.right, "the retry action stays inside the row").to.be.at.most(
+    errorRect.right + 1
+  );
+  expect(retryRect.width, "the retry action remains operable").to.be.greaterThan(0);
 });
 
 it("inherits independently rethemeable streaming, transcript, and error state longhands", async () => {

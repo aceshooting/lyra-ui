@@ -8,9 +8,59 @@ const CARD = ['BEGIN:VCARD', 'VERSION:4.0', 'FN:John Q. Public', 'ORG:ABC, Inc.'
 function response(body: string): Response { return { ok: true, status: 200, statusText: 'OK', text: () => Promise.resolve(body) } as Response; }
 
 describe('lr-contact-viewer', () => {
+  it('keeps loaded contacts and later updates working when a highlight omits its anchor', async () => {
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve(response(CARD))) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraContactViewer>(
+        html`<lr-contact-viewer src="https://example.test/a.vcf"></lr-contact-viewer>`,
+      );
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="contact"]') !== null);
+
+      el.highlights = [{ id: 'missing-anchor' }] as unknown as LyraContactViewer['highlights'];
+      await el.updateComplete;
+      el.headingLevel = '2';
+      await el.updateComplete;
+
+      expect(el.highlights.map((highlight) => highlight.id)).to.deep.equal([]);
+      expect(el.shadowRoot!.querySelectorAll('[part="contact"]').length).to.equal(1);
+      expect(el.shadowRoot!.querySelector('[part="contact-name"]')!.getAttribute('aria-level')).to.equal('2');
+    } finally {
+      window.fetch = original;
+    }
+  });
+
   it('renders a localized empty state by default', async () => {
     const el = (await fixture(html`<lr-contact-viewer></lr-contact-viewer>`)) as LyraContactViewer;
     expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No contact to display.');
+  });
+  it('reports found:false for a fragment matching generated contact data because contact cards have no ids', async () => {
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve(response(CARD))) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraContactViewer>(
+        html`<lr-contact-viewer src="https://example.test/a.vcf"></lr-contact-viewer>`,
+      );
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="contact"]') !== null,
+      );
+      const timing = el as unknown as {
+        anchorTimeoutMs: number;
+        anchorRetryIntervalMs: number;
+      };
+      timing.anchorTimeoutMs = 20;
+      timing.anchorRetryIntervalMs = 2;
+      expect(
+        el.shadowRoot!.querySelector('[part="contact"]')!.hasAttribute('id'),
+      ).to.equal(false);
+      const resultEvent = oneEvent(el, 'lr-anchor-result');
+      expect(
+        await el.scrollToAnchor({ kind: 'fragment', id: 'john@example.com' }),
+      ).to.equal(false);
+      expect((await resultEvent).detail).to.deep.equal({ found: false });
+    } finally {
+      window.fetch = original;
+    }
   });
   it('renders contact fields and multiple cards', async () => {
     const original = window.fetch;

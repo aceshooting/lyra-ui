@@ -49,8 +49,8 @@ describe('warnUnknownAttributes', () => {
     host.setAttribute('totally-unrelated-name', '');
     warnUnknownAttributes(host, ['known-attr']);
     expect(warnStub.calls).to.have.length(1);
-    expect(warnStub.calls[0][0]).to.contain('totally-unrelated-name');
-    expect(warnStub.calls[0][0]).to.not.contain('did you mean');
+    expect(warnStub.calls[0]![0]).to.contain('totally-unrelated-name');
+    expect(warnStub.calls[0]![0]).to.not.contain('did you mean');
   });
 
   it('stays silent for an attribute the element owns without observing', () => {
@@ -71,7 +71,7 @@ describe('warnUnknownAttributes', () => {
     host.setAttribute('disable-stikcy', 'header');
     warnUnknownAttributes(host, ['play'], ['playing', 'disable-sticky']);
     expect(warnStub.calls).to.have.length(1);
-    expect(warnStub.calls[0][0]).to.contain('disable-stikcy');
+    expect(warnStub.calls[0]![0]).to.contain('disable-stikcy');
   });
 
   it('treats an omitted knownUnobservedAttributes list as empty', () => {
@@ -80,7 +80,7 @@ describe('warnUnknownAttributes', () => {
     host.setAttribute('playing', '');
     warnUnknownAttributes(host, ['play']);
     expect(warnStub.calls).to.have.length(1);
-    expect(warnStub.calls[0][0]).to.contain('playing');
+    expect(warnStub.calls[0]![0]).to.contain('playing');
   });
 
   it('suggests the closest observed attribute when one is close enough', () => {
@@ -89,7 +89,7 @@ describe('warnUnknownAttributes', () => {
     host.setAttribute('hide-axi', '');
     warnUnknownAttributes(host, ['hide-axis', 'without-value-axis']);
     expect(warnStub.calls).to.have.length(1);
-    expect(warnStub.calls[0][0]).to.contain("did you mean 'hide-axis'");
+    expect(warnStub.calls[0]![0]).to.contain("did you mean 'hide-axis'");
   });
 
   it('never suggests a match further than the distance threshold', () => {
@@ -98,7 +98,7 @@ describe('warnUnknownAttributes', () => {
     host.setAttribute('zzzzzzzzzz', '');
     warnUnknownAttributes(host, ['hide-axis']);
     expect(warnStub.calls).to.have.length(1);
-    expect(warnStub.calls[0][0]).to.not.contain('did you mean');
+    expect(warnStub.calls[0]![0]).to.not.contain('did you mean');
   });
 
   it('never warns for an attribute already in observedAttributes', () => {

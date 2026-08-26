@@ -13,6 +13,7 @@ import {
   expandLyraInventoryManifest,
   generateInventory,
 } from './generate-component-inventory.mjs';
+import { isMainModule } from './is-main-module.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PIN_FIXTURE = path.join(packageDir, 'scripts', 'fixtures', 'upstream-package-pins.json');
@@ -399,4 +400,4 @@ async function main() {
   }
 }
 
-if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))) await main();
+if (isMainModule(import.meta.url)) await main();

@@ -14,6 +14,7 @@ import type { TaskItem, TaskStatus } from '../task-list/task-list.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './agent-run.styles.js';
 import { firstByIdentity } from '../collection-identity.js';
+import { agentStatusKind, agentStatusMessage } from '../agent-status-presentation.js';
 
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -68,12 +69,17 @@ const STEP_TO_TASK_STATUS: Record<string, TaskStatus> = {
 };
 
 function toTaskItem(step: AgentStep): TaskItem {
+  const kind = agentStatusKind(step.status);
   return {
     id: step.id,
     label: step.label,
-    status: STEP_TO_TASK_STATUS[step.status.kind] ?? 'pending',
-    detail: step.status.message,
+    status: STEP_TO_TASK_STATUS[kind] ?? 'pending',
+    detail: agentStatusMessage(step.status),
   };
+}
+
+function runSteps(run: AgentRun | null): readonly AgentStep[] {
+  return Array.isArray(run?.steps) ? run.steps : [];
 }
 
 export interface AgentRunMetric {
@@ -256,7 +262,8 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   static override styles = [LyraElement.styles, srOnly, styles];
 
   /** The run to display. Controlled and never mutated by this component -- pass a new object to
-   *  update it. `null` renders the shared `<lr-empty>` `noData` state. */
+   *  update it. `null` renders the shared `<lr-empty>` `noData` state. A runtime summary record
+   *  without `steps` renders an empty task slot, and a step without a status renders as pending. */
   @property({ attribute: false }) run: AgentRun | null = null;
 
   /** Overrides the default plain `Intl.NumberFormat` rendering of `run.costEstimate` fed to the
@@ -377,10 +384,9 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   }
 
   private get currentStep(): AgentStep | undefined {
-    const steps = this.run?.steps;
-    if (!steps) return undefined;
+    const steps = runSteps(this.run);
     for (let i = steps.length - 1; i >= 0; i--) {
-      if (steps[i]!.status.kind === 'running') return steps[i];
+      if (agentStatusKind(steps[i]!.status) === 'running') return steps[i];
     }
     return undefined;
   }
@@ -448,6 +454,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
     const staticElapsed = this.staticElapsedText;
     const cost = this.costText;
     const metrics = this.normalizedMetrics;
+    const steps = runSteps(run);
     const hasSummary = !!run.model || cost !== '' || metrics.length > 0;
 
     return html`
@@ -519,8 +526,8 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
         </div>
         <div part="body">
           <slot part="tasks" name="tasks"
-            >${run.steps.length > 0
-              ? html`<lr-task-list .items=${run.steps.map(toTaskItem)}></lr-task-list>`
+            >${steps.length > 0
+              ? html`<lr-task-list .items=${steps.map(toTaskItem)}></lr-task-list>`
               : nothing}</slot
           >
           <slot part="tools" name="tools"></slot>

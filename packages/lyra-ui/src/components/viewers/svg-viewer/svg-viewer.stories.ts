@@ -12,6 +12,17 @@ const src = `data:image/svg+xml,${encodeURIComponent(source)}`;
 
 export const Default: Story = { render: () => html`<lr-svg-viewer src=${src} name="Example illustration"></lr-svg-viewer>` };
 export const Empty: Story = { render: () => html`<lr-svg-viewer></lr-svg-viewer>` };
+export const ErrorState: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Idle, loading, and error content use a region rather than an image leaf so visible state text remains in the accessibility tree.',
+      },
+    },
+  },
+  render: () => html`<lr-svg-viewer src="javascript:alert(1)" name="Unsafe diagram"></lr-svg-viewer>`,
+};
 
 export const Zoomable: Story = {
   parameters: {

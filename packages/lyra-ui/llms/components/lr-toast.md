@@ -6,6 +6,7 @@
 - **Class** `LyraToast`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/toast/toast.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 1 part, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -25,16 +26,16 @@ A placement-specific region. The imperative helper maintains one region for each
 
 **Properties:**
 
-- `placement: ToastPlacement = 'top-end'` (reflected) — one of `'top-start'|'top-center'|'top-end'|
+- `placement: LyraToastPlacement = 'top-end'` (reflected) — one of `'top-start'|'top-center'|'top-end'|
 'bottom-start'|'bottom-center'|'bottom-end'`. Every placement resolves inside one logical usable
   rectangle whose four edges are the greater of `--lr-space-l` and the matching safe-area token.
   Start/end follow direction, center placements use that rectangle's midpoint even when the inline
   safe-area insets are asymmetric, and an oversized stack is capped to its usable inline size.
 
 **Methods:** `create(options: LyraToastOptions): Promise<LyraToastItem>` is the canonical form;
-`create(message: string, options?: ToastCreateOptions)` remains as a compatibility overload.
+`create(message: string, options?: LyraToastCreateOptions)` remains as a compatibility overload.
 `LyraToastOptions` contains `message`, optional `placement`, `ownerDocument`, `variant`, `duration`,
-`size`, `withIcon`, `icon`, and `action`; `ToastCreateOptions` omits `message` and `placement`.
+`size`, `withIcon`, `icon`, and `action`; `LyraToastCreateOptions` omits `message` and `placement`.
 `icon` accepts text, a DOM node, a Lit template, or a target-document factory returning one of
 those. Strings are always text, never HTML; cross-document nodes are imported into the region's
 document. `action` creates a native button from `{ label, onClick }`. The options' `ownerDocument`,
@@ -178,8 +179,7 @@ toast({
 });
 ```
 
-`toast(input: LyraToastOptions | string): ToastHandle`, where `ToastOptions` remains a deprecated
-type alias for `LyraToastOptions`, and
+`toast(input: LyraToastOptions | string): ToastHandle`, where
 `ToastHandle = { item: Promise<LyraToastItem>; dismiss: () => void }`. The canonical options are
 shared byte-for-byte with the region's object-form `create()`, including `ownerDocument`, safe icon
 payloads/factories, actions, and the long `small`/`medium`/`large` size aliases. It lazily mounts

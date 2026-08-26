@@ -351,6 +351,8 @@ const strings: LyraLocaleStrings = {
     'Datenbeschriftungen sind nicht verfügbar, aber das Diagramm bleibt verfügbar.',
   chartStackTotalsUnavailable:
     'Stapelsummen sind nicht verfügbar, aber das Diagramm bleibt verfügbar.',
+  chartAnnotationsUnavailable:
+    'Diagrammanmerkungen sind nicht verfügbar, aber das Diagramm bleibt verfügbar.',
   chart: 'Diagramm',
   chartTypeLine: 'Linien',
   chartTypeBar: 'Balken',
@@ -755,6 +757,7 @@ const strings: LyraLocaleStrings = {
   emailViewerSubject: 'Betreff',
   emailViewerDate: 'Datum',
   emailViewerAttachments: 'Anhänge',
+  emailViewerUnnamedAttachment: 'Unbenannter Anhang',
   emailViewerNoSubject: '(kein Betreff)',
   emailViewerOpenAttachment: '{filename} öffnen',
   emailViewerShowQuoted: 'Zitierten Text anzeigen',
@@ -1272,6 +1275,7 @@ const strings: LyraLocaleStrings = {
   ingestionStageDone: 'Fertig',
   ingestionStageFailed: 'Fehlgeschlagen',
   ingestionStageCancelled: 'Abgebrochen',
+  ingestionStageUnknown: 'Unbekannte Phase',
   ingestionQueueLabel: 'Erfassungs-Warteschlange',
   ingestionQueueEmpty: 'Keine Dokumente in der Warteschlange',
   documentLibraryFreshnessFresh: 'Aktuell',
@@ -1316,6 +1320,7 @@ const strings: LyraLocaleStrings = {
   drilldownDocuments: 'Dokumente',
   drilldownRuns: 'Agentenläufe',
   drilldownEmpty: 'Kein Element ausgewählt',
+  drilldownUntitledNode: 'Unbenannter Schritt',
   evaluationRunStatusIdle: 'Inaktiv',
   evaluationRunStatusWaitingInput: 'Wartet auf Eingabe',
   evaluationRunStatusWaitingApproval: 'Wartet auf Freigabe',

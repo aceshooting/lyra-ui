@@ -65,6 +65,18 @@ it('supports the complete mapped number-format vocabulary and both grouping alia
   expect(digits.shadowRoot?.textContent?.trim()).to.equal('012.3');
 });
 
+it('preserves each locale default grouping policy unless grouping is explicitly disabled', async () => {
+  const locale = 'es-ES';
+  const value = 1000;
+  const expected = new Intl.NumberFormat(locale).format(value);
+  expect(expected, 'the discriminator locale does not group four-digit values by default').to.equal('1000');
+
+  const el = (await fixture(html`
+    <lr-format-number .value=${value} locale=${locale}></lr-format-number>
+  `)) as LyraFormatNumber;
+  expect(el.shadowRoot?.textContent?.trim()).to.equal(expected);
+});
+
 it('formats dates and relative time', async () => {
   const el = await fixture(html`<div>
     <lr-format-date date="2024-01-01T00:00:00Z" locale="en-US"></lr-format-date>
@@ -82,7 +94,9 @@ it('treats numeric date attributes as epoch milliseconds like numeric properties
     <lr-format-date date="-1" locale="en-US"></lr-format-date>
     <lr-relative-time date="0" locale="en-US"></lr-relative-time>
   </div>`);
-  const [epoch, negative] = [...wrapper.querySelectorAll('lr-format-date')] as LyraFormatDate[];
+  const dates = [...wrapper.querySelectorAll('lr-format-date')] as LyraFormatDate[];
+  const epoch = dates[0]!;
+  const negative = dates[1]!;
   const relative = wrapper.querySelector('lr-relative-time') as LyraRelativeTime;
   expect(epoch.date).to.equal(0);
   expect(epoch.shadowRoot!.querySelector('time')!.getAttribute('datetime')).to.equal('1970-01-01T00:00:00.000Z');
@@ -224,7 +238,7 @@ it('falls back to the browser time zone when time-zone is invalid instead of thr
 
 it('falls back safely for invalid Intl number/date/relative-time option values', async () => {
   const number = (await fixture(html`<lr-format-number value="1234"></lr-format-number>`)) as LyraFormatNumber;
-  number.notation = 'invalid' as Intl.NumberFormatOptions['notation'];
+  (number as unknown as { notation: string }).notation = 'invalid';
   number.type = 'currency';
   number.currency = 'not-a-currency';
   await number.updateComplete;
@@ -402,7 +416,7 @@ it('does not schedule a sync relative-time refresh when the owner document has n
       undefined,
     );
   } finally {
-    delete (document as unknown as Record<string, unknown>).defaultView;
+    Reflect.deleteProperty(document, 'defaultView');
   }
 });
 
@@ -566,7 +580,7 @@ it('passes undefined (not an empty string) to Intl.RelativeTimeFormat when effec
     await el.updateComplete;
     expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
   } finally {
-    delete (el as unknown as Record<string, unknown>).effectiveLocale;
+    Reflect.deleteProperty(el, 'effectiveLocale');
   }
 });
 
@@ -663,20 +677,30 @@ it('falls back to a safe default unit-step instead of dividing by Math.log(1) ==
   expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
 });
 
-it('clamps out-of-range minimum/maximumFractionDigits instead of letting Intl.NumberFormat throw a RangeError (crash regression)', async () => {
+it('normalizes non-finite and out-of-range fraction digit options without discarding valid formatting', async () => {
   // Both minimumFractionDigits and maximumFractionDigits throw a RangeError outside [0, 100],
   // and throw even when each is individually in range if minimum > maximum -- unguarded pre-fix.
-  const el = (await fixture(html`<lr-format-number value="1234.5"></lr-format-number>`)) as LyraFormatNumber;
+  const el = (await fixture(html`
+    <lr-format-number value="1234.5" type="currency" currency="USD" locale="en-US"></lr-format-number>
+  `)) as LyraFormatNumber;
+
+  el.minimumFractionDigits = Number.NaN;
+  el.maximumFractionDigits = Number.POSITIVE_INFINITY;
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.equal(
+    new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 100,
+    }).format(1234.5),
+  );
 
   el.maximumFractionDigits = -1;
   await el.updateComplete;
   expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
 
   el.maximumFractionDigits = 500;
-  await el.updateComplete;
-  expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
-
-  el.minimumFractionDigits = NaN;
   await el.updateComplete;
   expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
 
@@ -687,14 +711,24 @@ it('clamps out-of-range minimum/maximumFractionDigits instead of letting Intl.Nu
   expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
 });
 
-it('clamps integer/significant digit options and orders crossed significant bounds', async () => {
-  const el = (await fixture(html`<lr-format-number value="1234.567"></lr-format-number>`)) as LyraFormatNumber;
+it('normalizes non-finite integer/significant digit options without discarding valid formatting', async () => {
+  const el = (await fixture(html`
+    <lr-format-number value="1234.567" type="currency" currency="USD" locale="en-US"></lr-format-number>
+  `)) as LyraFormatNumber;
 
-  el.minimumIntegerDigits = Number.NaN;
-  el.minimumSignificantDigits = 500;
-  el.maximumSignificantDigits = -1;
+  el.minimumIntegerDigits = Number.POSITIVE_INFINITY;
+  el.minimumSignificantDigits = Number.NaN;
+  el.maximumSignificantDigits = Number.POSITIVE_INFINITY;
   await el.updateComplete;
-  expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
+  expect(el.shadowRoot?.textContent?.trim()).to.equal(
+    new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumIntegerDigits: 1,
+      minimumSignificantDigits: 1,
+      maximumSignificantDigits: 21,
+    }).format(1234.567),
+  );
 
   el.minimumIntegerDigits = 99;
   el.minimumSignificantDigits = 5;

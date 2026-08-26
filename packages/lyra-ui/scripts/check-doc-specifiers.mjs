@@ -1,7 +1,7 @@
-// Every `@aceshooting/lyra-ui/...` specifier that a SHIPPED file tells a reader to import must
-// actually resolve through `package.json#exports`. An exports map blocks everything it does not
-// list, so a documented-but-unlisted specifier is not a soft docs bug -- it is a hard build error
-// in the consumer, with the library's own docs as the thing that caused it.
+// Every publishable workspace package specifier that a SHIPPED file tells a reader to import must
+// actually resolve through that package's `package.json#exports`. An exports map blocks everything
+// it does not list, so a documented-but-unlisted specifier is not a soft docs bug -- it is a hard
+// build error in the consumer, with the package's own docs as the thing that caused it.
 //
 // This exists because that happened twice, silently:
 //   * `flag-peer-bulk.js` -- 11.2.0's headline <lr-flag> entry point, named by the changelog, by
@@ -15,13 +15,17 @@
 // The lesson both share is that a naming convention over the SOURCE tree cannot see a promise made
 // in prose. This check reads the promises instead: it starts from what is written down, not from
 // what the file tree happens to look like, so it catches the next one whatever it is called.
-import { readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isMainModule } from './is-main-module.mjs';
 
 const defaultPackageDir = fileURLToPath(new URL('..', import.meta.url));
 
-const PACKAGE_NAME = '@aceshooting/lyra-ui';
+const defaultWorkspacePackageDirs = Object.freeze([
+  defaultPackageDir,
+  join(dirname(defaultPackageDir), 'lyra-flags'),
+]);
 
 /**
  * Specifiers that appear inside a real import statement in a shipped file and are nonetheless
@@ -62,7 +66,13 @@ const IMPORT_PATTERNS = Object.freeze([
 // extension is what keeps directory prose and `Symbol.for()` namespaces out. The trailing
 // `(?![A-Za-z0-9])` is load-bearing: without it the `js` alternative matches the first three
 // characters of `.json` and reports a `custom-elements.js` nobody ever wrote.
-const CONCRETE_MODULE_PATTERN = /(?<!node_modules\/)@aceshooting\/lyra-ui\/[A-Za-z0-9._/-]+\.(?:js|css|json)(?![A-Za-z0-9])/g;
+function concreteModulePattern(packageName) {
+  const escaped = packageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(
+    `(?<!node_modules/)${escaped}/[A-Za-z0-9._/-]+\\.(?:js|css|json)(?![A-Za-z0-9])`,
+    'g',
+  );
+}
 
 function walkFiles(directory, out = []) {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
@@ -98,8 +108,13 @@ function scannedFiles(packageDir) {
   return files;
 }
 
-/** Every distinct `@aceshooting/lyra-ui/...` specifier a shipped file tells a reader to import. */
+/** Every distinct specifier for `packageDir` that a shipped file tells a reader to import. */
 export function collectDocumentedSpecifiers(packageDir = defaultPackageDir) {
+  const packageName = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8')).name;
+  if (typeof packageName !== 'string' || packageName.length === 0) {
+    throw new Error(`${join(packageDir, 'package.json')} has no package name.`);
+  }
+  const concretePattern = concreteModulePattern(packageName);
   const found = new Map();
   for (const file of scannedFiles(packageDir)) {
     const contents = readFileSync(file, 'utf8');
@@ -108,14 +123,14 @@ export function collectDocumentedSpecifiers(packageDir = defaultPackageDir) {
       let match;
       while ((match = pattern.exec(contents)) !== null) {
         const specifier = match[2];
-        if (specifier !== PACKAGE_NAME && !specifier.startsWith(`${PACKAGE_NAME}/`)) continue;
+        if (specifier !== packageName && !specifier.startsWith(`${packageName}/`)) continue;
         if (!found.has(specifier)) found.set(specifier, new Set());
         found.get(specifier).add(relative(packageDir, file).replaceAll('\\', '/'));
       }
     }
-    CONCRETE_MODULE_PATTERN.lastIndex = 0;
+    concretePattern.lastIndex = 0;
     let concrete;
-    while ((concrete = CONCRETE_MODULE_PATTERN.exec(contents)) !== null) {
+    while ((concrete = concretePattern.exec(contents)) !== null) {
       const specifier = concrete[0];
       if (!found.has(specifier)) found.set(specifier, new Set());
       found.get(specifier).add(relative(packageDir, file).replaceAll('\\', '/'));
@@ -124,8 +139,8 @@ export function collectDocumentedSpecifiers(packageDir = defaultPackageDir) {
   return found;
 }
 
-function resolvesThroughExports(specifier, exportsMap) {
-  const subpath = specifier === PACKAGE_NAME ? '.' : `./${specifier.slice(PACKAGE_NAME.length + 1)}`;
+function resolvesThroughExports(specifier, exportsMap, packageName) {
+  const subpath = specifier === packageName ? '.' : `./${specifier.slice(packageName.length + 1)}`;
   if (Object.hasOwn(exportsMap, subpath)) return true;
   for (const key of Object.keys(exportsMap)) {
     const star = key.indexOf('*');
@@ -141,12 +156,19 @@ function resolvesThroughExports(specifier, exportsMap) {
 
 export function checkDocumentedSpecifiers(packageDir = defaultPackageDir) {
   const pkg = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8'));
+  const packageName = pkg.name;
+  if (typeof packageName !== 'string' || packageName.length === 0) {
+    throw new Error(`${join(packageDir, 'package.json')} has no package name.`);
+  }
   const exportsMap = pkg.exports ?? {};
-  const excused = new Set(DOC_SPECIFIER_EXCEPTIONS.map((entry) => entry.specifier));
+  const exceptions = DOC_SPECIFIER_EXCEPTIONS.filter(
+    (entry) => entry.specifier === packageName || entry.specifier.startsWith(`${packageName}/`),
+  );
+  const excused = new Set(exceptions.map((entry) => entry.specifier));
   const findings = [];
 
-  for (const entry of DOC_SPECIFIER_EXCEPTIONS) {
-    if (!resolvesThroughExports(entry.specifier, exportsMap)) continue;
+  for (const entry of exceptions) {
+    if (!resolvesThroughExports(entry.specifier, exportsMap, packageName)) continue;
     // A stale exception is as much a silent gap as a missing one: it excuses a specifier that no
     // longer needs excusing, and would go on excusing a genuinely-broken future namesake.
     findings.push(
@@ -157,7 +179,7 @@ export function checkDocumentedSpecifiers(packageDir = defaultPackageDir) {
 
   for (const [specifier, files] of [...collectDocumentedSpecifiers(packageDir)].sort()) {
     if (excused.has(specifier)) continue;
-    if (resolvesThroughExports(specifier, exportsMap)) continue;
+    if (resolvesThroughExports(specifier, exportsMap, packageName)) continue;
     findings.push(
       `${specifier} is documented as an import in ${[...files].sort().join(', ')} but does not `
       + 'resolve through package.json#exports',
@@ -166,8 +188,21 @@ export function checkDocumentedSpecifiers(packageDir = defaultPackageDir) {
   return { findings };
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
-  const { findings } = checkDocumentedSpecifiers();
+export function checkWorkspaceDocumentedSpecifiers(packageDirs = defaultWorkspacePackageDirs) {
+  const findings = [];
+  for (const packageDir of packageDirs) {
+    try {
+      if (!statSync(packageDir).isDirectory()) continue;
+    } catch {
+      continue;
+    }
+    findings.push(...checkDocumentedSpecifiers(packageDir).findings);
+  }
+  return { findings: findings.sort() };
+}
+
+if (isMainModule(import.meta.url)) {
+  const { findings } = checkWorkspaceDocumentedSpecifiers();
   if (findings.length > 0) {
     console.error('Documented package specifiers that do not resolve:');
     for (const finding of findings) console.error(`  - ${finding}`);

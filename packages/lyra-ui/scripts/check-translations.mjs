@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isMainModule } from './is-main-module.mjs';
 
 // Guards the shipped translation catalogs (`src/translations/<tag>.ts`) against the four ways a
 // catalog silently rots, none of which any other gate or the type system can see:
@@ -31,7 +32,6 @@
 // bootstraps: with zero catalogs declared the requirement is printed as a NOTE, and from the first
 // declared entry onward every catalog must be declared or this fails.
 
-import { realpathSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -477,7 +477,6 @@ async function main() {
   for (const summary of summaries) console.log(`- ${summary}`);
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
+if (isMainModule(import.meta.url)) {
   await main();
 }
-

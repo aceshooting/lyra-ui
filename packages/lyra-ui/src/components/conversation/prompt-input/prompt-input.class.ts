@@ -205,7 +205,18 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     'lr-send-now',
   ]);
 
-  @property() value = '';
+  private suggestionCaretGeneration = 0;
+  private _value = '';
+  @property()
+  get value(): string {
+    return this._value;
+  }
+  set value(next: string) {
+    const old = this._value;
+    this._value = next;
+    this.suggestionCaretGeneration += 1;
+    this.requestUpdate('value', old);
+  }
   @property() status: ChatComposerStatus = 'idle';
   @property() placeholder = '';
   @property({ type: Boolean, reflect: true }) disabled = false;
@@ -305,6 +316,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   }
 
   set selectionStart(value: number | null) {
+    this.suggestionCaretGeneration += 1;
     if (this.composer) this.composer.selectionStart = value;
   }
 
@@ -313,6 +325,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   }
 
   set selectionEnd(value: number | null) {
+    this.suggestionCaretGeneration += 1;
     if (this.composer) this.composer.selectionEnd = value;
   }
 
@@ -321,10 +334,12 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   }
 
   set selectionDirection(value: ChatComposerSelectionDirection | null) {
+    this.suggestionCaretGeneration += 1;
     if (this.composer) this.composer.selectionDirection = value;
   }
 
   select(): void {
+    this.suggestionCaretGeneration += 1;
     this.composer?.select();
   }
 
@@ -334,6 +349,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     end: number | null,
     direction?: ChatComposerSelectionDirection
   ): void {
+    this.suggestionCaretGeneration += 1;
     this.composer?.setSelectionRange(start, end, direction);
   }
 
@@ -390,6 +406,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
 
   override disconnectedCallback(): void {
     this.removeEventListener('focusout', this.onCompositeFocusOut);
+    this.suggestionCaretGeneration += 1;
     this.closeSuggestions();
     super.disconnectedCallback();
   }
@@ -606,12 +623,14 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     if (!occurrence || occurrence.suggestionId !== event.detail.suggestionId)
       return;
     const item = occurrence as LyraPromptSuggestion;
-    const caret = this.composer?.selectionStart ?? this.value.length;
+    const composer = this.composer;
+    const caret = composer?.selectionStart ?? this.value.length;
     const inserted = `${active.trigger}${
       item?.insertText ?? event.detail.label
     } `;
     this.value =
       this.value.slice(0, active.start) + inserted + this.value.slice(caret);
+    const caretGeneration = this.suggestionCaretGeneration;
     const nextCaret = active.start + inserted.length;
     this.closeSuggestions();
     this.emit('lr-input', { value: this.value });
@@ -622,7 +641,13 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       trigger: active.trigger,
     });
     void this.updateComplete.then(() => {
-      this.composer?.setSelectionRange(nextCaret, nextCaret);
+      if (
+        caretGeneration === this.suggestionCaretGeneration &&
+        this.isConnected &&
+        this.composer === composer
+      ) {
+        composer?.setSelectionRange(nextCaret, nextCaret);
+      }
       this.syncSuggestionAria();
     });
   }

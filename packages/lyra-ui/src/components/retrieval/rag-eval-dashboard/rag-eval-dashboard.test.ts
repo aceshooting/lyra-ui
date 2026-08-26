@@ -1,47 +1,109 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './rag-eval-dashboard.js';
-import type { LyraRagEvalDashboard, LyraRagEvaluationMetric, LyraRagEvaluationRun } from './rag-eval-dashboard.js';
+import type {
+  LyraRagEvalDashboard,
+  LyraRagEvaluationMetric,
+  LyraRagEvaluationRun,
+} from './rag-eval-dashboard.js';
 import type { LyraStat } from '../../data/stat/stat.class.js';
 
 const metrics: LyraRagEvaluationMetric[] = [
   { id: 'mrr', label: 'MRR', category: 'retrieval', format: 'number' },
-  { id: 'groundedness', label: 'Groundedness', category: 'generation', format: 'percent' },
+  {
+    id: 'groundedness',
+    label: 'Groundedness',
+    category: 'generation',
+    format: 'percent',
+  },
 ];
 const runs: LyraRagEvaluationRun[] = [
-  { id: 'run-1', label: 'Baseline', slice: 'all', metrics: { mrr: 0.62, groundedness: 0.8 } },
-  { id: 'run-2', label: 'Reranker', slice: 'all', metrics: { mrr: 0.74, groundedness: 0.91 } },
-  { id: 'run-3', label: 'Legal', slice: 'legal', metrics: { mrr: 0.7, groundedness: 0.88 } },
+  {
+    id: 'run-1',
+    label: 'Baseline',
+    slice: 'all',
+    metrics: { mrr: 0.62, groundedness: 0.8 },
+  },
+  {
+    id: 'run-2',
+    label: 'Reranker',
+    slice: 'all',
+    metrics: { mrr: 0.74, groundedness: 0.91 },
+  },
+  {
+    id: 'run-3',
+    label: 'Legal',
+    slice: 'legal',
+    metrics: { mrr: 0.7, groundedness: 0.88 },
+  },
 ];
 
 it('renders latest metric cards, a selected trend, and filters runs by slice', async () => {
   const el = (await fixture(
-    html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="groundedness" slice="all"></lr-rag-eval-dashboard>`,
+    html`<lr-rag-eval-dashboard
+      .metrics=${metrics}
+      .runs=${runs}
+      metric-id="groundedness"
+      slice="all"
+    ></lr-rag-eval-dashboard>`
   )) as LyraRagEvalDashboard;
   const stats = [...el.shadowRoot!.querySelectorAll('lr-stat')] as LyraStat[];
   expect(stats.length).to.equal(2);
   for (const stat of stats) {
     await stat.updateComplete;
-    const chrome = getComputedStyle(stat.shadowRoot!.querySelector('[part="base"]') as HTMLElement);
+    const chrome = getComputedStyle(
+      stat.shadowRoot!.querySelector('[part="base"]') as HTMLElement
+    );
     expect(stat.frame).to.equal('plain');
     expect(chrome.borderTopWidth).to.equal('0px');
     expect(chrome.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
     expect(chrome.paddingTop).to.equal('0px');
   }
   expect(el.shadowRoot!.querySelectorAll('[part="run"]').length).to.equal(2);
-  const chart = el.shadowRoot!.querySelector('lr-lite-chart') as HTMLElement & { datasets: unknown[] };
-  expect((chart) != null).to.equal(true);
-  expect(chart.datasets).to.deep.equal([{ label: 'Groundedness', data: [0.8, 0.91] }]);
+  const chart = el.shadowRoot!.querySelector('lr-lite-chart')!;
+  expect(chart.datasets).to.deep.equal([
+    { label: 'Groundedness', data: [0.8, 0.91] },
+  ]);
+});
+
+it('renders each required metric category as visible card metadata', async () => {
+  const el = await fixture<LyraRagEvalDashboard>(html`
+    <lr-rag-eval-dashboard
+      .metrics=${metrics}
+      .runs=${runs}
+    ></lr-rag-eval-dashboard>
+  `);
+  expect(
+    [...el.shadowRoot!.querySelectorAll('[part="metric-category"]')].map(
+      (category) => category.textContent?.trim()
+    )
+  ).to.deep.equal(['retrieval', 'generation']);
+});
+
+it('exposes the selected slice and metric border through a component-scoped token', async () => {
+  const el = await fixture<LyraRagEvalDashboard>(html`
+    <lr-rag-eval-dashboard
+      metric-id="mrr"
+      slice="all"
+      style="--lr-rag-eval-dashboard-selected-border-color: rgb(12, 34, 56)"
+      .metrics=${metrics}
+      .runs=${runs}
+    ></lr-rag-eval-dashboard>
+  `);
+  for (const selected of el.shadowRoot!.querySelectorAll<HTMLElement>(
+    '[part~="slice-selected"], [part~="metric-selected"]'
+  )) {
+    expect(getComputedStyle(selected).borderTopColor).to.equal(
+      'rgb(12, 34, 56)'
+    );
+  }
 });
 
 it('omits valid-id runs whose metrics record is malformed', async () => {
   const el = (await fixture(
     html`<lr-rag-eval-dashboard
       .metrics=${metrics}
-      .runs=${[
-        { id: 'bad', label: 'Malformed' },
-        runs[0],
-      ]}
-    ></lr-rag-eval-dashboard>`,
+      .runs=${[{ id: 'bad', label: 'Malformed' }, runs[0]]}
+    ></lr-rag-eval-dashboard>`
   )) as LyraRagEvalDashboard;
 
   expect(el.shadowRoot!.querySelectorAll('[part="run"]')).to.have.length(1);
@@ -51,15 +113,27 @@ it('omits valid-id runs whose metrics record is malformed', async () => {
 
 it('emits controlled metric, slice, and run selection events', async () => {
   const el = (await fixture(
-    html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="mrr"></lr-rag-eval-dashboard>`,
+    html`<lr-rag-eval-dashboard
+      .metrics=${metrics}
+      .runs=${runs}
+      metric-id="mrr"
+    ></lr-rag-eval-dashboard>`
   )) as LyraRagEvalDashboard;
 
   const metricPending = oneEvent(el, 'lr-metric-change');
-  (el.shadowRoot!.querySelector('[data-metric-id="groundedness"]') as HTMLButtonElement).click();
-  expect((await metricPending).detail).to.deep.equal({ metricId: 'groundedness' });
+  (
+    el.shadowRoot!.querySelector(
+      '[data-metric-id="groundedness"]'
+    ) as HTMLButtonElement
+  ).click();
+  expect((await metricPending).detail).to.deep.equal({
+    metricId: 'groundedness',
+  });
 
   const slicePending = oneEvent(el, 'lr-slice-change');
-  (el.shadowRoot!.querySelector('[data-slice="legal"]') as HTMLButtonElement).click();
+  (
+    el.shadowRoot!.querySelector('[data-slice="legal"]') as HTMLButtonElement
+  ).click();
   expect((await slicePending).detail).to.deep.equal({ slice: 'legal' });
 
   const runPending = oneEvent(el, 'lr-run-change');
@@ -71,31 +145,57 @@ it('has a localized empty state and one populated overall owner', async () => {
   const empty = (await fixture(
     html`<lr-rag-eval-dashboard
       .strings=${{ ragEvalDashboardEmpty: 'Aucune évaluation disponible' }}
-    ></lr-rag-eval-dashboard>`,
+    ></lr-rag-eval-dashboard>`
   )) as LyraRagEvalDashboard;
-  expect(empty.shadowRoot!.querySelector('lr-empty')?.getAttribute('heading')).to.equal(
-    'Aucune évaluation disponible',
-  );
+  expect(
+    empty.shadowRoot!.querySelector('lr-empty')?.getAttribute('heading')
+  ).to.equal('Aucune évaluation disponible');
   empty.setAttribute('aria-label', 'Empty RAG quality');
   await empty.updateComplete;
-  expect(empty.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(null);
-  expect(empty.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal(null);
+  expect(
+    empty.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
+  ).to.equal(null);
+  expect(
+    empty.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')
+  ).to.equal(null);
   const populated = (await fixture(
-    html`<lr-rag-eval-dashboard aria-label="RAG quality" .metrics=${metrics} .runs=${runs}></lr-rag-eval-dashboard>`,
+    html`<lr-rag-eval-dashboard
+      aria-label="RAG quality"
+      .metrics=${metrics}
+      .runs=${runs}
+    ></lr-rag-eval-dashboard>`
   )) as LyraRagEvalDashboard;
   expect(populated.getAttribute('aria-label')).to.equal('RAG quality');
-  expect(populated.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(null);
-  expect(populated.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal(null);
+  expect(
+    populated
+      .shadowRoot!.querySelector('[part="base"]')!
+      .getAttribute('aria-label')
+  ).to.equal(null);
+  expect(
+    populated.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')
+  ).to.equal(null);
   populated.setAttribute('aria-label', '');
   await populated.updateComplete;
   expect(populated.getAttribute('aria-label')).to.equal('');
-  expect(populated.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
-  expect(populated.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('region');
+  expect(
+    populated
+      .shadowRoot!.querySelector('[part="base"]')!
+      .getAttribute('aria-label')
+  ).to.equal('');
+  expect(
+    populated.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')
+  ).to.equal('region');
   populated.setAttribute('aria-label', 'Revised RAG quality');
   await populated.updateComplete;
   expect(populated.getAttribute('aria-label')).to.equal('Revised RAG quality');
-  expect(populated.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(null);
-  expect(populated.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal(null);
+  expect(
+    populated
+      .shadowRoot!.querySelector('[part="base"]')!
+      .getAttribute('aria-label')
+  ).to.equal(null);
+  expect(
+    populated.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')
+  ).to.equal(null);
   await expect(populated).shadowDom.to.be.accessible();
 });
 
@@ -103,27 +203,34 @@ it('applies per-instance strings to the evaluation region label', async () => {
   const el = (await fixture(html`<lr-rag-eval-dashboard
     .strings=${{ ragEvalDashboardLabel: 'Localized RAG evaluation' }}
   ></lr-rag-eval-dashboard>`)) as LyraRagEvalDashboard;
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
-    'Localized RAG evaluation',
-  );
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
+  ).to.equal('Localized RAG evaluation');
 });
 
 it('honors an explicitly empty label as genuinely empty, distinct from omitting it', async () => {
   const el = (await fixture(
-    html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs}></lr-rag-eval-dashboard>`,
+    html`<lr-rag-eval-dashboard
+      .metrics=${metrics}
+      .runs=${runs}
+    ></lr-rag-eval-dashboard>`
   )) as LyraRagEvalDashboard;
   expect(el.label).to.equal(undefined);
-  expect(el.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal(
-    'RAG evaluation dashboard',
-  );
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
-    'RAG evaluation dashboard',
-  );
+  expect(
+    el.shadowRoot!.querySelector('[part="heading"]')!.textContent
+  ).to.equal('RAG evaluation dashboard');
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
+  ).to.equal('RAG evaluation dashboard');
 
   el.label = '';
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('');
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
+  expect(
+    el.shadowRoot!.querySelector('[part="heading"]')!.textContent
+  ).to.equal('');
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
+  ).to.equal('');
 });
 
 it('preserves an unavailable controlled slice and renders a localized unavailable-filter state', async () => {
@@ -133,33 +240,65 @@ it('preserves an unavailable controlled slice and renders a localized unavailabl
       slice="missing"
       .metrics=${metrics}
       .runs=${runs}
-      .strings=${{ ragEvalDashboardSliceUnavailable: 'Aucune exécution pour {slice}.' }}
+      .strings=${{
+        ragEvalDashboardSliceUnavailable: 'Aucune exécution pour {slice}.',
+      }}
     ></lr-rag-eval-dashboard>
   `)) as LyraRagEvalDashboard;
 
   expect(el.slice).to.equal('missing');
-  expect(el.shadowRoot!.querySelectorAll('[part~="slice"][aria-pressed="true"]').length).to.equal(0);
-  expect(el.shadowRoot!.querySelector('[part="empty"]')?.getAttribute('heading')).to.equal(
-    'Aucune exécution pour missing.',
-  );
+  expect(
+    el.shadowRoot!.querySelectorAll('[part~="slice"][aria-pressed="true"]')
+      .length
+  ).to.equal(0);
+  expect(
+    el.shadowRoot!.querySelector('[part="empty"]')?.getAttribute('heading')
+  ).to.equal('Aucune exécution pour missing.');
   expect(el.shadowRoot!.querySelectorAll('[part="run"]').length).to.equal(0);
   expect(el.shadowRoot!.querySelectorAll('lr-stat').length).to.equal(0);
   expect(el.shadowRoot!.querySelector('lr-lite-chart') === null).to.equal(true);
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(null);
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal(null);
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')
+  ).to.equal(null);
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')
+  ).to.equal(null);
 });
 
 it('omits the trend chart when show-chart is disabled', async () => {
   const el = (await fixture(
-    html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="groundedness" slice="all"></lr-rag-eval-dashboard>`,
+    html`<lr-rag-eval-dashboard
+      .metrics=${metrics}
+      .runs=${runs}
+      metric-id="groundedness"
+      slice="all"
+    ></lr-rag-eval-dashboard>`
   )) as LyraRagEvalDashboard;
-  expect(el.shadowRoot!.querySelector('[part="chart"]') === null).to.equal(false);
+  expect(el.shadowRoot!.querySelector('[part="chart"]') === null).to.equal(
+    false
+  );
 
   el.showChart = false;
   await el.updateComplete;
 
-  expect(el.shadowRoot!.querySelector('[part="chart"]') === null).to.equal(true);
+  expect(el.shadowRoot!.querySelector('[part="chart"]') === null).to.equal(
+    true
+  );
   expect(el.shadowRoot!.querySelector('lr-lite-chart') === null).to.equal(true);
+});
+
+it('parses the true-defaulting show-chart="false" attribute as false', async () => {
+  const el = await fixture<LyraRagEvalDashboard>(html`
+    <lr-rag-eval-dashboard
+      show-chart="false"
+      .metrics=${metrics}
+      .runs=${runs}
+    ></lr-rag-eval-dashboard>
+  `);
+  expect(el.showChart).to.equal(false);
+  expect(el.shadowRoot!.querySelector('[part="chart"]') === null).to.equal(
+    true
+  );
 });
 
 it('omits blank and later duplicate metric and run ids before fallback, filters, rendering, and actions', async () => {
@@ -189,16 +328,21 @@ it('omits blank and later duplicate metric and run ids before fallback, filters,
     ></lr-rag-eval-dashboard>
   `)) as LyraRagEvalDashboard;
 
-  expect(el.shadowRoot!.querySelectorAll('[part~="metric"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelectorAll('[part~="metric"]').length).to.equal(
+    1
+  );
   expect(el.shadowRoot!.querySelectorAll('[part="run"]').length).to.equal(1);
-  expect(
-    (el.shadowRoot!.querySelector('lr-stat') as LyraStat).label
-  ).to.equal(firstMetric.label);
-  expect(el.shadowRoot!.querySelector('[data-slice="later-slice"]') === null).to.be.true;
+  expect((el.shadowRoot!.querySelector('lr-stat') as LyraStat).label).to.equal(
+    firstMetric.label
+  );
+  expect(el.shadowRoot!.querySelector('[data-slice="later-slice"]') === null).to
+    .be.true;
 
   const metricSelected = oneEvent(el, 'lr-metric-change');
   el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="metric"]')!.click();
-  expect((await metricSelected).detail).to.deep.equal({ metricId: firstMetric.id });
+  expect((await metricSelected).detail).to.deep.equal({
+    metricId: firstMetric.id,
+  });
 
   const runSelected = oneEvent(el, 'lr-run-change');
   el.shadowRoot!.querySelector<HTMLButtonElement>('[part="run"]')!.click();
@@ -209,36 +353,43 @@ it('renders runs without metric definitions or slices as bounded history only', 
   const el = (await fixture(html`
     <lr-rag-eval-dashboard
       .metrics=${[]}
-      .runs=${[
-        { id: 'run-only', label: 'Unscored run', metrics: {} },
-      ]}
+      .runs=${[{ id: 'run-only', label: 'Unscored run', metrics: {} }]}
     ></lr-rag-eval-dashboard>
   `)) as LyraRagEvalDashboard;
 
-  expect(el.shadowRoot!.querySelector('[part="slices"]') === null).to.equal(true);
-  expect(el.shadowRoot!.querySelector('[part="chart"]') === null).to.equal(true);
-  expect(el.shadowRoot!.querySelectorAll('[part="metric"]').length).to.equal(0);
-  expect(el.shadowRoot!.querySelector('[part="run"]')!.textContent!.trim()).to.equal(
-    'Unscored run'
+  expect(el.shadowRoot!.querySelector('[part="slices"]') === null).to.equal(
+    true
   );
+  expect(el.shadowRoot!.querySelector('[part="chart"]') === null).to.equal(
+    true
+  );
+  expect(el.shadowRoot!.querySelectorAll('[part="metric"]').length).to.equal(0);
+  expect(
+    el.shadowRoot!.querySelector('[part="run"]')!.textContent!.trim()
+  ).to.equal('Unscored run');
 });
 
 it('normalizes non-array collections and non-finite metric values', async () => {
   const el = (await fixture(html`
     <lr-rag-eval-dashboard
-      .metrics=${[
-        { id: 'score', label: 'Score', category: 'retrieval' },
-      ]}
+      .metrics=${[{ id: 'score', label: 'Score', category: 'retrieval' }]}
       .runs=${[
-        { id: 'bad', label: 'Unavailable score', metrics: { score: Number.NaN } },
+        {
+          id: 'bad',
+          label: 'Unavailable score',
+          metrics: { score: Number.NaN },
+        },
       ]}
     ></lr-rag-eval-dashboard>
   `)) as LyraRagEvalDashboard;
   const stat = el.shadowRoot!.querySelector('lr-stat') as LyraStat;
   expect(stat.value).to.equal('0');
-  expect(el.shadowRoot!.querySelector('[part="run"]')!.querySelectorAll('span').length).to.equal(1);
   expect(
-    (el.shadowRoot!.querySelector('lr-lite-chart') as HTMLElement & { datasets: unknown[] }).datasets
+    el.shadowRoot!.querySelector('[part="run"]')!.querySelectorAll('span')
+      .length
+  ).to.equal(1);
+  expect(
+    el.shadowRoot!.querySelector('lr-lite-chart')!.datasets
   ).to.deep.equal([{ label: 'Score', data: [null] }]);
 
   el.metrics = null as unknown as readonly LyraRagEvaluationMetric[];

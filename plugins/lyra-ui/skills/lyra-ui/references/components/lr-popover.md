@@ -6,6 +6,7 @@
 - **Class** `LyraPopover`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/overlay/popover.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 8 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -93,6 +94,8 @@ If the import fails, leave the native disclosure visible and usable.
 - `popupRole: 'dialog'|'menu'|'none' = 'dialog'` (attribute `popup-role`). `none` (new in 11.0.0)
   renders **no** `role` and no generated `aria-label` on the popup surface, and leaves
   `aria-haspopup` off the trigger, so slotted content owns its own semantics and accessible name.
+  Unsupported attribute values and untyped property writes normalize to `dialog` before any role
+  or trigger ARIA is rendered.
   It exists for the WAI-ARIA **disclosure navigation** pattern: a flyout of links is not an
   application action menu (`menu` announces "menu, menu item" and expects `menuitem` children) and
   is not an interruptive surface (`dialog`). The `aria-expanded`/`aria-controls` wiring that pattern
@@ -128,6 +131,9 @@ is exposed as the public `lr-popover` host. Target insertion, removal, replaceme
 and late custom-element upgrade are tracked live. Authored relationship tokens compose, generated
 whole-value attributes stay authoritative while owned, and exact late-authored baselines return
 when ownership moves or disconnects.
+An enabled, non-inert light-DOM descendant with `data-popover="close"` requests its closest owning
+popover to close when activated. Disabled/`aria-disabled` actions are inert, and a nested popover
+consumes its own action so the same click never closes an ancestor.
 **Methods:** `show(): Promise<void>` opens the popover programmatically — identical to
 `el.open = true`, including the veto point — and resolves after `lr-after-show`. A no-op or vetoed
 transition returns an already-resolved promise.
@@ -181,7 +187,8 @@ Per-element overrides win over page defaults; keyframes-only overrides retain th
 a `null` registration skips interpolation, but neither path skips the after-event or its
 method-promise settlement.
 
-**Slots:** `trigger` (the interactive element that toggles the popover), default (popover content).
+**Slots:** `trigger` (the interactive element that toggles the popover), default (popover content;
+an enabled, non-inert descendant with `data-popover="close"` closes its nearest owning popover).
 
 **CSS parts:** `trigger`; `popup dialog popup__popup`; `content body`; and
 `arrow popup__arrow` (rendered unless suppressed). Names grouped together are aliases on the same

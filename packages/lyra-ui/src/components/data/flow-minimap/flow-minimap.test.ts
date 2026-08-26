@@ -1,10 +1,10 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import '../flow-canvas/flow-canvas.js';
 import './flow-minimap.js';
 import type { LyraFlowMinimap } from './flow-minimap.js';
 import type { LyraFlowCanvas, FlowNode } from '../flow-canvas/flow-canvas.js';
-import { styles } from './flow-minimap.styles.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function sinkElement(doc: Document = document): HTMLElement | null {
   return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
@@ -20,9 +20,35 @@ const nodes: FlowNode[] = [
   { id: 'b', position: { x: 300, y: 200 } },
 ];
 
-it('gives the clickable map a hover treatment, matching its cursor: pointer affordance (regression)', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='map'\]:hover\s*\{[^}]*background/);
+it('renders the clickable map hover treatment that matches its pointer affordance', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas style="width:400px;height:300px">
+      <lr-flow-minimap
+        slot="bottom-end"
+        style="--lr-color-brand-quiet: rgb(1, 2, 3)"
+      ></lr-flow-minimap>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  const map = minimap.shadowRoot!.querySelector<SVGSVGElement>('[part="map"]')!;
+  const rect = map.getBoundingClientRect();
+
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + 4), Math.round(rect.top + 4)],
+    });
+    await waitUntil(
+      () => getComputedStyle(map).backgroundColor === 'rgb(1, 2, 3)',
+      'the rendered map hover background never appeared',
+    );
+  } finally {
+    await resetMouse();
+  }
 });
 
 it('defaults to an empty for/label', async () => {
@@ -242,7 +268,9 @@ it('lets each node status color be rethemed without changing shared semantic tok
     ['denied', 'rgb(13, 14, 15)'],
   ]);
   for (const rect of minimap.shadowRoot!.querySelectorAll<SVGElement>('[part="node"]')) {
-    expect(getComputedStyle(rect).fill).to.equal(expected.get(rect.dataset.status));
+    expect(getComputedStyle(rect).fill).to.equal(
+      expected.get(rect.dataset['status'] ?? '')!
+    );
   }
 });
 
@@ -896,11 +924,34 @@ it('is accessible with a resolved canvas', async () => {
 });
 
 describe('mouse-hover feedback on the viewport rectangle', () => {
-  // :hover cannot be synthesized in this test runner (no real pointer), so per this repo's
-  // documented exception for genuinely-unsynthesizable pseudo-classes, this asserts against the
-  // stylesheet source instead of a rendered/computed effect.
-  it('declares hover feedback from the transparent hit area onto the visible viewport', () => {
-    expect(styles.cssText).to.match(/\[data-viewport-control\]:hover \[part='viewport'\]\s*\{/);
+  it('renders hover feedback from the transparent hit area onto the visible viewport', async () => {
+    const wrapper = (await fixture(html`
+      <lr-flow-canvas style="width:400px;height:300px">
+        <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+      </lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    wrapper.nodes = nodes;
+    await wrapper.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+    await minimap.updateComplete;
+    const hitArea = minimap.shadowRoot!.querySelector<SVGRectElement>('[part="viewport-hit-area"]')!;
+    const viewport = minimap.shadowRoot!.querySelector<SVGRectElement>('[part="viewport"]')!;
+    const restingFill = getComputedStyle(viewport).fill;
+    const rect = hitArea.getBoundingClientRect();
+
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(() => {
+        const computed = getComputedStyle(viewport);
+        return Number.parseFloat(computed.strokeWidth) === 3 && computed.fill !== restingFill;
+      }, 'the visible viewport never painted its hit-area hover feedback');
+    } finally {
+      await resetMouse();
+    }
   });
 });
 

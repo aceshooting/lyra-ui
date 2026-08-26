@@ -113,10 +113,7 @@ it("renders claim-level evidence when claims are supplied and allows it to be hi
   };
   el.citations = CITATIONS;
   await el.updateComplete;
-  const claims = el.shadowRoot!.querySelector(
-    "lr-claim-evidence"
-  ) as HTMLElement & { claims: unknown[] };
-  expect(claims != null).to.equal(true);
+  const claims = el.shadowRoot!.querySelector("lr-claim-evidence")!;
   expect(claims.claims.length).to.equal(1);
 
   el.showClaims = false;

@@ -81,10 +81,19 @@ export const nextId = (scope: string): string => {
   return `${tag(scope)}-${state.counter}`;
 };
 
-/** Returns the host's authored `aria-label` by attribute presence, including the empty string.
- * `null` means the attribute is absent and the caller may use its computed fallback. */
+/** Returns the host's authored `aria-label`, including a public programmatic `accessibleLabel`
+ * binding. Attribute presence wins and preserves the empty string. A non-empty own or Lit-reactive
+ * compatibility property is the fallback; private computed getters are deliberately not invoked.
+ * `null` means neither path supplies a name and the caller may compute one. */
 export function hostAriaLabel(host: Element): string | null {
-  return host.hasAttribute('aria-label') ? (host.getAttribute('aria-label') ?? '') : null;
+  if (host.hasAttribute('aria-label')) return host.getAttribute('aria-label') ?? '';
+  const hasOwnProperty = Object.prototype.hasOwnProperty.call(host, 'accessibleLabel');
+  const reactiveProperties = (host.constructor as typeof Element & {
+    elementProperties?: ReadonlyMap<PropertyKey, unknown>;
+  }).elementProperties;
+  if (!hasOwnProperty && !reactiveProperties?.has('accessibleLabel')) return null;
+  const propertyValue = (host as Element & { accessibleLabel?: unknown }).accessibleLabel;
+  return typeof propertyValue === 'string' && propertyValue.length > 0 ? propertyValue : null;
 }
 
 // The one "is there real content" predicate for a set of light-DOM/assigned

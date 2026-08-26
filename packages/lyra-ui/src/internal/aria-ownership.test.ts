@@ -341,8 +341,10 @@ it('retargets after detachment without replacing late authored relationship base
 
 it('composes attribute and control owners acquired through separate module instances', async function () {
   if (!('ariaControlsElements' in HTMLElement.prototype)) this.skip();
-  const firstCopy = await import('../../dist/internal/aria-ownership.js?aria-owner-copy=first');
-  const secondCopy = await import('../../dist/internal/aria-ownership.js?aria-owner-copy=second');
+  const firstPath = '../../dist/internal/aria-ownership.js?aria-owner-copy=first';
+  const secondPath = '../../dist/internal/aria-ownership.js?aria-owner-copy=second';
+  const firstCopy = await import(firstPath);
+  const secondCopy = await import(secondPath);
   const root = await fixture<HTMLElement>(html`
     <div><button></button><section id="copy-control-first"></section><section id="copy-control-second"></section></div>
   `);

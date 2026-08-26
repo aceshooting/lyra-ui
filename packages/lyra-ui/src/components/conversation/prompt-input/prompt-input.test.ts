@@ -139,6 +139,18 @@ it("composes attachments, model, voice, sources, queue, and the chat composer", 
   expect(el.shadowRoot!.querySelectorAll("lr-prompt-queue")).to.have.lengthOf(
     1
   );
+  const voiceChanged = oneEvent(el, "lr-voice-change");
+  el.shadowRoot!.querySelector("lr-voice-picker")!.dispatchEvent(
+    new CustomEvent("lr-change", {
+      bubbles: true,
+      composed: true,
+      detail: { value: "bright", inCatalog: true },
+    })
+  );
+  expect((await voiceChanged).detail).to.deep.equal({
+    value: "bright",
+    inCatalog: true,
+  });
 });
 
 it("composes canonical start/end slots and restores generated fallbacks live", async () => {
@@ -266,7 +278,7 @@ it("detects mention triggers, anchors the popover to the real textarea, and inse
     ).ariaActiveDescendantElement;
     return (
       currentReflection === popover.activeDescendantElement ||
-      (popover.shadowRoot!.activeElement as HTMLElement | null)?.dataset.id ===
+      (popover.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id'] ===
         "adam"
     );
   });
@@ -291,7 +303,7 @@ it("detects mention triggers, anchors the popover to the real textarea, and inse
       "the fallback must continue avoiding a broken string IDREF"
     ).to.be.false;
     expect(
-      (popover.shadowRoot!.activeElement as HTMLElement | null)?.dataset.id
+      (popover.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']
     ).to.equal("adam");
   }
 
@@ -316,6 +328,57 @@ it("detects mention triggers, anchors the popover to the real textarea, and inse
     trigger: "@",
   });
   expect(el.value).to.equal("Hello @Ada ");
+});
+
+it("does not overwrite a controlled caret after suggestion selection", async () => {
+  const el = (await fixture(html`
+    <lr-prompt-input
+      .mentionItems=${[{ suggestionId: "ada", label: "Ada" }]}
+    ></lr-prompt-input>
+  `)) as LyraPromptInput;
+  const composer = el.shadowRoot!.querySelector(
+    "lr-chat-composer"
+  ) as LyraChatComposer;
+  composer.value = "Hello @ad";
+  await composer.updateComplete;
+  composer.setSelectionRange(composer.value.length, composer.value.length);
+  composer.dispatchEvent(
+    new CustomEvent("lr-input", {
+      bubbles: true,
+      composed: true,
+      detail: { value: composer.value },
+    })
+  );
+  await el.updateComplete;
+  const popover = el.shadowRoot!.querySelector(
+    "lr-mention-popover"
+  ) as LyraMentionPopover;
+  await popover.updateComplete;
+
+  el.addEventListener(
+    "lr-input",
+    () => {
+      el.value = "Controlled replacement";
+      composer.value = "Controlled replacement";
+      el.setSelectionRange(3, 3);
+    },
+    { once: true }
+  );
+  popover.dispatchEvent(
+    new CustomEvent("lr-mention-select", {
+      bubbles: true,
+      composed: true,
+      detail: { suggestionId: "ada", index: 0, label: "Ada" },
+    })
+  );
+  await el.updateComplete;
+  await composer.updateComplete;
+  await Promise.resolve();
+
+  expect(el.value).to.equal("Controlled replacement");
+  expect(composer.value).to.equal("Controlled replacement");
+  expect(composer.selectionStart).to.equal(3);
+  expect(composer.selectionEnd).to.equal(3);
 });
 
 it("recognizes slash commands and clears suggestions after ordinary input", async () => {

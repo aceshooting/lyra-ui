@@ -6,6 +6,7 @@
 - **Class** `LyraToolApprovalDialog`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-approval-dialog/tool-approval-dialog.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 22 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -33,12 +34,15 @@ renders at the start of the action row, before Deny/Edit/Approve.
 - `ApprovalDecision = 'approved' | 'denied'` — shared final-outcome vocabulary, deliberately
   separate from `ApprovalAction`
 - `ToolApprovalDialogCloseReason = 'escape' | 'backdrop' | 'approve' | 'deny' | 'api' | string` — the
-  `lr-close` detail; `'escape'`/`'backdrop'`/`'approve'`/`'deny'` come from the dialog's own built-in
-  dismiss triggers, any other string is whatever a caller passes to `close()` directly.
+  `lr-close` detail; `'escape'`/`'approve'`/`'deny'` come from the dialog's built-in triggers,
+  `'backdrop'` requires `lightDismiss`, and any other string is whatever a caller passes to
+  `close()` directly.
 
 **Properties:**
 
 - `open: boolean = false` (reflected) — set it directly or use the lifecycle methods below
+- `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop-click
+  dismissal; Escape and the built-in decision buttons remain available without it
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — a host attribute names the
   host; the panel remains labelled by its visible heading rather than cloning the same name. A
   direct property assignment made without the attribute can name the panel
@@ -62,7 +66,7 @@ renders at the start of the action row, before Deny/Edit/Approve.
   resolution while an `lr-approve`/`lr-deny` listener has called `preventDefault()` on the
   now-cancelable event; the pending button shows `loading`, the other is `disabled` (Approve is
   also still `disabled` while an in-progress edit is invalid JSON, independent of `pending`).
-  Escape/backdrop dismissal is suppressed while `pending` is set. Finalize by calling
+  Escape and an enabled backdrop dismissal are suppressed while `pending` is set. Finalize by calling
   `close('approve'|'deny')`, or clear `.pending` back to `null` to bounce back to the undecided
   state; `pending` also resets to `null` every time the dialog re-opens.
 
@@ -77,8 +81,8 @@ closing; otherwise always followed by `lr-close` with reason `'approve'`), `lr-d
 `this.emit('lr-deny')` is called with no second argument, so per the DOM spec's `CustomEventInit`
 default, `event.detail` is `null`, not `undefined`. Cancelable, same `pending` mechanism, setting
 `pending` to `'deny'`; otherwise always followed by `lr-close` with reason `'deny'`), `lr-close`
-(`detail: ToolApprovalDialogCloseReason` — fired exactly once per dismissal, via Escape, a backdrop
-click, the Approve/Deny buttons, or a `close()` call), and no-detail `focus`/`blur` events
+(`detail: ToolApprovalDialogCloseReason` — fired exactly once per dismissal, via Escape, an opted-in
+backdrop click, the Approve/Deny buttons, or a `close()` call), and no-detail `focus`/`blur` events
 re-dispatched when the raw-JSON editor gains or loses focus.
 
 **Slots:** `footer` — optional supplementary content (e.g. a "remember this choice" checkbox),
@@ -175,9 +179,11 @@ shared composed-tree focus traversal used by the other modal families.
   padding/border/font/`:hover`/`:focus-visible` must move that CSS onto the re-exported
   `deny-button-base`/`approve-button-base` sub-parts instead. `edit-button` is unaffected and stays
   a raw `<button>`.
+- Backdrop clicks leave the dialog open by default; add `light-dismiss` to opt in, matching
+  `<lr-dialog>`, `<lr-drawer>`, `<lr-lightbox>`, and the sibling tool dialogs.
 - An `lr-approve`/`lr-deny` listener can call `preventDefault()` to keep the decision open while
-  its own async work is in flight — see `pending` above. While `pending` is set, Escape/backdrop
-  dismissal is suppressed, so a consumer that never resolves the pending decision leaves the
+  its own async work is in flight — see `pending` above. While `pending` is set, Escape and an
+  enabled backdrop dismissal are suppressed, so a consumer that never resolves the pending decision leaves the
   dialog open until it clears `.pending` or calls `close()` directly itself.
 
 ---

@@ -1,6 +1,8 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './visually-hidden.js';
 
+type TestVisuallyHidden = HTMLElement & { updateComplete: Promise<unknown> };
+
 it('collapses out of sight while remaining in the accessibility tree', async () => {
   const el = await fixture(html`<lr-visually-hidden>Skip to content</lr-visually-hidden>`);
   const style = getComputedStyle(el);
@@ -15,14 +17,14 @@ it('collapses out of sight while remaining in the accessibility tree', async () 
 });
 
 it('becomes visible while focus is inside it', async () => {
-  const el = await fixture(html`<lr-visually-hidden><a href="#main">Skip to content</a></lr-visually-hidden>`);
+  const el = await fixture<TestVisuallyHidden>(html`<lr-visually-hidden><a href="#main">Skip to content</a></lr-visually-hidden>`);
   el.querySelector('a')!.focus();
   await el.updateComplete;
   expect(el.getBoundingClientRect().height).to.be.greaterThan(1);
 });
 
 it('sizes its hidden box from the shared --lr-size-1px token, not the unrelated --lr-border-width-thin', async () => {
-  const el = await fixture(html`<lr-visually-hidden>Skip to content</lr-visually-hidden>`);
+  const el = await fixture<TestVisuallyHidden>(html`<lr-visually-hidden>Skip to content</lr-visually-hidden>`);
   const style = getComputedStyle(el);
   expect(style.inlineSize).to.equal('1px');
   expect(style.blockSize).to.equal('1px');

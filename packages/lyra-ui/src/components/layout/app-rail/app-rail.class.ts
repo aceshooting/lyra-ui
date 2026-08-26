@@ -248,8 +248,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  role, mirroring `<lr-date-input>`'s `accessibleLabel` pattern. Reads the host's own
    *  `aria-label` attribute -- unset (the default, `null`) reproduces today's exact
    *  `label`/localized-default output. */
-  @property({ attribute: 'aria-label' }) private accessibleLabel:
-    | string | null = null;
+  @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
 
   /** Manually prefers `'full'` or `'icon-only'` for the non-mobile breakpoint axis, while the
    *  `mobile-breakpoint` continues to be tracked automatically regardless — e.g. a user's manual
@@ -390,7 +389,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   private recoverInlineFocusAfterResponsiveClose = false;
   private readonly navId = nextId('app-rail-nav');
 
-  @query('[part="base"]') private baseEl?: HTMLElement;
+  @query('[part="base"], [part="panel"]') private baseEl?: HTMLElement;
   private resizePointerId?: number;
   private resizeOwnerWindow?: Window;
   private resizeStartX = 0;

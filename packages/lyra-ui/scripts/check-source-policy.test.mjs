@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
+import path from 'node:path';
 import test from 'node:test';
 
 import {
+  collectSourcePolicyFindings,
   findOpaqueReviewTokens,
   findUnboundAnnouncerTimerHosts,
   findNulByteLines,
@@ -10,6 +12,26 @@ import {
   findShadowLiveRegionMarkup,
   isSafeIntlLocaleExpression,
 } from './check-source-policy.mjs';
+
+const packageDir = path.resolve(import.meta.dirname, '..');
+
+test('internal helpers receive localize-fallback and physical-CSS policy coverage', () => {
+  const localizeFindings = collectSourcePolicyFindings({
+    file: path.join(packageDir, 'src/internal/policy-probe.ts'),
+    source: `this.localize('knownKey', 'English fallback');`,
+    knownKeys: new Set(['knownKey']),
+  });
+  assert.equal(localizeFindings.length, 1);
+  assert.match(localizeFindings[0], /\[localize-fallback\]/u);
+
+  const styleFindings = collectSourcePolicyFindings({
+    file: path.join(packageDir, 'src/internal/policy-probe.styles.ts'),
+    source: `export const styles = css\`:host { margin-left: 1rem; }\`;`,
+    knownKeys: new Set(),
+  });
+  assert.equal(styleFindings.length, 1);
+  assert.match(styleFindings[0], /\[physical-css\]/u);
+});
 
 test('shipped-source hygiene rejects opaque review IDs without flagging public standards', () => {
   const source = [

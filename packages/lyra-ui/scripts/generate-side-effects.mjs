@@ -1,7 +1,9 @@
+import { isMainModule } from './is-main-module.mjs';
+
 // Regenerates package.json#sideEffects from the same required-entries derivation
 // scripts/check-side-effects.mjs verifies against, so the array is a generated artifact instead
 // of 500+ hand-maintained lines. Run after any component add/move/remove, then commit the diff.
-import { existsSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -139,7 +141,7 @@ export function generateSideEffects(packageDir = defaultPackageDir) {
   return pkg.sideEffects;
 }
 
-if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
+if (isMainModule(import.meta.url)) {
   const entries = generateSideEffects();
   console.log(`package.json#sideEffects regenerated: ${entries.length} entries.`);
 }

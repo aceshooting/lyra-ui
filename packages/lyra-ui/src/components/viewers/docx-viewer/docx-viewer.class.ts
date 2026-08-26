@@ -216,6 +216,10 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  * Renders a DOCX document as sanitized semantic HTML using the optional
  * `mammoth` converter and `dompurify` sanitizer peers. DOCX content is always
  * sanitized; there is no unsanitized rendering mode for uploaded documents.
+ * Converted markup then passes through the passive-document profile: anchors, form controls, and
+ * custom elements are unwrapped to ordinary text/children where safe, remote navigation/resource
+ * attributes are removed, and an `<a>` itself never remains. Images render only inline base64 GIF,
+ * JPEG, PNG, or WebP data; same-document SVG fragment references may remain.
  *
  * Every rendered heading's slug (computed via the shared GitHub-slugger-style `Slugger` -- the same
  * algorithm and shared class `<lr-markdown>` uses, so identical heading text slugs identically

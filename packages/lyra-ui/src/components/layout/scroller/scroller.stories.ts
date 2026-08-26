@@ -22,7 +22,7 @@ export const Horizontal: Story = {
 
 export const Vertical: Story = {
   render: () => html`<lr-scroller orientation="vertical" controls label="Recent events" style="max-block-size: 12rem;">
-    ${['Connected', 'Imported', 'Calculated', 'Published'].map((item) => html`<span>${item}</span>`)}
+    ${Array.from({ length: 24 }, (_, index) => html`<span>Event ${index + 1}</span>`)}
   </lr-scroller>`,
 };
 

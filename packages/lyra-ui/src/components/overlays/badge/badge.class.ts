@@ -35,9 +35,10 @@ export type BadgeAttention = 'none' | 'pulse' | 'bounce';
  * status to signal reads as plain rather than grey-tinted.
  * `pill` switches the rounded rectangle for fully-rounded ends, and `attention` adds an opt-in,
  * reduced-motion-aware animation for a badge that has to be noticed.
- * The light-DOM host owns the one `role="status"` semantic surface so its projected label remains
- * directly exposed. `<lr-tag>` inherits the visual implementation but explicitly opts out of that
- * role because tag content is not a live status.
+ * Badge content is static by default, matching both mirrored upstreams. Authors whose badge holds
+ * genuinely changing status text can opt into live-region semantics with `role="status"`; any
+ * authored role is preserved. `<lr-tag>` inherits the same visual and author-owned semantic
+ * contract.
  *
  * @customElement lr-badge
  * @slot - Badge content.
@@ -140,9 +141,9 @@ export class LyraBadge<
   @state() private hasStartSlot = false;
   @state() private hasEndSlot = false;
 
-  /** One semantic owner for badges. Subclasses whose content is not a status opt out here. */
+  /** Badge semantics are author-owned by default; a purpose-specific subclass may opt in. */
   protected get semanticRole(): 'status' | null {
-    return 'status';
+    return null;
   }
 
   protected get effectiveVariant(): LyraVariant {

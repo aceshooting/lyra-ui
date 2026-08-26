@@ -355,6 +355,8 @@ const strings: LyraLocaleStrings = {
     'Os rótulos de dados não estão disponíveis, mas o gráfico principal continua disponível.',
   chartStackTotalsUnavailable:
     'Os totais empilhados não estão disponíveis, mas o gráfico principal continua disponível.',
+  chartAnnotationsUnavailable:
+    'As anotações do gráfico não estão disponíveis, mas o gráfico principal continua disponível.',
   chart: 'Gráfico',
   chartTypeLine: 'linhas',
   chartTypeBar: 'barras',
@@ -764,6 +766,7 @@ const strings: LyraLocaleStrings = {
   emailViewerSubject: 'Assunto',
   emailViewerDate: 'Data',
   emailViewerAttachments: 'Anexos',
+  emailViewerUnnamedAttachment: 'Anexo sem nome',
   emailViewerNoSubject: '(sem assunto)',
   emailViewerOpenAttachment: 'Abrir {filename}',
   emailViewerShowQuoted: 'Mostrar o texto citado',
@@ -1285,6 +1288,7 @@ const strings: LyraLocaleStrings = {
   ingestionStageDone: 'Concluído',
   ingestionStageFailed: 'Com falha',
   ingestionStageCancelled: 'Cancelado',
+  ingestionStageUnknown: 'Etapa desconhecida',
   ingestionQueueLabel: 'Fila de ingestão',
   ingestionQueueEmpty: 'Nenhum documento na fila',
   documentLibraryFreshnessFresh: 'Atualizado',
@@ -1329,6 +1333,7 @@ const strings: LyraLocaleStrings = {
   drilldownDocuments: 'Documentos',
   drilldownRuns: 'Execuções do agente',
   drilldownEmpty: 'Nenhum item selecionado',
+  drilldownUntitledNode: 'Etapa sem título',
   evaluationRunStatusIdle: 'Ocioso',
   evaluationRunStatusWaitingInput: 'Aguardando entrada',
   evaluationRunStatusWaitingApproval: 'Aguardando aprovação',

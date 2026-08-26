@@ -396,8 +396,8 @@ it('uses role="list"/"listitem" (not listbox/option) and reflects the real item 
     expect(r.getAttribute("role")).to.equal("listitem")
   );
   // Full-array size, not the rendered-window size.
-  expect(rowsBefore[0].getAttribute("aria-setsize")).to.equal("100");
-  expect(rowsBefore[0].getAttribute("aria-posinset")).to.equal("1");
+  expect(rowsBefore[0]!.getAttribute("aria-setsize")).to.equal("100");
+  expect(rowsBefore[0]!.getAttribute("aria-posinset")).to.equal("1");
 
   // Scroll 10 rows down (400px / 40px per row) -- the *first rendered* row's
   // posinset must reflect its real index (11), not "1st DOM node".
@@ -409,8 +409,8 @@ it('uses role="list"/"listitem" (not listbox/option) and reflects the real item 
   const rowsAfter = [
     ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]'),
   ];
-  expect(rowsAfter[0].getAttribute("aria-posinset")).to.equal("11");
-  expect(rowsAfter[0].getAttribute("aria-setsize")).to.equal("100");
+  expect(rowsAfter[0]!.getAttribute("aria-posinset")).to.equal("11");
+  expect(rowsAfter[0]!.getAttribute("aria-setsize")).to.equal("100");
 });
 
 it("positions rows via translateY using exact cumulative offsets in fixed row-height mode", async () => {
@@ -431,9 +431,9 @@ it("positions rows via translateY using exact cumulative offsets in fixed row-he
   const rows = [
     ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]'),
   ];
-  expect(rows[0].style.transform).to.equal("translateY(0px)");
-  expect(rows[1].style.transform).to.equal("translateY(40px)");
-  expect(rows[2].style.transform).to.equal("translateY(80px)");
+  expect(rows[0]!.style.transform).to.equal("translateY(0px)");
+  expect(rows[1]!.style.transform).to.equal("translateY(40px)");
+  expect(rows[2]!.style.transform).to.equal("translateY(80px)");
 
   const spacer = el.shadowRoot!.querySelector('[part="spacer"]') as HTMLElement;
   expect(spacer.style.height).to.equal("2000px"); // 50 * 40
@@ -453,7 +453,7 @@ it("falls back to the item's index as the row key when keyFunction is omitted", 
   const rows = [
     ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]'),
   ];
-  expect(rows.map((r) => r.dataset.rowKey)).to.deep.equal([
+  expect(rows.map((r) => r.dataset['rowKey'])).to.deep.equal([
     "number:0",
     "number:1",
     "number:2",
@@ -476,7 +476,7 @@ it("keeps NaN and negative zero keys distinct in their DOM tokens", async () => 
   const rows = [
     ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]'),
   ];
-  expect(rows.map((row) => row.dataset.rowKey)).to.deep.equal([
+  expect(rows.map((row) => row.dataset['rowKey'])).to.deep.equal([
     "number:NaN",
     "number:-0",
   ]);
@@ -810,10 +810,10 @@ it('marks the row matching active-item-id with aria-current="true", not aria-sel
   const rows = [
     ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]'),
   ];
-  const active = rows.find((r) => r.dataset.rowKey === "string:b")!;
+  const active = rows.find((r) => r.dataset['rowKey'] === "string:b")!;
   expect(active.getAttribute("aria-current")).to.equal("true");
   expect(active.hasAttribute("aria-selected")).to.be.false;
-  const others = rows.filter((r) => r.dataset.rowKey !== "string:b");
+  const others = rows.filter((r) => r.dataset['rowKey'] !== "string:b");
   others.forEach((r) =>
     expect(r.getAttribute("aria-current")).to.equal("false")
   );
@@ -846,7 +846,7 @@ it('scrolls the matching row into view once active-item-id changes after mount',
     media: query,
     addEventListener: () => {},
     removeEventListener: () => {},
-  })) as typeof window.matchMedia;
+  })) as unknown as typeof window.matchMedia;
 
   try {
     const items = Array.from({ length: 50 }, (_, i) => i);
@@ -1013,7 +1013,7 @@ it('forces behavior "auto" under prefers-reduced-motion even when "smooth" is re
     media: query,
     addEventListener: () => {},
     removeEventListener: () => {},
-  })) as typeof window.matchMedia;
+  })) as unknown as typeof window.matchMedia;
 
   try {
     const items = Array.from({ length: 50 }, (_, i) => i);
@@ -1086,7 +1086,7 @@ it('keeps an active-item-id target visible while tall preceding rows replace the
     media: query,
     addEventListener: () => {},
     removeEventListener: () => {},
-  })) as typeof window.matchMedia;
+  })) as unknown as typeof window.matchMedia;
   try {
     const items = Array.from({ length: 50 }, (_, index) => index);
     const el = await fixture<LyraVirtualList>(html`
@@ -1857,6 +1857,69 @@ it("prunes stale measuredHeights entries once items changes to a wholly differen
   });
 });
 
+it("bounds indexed-source auto-height measurements to a multiple of the rendered window", async function () {
+  this.timeout(15_000);
+  const source: LyraVirtualListIndexedSource<number> = {
+    count: 100_000,
+    itemAt: (index) => index,
+    keyAt: (index) => index,
+  };
+  const el = (await fixture(html`
+    <lr-virtual-list
+      style="--lr-virtual-list-height:200px"
+      .source=${source}
+      .renderItem=${renderText}
+    ></lr-virtual-list>
+  `)) as LyraVirtualList;
+  await nextFrame();
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  for (let window = 1; window <= 100; window++) {
+    base.scrollTop = window * 400;
+    base.dispatchEvent(new Event("scroll"));
+    await nextFrame();
+    await el.updateComplete;
+  }
+
+  const state = el as unknown as {
+    measuredHeights: Map<string, number>;
+    measuredIndices: Map<string, number>;
+  };
+  const renderedCount = el.renderedRows.length;
+  const retentionLimit = Math.max(64, renderedCount * 8);
+  expect(state.measuredHeights.size).to.be.at.most(retentionLimit);
+  expect(state.measuredIndices.size).to.be.at.most(retentionLimit);
+});
+
+it("prunes measuredIndices together with measuredHeights when array items are replaced", async () => {
+  const el = (await fixture(html`
+    <lr-virtual-list
+      style="--lr-virtual-list-height:200px"
+      .items=${Array.from({ length: 80 }, (_, index) => index)}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lr-virtual-list>
+  `)) as LyraVirtualList;
+  await nextFrame();
+  await nextFrame();
+  await el.updateComplete;
+  const state = el as unknown as {
+    measuredHeights: Map<string, number>;
+    measuredIndices: Map<string, number>;
+  };
+  expect(state.measuredIndices.size).to.be.greaterThan(0);
+
+  el.items = [1000, 1001];
+  await el.updateComplete;
+  await nextFrame();
+  await nextFrame();
+  await el.updateComplete;
+
+  expect(state.measuredHeights.size).to.be.at.most(2);
+  expect(state.measuredIndices.size).to.equal(state.measuredHeights.size);
+});
+
 it("keeps numeric and string keys distinct in internal measurements and DOM identity", async () => {
   const items = [1, "1"];
   const el = (await fixture(
@@ -1875,12 +1938,12 @@ it("keeps numeric and string keys distinct in internal measurements and DOM iden
   const rows = [
     ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]'),
   ];
-  expect(rows.map((row) => row.dataset.rowKey)).to.deep.equal([
+  expect(rows.map((row) => row.dataset['rowKey'])).to.deep.equal([
     "number:1",
     "string:1",
   ]);
-  expect(rows[0].getAttribute("aria-current")).to.equal("true");
-  expect(rows[1].getAttribute("aria-current")).to.equal("false");
+  expect(rows[0]!.getAttribute("aria-current")).to.equal("true");
+  expect(rows[1]!.getAttribute("aria-current")).to.equal("false");
 });
 
 it("keeps duplicate public keys as distinct occurrence-owned rows and activates only the first", async () => {
@@ -1933,8 +1996,8 @@ it("measures group markers as virtual entries before their indexed rows", async 
     "First",
     "Second",
   ]);
-  const firstHeight = groups[0].getBoundingClientRect().height;
-  const secondHeight = groups[1].getBoundingClientRect().height;
+  const firstHeight = groups[0]!.getBoundingClientRect().height;
+  const secondHeight = groups[1]!.getBoundingClientRect().height;
   const rows = [
     ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]'),
   ];
@@ -1942,7 +2005,7 @@ it("measures group markers as virtual entries before their indexed rows", async 
     parseFloat(rows[0]!.style.transform.replace(/[^\d.-]/g, ""))
   ).to.be.closeTo(firstHeight, 1);
   expect(
-    parseFloat(groups[1].style.transform.replace(/[^\d.-]/g, ""))
+    parseFloat(groups[1]!.style.transform.replace(/[^\d.-]/g, ""))
   ).to.be.closeTo(firstHeight + 80, 1);
   expect(
     parseFloat(rows[2]!.style.transform.replace(/[^\d.-]/g, ""))
@@ -2098,6 +2161,29 @@ it("falls back to a group key when a group has no explicit label", async () => {
   ).to.equal("Ungrouped");
 });
 
+it('ignores null and malformed group entries while retaining valid group markers', async () => {
+  const el = await fixture<LyraVirtualList>(html`
+    <lr-virtual-list
+      style="--lr-virtual-list-height:200px"
+      row-height="40"
+      .items=${['a', 'b']}
+      .groups=${[
+        null,
+        { key: 'Valid', startIndex: 0 },
+        undefined,
+        'not-a-group',
+      ] as unknown as readonly { key: string; startIndex: number }[]}
+      .renderItem=${renderText}
+    ></lr-virtual-list>
+  `);
+  await el.updateComplete;
+  await nextFrame();
+
+  const markers = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="group"]')];
+  expect(markers.map((marker) => marker.textContent?.trim())).to.deep.equal(['Valid']);
+  expect(el.offsetForIndex(0)).to.be.greaterThan(0);
+});
+
 it("locale-formats a numeric group key when no explicit label is supplied", async () => {
   const el = (await fixture(
     html`<lr-virtual-list
@@ -2113,7 +2199,7 @@ it("locale-formats a numeric group key when no explicit label is supplied", asyn
   await nextFrame();
   expect(
     el.shadowRoot!.querySelector('[part="group"]')!.textContent?.trim()
-  ).to.equal(new Intl.NumberFormat(el.effectiveLocale).format(1234));
+  ).to.equal(new Intl.NumberFormat(el.lang).format(1234));
 });
 
 it("windows one-group-per-row markers instead of materializing the full catalog", async () => {
@@ -2509,9 +2595,9 @@ describe("public scroll container and lr-virtual-scroll", () => {
       details.length,
       "three scroll events in one frame produce one lr-virtual-scroll"
     ).to.equal(1);
-    expect(details[0].scrollTop).to.equal(base.scrollTop);
-    expect(details[0].scrollTop).to.equal(375);
-    expect(details[0].viewportHeight).to.be.closeTo(base.clientHeight, 1);
+    expect(details[0]!.scrollTop).to.equal(base.scrollTop);
+    expect(details[0]!.scrollTop).to.equal(375);
+    expect(details[0]!.viewportHeight).to.be.closeTo(base.clientHeight, 1);
     expect(legacyEvents, "the scroller event name is not aliased").to.equal(0);
   });
 
@@ -2602,8 +2688,8 @@ describe("renderedRows", () => {
     );
     expect(rows.length).to.be.greaterThan(1);
     expect(rows.every((row) => row.getAttribute("part") === "row")).to.be.true;
-    expect(rows.map((row) => Number(row.dataset.rowIndex))).to.deep.equal(
-      rows.map((_, i) => i + Number(rows[0].dataset.rowIndex))
+    expect(rows.map((row) => Number(row.dataset['rowIndex']))).to.deep.equal(
+      rows.map((_, i) => i + Number(rows[0]!.dataset['rowIndex']))
     );
 
     // Windowed, not the whole collection -- and it tracks the window as it moves.
@@ -2612,7 +2698,7 @@ describe("renderedRows", () => {
     el.scrollContainer!.dispatchEvent(new Event("scroll"));
     await nextFrame();
     await el.updateComplete;
-    expect(Number(el.renderedRows[0].dataset.rowIndex)).to.equal(40);
+    expect(Number(el.renderedRows[0]!.dataset['rowIndex'])).to.equal(40);
   });
 
   it("is empty before the first render", () => {
@@ -3114,7 +3200,7 @@ describe("sticky group overlay", () => {
         media: query,
         addEventListener: () => {},
         removeEventListener: () => {},
-      })) as typeof window.matchMedia;
+      })) as unknown as typeof window.matchMedia;
     });
 
     afterEach(() => {
@@ -3285,7 +3371,7 @@ describe("row stacking context", () => {
     el.shadowRoot!.querySelector<HTMLButtonElement>("#btn-1")!.focus();
     await el.updateComplete;
 
-    expect(getComputedStyle(rows[0]).zIndex).to.equal("1");
+    expect(getComputedStyle(rows[0]!).zIndex).to.equal("1");
     for (const row of rows.slice(1))
       expect(getComputedStyle(row).zIndex).to.equal("auto");
   });

@@ -82,9 +82,10 @@ function archiveSelectionRange(viewer: LyraElement, contentRoot: Element): Range
  * or loading an archive parser. One owned central-directory parser is the listing and validation
  * authority: it enforces the 10,000-entry and 100 MB declared-expansion ceilings, validates local
  * header bounds and supported compression methods, and never inflates entry bodies.
- * Fragment anchors use the exact ZIP entry path as their `id`; text-quote anchors resolve against
- * each complete entry path before the matching virtual row is scrolled into view. Text selections
- * and painted highlights are likewise scoped to entry paths rendered in the nested virtual list.
+ * Fragment anchors use the exact ZIP entry path as their `id`; rendered rows do not expose that
+ * path as a DOM `id`, so the viewer resolves entry metadata before mounting and scrolling the
+ * matching virtual row. Text-quote anchors resolve against each complete entry path. Text
+ * selections and painted highlights are likewise scoped to entry paths in the nested virtual list.
  *
  * @customElement lr-archive-viewer
  * @event lr-render-error - Fired when fetching or parsing the archive fails.

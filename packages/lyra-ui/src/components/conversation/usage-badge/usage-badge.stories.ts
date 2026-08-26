@@ -54,7 +54,7 @@ export const DetailsWithSummary: Story = {
 export const InChatMessage: Story = {
   name: 'Composed in a lr-chat-message',
   render: () => html`
-    <lr-chat-message data-role="assistant" status="sent" style="max-width: 32rem;">
+    <lr-chat-message message-role="assistant" status="sent" style="max-width: 32rem;">
       <lr-usage-badge
         slot="badges"
         tokens-in="1204"

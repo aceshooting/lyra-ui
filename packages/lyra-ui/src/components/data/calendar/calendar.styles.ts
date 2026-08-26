@@ -83,7 +83,7 @@ export const styles = css`
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
   }
   [part='agenda'] { display: grid; gap: var(--lr-space-s); }
-  [part='agenda-event'] { padding: var(--lr-space-s); border: 0; border-inline-start: var(--lr-border-width-medium) solid var(--lr-color-brand); background: var(--lr-color-surface); color: var(--lr-color-text); font: inherit; text-align: start; cursor: pointer; }
+  [part='agenda-event'] { padding: var(--lr-space-s); border: 0; border-inline-start: var(--lr-border-width-medium) solid var(--lr-color-brand); background: var(--_lr-calendar-agenda-event-background, var(--lr-color-surface)); color: var(--_lr-calendar-agenda-event-foreground, var(--lr-color-text)); font: inherit; text-align: start; cursor: pointer; }
   @container (max-inline-size: 28rem) { [part='day'] { min-block-size: var(--lr-calendar-day-min-block-size-narrow, var(--lr-size-4rem)); } [part='event'] { font-size: var(--lr-font-size-xs); } }
   :host(:dir(rtl)) [part='nav-glyph'] { transform: scaleX(-1); }
 

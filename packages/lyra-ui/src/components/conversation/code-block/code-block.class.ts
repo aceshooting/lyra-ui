@@ -255,7 +255,8 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   private _highlights: readonly LyraHighlight[] = snapshotLyraHighlights([]);
   /** Host-supplied highlights to paint over the code. Only `line-range` anchors are meaningful
    *  here — every other `LyraAnchor` kind, and a highlight with a missing, malformed, or
-   *  non-discriminated anchor, is ignored (`snapshotLyraHighlights`). */
+   *  non-discriminated anchor, is ignored (`snapshotLyraHighlights`).
+   * @default [] */
   @property({ attribute: false })
   get highlights(): readonly LyraHighlight[] { return this._highlights; }
   set highlights(value: readonly LyraHighlight[]) {

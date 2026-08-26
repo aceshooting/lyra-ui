@@ -1,7 +1,10 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { place } from '../../../internal/positioner.js';
+import {
+  deferredPlaceReady as place,
+  type DeferredOperationHandle,
+} from '../../../internal/anchored-overlay-runtime.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { styles } from './mention-popover.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
@@ -219,8 +222,9 @@ export interface LyraMentionPopoverEventMap {
  *
  * Filtering happens internally against `items` (mirroring `<lr-combobox>`'s
  * filter-predicate convention via `filter`, rather than requiring the host to
- * pre-filter): the default predicate is a case-insensitive substring match
- * against `label`/`description`, overridable via `filter`.
+ * pre-filter): candidate rows without a string `label` are omitted before any
+ * predicate runs, and the default predicate is a case-insensitive substring
+ * match against `label`/`description`, overridable via `filter`.
  *
  * There is no persisted "selection" the way a real listbox has one — a
  * mention is either committed (closing the popover) or the popover is
@@ -310,7 +314,9 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
 
   private _items: readonly Readonly<LyraMentionItem>[] = Object.freeze([]);
 
-  /** The full candidate set, pre-`query`-filtering. Assignment takes a shallow frozen snapshot. */
+  /** The full candidate set, pre-`query`-filtering. Assignment takes a shallow frozen snapshot;
+   *  malformed rows without a string `label` remain in that snapshot but are omitted from every
+   *  filtered/rendered projection. */
   get items(): readonly Readonly<LyraMentionItem>[] {
     return this._items;
   }
@@ -351,8 +357,8 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   // typed text can itself already equal a full, deliberately-typed value.
   @state() private activeIndex = 0;
 
-  private readonly _listboxId = nextId('mention-popover-listbox');
-  private cleanup?: () => void;
+  private readonly _listId = nextId('mention-popover-listbox');
+  private cleanup?: DeferredOperationHandle;
   // A synthetic zero-size point element, positioned at the measured caret
   // rect and handed to place() in caret-precision mode -- place()/Floating
   // UI only understand a real HTMLElement anchor, so caret positioning goes
@@ -364,7 +370,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   // on every true->false transition, matching lr-combobox's/lr-select's
   // identical lr-hide handling) can tell a successful-selection close
   // apart from every other close and skip the event for that one case.
-  private _suppressCloseEvent = false;
+  private _silentClose = false;
   // Cross-root ARIA element reflection is not implemented consistently by
   // browsers. When a host explicitly chooses the documented fallback, real
   // focus moves onto the active option so ownership and option share this
@@ -418,10 +424,10 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
         this.virtualAnchor?.remove();
         // Don't fire for markup that's simply rendering open="false" for the
         // first time, and don't fire for the commit() path (see
-        // _suppressCloseEvent's own doc above) -- every other true->false
+        // _silentClose's own doc above) -- every other true->false
         // transition (Escape, or a direct host assignment) does fire.
-        if (!this._isFirstUpdate && !this._suppressCloseEvent) this.emit('lr-mention-close');
-        this._suppressCloseEvent = false;
+        if (!this._isFirstUpdate && !this._silentClose) this.emit('lr-mention-close');
+        this._silentClose = false;
       }
     } else if (this.open && (changed.has('anchor') || changed.has('query'))) {
       this.reposition();
@@ -437,19 +443,8 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
       const active = this.renderRoot.querySelector<HTMLElement>('[part="option"][data-active]');
       active?.scrollIntoView({ block: 'nearest' });
       if (this._ownsFocus) {
-        if (active) {
-          active.focus({ preventScroll: true });
-        } else if (this.anchor?.isConnected) {
-          this.renderRoot.querySelector<HTMLElement>('[part="listbox"]')?.setAttribute('tabindex', '-1');
-          this.anchor.focus({ preventScroll: true });
-          this.scheduleAfterUpdate(() => {
-            this._ownsFocus = false;
-          });
-        } else {
-          this.renderRoot.querySelector<HTMLElement>('[part="listbox"]')?.focus({
-            preventScroll: true,
-          });
-        }
+        if (!active && this.anchor?.isConnected) this.restoreFocus();
+        else void this.restoreFocus(true);
       }
     }
     this.syncAnchorRelationship();
@@ -577,18 +572,20 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     this.syncActiveDescendant(control);
   }
 
-  /** The current candidate set: `items` filtered by `query` via `filter`
-   *  (or the built-in default). Empty `query` returns `items` unfiltered. */
+  /** The current candidate set: runtime rows without a string `label` are omitted, then the
+   *  remaining `items` are filtered by `query` via `filter` (or the built-in default). */
   get filteredItems(): readonly Readonly<LyraMentionItem>[] {
     const locale = this.effectiveLocale;
     const q = this.query.trim().toLocaleLowerCase(locale);
-    if (!q) return this.items;
-    if (this.filter) return this.items.filter((item) => this.filter!(item, q));
-    return this.items.filter(
-      (item) =>
-        item.label.toLocaleLowerCase(locale).includes(q) ||
-        (item.description ?? '').toLocaleLowerCase(locale).includes(q),
-    );
+    return this.items.filter((item) => {
+      if (typeof item.label !== 'string') return false;
+      if (!q) return true;
+      if (this.filter) return this.filter(item, q);
+      return item.label.toLocaleLowerCase(locale).includes(q) ||
+        (typeof item.description === 'string' ? item.description : '')
+          .toLocaleLowerCase(locale)
+          .includes(q);
+    });
   }
 
   /** The internal `id` of the currently-highlighted row. This remains useful
@@ -660,6 +657,10 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     };
     await this.updateComplete;
 
+    if ((await this.cleanup?.ready) === false) {
+      return false;
+    }
+
     if (
       generation !== this._focusTransferGeneration ||
       !this.isConnected ||
@@ -684,6 +685,25 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     return true;
   }
 
+  private async restoreFocus(waitForPlacement = false): Promise<void> {
+    if (
+      waitForPlacement &&
+      ((await this.cleanup?.ready) === false || !this._ownsFocus || !this.open)
+    ) return;
+    const active = this.renderRoot.querySelector<HTMLElement>('[part="option"][data-active]');
+    if (active) {
+      active.focus({ preventScroll: true });
+    } else if (this.anchor?.isConnected) {
+      this.renderRoot.querySelector<HTMLElement>('[part="listbox"]')?.setAttribute('tabindex', '-1');
+      this.anchor.focus({ preventScroll: true });
+      this.scheduleAfterUpdate(() => {
+        this._ownsFocus = false;
+      });
+    } else {
+      this.renderRoot.querySelector<HTMLElement>('[part="listbox"]')?.focus({ preventScroll: true });
+    }
+  }
+
   private callFocusOwner(predicate: (() => boolean) | undefined): boolean {
     try {
       return predicate?.() ?? true;
@@ -700,7 +720,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
    *  `activeDescendantId`, it cannot form a cross-shadow string IDREF from a
    *  host-owned input. */
   get listboxId(): string {
-    return this._listboxId;
+    return this._listId;
   }
 
   /**
@@ -754,7 +774,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   }
 
   private rowId(index: number): string {
-    return `${this._listboxId}-opt-${index}`;
+    return `${this._listId}-opt-${index}`;
   }
 
   private commit(item: Readonly<LyraMentionItem>): void {
@@ -764,7 +784,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
       'lr-mention-select',
       Object.freeze({ suggestionId: item.suggestionId, index, label: item.label }),
     );
-    this._suppressCloseEvent = true;
+    this._silentClose = true;
     this.open = false;
   }
 
@@ -773,7 +793,15 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     this.cleanup = undefined;
     const anchorEl = this.resolveAnchorElement();
     const popup = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
-    if (anchorEl && popup) this.cleanup = place(anchorEl, popup, { placement: 'bottom-start' });
+    if (anchorEl && popup) {
+      const placement = place(anchorEl, popup, { placement: 'bottom-start' });
+      this.cleanup = placement;
+      void placement.ready.then((positioned) => {
+        if (positioned || this.cleanup !== placement || !this.open) return;
+        this._silentClose = true;
+        this.open = false;
+      });
+    }
   }
 
   /** Resolves what to actually hand `place()` -- a caret-precise virtual
@@ -877,7 +905,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     return html`
       <div
         part="listbox"
-        id=${this._listboxId}
+        id=${this._listId}
         role="listbox"
         tabindex=${this._ownsFocus && rows.length === 0 ? '0' : '-1'}
         aria-label=${this.effectiveLabel}

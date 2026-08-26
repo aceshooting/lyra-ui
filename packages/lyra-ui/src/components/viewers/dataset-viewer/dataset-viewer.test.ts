@@ -9,8 +9,8 @@ import {
 import './dataset-viewer.js';
 import type { LyraDatasetViewer } from './dataset-viewer.js';
 import { findDocumentRenderer } from '../document-viewer/registry.js';
-import { styles } from './dataset-viewer.styles.js';
 import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const TAB_DATA = 'name\tage\tcity\nAda\t30\tLondon\nGrace\t85\tArlington';
 const GRID_DATASET =
@@ -154,6 +154,30 @@ async function assertScrollFrameFollowsAdoption(
 }
 
 describe('lr-dataset-viewer', () => {
+  it('keeps loaded cells and later updates working when a highlight omits its anchor', async () => {
+    const el = await fixture<LyraDatasetViewer>(html`<lr-dataset-viewer></lr-dataset-viewer>`);
+    const restore = fetchText(GRID_DATASET);
+    try {
+      el.src = 'https://example.test/data.tsv';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+
+      el.highlights = [{ id: 'missing-anchor' }] as unknown as LyraDatasetViewer['highlights'];
+      await el.updateComplete;
+      el.maxHeight = '12rem';
+      await el.updateComplete;
+
+      expect(el.highlights.map((highlight) => highlight.id)).to.deep.equal([]);
+      expect(el.shadowRoot!.querySelectorAll('[part="table"]').length).to.equal(1);
+      expect(
+        (el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).style.getPropertyValue(
+          '--lr-dataset-viewer-max-height',
+        ),
+      ).to.equal('12rem');
+    } finally {
+      restore();
+    }
+  });
+
   it('renders an empty localized state by default', async () => {
     const el = (await fixture(
       html`<lr-dataset-viewer></lr-dataset-viewer>`
@@ -206,7 +230,7 @@ describe('lr-dataset-viewer', () => {
       );
       const list = el.shadowRoot!.querySelector(
         'lr-virtual-list'
-      ) as HTMLElement & {
+      ) as unknown as HTMLElement & {
         items: Record<string, string>[];
       };
       expect(list.items).to.deep.equal([
@@ -1398,12 +1422,89 @@ it('validates maxHeight before assigning the base custom property', async () => 
   ).to.equal('calc(10rem + 2px)');
 });
 
-describe('styling', () => {
-  it('gives the cell-highlight-action a hover state', () => {
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(
-      /lr-virtual-list::part\(cell-highlight-action\):hover/
+// A scroll container clips both axes. Leaving the uncapped body at `overflow: auto` therefore
+// makes it the sticky header's containing block even though the body itself never scrolls; the
+// header then leaves the viewport with the rest of the page.
+describe('scrollMode', () => {
+  const body = (el: LyraDatasetViewer): HTMLElement =>
+    el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+
+  it('defaults to self-contained scrolling for compatibility', async () => {
+    const el = await fixture<LyraDatasetViewer>(
+      html`<lr-dataset-viewer></lr-dataset-viewer>`
     );
+
+    expect(el.scrollMode).to.equal('self');
+    expect(getComputedStyle(body(el)).overflowY).to.equal('auto');
+  });
+
+  it('hands an uncapped sticky header to the page scrollport in page mode', async () => {
+    const el = await fixture<LyraDatasetViewer>(
+      html`<lr-dataset-viewer scroll-mode="page"></lr-dataset-viewer>`
+    );
+
+    const style = getComputedStyle(body(el));
+    expect(style.overflowX).to.equal('visible');
+    expect(style.overflowY).to.equal('visible');
+    expect(style.maxBlockSize).to.equal('none');
+  });
+
+  it('normalizes unsupported scroll modes back to self', async () => {
+    const el = await fixture<LyraDatasetViewer>(
+      html`<lr-dataset-viewer scroll-mode="sideways"></lr-dataset-viewer>`
+    );
+
+    expect(el.scrollMode).to.equal('self');
+    expect(el.getAttribute('scroll-mode')).to.equal('self');
+    expect(getComputedStyle(body(el)).overflowY).to.equal('auto');
+  });
+});
+
+describe('styling', () => {
+  it('changes the rendered cell-highlight action background under real pointer hover', async () => {
+    const el = await fixture<LyraDatasetViewer>(html`
+      <lr-dataset-viewer
+        style="--lr-color-brand-quiet: rgb(1, 2, 3)"
+      ></lr-dataset-viewer>
+    `);
+    const restore = fetchText(GRID_DATASET);
+    try {
+      el.highlights = [
+        { id: 'h1', anchor: { kind: 'cell-range', range: 'A2' } },
+      ];
+      el.src = 'https://example.test/data.tsv';
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('lr-virtual-list') !== null
+      );
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+      await waitUntil(
+        () =>
+          list.shadowRoot!.querySelector('[part="cell-highlight-action"]') !==
+          null
+      );
+      const action = list.shadowRoot!.querySelector(
+        '[part="cell-highlight-action"]'
+      ) as HTMLElement;
+      const resting = getComputedStyle(action).backgroundColor;
+      const box = action.getBoundingClientRect();
+
+      await resetMouse();
+      await sendMouse({
+        type: 'move',
+        position: [
+          Math.round(box.left + box.width / 2),
+          Math.round(box.top + box.height / 2),
+        ],
+      });
+      await waitUntil(
+        () => getComputedStyle(action).backgroundColor !== resting,
+        'the dataset highlight action never entered its rendered hover state'
+      );
+      expect(getComputedStyle(action).backgroundColor).to.not.equal(resting);
+    } finally {
+      await resetMouse();
+      restore();
+    }
   });
 });
 

@@ -16,6 +16,7 @@ import {
 } from '../../../internal/aria-controls.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
+import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './checkbox-group.styles.js';
 import type { LyraCheckbox } from '../checkbox/checkbox.class.js';
 import {
@@ -52,7 +53,7 @@ export interface LyraCheckboxGroupEventMap {
   'lr-change': CustomEvent<Readonly<{ value: readonly string[] }>>;
 }
 
-export type CheckboxGroupOrientation = 'horizontal' | 'vertical';
+export type CheckboxGroupOrientation = LyraOrientation;
 
 /**
  * `<lr-checkbox-group>` — a form-associated group of `<lr-checkbox>` elements.

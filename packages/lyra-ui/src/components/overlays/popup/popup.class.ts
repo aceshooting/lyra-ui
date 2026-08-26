@@ -2,16 +2,16 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import {
-  place,
-  virtualAnchorFromRect,
-  type PlaceAutoSize,
-  type PlaceBoundary,
-  type PlaceFlipFallbackStrategy,
-  type PlaceStrategy,
-  type PlaceSync,
-  type VirtualAnchor,
+import type {
+  PlaceAutoSize,
+  PlaceBoundary,
+  PlaceFlipFallbackStrategy,
+  PlaceStrategy,
+  PlaceSync,
+  VirtualAnchor,
 } from '../../../internal/positioner.js';
+import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
+import { virtualAnchorFromRect } from '../../../internal/positioner-geometry.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from '../overlay/overlay-arrow.js';

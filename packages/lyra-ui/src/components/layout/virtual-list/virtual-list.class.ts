@@ -125,10 +125,12 @@ export interface LyraVirtualListEventMap {
  *
  * Content is entirely caller-supplied: `renderItem(item, index)` returns
  * whatever `lit-html` value should represent that row (typically a
- * `TemplateResult`), and `keyFunction(item, index)` gives it a stable
- * identity for `repeat()`'s DOM-reconciliation key, so scroll position and
- * any per-row state (e.g. an `<audio>` element's playback position) survive
- * an array/source mutation instead of every row remounting from scratch.
+ * `TemplateResult`). That value is instantiated inside this component's shadow root, not in the
+ * caller's light DOM; style callback output in its own template/custom element, through inherited
+ * custom properties, or through an explicitly exported part. `keyFunction(item, index)` gives the
+ * row a stable `repeat()` reconciliation key, so scroll position and any per-row state (e.g. an
+ * `<audio>` element's playback position) survive an array/source mutation instead of every row
+ * remounting from scratch.
  *
  * **Narrow allocations.** Row wrappers allow their content to shrink and use
  * `overflow-wrap: anywhere` by default, so a normal long value wraps inside
@@ -315,7 +317,9 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    */
   @property({ attribute: false }) source?: LyraVirtualListSource;
 
-  /** Renders one row's content — typically returns a `lit-html` `TemplateResult`. */
+  /** Renders one row's content — typically a `lit-html` `TemplateResult` — inside this component's
+   *  shadow root. The returned value is not light-DOM content: style it in its own template/custom
+   *  element, with inherited custom properties, or through a part this component exports. */
   @property({ attribute: false }) renderItem: (
     item: unknown,
     index: number
@@ -332,8 +336,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     index: number
   ) => string | number;
 
-  /** Measured group markers inserted immediately before their first row's `startIndex`. Invalid or
-   * duplicate indexes are ignored during rendering. An entry whose `label` is
+  /** Measured group markers inserted immediately before their first row's `startIndex`. Non-object
+   * entries, invalid indexes, and duplicate indexes are ignored during rendering. An entry whose `label` is
    * the empty string renders no `[part="group"]` marker at all — it is a pure
    * position anchor, for a host that renders its own group header as an
    * ordinary row (and would otherwise get two stacked headers) but still needs
@@ -459,15 +463,17 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   private rowIdentities: string[] = [];
   /** Parsed `rowHeight`: a positive pixel number, or `null` for `'auto'` (measured) mode. */
   private fixedRowHeight: number | null = null;
-  /** `row-height="auto"` per-row measured heights, keyed by
-   *  keyFunction result. Pruned to the current `items`'
-   *  live keys whenever `items` changes (see `recomputeOffsets()`), so a
-   *  long-lived instance handed many wholly different `items` arrays over
-   *  its life doesn't grow this map without bound. */
+  /** `row-height="auto"` per-row measured heights, keyed by internal row identity. Array sources
+   * are pruned to their current live identities whenever `items` changes; indexed sources retain
+   * only a bounded window around the rendered range. */
   private readonly measuredHeights = new Map<string, number>();
-  /** Sparse index ownership for indexed-source measurements. Array sources derive this from their
-   * cumulative offsets array instead. */
+  /** Index ownership for each retained measurement. Pruned in lockstep with `measuredHeights`. */
   private readonly measuredIndices = new Map<string, number>();
+  /** Sorted retained indexes and their cumulative height deltas. Indexed offset queries binary
+   * search this cache instead of rescanning every retained measurement. */
+  private indexedMeasurementIndices: number[] = [];
+  private indexedMeasurementDeltaPrefix: number[] = [0];
+  private indexedMeasurementIndexDirty = true;
   /** True whenever `offsets` needs rebuilding before the next render --
    *  set initially and whenever `items`/`rowHeight`/`keyFunction` change or
    *  a row's measured height changes, but *not* on a pure scroll-position
@@ -736,6 +742,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     ) {
       this.measuredHeights.clear();
       this.measuredIndices.clear();
+      this.indexedMeasurementIndexDirty = true;
     }
     if (changed.has('groups')) this.measuredGroupHeights.clear();
     if (changed.has('items') || changed.has('source') || changed.has('groups')) {
@@ -743,6 +750,11 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     }
     if (changed.has('rowHeight')) {
       this.fixedRowHeight = this.parseRowHeight(this.rowHeight);
+      if (this.fixedRowHeight != null) {
+        this.measuredHeights.clear();
+        this.measuredIndices.clear();
+        this.indexedMeasurementIndexDirty = true;
+      }
     }
     if (this.offsetsDirty) {
       this.recomputeOffsets();
@@ -854,14 +866,93 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         ? Number.MAX_VALUE
         : index * baseHeight;
     if (this.fixedRowHeight == null) {
-      for (const [identity, height] of this.measuredHeights) {
-        const measuredIndex = this.measuredIndices.get(identity);
-        if (measuredIndex !== undefined && measuredIndex < index) {
-          offset = finiteAdd(offset, height - DEFAULT_ROW_ESTIMATE_PX);
-        }
+      this.rebuildIndexedMeasurementIndex();
+      let low = 0;
+      let high = this.indexedMeasurementIndices.length;
+      while (low < high) {
+        const middle = (low + high) >> 1;
+        if (this.indexedMeasurementIndices[middle]! < index) low = middle + 1;
+        else high = middle;
       }
+      offset = finiteAdd(offset, this.indexedMeasurementDeltaPrefix[low] ?? 0);
     }
     return Math.max(0, finiteAdd(offset, this.groupContributionThrough(index)));
+  }
+
+  private rebuildIndexedMeasurementIndex(): void {
+    if (!this.indexedMeasurementIndexDirty) return;
+    const retained: Array<{ index: number; delta: number }> = [];
+    for (const [identity, index] of this.measuredIndices) {
+      const height = this.measuredHeights.get(identity);
+      if (height !== undefined) {
+        retained.push({ index, delta: height - DEFAULT_ROW_ESTIMATE_PX });
+      }
+    }
+    retained.sort((a, b) => a.index - b.index);
+    const indices = new Array<number>(retained.length);
+    const prefix = new Array<number>(retained.length + 1);
+    prefix[0] = 0;
+    for (let position = 0; position < retained.length; position++) {
+      const measurement = retained[position]!;
+      indices[position] = measurement.index;
+      prefix[position + 1] = finiteAdd(prefix[position]!, measurement.delta);
+    }
+    this.indexedMeasurementIndices = indices;
+    this.indexedMeasurementDeltaPrefix = prefix;
+    this.indexedMeasurementIndexDirty = false;
+  }
+
+  private pruneIndexedMeasurements(): boolean {
+    if (
+      !isIndexedSource(this.effectiveSource) ||
+      this.fixedRowHeight != null ||
+      this.renderEnd < this.renderStart
+    ) return false;
+    const renderedCount = this.renderEnd - this.renderStart + 1;
+    const retentionRows = Math.max(
+      renderedCount,
+      normalizeOverscan(this.overscan) * 4
+    );
+    const firstRetained = Math.max(0, this.renderStart - retentionRows);
+    const lastRetained = Math.min(
+      this.itemCount - 1,
+      this.renderEnd + retentionRows
+    );
+    let removedDeltaBeforeWindow = 0;
+    let pruned = false;
+    for (const [identity, measuredIndex] of this.measuredIndices) {
+      if (measuredIndex < firstRetained || measuredIndex > lastRetained) {
+        const height = this.measuredHeights.get(identity);
+        if (height !== undefined && measuredIndex < firstRetained) {
+          removedDeltaBeforeWindow = finiteAdd(
+            removedDeltaBeforeWindow,
+            height - DEFAULT_ROW_ESTIMATE_PX
+          );
+        }
+        this.measuredIndices.delete(identity);
+        this.measuredHeights.delete(identity);
+        pruned = true;
+      }
+    }
+    if (pruned) {
+      this.indexedMeasurementIndexDirty = true;
+      // Removing measurements above the retained window changes every following row's estimated
+      // offset. Shift the scroll coordinate by the same delta so the first visible row remains
+      // anchored; without this, a far scrollToIndex() jump can immediately reinterpret its target
+      // as a different window when the old measurements are discarded.
+      if (removedDeltaBeforeWindow !== 0) {
+        const base = this.scrollContainer;
+        const oldScrollTop = base?.scrollTop ?? this.containerScrollTop;
+        const nextScrollTop = Math.max(
+          0,
+          oldScrollTop - removedDeltaBeforeWindow
+        );
+        if (base) base.scrollTop = nextScrollTop;
+        this.containerScrollTop = nextScrollTop;
+        this.pendingScrollTop = null;
+      }
+    }
+    return pruned;
   }
 
   private offsetAt(index: number): number {
@@ -918,7 +1009,17 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     this.itemsChangedPendingPrune = false;
     if (liveKeys) {
       for (const key of this.measuredHeights.keys()) {
-        if (!liveKeys.has(key)) this.measuredHeights.delete(key);
+        if (!liveKeys.has(key)) {
+          this.measuredHeights.delete(key);
+          this.measuredIndices.delete(key);
+          this.indexedMeasurementIndexDirty = true;
+        }
+      }
+      for (const key of this.measuredIndices.keys()) {
+        if (!liveKeys.has(key)) {
+          this.measuredIndices.delete(key);
+          this.indexedMeasurementIndexDirty = true;
+        }
       }
     }
   }
@@ -1031,6 +1132,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     const overscan = normalizeOverscan(this.overscan);
     this.renderStart = Math.max(0, this.visibleStart - overscan);
     this.renderEnd = Math.min(n - 1, this.visibleEnd + overscan);
+    if (this.pruneIndexedMeasurements()) this.computeRange();
   }
 
   private attachContainerListeners(): void {
@@ -1184,6 +1286,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       }
     }
     if (changed) {
+      this.indexedMeasurementIndexDirty = true;
       if (base && scrollAdjustment !== 0) {
         const nextScrollTop = Math.max(0, oldScrollTop + scrollAdjustment);
         base.scrollTop = nextScrollTop;
@@ -1562,7 +1665,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   private recomputeGroups(): void {
     const seen = new Set<number>();
     this.normalizedGroups = (this.groups ?? [])
-      .filter((group) => {
+      .filter((group): group is LyraVirtualListGroup => {
+        if (typeof group !== 'object' || group === null) return false;
         const index = group.startIndex;
         if (
           !Number.isInteger(index) ||

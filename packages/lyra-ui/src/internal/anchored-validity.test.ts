@@ -1,5 +1,15 @@
 import { expect } from "@open-wc/testing";
+import type { ReactiveControllerHost } from "lit";
 import { AnchoredValidityController, resolveValidityAnchor, VALIDITY_ANCHOR } from "./anchored-validity.js";
+
+function controllerHost(): ReactiveControllerHost {
+  return {
+    addController: () => {},
+    removeController: () => {},
+    requestUpdate: () => {},
+    updateComplete: Promise.resolve(true),
+  };
+}
 
 it("accepts only object/function providers with a callable anchor resolver", () => {
   const anchor = document.createElement("input");
@@ -17,7 +27,7 @@ it("falls back to host validity when the connected anchor is not a legal descend
   const anchor = document.createElement("input");
   document.body.appendChild(anchor);
   const calls: unknown[][] = [];
-  const host = { addController: () => {} };
+  const host = controllerHost();
   const internals = {
     setValidity: (...args: unknown[]) => {
       calls.push(args);
@@ -57,7 +67,7 @@ it("recognizes a foreign-realm NotFoundError without swallowing a lookalike", ()
       },
     };
     const controller = new AnchoredValidityController(
-      { addController: () => {} },
+      controllerHost(),
       internals as unknown as ElementInternals,
       () => anchor,
     );
@@ -72,7 +82,7 @@ it("recognizes a foreign-realm NotFoundError without swallowing a lookalike", ()
       },
     };
     const spoofingController = new AnchoredValidityController(
-      { addController: () => {} },
+      controllerHost(),
       spoofingInternals as unknown as ElementInternals,
       () => anchor,
     );
@@ -118,7 +128,7 @@ it("uses a connected descendant anchor without a host fallback", () => {
   };
 
   const controller = new AnchoredValidityController(
-    { addController: () => {} },
+    controllerHost(),
     internals as unknown as ElementInternals,
     () => anchor,
   );
@@ -139,7 +149,7 @@ it("rethrows validity errors other than a stale-anchor NotFoundError", () => {
     },
   };
   const controller = new AnchoredValidityController(
-    { addController: () => {} },
+    controllerHost(),
     internals as unknown as ElementInternals,
     () => anchor,
   );

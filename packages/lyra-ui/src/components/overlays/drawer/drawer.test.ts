@@ -439,11 +439,15 @@ describe("slide animation", () => {
         .getAnimations()
         .find((candidate) => candidate.id === "drawer.showStart");
       expect(animation?.id).to.equal("drawer.showStart");
+      const effect = animation?.effect;
+      if (!(effect instanceof KeyframeEffect)) {
+        throw new Error('expected drawer.showStart to use a KeyframeEffect');
+      }
       expect(
-        String(animation?.effect?.getKeyframes()[0]?.transform)
+        String(effect.getKeyframes()[0]?.['transform'])
       ).to.include("14px");
       expect(
-        String(animation?.effect?.getKeyframes()[0]?.transform).includes(
+        String(effect.getKeyframes()[0]?.['transform']).includes(
           "-14px"
         )
       ).to.equal(false);

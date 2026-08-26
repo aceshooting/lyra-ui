@@ -6,6 +6,7 @@
 - **Class** `LyraKnowledgeBaseAdmin`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/knowledge-base-admin/knowledge-base-admin.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.2.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -21,7 +22,8 @@ permissions, and connector settings go in the `settings` slot.
 
 **Properties:** `sources: KnowledgeSource[] = []` (attribute: false); `ingestionItems:
 IngestionQueueItem[] = []` (attribute: false); `activeTab: 'sources' | 'ingestion' = 'sources'`;
-`label: string = ''` (the visible heading and the tablist's distinct accessible name; authored host
+`label?: string` (the visible heading and the tablist's distinct accessible name; omission uses the
+localized admin label, while an explicit empty string stays empty; authored host
 `aria-label` independently names the admin component and is not cloned onto either);
 `hideIngestion: boolean = false`. If ingestion is active when it becomes hidden, `activeTab`
 normalizes to `'sources'`, emits `lr-tab-change`, and moves focus to the Sources tab when needed.

@@ -28,9 +28,13 @@ const motionMatchMedia = (matches: boolean): typeof window.matchMedia =>
     ({
       matches,
       media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
       addEventListener: () => {},
       removeEventListener: () => {},
-    }) as MediaQueryList) as typeof window.matchMedia;
+      dispatchEvent: () => true,
+    }) satisfies MediaQueryList);
 
 // One root-level row per status tone, so every active-row color rule has something to apply to.
 const STATUS_SPANS: LyraSpan[] = [
@@ -71,9 +75,14 @@ const partColor = (el: LyraTraceTree, id: string, part: string): string =>
  * `color(srgb r g b)` with 0..1 floats and a plain token as `rgb(r, g, b)` with 0..255 integers, so
  * the two have to be normalized before they can be compared numerically.
  */
-const channels = (color: string): number[] => {
+const channels = (color: string): [number, number, number] => {
   const nums = (color.match(/[\d.]+/g) ?? []).map(Number).slice(0, 3);
-  return color.startsWith('color(') ? nums.map((n) => Math.round(n * 255)) : nums;
+  const normalized = color.startsWith('color(') ? nums.map((n) => Math.round(n * 255)) : nums;
+  const [red, green, blue] = normalized;
+  if (red === undefined || green === undefined || blue === undefined) {
+    throw new Error(`Expected three color channels in ${color}.`);
+  }
+  return [red, green, blue];
 };
 
 describe('lr-trace-tree', () => {
@@ -328,6 +337,25 @@ describe('lr-trace-tree', () => {
     expect(sink?.lastElementChild?.textContent).to.equal('Limited to 500 spans');
   });
 
+  it('formats the projection-limit count in the effective numbering system', async () => {
+    const el = await fixture<LyraTraceTree>(html`
+      <lr-trace-tree
+        lang="ar-EG"
+        .spans=${Array.from({ length: 501 }, (_, index) => ({
+          id: `span-${index}`,
+          name: `Span ${index}`,
+          kind: 'tool' as const,
+          status: 'success' as const,
+          startMs: index,
+          endMs: index + 1,
+        }))}
+        .strings=${{ spanProjectionLimit: 'Limited to {count} spans' }}
+      ></lr-trace-tree>
+    `);
+    const formatted = new Intl.NumberFormat('ar-EG').format(500);
+    expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.equal(`Limited to ${formatted} spans`);
+  });
+
   it('normalizes duplicate/cyclic/non-finite data and bounds deep rendering', async () => {
     const deep = Array.from({ length: 2_000 }, (_, index) => ({
       id: `deep-${index}`,
@@ -501,7 +529,7 @@ describe('lr-trace-tree', () => {
     expect(rows).to.have.length(1);
     const zeroTab = rows.filter((r) => r.getAttribute('tabindex') === '0');
     expect(zeroTab).to.have.length(1);
-    expect(zeroTab[0].getAttribute('data-id')).to.equal('root');
+    expect(zeroTab[0]!.getAttribute('data-id')).to.equal('root');
   });
 
   it('keeps a roving tabindex after collapseAll() hides the focused row (regression)', async () => {
@@ -516,7 +544,7 @@ describe('lr-trace-tree', () => {
     expect(rows).to.have.length(1);
     const zeroTab = rows.filter((r) => r.getAttribute('tabindex') === '0');
     expect(zeroTab).to.have.length(1);
-    expect(zeroTab[0].getAttribute('data-id')).to.equal('root');
+    expect(zeroTab[0]!.getAttribute('data-id')).to.equal('root');
   });
 
   it('renders lr-empty when spans is empty', async () => {

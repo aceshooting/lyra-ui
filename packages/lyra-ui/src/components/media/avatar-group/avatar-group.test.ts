@@ -18,10 +18,10 @@ const isGroupHidden = (avatar: Element): boolean =>
 // one element) under-counts what the group's own default slot actually
 // flattens to (the real projected `<lr-avatar>`s).
 class AvatarGroupForwarder extends LitElement {
-  protected createRenderRoot() {
+  protected override createRenderRoot() {
     return this.attachShadow({ mode: 'open' });
   }
-  protected render() {
+  protected override render() {
     return litHtml`<lr-avatar-group max="2"><slot></slot></lr-avatar-group>`;
   }
 }
@@ -468,7 +468,6 @@ describe('design tokens reach rendered CSS', () => {
     const el = (await fixture(html`
     <lr-avatar-group size="large"><lr-avatar></lr-avatar></lr-avatar-group>
     `)) as LyraAvatarGroup;
-    const hostStyle = getComputedStyle(el);
     const avatar = el.querySelector('lr-avatar') as HTMLElement;
     const base = avatar.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(getComputedStyle(base).inlineSize).to.equal('64px');
@@ -726,13 +725,13 @@ it('tracks live author hidden and inert writes without overwriting them', async 
   const [a, b] = [...el.querySelectorAll('lr-avatar')];
   expect(isGroupHidden(b!)).to.be.true;
   a!.setAttribute('hidden', '');
-  await new Promise((resolve) => queueMicrotask(resolve));
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
   await el.updateComplete;
   expect(isGroupHidden(b!)).to.be.false;
   expect(el.shadowRoot!.querySelector('[part="overflow-badge"]') === null).to.be.true;
   a!.removeAttribute('hidden');
   b!.setAttribute('inert', '');
-  await new Promise((resolve) => queueMicrotask(resolve));
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
   await el.updateComplete;
   expect(a!.hasAttribute('hidden')).to.be.false;
   expect(b!.hasAttribute('inert')).to.be.true;

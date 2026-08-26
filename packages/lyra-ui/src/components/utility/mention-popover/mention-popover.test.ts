@@ -1,8 +1,9 @@
-import { fixture, expect, oneEvent, html } from '@open-wc/testing';
+import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import './mention-popover.js';
 import type { LyraMentionItem, LyraMentionPopover, LyraMentionSelectDetail } from './mention-popover.js';
 import { styles } from './mention-popover.styles.js';
 import { ignoreResizeObserverLoopErrors } from '../../../../test/resize-observer-noise.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 // Several tests here mount an <iframe> (to exercise cross-document anchors) and then remove it in
 // a `finally`, tearing the frame down while Floating UI's `autoUpdate` ResizeObservers are still
@@ -35,6 +36,10 @@ function rows(el: LyraMentionPopover): NodeListOf<HTMLElement> {
   return el.shadowRoot!.querySelectorAll('[part="option"]');
 }
 
+function hasPlatformProperty(value: object, property: PropertyKey): boolean {
+  return property in value;
+}
+
 async function openWithItems(items: LyraMentionItem[] = ITEMS): Promise<LyraMentionPopover> {
   const el = (await fixture(html`<lr-mention-popover></lr-mention-popover>`)) as LyraMentionPopover;
   const anchor = document.createElement('div');
@@ -43,6 +48,10 @@ async function openWithItems(items: LyraMentionItem[] = ITEMS): Promise<LyraMent
   el.items = items;
   el.open = true;
   await el.updateComplete;
+  await waitFor(
+    () => getComputedStyle(listbox(el)).visibility,
+    (visibility) => visibility === 'visible',
+  );
   return el;
 }
 
@@ -102,6 +111,28 @@ it('fails closed to a frozen empty snapshot for non-array items', async () => {
   expect(el.items).to.deep.equal([]);
   expect(Object.isFrozen(el.items)).to.equal(true);
   expect(el.filteredItems).to.deep.equal([]);
+});
+
+it('omits malformed labels while a valid neighboring suggestion remains filterable and selectable', async () => {
+  const el = await openWithItems([
+    null,
+    { suggestionId: 'missing' },
+    { suggestionId: 'numeric', label: 42 },
+    { suggestionId: 'kept', label: 'Kept suggestion' },
+  ] as unknown as LyraMentionItem[]);
+
+  el.query = 'kept';
+  await el.updateComplete;
+
+  expect(el.filteredItems.map((item) => item.suggestionId)).to.deep.equal(['kept']);
+  expect(rows(el)).to.have.length(1);
+  const selected = oneEvent(el, 'lr-mention-select');
+  (rows(el)[0] as HTMLElement).click();
+  expect((await selected).detail).to.deep.equal({
+    suggestionId: 'kept',
+    index: 3,
+    label: 'Kept suggestion',
+  });
 });
 
 it('uses the effective locale for built-in case-insensitive filtering', async () => {
@@ -329,7 +360,7 @@ it('commits a row on click, and preventDefaults its own mousedown so focus never
   const el = await openWithItems();
 
   const listener = oneEvent(el, 'lr-mention-select');
-  const row = rows(el)[2];
+  const row = rows(el)[2]!;
   const down = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
   row.dispatchEvent(down);
   expect(down.defaultPrevented, 'mousedown on a row must be prevented so focus never leaves the host input').to.be.true;
@@ -425,13 +456,13 @@ it('owns and restores the anchor combobox relationship across close, replacement
     expect(first.getAttribute('role')).to.equal('searchbox');
     expect(first.getAttribute('aria-expanded')).to.equal('true');
     expect(first.getAttribute('aria-haspopup')).to.equal('listbox');
-    if ('ariaControlsElements' in first) {
+    if (hasPlatformProperty(first, 'ariaControlsElements')) {
       const controlled = first.ariaControlsElements?.[0];
       expect(controlled === listbox(el) || controlled === el).to.be.true;
     } else {
       expect(first.hasAttribute('aria-controls')).to.be.false;
     }
-    if ('ariaActiveDescendantElement' in first) {
+    if (hasPlatformProperty(first, 'ariaActiveDescendantElement')) {
       const active = first.ariaActiveDescendantElement;
       expect(active === null || active === el.activeDescendantElement).to.be.true;
       if (active === null) expect(first.hasAttribute('aria-activedescendant')).to.be.false;
@@ -606,6 +637,10 @@ it('focuses the active fallback option when nested inside another shadow root', 
 
     textarea.focus();
     const active = el.activeDescendantElement!;
+    await waitFor(
+      () => getComputedStyle(active).visibility,
+      (visibility) => visibility === 'visible',
+    );
     expect(getComputedStyle(active).visibility).to.equal('visible');
     expect(active.tabIndex).to.equal(-1);
     expect(await el.focusActiveOption()).to.be.true;
@@ -1120,9 +1155,29 @@ it('is accessible (populated, open state)', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('gives an option a :hover treatment, matching lr-select/lr-combobox/lr-model-select', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.match(/\[part='option'\]:hover,\s*\[part='option'\]\[data-active\]\s*\{[^}]+\}/);
+it('paints option hover feedback under a real pointer', async () => {
+  const el = await openWithItems();
+  el.style.setProperty('--lr-mention-popover-option-active-bg', 'rgb(10, 20, 30)');
+  await el.updateComplete;
+  const option = rows(el)[1]!;
+  option.scrollIntoView({ block: 'center' });
+  const rect = option.getBoundingClientRect();
+  try {
+    await resetMouse();
+    await sendMouse({
+      type: 'move',
+      position: [
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + rect.height / 2),
+      ],
+    });
+    await waitUntil(
+      () => getComputedStyle(option).backgroundColor === 'rgb(10, 20, 30)',
+      'the mention option hover background never painted'
+    );
+  } finally {
+    await resetMouse();
+  }
 });
 
 describe('active-option row cssprop indirection', () => {
@@ -1189,36 +1244,37 @@ it('clips the non-scrolling inline axis and keeps every option at the shared hit
   expect(parseFloat(getComputedStyle(rows(el)[0]!).minBlockSize)).to.be.at.least(44);
 });
 
-/** Render the max-inline-size declared on `selector` (read off the element's own applied stylesheets)
- *  into the component's shadow scope with the viewport-clamp token pinned to a tiny value, returning
- *  its resolved computed value. Wired to --lr-popover-viewport-clamp the min() collapses to that
- *  pinned value; a leftover 92vw/90vw literal would resolve to something else. */
-function renderedClamp(el: HTMLElement, selector: string): string {
-  const normalize = (text: string) => text.replace(/"/g, "'");
-  let declared = '';
-  for (const sheet of el.shadowRoot!.adoptedStyleSheets) {
-    for (const rule of sheet.cssRules) {
-      if (
-        rule instanceof CSSStyleRule &&
-        normalize(rule.selectorText) === normalize(selector) &&
-        rule.style.maxInlineSize
-      ) {
-        declared = rule.style.maxInlineSize;
-      }
-    }
-  }
-  const probe = document.createElement('span');
-  probe.style.display = 'block';
-  probe.style.setProperty('--lr-popover-viewport-clamp', '10px');
-  probe.style.maxInlineSize = declared;
-  el.shadowRoot!.appendChild(probe);
-  const value = getComputedStyle(probe).maxInlineSize;
-  probe.remove();
-  return value;
-}
+it('centers a single-line option inside an enlarged hit-area allocation', async () => {
+  const el = await openWithItems([{ suggestionId: 'alice', label: 'Alice', icon: '👤' }]);
+  el.style.setProperty('--lr-icon-button-size', '80px');
+  el.style.setProperty('--lr-space-xs', '0px');
+  el.style.setProperty('--lr-space-s', '0px');
+  await el.updateComplete;
 
-it('clamps its floating surface width through the shared popover-viewport-clamp token', async () => {
-  const el = (await fixture(html`<lr-mention-popover></lr-mention-popover>`)) as HTMLElement;
-  await (el as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete;
-  expect(renderedClamp(el, "[part='listbox']")).to.equal('10px');
+  const option = rows(el)[0]!;
+  const label = option.querySelector<HTMLElement>('[part="option-label"]')!;
+  const optionBox = option.getBoundingClientRect();
+  const labelBox = label.getBoundingClientRect();
+  expect(
+    Math.abs(labelBox.top + labelBox.height / 2 - (optionBox.top + optionBox.height / 2)),
+    'the short label is centered rather than pinned to the option top'
+  ).to.be.lessThan(1.5);
+});
+
+it('clamps its rendered floating surface width through the shared popover-viewport-clamp token', async () => {
+  const el = await openWithItems([
+    {
+      suggestionId: 'long',
+      label: 'AnExceptionallyLongUnbrokenMentionSuggestionLabel',
+      description: 'AnExceptionallyLongUnbrokenMentionSuggestionDescription',
+    },
+  ]);
+  el.style.setProperty('--lr-popover-viewport-clamp', '100px');
+  await el.updateComplete;
+  const box = listbox(el);
+  await waitUntil(
+    () => box.getBoundingClientRect().width > 0,
+    'the mention listbox never acquired rendered geometry'
+  );
+  expect(box.getBoundingClientRect().width).to.be.at.most(100.5);
 });

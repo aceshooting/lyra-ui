@@ -30,8 +30,8 @@ export type ToolResultStatus = LyraToolStatus;
  * Reason the dialog was dismissed, forwarded as the `lr-close` event
  * detail -- mirrors `<lr-dialog>`'s own `DialogCloseReason` shape.
  * `'escape'`/`'backdrop'` come from the dialog's own built-in dismiss
- * triggers, `'close-button'` from the built-in header close button, and any
- * other string is whatever a caller passes to `close()` directly (e.g. a
+ * triggers (the latter only while `lightDismiss` is enabled), `'close-button'` from the built-in
+ * header close button, and any other string is whatever a caller passes to `close()` directly (e.g. a
  * consumer's own footer action).
  */
 export type ToolResultDialogCloseReason =
@@ -175,7 +175,7 @@ const statusConverter: ComplexAttributeConverter<ToolResultStatus> = {
  * around it.
  *
  * This is its own standalone overlay implementation (`role="dialog"`,
- * focus-trapped, Escape/backdrop-dismissible, scroll-locking) rather than
+ * focus-trapped, Escape-dismissible, optionally backdrop-dismissible, scroll-locking) rather than
  * nesting a `<lr-dialog>` in its shadow template — see `<lr-dialog>`'s
  * own header comment for why a new overlay component in this library
  * duplicates that pattern locally instead of composing the previous one:
@@ -202,7 +202,7 @@ const statusConverter: ComplexAttributeConverter<ToolResultStatus> = {
  * Input/Preview/JSON/Raw panels, entirely consumer-assembled.
  * @slot footer - Optional action buttons, rendered in a bottom row.
  * @event lr-close - `detail: ToolResultDialogCloseReason`. Fired
- * exactly once per dismissal, via Escape, a backdrop click, the built-in
+ * exactly once per dismissal, via Escape, an opted-in backdrop click, the built-in
  * close button, or a `close()` call.
  * @event lr-maximize-change - `detail: { maximized: boolean }` (the new `maximized`
  * state), fired when the header's maximize/restore toggle is clicked.
@@ -271,6 +271,10 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
    * to attach to that event.
    */
   @property({ type: Boolean, reflect: true }) open = false;
+
+  /** Dismisses the dialog on a backdrop click. Opt-in and `false` by default, matching
+   *  `<lr-dialog>`, `<lr-drawer>`, and `<lr-lightbox>`. */
+  @property({ type: Boolean, attribute: 'light-dismiss' }) lightDismiss = false;
 
   /** Accessible name for the component. When assigned directly as a property without a host
    *  attribute it names the internal dialog; a host `aria-label` remains on the host and the
@@ -350,7 +354,8 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
   /**
    * Close the dialog and return focus to whatever had it before the dialog
    * opened. `reason` is forwarded as the `lr-close` detail --
-   * built-in triggers pass `'escape'`/`'backdrop'`/`'close-button'`; a
+   * built-in triggers pass `'escape'`/`'backdrop'`/`'close-button'` (`'backdrop'` only while
+   * `lightDismiss` is enabled); a
    * consumer's own close affordance (e.g. a footer action button) should
    * call this directly with its own reason string, so every dismissal path
    * funnels through the same event instead of the consumer having to also
@@ -398,7 +403,9 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
       host: this,
       panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
       onEscape: () => this.close('escape'),
-      onBackdrop: () => this.close('backdrop'),
+      onBackdrop: () => {
+        if (this.lightDismiss) this.close('backdrop');
+      },
       lockScroll: true,
       suspendWhenUnrendered: true,
     });

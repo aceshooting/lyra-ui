@@ -6,6 +6,7 @@
 - **Class** `LyraNeighborList`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/neighbor-list/neighbor-list.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -27,7 +28,8 @@ graph data) and never mutates a graph.
   distinct `relation`
 - `expandable: boolean = false` — renders a per-row expand-in-graph icon button
 - `virtualizeAt: number = 100` (attribute `virtualize-at`) — row count above which the list virtualizes
-- `label: string = ''` — fallback name for the stable group. A non-empty host `aria-label` makes
+- `label?: string` — fallback name for the stable group. Omission uses the localized neighbor-list
+  label. A non-empty host `aria-label` makes
   the host the sole overall owner; an explicitly empty host label stays empty on the group
 
 **Events:** `lr-entity-select` (`detail: { entityId }`, a row's node button was activated),
@@ -70,5 +72,7 @@ wrapper, re-exported under the same name), `direction` (`aria-hidden` glyph), `r
   content into it), so a `::part(row)` rule applies once, not twice.
 - Rows with blank neighbor ids and later rows repeating the same node id are omitted first-wins
   before grouping, virtualization, rendering, or events.
+- A missing, blank, or nonstring `node.type` is omitted from that row's secondary metadata instead
+  of being passed to locale formatting; the neighbor label and any valid degree remain visible.
 
 ---

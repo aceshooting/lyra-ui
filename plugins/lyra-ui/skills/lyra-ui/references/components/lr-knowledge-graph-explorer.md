@@ -6,9 +6,10 @@
 - **Class** `LyraKnowledgeGraphExplorer`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)
 - **Deprecations** none
 - **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
-- **Themeable via** 13 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -46,10 +47,11 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   and `lr-graph.selectedNodeIds`; `null` shows no selection and keeps the popover closed
 - `pinnedNodeIds: string[] = []` (attribute: false) — exactly two pinned nodes reveals the "Find
   path" action
-- `searchQuery: string = ''` (attribute `search-query`) — the label/type filter applied to the node
+- `searchQuery: string = ''` (attribute `search-query`) — the id/label filter applied to the node
   set, driving `[part="search-results"]` and the search-match dimming forwarded to `lr-graph`.
   Presettable, so a host can deep-link straight into a filtered view; the toolbar's search box keeps
-  it up to date afterwards
+  it up to date afterwards. A missing or nonstring label is ignored for label matching while the
+  node's valid string id remains searchable
 
 (presentation)
 
@@ -60,7 +62,7 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   `'selection'` dims by the selected node's immediate neighborhood; `'hover'` additionally dims by
   the pointer-hovered node (falling back to selection while nothing is hovered); `'none'` forwards
   empty arrays regardless of search/selection state, for a host driving dimming its own way
-- `label: string = ''` — fallback name for the root group; defaults to localized
+- `label?: string` — fallback name for the root group; omission uses localized
   `graphExplorerLabel`. A non-empty host `aria-label` makes the host the sole overall owner; an
   explicitly empty host label stays empty on the group
 
@@ -103,17 +105,18 @@ composed `lr-graph-legend`), `search-results` (only while `searchQuery` is non-e
 `pinnedNodeIds` is non-empty), `pinned-heading`, `graph` (the composed `lr-graph`), `path` (only
 while `path` is non-empty), `detail-popover`, `detail-card`.
 
-**Themeable custom properties:** shared tokens only; retheme the graph through `lr-graph`'s own
-tokens (see above).
+**Themeable custom properties:** `--lr-canvas-reserved-height` (default
+`var(--lr-size-24rem)`) sets the explorer's host block size and matches its pre-upgrade
+reservation. Retheme the composed graph through `lr-graph`'s own tokens (see above).
 
 **Optional peer deps:** `lr-graph`'s `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` set, transitively.
 
 **Known gotchas:**
 
-- An explicit height on the host bounds the whole explorer: `[part="base"]` fills it and
+- The host defaults to `--lr-canvas-reserved-height` (`24rem`). An explicit height on the host
+  bounds the whole explorer: `[part="base"]` fills it and
   `[part="graph"]` takes whatever the toolbar, search results, pinned row and path strip leave over,
-  rather than the graph sizing itself from its own intrinsic aspect ratio. With no height on the
-  host the column still sizes itself from its content, unchanged.
+  rather than the graph sizing itself from its own intrinsic aspect ratio.
 - `lr-graph.getNodePosition()` and `lr-node-click`'s `{ x, y }` are graph-_local_ drawing
   coordinates, never viewport pixels. For `renderer="svg"` this component resolves the real viewport
   rect from `event.composedPath()`'s `[part="node"]` element; for `renderer="canvas"` (no per-node

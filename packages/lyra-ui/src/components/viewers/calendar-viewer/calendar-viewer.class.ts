@@ -98,7 +98,9 @@ class LyraCalendarViewerBase extends LyraElement<LyraCalendarViewerEventMap> {}
  * Parses `.ics` calendars with the optional `ical.js` peer and renders each
  * VEVENT as plain text, preserving summaries, DATE/DATE-TIME semantics, locations, and details.
  * At most 250 events and 2 MiB of rendered event text are retained so search, selection and
- * fragment/text anchors continue to cover the complete accepted document without eager 10k-row DOM.
+ * text-quote anchors continue to cover the complete accepted document without eager 10k-row DOM.
+ * The inherited fragment path performs an exact DOM `id` lookup, but generated event markup has
+ * no fragment ids; such a jump reports `found: false`. Use a text-quote anchor for event content.
  *
  * @customElement lr-calendar-viewer
  * @event lr-render-error - Fired when fetching or parsing the calendar fails.

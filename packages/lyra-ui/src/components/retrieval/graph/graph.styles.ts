@@ -3,6 +3,7 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    block-size: var(--lr-canvas-reserved-height, var(--lr-size-24rem));
   }
   [part="base"] {
     position: relative;
