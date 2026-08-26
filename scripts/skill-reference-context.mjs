@@ -102,7 +102,7 @@ export function rewriteStandaloneComponentReference(text, label = 'component ref
   return text.replaceAll(FAMILY_SUMMARY_LINK_SUFFIX, '');
 }
 
-export function rewriteStandaloneReferenceTree(referencesDir) {
+function rewriteStandaloneReferenceTree(referencesDir) {
   const sharedPath = path.join(referencesDir, 'shared.md');
   const componentsDir = path.join(referencesDir, 'components');
   if (!existsSync(sharedPath) || !existsSync(componentsDir)) {
