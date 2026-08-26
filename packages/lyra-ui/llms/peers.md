@@ -37,7 +37,7 @@ for the page.
 
 | Peer | Range | Needed by |
 |---|---|---|
-| `@aceshooting/lyra-flags` | `^2.2.0` | _(loaded by a shared internal module)_ |
+| `@aceshooting/lyra-flags` | `^2.3.0` | _(loaded by a shared internal module)_ |
 | `@aiden0z/pptx-renderer` | `^1.2.4` | `lr-pptx-viewer` |
 | `@sgratzl/chartjs-chart-boxplot` | `^4.4.5` | `lr-box-plot` |
 | `chart.js` | `^4.5.1` | `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |

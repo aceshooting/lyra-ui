@@ -1,5 +1,27 @@
 # Changelog
 
+## 13.0.0
+
+### Major Changes
+
+- 70ddaac: Harden accessibility, overlay stacking, form semantics, localization, remote-content boundaries,
+  and rendering across the component library. Add opt-in light dismissal to the tool dialogs and a
+  named accessible-label slot to the progress ring, and improve generated API and editor metadata.
+
+### Patch Changes
+
+- 77d0c25: Correct published API reference entries where a documented IDL default contradicted the shipped
+  declaration. `accessibleLabel` on `lr-breadcrumb`, `lr-carousel`, `lr-command-palette`, `lr-table`
+  and `lr-timeline`, `label` on `lr-breadcrumb`, `lr-pagination`, `lr-file-tree`, `lr-artifact-panel`,
+  `lr-subagent-panel` and `lr-pptx-viewer`, and `lr-attachment-chip`'s five label overrides are all
+  optional: an unset property reads back `undefined` and falls through to a localized default, rather
+  than the empty string or the literal English text the reference claimed. `lr-details` now documents
+  `header-actions` as rendering inside the `<summary>` header row — the shape that actually ships and
+  keeps the controls hit-testable while collapsed — and `lr-eval-dataset`'s `lr-example-add-request`
+  is documented with the `detail: null` that `emit()` produces.
+- Updated dependencies [70ddaac]
+  - @aceshooting/lyra-flags@2.3.0
+
 ## 12.1.2
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @aceshooting/lyra-flags
 
+## 2.3.0
+
+### Minor Changes
+
+- 70ddaac: Expose the standard-tier-only `flagUrls()` bulk resolver from the `./standard` entry point.
+
 ## 2.2.0
 
 ### Minor Changes
