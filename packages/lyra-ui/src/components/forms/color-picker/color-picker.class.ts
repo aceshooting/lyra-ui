@@ -405,13 +405,13 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     // revealing it on the following render. Mirrors lr-checkbox-group's identical fix.
     const seedEnvironmentState = (): void => {
       const hasSlot = (name: string): boolean =>
-        Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === name);
+        Array.from(this.children).some((el) => el.getAttribute('slot') === name);
       this.hasLabel = hasSlot('label');
       this.hasHint = hasSlot('hint');
       this.hasError = hasSlot('error');
       // A server renderer has neither those children nor an `EyeDropper` constructor, so on a
       // hydrating mount this runs one update after the render it would otherwise contradict.
-      this.hasEyeDropper = eyeDropperConstructor(this.ownerDocument.defaultView) !== undefined;
+      this.hasEyeDropper = !!eyeDropperConstructor(this.ownerDocument.defaultView);
     };
     if (this.hasUpdated) seedEnvironmentState();
     else this.seedFirstRenderState(seedEnvironmentState);
