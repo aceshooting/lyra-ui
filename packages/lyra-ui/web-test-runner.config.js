@@ -113,7 +113,12 @@ const mouseCommandPlugin = {
     }
 
     const page = session.browser.getPage(session.id);
-    await page.bringToFront();
+    // WebKit can indefinitely suspend a sibling page waiting on animation frames when another test
+    // page steals foreground. Keep the established foreground behavior for Firefox/Chromium, but
+    // leave WebKit under the concurrency cap without changing its foreground page.
+    if (session.browser.product !== 'webkit') {
+      await page.bringToFront();
+    }
     if (command === 'reset-mouse') {
       await page.mouse.up({ button: 'left' });
       await page.mouse.up({ button: 'middle' });

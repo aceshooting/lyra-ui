@@ -50,7 +50,7 @@ function runConfigInspection({
   });
 }
 
-function inspectMouseCommandOrder() {
+function inspectMouseCommandOrder(product = 'firefox') {
   const source = `
     import config from ${JSON.stringify(configUrl)};
     const calls = [];
@@ -68,6 +68,7 @@ function inspectMouseCommandOrder() {
       id: 'session-1',
       browser: {
         type: 'playwright',
+        product: ${JSON.stringify(product)},
         getPage(id) {
           calls.push('page:' + id);
           return page;
@@ -164,8 +165,8 @@ test('uses validated opt-in concurrency without weakening the coverage ceiling',
   }
 });
 
-test('foregrounds the requesting page before every real pointer command', () => {
-  assert.deepEqual(inspectMouseCommandOrder(), [
+test('foregrounds non-WebKit pointer commands without suspending sibling WebKit pages', () => {
+  const foregroundOrder = [
     'page:session-1',
     'front',
     'move:12,34',
@@ -180,6 +181,23 @@ test('foregrounds the requesting page before every real pointer command', () => 
     'up:default',
     'page:session-1',
     'front',
+    'up:left',
+    'up:middle',
+    'up:right',
+    'move:0,0',
+  ];
+  assert.deepEqual(inspectMouseCommandOrder(), foregroundOrder);
+  assert.deepEqual(inspectMouseCommandOrder('chromium'), foregroundOrder);
+  assert.deepEqual(inspectMouseCommandOrder('webkit'), [
+    'page:session-1',
+    'move:12,34',
+    'page:session-1',
+    'click:56,78',
+    'page:session-1',
+    'down',
+    'page:session-1',
+    'up:default',
+    'page:session-1',
     'up:left',
     'up:middle',
     'up:right',

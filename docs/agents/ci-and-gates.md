@@ -312,7 +312,8 @@ the same checksum-pinned actionlint workflow gate as `static-checks`.
   concurrency and caps Firefox/WebKit/Safari at the smaller of four pages or half the available
   CPUs. This preserves low-core hosted-runner behavior while preventing a high-core machine from
   opening dozens of timing-sensitive pointer pages in one process. The shared mouse-command bridge
-  also foregrounds the requesting page before each real pointer action.
+  foregrounds the requesting page before each Firefox/Chromium pointer action, but leaves WebKit
+  pages alone so one test cannot suspend a sibling page by stealing foreground.
 - `./scripts/ci.sh --platform-matrix` (or `--all`) runs the primary aggregate and then the exact
   local counterpart of CI's platform matrix. Its 11 legs are source-derived: Node 20 runs Firefox
   (1 shard) and Safari (1 shard); Node 22 runs Chromium (2 shards), Chrome (1 shard), Edge (1 shard),
@@ -544,11 +545,16 @@ runtime artifacts. Even that incomplete package was 6,088,928 packed bytes — 2
 the target before restoring the omitted public artifacts. Deleting those artifacts or weakening
 their content is not an acceptable package-size fix.
 
-The exception therefore uses a hard measurement-derived regression ceiling. Final authored
+The exception therefore uses a hard measurement-derived regression ceiling. Initial authored
 documentation corrections and canonical regeneration grew the required public payload by 3,688
 packed bytes and 14,084 unpacked bytes from the prior reviewed complete package, including the
-14,080-byte growth of `llms-full.txt`. The reviewed complete package is therefore 6,929,625 packed
-bytes, and its 6,932,540-byte ceiling retains exactly 2,915 bytes (0.042%) of tool/version headroom.
+14,080-byte growth of `llms-full.txt`, producing a 6,929,625-byte reviewed measurement. Later
+integrated generated output consumed part of that headroom. The final manifest-driven IDL-default
+documentation sweep adds 4,394 required unpacked bytes across `llms-full.txt` and 17 self-contained
+component references without adding package files. Exact Node 22.23.2/npm 10.9.8 packs move from
+6,932,102 packed / 28,851,327 unpacked bytes at the parent commit to 6,933,420 packed / 28,855,721
+unpacked bytes now. The complete required package is therefore re-reviewed at 6,933,420 packed
+bytes, and its 6,936,335-byte ceiling retains exactly 2,915 bytes (0.042%) of tool/version headroom.
 `validatePackageBudgets()` rejects a missing/renamed exception, a probe that does not exceed the
 mathematical target, headroom over 0.5%, or a ceiling that is not exactly the reviewed measurement
 plus headroom. Any future ceiling increase needs a new reproducible measurement and review

@@ -3982,7 +3982,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1497,
+              "line": 1492,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -4179,14 +4179,14 @@
             },
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1929,
+              "line": 1924,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1929,
+              "line": 1924,
               "test": "is accessible collapsed and expanded",
               "target": "el",
               "state": "populated"
@@ -4200,7 +4200,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1497,
+              "line": 1492,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -5127,7 +5127,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1497,
+              "line": 1492,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -6797,7 +6797,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1497,
+              "line": 1492,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -14913,7 +14913,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1497,
+              "line": 1492,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -22230,7 +22230,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1497,
+              "line": 1492,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -25292,7 +25292,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1497,
+              "line": 1492,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -25510,7 +25510,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1497,
+              "line": 1492,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -31858,7 +31858,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1497,
+              "line": 1492,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -32063,7 +32063,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1497,
+              "line": 1492,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -34449,7 +34449,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1497,
+              "line": 1492,
               "kind": "component keyboard assertion signal"
             }
           ]
@@ -38078,7 +38078,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.test.ts",
-              "line": 1497,
+              "line": 1492,
               "kind": "component keyboard assertion signal"
             }
           ]

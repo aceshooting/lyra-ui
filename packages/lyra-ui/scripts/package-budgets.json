@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard npm-tarball budgets against the measured pre-8.0.0 baseline. Machine-consumed editor and design-token JSON is deterministically compact; emitted declaration, CSS, JavaScript, and public-CLI whitespace is compacted without removing JSDoc, type text, public paths, or readable runtime names. That brings unpacked bytes below the approved 25% reduction target while preserving every published docs/editor/CEM/declaration path. Packed bytes use the explicit required-artifact infeasibility exception documented below: a deliberately favorable probe containing all required consumer docs/editor/CEM assets plus fully identifier-minified runtime JavaScript, but omitting every declaration, CSS file, and other required runtime artifact, still packs to 6,088,928 bytes -- 216,583 bytes above the mathematical 25% target of 5,872,345 before the omitted required artifacts are restored. Final authored documentation corrections and their canonical required-public-asset regeneration add 3,688 packed bytes and 14,084 unpacked bytes to the prior reviewed complete package, including the 14,080-byte llms-full.txt growth, so the complete optimized package now measures 6,929,625 packed bytes. Its reviewed ceiling retains exactly 2,915 bytes (0.042%) of tool/version headroom, and validation rejects headroom above 0.5%. The file ceiling is the prior 2,500-artifact base plus two emitted files for each of 285 stable lr-* alias entries, the measured 82-file entrypoint remainder, and seven non-alias artifacts of next-component scaffold headroom; incrementing the stable alias count budgets that component's two alias files separately. Source/map rejection remains independent.",
+  "$comment": "Hard npm-tarball budgets against the measured pre-8.0.0 baseline. Machine-consumed editor and design-token JSON is deterministically compact; emitted declaration, CSS, JavaScript, and public-CLI whitespace is compacted without removing JSDoc, type text, public paths, or readable runtime names. That brings unpacked bytes below the approved 25% reduction target while preserving every published docs/editor/CEM/declaration path. Packed bytes use the explicit required-artifact infeasibility exception documented below: a deliberately favorable probe containing all required consumer docs/editor/CEM assets plus fully identifier-minified runtime JavaScript, but omitting every declaration, CSS file, and other required runtime artifact, still packs to 6,088,928 bytes -- 216,583 bytes above the mathematical 25% target of 5,872,345 before the omitted required artifacts are restored. Initial authored documentation corrections and their canonical required-public-asset regeneration added 3,688 packed bytes and 14,084 unpacked bytes to the prior reviewed complete package, including the 14,080-byte llms-full.txt growth, producing a 6,929,625-byte reviewed measurement. Later integrated generated output consumed part of that headroom. The final manifest-driven IDL-default documentation sweep adds 4,394 required unpacked bytes across llms-full.txt and 17 self-contained component references without adding package files. Exact Node 22.23.2/npm 10.9.8 packs move from 6,932,102 packed / 28,851,327 unpacked bytes at the parent commit to 6,933,420 packed / 28,855,721 unpacked bytes now. The complete required package is therefore re-reviewed at 6,933,420 packed bytes; its 6,936,335-byte ceiling retains exactly 2,915 bytes (0.042%) of tool/version headroom, and validation rejects headroom above 0.5%. The file ceiling is the prior 2,500-artifact base plus two emitted files for each of 285 stable lr-* alias entries, the measured 82-file entrypoint remainder, and seven non-alias artifacts of next-component scaffold headroom; incrementing the stable alias count budgets that component's two alias files separately. Source/map rejection remains independent.",
   "baseline": {
     "packedBytes": 7829794,
     "unpackedBytes": 38510084,
@@ -10,7 +10,7 @@
   "packedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 6929625,
+    "reviewedMeasurementBytes": 6933420,
     "headroomBytes": 2915,
     "targetAt25PercentBytes": 5872345,
     "favorableIncompletePackageProbeBytes": 6088928
@@ -24,7 +24,7 @@
     "entrypointHeadroom": 89
   },
   "maximum": {
-    "packedBytes": 6932540,
+    "packedBytes": 6936335,
     "unpackedBytes": 28882563,
     "fileCount": 3159
   }

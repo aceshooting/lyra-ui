@@ -5025,7 +5025,10 @@ it('stops the force simulation on disconnect so a detached instance stops tickin
 });
 
 it('does not restart the simulation from scratch on a reconnect (e.g. a drag-and-drop reparent)', async () => {
-  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+  // A seed converges the initial simulation synchronously. Reconnect continuity is proved by the
+  // simulation object's identity below, so making this setup deterministic avoids spending almost
+  // the entire per-test budget waiting for ~300 requestAnimationFrame-driven decay ticks.
+  const el = (await fixture(html`<lr-graph seed="7"></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.links = links;
   await el.updateComplete;
@@ -5042,32 +5045,29 @@ it('does not restart the simulation from scratch on a reconnect (e.g. a drag-and
     alpha: () => number;
     alphaMin: () => number;
   };
-  await waitUntil(
-    () => simulation.alpha() <= simulation.alphaMin(),
-    undefined,
-    {
-      timeout: ALPHA_SETTLE_TIMEOUT,
-    }
-  );
+  expect(simulation.alpha(), 'seeded setup should already be settled').to.be.at
+    .most(simulation.alphaMin());
 
   const otherContainer = document.createElement('div');
   document.body.appendChild(otherContainer);
-  otherContainer.appendChild(el); // reparenting an already-connected node fires disconnectedCallback then connectedCallback synchronously
+  try {
+    otherContainer.appendChild(el); // reparenting an already-connected node fires disconnectedCallback then connectedCallback synchronously
 
-  // A buggy connectedCallback kicks off its rebuild from an already-resolved
-  // `loadD3()` promise's `.then()` — that callback lands on a later
-  // microtask/task, not synchronously within this reparent — so give it a
-  // moment to run before asserting nothing changed.
-  await aTimeout(50);
+    // A buggy connectedCallback kicks off its rebuild from an already-resolved
+    // `loadD3()` promise's `.then()` — that callback lands on a later
+    // microtask/task, not synchronously within this reparent — so give it a
+    // moment to run before asserting nothing changed.
+    await aTimeout(50);
 
-  // A from-scratch rebuild would swap in a brand-new forceSimulation()
-  // instance (starting at alpha=1, restarting the ~300-tick settle
-  // animation) — the same, already-settled instance must be reused instead.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  expect((el as any).simulation).to.equal(simulation);
-  expect(simulation.alpha()).to.be.at.most(simulation.alphaMin());
-
-  otherContainer.remove();
+    // A from-scratch rebuild would swap in a brand-new forceSimulation() instance. The seed makes
+    // either instance settle synchronously, so object identity remains the discriminating signal:
+    // the same, already-settled instance must be reused instead.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((el as any).simulation).to.equal(simulation);
+    expect(simulation.alpha()).to.be.at.most(simulation.alphaMin());
+  } finally {
+    otherContainer.remove();
+  }
 });
 
 it('renders a dangling-target link as a stub off the source instead of dropping it', async () => {

@@ -700,31 +700,26 @@ it('caps the generated box-plot alternative at 1,000 endpoint-preserving records
 });
 
 it('keeps an initially sampled box plot silent, then announces a later sampling transition', async () => {
-  const sampledLabels = Array.from({ length: 1001 }, (_, index) => `C${index}`);
-  const sampledBoxes = [{
-    label: 'Range',
-    data: sampledLabels.map((_, index) => ({
-      min: index,
-      q1: index + 1,
-      median: index + 2,
-      q3: index + 3,
-      max: index + 4,
-    })),
-  }];
-  const el = (await fixture(html`<lr-box-plot
-    .strings=${{ chartDataSampled: 'Sampled records; use a custom table.' }}
-    .labels=${sampledLabels}
-    .datasets=${sampledBoxes}
-  ></lr-box-plot>`)) as LyraBoxPlot;
-  await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+  // The preceding integration test proves real high-cardinality data reaches the sampling notice.
+  // A controllable predicate isolates its mount-versus-transition announcement lifecycle here.
+  let sampled = true;
+  const el = document.createElement('lr-box-plot') as LyraBoxPlot;
+  (el as any).generatedDataIsSampled = () => sampled;
+  el.strings = { chartDataSampled: 'Sampled records; use a custom table.' };
+  el.labels = ['C0'];
+  el.datasets = [{ label: 'Range', data: [{ min: 0, q1: 1, median: 2, q3: 3, max: 4 }] }];
+  const mount = await fixture(html`<div></div>`);
+  mount.append(el);
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null, 'box plot never became ready', { timeout: 5_000 });
 
   expect(politeTexts()).to.deep.equal([]);
 
-  el.labels = ['C0'];
-  el.datasets = [{ label: 'Range', data: [{ min: 0, q1: 1, median: 2, q3: 3, max: 4 }] }];
+  sampled = false;
+  el.requestUpdate();
   await el.updateComplete;
-  el.labels = sampledLabels;
-  el.datasets = sampledBoxes;
+  sampled = true;
+  el.requestUpdate();
   await el.updateComplete;
 
   expect(politeTexts()).to.deep.equal(['Sampled records; use a custom table.']);
