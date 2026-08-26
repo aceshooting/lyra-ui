@@ -645,8 +645,10 @@ when they become visible, are removed, or the carousel disconnects.
   Gestures begin only for a primary left-mouse pointer on noninteractive slide content; native,
   custom, shadow-wrapped, labelled, disabled, and editable controls retain their own pointer input.
 - `slides: number` (read-only) — live assigned-slide count, updated after dynamic child changes.
-- `accessibleLabel: string = ''` (attribute `accessible-label`) — fallback landmark name; a host
-  `aria-label` takes precedence by presence, including an explicitly empty value
+- `accessibleLabel?: string` (attribute `accessible-label`) — fallback landmark name. Omitting it
+  reads back `undefined` and uses the localized `carouselLabel` default; an explicitly empty value
+  is used as-is. A host `aria-label` takes precedence by presence, including an explicitly empty
+  value
 
 **9.0 cleanup:** the redundant Lyra-only `index`, `showIndicators`, and `goTo()` aliases were
 removed. Use mapped `currentSlide`, `pagination`, and `goToSlide()`. The writable/reflected
@@ -2888,7 +2890,9 @@ shortcut?, keywords?: readonly string[], disabled?, icon?, onSelect? }`. The seq
   `navigator.platform` alone. Repeats, composition keys, and extra modifiers do not match. If
   several connected palettes use the same chord, the last connected palette owns it;
   activation is idempotently open rather than a toggle.
-- `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the localized dialog name
+- `accessibleLabel?: string` (attribute `aria-label`) — overrides the localized dialog name.
+  Omitting it reads back `undefined` and uses the localized `commandPaletteLabel` default; an
+  explicitly empty value is used as-is
 
 **Methods:** `openPalette()` (after an accepted open, clears the query and resets the active row;
 no-op if already open),
@@ -3064,10 +3068,11 @@ from assistive technology: do not place independent links, buttons, inputs, form
 targets there. The accordion-item `icon` slot follows the same flattened-tree inert and aria-hidden
 visual contract, while the trigger button remains the sole action. Details has `summary`,
 `header-actions`, `expand-icon`, `collapse-icon`, plus default content. `header-actions` renders
-extra controls (e.g. a trailing "add" button) as a peer of the summary row, never a descendant of
-the native `<summary>` toggle target — nesting an interactive control inside `summary` would make
-every press on it also toggle the panel. Its wrapper is hidden and reclaims layout space whenever
-the slot is empty.
+extra controls (e.g. a trailing "add" button) inside the `<summary>` header row — the one subtree a
+native `<details>` keeps out of its generated content box — so they stay rendered, visible, and
+hit-testable while the panel is collapsed. Activating one never toggles the panel: a click whose
+composed path crosses `[part~="header-actions"]` is exempted from disclosure activation. Its wrapper
+is hidden and reclaims layout space whenever the slot is empty.
 
 **CSS parts:** accordion exposes `base`. Accordion item exposes `base` and `accordion-item` on the
 same outer wrapper, plus `heading`, `button`, `label`, `icon`, `panel`, and `content`. Details
@@ -3161,8 +3166,10 @@ theme without requiring shared-token changes or shadow-part selectors.
 
 Responsive navigation trail primitives.
 
-**`lr-breadcrumb` properties:** `label: string = ''` names the trail, falling back to the localized
-`"Breadcrumb"`; `accessibleLabel: string = ''` (attribute **`aria-label`**) overrides both. The
+**`lr-breadcrumb` properties:** `label?: string` names the trail; omitting it reads back `undefined`
+and falls back to the localized `"Breadcrumb"`, while an explicitly empty string stays empty.
+`accessibleLabel?: string` (attribute **`aria-label`**) overrides both, with the same
+omitted-versus-explicitly-empty distinction. The
 shadow-root `<nav>` landmark never inherits a host attribute on its own, so the value is copied onto
 it. **Fixed in 9.0.0:** the property used to be declared but never read — only the literal host
 `aria-label` attribute reached the landmark, so `el.accessibleLabel = 'Docs trail'` type-checked and

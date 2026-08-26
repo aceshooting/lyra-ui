@@ -28,7 +28,9 @@ buttons; it does not make the individual rows interactive.
 
 **`lr-timeline` properties:** `orientation: 'vertical' | 'horizontal' = 'vertical'` — note the
 opposite default from `lr-stepper`; `horizontal` makes `[part='base']` a horizontally scrollable row.
-`accessibleLabel: string = ''` (attribute `aria-label`) overrides the localized `"Timeline"` name
+`accessibleLabel?: string` (attribute `aria-label`) overrides the localized `"Timeline"` name —
+omitting it reads back `undefined` and falls back to that default, while an explicitly empty
+`aria-label` stays empty
 (the `role="list"` element is in the shadow root and never inherits a host attribute). Read-only
 `itemCount: number` is the live count of default-slot `<lr-timeline-item>` assignments (including
 flattened forwarding slots); unrelated slotted elements and text nodes are ignored.

@@ -2126,7 +2126,10 @@ the artifact itself — content is slotted. No content rendering of its own (slo
 dialog/dock chrome (compose `lr-dialog`/`lr-dock-panel`/`lr-multi-split`), no version storage or
 diffing (host state; diffs via `lr-diff-view`), no code editing (`lr-code-editor`).
 
-**Properties:** `label: string = ''` — the artifact's title, shown in the header. `kind: string = ''`
+**Properties:** `label?: string` — the artifact's title, shown in the header; omitting it reads back
+`undefined` and localizes the `artifactPanelLabel` default for the view-toggle group's accessible name
+(with no visible title), while an explicit empty string renders no visible or accessible label.
+`kind: string = ''`
 — a short kind label (e.g. `document`, `code`), shown as a badge next to `label`. `view: 'preview' |
 'code' = 'preview'` (reflected) — which slot is currently visible. `versions: ArtifactVersion[] = []`
 (attribute: false, each `{ id, label? }`) — the artifact's version history, oldest first; the last
@@ -2418,7 +2421,8 @@ expectedOutput?: string; tags?: readonly string[]; metadata?: Record<string, unk
   overall name and is not cloned onto the independently interactive grid
 
 **Events:** `lr-example-select` (`detail: { exampleId: string | null }`),
-`lr-example-add-request` (`detail: undefined`), `lr-example-remove-request` (`detail: { exampleId:
+`lr-example-add-request` (`detail: null` — no payload; `emit()`
+normalizes an omitted detail to `null`, never `undefined`), `lr-example-remove-request` (`detail: { exampleId:
 string }`), `lr-import-request` (`detail: { files: File[] }`), `lr-export-request` (`detail: {
 format: string }`), and the deliberate nested-table pass-through `lr-sort` (`detail: { phase:
 'commit'; sortKey: string; sortDir: 'asc' | 'desc' }`). `focus`/`blur` —
@@ -2968,7 +2972,9 @@ selection, cancel, and retry intents. `SubagentRun.parentId` creates nesting; cy
 parents remain renderable instead of recursing forever.
 
 **Properties:** `runs: SubagentRun[] = []` (attribute: false);
-`selectedRunId: string | null = null` (attribute `selected-run-id`); `label: string = ''`.
+`selectedRunId: string | null = null` (attribute `selected-run-id`); `label?: string` — an
+accessible-name override for the `role="tree"` element, where omission reads back `undefined` and
+localizes the default while any supplied string, including `''`, renders verbatim.
 `SubagentRun = { id: string; parentId?: string; label: string; status: AgentStatusKind; task?:
 string; model?: string; progress?: number; startedAt?: number; endedAt?: number; metadata?:
 Record<string, unknown> }`.

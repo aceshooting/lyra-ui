@@ -45,7 +45,9 @@ shortcut?, keywords?: readonly string[], disabled?, icon?, onSelect? }`. The seq
   `navigator.platform` alone. Repeats, composition keys, and extra modifiers do not match. If
   several connected palettes use the same chord, the last connected palette owns it;
   activation is idempotently open rather than a toggle.
-- `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the localized dialog name
+- `accessibleLabel?: string` (attribute `aria-label`) — overrides the localized dialog name.
+  Omitting it reads back `undefined` and uses the localized `commandPaletteLabel` default; an
+  explicitly empty value is used as-is
 
 **Methods:** `openPalette()` (after an accepted open, clears the query and resets the active row;
 no-op if already open),

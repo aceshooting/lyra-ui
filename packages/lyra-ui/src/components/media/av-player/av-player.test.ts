@@ -2,7 +2,7 @@ import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/t
 import './av-player.js';
 import '../../layout/virtual-list/virtual-list.js';
 import type { LyraAvPlayer, LyraAvCue } from './av-player.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { invalidateLyraTheme } from '../../../internal/theme-watcher.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
@@ -696,7 +696,8 @@ describe('playback controls', () => {
     expect(select.value).to.equal('1.75');
   });
 
-  it('renders native rate-select theming, its hover state, and the decorative chevron', async () => {
+  it('renders native rate-select theming, its hover state, and the decorative chevron', async function () {
+    this.timeout(10000);
     const el = (await fixture(html`
       <lr-av-player
         src=${MP4_SRC}
@@ -714,16 +715,12 @@ describe('playback controls', () => {
     expect(optionStyle.backgroundColor).to.equal('rgb(7, 8, 9)');
     expect(optionStyle.color).to.equal('rgb(10, 11, 12)');
 
-    select.scrollIntoView({ block: 'center' });
-    const rect = select.getBoundingClientRect();
     try {
-      await sendMouse({
-        type: 'move',
-        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-      });
+      await hoverUntilMatched(select, 'the rate-select never registered :hover');
       await waitUntil(
         () => getComputedStyle(select).backgroundColor === 'rgb(1, 2, 3)',
         'the rate-select hover background never appeared',
+        { timeout: 2000 },
       );
     } finally {
       await resetMouse();
@@ -1407,7 +1404,10 @@ it('renders marker actions as siblings of the slider and passes populated access
 });
 
 describe('hover feedback for click-to-seek/clickable parts', () => {
-  it('renders hover treatment on the timeline, highlight markers, and transcript cue rows', async () => {
+  it('renders hover treatment on the timeline, highlight markers, and transcript cue rows', async function () {
+    // Three synthesized hovers, each with its own bounded re-dispatch budget, can exceed the
+    // 6000ms Mocha timeout web-test-runner.config.js sets for the whole suite.
+    this.timeout(25000);
     const el = await fixture<LyraAvPlayer>(html`
       <lr-av-player
         src=${MP3_SRC}
@@ -1427,47 +1427,39 @@ describe('hover feedback for click-to-seek/clickable parts', () => {
     const marker = el.shadowRoot!.querySelector<HTMLElement>('[part="timeline-marker"]')!;
     const cue = cueRows(el)[1]!;
 
-    timeline.scrollIntoView({ block: 'center' });
-    let rect = timeline.getBoundingClientRect();
     try {
-      await sendMouse({
-        type: 'move',
-        position: [Math.round(rect.right - 5), Math.round(rect.top + rect.height / 2)],
-      });
+      await hoverUntilMatched(
+        timeline,
+        'the timeline never registered :hover',
+        (rect) => [rect.right - 5, rect.top + rect.height / 2],
+      );
       await waitUntil(
         () => getComputedStyle(timeline).borderTopColor === 'rgb(1, 2, 3)',
         'the timeline hover border never appeared',
+        { timeout: 2000 },
       );
     } finally {
       await resetMouse();
     }
 
-    marker.scrollIntoView({ block: 'center' });
-    rect = marker.getBoundingClientRect();
     const restingMarker = getComputedStyle(marker).backgroundColor;
     try {
-      await sendMouse({
-        type: 'move',
-        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-      });
+      await hoverUntilMatched(marker, 'the timeline marker never registered :hover');
       await waitUntil(
         () => getComputedStyle(marker).backgroundColor !== restingMarker,
         'the timeline marker hover fill never appeared',
+        { timeout: 2000 },
       );
     } finally {
       await resetMouse();
     }
 
-    cue.scrollIntoView({ block: 'center' });
-    rect = cue.getBoundingClientRect();
     try {
-      await sendMouse({
-        type: 'move',
-        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-      });
+      await hoverUntilMatched(cue, 'the transcript cue row never registered :hover');
       await waitUntil(
         () => getComputedStyle(cue).backgroundColor === 'rgb(4, 5, 6)',
         'the transcript cue hover background never appeared',
+        { timeout: 2000 },
       );
     } finally {
       await resetMouse();

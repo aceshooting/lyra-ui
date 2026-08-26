@@ -55,8 +55,10 @@ when they become visible, are removed, or the carousel disconnects.
   Gestures begin only for a primary left-mouse pointer on noninteractive slide content; native,
   custom, shadow-wrapped, labelled, disabled, and editable controls retain their own pointer input.
 - `slides: number` (read-only) — live assigned-slide count, updated after dynamic child changes.
-- `accessibleLabel: string = ''` (attribute `accessible-label`) — fallback landmark name; a host
-  `aria-label` takes precedence by presence, including an explicitly empty value
+- `accessibleLabel?: string` (attribute `accessible-label`) — fallback landmark name. Omitting it
+  reads back `undefined` and uses the localized `carouselLabel` default; an explicitly empty value
+  is used as-is. A host `aria-label` takes precedence by presence, including an explicitly empty
+  value
 
 **9.0 cleanup:** the redundant Lyra-only `index`, `showIndicators`, and `goTo()` aliases were
 removed. Use mapped `currentSlide`, `pagination`, and `goToSlide()`. The writable/reflected

@@ -929,10 +929,11 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
   assigning them (or set `sort-mode="server"` and own the whole ordering).
 - both single and multiple row selection use `selectedRowKeys`; the component does not synthesize a
   checkbox column, so a bulk-select UI still belongs in `headerCell()`/`cell()` callbacks.
-- `accessibleLabel: string = ''` (attribute `accessible-label`) — a typed accessible name for the
-  `<table role="grid">`. A plain `aria-label` HTML attribute on the host is also forwarded (read via
-  `this.getAttribute('aria-label')` at render time) and serves as a fallback when `accessibleLabel`
-  is unset. Consumer-supplied text, so neither is run through `this.localize()`.
+- `accessibleLabel?: string` (attribute `accessible-label`) — a typed accessible name for the
+  `<table role="grid">`. Omitting it reads back `undefined`; a plain `aria-label` HTML attribute on
+  the host is then forwarded instead (read via `this.getAttribute('aria-label')` at render time). An
+  explicitly empty string is a real override — it renders `aria-label=""` rather than falling back to
+  the host attribute. Consumer-supplied text, so neither is run through `this.localize()`.
 - `caption: string = ''` — an optional visible `<caption>` (exposed as the `caption` CSS part). When
   no `accessibleLabel`/host `aria-label` is present the caption also names the grid via
   `aria-labelledby`.
@@ -1068,8 +1069,9 @@ independent concepts.
   selects the localized singular `item` or plural `items` key
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — host accessible-name override
   forwarded to the internal `<nav>` landmark; takes precedence over `label`
-- `label: string = ''` — explicit fallback accessible name for the internal `<nav>` landmark;
-  empty uses the localized `paginationLabel` message
+- `label?: string` — explicit fallback accessible name for the internal `<nav>` landmark, applied
+  when no host `aria-label` is set; omitting it reads back `undefined` and localizes the
+  `paginationLabel` message, while an explicit empty string renders no visible/accessible label
 - `pageLabel?: string` (attribute `page-label`) — optional accessible-name override for the page-jump input
 - `previousLabel?: string` (attribute `previous-label`), `nextLabel?: string`
   (attribute `next-label`) — optional accessible-name overrides for the icon-only directional buttons
@@ -3153,7 +3155,9 @@ buttons; it does not make the individual rows interactive.
 
 **`lr-timeline` properties:** `orientation: 'vertical' | 'horizontal' = 'vertical'` — note the
 opposite default from `lr-stepper`; `horizontal` makes `[part='base']` a horizontally scrollable row.
-`accessibleLabel: string = ''` (attribute `aria-label`) overrides the localized `"Timeline"` name
+`accessibleLabel?: string` (attribute `aria-label`) overrides the localized `"Timeline"` name —
+omitting it reads back `undefined` and falls back to that default, while an explicitly empty
+`aria-label` stays empty
 (the `role="list"` element is in the shadow root and never inherits a host attribute). Read-only
 `itemCount: number` is the live count of default-slot `<lr-timeline-item>` assignments (including
 flattened forwarding slots); unrelated slotted elements and text nodes are ignored.
@@ -3256,7 +3260,9 @@ git-status/diff-count badges, lazy directory loading, and select/open events.
 **Properties:** `nodes: readonly FileTreeNode[] = []` (attribute: false; clone-owned/frozen,
 cycle-safe snapshot omitting empty/blank paths and retaining the first duplicate path, bounded to
 the first 10,000 inspected source positions across 64 descendant levels; reassign after changes),
-`selectedPath: string | null = null` (attribute `selected-path`), and `label: string = ''`.
+`selectedPath: string | null = null` (attribute `selected-path`), and `label?: string` — an
+accessible-name override for the internal `<lr-tree>`, where omission reads back `undefined` and falls
+back to the localized default while an explicitly empty string renders as an empty label.
 `additions`/`deletions` are normalized once to finite nonnegative integers before localized visible
 and accessible diff summaries. A host `aria-label` wins by presence when naming the internal tree,
 including an explicit empty string; removing it restores `label` or the localized fallback.

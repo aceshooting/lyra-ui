@@ -3237,28 +3237,28 @@
           "evidence": [
             {
               "file": "src/components/media/av-player/av-player.test.ts",
-              "line": 1390,
+              "line": 1387,
               "test": "renders marker actions as siblings of the slider and passes populated accessibility checks",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/av-player/av-player.test.ts",
-              "line": 2276,
+              "line": 2268,
               "test": "is accessible with cues and peaks set",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/av-player/av-player.test.ts",
-              "line": 2481,
+              "line": 2473,
               "test": "renders an error region instead of a media element when src is unsafe",
               "target": "el",
               "state": "populated"
             },
             {
               "file": "src/components/media/av-player/av-player.test.ts",
-              "line": 2801,
+              "line": 2793,
               "test": "is accessible with every active-state prop themed",
               "target": "el",
               "state": "populated"
@@ -3283,7 +3283,7 @@
           "evidence": [
             {
               "file": "src/components/media/av-player/av-player.test.ts",
-              "line": 1290,
+              "line": 1287,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -3300,7 +3300,7 @@
           "evidence": [
             {
               "file": "src/components/media/av-player/av-player.test.ts",
-              "line": 1799,
+              "line": 1791,
               "kind": "320px allocation test signal"
             }
           ]
@@ -13137,21 +13137,21 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.test.ts",
-              "line": 13,
+              "line": 14,
               "test": "renders a disclosure panel and reports its state",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/layout/details/details.test.ts",
-              "line": 1061,
+              "line": 1093,
               "test": "is accessible with custom icons, grouping, and a populated open panel",
               "target": "el",
               "state": "open"
             },
             {
               "file": "src/components/layout/details/details.test.ts",
-              "line": 840,
+              "line": 872,
               "test": "stays accessible and keyboard-operable at the smallest tier",
               "target": "el",
               "state": "populated"
@@ -38263,7 +38263,7 @@
           "evidence": [
             {
               "file": "src/components/layout/scroller/scroller.test.ts",
-              "line": 372,
+              "line": 375,
               "test": "is accessible",
               "target": "el",
               "state": "populated"
@@ -38283,7 +38283,7 @@
           "evidence": [
             {
               "file": "src/components/layout/scroller/scroller.test.ts",
-              "line": 211,
+              "line": 214,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -38300,7 +38300,7 @@
           "evidence": [
             {
               "file": "src/components/layout/scroller/scroller.test.ts",
-              "line": 748,
+              "line": 811,
               "kind": "320px allocation test signal"
             }
           ]

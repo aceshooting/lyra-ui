@@ -20,9 +20,10 @@ Best-effort client-side PPTX viewer backed by the optional `@aiden0z/pptx-render
 localized fidelity notice is always visible because animations, equations, embedded objects,
 speaker notes, and several advanced effects are not rendered.
 
-**Properties:** `src: string = ''`, `name: string = ''`, `label: string = ''`, `page: number = 1`
+**Properties:** `src: string = ''`, `name: string = ''`, `label?: string`, `page: number = 1`
 (reflected, one-based current slide), and `maxHeight: string = ''` (attribute `max-height`). Assigning
-`page` while ready navigates to that slide. A host
+`page` while ready navigates to that slide. Omitting `label` reads back `undefined` and falls back to
+`name`, then a localized default; an explicit empty string clears it. A host
 `aria-label` takes precedence over
 `label` and `name`. `maxHeight` caps the scrollable `[part="container"]`; invalid CSS `max-height`
 values, declaration breaks, and `url()` are ignored. `highlights`, `activeHighlightId`, `anchor`,

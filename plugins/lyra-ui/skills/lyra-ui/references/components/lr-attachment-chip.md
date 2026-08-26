@@ -57,17 +57,21 @@ or overlay, so the host composes the desired preview surface.
   `compact` are set, hides `[part='meta']` (the filename/size text) entirely for an image-mime
   attachment, leaving only the thumbnail. Has no effect for a non-image chip, or when `compact` is
   unset. `false` (the default) reproduces the chip's exact existing output.
-- `removeLabel: string = 'Remove'` (attribute `remove-label`) — verb used in the remove button's
-  accessible name; the default routes through the complete localized `removeWithContext` template
-- `retryLabel: string = 'Retry'` (attribute `retry-label`) — verb used in the retry button's
-  accessible name; the default routes through the complete localized attachment template
-- `uploadingLabel: string = 'Uploading'` (attribute `uploading-label`) — verb used in the visible
-  uploading status; the untouched default uses complete localized messages for progress,
+- `removeLabel?: string` (attribute `remove-label`) — verb used in the remove button's accessible
+  name; omitting it reads back `undefined` and routes through the complete localized
+  `removeWithContext` template
+- `retryLabel?: string` (attribute `retry-label`) — verb used in the retry button's accessible
+  name; omitting it reads back `undefined` and routes through the complete localized
+  `attachmentRetryWithContext` template
+- `uploadingLabel?: string` (attribute `uploading-label`) — verb used in the visible uploading
+  status; omitting it reads back `undefined` and uses complete localized messages for progress,
   indeterminate state, and filename context so translators can reorder every value
-- `uploadFailedLabel: string = 'Upload failed'` (attribute `upload-failed-label`) — visible status
-  text shown for `status="error"`; override for i18n/locale
-- `untitledLabel: string = 'Untitled file'` (attribute `untitled-label`) — fallback filename and
-  tooltip when neither `file` nor `name` supplies a name
+- `uploadFailedLabel?: string` (attribute `upload-failed-label`) — visible status text shown for
+  `status="error"`; override for i18n/locale. Omitting it reads back `undefined` and uses the
+  localized default (`'Upload failed'` in English)
+- `untitledLabel?: string` (attribute `untitled-label`) — fallback filename and tooltip when
+  neither `file` nor `name` supplies a name. Omitting it reads back `undefined` and uses the
+  localized default (`'Untitled file'` in English)
 
 **Renamed in 8.0.0 — breaking:** the byte count is `bytes`, not `size` (same rename as
 `lr-file-icon`'s). Everywhere else in this library `size` names a tier on the shared size ladder,

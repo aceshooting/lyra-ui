@@ -10552,10 +10552,11 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
   assigning them (or set `sort-mode="server"` and own the whole ordering).
 - both single and multiple row selection use `selectedRowKeys`; the component does not synthesize a
   checkbox column, so a bulk-select UI still belongs in `headerCell()`/`cell()` callbacks.
-- `accessibleLabel: string = ''` (attribute `accessible-label`) — a typed accessible name for the
-  `<table role="grid">`. A plain `aria-label` HTML attribute on the host is also forwarded (read via
-  `this.getAttribute('aria-label')` at render time) and serves as a fallback when `accessibleLabel`
-  is unset. Consumer-supplied text, so neither is run through `this.localize()`.
+- `accessibleLabel?: string` (attribute `accessible-label`) — a typed accessible name for the
+  `<table role="grid">`. Omitting it reads back `undefined`; a plain `aria-label` HTML attribute on
+  the host is then forwarded instead (read via `this.getAttribute('aria-label')` at render time). An
+  explicitly empty string is a real override — it renders `aria-label=""` rather than falling back to
+  the host attribute. Consumer-supplied text, so neither is run through `this.localize()`.
 - `caption: string = ''` — an optional visible `<caption>` (exposed as the `caption` CSS part). When
   no `accessibleLabel`/host `aria-label` is present the caption also names the grid via
   `aria-labelledby`.
@@ -10691,8 +10692,9 @@ independent concepts.
   selects the localized singular `item` or plural `items` key
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — host accessible-name override
   forwarded to the internal `<nav>` landmark; takes precedence over `label`
-- `label: string = ''` — explicit fallback accessible name for the internal `<nav>` landmark;
-  empty uses the localized `paginationLabel` message
+- `label?: string` — explicit fallback accessible name for the internal `<nav>` landmark, applied
+  when no host `aria-label` is set; omitting it reads back `undefined` and localizes the
+  `paginationLabel` message, while an explicit empty string renders no visible/accessible label
 - `pageLabel?: string` (attribute `page-label`) — optional accessible-name override for the page-jump input
 - `previousLabel?: string` (attribute `previous-label`), `nextLabel?: string`
   (attribute `next-label`) — optional accessible-name overrides for the icon-only directional buttons
@@ -12776,7 +12778,9 @@ buttons; it does not make the individual rows interactive.
 
 **`lr-timeline` properties:** `orientation: 'vertical' | 'horizontal' = 'vertical'` — note the
 opposite default from `lr-stepper`; `horizontal` makes `[part='base']` a horizontally scrollable row.
-`accessibleLabel: string = ''` (attribute `aria-label`) overrides the localized `"Timeline"` name
+`accessibleLabel?: string` (attribute `aria-label`) overrides the localized `"Timeline"` name —
+omitting it reads back `undefined` and falls back to that default, while an explicitly empty
+`aria-label` stays empty
 (the `role="list"` element is in the shadow root and never inherits a host attribute). Read-only
 `itemCount: number` is the live count of default-slot `<lr-timeline-item>` assignments (including
 flattened forwarding slots); unrelated slotted elements and text nodes are ignored.
@@ -12879,7 +12883,9 @@ git-status/diff-count badges, lazy directory loading, and select/open events.
 **Properties:** `nodes: readonly FileTreeNode[] = []` (attribute: false; clone-owned/frozen,
 cycle-safe snapshot omitting empty/blank paths and retaining the first duplicate path, bounded to
 the first 10,000 inspected source positions across 64 descendant levels; reassign after changes),
-`selectedPath: string | null = null` (attribute `selected-path`), and `label: string = ''`.
+`selectedPath: string | null = null` (attribute `selected-path`), and `label?: string` — an
+accessible-name override for the internal `<lr-tree>`, where omission reads back `undefined` and falls
+back to the localized default while an explicitly empty string renders as an empty label.
 `additions`/`deletions` are normalized once to finite nonnegative integers before localized visible
 and accessible diff summaries. A host `aria-label` wins by presence when naming the internal tree,
 including an explicit empty string; removing it restores `label` or the localized fallback.
@@ -14322,8 +14328,10 @@ when they become visible, are removed, or the carousel disconnects.
   Gestures begin only for a primary left-mouse pointer on noninteractive slide content; native,
   custom, shadow-wrapped, labelled, disabled, and editable controls retain their own pointer input.
 - `slides: number` (read-only) — live assigned-slide count, updated after dynamic child changes.
-- `accessibleLabel: string = ''` (attribute `accessible-label`) — fallback landmark name; a host
-  `aria-label` takes precedence by presence, including an explicitly empty value
+- `accessibleLabel?: string` (attribute `accessible-label`) — fallback landmark name. Omitting it
+  reads back `undefined` and uses the localized `carouselLabel` default; an explicitly empty value
+  is used as-is. A host `aria-label` takes precedence by presence, including an explicitly empty
+  value
 
 **9.0 cleanup:** the redundant Lyra-only `index`, `showIndicators`, and `goTo()` aliases were
 removed. Use mapped `currentSlide`, `pagination`, and `goToSlide()`. The writable/reflected
@@ -16565,7 +16573,9 @@ shortcut?, keywords?: readonly string[], disabled?, icon?, onSelect? }`. The seq
   `navigator.platform` alone. Repeats, composition keys, and extra modifiers do not match. If
   several connected palettes use the same chord, the last connected palette owns it;
   activation is idempotently open rather than a toggle.
-- `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the localized dialog name
+- `accessibleLabel?: string` (attribute `aria-label`) — overrides the localized dialog name.
+  Omitting it reads back `undefined` and uses the localized `commandPaletteLabel` default; an
+  explicitly empty value is used as-is
 
 **Methods:** `openPalette()` (after an accepted open, clears the query and resets the active row;
 no-op if already open),
@@ -16741,10 +16751,11 @@ from assistive technology: do not place independent links, buttons, inputs, form
 targets there. The accordion-item `icon` slot follows the same flattened-tree inert and aria-hidden
 visual contract, while the trigger button remains the sole action. Details has `summary`,
 `header-actions`, `expand-icon`, `collapse-icon`, plus default content. `header-actions` renders
-extra controls (e.g. a trailing "add" button) as a peer of the summary row, never a descendant of
-the native `<summary>` toggle target — nesting an interactive control inside `summary` would make
-every press on it also toggle the panel. Its wrapper is hidden and reclaims layout space whenever
-the slot is empty.
+extra controls (e.g. a trailing "add" button) inside the `<summary>` header row — the one subtree a
+native `<details>` keeps out of its generated content box — so they stay rendered, visible, and
+hit-testable while the panel is collapsed. Activating one never toggles the panel: a click whose
+composed path crosses `[part~="header-actions"]` is exempted from disclosure activation. Its wrapper
+is hidden and reclaims layout space whenever the slot is empty.
 
 **CSS parts:** accordion exposes `base`. Accordion item exposes `base` and `accordion-item` on the
 same outer wrapper, plus `heading`, `button`, `label`, `icon`, `panel`, and `content`. Details
@@ -16838,8 +16849,10 @@ theme without requiring shared-token changes or shadow-part selectors.
 
 Responsive navigation trail primitives.
 
-**`lr-breadcrumb` properties:** `label: string = ''` names the trail, falling back to the localized
-`"Breadcrumb"`; `accessibleLabel: string = ''` (attribute **`aria-label`**) overrides both. The
+**`lr-breadcrumb` properties:** `label?: string` names the trail; omitting it reads back `undefined`
+and falls back to the localized `"Breadcrumb"`, while an explicitly empty string stays empty.
+`accessibleLabel?: string` (attribute **`aria-label`**) overrides both, with the same
+omitted-versus-explicitly-empty distinction. The
 shadow-root `<nav>` landmark never inherits a host attribute on its own, so the value is copied onto
 it. **Fixed in 9.0.0:** the property used to be declared but never read — only the literal host
 `aria-label` attribute reached the landmark, so `el.accessibleLabel = 'Docs trail'` type-checked and
@@ -23599,17 +23612,21 @@ or overlay, so the host composes the desired preview surface.
   `compact` are set, hides `[part='meta']` (the filename/size text) entirely for an image-mime
   attachment, leaving only the thumbnail. Has no effect for a non-image chip, or when `compact` is
   unset. `false` (the default) reproduces the chip's exact existing output.
-- `removeLabel: string = 'Remove'` (attribute `remove-label`) — verb used in the remove button's
-  accessible name; the default routes through the complete localized `removeWithContext` template
-- `retryLabel: string = 'Retry'` (attribute `retry-label`) — verb used in the retry button's
-  accessible name; the default routes through the complete localized attachment template
-- `uploadingLabel: string = 'Uploading'` (attribute `uploading-label`) — verb used in the visible
-  uploading status; the untouched default uses complete localized messages for progress,
+- `removeLabel?: string` (attribute `remove-label`) — verb used in the remove button's accessible
+  name; omitting it reads back `undefined` and routes through the complete localized
+  `removeWithContext` template
+- `retryLabel?: string` (attribute `retry-label`) — verb used in the retry button's accessible
+  name; omitting it reads back `undefined` and routes through the complete localized
+  `attachmentRetryWithContext` template
+- `uploadingLabel?: string` (attribute `uploading-label`) — verb used in the visible uploading
+  status; omitting it reads back `undefined` and uses complete localized messages for progress,
   indeterminate state, and filename context so translators can reorder every value
-- `uploadFailedLabel: string = 'Upload failed'` (attribute `upload-failed-label`) — visible status
-  text shown for `status="error"`; override for i18n/locale
-- `untitledLabel: string = 'Untitled file'` (attribute `untitled-label`) — fallback filename and
-  tooltip when neither `file` nor `name` supplies a name
+- `uploadFailedLabel?: string` (attribute `upload-failed-label`) — visible status text shown for
+  `status="error"`; override for i18n/locale. Omitting it reads back `undefined` and uses the
+  localized default (`'Upload failed'` in English)
+- `untitledLabel?: string` (attribute `untitled-label`) — fallback filename and tooltip when
+  neither `file` nor `name` supplies a name. Omitting it reads back `undefined` and uses the
+  localized default (`'Untitled file'` in English)
 
 **Renamed in 8.0.0 — breaking:** the byte count is `bytes`, not `size` (same rename as
 `lr-file-icon`'s). Everywhere else in this library `size` names a tier on the shared size ladder,
@@ -27408,9 +27425,10 @@ Best-effort client-side PPTX viewer backed by the optional `@aiden0z/pptx-render
 localized fidelity notice is always visible because animations, equations, embedded objects,
 speaker notes, and several advanced effects are not rendered.
 
-**Properties:** `src: string = ''`, `name: string = ''`, `label: string = ''`, `page: number = 1`
+**Properties:** `src: string = ''`, `name: string = ''`, `label?: string`, `page: number = 1`
 (reflected, one-based current slide), and `maxHeight: string = ''` (attribute `max-height`). Assigning
-`page` while ready navigates to that slide. A host
+`page` while ready navigates to that slide. Omitting `label` reads back `undefined` and falls back to
+`name`, then a localized default; an explicit empty string clears it. A host
 `aria-label` takes precedence over
 `label` and `name`. `maxHeight` caps the scrollable `[part="container"]`; invalid CSS `max-height`
 values, declaration breaks, and `url()` are ignored. `highlights`, `activeHighlightId`, `anchor`,
@@ -34993,7 +35011,10 @@ the artifact itself — content is slotted. No content rendering of its own (slo
 dialog/dock chrome (compose `lr-dialog`/`lr-dock-panel`/`lr-multi-split`), no version storage or
 diffing (host state; diffs via `lr-diff-view`), no code editing (`lr-code-editor`).
 
-**Properties:** `label: string = ''` — the artifact's title, shown in the header. `kind: string = ''`
+**Properties:** `label?: string` — the artifact's title, shown in the header; omitting it reads back
+`undefined` and localizes the `artifactPanelLabel` default for the view-toggle group's accessible name
+(with no visible title), while an explicit empty string renders no visible or accessible label.
+`kind: string = ''`
 — a short kind label (e.g. `document`, `code`), shown as a badge next to `label`. `view: 'preview' |
 'code' = 'preview'` (reflected) — which slot is currently visible. `versions: ArtifactVersion[] = []`
 (attribute: false, each `{ id, label? }`) — the artifact's version history, oldest first; the last
@@ -35285,7 +35306,8 @@ expectedOutput?: string; tags?: readonly string[]; metadata?: Record<string, unk
   overall name and is not cloned onto the independently interactive grid
 
 **Events:** `lr-example-select` (`detail: { exampleId: string | null }`),
-`lr-example-add-request` (`detail: undefined`), `lr-example-remove-request` (`detail: { exampleId:
+`lr-example-add-request` (`detail: null` — no payload; `emit()`
+normalizes an omitted detail to `null`, never `undefined`), `lr-example-remove-request` (`detail: { exampleId:
 string }`), `lr-import-request` (`detail: { files: File[] }`), `lr-export-request` (`detail: {
 format: string }`), and the deliberate nested-table pass-through `lr-sort` (`detail: { phase:
 'commit'; sortKey: string; sortDir: 'asc' | 'desc' }`). `focus`/`blur` —
@@ -35835,7 +35857,9 @@ selection, cancel, and retry intents. `SubagentRun.parentId` creates nesting; cy
 parents remain renderable instead of recursing forever.
 
 **Properties:** `runs: SubagentRun[] = []` (attribute: false);
-`selectedRunId: string | null = null` (attribute `selected-run-id`); `label: string = ''`.
+`selectedRunId: string | null = null` (attribute `selected-run-id`); `label?: string` — an
+accessible-name override for the `role="tree"` element, where omission reads back `undefined` and
+localizes the default while any supplied string, including `''`, renders verbatim.
 `SubagentRun = { id: string; parentId?: string; label: string; status: AgentStatusKind; task?:
 string; model?: string; progress?: number; startedAt?: number; endedAt?: number; metadata?:
 Record<string, unknown> }`.

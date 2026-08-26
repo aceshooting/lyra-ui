@@ -22,7 +22,10 @@ the artifact itself — content is slotted. No content rendering of its own (slo
 dialog/dock chrome (compose `lr-dialog`/`lr-dock-panel`/`lr-multi-split`), no version storage or
 diffing (host state; diffs via `lr-diff-view`), no code editing (`lr-code-editor`).
 
-**Properties:** `label: string = ''` — the artifact's title, shown in the header. `kind: string = ''`
+**Properties:** `label?: string` — the artifact's title, shown in the header; omitting it reads back
+`undefined` and localizes the `artifactPanelLabel` default for the view-toggle group's accessible name
+(with no visible title), while an explicit empty string renders no visible or accessible label.
+`kind: string = ''`
 — a short kind label (e.g. `document`, `code`), shown as a badge next to `label`. `view: 'preview' |
 'code' = 'preview'` (reflected) — which slot is currently visible. `versions: ArtifactVersion[] = []`
 (attribute: false, each `{ id, label? }`) — the artifact's version history, oldest first; the last

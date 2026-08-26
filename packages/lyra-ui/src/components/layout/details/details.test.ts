@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from "@open-wc/testing";
+import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { LitElement, type PropertyValues } from "lit";
 import "./details.js";
 import "./accordion.js";
@@ -9,6 +9,7 @@ import type { LyraAccordionItem } from "./accordion-item.js";
 import { styles as detailsStyles } from "./details.styles.js";
 import { styles as accordionStyles } from "./accordion.styles.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { sendKeys } from "@web/test-runner-commands";
 
 it("renders a disclosure panel and reports its state", async () => {
   const el = (await fixture(
@@ -446,10 +447,41 @@ it("chains willUpdate() to super.willUpdate() so a mixin layered under LyraEleme
   }
 });
 
-it("gives the summary (the real focusable/clickable surface) hover and focus-visible treatment", () => {
-  const css = detailsStyles.cssText.replace(/"/g, "'").replace(/\s+/g, " ");
-  expect(css).to.match(/\[part='summary'\]:hover\s*\{[^}]*background:/);
-  expect(css).to.match(/\[part='summary'\]:focus-visible\s*\{[^}]*outline:/);
+// The matching :hover/:active half is asserted against rendered paint further down
+// ("inherits independent appearance and pointer-state paint without retinting shared tokens"),
+// so this covers the focus-visible half the same way: a stylesheet-text match proves only that a
+// rule was authored, never that it reaches the element or survives specificity.
+it("gives the summary (the real focusable/clickable surface) focus-visible treatment", async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <button id="before">before</button>
+      <lr-details
+        style="--lr-focus-ring-width: 3px; --lr-focus-ring-color: rgb(1, 2, 3)"
+        summary="More"
+        >Content</lr-details
+      >
+    </div>
+  `);
+  const el = wrapper.querySelector("lr-details") as LyraDetails;
+  await el.updateComplete;
+  const summary = el.shadowRoot!.querySelector<HTMLElement>(
+    '[part="summary"]'
+  )!;
+
+  // Keyboard modality is what makes :focus-visible match on a pointer-activatable summary;
+  // a bare summary.focus() does not match it reliably across engines.
+  wrapper.querySelector<HTMLElement>("#before")!.focus();
+  await sendKeys({ press: "Tab" });
+  await waitUntil(
+    () => summary.matches(":focus-visible"),
+    "the summary never took keyboard focus"
+  );
+
+  const ring = getComputedStyle(summary);
+  expect(ring.outlineStyle).to.equal("solid");
+  expect(ring.outlineWidth).to.equal("3px");
+  expect(ring.outlineColor).to.equal("rgb(1, 2, 3)");
+  expect(ring.outlineOffset).to.equal("-3px");
 });
 
 it("inherits independent appearance and pointer-state paint without retinting shared tokens", async () => {

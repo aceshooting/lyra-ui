@@ -48,3 +48,50 @@ export function sendMouse(command: MouseCommand): Promise<void> {
 export function resetMouse(): Promise<void> {
   return executeMouseCommand('reset-mouse');
 }
+
+/**
+ * Hover `target`, then wait until the browser has actually applied `:hover` to it.
+ *
+ * `sendMouse()`'s promise resolves once the synthesized pointer command completes, which does not
+ * guarantee the browser went on to process the resulting native pointer event and update `:hover`
+ * matching -- and a late layout settle can move the target out from under an already-dispatched
+ * position. So re-read the rect and re-dispatch until `:hover` matches, rather than reading a
+ * hover-dependent computed style straight after one move. Single-shot moves can lose the hover
+ * state under a busy multi-page browser run even when the same test passes in isolation.
+ *
+ * Callers stay responsible for `resetMouse()` (a `finally` block) and for asserting the RENDERED
+ * result afterwards: `:hover` matching alone proves the pointer arrived, never that the stylesheet
+ * rule reached the element.
+ */
+export async function hoverUntilMatched(
+  target: Element,
+  message: string,
+  point: (rect: DOMRect) => [number, number] = (rect) => [
+    rect.left + rect.width / 2,
+    rect.top + rect.height / 2,
+  ],
+  attempts = 4,
+  perAttemptMs = 1200,
+): Promise<void> {
+  const settle = (milliseconds: number): Promise<void> =>
+    new Promise((resolve) => {
+      setTimeout(resolve, milliseconds);
+    });
+
+  await resetMouse();
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    if (attempt > 0) {
+      await resetMouse();
+    }
+    target.scrollIntoView({ block: 'center', inline: 'center' });
+    await settle(0);
+    const [x, y] = point(target.getBoundingClientRect());
+    await sendMouse({ type: 'move', position: [Math.round(x), Math.round(y)] });
+    const deadline = Date.now() + perAttemptMs;
+    while (!target.matches(':hover') && Date.now() < deadline) {
+      await settle(20);
+    }
+    if (target.matches(':hover')) return;
+  }
+  throw new Error(message);
+}

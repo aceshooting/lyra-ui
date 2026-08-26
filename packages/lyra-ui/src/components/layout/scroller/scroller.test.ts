@@ -1,7 +1,10 @@
 import { expect, fixture, html, waitUntil } from "@open-wc/testing";
 import "./scroller.js";
 import type { LyraScroller } from "./scroller.class.js";
-import { styles } from "./scroller.styles.js";
+import {
+  hoverUntilMatched,
+  resetMouse,
+} from "../../../../test/wtr-mouse.js";
 
 /** `lr-scroll` and the edge recompute are coalesced through one `requestAnimationFrame` tick, so a
  *  synthetic `scroll` dispatch settles a frame later rather than synchronously. */
@@ -543,14 +546,74 @@ describe("<lr-scroller>", () => {
     expect(calls).to.deep.equal([{ top: 80 }, { top: -80 }]);
   });
 
-  it("gives control a hover state", () => {
-    const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
-    expect(css).to.match(/\[part~='control'\]:hover:not\(:disabled\)/);
+  // Asserted against rendered paint, not against styles.cssText: a stylesheet-text match proves
+  // only that a rule was authored, never that it reaches the element or survives specificity.
+  it("gives control a rendered hover fill", async function () {
+    this.timeout(10000);
+    const el = await fixture<LyraScroller>(html`
+      <lr-scroller
+        controls
+        label="Items"
+        style="inline-size: 200px; --lr-color-brand-quiet: rgb(1, 2, 3)"
+      >
+        <div style="inline-size: 800px">wide content</div>
+      </lr-scroller>
+    `);
+    await el.updateComplete;
+    const next = el.shadowRoot!.querySelector<HTMLButtonElement>(
+      '[part~="next"]'
+    )!;
+    await waitUntil(
+      () => !next.disabled,
+      "the next control never became enabled after edge measurement"
+    );
+    expect(next.disabled, "the next control must be enabled to be hoverable").to
+      .be.false;
+    expect(getComputedStyle(next).backgroundColor).to.not.equal("rgb(1, 2, 3)");
+    try {
+      await hoverUntilMatched(
+        next,
+        "the scroller control never registered :hover"
+      );
+      await waitUntil(
+        () => getComputedStyle(next).backgroundColor === "rgb(1, 2, 3)",
+        "the control hover fill never rendered",
+        { timeout: 2000 }
+      );
+    } finally {
+      await resetMouse();
+    }
   });
 
-  it("gives the keyboard-focusable viewport a hover affordance", () => {
-    const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
-    expect(css).to.match(/\[part='viewport'\]:hover/);
+  it("gives the keyboard-focusable viewport a rendered hover affordance", async function () {
+    this.timeout(10000);
+    const el = await fixture<LyraScroller>(html`
+      <lr-scroller
+        label="Items"
+        style="inline-size: 200px; --lr-color-border: rgb(4, 5, 6)"
+      >
+        <div style="inline-size: 800px">wide content</div>
+      </lr-scroller>
+    `);
+    await el.updateComplete;
+    const viewport = el.shadowRoot!.querySelector<HTMLElement>(
+      '[part="viewport"]'
+    )!;
+    expect(getComputedStyle(viewport).outlineStyle).to.equal("none");
+    try {
+      await hoverUntilMatched(
+        viewport,
+        "the scroller viewport never registered :hover"
+      );
+      await waitUntil(
+        () => getComputedStyle(viewport).outlineStyle === "solid",
+        "the viewport hover outline never rendered",
+        { timeout: 2000 }
+      );
+      expect(getComputedStyle(viewport).outlineColor).to.equal("rgb(4, 5, 6)");
+    } finally {
+      await resetMouse();
+    }
   });
 
   it("emits lr-scroll for ordinary movement even when neither edge state changes", async () => {

@@ -93,8 +93,9 @@ independent concepts.
   selects the localized singular `item` or plural `items` key
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — host accessible-name override
   forwarded to the internal `<nav>` landmark; takes precedence over `label`
-- `label: string = ''` — explicit fallback accessible name for the internal `<nav>` landmark;
-  empty uses the localized `paginationLabel` message
+- `label?: string` — explicit fallback accessible name for the internal `<nav>` landmark, applied
+  when no host `aria-label` is set; omitting it reads back `undefined` and localizes the
+  `paginationLabel` message, while an explicit empty string renders no visible/accessible label
 - `pageLabel?: string` (attribute `page-label`) — optional accessible-name override for the page-jump input
 - `previousLabel?: string` (attribute `previous-label`), `nextLabel?: string`
   (attribute `next-label`) — optional accessible-name overrides for the icon-only directional buttons

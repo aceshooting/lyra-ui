@@ -141,10 +141,11 @@ from assistive technology: do not place independent links, buttons, inputs, form
 targets there. The accordion-item `icon` slot follows the same flattened-tree inert and aria-hidden
 visual contract, while the trigger button remains the sole action. Details has `summary`,
 `header-actions`, `expand-icon`, `collapse-icon`, plus default content. `header-actions` renders
-extra controls (e.g. a trailing "add" button) as a peer of the summary row, never a descendant of
-the native `<summary>` toggle target — nesting an interactive control inside `summary` would make
-every press on it also toggle the panel. Its wrapper is hidden and reclaims layout space whenever
-the slot is empty.
+extra controls (e.g. a trailing "add" button) inside the `<summary>` header row — the one subtree a
+native `<details>` keeps out of its generated content box — so they stay rendered, visible, and
+hit-testable while the panel is collapsed. Activating one never toggles the panel: a click whose
+composed path crosses `[part~="header-actions"]` is exempted from disclosure activation. Its wrapper
+is hidden and reclaims layout space whenever the slot is empty.
 
 **CSS parts:** accordion exposes `base`. Accordion item exposes `base` and `accordion-item` on the
 same outer wrapper, plus `heading`, `button`, `label`, `icon`, `panel`, and `content`. Details

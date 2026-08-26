@@ -444,10 +444,11 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
   assigning them (or set `sort-mode="server"` and own the whole ordering).
 - both single and multiple row selection use `selectedRowKeys`; the component does not synthesize a
   checkbox column, so a bulk-select UI still belongs in `headerCell()`/`cell()` callbacks.
-- `accessibleLabel: string = ''` (attribute `accessible-label`) — a typed accessible name for the
-  `<table role="grid">`. A plain `aria-label` HTML attribute on the host is also forwarded (read via
-  `this.getAttribute('aria-label')` at render time) and serves as a fallback when `accessibleLabel`
-  is unset. Consumer-supplied text, so neither is run through `this.localize()`.
+- `accessibleLabel?: string` (attribute `accessible-label`) — a typed accessible name for the
+  `<table role="grid">`. Omitting it reads back `undefined`; a plain `aria-label` HTML attribute on
+  the host is then forwarded instead (read via `this.getAttribute('aria-label')` at render time). An
+  explicitly empty string is a real override — it renders `aria-label=""` rather than falling back to
+  the host attribute. Consumer-supplied text, so neither is run through `this.localize()`.
 - `caption: string = ''` — an optional visible `<caption>` (exposed as the `caption` CSS part). When
   no `accessibleLabel`/host `aria-label` is present the caption also names the grid via
   `aria-labelledby`.

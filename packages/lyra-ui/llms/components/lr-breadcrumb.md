@@ -19,8 +19,10 @@
 
 Responsive navigation trail primitives.
 
-**`lr-breadcrumb` properties:** `label: string = ''` names the trail, falling back to the localized
-`"Breadcrumb"`; `accessibleLabel: string = ''` (attribute **`aria-label`**) overrides both. The
+**`lr-breadcrumb` properties:** `label?: string` names the trail; omitting it reads back `undefined`
+and falls back to the localized `"Breadcrumb"`, while an explicitly empty string stays empty.
+`accessibleLabel?: string` (attribute **`aria-label`**) overrides both, with the same
+omitted-versus-explicitly-empty distinction. The
 shadow-root `<nav>` landmark never inherits a host attribute on its own, so the value is copied onto
 it. **Fixed in 9.0.0:** the property used to be declared but never read — only the literal host
 `aria-label` attribute reached the landmark, so `el.accessibleLabel = 'Docs trail'` type-checked and

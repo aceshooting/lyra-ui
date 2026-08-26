@@ -47,7 +47,8 @@ expectedOutput?: string; tags?: readonly string[]; metadata?: Record<string, unk
   overall name and is not cloned onto the independently interactive grid
 
 **Events:** `lr-example-select` (`detail: { exampleId: string | null }`),
-`lr-example-add-request` (`detail: undefined`), `lr-example-remove-request` (`detail: { exampleId:
+`lr-example-add-request` (`detail: null` — no payload; `emit()`
+normalizes an omitted detail to `null`, never `undefined`), `lr-example-remove-request` (`detail: { exampleId:
 string }`), `lr-import-request` (`detail: { files: File[] }`), `lr-export-request` (`detail: {
 format: string }`), and the deliberate nested-table pass-through `lr-sort` (`detail: { phase:
 'commit'; sortKey: string; sortDir: 'asc' | 'desc' }`). `focus`/`blur` —

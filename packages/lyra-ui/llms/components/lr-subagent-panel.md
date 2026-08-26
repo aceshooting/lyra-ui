@@ -21,7 +21,9 @@ selection, cancel, and retry intents. `SubagentRun.parentId` creates nesting; cy
 parents remain renderable instead of recursing forever.
 
 **Properties:** `runs: SubagentRun[] = []` (attribute: false);
-`selectedRunId: string | null = null` (attribute `selected-run-id`); `label: string = ''`.
+`selectedRunId: string | null = null` (attribute `selected-run-id`); `label?: string` — an
+accessible-name override for the `role="tree"` element, where omission reads back `undefined` and
+localizes the default while any supplied string, including `''`, renders verbatim.
 `SubagentRun = { id: string; parentId?: string; label: string; status: AgentStatusKind; task?:
 string; model?: string; progress?: number; startedAt?: number; endedAt?: number; metadata?:
 Record<string, unknown> }`.

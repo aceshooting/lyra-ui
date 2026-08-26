@@ -22,7 +22,9 @@ git-status/diff-count badges, lazy directory loading, and select/open events.
 **Properties:** `nodes: readonly FileTreeNode[] = []` (attribute: false; clone-owned/frozen,
 cycle-safe snapshot omitting empty/blank paths and retaining the first duplicate path, bounded to
 the first 10,000 inspected source positions across 64 descendant levels; reassign after changes),
-`selectedPath: string | null = null` (attribute `selected-path`), and `label: string = ''`.
+`selectedPath: string | null = null` (attribute `selected-path`), and `label?: string` — an
+accessible-name override for the internal `<lr-tree>`, where omission reads back `undefined` and falls
+back to the localized default while an explicitly empty string renders as an empty label.
 `additions`/`deletions` are normalized once to finite nonnegative integers before localized visible
 and accessible diff summaries. A host `aria-label` wins by presence when naming the internal tree,
 including an explicit empty string; removing it restores `label` or the localized fallback.
