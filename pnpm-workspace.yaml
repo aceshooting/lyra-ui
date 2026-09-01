@@ -31,29 +31,29 @@ minimumReleaseAgeExclude:
   - storybook@10.5.4 || 10.5.6 || 10.5.7 || 10.5.8 || 10.5.9 || 10.5.10
   - libphonenumber-js@1.13.10 || 1.13.11
   - vite@8.2.0 || 8.2.1 || 8.2.2
-  - '@oxc-parser/binding-android-arm-eabi@0.143.0 || 0.145.0'
-  - '@oxc-parser/binding-android-arm64@0.143.0 || 0.145.0'
-  - '@oxc-parser/binding-darwin-arm64@0.143.0 || 0.145.0'
-  - '@oxc-parser/binding-darwin-x64@0.143.0 || 0.145.0'
-  - '@oxc-parser/binding-freebsd-x64@0.143.0 || 0.145.0'
-  - '@oxc-parser/binding-linux-arm-gnueabihf@0.143.0 || 0.145.0'
-  - '@oxc-parser/binding-linux-arm-musleabihf@0.143.0 || 0.145.0'
-  - '@oxc-parser/binding-linux-arm64-gnu@0.143.0 || 0.145.0'
-  - '@oxc-parser/binding-linux-arm64-musl@0.143.0 || 0.145.0'
-  - '@oxc-parser/binding-linux-ppc64-gnu@0.143.0 || 0.145.0'
-  - '@oxc-parser/binding-linux-riscv64-gnu@0.143.0 || 0.145.0'
-  - '@oxc-parser/binding-linux-riscv64-musl@0.143.0 || 0.145.0'
-  - '@oxc-parser/binding-linux-s390x-gnu@0.143.0 || 0.145.0'
-  - '@oxc-parser/binding-linux-x64-gnu@0.143.0 || 0.145.0'
-  - '@oxc-parser/binding-linux-x64-musl@0.143.0 || 0.145.0'
-  - '@oxc-parser/binding-openharmony-arm64@0.143.0 || 0.145.0'
-  - '@oxc-parser/binding-win32-arm64-msvc@0.143.0 || 0.145.0'
-  - '@oxc-parser/binding-win32-ia32-msvc@0.143.0 || 0.145.0'
-  - '@oxc-parser/binding-win32-x64-msvc@0.143.0 || 0.145.0'
-  - '@oxc-project/types@0.143.0 || 0.145.0'
+  - '@oxc-parser/binding-android-arm-eabi@0.143.0 || 0.145.0 || 0.148.0'
+  - '@oxc-parser/binding-android-arm64@0.143.0 || 0.145.0 || 0.148.0'
+  - '@oxc-parser/binding-darwin-arm64@0.143.0 || 0.145.0 || 0.148.0'
+  - '@oxc-parser/binding-darwin-x64@0.143.0 || 0.145.0 || 0.148.0'
+  - '@oxc-parser/binding-freebsd-x64@0.143.0 || 0.145.0 || 0.148.0'
+  - '@oxc-parser/binding-linux-arm-gnueabihf@0.143.0 || 0.145.0 || 0.148.0'
+  - '@oxc-parser/binding-linux-arm-musleabihf@0.143.0 || 0.145.0 || 0.148.0'
+  - '@oxc-parser/binding-linux-arm64-gnu@0.143.0 || 0.145.0 || 0.148.0'
+  - '@oxc-parser/binding-linux-arm64-musl@0.143.0 || 0.145.0 || 0.148.0'
+  - '@oxc-parser/binding-linux-ppc64-gnu@0.143.0 || 0.145.0 || 0.148.0'
+  - '@oxc-parser/binding-linux-riscv64-gnu@0.143.0 || 0.145.0 || 0.148.0'
+  - '@oxc-parser/binding-linux-riscv64-musl@0.143.0 || 0.145.0 || 0.148.0'
+  - '@oxc-parser/binding-linux-s390x-gnu@0.143.0 || 0.145.0 || 0.148.0'
+  - '@oxc-parser/binding-linux-x64-gnu@0.143.0 || 0.145.0 || 0.148.0'
+  - '@oxc-parser/binding-linux-x64-musl@0.143.0 || 0.145.0 || 0.148.0'
+  - '@oxc-parser/binding-openharmony-arm64@0.143.0 || 0.145.0 || 0.148.0'
+  - '@oxc-parser/binding-win32-arm64-msvc@0.143.0 || 0.145.0 || 0.148.0'
+  - '@oxc-parser/binding-win32-ia32-msvc@0.143.0 || 0.145.0 || 0.148.0'
+  - '@oxc-parser/binding-win32-x64-msvc@0.143.0 || 0.145.0 || 0.148.0'
+  - '@oxc-project/types@0.143.0 || 0.145.0 || 0.148.0'
   - dompurify@3.4.13
   - marked@18.0.9 || 18.0.10
-  - oxc-parser@0.143.0 || 0.145.0
+  - oxc-parser@0.143.0 || 0.145.0 || 0.148.0
   - '@shikijs/core@4.4.2 || 4.4.3'
   - '@shikijs/engine-javascript@4.4.2 || 4.4.3'
   - '@shikijs/engine-oniguruma@4.4.2 || 4.4.3'
@@ -74,7 +74,7 @@ minimumReleaseAgeExclude:
   - axe-core@4.13.0
   - vue@3.5.41
   - postal-mime@2.7.6 || 3.0.0
-  - katex@0.18.3
+  - katex@0.18.3 || 0.18.5
   - mammoth@1.12.1
   - '@changesets/apply-release-plan@8.0.0'
   - '@changesets/assemble-release-plan@7.0.0'
@@ -90,7 +90,7 @@ minimumReleaseAgeExclude:
   - '@changesets/should-skip-package@1.0.0'
   - '@changesets/types@7.0.0'
   - '@changesets/write@1.0.0'
-  - knip@6.32.2
+  - knip@6.32.2 || 6.34.0
   - svelte@5.56.9
   - papaparse@5.6.0
   - maplibre-gl@6.4.0 || 6.4.1
